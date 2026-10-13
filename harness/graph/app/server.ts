@@ -6,7 +6,7 @@ import express from 'express';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const python = process.env.PYTHON || 'python';
-const PYTHON_TIMEOUT_MS = Number(process.env.CODEQL_PYTHON_TIMEOUT_MS || 10_800_000);
+const PYTHON_TIMEOUT_MS = Number(process.env.GRAPH_PYTHON_TIMEOUT_MS || 10_800_000);
 const child = spawn(python, ['-u', path.join(here, 'host.py')], { stdio: ['pipe', 'pipe', 'inherit'] });
 const lines = createInterface({ input: child.stdout });
 const pending: Array<(line: string) => void> = [];
@@ -184,7 +184,7 @@ app.get('/ping', (_request, response) => {
   response.json({
     ok: true,
     ping: 'pong',
-    service: 'codeql_web',
+    service: 'graph_web',
     url: `http://127.0.0.1:${port}`,
     port,
   });

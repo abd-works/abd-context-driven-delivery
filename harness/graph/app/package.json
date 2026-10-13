@@ -1,5 +1,5 @@
 {
-  "name": "@cdd/codeql-graph-app",
+  "name": "@cdd/graph-app",
   "private": true,
   "type": "module",
   "scripts": {

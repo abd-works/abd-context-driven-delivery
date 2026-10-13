@@ -18,7 +18,7 @@ function queryName(path: string): string {
 }
 
 function statusText(line: string): string {
-  return line.replace(/^(load|queries|query|codeql|error):\s*/, '').trim();
+  return line.replace(/^(load|queries|query|error):\s*/, '').trim();
 }
 
 export function queryProgress(messages: string[]): QueryProgress {
@@ -71,7 +71,7 @@ export function queryProgress(messages: string[]): QueryProgress {
         name,
         phase: 'Running',
       };
-      detail = line.replace(/^codeql:\s*/, '');
+      detail = text;
       continue;
     }
     if (line.includes('.ql') || /^\(\d+%\)/.test(text)) {

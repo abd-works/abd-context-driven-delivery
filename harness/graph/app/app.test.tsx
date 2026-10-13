@@ -783,10 +783,8 @@ it('should show each load step while the graph is loading', async () => {
         const payload = {
           ok: true,
           messages: [
-            'query: 1/2 steps.ql',
-            'codeql: Starting evaluation of steps.ql.',
-            'codeql: [1/2 comp 1s] Compiled C:\\pack\\steps.ql.',
-            'codeql: [2/2 comp 1s] Compiled C:\\pack\\edges.ql.',
+            'load: Reading classes',
+            'load: Recording stories',
           ],
         };
         const serialized = JSON.stringify(payload);
@@ -799,9 +797,9 @@ it('should show each load step while the graph is loading', async () => {
   );
   render(<App />);
   const log = await screen.findByTestId('loading-log');
-  expect(log.textContent).toContain('1/2 steps.ql');
-  expect(log.textContent).toContain('2/2 edges.ql');
-  expect(screen.getByTestId('extraction-progress').textContent).toContain('Compiled 2/2 edges.ql');
+  expect(log.textContent).toContain('Reading classes');
+  expect(log.textContent).toContain('Recording stories');
+  expect(screen.getByTestId('extraction-progress').textContent).toContain('Recording stories');
   release(undefined);
   await screen.findByRole('button', { name: 'Expand clean_engineering' });
 });

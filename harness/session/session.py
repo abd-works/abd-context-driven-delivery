@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from harness.codeQl_graph.graph import Graph
+    from harness.graph.graph import Graph
     from harness.guidance.guidance import PracticeGuidance
 
 
@@ -19,7 +19,7 @@ class Session:
     @property
     def knowledge_graph(self):
         if self._knowledge_graph is None:
-            from harness.codeQl_graph.graph import Graph
+            from harness.graph.graph import Graph
 
             self._knowledge_graph = Graph()
         return self._knowledge_graph

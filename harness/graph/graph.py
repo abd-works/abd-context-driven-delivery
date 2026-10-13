@@ -18,16 +18,12 @@ Display = str
 Tuple = list[str]
 _GRAPH_PRACTICE_NAMES = frozenset({"clean_engineering", "stories", "ddd", "bdd", "ux"})
 
-def query_pack(practice: str, language: str) -> Path:
-    return _REPO / "practices" / practice / "model" / language / "codeql"
-
-
 def pattern_overlay_root(pattern: str) -> Path:
     return _REPO / "patterns" / pattern
 
 
 def resolve_overlay_root(overlay: str) -> Path:
-    """Overlay root is a folder that contains ``practices/<practice>/model/<language>/codeql``."""
+    """Overlay root is a folder that contains ``practices/``."""
     candidate = Path(overlay)
     if candidate.is_dir():
         resolved = candidate.resolve()
@@ -45,13 +41,6 @@ def normalize_overlay(overlay: str) -> str:
     return str(resolve_overlay_root(overlay))
 
 
-def pattern_query_pack(overlay: str, practice: str, language: str) -> Path | None:
-    pack = resolve_overlay_root(overlay) / "practices" / practice / "model" / language / "codeql"
-    if not (pack / "qlpack.yml").is_file():
-        return None
-    return pack
-
-
 def available_pattern_overlays() -> list[str]:
     patterns = _REPO / "patterns"
     if not patterns.is_dir():
@@ -63,15 +52,8 @@ def available_pattern_overlays() -> list[str]:
         practices = entry / "practices"
         if not practices.is_dir():
             continue
-        for practice in practices.iterdir():
-            if not practice.is_dir() or practice.name.startswith("."):
-                continue
-            for language in ("typescript", "javascript", "python"):
-                if (practice / "model" / language / "codeql" / "qlpack.yml").is_file():
-                    found.append(entry.name)
-                    break
-            if entry.name in found:
-                break
+        if any(child.is_dir() and not child.name.startswith(".") for child in practices.iterdir()):
+            found.append(entry.name)
     return found
 
 

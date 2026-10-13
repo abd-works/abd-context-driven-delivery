@@ -8,7 +8,6 @@ import logging
 import os
 import re
 import sys
-import threading
 import time
 import types as py_types
 from collections.abc import Callable, Mapping, Sequence
@@ -680,9 +679,6 @@ class McpHost:
     def __init__(self, runtime: McpServer) -> None:
         self._runtime = runtime
         self._server = Server("cdd")
-        self.codeql_server = None
-        self._codeql_closed = False
-        self._codeql_lock = threading.Lock()
         self._register_handlers()
 
     def input_schema_for_callable(self, callable: Callable[..., object]) -> dict[str, Any]:
@@ -943,41 +939,14 @@ class McpHost:
             )
 
     def run(self) -> None:
-        threading.Thread(
-            target=self._start_codeql_server,
-            name="codeql-query-server",
-            daemon=True,
-        ).start()
-        try:
-            while True:
-                try:
-                    anyio.run(self.run_stdio)
-                    return
-                except (KeyboardInterrupt, SystemExit):
-                    raise
-                except Exception:
-                    logger.exception("MCP stdio host crashed; restarting")
-        finally:
-            self._stop_codeql_server()
-
-    def _start_codeql_server(self) -> None:
-        from harness.mcp.codeql_query_daemon import QueryServerClient
-
-        try:
-            server = QueryServerClient().ensure_query_server(Path(self._runtime.repo))
-        except Exception:
-            logger.exception("CodeQL query server did not start; queries will use the CLI")
-            return
-        with self._codeql_lock:
-            if self._codeql_closed:
+        while True:
+            try:
+                anyio.run(self.run_stdio)
                 return
-            self.codeql_server = server
-        logger.info("codeql query-server daemon pid=%s", getattr(server, "pid", None))
-
-    def _stop_codeql_server(self) -> None:
-        with self._codeql_lock:
-            self._codeql_closed = True
-            self.codeql_server = None
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception:
+                logger.exception("MCP stdio host crashed; restarting")
 
     def ping(self) -> str:
         return "pong"
@@ -995,14 +964,12 @@ class McpHost:
             {"tool": item.tool, "reason": item.reason}
             for item in self._runtime.exceptions
         ]
-        server = self.codeql_server
         return {
             "ok": True,
             "ping": reply,
             "tools": tools,
             "exceptions": exceptions,
             "notice": self.notice(),
-            "codeqlServer": server.pid if server is not None and server.alive else None,
         }
 
     def notice(self) -> str:

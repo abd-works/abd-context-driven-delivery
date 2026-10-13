@@ -11,7 +11,7 @@ export type PythonSuccess<T> = {
   result: T;
 };
 
-const DEFAULT_TIMEOUT_MS = Number(import.meta.env.VITE_CODEQL_CLIENT_TIMEOUT_MS || 10_800_000);
+const DEFAULT_TIMEOUT_MS = Number(import.meta.env.VITE_GRAPH_CLIENT_TIMEOUT_MS || 10_800_000);
 
 export class PythonCall {
   constructor(private readonly timeoutMs = DEFAULT_TIMEOUT_MS) {}

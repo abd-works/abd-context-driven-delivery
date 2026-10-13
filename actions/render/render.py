@@ -43,5 +43,5 @@ class Render(GuidanceAction):
 
     @agent_instructions
     def place_rendered(self) -> str:
-        """After render, do an AI pass on the written files. Put each class in the practice model folder for that channel — `{practice}/model/{format}/`, the same layout as json, markdown, and codeql. Shared graph types stay on the harness knowledge graph. Small nips and tucks only: names, bases, constructors, imports, and file splits so the tree follows the architecture and the sketch intent. Do not re-render. Do not invent types."""
+        """After render, do an AI pass on the written files. Put each class in the practice model folder for that channel — `{practice}/model/{format}/`, the same layout as json and markdown. Shared graph types stay on the harness knowledge graph. Small nips and tucks only: names, bases, constructors, imports, and file splits so the tree follows the architecture and the sketch intent. Do not re-render. Do not invent types."""
         return "Place rendered classes in the channel packages and tidy to the architecture."

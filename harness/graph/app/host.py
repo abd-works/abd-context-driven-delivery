@@ -236,9 +236,6 @@ def _graph_facts(host: GraphHost | None) -> list[str]:
     languages = getattr(graph, "_languages", {})
     if languages:
         facts.append(f"languages: {json.dumps(languages)}")
-    executable = getattr(graph, "_executable", "")
-    if executable:
-        facts.append(f"codeql: {executable}")
     return facts
 
 

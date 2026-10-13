@@ -18,7 +18,7 @@ function ping(): Plugin {
         const body = JSON.stringify({
           ok: true,
           ping: 'pong',
-          service: 'codeql_app',
+          service: 'graph_app',
           url: origin,
           port: heard,
         });

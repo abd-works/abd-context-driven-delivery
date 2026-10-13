@@ -13,8 +13,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable, NamedTuple
 
-CODEQL_WEB_PORTS: tuple[int, ...] = (3000,)
-CODEQL_APP_PORTS: tuple[int, ...] = (5173, 5174, 5175, 5176)
+GRAPH_WEB_PORTS: tuple[int, ...] = (3000,)
+GRAPH_APP_PORTS: tuple[int, ...] = (5173, 5174, 5175, 5176)
 
 
 class Process(NamedTuple):
@@ -138,11 +138,11 @@ class RepoProcesses:
             if tagged is not None:
                 if tagged != expect_service:
                     return None
-            elif expect_service == "codeql_web":
-                if port_text != str(CODEQL_WEB_PORTS[0]):
+            elif expect_service == "graph_web":
+                if port_text != str(GRAPH_WEB_PORTS[0]):
                     return None
-            elif expect_service == "codeql_app":
-                if port_text not in {str(item) for item in CODEQL_APP_PORTS}:
+            elif expect_service == "graph_app":
+                if port_text not in {str(item) for item in GRAPH_APP_PORTS}:
                     return None
             else:
                 return None
@@ -443,15 +443,18 @@ class HttpPing:
         return None
 
 
-def codeql_web(command: str) -> bool:
+_GRAPH_APP = "harness/graph/app/"
+
+
+def graph_web(command: str) -> bool:
     folded = command.casefold().replace("\\", "/")
     if "preflight.cjs" in folded or "vitest" in folded:
         return False
-    return "codeql_graph/app/" in folded and "server.ts" in folded
+    return _GRAPH_APP in folded and "server.ts" in folded
 
 
-def codeql_app(command: str) -> bool:
+def graph_app(command: str) -> bool:
     folded = command.casefold().replace("\\", "/")
-    if "codeql_graph/app/" not in folded or "vitest" in folded or "preflight.cjs" in folded:
+    if _GRAPH_APP not in folded or "vitest" in folded or "preflight.cjs" in folded:
         return False
     return "/vite/bin/vite.js" in folded or folded.rstrip().endswith(" vite")

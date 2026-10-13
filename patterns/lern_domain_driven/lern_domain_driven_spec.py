@@ -38,7 +38,6 @@ from mamba import before, context, description, it
 
 from practices.clean_engineering.specifications._scan_kit import (
     DOMAIN_MODULE_RULE_GLOBS,
-    ScannerCollection,
 )
 from patterns.lern_domain_driven.lern_domain_driven import (
     LernDomainDriven,
@@ -67,9 +66,9 @@ _ALL_RULE_SLUGS = (
     "implement-full-interfaces",
     "use-valid-package-names",
     "include-all-external-dependencies",
-    "test-story-driven",
+    "reduce-story-overlap",
     "scaffold-test-scripts",
-    "use-thorough-e2e-tests",
+    "playwright-tests-browser-interaction",
     "one-json-store-per-aggregate",
     "repository-owns-aggregate-lifecycle",
     "one-repository-per-aggregate",
@@ -147,48 +146,6 @@ with description("a LernDomainDriven generator"):
             expect(self.rendered).to(contain("AskQuestion"))
             expect(self.rendered).to(contain("ask-cross-aggregate-sync"))
             expect("event" in self.rendered.lower()).to(be_true)
-
-    with context("whose CodeQL packs list the architecture rules"):
-        with before.each:
-            self.discovered = ScannerCollection(module_dir=_MODULE_DIR).discover()
-
-        with it("should resolve a typescript query pack per attributed practice"):
-            for practice in ("clean_engineering", "ddd", "stories"):
-                pack = _MODULE_DIR / "practices" / practice / "model" / "typescript" / "codeql"
-                expect((pack / "qlpack.yml").is_file()).to(equal(True))
-                expect((pack / "rules").is_dir()).to(equal(True))
-                expect((pack / "loaders").is_dir()).to(equal(True))
-
-        with it("should register exactly the architecture rules, one query each"):
-            expect(sorted(self.discovered)).to(equal(sorted(_ALL_RULE_SLUGS)))
-
-        with it("should not ship javascript or python query packs"):
-            expect((_MODULE_DIR / "model" / "javascript").exists()).to(equal(False))
-            expect((_MODULE_DIR / "model" / "python").exists()).to(equal(False))
-
-        with it("should keep rule queries flat under each practice rules folder"):
-            for practice in ("clean_engineering", "ddd", "stories"):
-                rules_root = _MODULE_DIR / "practices" / practice / "model" / "typescript" / "codeql" / "rules"
-                expect(any(rules_root.glob("*.ql"))).to(be_true)
-                expect(list(rules_root.glob("*/*.ql"))).to(equal([]))
-
-    with context("whose graph rules carry pattern and parent-practice metadata"):
-        with before.each:
-            self.rules = self.tool.rules
-
-        with it("should attribute layout rules to clean_engineering"):
-            expect(self.rules["epic-package-screens-only"].practice).to(equal("clean_engineering"))
-            expect(self.rules["epic-package-screens-only"].fidelity).to(equal("code"))
-
-        with it("should attribute aggregate rules to ddd"):
-            expect(self.rules["one-json-store-per-aggregate"].practice).to(equal("ddd"))
-            expect(self.rules["one-json-store-per-aggregate"].fidelity).to(equal("tactics"))
-            expect(self.rules["one-repository-per-aggregate"].practice).to(equal("ddd"))
-            expect(self.rules["one-repository-per-aggregate"].fidelity).to(equal("tactics"))
-
-        with it("should attribute story-test rules to stories"):
-            expect(self.rules["test-story-driven"].practice).to(equal("stories"))
-            expect(self.rules["test-story-driven"].fidelity).to(equal("acceptance_tests"))
 
     with context("whose rules collection injects on matching paths"):
         with before.each:

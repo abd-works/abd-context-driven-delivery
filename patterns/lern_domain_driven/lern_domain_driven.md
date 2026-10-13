@@ -12,6 +12,99 @@ and CleanEngineering already enforce, not a restatement of them.
 `acceptance_tests` with `format="typescript"`; production code arrives via
 Stories' `ce()` companion at `code` / `typescript`.
 
+One aggregate. `{Domain}Client` and `{Domain}Node` extend `{Domain}`. The view paints the client. The route asks the node. The node persists through the repository. The repository owns the JSON file.
+
+| Layer | File | Role |
+|---|---|---|
+| Boot | `packages/<epicSlug>/app.ts`, `serve.ts`, `main.tsx` | Start Express and Vite. Mount the first view. |
+| View | `src/…/<aggregate>/<screen-slug>.tsx` | Hold the client in React state. Paint fields and actions. |
+| Client | `<aggregate>-client.tsx` | `{Domain}Client`. Field changes return a new instance. Call the route. |
+| Routes | `<aggregate>-routes.ts` | Parse the request. Call the node. Return `destination`. |
+| Node | `<aggregate>-node.ts` | `{Domain}Node`. Map the step to a path. Repository I/O. |
+| Domain | `<aggregate>.ts` | Aggregate root, value objects, `{Domain}Repository`. Framework-free. |
+| Store | `<aggregate>.json` | One lowdb file. The repository is the only writer. |
+
+1. Boot mounts the view for the current path.
+2. The view constructs `{Domain}Client` and paints its fields.
+3. A field edit replaces React state with a new client.
+4. Submit calls the aggregate route.
+5. The route builds `{Domain}Node` and runs the domain operation.
+6. The node calls `{Domain}Repository` (`load`, `create`, `search`, or `update`).
+7. The repository runs Zod `.parse()` and writes `<aggregate>.json`.
+8. The route asks `{Domain}Node.destination` and returns that path.
+9. The next view in the aggregate folder mounts.
+
+```mermaid
+classDiagram
+  class Domain {
+    <<aggregate root>>
+    +operation()
+  }
+  class ValueObject {
+    <<value object>>
+  }
+  class Repository {
+    <<interface>>
+    +load(id)
+    +create(input)
+    +search(query)
+    +update(root)
+  }
+  class DomainNode {
+    +destination()
+  }
+  class DomainClient {
+    +withField()
+  }
+  class View {
+    <<React>>
+  }
+  class Routes
+  class JsonStore {
+    <<lowdb>>
+  }
+
+  Domain <|-- DomainNode
+  Domain <|-- DomainClient
+  Domain o-- ValueObject
+  Repository ..> Domain : root
+  DomainNode --> Repository
+  Repository --> JsonStore
+  View --> DomainClient : renders
+  DomainClient --> Routes : HTTP
+  Routes --> DomainNode : asks
+```
+
+```mermaid
+sequenceDiagram
+  actor User
+  participant Boot
+  participant View
+  participant Client as DomainClient
+  participant Routes
+  participant Node as DomainNode
+  participant Repository
+  participant Store as JsonStore
+
+  Boot->>View: mount screen
+  View->>Client: new client
+  User->>View: edit field
+  View->>Client: withField
+  Client-->>View: new client
+  User->>View: submit
+  View->>Client: host operation
+  Client->>Routes: HTTP
+  Routes->>Node: domain operation
+  Node->>Repository: create or update
+  Repository->>Store: Zod parse, write JSON
+  Store-->>Repository: root
+  Repository-->>Node: root
+  Routes->>Node: destination
+  Node-->>Routes: next path
+  Routes-->>View: next path
+  View->>View: mount next view
+```
+
 ---
 
 ## Guidance
@@ -46,8 +139,8 @@ callers never open the JSON store themselves.
 
 Domain tiers, views, the node file, the client file, and one route file live
 under `src/<boundedContext>/<aggregate>/`. Epic packages under
-`packages/<epicSlug>/` hold process boot and the shell only — they import the
-aggregate through `@src`.
+`packages/<epicSlug>/` hold process boot only — they import the aggregate
+through `@src`.
 
 ```
 src/
@@ -60,20 +153,19 @@ src/
       <aggregate>-routes.ts             ← one route file for this aggregate
       <aggregate>.json                  ← lowdb store for this aggregate
 
-packages/<epicSlug>/                    ← epic shell — boot only
+packages/<epicSlug>/                    ← epic package — boot only
   app.ts / serve.ts / main.tsx          ← Express + Vite process boot
   package.json / index.html / vite.config.ts
-  <epic-slug>-view.tsx                  ← epic shell view
-  <epic-slug>-redirect.tsx              ← fetches the node destination, mounts the view
 ```
 
 A view, the client file, and the node file are siblings in the aggregate
 folder. The view renders the client. The node selects the view. The aggregate
-has one route file.
+has one route file. Views are domain files, the same as the client and the node.
 
-Rule `epic-package-screens-only` governs the split. Do **not** put
-`<aggregate>.ts`, `<aggregate>-node.ts`, `<aggregate>-client.tsx`, views, or
-the route file under the epic package.
+Rule `epic-package-screens-only` governs the split. Keep views in the aggregate
+folder. Do **not** put `<aggregate>.ts`, `<aggregate>-node.ts`,
+`<aggregate>-client.tsx`, views, `*-view.tsx`, `*-redirect.tsx`, or the route
+file under the epic package.
 
 Rule `domain-core-file-matches-folder-slug` governs filenames: kebab-case core
 files (`<aggregate>/<aggregate>.ts`), PascalCase exported types (`{Domain}`).
@@ -160,9 +252,9 @@ client exposes. Field entry, touched flags, requirement strings, and host
 operations stay on the client. The node selects the next view (rule
 `views-render-only`).
 
-The epic shell uses `<epic-slug>-view.tsx`. Aggregate views use kebab-case
-filenames (`<screen-slug>.tsx`) beside the client file and the node file.
-Exported React components end in `View` (rule `consistent-view-naming`).
+Aggregate views use kebab-case filenames (`<screen-slug>.tsx`) beside the
+client file and the node file. Exported React components end in `View` (rule
+`consistent-view-naming`).
 
 ---
 
@@ -192,31 +284,33 @@ the one route file. Rules `use-valid-package-names` and
 
 ### Testing architecture
 
-One sub-epic folder under `tests/<epic-slug>/<sub-epic-slug>/` holds one story
-and three ways to run it. The shape is the onboard-a-customer tests: Create
+One sub-epic folder under `tests/<epic-slug>/<sub-epic-slug>/` states each
+story once and runs it on the entity and on the node. Playwright is an
+optional screen check. The shape is the onboard-a-customer tests: Create
 Customer and Authenticate User.
 
 | File | What it does |
 |---|---|
-| `<snake>.story.shared.ts` | States the story once. `shareStory` holds Given, When, and Then. It imports `examples/` and calls the domain operation. |
+| `<snake>.story.shared.ts` | States each story once. `shareStory` holds Given, When, and Then. It imports `examples/` and calls the domain operation. |
 | `<snake>.story.domain.spec.ts` | Runs that shared story with the domain repository. This proves the entity. |
-| `<snake>.story.server.spec.ts` | Runs that shared story with the node repository, and asks the route for the destination. This proves the node. |
-| `<snake>.story.playwright.ts` | Runs that shared story in the browser. The screen shows the destination. This proves the view. |
+| `<snake>.story.server.spec.ts` | Runs that same shared story with the node repository. Adds a scenario only for a route result the shared story does not cover. |
+| `<snake>.story.playwright.ts` | Optional. Tests browser interaction the domain and server specs cannot see. States its own screen story. |
 | `examples/<concept>.examples.ts` | Seed data for the entity. The shared story imports it. The file exports data, not a repository. |
 
-`domain-runs-entity`, `server-runs-node`, and `playwright-displays-view` are
-those three runs. `shared-states-story` is the shared file stating the story
-they all import.
+`shared-states-story` is the shared file. `domain-runs-entity` and
+`server-runs-node` run that file. A Playwright file covers browser interaction
+the other two leave unseen.
 
-Rules `test-story-driven`, `scaffold-test-scripts`, `use-thorough-e2e-tests`,
-and `pml-artifact-layout` govern these files.
+Rules `reduce-story-overlap`, `scaffold-test-scripts`,
+`playwright-tests-browser-interaction`, and `pml-artifact-layout` govern these
+files.
 
 ### UX hand-off
 
 Screens and navigation for this slice were designed upstream by `ux` before
 this tool runs. `generate` cites that artifact under **Sources / context** on
-the touched view files (`src/<boundedContext>/<aggregate>/*.tsx` and the epic
-shell `*-view.tsx`) — it does not call `ux` itself.
+the touched view files (`src/<boundedContext>/<aggregate>/*.tsx`) — it does
+not call `ux` itself.
 
 ### Generating stories — cross-aggregate sync
 
@@ -248,6 +342,8 @@ options; do not write story files until the answer is in
 If the slice is a single aggregate, record `single-aggregate` under that
 heading and skip the question.
 
+## Overview
+
 ---
 
 ## Generate
@@ -255,16 +351,18 @@ heading and skip the question.
 1. Follow **session_guidance**. Scaffold each aggregate under
    `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`,
    `<aggregate>-client.tsx`, the views, one `<aggregate>-routes.ts`,
-   `<aggregate>.json`) and the epic shell under `packages/<epicSlug>/` (boot,
-   epic view, redirect). Import the aggregate through `@src`.
+   `<aggregate>.json`) and the epic shell under `packages/<epicSlug>/`
+   (boot only: `app.ts`, `serve.ts`, `main.tsx`). Import the aggregate
+   through `@src`.
 2. **`ask-cross-aggregate-sync`** — if more than one aggregate is in play,
    AskQuestion as specified above and persist the answer **before** calling
    the Stories companion.
 3. Call guidance on the Stories companion. For each sub-epic write
-   `<snake>.story.shared.ts`, then `<snake>.story.domain.spec.ts`,
-   `<snake>.story.server.spec.ts`, and `<snake>.story.playwright.ts`, plus
-   `examples/`. Specs first — small RED cycles before production. Pass that
-   companion to this action as a separate tools run.
+   `<snake>.story.shared.ts`, then `<snake>.story.domain.spec.ts` and
+   `<snake>.story.server.spec.ts` that run that shared story, plus
+   `examples/`. Add `<snake>.story.playwright.ts` only for browser interaction
+   those specs cannot see. Specs first — small RED cycles before production.
+   Pass that companion to this action as a separate tools run.
 4. Cite the ux screen/navigation artifact for this slice under **Sources /
    context** on the touched view files — this tool does not call `ux` itself.
 5. Run validate. If it fails, fix and validate again until it passes.
@@ -283,7 +381,7 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 
 ### Layout and tiers
 
-- **`epic-package-screens-only`** — Keep the aggregate under `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, one `<aggregate>-routes.ts`, and the json store). Limit `packages/<epicSlug>/` to epic boot (`app.ts`, `serve.ts`, `main.tsx`, `*-view.tsx`, `*-redirect.tsx`) — no `*-node.ts`, `*-client.tsx`, views, route file, `source/`, or `data/` tree under the epic package.
+- **`epic-package-screens-only`** — Views belong to the domain. Keep the aggregate under `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, one `<aggregate>-routes.ts`, and the json store). Limit `packages/<epicSlug>/` to epic boot (`app.ts`, `serve.ts`, `main.tsx`) — no `*-view.tsx`, `*-redirect.tsx`, `*-node.ts`, `*-client.tsx`, views, route file, `source/`, or `data/` tree under the epic package.
 - **`domain-core-file-matches-folder-slug`** — Name the domain core file after the aggregate folder slug in kebab-case (`src/<boundedContext>/<aggregate>/<aggregate>.ts`). Keep exported classes PascalCase (`{Domain}`). Place `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, and one route file in that same aggregate folder.
 - **`node-tier-uses-node-suffix`** — Name the Node.js LERN tier with the `Node` suffix and `<domain>-node.ts` filenames (`{Domain}Node`). Type request-context fields as `*Node`, not `Server`. The repository is `*Repository`, never `*RepositoryNode`.
 - **`client-subtypes-domain-hosts-browser-logic`** — For each aggregate folder, derive `<aggregate>.ts`, `<aggregate>-client.tsx`, and `<aggregate>-node.ts` from the folder slug. The `*Client` and `*Node` classes extend the core domain class. The view renders the client. The node selects the view. Domain operations on the core are the operations the client hosts for the browser; field changes return a new client instance for React state.
@@ -318,7 +416,7 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 
 ### Testing and story generation
 
-- **`test-story-driven`** — Each sub-epic states the story once in `<snake>.story.shared.ts`. The domain spec runs it on the entity, the server spec runs it on the node, and the Playwright spec displays it on the view.
+- **`reduce-story-overlap`** — Each sub-epic states each story once in `<snake>.story.shared.ts`. The domain spec runs that story on the entity repository. The server spec runs that same story on the node repository. A scenario's Given, When, and Then stay in the shared story; domain and server specs run it with `.run()`, `runAll()`, or `withScenario().run()`. When two files would assert the same outcome, keep that assertion in the shared story and run it from both tiers. A server spec adds a scenario only for an HTTP or route result the shared story does not cover. A Playwright file adds a screen story only for interaction the shared story does not cover.
 - **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`, `test-e2e.sh`, `test-e2e.ps1` at the workspace root; Vitest and Playwright stay separate.
-- **`use-thorough-e2e-tests`** — E2E tests are independent (no wiping entire JSON stores between tests); delete only aggregate roots the test created.
+- **`playwright-tests-browser-interaction`** — Playwright tests interaction the domain spec and the server spec cannot see: a rendered screen, navigation, and controls the user operates in the browser. The file is optional. It states its own screen story. It leaves the shared story to the domain spec and the server spec.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.

@@ -21,7 +21,7 @@ from mamba import before, context, description, it
 
 from harness.guidance.guidance import PracticeGuidance
 from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
-from harness.codeQl_graph.graph import Graph
+from harness.graph.graph import Graph
 from harness.mcp.mcp_server import McpServer
 from harness.session import Session
 
