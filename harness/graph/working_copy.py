@@ -275,18 +275,9 @@ def _class_span(text: str, name: str) -> tuple[str, int]:
 
 
 def _stereotyped_name(text: str, name: str) -> str:
-    """Class name plus the <<stereotype>> tags on the comment above the declaration."""
-    match = re.search(rf"(?:export\s+)?(?:abstract\s+)?class\s+{re.escape(name)}\b", text)
-    if match is None:
-        return name
-    prefix = text[max(0, match.start() - 240) : match.start()]
-    comment = re.search(r"/\*\*([\s\S]*?)\*/\s*$", prefix)
-    if comment is None:
-        return name
-    tags = re.findall(r"<<[^>]+>>", comment.group(1))
-    if not tags:
-        return name
-    return f"{name} {' '.join(tags)}"
+    from practices.ddd.model.stereotypes import class_declaration_decorated_name
+
+    return class_declaration_decorated_name(text, name)
 
 
 def _class_names(root: Path) -> set[str]:

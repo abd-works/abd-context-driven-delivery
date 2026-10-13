@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import re
 
-from practices.ddd.model.stereotypes import class_stereotypes, inferred_tactical_kind, plain_class_name
+from practices.ddd.model.stereotypes import (
+    class_declaration_decorated_name,
+    class_stereotypes,
+    inferred_tactical_kind,
+    plain_class_name,
+)
 
 _TECHNICAL_SUFFIXES = frozenset({"result", "response", "dto", "request"})
 _AGENT_NOUNS = frozenset({"manager", "helper", "processor", "handler", "controller"})
@@ -23,17 +28,7 @@ _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
 
 
 def stereotyped_declaration_name(text: str, class_name: str) -> str:
-    match = re.search(rf"(?:export\s+)?(?:abstract\s+)?class\s+{re.escape(class_name)}\b", text)
-    if match is None:
-        return class_name
-    prefix = text[max(0, match.start() - 240) : match.start()]
-    comment = re.search(r"/\*\*([\s\S]*?)\*/\s*$", prefix)
-    if comment is None:
-        return class_name
-    tags = re.findall(r"<<[^>]+>>", comment.group(1))
-    if not tags:
-        return class_name
-    return f"{class_name} {' '.join(tags)}"
+    return class_declaration_decorated_name(text, class_name)
 
 
 def class_names_in_text(context, node) -> set[str]:

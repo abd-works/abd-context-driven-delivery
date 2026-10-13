@@ -84,7 +84,10 @@ class BuildingBlocksFidelityRequiresTacticalStereotype(PracticeGraphRule):
     def check(self, node, context) -> list[str]:
         if has_tactical_stereotype(context, node):
             return []
-        return [f"Class '{node.name}' lacks a tactical stereotype (<<Entity>>, <<Value Object>>, …)."]
+        return [
+            f"Class '{node.name}' lacks a tactical stereotype "
+            f"(<<Entity>>, <<Repository>>, or code @entity / @repository on the class)."
+        ]
 
 
 class DomainConceptsNotTechnicalNames(PracticeGraphRule):

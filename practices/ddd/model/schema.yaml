@@ -3,6 +3,7 @@
 #   module → Module (BoundedContext, Aggregate)
 #   class → OoadClass (Entity, ValueObject, Repository, …)
 #   property → Property (DomainEvent)
+# Tactical markers: model/sketch use <<Repository>>; code may use @repository / @entity on the class.
 # Python nodes in nodes.py subclass the same CE model types; graph rules inherit from schema.
 # Pattern overlays may use ``is: ddd.entityRoot`` to extend a DDD type.
 # Top: a collection of bounded contexts or aggregates is required. Everything below is a def or sub-def.
