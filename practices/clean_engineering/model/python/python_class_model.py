@@ -182,8 +182,7 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
 
 
     def _operation_from_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> Operation:
-        params = [a.arg for a in node.args.args if a.arg != "self"]
-        params += [a.arg for a in node.args.kwonlyargs]
+        params = self._parameter_strings(node)
         ret = ""
         if node.returns is not None:
             ret = ast.unparse(node.returns)
@@ -215,6 +214,17 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
         )
         apply_python_function_metrics(operation, node)
         return operation
+
+    def _parameter_strings(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
+        items: list[str] = []
+        for arg in list(node.args.args) + list(node.args.kwonlyargs):
+            if arg.arg == "self":
+                continue
+            if arg.annotation is not None:
+                items.append(f"{arg.arg}: {ast.unparse(arg.annotation)}")
+            else:
+                items.append(arg.arg)
+        return items
 
     def _constructed_types(self, func: ast.AST) -> list[tuple[str, int]]:
         found: list[tuple[str, int]] = []

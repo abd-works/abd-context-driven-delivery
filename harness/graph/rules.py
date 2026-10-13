@@ -1,4 +1,4 @@
-"""Run practice graph rules and record violations on each node's rules collection."""
+"""Run practice graph rules and attach violations on each node's rules collection."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 from harness.graph.node_rules import attach_node_rules
 from harness.graph.practice_rules_registry import checks_for_node, checks_for_practice
 from harness.graph.rule_context import RuleCheckContext
-from harness.graph.schema_rules import bind_practice_rules
+from harness.graph.schema_rules import bind_practice_rules, slugs_for_type
 
 
 def attach_rules(practice) -> None:
@@ -20,9 +20,16 @@ def attach_rules(practice) -> None:
     context = RuleCheckContext(practice, root)
     rows_by_slug: dict[str, list[list[str]]] = {}
 
+    def schema_slugs_for(node) -> frozenset[str]:
+        if hasattr(node, "_rules") and node._rules is not None:
+            return frozenset(node._rules.slugs())
+        return frozenset(slugs_for_type(node.practice.name, node.type))
+
     def record(slug: str, node_id: str, message: str) -> None:
         node = practice.registered(node_id)
         if node is None:
+            return
+        if slug not in schema_slugs_for(node):
             return
         if not hasattr(node, "_rules") or node._rules is None:
             attach_node_rules(node)
@@ -37,7 +44,10 @@ def attach_rules(practice) -> None:
         for node in nodes:
             if not hasattr(node, "_rules") or node._rules is None:
                 attach_node_rules(node)
+            allowed = schema_slugs_for(node)
             for check in checks_for_node(node).values():
+                if check.slug not in allowed:
+                    continue
                 for message in check.check(node, context):
                     record(check.slug, node.node_id, message)
 

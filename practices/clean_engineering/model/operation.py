@@ -96,6 +96,7 @@ class Operation(OoadNode):
         self.has_bare_catch: bool = False
         self.swallows_exceptions: bool = False
         self.unnamed_literal_numbers: list[str] = []
+        self.narrative_comment_lines: int = 0
         for key, value in fields.items():
             setattr(self, key, value)
         if parameters:
@@ -143,6 +144,7 @@ class Operation(OoadNode):
         cloned.has_bare_catch = self.has_bare_catch
         cloned.swallows_exceptions = self.swallows_exceptions
         cloned.unnamed_literal_numbers = list(self.unnamed_literal_numbers)
+        cloned.narrative_comment_lines = self.narrative_comment_lines
         return cloned
 
     def save(self) -> str:
@@ -188,6 +190,7 @@ class Operation(OoadNode):
         self.has_bare_catch = copied.has_bare_catch
         self.swallows_exceptions = copied.swallows_exceptions
         self.unnamed_literal_numbers = list(copied.unnamed_literal_numbers)
+        self.narrative_comment_lines = copied.narrative_comment_lines
 
     def load_parameters(self) -> None:
         while self.has_more_parameter():

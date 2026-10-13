@@ -14,6 +14,10 @@ _PY_EXCEPT = re.compile(r"\bexcept\s*(?::|\([^)]*\)\s*:)")
 _STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
 _NUMBER = re.compile(r"\b(\d+(?:\.\d+)?)\b")
 _SAFE_NUMBERS = {0, 1, 2, -1, 0.0, 1.0, 0.5, 10, 100}
+_NARRATIVE_COMMENT = re.compile(
+    r"(?:transient|value object|carries|implementation|see also|cross-ref)",
+    re.IGNORECASE,
+)
 
 
 def _brace_body(text: str, open_index: int) -> str | None:
@@ -112,6 +116,7 @@ def apply_python_function_metrics(operation: "Operation", node: ast.FunctionDef 
     operation.has_bare_catch = bare
     operation.swallows_exceptions = swallow
     operation.unnamed_literal_numbers = _python_unnamed_numbers(node)
+    operation.narrative_comment_lines = 0
 
 
 def _python_control_flow_depth(node: ast.AST) -> int:

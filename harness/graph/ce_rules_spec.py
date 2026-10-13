@@ -76,6 +76,18 @@ with description("Clean Engineering graph rules (python .examples pairs)"):
     with context("prefer-instance-operations"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("prefer-instance-operations")
+    with context("keep-classes-single-responsibility"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("keep-classes-single-responsibility")
+    with context("use-typed-signatures"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("use-typed-signatures")
+    with context("limit-comments"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("limit-comments")
+    with context("prefer-class-operations"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("prefer-class-operations")
 
 
 with description("Clean Engineering graph rules (multi-language scanner fixtures)"):
