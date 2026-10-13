@@ -12,6 +12,7 @@ from practices.bdd.rules.spec_helpers import (
     is_spec_file,
     plain_english_violations,
 )
+from practices.bdd.rules.layer_isolation import LayerIsolation
 from practices.bdd.rules.observable_behavior import ObservableBehavior
 
 _EXPECT_PRIVATE = re.compile(r"(?:expect\s*\([^)]*\._\w+|expect\([^)]*\)\.to\([^)]*\._\w+)")
@@ -63,4 +64,5 @@ SPEC_RULES: tuple[PracticeGraphRule, ...] = (
     ObservableBehavior(),
     PlainEnglishOnly(),
     SignatureMarkers(),
+    LayerIsolation(),
 )

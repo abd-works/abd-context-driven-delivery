@@ -39,6 +39,9 @@ module:
     - low-coupling
     - layer-separation
     - nesting
+    - missing-module-context
+    - language-modules-one-section
+    - modules-not-model-blocks
 
 package:
   id: dotPath
@@ -80,6 +83,9 @@ class:
     - eliminate-duplication
     - one-canonical-model-document
     - no-redundant-relationship-paths
+    - missing-module-context
+    - language-modules-one-section
+    - modules-not-model-blocks
 
 relationship:
   id: dotPath

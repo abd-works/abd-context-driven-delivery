@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 from harness.graph.practice_rule import PracticeGraphRule
+from practices.clean_engineering.model.module_context_files import ModuleContextFiles
 
 _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
 
@@ -53,3 +55,48 @@ def _module_source_text(context, node) -> str:
         except OSError:
             continue
     return "\n".join(chunks)
+
+
+def _class_py_path(context, node) -> Path | None:
+    if context.source_root is None or not node.source.file:
+        return None
+    path = context.source_root / node.source.file
+    return path if path.suffix.lower() == ".py" and path.is_file() else None
+
+
+def _context_row(node, context) -> dict:
+    path = _class_py_path(context, node)
+    return {"name": node.name, "message": str(path) if path else "", "contributor": node.name}
+
+
+class MissingModuleContext(PracticeGraphRule):
+    slug = "missing-module-context"
+    node_types = ("OoadClass",)
+
+    def check(self, node, context) -> list[str]:
+        if _class_py_path(context, node) is None:
+            return []
+        hits = ModuleContextFiles().rows_for_missing_module_context([_context_row(node, context)])
+        return [hit["message"] for hit in hits]
+
+
+class LanguageModulesOneSection(PracticeGraphRule):
+    slug = "language-modules-one-section"
+    node_types = ("OoadClass",)
+
+    def check(self, node, context) -> list[str]:
+        if _class_py_path(context, node) is None:
+            return []
+        hits = ModuleContextFiles().rows_for_language_modules_one_section([_context_row(node, context)])
+        return [hit["message"] for hit in hits]
+
+
+class ModulesNotModelBlocks(PracticeGraphRule):
+    slug = "modules-not-model-blocks"
+    node_types = ("OoadClass",)
+
+    def check(self, node, context) -> list[str]:
+        if _class_py_path(context, node) is None:
+            return []
+        hits = ModuleContextFiles().rows_for_modules_not_model_blocks([_context_row(node, context)])
+        return [hit["message"] for hit in hits]

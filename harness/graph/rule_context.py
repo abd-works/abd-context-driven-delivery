@@ -200,6 +200,9 @@ def _operation_name_from_param_node(node) -> str:
 def _owner_class_name(node) -> str:
     parts = str(node.node_id or "").split(":")
     if len(parts) >= 2 and parts[-1]:
-        return parts[-1]
+        tail = parts[-1]
+        if "." in tail:
+            return tail.rsplit(".", 1)[0]
+        return tail
     match = re.search(r":([A-Za-z]\w*)$", str(node.node_id or ""))
     return match.group(1) if match else ""

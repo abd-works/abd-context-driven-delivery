@@ -28,6 +28,7 @@ from harness.graph.ce_multi_language_fixtures import (
     _USE_EXCEPTIONS_PROPERLY_CLEAN,
     _USE_EXCEPTIONS_PROPERLY_FAULT,
 )
+from harness.graph.ce_module_example_harness import assert_module_example_pair
 from harness.graph.ce_rule_eval_harness import assert_python_example_pair, assert_rule_pair
 
 _LANGS = ("python", "typescript", "javascript")
@@ -100,6 +101,15 @@ with description("Clean Engineering graph rules (python .examples pairs)"):
     with context("layer-separation"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("layer-separation")
+    with context("missing-module-context"):
+        with it("should flag a folder without module-context.md"):
+            assert_module_example_pair("missing-module-context")
+    with context("language-modules-one-section"):
+        with it("should flag a Modules heading in module-context"):
+            assert_module_example_pair("language-modules-one-section")
+    with context("modules-not-model-blocks"):
+        with it("should flag model dump blocks in module-context"):
+            assert_module_example_pair("modules-not-model-blocks")
 
 
 with description("Clean Engineering graph rules (multi-language scanner fixtures)"):

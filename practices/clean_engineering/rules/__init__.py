@@ -12,7 +12,13 @@ from practices.clean_engineering.model.rules_shared.operation_checks import CODE
 from practices.clean_engineering.model.rules_shared.prefer_class_operations import PreferClassOperations
 from practices.clean_engineering.model.rules_shared.typed_and_comments import LimitComments, UseTypedSignatures
 from practices.clean_engineering.rules.limit_operation_parameters import LimitOperationParameters
-from practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint, PublicSeamOnly
+from practices.clean_engineering.rules.module_graph_rules import (
+    LanguageModulesOneSection,
+    MissingModuleContext,
+    ModulesNotModelBlocks,
+    NamedSeamAndConstraint,
+    PublicSeamOnly,
+)
 from practices.clean_engineering.rules.practice_wide_rules import (
     DeepModule,
     ExtensionsLiveWithTheDomain,
@@ -24,6 +30,9 @@ RULES: tuple = (
     LimitOperationParameters(),
     NamedSeamAndConstraint(),
     PublicSeamOnly(),
+    MissingModuleContext(),
+    LanguageModulesOneSection(),
+    ModulesNotModelBlocks(),
     PreferClassOperations(),
     KeepClassesSingleResponsibility(),
     UseTypedSignatures(),
