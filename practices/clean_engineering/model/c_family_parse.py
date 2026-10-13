@@ -168,9 +168,18 @@ class CFamilyParse:
             append_invariant(op, note)
         op.callees = callees
         op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
+        op.body_fingerprint = self._body_fingerprint(body)
         if op.name in {"constructor", "__init__"}:
             op.constructed_types = self._constructed_types(body, op.line or 1)
         return op
+
+    def _body_fingerprint(self, body: str) -> str:
+        import hashlib
+
+        normalized = re.sub(r"\s+", " ", body.strip())
+        if len(normalized) < 40:
+            return ""
+        return hashlib.sha256(normalized.encode()).hexdigest()[:24]
 
     def _constructed_types(self, body: str, start_line: int) -> list[tuple[str, int]]:
         found: list[tuple[str, int]] = []

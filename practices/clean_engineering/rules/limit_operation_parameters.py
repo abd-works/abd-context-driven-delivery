@@ -1,3 +1,5 @@
+"""Graph + model — applies to every code channel."""
+
 from __future__ import annotations
 
 from harness.graph.practice_rule import PracticeGraphRule

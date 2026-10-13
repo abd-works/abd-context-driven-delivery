@@ -1,8 +1,8 @@
-"""DDD graph rule classes — add checks ported from practices/ddd/scanners on main."""
+"""DDD graph rule classes."""
 
-from harness.graph.practice_rule import PracticeGraphRule
+from practices.ddd.rules.tactical import FlaccidDataObject, PrivateMethodNaming
 
-RULES: tuple[PracticeGraphRule, ...] = ()
-BY_SLUG: dict[str, PracticeGraphRule] = {}
+RULES: tuple = (PrivateMethodNaming(), FlaccidDataObject())
+BY_SLUG = {rule.slug: rule for rule in RULES}
 
 __all__ = ["BY_SLUG", "RULES"]

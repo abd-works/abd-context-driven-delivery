@@ -63,6 +63,7 @@ class Operation(OoadNode):
         self.invariants: List = []
         self.line: int | None = None
         self.line_count: int | None = None
+        self.body_fingerprint: str = ""
         self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
         for key, value in fields.items():
@@ -102,6 +103,7 @@ class Operation(OoadNode):
         cloned.invariants = [item.clone() for item in self.invariants]
         cloned.line = self.line
         cloned.line_count = self.line_count
+        cloned.body_fingerprint = self.body_fingerprint
         cloned.constructed_types = list(self.constructed_types)
         cloned.is_property = self.is_property
         return cloned
@@ -139,6 +141,7 @@ class Operation(OoadNode):
         self.invariants = copied.invariants
         self.line = copied.line
         self.line_count = copied.line_count
+        self.body_fingerprint = copied.body_fingerprint
         self.constructed_types = list(copied.constructed_types)
         self.is_property = copied.is_property
 

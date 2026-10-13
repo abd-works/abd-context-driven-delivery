@@ -1,8 +1,8 @@
-"""UX graph rule classes — add checks ported from historical scanners on main."""
+"""UX graph rule classes."""
 
-from harness.graph.practice_rule import PracticeGraphRule
+from practices.ux.rules.screen_rules import ScreenNamesUseDomainTerms, ScreenStoryBudget
 
-RULES: tuple[PracticeGraphRule, ...] = ()
-BY_SLUG: dict[str, PracticeGraphRule] = {}
+RULES: tuple = (ScreenStoryBudget(), ScreenNamesUseDomainTerms())
+BY_SLUG = {rule.slug: rule for rule in RULES}
 
 __all__ = ["BY_SLUG", "RULES"]

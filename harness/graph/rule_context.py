@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -38,6 +39,8 @@ class RuleCheckContext:
         self.source_root = source_root
         self._files: dict[str, str] = {}
         self._ce_models: dict[str, CleanEngineeringModel] = {}
+        self._story_model = None
+        self._story_model_failed = False
 
     def text(self, node) -> str:
         if not self.source_root or not node.source.file:
@@ -108,6 +111,72 @@ class RuleCheckContext:
                 if edge.parent is node:
                     count += 1
         return count
+
+    def children(self, node, edge_kind: str) -> list:
+        return [
+            edge.child
+            for edge in self.practice.edges.get(edge_kind, [])
+            if edge.parent is node
+        ]
+
+    def module_folder(self, node) -> Path | None:
+        if not self.source_root or not node.source.file:
+            return None
+        folder = node.source.file.strip("./")
+        return self.source_root / folder if folder else self.source_root
+
+    def story_model(self):
+        if self._story_model_failed:
+            return None
+        if self._story_model is not None:
+            return self._story_model
+        if not self.source_root:
+            self._story_model_failed = True
+            return None
+        try:
+            from practices.stories.model.story_model import StoryModel
+
+            self._story_model = StoryModel.load(self.source_root)
+        except Exception:
+            self._story_model_failed = True
+            return None
+        return self._story_model
+
+    def operation_fingerprint(self, node, operation: Operation) -> str:
+        span = self.span(node).strip()
+        if not span:
+            return ""
+        normalized = re.sub(r"\s+", " ", span)
+        return hashlib.sha256(normalized.encode()).hexdigest()[:24]
+
+    def ce_parameter(self, node):
+        if node.type != "Parameter":
+            return None
+        owner = _owner_class_name(node)
+        op_name = _operation_name_from_param_node(node)
+        model = self.clean_engineering_model(node)
+        if model is None:
+            return None
+        for module in model.modules:
+            for oclass in module.classes:
+                if owner and oclass.name != owner:
+                    continue
+                for op in oclass.operations:
+                    if op_name and op.name != op_name:
+                        continue
+                    for param in op.parameters:
+                        if param.name == node.name:
+                            return param
+        return None
+
+
+def _operation_name_from_param_node(node) -> str:
+    parts = str(node.node_id or "").split(":")
+    if len(parts) >= 2:
+        tail = parts[-1]
+        if "." in tail:
+            return tail.rsplit(".", 1)[-1]
+    return ""
 
 
 def _owner_class_name(node) -> str:
