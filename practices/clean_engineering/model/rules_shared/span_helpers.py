@@ -37,6 +37,30 @@ def class_body(text: str, name: str) -> str:
     return brace_body(text, match.end() - 1) or ""
 
 
+def method_body(text: str, method_name: str) -> str:
+    match = re.search(rf"\bdef\s+{re.escape(method_name)}\s*\([^)]*\)\s*:", text)
+    if match is None:
+        match = re.search(rf"\b{re.escape(method_name)}\s*\([^)]*\)\s*\{{", text)
+    if match is None:
+        return ""
+    if "def " in match.group(0):
+        lines = text[match.end() :].splitlines()
+        body_lines: list[str] = []
+        if not lines:
+            return ""
+        base_indent = len(lines[0].expandtabs()) - len(lines[0].lstrip()) if lines[0].strip() else 0
+        for line in lines:
+            if not line.strip():
+                body_lines.append(line)
+                continue
+            indent = len(line.expandtabs()) - len(line.lstrip())
+            if body_lines and indent <= base_indent and line.strip():
+                break
+            body_lines.append(line)
+        return "\n".join(body_lines)
+    return brace_body(text, match.end() - 1) or ""
+
+
 def constructor_body(class_body_text: str) -> str:
     match = re.search(r"\bconstructor\s*\([^)]*\)\s*\{", class_body_text)
     if match is None:

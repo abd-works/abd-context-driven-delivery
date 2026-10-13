@@ -107,6 +107,7 @@ def apply_brace_body_metrics(operation: "Operation", body: str) -> None:
     operation.has_bare_catch = bare_catch_in_text(body)
     operation.swallows_exceptions = swallowing_catch_in_text(body)
     operation.unnamed_literal_numbers = unnamed_literal_numbers_in_text(body)
+    operation.peer_private_access = bool(re.search(r"(?<![\w.])\w+\._\w+", body))
 
 
 def apply_python_function_metrics(operation: "Operation", node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
@@ -117,6 +118,17 @@ def apply_python_function_metrics(operation: "Operation", node: ast.FunctionDef 
     operation.swallows_exceptions = swallow
     operation.unnamed_literal_numbers = _python_unnamed_numbers(node)
     operation.narrative_comment_lines = 0
+    operation.peer_private_access = _python_peer_private_access(node)
+
+
+def _python_peer_private_access(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    params = {a.arg for a in node.args.args if a.arg != "self"}
+    params.update(a.arg for a in node.args.kwonlyargs)
+    for child in ast.walk(node):
+        if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name):
+            if child.value.id in params and child.attr.startswith("_"):
+                return True
+    return False
 
 
 def _python_control_flow_depth(node: ast.AST) -> int:

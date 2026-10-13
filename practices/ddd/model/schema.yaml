@@ -62,3 +62,52 @@ aggregate:
       - is: class
       - name: string
       - belongsTo: aggregate
+
+# Tactical DDD rules (CE rules still inherited via is: above).
+entityRoot:
+  rules:
+    - building-blocks-fidelity-requires-tactical-stereotype
+    - domain-concepts-not-technical-names
+    - private-method-naming
+    - flaccid-data-object-no-behavior
+    - no-orphaned-objects
+    - screen-interface-not-a-domain-object
+entity:
+  rules:
+    - building-blocks-fidelity-requires-tactical-stereotype
+    - domain-concepts-not-technical-names
+    - private-method-naming
+    - flaccid-data-object-no-behavior
+    - no-orphaned-objects
+    - screen-interface-not-a-domain-object
+valueObject:
+  rules:
+    - building-blocks-fidelity-requires-tactical-stereotype
+    - domain-concepts-not-technical-names
+    - private-method-naming
+    - flaccid-data-object-no-behavior
+    - no-orphaned-objects
+    - screen-interface-not-a-domain-object
+repository:
+  rules:
+    - building-blocks-fidelity-requires-tactical-stereotype
+    - domain-concepts-not-technical-names
+    - private-method-naming
+    - repository-is-collection-lifecycle
+    - load-with-identity-in-hand
+domainService:
+  rules:
+    - building-blocks-fidelity-requires-tactical-stereotype
+    - domain-concepts-not-technical-names
+    - private-method-naming
+    - service-is-homeless
+factory:
+  rules:
+    - building-blocks-fidelity-requires-tactical-stereotype
+    - domain-concepts-not-technical-names
+    - private-method-naming
+specification:
+  rules:
+    - building-blocks-fidelity-requires-tactical-stereotype
+    - domain-concepts-not-technical-names
+    - private-method-naming

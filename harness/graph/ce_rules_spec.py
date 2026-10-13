@@ -88,6 +88,18 @@ with description("Clean Engineering graph rules (python .examples pairs)"):
     with context("prefer-class-operations"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("prefer-class-operations")
+    with context("hide-inner-details"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("hide-inner-details")
+    with context("do-not-invent-parallel-object-models"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("do-not-invent-parallel-object-models")
+    with context("shape-classes-around-resources"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("shape-classes-around-resources")
+    with context("layer-separation"):
+        with it("should flag faultyAsset and accept repairedAsset"):
+            _example_pair("layer-separation")
 
 
 with description("Clean Engineering graph rules (multi-language scanner fixtures)"):

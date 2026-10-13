@@ -6,6 +6,7 @@ import re
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+from practices.clean_engineering.model.rules_shared.operation_semantics import SEMANTIC_RULES
 from practices.clean_engineering.model.rules_shared.span_helpers import (
     bare_catch_in_span,
     class_body,
@@ -315,4 +316,4 @@ CODE_RULES: tuple[PracticeGraphRule, ...] = (
     PreferInstanceOperations(),
     UsePropertyNotAccessor(),
     EliminateDuplication(),
-)
+) + SEMANTIC_RULES
