@@ -184,10 +184,16 @@ def _class_fact(practice, text: str, relative: str, module_id: str, cls, class_n
             continue
         if str(operation.name).startswith("_"):
             continue
+        from practices.clean_engineering.model.operation import operation_source_span
+
         span = _method_span(text, operation.name, getattr(operation, "line", None) or 1)
-        start = getattr(operation, "line", None) or span[0]
-        line_count = getattr(operation, "line_count", None)
-        end = start + line_count - 1 if line_count and line_count > 0 else span[1]
+        model_span = operation_source_span(operation)
+        if model_span is not None:
+            start, end = model_span
+        else:
+            start = getattr(operation, "line", None) or span[0]
+            line_count = getattr(operation, "line_count", None)
+            end = start + line_count - 1 if line_count and line_count > 0 else span[1]
         op_id = f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}"
         nodes.append([op_id, operation.name, "Operation", "clean_engineering", relative, start, end])
         edges.append([class_id, op_id, "owns", 2, "direct"])
@@ -309,21 +315,9 @@ def _class_id_named(nodes: list, name: str) -> str:
 
 
 def _method_span(text: str, name: str, fallback: int) -> tuple[int, int]:
-    match = re.search(rf"\b{re.escape(name)}\s*\([^)]*\)\s*(?::\s*[^{{]+)?\s*\{{", text)
-    if match is None:
-        return fallback, fallback
-    start = text[: match.start()].count("\n") + 1
-    depth = 0
-    opened = False
-    for index in range(match.end() - 1, len(text)):
-        if text[index] == "{":
-            depth += 1
-            opened = True
-        elif text[index] == "}":
-            depth -= 1
-            if opened and depth == 0:
-                return start, text[: index].count("\n") + 1
-    return start, start
+    from practices.clean_engineering.model.c_family_parse import CFamilyParse
+
+    return CFamilyParse.method_span_in_text(text, name, fallback)
 
 
 def _record_ddd(practice, root: Path, classes: list[dict]) -> None:

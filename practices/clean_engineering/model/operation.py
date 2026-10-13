@@ -2,7 +2,30 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from typing import List
+
+
+def operation_body_fingerprint(body: str) -> str:
+    """Stable hash of normalized method body text (shared by Python AST and C-family parse)."""
+    normalized = re.sub(r"\s+", " ", body.strip())
+    if len(normalized) < 40:
+        return ""
+    return hashlib.sha256(normalized.encode()).hexdigest()[:24]
+
+
+def operation_source_span(operation: "Operation") -> tuple[int, int] | None:
+    """1-based inclusive source lines for this operation when the model recorded them."""
+    start = operation.line
+    if not start:
+        return None
+    end = operation.end_line
+    if end is not None and end >= start:
+        return start, end
+    if operation.line_count and operation.line_count > 0:
+        return start, start + operation.line_count - 1
+    return None
 
 from harness.graph.bound_node import BoundChildren
 
@@ -62,6 +85,7 @@ class Operation(OoadNode):
         self._parameters = BoundChildren(self, "parameters")
         self.invariants: List = []
         self.line: int | None = None
+        self.end_line: int | None = None
         self.line_count: int | None = None
         self.body_fingerprint: str = ""
         self.constructed_types: list[tuple[str, int]] = []
@@ -102,6 +126,7 @@ class Operation(OoadNode):
         cloned.parameters = [parameter.clone() for parameter in self.parameters]
         cloned.invariants = [item.clone() for item in self.invariants]
         cloned.line = self.line
+        cloned.end_line = self.end_line
         cloned.line_count = self.line_count
         cloned.body_fingerprint = self.body_fingerprint
         cloned.constructed_types = list(self.constructed_types)
@@ -140,6 +165,7 @@ class Operation(OoadNode):
         self.parameters = copied.parameters
         self.invariants = copied.invariants
         self.line = copied.line
+        self.end_line = copied.end_line
         self.line_count = copied.line_count
         self.body_fingerprint = copied.body_fingerprint
         self.constructed_types = list(copied.constructed_types)

@@ -6,7 +6,6 @@ source themselves when the graph loads.
 from __future__ import annotations
 
 import ast
-import hashlib
 import re
 import sys
 from dataclasses import dataclass
@@ -26,6 +25,7 @@ from practices.clean_engineering.model.base_class_model import (
     companion_interface_name,
     is_interface_name,
 )
+from practices.clean_engineering.model.operation import operation_body_fingerprint
 from practices.clean_engineering.model.update_report import UpdateReport
 
 _MODULE_MARKER = re.compile(r"^#\s*===\s*(.+?)\s*===$", re.MULTILINE)
@@ -187,31 +187,25 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
         if node.returns is not None:
             ret = ast.unparse(node.returns)
         doc = (ast.get_docstring(node) or "").strip()
-        end = getattr(node, "end_lineno", None) or node.lineno
-        line_count = end - node.lineno + 1
+        end_line = getattr(node, "end_lineno", None) or node.lineno
+        line_count = end_line - node.lineno + 1
         constructed: list[tuple[str, int]] = []
         if node.name in {"__init__", "constructor"}:
             constructed = self._constructed_types(node)
         body_text = "\n".join(ast.unparse(stmt) for stmt in node.body)
-        fingerprint = self._body_fingerprint(body_text)
         return Operation(
             name=node.name,
             parameters=params,
             return_type=ret,
             description=doc,
             line=node.lineno,
+            end_line=end_line,
             line_count=line_count,
             constructed_types=constructed,
             callees=self._collect_callees(node),
             is_property=self._is_property(node),
-            body_fingerprint=fingerprint,
+            body_fingerprint=operation_body_fingerprint(body_text),
         )
-
-    def _body_fingerprint(self, body: str) -> str:
-        normalized = re.sub(r"\s+", " ", body.strip())
-        if len(normalized) < 40:
-            return ""
-        return hashlib.sha256(normalized.encode()).hexdigest()[:24]
 
     def _constructed_types(self, func: ast.AST) -> list[tuple[str, int]]:
         found: list[tuple[str, int]] = []

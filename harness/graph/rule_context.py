@@ -55,20 +55,18 @@ class RuleCheckContext:
         text = self.text(node)
         start = node.source.start_line
         end = node.source.end_line
-        if node.type == "Operation" and text and node.name:
-            relative = (node.source.file or "").lower()
+        if node.type == "Operation":
             matched = self.ce_operation(node)
-            if relative.endswith(".py") and matched is not None:
-                _oclass, operation = matched
-                if operation.line and operation.line_count:
-                    start = operation.line
-                    end = operation.line + operation.line_count - 1
-            elif relative.endswith((".ts", ".tsx", ".js", ".jsx", ".java", ".mjs")):
-                from harness.graph.working_copy import _method_span
+            if matched is not None:
+                from practices.clean_engineering.model.c_family_parse import CFamilyParse
+                from practices.clean_engineering.model.operation import operation_source_span
 
-                method_start, method_end = _method_span(text, node.name, start or 1)
-                if method_end >= method_start:
-                    start, end = method_start, method_end
+                _oclass, operation = matched
+                model_span = operation_source_span(operation)
+                if model_span is not None:
+                    start, end = model_span
+                elif text and node.name:
+                    start, end = CFamilyParse.method_span_in_text(text, node.name, start or 1)
         if not text or not start or not end or end < start:
             return text
         return "\n".join(text.splitlines()[start - 1 : end])
