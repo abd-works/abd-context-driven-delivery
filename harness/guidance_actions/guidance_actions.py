@@ -278,6 +278,10 @@ class GuidanceCatalog:
         if slug and slug not in refs:
             refs[slug] = ref
         for name, child in fidelities.items():
+            fidelity_ref = {"toolset": ref, "fidelity": name}
             child_slug = str(getattr(child, "slug", "") or "")
             if child_slug and child_slug not in refs:
-                refs[child_slug] = {"toolset": ref, "fidelity": name}
+                refs[child_slug] = fidelity_ref
+            for alias in {name, name.replace("_", "-")}:
+                if alias and alias not in refs:
+                    refs[alias] = fidelity_ref
