@@ -10,7 +10,7 @@ from practices.clean_engineering.model.rules_shared.span_helpers import (
     bare_catch_in_span,
     class_body,
     constructor_body,
-    brace_depth,
+    control_flow_depth,
     swallowing_catch_in_span,
     unnamed_numbers_in_span,
 )
@@ -94,7 +94,7 @@ class SimplifyControlFlow(PracticeGraphRule):
     limit = 3
 
     def check(self, node, context) -> list[str]:
-        depth = max(0, brace_depth(context.span(node)) - 1)
+        depth = control_flow_depth(context.span(node))
         if depth <= self.limit:
             return []
         return [f"Operation '{node.name}' nests control flow {depth} levels deep (max {self.limit})."]

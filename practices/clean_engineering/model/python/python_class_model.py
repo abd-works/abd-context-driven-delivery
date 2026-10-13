@@ -6,6 +6,7 @@ source themselves when the graph loads.
 from __future__ import annotations
 
 import ast
+import hashlib
 import re
 import sys
 from dataclasses import dataclass
@@ -191,6 +192,8 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
         constructed: list[tuple[str, int]] = []
         if node.name in {"__init__", "constructor"}:
             constructed = self._constructed_types(node)
+        body_text = "\n".join(ast.unparse(stmt) for stmt in node.body)
+        fingerprint = self._body_fingerprint(body_text)
         return Operation(
             name=node.name,
             parameters=params,
@@ -201,7 +204,14 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             constructed_types=constructed,
             callees=self._collect_callees(node),
             is_property=self._is_property(node),
+            body_fingerprint=fingerprint,
         )
+
+    def _body_fingerprint(self, body: str) -> str:
+        normalized = re.sub(r"\s+", " ", body.strip())
+        if len(normalized) < 40:
+            return ""
+        return hashlib.sha256(normalized.encode()).hexdigest()[:24]
 
     def _constructed_types(self, func: ast.AST) -> list[tuple[str, int]]:
         found: list[tuple[str, int]] = []

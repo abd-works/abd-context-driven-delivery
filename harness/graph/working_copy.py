@@ -185,8 +185,11 @@ def _class_fact(practice, text: str, relative: str, module_id: str, cls, class_n
         if str(operation.name).startswith("_"):
             continue
         span = _method_span(text, operation.name, getattr(operation, "line", None) or 1)
+        start = getattr(operation, "line", None) or span[0]
+        line_count = getattr(operation, "line_count", None)
+        end = start + line_count - 1 if line_count and line_count > 0 else span[1]
         op_id = f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}"
-        nodes.append([op_id, operation.name, "Operation", "clean_engineering", relative, span[0], span[1]])
+        nodes.append([op_id, operation.name, "Operation", "clean_engineering", relative, start, end])
         edges.append([class_id, op_id, "owns", 2, "direct"])
         for parameter in operation.parameters:
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
