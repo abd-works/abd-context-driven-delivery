@@ -62,6 +62,8 @@ class Operation(OoadNode):
         self._parameters = BoundChildren(self, "parameters")
         self.invariants: List = []
         self.line: int | None = None
+        self.line_count: int | None = None
+        self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
         for key, value in fields.items():
             setattr(self, key, value)
@@ -99,6 +101,8 @@ class Operation(OoadNode):
         cloned.parameters = [parameter.clone() for parameter in self.parameters]
         cloned.invariants = [item.clone() for item in self.invariants]
         cloned.line = self.line
+        cloned.line_count = self.line_count
+        cloned.constructed_types = list(self.constructed_types)
         cloned.is_property = self.is_property
         return cloned
 
@@ -134,6 +138,8 @@ class Operation(OoadNode):
         self.parameters = copied.parameters
         self.invariants = copied.invariants
         self.line = copied.line
+        self.line_count = copied.line_count
+        self.constructed_types = list(copied.constructed_types)
         self.is_property = copied.is_property
 
     def load_parameters(self) -> None:

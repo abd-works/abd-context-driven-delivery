@@ -1,4 +1,4 @@
-"""UX graph rule classes (schema slugs; checks added per rule)."""
+"""UX graph rule classes — add checks ported from historical scanners on main."""
 
 from harness.graph.practice_rule import PracticeGraphRule
 

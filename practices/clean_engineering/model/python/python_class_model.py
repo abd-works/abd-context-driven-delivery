@@ -186,15 +186,31 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
         if node.returns is not None:
             ret = ast.unparse(node.returns)
         doc = (ast.get_docstring(node) or "").strip()
+        end = getattr(node, "end_lineno", None) or node.lineno
+        line_count = end - node.lineno + 1
+        constructed: list[tuple[str, int]] = []
+        if node.name in {"__init__", "constructor"}:
+            constructed = self._constructed_types(node)
         return Operation(
             name=node.name,
             parameters=params,
             return_type=ret,
             description=doc,
             line=node.lineno,
+            line_count=line_count,
+            constructed_types=constructed,
             callees=self._collect_callees(node),
             is_property=self._is_property(node),
         )
+
+    def _constructed_types(self, func: ast.AST) -> list[tuple[str, int]]:
+        found: list[tuple[str, int]] = []
+        for child in ast.walk(func):
+            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                name = child.func.id
+                if name and name[0].isupper():
+                    found.append((name, child.lineno))
+        return found
 
 
     def _properties_from_class(self, class_node: ast.ClassDef) -> list[Property]:

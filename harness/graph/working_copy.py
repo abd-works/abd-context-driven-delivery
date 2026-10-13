@@ -45,8 +45,8 @@ def fill_working_copy(graph: Graph) -> None:
     if _overlay_selected(graph, "lern_domain_driven"):
         _record_lern(graph, source, classes)
     for practice in graph.practices.values():
-        if practice.loaded != ["nodes", "edges", "rules"]:
-            practice.loaded = ["nodes", "edges", "rules"]
+        attach_rules(practice)
+        practice.loaded = ["nodes", "edges", "rules"]
 
 
 def _offer(practice, types: list[str]) -> None:
@@ -91,7 +91,6 @@ def _record_clean(practice, root: Path) -> list[dict]:
                     parsed.append(_class_fact(practice, text, relative, owner_id, cls, class_names, nodes, edges))
     practice.apply_nodes(nodes)
     practice.apply_edges(edges)
-    attach_rules(practice)
     practice.loaded = ["nodes", "edges", "rules"]
     return parsed
 

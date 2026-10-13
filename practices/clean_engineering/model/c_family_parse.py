@@ -167,7 +167,17 @@ class CFamilyParse:
         for note in notes:
             append_invariant(op, note)
         op.callees = callees
+        op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
+        if op.name in {"constructor", "__init__"}:
+            op.constructed_types = self._constructed_types(body, op.line or 1)
         return op
+
+    def _constructed_types(self, body: str, start_line: int) -> list[tuple[str, int]]:
+        found: list[tuple[str, int]] = []
+        for index, line in enumerate(body.splitlines()):
+            for match in re.finditer(r"\bnew\s+([A-Z]\w*)\s*\(", line):
+                found.append((match.group(1), start_line + index))
+        return found
 
     def _split_params(self, raw: str) -> list[str]:
         if not raw.strip():

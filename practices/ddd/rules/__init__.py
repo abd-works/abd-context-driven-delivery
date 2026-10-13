@@ -1,4 +1,4 @@
-"""DDD graph rule classes (schema slugs; checks added per rule)."""
+"""DDD graph rule classes — add checks ported from practices/ddd/scanners on main."""
 
 from harness.graph.practice_rule import PracticeGraphRule
 

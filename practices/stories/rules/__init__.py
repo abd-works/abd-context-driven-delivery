@@ -1,8 +1,8 @@
-"""Story graph rule classes (schema slugs; checks added per rule)."""
+"""Story graph rule classes."""
 
-from harness.graph.practice_rule import PracticeGraphRule
+from practices.stories.rules.four_to_nine_children import FourToNineChildren
 
-RULES: tuple[PracticeGraphRule, ...] = ()
-BY_SLUG: dict[str, PracticeGraphRule] = {}
+RULES: tuple = (FourToNineChildren(),)
+BY_SLUG = {rule.slug: rule for rule in RULES}
 
 __all__ = ["BY_SLUG", "RULES"]
