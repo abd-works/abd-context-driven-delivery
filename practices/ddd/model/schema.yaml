@@ -3,6 +3,7 @@
 # Top: a collection of bounded contexts or aggregates is required. Everything below is a def or sub-def.
 [boundedContext | aggregate]
 boundedContext:
+  - fidelity: bounded_context
   - is: module
   - name: string
   - [boundedContext | aggregate]
@@ -14,6 +15,7 @@ boundedContext:
           - pattern: "shared kernel" | "customer-supplier" | "published language" | "conformist" | "separate ways"
     ]
 aggregate:
+  - fidelity: bounded_context
   - is: module
   - name: string
   - root: entityRoot
@@ -22,38 +24,46 @@ aggregate:
       entity | valueObject | class | repository | domainEvent | domainService | factory | specification
     ]
   - entityRoot:
+      - fidelity: building_blocks
       - is: entity
       - name: string
       - belongsTo: aggregate
       - associates: [entity]
       - identity: property
   - valueObject:
+      - fidelity: building_blocks
       - is: class
       - name: string
       - belongsTo: aggregate
   - entity:
+      - fidelity: building_blocks
       - is: class
       - name: string
       - belongsTo: aggregate
       - associates: [entity]
   - repository:
+      - fidelity: building_blocks
       - is: class
       - name: string
       - belongsTo: aggregate
       - accesses: entityRoot
   - domainEvent:
+      - fidelity: building_blocks
       - is: property
       - name: string
       - belongsTo: aggregate
   - domainService:
+      - fidelity: building_blocks
       - is: class
       - name: string
       - belongsTo: aggregate
   - factory:
+      - fidelity: building_blocks
       - is: class
       - name: string
       - belongsTo: aggregate
   - specification:
+      - fidelity: building_blocks
       - is: class
       - name: string
       - belongsTo: aggregate

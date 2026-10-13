@@ -1,17 +1,18 @@
 # LERN overlay on stories. Extend only.
 share:
+  - fidelity: acceptance_tests
   - is: stories.story
   - states: stories.story
   - links?: ddd.aggregate
-  - domain
-  - server
-  - playwright
 domain:
+  - fidelity: acceptance_tests
   - is: stories.story
   - executes: share
 server:
+  - fidelity: acceptance_tests
   - is: stories.story
   - executes: share
 playwright:
+  - fidelity: acceptance_tests
   - is: stories.story
   - executes: share
