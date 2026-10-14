@@ -1,6 +1,6 @@
 # Modules
 
-*Context-Driven Delivery* is how an agent installs practices, opens a work session, and runs generate, document, and scan from the markdown that sits beside the code. Public classes and dependencies below are the latest CodeQL first-class prefixes and `moduleDependsOn` edges.
+*Context-Driven Delivery* is how an agent installs practices, opens a work session, and runs generate, document, and scan from the markdown that sits beside the code. Public classes and dependencies below are module seams and `moduleDependsOn` edges from the catalog.
 
 ## actions
 ### Public Seam
@@ -18,7 +18,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
@@ -91,7 +91,7 @@
  - `builders.create_context_tool` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -147,7 +147,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
@@ -184,7 +184,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -230,7 +230,7 @@
 ### Dependencies
  - `harness` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -252,7 +252,7 @@
  - `actions.sketch` — moduleDependsOn
  - `harness` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -275,7 +275,7 @@
 ### Dependencies
  - `harness` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -303,7 +303,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -338,7 +338,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -373,7 +373,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -442,7 +442,7 @@
  - `builders.create_context_tool` — moduleDependsOn
  - `harness` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -505,7 +505,7 @@
  - `builders.create_context_tool` — moduleDependsOn
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -529,35 +529,21 @@
  - `tools.workspace` — moduleDependsOn
 ---
 
-## harness.knowledge_graph
+## harness.graph
 ### Public Seam
-#### CodeQL
 
-#### CodeQLBackground
 
-#### CodeQLCall
 
-#### CodeQLClass
 
-#### CodeQLExampleExport
 
-#### CodeQLOperation
 
-#### CodeQLPracticeGraphExport
 
-#### CodeQLProperty
 
-#### CodeQLRunError
 
-#### CodeQLScenario
 
-#### CodeQLStep
 
-#### CodeQLStory
 
-#### CodeQLStoryCall
 
-#### CodeQLStoryObservation
 
 #### DotMarkup
 
@@ -734,7 +720,7 @@
  - `actions.partition` — moduleDependsOn
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.ux.model` — moduleDependsOn
  - `tools.catalog_generator` — moduleDependsOn
@@ -746,7 +732,6 @@
 
 ## harness.mcp
 ### Public Seam
-#### CodeQLQueryServer
 
 #### CursorMcpJson
 
@@ -785,7 +770,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `installation` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
@@ -851,7 +836,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -896,7 +881,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -1008,7 +993,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -1073,7 +1058,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -1305,7 +1290,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -1344,7 +1329,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -1413,7 +1398,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -1471,7 +1456,7 @@
 
 ### Dependencies
  - `actions.partition` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
@@ -1537,7 +1522,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -1564,7 +1549,7 @@
 #### Handoff
 
 ### Dependencies
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.ddd` — moduleDependsOn
  - `practices.stories` — moduleDependsOn
@@ -1606,7 +1591,7 @@
  - `actions.partition` — moduleDependsOn
  - `harness` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -1638,7 +1623,7 @@
 ### Dependencies
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
@@ -1657,7 +1642,7 @@
 
 ### Dependencies
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
@@ -1672,7 +1657,7 @@
 #### RecordDecisions
 
 ### Dependencies
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
 ---
 
 ## tools.workflow
@@ -1686,7 +1671,7 @@
 ### Dependencies
  - `actions.partition` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
  - `practices.ddd` — moduleDependsOn
@@ -1753,7 +1738,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -1905,7 +1890,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -1988,7 +1973,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -2079,7 +2064,7 @@
  - `harness` — moduleDependsOn
  - `harness.agent_tools` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.markdown` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `installation` — moduleDependsOn
@@ -2112,7 +2097,7 @@
 ### Dependencies
  - `harness` — moduleDependsOn
  - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `harness.mcp` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -2138,7 +2123,7 @@
  - `actions` — moduleDependsOn
  - `actions.partition` — moduleDependsOn
  - `harness` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `installation` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering` — moduleDependsOn
@@ -2180,7 +2165,7 @@
 #### MarkdownUxMap
 
 ### Dependencies
- - `harness.knowledge_graph` — moduleDependsOn
+ - `harness.graph` — moduleDependsOn
  - `practices.agent_bdd` — moduleDependsOn
  - `practices.clean_engineering.model` — moduleDependsOn
  - `practices.clean_engineering.model.drawio` — moduleDependsOn

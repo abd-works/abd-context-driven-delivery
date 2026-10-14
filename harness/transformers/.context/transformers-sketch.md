@@ -1,7 +1,7 @@
 fidelity: discovery / modules / behavior
-scope: Transformer is the mix-in (like Node). Transformers is the agent toolset (like KnowledgeGraph). model/transformation/ wraps each codeql type as {Source}Transformer — bind to a logical Jinja template and recurse, not a second iterator. Transformers.transform sketch loads that channel from the sketch then render "logical" on the loaded root. Transformers.transform logic renders a passed pack (LERN first) against filled logic.
-status: wrap codeql types as TypeTransformer; Transformers holds the agent marks; Transformer.render looks up templates
-source: practices/*/model/codeql/codeql_model.py; harness/knowledge_graph/model/graph_node.py Node; harness/knowledge_graph/model/knowledge_graph.py KnowledgeGraph; harness/guidance/rule.py Rule; practices/clean_engineering/specifications/lern_domain_driven/templates
+scope: Transformer is the mix-in (like Node). Transformers is the agent toolset (like Graph). model/transformation/ wraps each object-model type as {Source}Transformer — bind to a logical Jinja template and recurse, not a second iterator. Transformers.transform sketch loads that channel from the sketch then render "logical" on the loaded root. Transformers.transform logic renders a passed pack (LERN first) against filled logic.
+status: wrap object-model types as TypeTransformer; Transformers holds the agent marks; Transformer.render looks up templates
+source: practices/*/model/* (channel roots); harness/graph/model/graph_node.py Node; harness/graph/model/knowledge_graph.py Graph; harness/guidance/rule.py Rule; practices/clean_engineering/specifications/lern_domain_driven/templates
 
 stories:
 Discover Solution
@@ -39,12 +39,12 @@ Create Tech Stack Rules And Transformers
 
 ce:
 harness/
-  knowledge_graph                  // Node mix-in; KnowledgeGraph agent toolset
+  knowledge_graph                  // Node mix-in; Graph agent toolset
   transformers                     // Transformer mix-in; Transformers agent toolset
 practices/
   stories/
     model
-      codeql                       // StoryMap, Epic, SubEpic, Story, Scenario, Background, Step, Example : Source, Node
+      object_model                // StoryMap, Epic, SubEpic, Story, Scenario, Background, Step, Example : Source, Node
       transformation               // StoryMapTransformer, EpicTransformer, SubEpicTransformer, StoryTransformer, ScenarioTransformer, BackgroundTransformer, StepTransformer, ExampleTransformer
         story_nodes node
         story_name node
@@ -57,7 +57,7 @@ practices/
         step_body node
   clean_engineering/
     model
-      codeql                       // CleanEngineeringModel, Module, File, OoadClass, Operation, Property, Parameter : Source, Node
+      object_model                // CleanEngineeringModel, Module, File, OoadClass, Operation, Property, Parameter : Source, Node
       transformation               // CleanEngineeringTransformer, ModuleTransformer, FileTransformer, OoadClassTransformer, OperationTransformer, PropertyTransformer, ParameterTransformer
         one_class node
         private_class node
@@ -68,7 +68,7 @@ practices/
       lern_domain_driven           // templates/ passed into Transformers.transform logic
   bdd/
     model
-      codeql                       // Description, Context, Observation : Source, Node
+      object_model                // Description, Context, Observation : Source, Node
       transformation               // DescriptionTransformer, ContextTransformer, ObservationTransformer
         domain_subject node
         description_tree node
@@ -78,7 +78,7 @@ practices/
         scan_pair node
   ddd/
     model
-      codeql                       // BoundedContext, Aggregate, Entity, EntityRoot, ValueObject, Repository, DomainEvent, DomainService : Source, Node
+      object_model                // BoundedContext, Aggregate, Entity, EntityRoot, ValueObject, Repository, DomainEvent, DomainService : Source, Node
       transformation               // BoundedContextTransformer, AggregateTransformer, EntityTransformer, EntityRootTransformer, ValueObjectTransformer, RepositoryTransformer, DomainEventTransformer, DomainServiceTransformer, SpecificationTransformer, FactoryTransformer
         context node
         depends node
@@ -96,7 +96,7 @@ practices/
         data_goto node
         domain_import node
 
-KnowledgeGraph
+Graph
   refresh_master
   reload_working_copy
   create_database root
@@ -135,7 +135,7 @@ KnowledgeGraph
           -> start at filled logic node
           -> for each template
               -> template.render filled logic node
-      // @agent_toolset domain_slug like KnowledgeGraph
+      // @agent_toolset domain_slug like Graph
       // transform sketch, transform logic: mcp Skill agent_tool — same marks as return_nodes
       // Jinja LoadEnvironment once
       // practice.model.transformer.load(sketch): that practice's transformer channel parses the sketch — same seam as markdown/python parse
@@ -177,7 +177,7 @@ KnowledgeGraph
           steps
       ExampleTransformer
           fixture
-      // practices/stories/model/transformation/ — wrap each stories/model/codeql type
+      // practices/stories/model/transformation/ — wrap each stories/model type
       // EpicTransformer: folder template; StoryTransformer: language file; ScenarioTransformer BackgroundTransformer StepTransformer ExampleTransformer: no file — story template keeps rendering
       // theme Discover Solution — starts
       // theme Specify Solution
@@ -202,7 +202,7 @@ KnowledgeGraph
       PropertyTransformer
           property
       ParameterTransformer
-      // practices/clean_engineering/model/transformation/ — wrap each clean_engineering/model/codeql type
+      // practices/clean_engineering/model/transformation/ — wrap each clean_engineering/model type
       // ModuleTransformer: folder; FileTransformer OoadClassTransformer: language file; OperationTransformer PropertyTransformer ParameterTransformer: no file unless it has a logical template — parent keeps rendering
       // theme Discover Solution — starts
       // theme Implement Logic
@@ -222,7 +222,7 @@ KnowledgeGraph
           setup_for_label
       ObservationTransformer
           signature_only
-      // practices/bdd/model/transformation/ — wrap each bdd/model/codeql type
+      // practices/bdd/model/transformation/ — wrap each bdd/model type
       // DescriptionTransformer: language file; ContextTransformer ObservationTransformer: no file — description template keeps rendering
       // theme Discover Solution — starts
       // theme Specify Solution — signatures stay on DescriptionTransformer / ContextTransformer / ObservationTransformer
@@ -262,14 +262,14 @@ KnowledgeGraph
       FactoryTransformer
           factory
           constructor_parameters
-      // practices/ddd/model/transformation/ — wrap each ddd/model/codeql type
+      // practices/ddd/model/transformation/ — wrap each ddd/model type
       // BoundedContextTransformer: module annotated as bounded context
       // AggregateTransformer: module folder — not a class named Aggregate
       // that folder holds the root entity, its entities and value objects, and the repository
       // DomainEventTransformer DomainServiceTransformer SpecificationTransformer FactoryTransformer optional in that folder
       // EntityRootTransformer: <<Aggregate Root>> <<Entity>> and identifier; EntityTransformer: <<Entity>> and identifier
       // RepositoryTransformer: <<Repository>> in the aggregate folder, named for the root — add remove update, search only by identity, plus find by / new / search from the sketch
-      // EntityTransformer owns OperationTransformer PropertyTransformer like codeql Entity uses CE members
+      // EntityTransformer owns OperationTransformer PropertyTransformer like DDD Entity uses CE members
       // theme Discover Solution — starts
       // theme Specify Solution — building blocks stay on these types
       // theme Specify Solution — ends

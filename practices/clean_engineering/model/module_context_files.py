@@ -1,7 +1,7 @@
-"""Read `.context/module-context.md` next to a CodeQL class row.
+"""Read `.context/module-context.md` next to a graph class row.
 
-The Python extractor does not put markdown in the database. CodeQL emits the
-class and the absolute path of its `.py` file; these helpers open the sibling
+The working-copy loader does not put markdown on the node. It supplies the
+class and the absolute path of its source file; these helpers open the sibling
 module-context file and apply the same text checks the scanners use.
 """
 

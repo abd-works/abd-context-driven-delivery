@@ -1,8 +1,9 @@
 """Noun clusters for keep-classes-single-responsibility.
 
-CodeQL emits identifier tokens. NLTK WordNet decides which are nouns; operations
-that share a noun sit in one responsibility cluster. A stray singleton noun is
-not a second job — only several distinct clusters on a large public surface count.
+The graph supplies identifier tokens. NLTK WordNet decides which are nouns;
+operations that share a noun sit in one responsibility cluster. A stray singleton
+noun is not a second job — only several distinct clusters on a large public
+surface count.
 """
 
 from __future__ import annotations
