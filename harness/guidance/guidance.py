@@ -349,6 +349,12 @@ class PracticeGuidance(Guidance):
             f"{body}"
         )
 
+    def schema_node_fidelities(self) -> dict[str, str]:
+        """Each schema node type mapped to a fidelity name from ``model/schema.yaml``."""
+        from harness.guidance.schema_map import node_fidelities
+
+        return node_fidelities(self.schema)
+
 
     @toolsetCollection
     @markdownCollection

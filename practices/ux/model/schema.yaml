@@ -1,6 +1,7 @@
 [map]
 
 map:
+  fidelity: ia
   id: dotPath
   name: string
   storyReferences?: [string]
@@ -20,6 +21,7 @@ map:
     - story-domain-js-imported
 
 screen:
+  fidelity: ia
   id: dotPath
   name: string
   order: number
@@ -51,6 +53,7 @@ screen:
     - real-backend-wired
 
 region:
+  fidelity: ia
   id: dotPath
   name: string
   order: number
@@ -63,6 +66,7 @@ region:
     - controls appear from mockup onward
 
 control:
+  fidelity: mockup
   id: dotPath
   name: string
   order: number
@@ -80,6 +84,7 @@ control:
     - stub-catalogue-honest
 
 storyDemoControl:
+  fidelity: mockup
   is: control
   id: dotPath
   boundField: property
@@ -98,6 +103,7 @@ storyDemoControl:
     - story-domain-js-imported
 
 interaction:
+  fidelity: mockup
   id: dotPath
   name: string
   order: number
@@ -112,6 +118,7 @@ interaction:
     - controls-match-interaction-decisions
 
 transition:
+  fidelity: ia
   id: dotPath
   name: string
   belongsTo: map
@@ -125,6 +132,7 @@ transition:
     - navType is "Quick Action" | "top nav" | "drawer nav" | "secondary nav" | "action" | "system"
 
 contentType:
+  fidelity: ia
   id: dotPath
   name: string
   belongsTo: map
@@ -134,6 +142,7 @@ contentType:
     - id is the map id, then this content type name, joined by dots
 
 navComponent:
+  fidelity: ia
   id: dotPath
   name: string
   belongsTo: map
@@ -143,6 +152,7 @@ navComponent:
     - id is the map id, then this nav component name, joined by dots
 
 uxContext:
+  fidelity: ia
   id: dotPath
   belongsTo: map
   notes?: [string]

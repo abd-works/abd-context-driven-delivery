@@ -9,7 +9,7 @@ from harness.agent_tools import agent_instructions, agent_toolset, instructions
 from installation.destination import noDeploy
 from installation.files import Skill
 from harness.mcp.mcp_server import Mcp
-from harness.guidance.rule import Rule
+from harness.guidance import Rule
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
 
@@ -63,12 +63,15 @@ class Validate(GuidanceAction):
         ]
 
     def _validate_text(self, collection) -> str:
-        text = getattr(collection, "validate", "")
-        if callable(text):
-            text = text()
-        if not isinstance(text, str):
-            return ""
-        return text.strip()
+        for accessor in ("validate", "markdown_block", "markdown"):
+            text = getattr(collection, accessor, None)
+            if text is None:
+                continue
+            if callable(text):
+                text = text()
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+        return ""
 
     @noDeploy
     @Mcp

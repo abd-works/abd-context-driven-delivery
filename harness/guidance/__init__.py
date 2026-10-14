@@ -1,5 +1,6 @@
 """Harness guidance — ``from harness.guidance import ...``."""
 from .rule import AppliesTo, Rule, RulesCollection
+from .schema_map import fidelity_for_node, node_fidelities, validate_schema_fidelities
 
 def __getattr__(name: str):
     from . import guidance as _guidance

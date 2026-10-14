@@ -11,7 +11,7 @@ if str(_HERE) not in sys.path:
 from expects import be_above, contain, equal, expect
 from mamba import before, context, description, it
 
-from graph import Graph, Node, RuleResult, Source
+from graph import Graph, Node, Source
 
 
 def rule_on(node: dict, slug: str) -> dict:
@@ -31,12 +31,13 @@ with description("rule categories"):
             self.graph._practice_roots = {"clean_engineering": Path(".")}
             self.practice = self.graph.practice("clean_engineering")
             self.practice.graph = self.graph
-            self.practice.bind_rule("limit-operation-parameters", ["Operation"])
-            self.practice.bind_rule("use-explicit-dependencies", ["OoadClass"])
             self.failure = Node(self.practice, "Operation", "clean_engineering:Operation:failure", "failure", Source(".", 1, 2))
             self.register = Node(self.practice, "Operation", "clean_engineering:Operation:register", "register", Source(".", 3, 4))
             self.account = Node(self.practice, "OoadClass", "clean_engineering:OoadClass:AccountCredentials", "AccountCredentials", Source(".", 1, 8))
-            self.failure.rules.append(RuleResult("limit-operation-parameters", "Operation 'failure' takes more than two parameters."))
+            self.failure.rules.record_violation(
+                "limit-operation-parameters",
+                "Operation 'failure' takes more than two parameters.",
+            )
             self.practice.root_node.children = [self.failure, self.register, self.account]
             for node in (self.failure, self.register, self.account):
                 node.parent = self.practice.root_node

@@ -2,7 +2,30 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from typing import List
+
+
+def operation_body_fingerprint(body: str) -> str:
+    """Stable hash of normalized method body text (shared by Python AST and C-family parse)."""
+    normalized = re.sub(r"\s+", " ", body.strip())
+    if len(normalized) < 40:
+        return ""
+    return hashlib.sha256(normalized.encode()).hexdigest()[:24]
+
+
+def operation_source_span(operation: "Operation") -> tuple[int, int] | None:
+    """1-based inclusive source lines for this operation when the model recorded them."""
+    start = operation.line
+    if not start:
+        return None
+    end = operation.end_line
+    if end is not None and end >= start:
+        return start, end
+    if operation.line_count and operation.line_count > 0:
+        return start, start + operation.line_count - 1
+    return None
 
 from harness.graph.bound_node import BoundChildren
 
@@ -62,7 +85,19 @@ class Operation(OoadNode):
         self._parameters = BoundChildren(self, "parameters")
         self.invariants: List = []
         self.line: int | None = None
+        self.end_line: int | None = None
+        self.line_count: int | None = None
+        self.body_fingerprint: str = ""
+        self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
+        self.is_static = False
+        self.is_classmethod = False
+        self.max_control_flow_depth: int = 0
+        self.has_bare_catch: bool = False
+        self.swallows_exceptions: bool = False
+        self.unnamed_literal_numbers: list[str] = []
+        self.narrative_comment_lines: int = 0
+        self.peer_private_access: bool = False
         for key, value in fields.items():
             setattr(self, key, value)
         if parameters:
@@ -99,7 +134,19 @@ class Operation(OoadNode):
         cloned.parameters = [parameter.clone() for parameter in self.parameters]
         cloned.invariants = [item.clone() for item in self.invariants]
         cloned.line = self.line
+        cloned.end_line = self.end_line
+        cloned.line_count = self.line_count
+        cloned.body_fingerprint = self.body_fingerprint
+        cloned.constructed_types = list(self.constructed_types)
         cloned.is_property = self.is_property
+        cloned.is_static = self.is_static
+        cloned.is_classmethod = self.is_classmethod
+        cloned.max_control_flow_depth = self.max_control_flow_depth
+        cloned.has_bare_catch = self.has_bare_catch
+        cloned.swallows_exceptions = self.swallows_exceptions
+        cloned.unnamed_literal_numbers = list(self.unnamed_literal_numbers)
+        cloned.narrative_comment_lines = self.narrative_comment_lines
+        cloned.peer_private_access = self.peer_private_access
         return cloned
 
     def save(self) -> str:
@@ -134,7 +181,19 @@ class Operation(OoadNode):
         self.parameters = copied.parameters
         self.invariants = copied.invariants
         self.line = copied.line
+        self.end_line = copied.end_line
+        self.line_count = copied.line_count
+        self.body_fingerprint = copied.body_fingerprint
+        self.constructed_types = list(copied.constructed_types)
         self.is_property = copied.is_property
+        self.is_static = copied.is_static
+        self.is_classmethod = copied.is_classmethod
+        self.max_control_flow_depth = copied.max_control_flow_depth
+        self.has_bare_catch = copied.has_bare_catch
+        self.swallows_exceptions = copied.swallows_exceptions
+        self.unnamed_literal_numbers = list(copied.unnamed_literal_numbers)
+        self.narrative_comment_lines = copied.narrative_comment_lines
+        self.peer_private_access = copied.peer_private_access
 
     def load_parameters(self) -> None:
         while self.has_more_parameter():

@@ -54,6 +54,16 @@ with description("a validate action on practice guidance") as self:
             expect(prose).to(contain("sketch-rule"))
             expect(prose).not_to(contain("spec-rule"))
 
+    with context("with stories practice guidance"):
+        with it("should load the shared rules collection from the whole practice slug"):
+            prose = _expanded_validate(self.action, {"guidance": ["stories"]})
+            expect(prose).to(contain("vocabulary-traces-to-domain-source"))
+
+        with it("should load shared and fidelity rules when the fidelity slug is scenarios"):
+            prose = _expanded_validate(self.action, {"guidance": ["scenarios"]})
+            expect(prose).to(contain("vocabulary-traces-to-domain-source"))
+            expect(prose).to(contain("gwt-steps-trace-to-domain-operations"))
+
     with context("with ddd and stories guidance"):
         with it("should return shared and active-fidelity rules from each practice"):
             report = self.action.validate(guidance=["ddd", "stories"])

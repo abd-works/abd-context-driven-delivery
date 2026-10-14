@@ -10,7 +10,7 @@ if str(_HERE) not in sys.path:
 from expects import be_above, contain, equal, expect
 from mamba import before, context, description, it
 
-from graph import Graph, Node, PracticeGraph, RuleResult, Source
+from graph import Graph, Node, PracticeGraph, Source
 
 _FOLDS = _HERE / "examples" / "folds"
 
@@ -33,7 +33,7 @@ with description("a graph"):
             self.failure = Node(
                 self.practice, "Operation", "clean_engineering:Operation:failure.ts:failure:Account", "failure", Source(".", 1, 1)
             )
-            self.failure.rules.append(RuleResult("limit-operation-parameters", "too many"))
+            self.failure.rules.record_violation("limit-operation-parameters", "too many")
             self.register = Node(
                 self.practice, "Operation", "clean_engineering:Operation:register.ts:register:Account", "register", Source(".", 1, 1)
             )

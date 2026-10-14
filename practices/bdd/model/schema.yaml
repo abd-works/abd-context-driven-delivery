@@ -1,6 +1,7 @@
 [spec]
 
 spec:
+  fidelity: behavior
   id: dotPath
   name: string
   descriptions: [description]
@@ -16,6 +17,7 @@ spec:
     - framework-syntax
 
 description:
+  fidelity: behavior
   id: dotPath
   text: string
   order: number
@@ -34,6 +36,7 @@ description:
     - domain-practice-alignment
 
 context:
+  fidelity: behavior
   id: dotPath
   text: string
   order: number
@@ -56,6 +59,7 @@ context:
     - context-sharing
 
 observation:
+  fidelity: behavior
   id: dotPath
   text: string
   order: number

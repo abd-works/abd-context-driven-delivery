@@ -5,6 +5,8 @@ import re
 from typing import Callable
 
 from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation
+from practices.clean_engineering.model.operation import operation_body_fingerprint
+from practices.clean_engineering.model.operation_metrics import apply_brace_body_metrics
 from practices.clean_engineering.model.property import Property, append_invariant, take_property_note
 
 _CLASS_RE = re.compile(
@@ -46,6 +48,26 @@ class CFamilyParse:
         self._model_factory = model_factory
         self._class_factory = class_factory
 
+    @staticmethod
+    def method_span_in_text(text: str, name: str, fallback_line: int = 1) -> tuple[int, int]:
+        """Brace-language method extent in full file text (used by graph load when end_line missing)."""
+        match = re.search(rf"\b{re.escape(name)}\s*\([^)]*\)\s*(?::\s*[^{{]+)?\s*\{{", text)
+        if match is None:
+            line = fallback_line
+            return line, line
+        start = text[: match.start()].count("\n") + 1
+        depth = 0
+        opened = False
+        for index in range(match.end() - 1, len(text)):
+            if text[index] == "{":
+                depth += 1
+                opened = True
+            elif text[index] == "}":
+                depth -= 1
+                if opened and depth == 0:
+                    return start, text[:index].count("\n") + 1
+        return start, start
+
     def parse(self, text: str) -> CleanEngineeringModel:
         self._text = text
         model = self._model_factory()
@@ -84,6 +106,7 @@ class CFamilyParse:
                 continue
             op = Operation(name="constructor", parameters=self._split_params(ctor.group(1)))
             op.line = self._line_at(self._text, self._body_start + ctor.start())
+            self._apply_method_end_line(op, body, ctor.end() - 1)
             oclass.operations.insert(0, self._loaded_operation(oclass, self._operation_from_body(op, ctor_body)))
 
     def _attach_top_level(self, module: Module) -> None:
@@ -143,10 +166,12 @@ class CFamilyParse:
                 return_type=(match.group(3) or "").strip(),
             )
             op.line = self._line_at(self._text, self._body_start + match.start())
+            self._apply_method_end_line(op, class_body, match.end() - 1)
             filled = self._operation_from_body(op, method_body)
-            prefix = class_body[max(0, match.start() - 12) : match.start()]
+            prefix = class_body[max(0, match.start() - 24) : match.start()]
             if re.search(r"\bget\s*$", prefix):
                 filled.is_property = True
+            filled.is_static = bool(re.search(r"\bstatic\b", prefix))
             ops.append(filled)
         return ops
 
@@ -167,7 +192,38 @@ class CFamilyParse:
         for note in notes:
             append_invariant(op, note)
         op.callees = callees
+        op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
+        op.body_fingerprint = operation_body_fingerprint(body)
+        apply_brace_body_metrics(op, body)
+        if op.name in {"constructor", "__init__"}:
+            op.constructed_types = self._constructed_types(body, op.line or 1)
         return op
+
+    def _apply_method_end_line(self, op: Operation, class_body: str, search_from: int) -> None:
+        brace_open = class_body.find("{", search_from)
+        if brace_open < 0:
+            return
+        close_idx = self._closing_brace_index(class_body, brace_open)
+        if close_idx >= 0:
+            op.end_line = self._line_at(self._text, self._body_start + close_idx)
+
+    def _closing_brace_index(self, text: str, open_index: int) -> int:
+        depth = 0
+        for index in range(open_index, len(text)):
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    return index
+        return -1
+
+    def _constructed_types(self, body: str, start_line: int) -> list[tuple[str, int]]:
+        found: list[tuple[str, int]] = []
+        for index, line in enumerate(body.splitlines()):
+            for match in re.finditer(r"\bnew\s+([A-Z]\w*)\s*\(", line):
+                found.append((match.group(1), start_line + index))
+        return found
 
     def _split_params(self, raw: str) -> list[str]:
         if not raw.strip():
