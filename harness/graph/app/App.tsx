@@ -5,9 +5,9 @@ import { FilterClient, type FilterSelection, type GraphTree, type InventoryBundl
 import { FilterView } from './filter/FilterView';
 import { GraphClient } from './graph/GraphClient';
 import { GraphView } from './graph/GraphView';
-import type { GraphSelection } from './graph/graph-selection';
+import { ruleHits, selectionForRule, type GraphSelection } from './graph/graph-selection';
 import { SourceClient, type SourceText } from './source/SourceClient';
-import { SourceView } from './source/SourceView';
+import { SourceView, type SourceRule } from './source/SourceView';
 import { normalizeInventoryBundle } from './inventory-bundle';
 import type { ViolationFocus } from './source/violation-prompt';
 
@@ -42,6 +42,7 @@ export function App() {
   const [loadingLog, setLoadingLog] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState('');
+  const [activeRule, setActiveRule] = useState('');
   const [violation, setViolation] = useState<ViolationFocus | null>(null);
   const [source, setSource] = useState<SourceText | null>(null);
   const loadGeneration = useRef(0);
@@ -144,8 +145,10 @@ export function App() {
 
   async function choose(selection: GraphSelection) {
     setSelectedId(selection.nodeId);
+    setActiveRule(selection.rule ?? '');
     setViolation(selection.violation ?? null);
-    setSource(await sources.open(selection.nodeId));
+    const opened = await sources.open(selection.nodeId);
+    setSource(opened?.text != null && opened.file != null ? opened : null);
   }
 
   function adoptInventory(bundle: InventoryBundle, filter: FilterSelection) {
@@ -317,9 +320,22 @@ export function App() {
             loadingLog={loadingLog}
             error={error}
             selectedId={selectedId}
+            activeRule={activeRule}
             onSelect={(selection) => void choose(selection)}
           />
-          <SourceView source={source} violation={violation} />
+          <SourceView
+            source={source}
+            violation={violation}
+            rules={rulesOn(findNode(trees, selectedId))}
+            activeRule={activeRule}
+            onSelectRule={(name) => {
+              const node = findNode(trees, selectedId);
+              const rule = node?.children.find((child) => child.type === 'rules')?.children.find((child) => child.name === name);
+              if (rule) {
+                void choose(selectionForRule(selectedId, rule));
+              }
+            }}
+          />
         </div>
       </div>
     </main>
@@ -406,4 +422,26 @@ function keep(node: GraphTree | undefined, ids: Set<string>, types: string[]): G
     return { ...node, children };
   }
   return { ...node, children: [...children, ...rules] };
+}
+
+function findNode(nodes: GraphTree[], id: string): GraphTree | null {
+  for (const node of nodes) {
+    if (node.node_id === id) {
+      return node;
+    }
+    const child = findNode(node.children ?? [], id);
+    if (child) {
+      return child;
+    }
+  }
+  return null;
+}
+
+function rulesOn(node: GraphTree | null): SourceRule[] {
+  const holder = node?.children.find((child) => child.type === 'rules');
+  return (holder?.children ?? []).map((rule) => ({
+    name: rule.name,
+    status: rule.status,
+    messages: ruleHits(rule).map((hit) => hit.message).filter(Boolean),
+  }));
 }

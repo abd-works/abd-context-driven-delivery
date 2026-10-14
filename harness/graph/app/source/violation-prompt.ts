@@ -1,6 +1,8 @@
 export type ViolationFocus = {
   rule: string;
   message: string;
+  startLine?: number;
+  endLine?: number;
 };
 
 export function buildViolationCorrectPrompt(input: {

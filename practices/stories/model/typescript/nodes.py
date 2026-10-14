@@ -211,6 +211,9 @@ class TypeScriptStory(CodeStory):
         actor_match = re.search(r"\*\s*Actor:\s*(.+)", content)
         if actor_match:
             story.actors = [actor_match.group(1).strip()]
+        evidence_match = re.search(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)", content)
+        if evidence_match:
+            story.evidence = [part.strip() for part in evidence_match.group(1).split(",") if part.strip()]
         story.fill(content)
         return story
 

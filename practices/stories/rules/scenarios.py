@@ -1,4 +1,4 @@
-"""Scenario / GWT rules — graph + StoryModel fields."""
+"""scenarios fidelity — scenario, step, given, when, and then rules."""
 
 from __future__ import annotations
 
@@ -7,17 +7,20 @@ import re
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.story_model_lookup import example_count, scenario_for_graph_node
 
+_CAMEL_STEP = re.compile(r"^[a-z]+(?:[A-Z][a-z0-9]*)+$")
+
+_PLAIN_ENGLISH = re.compile(r"^[a-z].*(?:\s+[a-z].*)+$", re.IGNORECASE)
+
+_DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
+
 _INLINE_CONDITIONAL = re.compile(
     r"\bwhen\s+[<{]?\w+[>}]?\s+is\s+(?:true|false)\b", re.I
 )
+
 _GESTURE = re.compile(
     r"\b(click(?:s|ed|ing)?|tap(?:s|ped|ping)?|press(?:es|ed|ing)?|button|link|field|widget|screen)\b",
     re.I,
 )
-_ONE_OFF = re.compile(
-    r"\b(once|one[- ]time|initial setup|bootstrap only|migrate legacy)\b", re.I
-)
-
 
 class AndChaining(PracticeGraphRule):
     slug = "and-chaining"
@@ -34,7 +37,6 @@ class AndChaining(PracticeGraphRule):
                 ]
         return []
 
-
 class ButMarksMissingState(PracticeGraphRule):
     slug = "but-marks-missing-state"
     node_types = ("Step", "Given", "When", "Then")
@@ -46,7 +48,6 @@ class ButMarksMissingState(PracticeGraphRule):
         if any(word in text for word in ("not ", "without ", "absent", "missing", "no ")):
             return []
         return [f"But step should mark missing or absent state, not a consequence: {context.step_text(node)!r}."]
-
 
 class WhenHoldsTheOperation(PracticeGraphRule):
     slug = "when-holds-the-operation"
@@ -62,7 +63,6 @@ class WhenHoldsTheOperation(PracticeGraphRule):
         if len(text.split()) < 2:
             return [f"When {text!r} should name the operation under test in plain language."]
         return []
-
 
 class OutlineRequiresManyPermutations(PracticeGraphRule):
     slug = "outline-requires-many-permutations"
@@ -83,7 +83,6 @@ class OutlineRequiresManyPermutations(PracticeGraphRule):
                 f"Scenario outline {node.name!r} needs more than two example rows (found {examples})."
             ]
         return []
-
 
 class ExamplesTraceDomainModel(PracticeGraphRule):
     slug = "examples-trace-domain-model"
@@ -106,7 +105,6 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
             ]
         return []
 
-
 class WhenNamesIntentNotInterfaceGesture(PracticeGraphRule):
     slug = "when-names-intent-not-interface-gesture"
     node_types = ("When", "Step")
@@ -120,7 +118,6 @@ class WhenNamesIntentNotInterfaceGesture(PracticeGraphRule):
             return [f"When step {text!r} names a UI gesture; state the domain intent instead."]
         return []
 
-
 class BehavioralAndSystemObservableOutcomes(PracticeGraphRule):
     slug = "behavioral-and-system-observable-outcomes"
     node_types = ("Then", "Step")
@@ -133,7 +130,6 @@ class BehavioralAndSystemObservableOutcomes(PracticeGraphRule):
         if _INLINE_CONDITIONAL.search(text):
             return [f"Then step {text!r} embeds a conditional guard; assert an observable outcome instead."]
         return []
-
 
 class FlaggedWritesIntendedGwt(PracticeGraphRule):
     slug = "flagged-writes-intended-gwt"
@@ -152,38 +148,6 @@ class FlaggedWritesIntendedGwt(PracticeGraphRule):
                 return [f"Scenario {node.name!r} is marked intended but has no GWT steps written."]
         return []
 
-
-class BranchOnMechanicalUniqueness(PracticeGraphRule):
-    slug = "branch-on-mechanical-uniqueness"
-    node_types = ("Epic", "SubEpic", "Story")
-
-    def check(self, node, context) -> list[str]:
-        siblings = [
-            edge.child
-            for edge in context.practice.edges.get("decomposedInto", [])
-            if edge.parent is node and edge.child.type == "Story"
-        ]
-        if len(siblings) < 2:
-            return []
-        names = [s.name.strip().casefold() for s in siblings]
-        verbs = [n.split()[0] for n in names if n.split()]
-        if len(verbs) >= 2 and len(set(verbs)) == 1 and len(set(names)) > 1:
-            return [
-                f"Stories under {node.name!r} share the same verb {verbs[0]!r}; split by distinct mechanics or merge."
-            ]
-        return []
-
-
-class BehavioursNotOneTimeTasks(PracticeGraphRule):
-    slug = "behaviours-not-one-time-tasks"
-    node_types = ("Story",)
-
-    def check(self, node, context) -> list[str]:
-        if _ONE_OFF.search(node.name or ""):
-            return [f"Story {node.name!r} reads like a one-time task, not a repeatable behaviour."]
-        return []
-
-
 class GivenNamesComplexStateRootFirst(PracticeGraphRule):
     slug = "given-names-complex-state-root-first"
     node_types = ("Given", "Step")
@@ -199,7 +163,6 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
                 f"Complex Given {text!r} should open with the aggregate root before owned parts."
             ]
         return []
-
 
 class ScenarioNamesContinuation(PracticeGraphRule):
     slug = "scenario-names-continuation"
@@ -217,7 +180,6 @@ class ScenarioNamesContinuation(PracticeGraphRule):
             ]
         return []
 
-
 def _and_chaining_from_graph(scenario_node, context) -> list[str]:
     steps = context.children(scenario_node, "steps")
     seen_then = False
@@ -230,3 +192,87 @@ def _and_chaining_from_graph(scenario_node, context) -> list[str]:
                 f"Scenario {scenario_node.name!r} has When before any Then; add Given/Then or chain with And."
             ]
     return []
+
+class ScenariosShape(PracticeGraphRule):
+    slug = "scenarios-shape"
+    node_types = ("Scenario",)
+
+    def check(self, node, context) -> list[str]:
+        steps = context.children(node, "steps")
+        if not steps:
+            return [f"Scenario {node.name!r} has no steps."]
+        phases = {_phase(step, context) for step in steps}
+        missing = []
+        if "given" not in phases:
+            missing.append("Given")
+        if "when" not in phases:
+            missing.append("When")
+        if "then" not in phases:
+            missing.append("Then")
+        if missing:
+            return [f"Scenario {node.name!r} is missing required phase(s): {', '.join(missing)}."]
+        return []
+
+def _phase(step, context) -> str:
+    data = context.node_data(step)
+    phase = str(data.get("phase") or "").casefold()
+    if phase in {"given", "when", "then"}:
+        return phase
+    if step.type == "Given":
+        return "given"
+    if step.type == "When":
+        return "when"
+    if step.type == "Then":
+        return "then"
+    keyword = context.step_keyword(step).casefold()
+    if keyword in {"given", "when", "then"}:
+        return keyword
+    label = (step.name or "").casefold()
+    for prefix in ("given", "when", "then"):
+        if label.startswith(prefix + " "):
+            return prefix
+    return ""
+
+class PlainEnglishGwtSteps(PracticeGraphRule):
+    slug = "plain-english-gwt-steps"
+    node_types = ("Step", "Given", "When", "Then")
+
+    def check(self, node, context) -> list[str]:
+        text = (node.name or "").strip()
+        if not text:
+            return []
+        if " " not in text and _CAMEL_STEP.match(text):
+            return [f"Step {text!r} looks like code; write plain English GWT phrasing."]
+        if text.isidentifier() or (text.replace("_", "").isalnum() and " " not in text):
+            return [f"Step {text!r} looks like an identifier; write plain English GWT phrasing."]
+        if len(text.split()) >= 2 or _PLAIN_ENGLISH.match(text):
+            return []
+        return []
+
+class GwtStepsTraceToDomainOperations(PracticeGraphRule):
+    slug = "gwt-steps-trace-to-domain-operations"
+    node_types = ("Step", "Given", "When", "Then")
+
+    def check(self, node, context) -> list[str]:
+        text = context.text(node)
+        name = (node.name or "").strip()
+        classes = _DOMAIN_CLASS.findall(text)
+        if name.isidentifier() or (name.replace("_", "").isalnum() and " " not in name):
+            return [f"Step {name!r} does not trace to a domain operation; use the domain type in the step phrase."]
+        if not classes:
+            return []
+        if any(cls.lower() in name.lower() for cls in classes):
+            return []
+        return [
+            f"Step {name!r} does not name a domain concept ({', '.join(classes)}); tie GWT to domain operations."
+        ]
+
+class DomainOperationInTheStep(PracticeGraphRule):
+    slug = "domain-operation-in-the-step"
+    node_types = ("Story", "Step", "Given", "When", "Then")
+
+    def check(self, node, context) -> list[str]:
+        text = context.text(node)
+        if re.search(r"export function (?:activate|handle|process)\w*\s*\(", text):
+            return ["Story shared file exports orchestration instead of calling domain methods in GWT steps."]
+        return []

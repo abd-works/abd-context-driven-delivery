@@ -6,29 +6,58 @@ import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-pr
 
 const LINE_HEIGHT = 20;
 
+export type SourceRule = {
+  name: string;
+  status?: string;
+  messages: string[];
+};
+
 type SourceViewProps = {
   source: SourceText | null;
   violation: ViolationFocus | null;
+  rules: SourceRule[];
+  activeRule: string;
+  onSelectRule?: (name: string) => void;
 };
 
-export function SourceView({ source, violation }: SourceViewProps) {
+export function SourceView({ source, violation, rules = [], activeRule = '', onSelectRule = () => undefined }: SourceViewProps) {
   return (
     <div className="panel" data-testid="source-file">
-      {source ? <SourceEditor source={source} violation={violation} /> : <p className="empty-state">Select a node</p>}
+      {source ? (
+        <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} />
+      ) : (
+        <p className="empty-state">Select a node</p>
+      )}
     </div>
   );
 }
 
-function SourceEditor({ source, violation }: { source: SourceText; violation: ViolationFocus | null }) {
+function SourceEditor({
+  source,
+  violation,
+  rules,
+  activeRule,
+  onSelectRule,
+}: {
+  source: SourceText;
+  violation: ViolationFocus | null;
+  rules: SourceRule[];
+  activeRule: string;
+  onSelectRule?: (name: string) => void;
+}) {
+  const file = source.file ?? '';
+  const text = source.text ?? '';
+  const markStart = violation?.startLine ?? source.start_line;
+  const markEnd = violation?.endLine ?? source.end_line;
   const members = source.members ?? [];
   const owner = members.find((member) => member.id === source.node_id)?.owner ?? '';
   const prepared = useMemo(
     () =>
-      inlineCallLayout(source.text, members, owner, {
+      inlineCallLayout(text, members, owner, {
         openedClass: source.type === 'OoadClass' ? source.name : '',
         origin: source.start_line || 1,
       }),
-    [source, members, owner],
+    [source, text, members, owner],
   );
   const [openFor, setOpenFor] = useState(source.node_id);
   const [openFolds, setOpenFolds] = useState<string[]>(() => openBlockFolds(prepared.folds));
@@ -61,9 +90,9 @@ function SourceEditor({ source, violation }: { source: SourceText; violation: Vi
       hideSource.current,
       decorations,
       prepared.depths,
-      violationLineDecorations(prepared.lineNumbers, source.start_line, source.end_line, Boolean(violation)),
+      violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)),
     );
-  }, [prepared.text, prepared.folds, prepared.depths, openFolds, prepared.lineNumbers, source.start_line, source.end_line, violation]);
+  }, [prepared.text, prepared.folds, prepared.depths, openFolds, prepared.lineNumbers, markStart, markEnd, violation]);
 
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
@@ -74,12 +103,7 @@ function SourceEditor({ source, violation }: { source: SourceText; violation: Vi
       hideSource.current,
       decorations,
       depthsRef.current,
-      violationLineDecorations(
-        prepared.lineNumbers,
-        source.start_line,
-        source.end_line,
-        Boolean(violation),
-      ),
+        violationLineDecorations(prepared.lineNumbers, markStart, markEnd, Boolean(violation)),
     );
     const nodeEl = editor.getDomNode();
     nodeEl?.addEventListener(
@@ -113,16 +137,31 @@ function SourceEditor({ source, violation }: { source: SourceText; violation: Vi
       message: violation.message,
       nodeName: source.name,
       nodeType: source.type,
-      file: source.file,
-      startLine: source.start_line,
-      endLine: source.end_line,
-      excerpt: source.text,
+      file: file,
+      startLine: violation?.startLine ?? source.start_line,
+      endLine: violation?.endLine ?? source.end_line,
+      excerpt: text,
     });
     await navigator.clipboard.writeText(prompt);
   }
 
   return (
-    <section className="knowledge-graph-panel source-snippet" data-open="true" data-file={source.file}>
+    <section className="knowledge-graph-panel source-snippet" data-open="true" data-file={file}>
+      {rules.length > 0 ? (
+        <div className="source-rules" data-testid="source-rules">
+          {rules.map((rule) => (
+            <button
+              key={rule.name}
+              type="button"
+              className={['source-rule', rule.status ?? '', rule.name === activeRule ? 'is-active' : ''].filter(Boolean).join(' ')}
+              title={rule.messages.join('\n') || undefined}
+              onClick={() => onSelectRule?.(rule.name)}
+            >
+              {rule.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {violation ? (
         <div className="violation-banner" data-testid="violation-banner">
           <div className="violation-banner-copy">
@@ -134,11 +173,11 @@ function SourceEditor({ source, violation }: { source: SourceText; violation: Vi
           </button>
         </div>
       ) : null}
-      <p className="source-path">{source.file || source.name}</p>
+      <p className="source-path">{file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
           height={sourceHeight(prepared.text)}
-          language={languageFor(source.file)}
+          language={languageFor(file)}
           theme={document.documentElement.dataset.theme === 'engineering' ? 'vs-dark' : 'vs'}
           defaultValue={prepared.text}
           onMount={onMount}

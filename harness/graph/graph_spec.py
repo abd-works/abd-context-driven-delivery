@@ -90,6 +90,10 @@ def rule_on(node: dict, slug: str) -> dict:
     return tree_child(tree_child(node, "rules"), slug)
 
 
+def _rule_names(node: dict) -> list[str]:
+    return [child["name"] for child in tree_child(node, "rules")["children"]]
+
+
 def typed_child(node: dict, holder: str, type: str) -> dict:
     for child in tree_child(node, holder).get("children") or []:
         if child.get("type") == type:
@@ -279,7 +283,7 @@ with description("a graph"):
                         failure = tree_named(self.clean_tree, "failure", "Operation")
                         rule = rule_on(failure, "limit-operation-parameters")
                         expect(rule["status"]).to(equal("violating"))
-                        expect(len(rule["violation"])).to(be_above(0))
+                        expect(len(rule["violations"])).to(be_above(0))
 
                     with it("should attach the parameter rule to the operation that passes it"):
                         register = tree_named(self.clean_tree, "register", "Operation")
@@ -310,13 +314,13 @@ with description("a graph"):
                         attached = [rule for rule in failure["rules"] if rule["name"] == "limit-operation-parameters"]
                         expect(len(attached)).to(equal(1))
                         expect(attached[0]["status"]).to(equal("violating"))
-                        expect(len(attached[0]["violation"])).to(be_above(0))
+                        expect(len(attached[0]["violations"])).to(be_above(0))
 
                     with it("should attach that violation on the serialized graph"):
                         failure = tree_named(self.violation_tree, "failure", "Operation")
                         rule = rule_on(failure, "limit-operation-parameters")
                         expect(rule["status"]).to(equal("violating"))
-                        expect(len(rule["violation"])).to(be_above(0))
+                        expect(len(rule["violations"])).to(be_above(0))
 
                     with it("should leave the passing rule off the serialized graph"):
                         register = tree_named(self.violation_tree, "register", "Operation")
@@ -363,8 +367,8 @@ with description("a graph"):
             with it("should count one epic"):
                 expect(tree_count(self.stories_tree, "Epic")).to(equal(1))
 
-            with it("should count three stories"):
-                expect(tree_count(self.stories_tree, "Story")).to(equal(3))
+            with it("should count six stories"):
+                expect(tree_count(self.stories_tree, "Story")).to(equal(6))
 
             with it("should include epic, sub-epic, story, scenario, background, step, and example nodes"):
                 expect(
@@ -374,6 +378,179 @@ with description("a graph"):
 
             with it("should own Onboard A Customer"):
                 expect(tree_names(self.stories_tree)).to(contain("Onboard A Customer"))
+
+            with context("with a story map"):
+                with before.all:
+                    self.handle_request = tree_named(self.stories_tree, "Handle Request", "Story")
+                    self.submit_order = tree_named(self.stories_tree, "Submit Order", "Story")
+                    self.create_account = tree_named(self.stories_tree, "Create Account", "Story")
+                    self.onboard = tree_named(self.stories_tree, "Onboard A Customer", "Epic")
+                    self.authenticate = tree_named(self.stories_tree, "Authenticate User", "SubEpic")
+
+                with it("should list the shared story-node rules"):
+                    names = _rule_names(self.handle_request)
+                    expect(
+                        {
+                            "vocabulary-traces-to-domain-source",
+                            "read-all-source-context-in-full",
+                            "do-not-invent-requirements",
+                            "evidence-distinguishes-observed-inferred-and-intended",
+                        }
+                        <= set(names)
+                    ).to(equal(True))
+
+                with it("should list the epic rules"):
+                    expect(
+                        {"verb-noun-format", "branch-on-mechanical-uniqueness", "four-to-nine-children"}
+                        <= set(_rule_names(self.onboard))
+                    ).to(equal(True))
+
+                with it("should list the sub-epic rules"):
+                    expect(
+                        {"verb-noun-format", "branch-on-mechanical-uniqueness", "four-to-nine-children"}
+                        <= set(_rule_names(self.authenticate))
+                    ).to(equal(True))
+
+                with it("should list the story rules"):
+                    expect(
+                        {
+                            "verb-noun-format",
+                            "story-name-captures-system-mechanic",
+                            "right-size-story-nodes",
+                            "behaviours-not-one-time-tasks",
+                            "four-to-nine-children",
+                        }
+                        <= set(_rule_names(self.handle_request))
+                    ).to(equal(True))
+
+                with it("should violate verb-noun format on Handle Request"):
+                    hit = rule_on(self.handle_request, "verb-noun-format")
+                    expect(hit["status"]).to(equal("violating"))
+                    expect(hit["violations"][0]["message"]).to(
+                        equal("Story 'Handle Request': name should start with a verb (got generic-verb).")
+                    )
+
+                with it("should store the verb-noun span on Handle Request"):
+                    hit = rule_on(self.handle_request, "verb-noun-format")["violations"][0]
+                    expect(hit["file"]).to(
+                        equal("tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts")
+                    )
+                    expect(hit["start"]).to(equal(444))
+                    expect(hit["end"]).to(equal(444))
+
+                with it("should violate the system mechanic on Handle Request"):
+                    hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")
+                    expect(hit["status"]).to(equal("violating"))
+                    expect(hit["violations"][0]["message"]).to(
+                        equal(
+                            "Story 'Handle Request' names a generic handler; use the system mechanic (e.g. 'Submit Order')."
+                        )
+                    )
+
+                with it("should store the system-mechanic span on Handle Request"):
+                    hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")["violations"][0]
+                    expect(hit["start"]).to(equal(444))
+                    expect(hit["end"]).to(equal(444))
+
+                with it("should leave verb-noun format passing on Submit Order"):
+                    expect(rule_on(self.submit_order, "verb-noun-format")["status"]).to(equal("passing"))
+
+                with it("should violate four to nine children on the epic"):
+                    hit = rule_on(self.onboard, "four-to-nine-children")
+                    expect(hit["status"]).to(equal("violating"))
+                    expect(hit["violations"][0]["message"]).to(
+                        equal("epic 'Onboard A Customer': 1 children (target 4-9)")
+                    )
+
+                with it("should store the epic child-count hit on the line that names the epic"):
+                    hit = rule_on(self.onboard, "four-to-nine-children")["violations"][0]
+                    expect({"file": hit["file"], "start": hit["start"], "end": hit["end"]}).to(
+                        equal(
+                            {
+                                "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
+                                "start": 1,
+                                "end": 1,
+                            }
+                        )
+                    )
+
+                with it("should leave four to nine children passing on the sub-epic"):
+                    expect(rule_on(self.authenticate, "four-to-nine-children")["status"]).to(equal("passing"))
+
+                with it("should leave do-not-invent-requirements prompt"):
+                    expect(rule_on(self.handle_request, "do-not-invent-requirements")["status"]).to(equal("prompt"))
+
+                with context("with a story whose evidence is unlabeled"):
+                    with it("should record that evidence must be observed, inferred, or intended"):
+                        message = rule_on(
+                            self.handle_request,
+                            "evidence-distinguishes-observed-inferred-and-intended",
+                        )["violations"][0]["message"]
+                        expect(message).to(
+                            equal("story 'Handle Request': evidence must be observed, inferred, or intended.")
+                        )
+
+                    with it("should store that evidence hit on the story line"):
+                        hit = rule_on(
+                            self.handle_request,
+                            "evidence-distinguishes-observed-inferred-and-intended",
+                        )["violations"][0]
+                        expect({"file": hit["file"], "start": hit["start"], "end": hit["end"]}).to(
+                            equal(
+                                {
+                                    "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
+                                    "start": 444,
+                                    "end": 444,
+                                }
+                            )
+                        )
+
+                with context("with a story labeled observed"):
+                    with it("should leave that story's evidence passing"):
+                        status = rule_on(
+                            self.submit_order,
+                            "evidence-distinguishes-observed-inferred-and-intended",
+                        )["status"]
+                        expect(status).to(equal("passing"))
+
+                with context("with a story that repeats a sibling story"):
+                    with it("should record that the story is too similar to another story on the same map node"):
+                        message = rule_on(self.submit_order, "right-size-story-nodes")["violations"][0]["message"]
+                        expect(message).to(
+                            equal("Story 'Submit Order' is too similar to another story on the same map node.")
+                        )
+
+                    with it("should store that similarity hit on the story line"):
+                        hit = rule_on(self.submit_order, "right-size-story-nodes")["violations"][0]
+                        expect({"file": hit["file"], "start": hit["start"], "end": hit["end"]}).to(
+                            equal(
+                                {
+                                    "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
+                                    "start": 429,
+                                    "end": 429,
+                                }
+                            )
+                        )
+
+                with context("with a story whose siblings name distinct interactions"):
+                    with it("should leave that story distinct from its siblings"):
+                        expect(rule_on(self.create_account, "right-size-story-nodes")["status"]).to(equal("passing"))
+
+                with context("with the story type selected"):
+                    with before.all:
+                        self.graph.filter.select_practices(["stories"])
+                        self.graph.filter.select_node_types(["Story"])
+
+                    with it("should offer the story-node rules"):
+                        expect(
+                            {
+                                "vocabulary-traces-to-domain-source",
+                                "read-all-source-context-in-full",
+                                "do-not-invent-requirements",
+                                "evidence-distinguishes-observed-inferred-and-intended",
+                            }
+                            <= set(self.graph.filter.rules)
+                        ).to(equal(True))
 
             with context("with an epic, a sub-epic, a story, a scenario, a step, and an example"):
                 with it("should parent the epic on the practice"):

@@ -696,24 +696,29 @@ class Node:
         }
 
     def rule_rows(self) -> list[dict]:
+        """One rule child: status violating, passing, or prompt, and every stored hit."""
         graph = self.practice.graph
         violations_only = bool(graph and graph.filter.violations)
         selected = list(graph.filter.rules) if graph else []
-        failed: dict[str, str] = {}
-        for slug, message in self.rules.violations():
-            failed.setdefault(slug, message)
         rows: list[dict] = []
-        for rule in self.rules.slugs():
-            violating = rule in failed
-            if violations_only and (not violating or (selected and rule not in selected)):
+        for slug in self.rules.slugs():
+            entry = self.rules.entries.get(slug)
+            hits = [dict(hit) for hit in getattr(entry, "hits", []) or []]
+            if hits:
+                status = "violating"
+            elif not getattr(entry, "executable", True):
+                status = "prompt"
+            else:
+                status = "passing"
+            if violations_only and (status != "violating" or (selected and slug not in selected)):
                 continue
             rows.append(
                 {
                     "type": "Rule",
-                    "name": rule,
-                    "node_id": f"{self.node_id}:rules:{rule}",
-                    "status": "violating" if violating else "passing",
-                    "violation": failed.get(rule, ""),
+                    "name": slug,
+                    "node_id": f"{self.node_id}:rules:{slug}",
+                    "status": status,
+                    "violations": hits,
                     "children": [],
                 }
             )

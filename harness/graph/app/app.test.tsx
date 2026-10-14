@@ -171,7 +171,14 @@ const engineeringTree = {
                       name: 'limit-operation-parameters',
                       node_id: 'op-failure:rules:limit-operation-parameters',
                       status: 'violating',
-                      violation: "Operation 'failure' takes more than two parameters.",
+                      violations: [
+                        {
+                          message: "Operation 'failure' takes more than two parameters.",
+                          file: 'register.ts',
+                          start: 1,
+                          end: 2,
+                        },
+                      ],
                       children: [],
                     },
                   ],
@@ -683,6 +690,9 @@ it('should show the violation banner, highlight the source, and copy a Correct p
   const banner = await screen.findByTestId('violation-banner');
   expect(banner.textContent).toContain('limit-operation-parameters');
   expect(banner.textContent).toContain('takes more than two parameters');
+  expect(calls.some((call) => call.operation === 'source' && call.body.node_id === 'op-failure')).toBe(true);
+  const listed = await screen.findByTestId('source-rules');
+  expect(listed.textContent).toContain('limit-operation-parameters');
   const editor = await screen.findByTestId('source-editor');
   await waitFor(() => expect(editor.querySelector('.violation-highlight')).toBeTruthy());
   await user.click(screen.getByTestId('violation-correct'));

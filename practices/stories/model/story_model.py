@@ -5,6 +5,7 @@ A nested epic is an epic whose parent is an epic. Each node type implements clon
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional
@@ -48,11 +49,117 @@ class StoryNode(BoundNode, ABC):
         "ands": 9,
     }
 
+    _GENERIC_VERBS = frozenset({"handle", "process", "manage", "perform", "do", "execute", "run"})
+    _ACTOR_NOUNS = frozenset({
+        "customer", "user", "system", "admin", "operator", "treasurer", "approver",
+        "auditor", "merchant", "partner", "service", "api", "backend", "frontend",
+        "database", "browser", "client", "server",
+    })
+    _VERBS = frozenset({
+        "add", "allow", "approve", "assign", "attach", "block", "build", "cancel",
+        "capture", "check", "clear", "close", "collect", "compare", "complete",
+        "compose", "confirm", "connect", "convert", "create", "delete", "deliver",
+        "deny", "deploy", "detect", "disable", "display", "download", "draft",
+        "drop", "edit", "email", "enable", "enter", "expire", "export", "extend",
+        "extract", "fetch", "filter", "fix", "flag", "generate", "grant", "group",
+        "hide", "hold", "import", "index", "initiate", "invite", "issue",
+        "join", "leave", "list", "load", "lock", "log", "map", "match", "merge",
+        "move", "notify", "onboard", "open", "order", "pause", "pay", "post",
+        "print", "publish", "queue", "read", "record", "refresh",
+        "refund", "register", "reject", "release", "remove", "rename", "render",
+        "reply", "report", "reset", "resolve", "retry", "return", "revert",
+        "review", "revoke", "route", "save", "scan", "schedule", "search",
+        "select", "send", "settle", "share", "show", "sign", "split", "start",
+        "stop", "store", "submit", "subscribe", "sync", "toggle", "track",
+        "translate", "trigger", "unlock", "update", "upload", "validate", "verify",
+        "view", "vote", "wait", "browse", "request", "place",
+    })
+    _GERUND = re.compile(r"^[a-z]+ing$")
+    _NOMINALISATION = re.compile(r"^[a-z]+(?:tion|sion|ment|ance|ence|ity|ness)$")
+    _GENERIC_HANDLER = re.compile(
+        r"^(Handle|Process|Manage|Perform|Do|Execute|Run)\s+[A-Z]",
+        re.IGNORECASE,
+    )
+    _KEBAB_FILE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*\.(md|ts|tsx|js|jsx)$")
+    _CAMEL_FILE = re.compile(r"[A-Z][a-zA-Z0-9]*(?:Story|Test|Spec)")
+    _ONE_OFF = re.compile(
+        r"\b(once|one[- ]time|initial setup|bootstrap only|migrate legacy)\b",
+        re.IGNORECASE,
+    )
+
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None):
         super().__init__(name, sequential_order, graph)
         # Shaping outline sizing (e.g. "approx 2-3 more stories (...)").
         # Meaningful on Epic; empty on Story and below.
         self.estimate: str = ""
+        self.opening_token = ""
+        self.opening_class = ""
+        self.child_count = 0
+        self.child_label = "children"
+        self.child_band = ""
+        self.near_duplicate = False
+        self.generic_handler = False
+        self.shared_verb = ""
+        self.one_time_task = False
+        self.artifact_name = ""
+        self.camel_case_path = False
+        self.evidence: List[str] = []
+
+    def load_map_facts(self) -> None:
+        """Fill the name, evidence, and child-count facts this node already owns."""
+        self._load_opening()
+        self._load_path_case()
+        self.generic_handler = bool(self._GENERIC_HANDLER.match((self.name or "").strip()))
+        self.near_duplicate = False
+        self.shared_verb = ""
+        self.one_time_task = bool(self._ONE_OFF.search(self.name or ""))
+        self.load_child_band(0, "children")
+
+    def _load_path_case(self) -> None:
+        source = getattr(self, "source", None)
+        relative = str(getattr(source, "file", "") or "") if source is not None else ""
+        name = relative.replace("\\", "/").rsplit("/", 1)[-1]
+        self.artifact_name = name
+        self.camel_case_path = self._camel_case_file(name)
+
+    def _camel_case_file(self, name: str) -> bool:
+        if not name or name in {"."}:
+            return False
+        if self._KEBAB_FILE.match(name):
+            return False
+        stem = name.split(".")[0]
+        return bool(self._CAMEL_FILE.search(name) or re.search(r"[A-Z]", stem))
+
+    def _load_opening(self) -> None:
+        stripped = (self.name or "").strip().strip("`").strip("*").strip()
+        match = re.match(r"[A-Za-z][A-Za-z\-']*", stripped)
+        self.opening_token = match.group(0).lower() if match else ""
+        self.opening_class = self._classify_opening(self.opening_token)
+
+    def _classify_opening(self, token: str) -> str:
+        if not token:
+            return "unknown-noun"
+        if token in self._GENERIC_VERBS:
+            return "generic-verb"
+        if token in self._VERBS:
+            return "verb"
+        if token in self._ACTOR_NOUNS:
+            return "actor-noun"
+        if self._GERUND.match(token):
+            return "gerund"
+        if self._NOMINALISATION.match(token):
+            return "nominalisation"
+        return "unknown-noun"
+
+    def load_child_band(self, count: int, label: str) -> None:
+        self.child_count = count
+        self.child_label = label
+        if count == 0 or 4 <= count <= 9:
+            self.child_band = ""
+        elif count in (3, 10):
+            self.child_band = "warning"
+        else:
+            self.child_band = "error"
 
     @abstractmethod
     def clone(self) -> "StoryNode":
@@ -400,6 +507,15 @@ class Scenario(StoryNode):
         close()
         return runs
 
+    def load_map_facts(self) -> None:
+        self._load_opening()
+        self._load_path_case()
+        self.generic_handler = False
+        self.near_duplicate = False
+        self.shared_verb = ""
+        self.one_time_task = False
+        self.load_child_band(len(self.steps), "steps")
+
     def clone(self) -> "Scenario":
         cloned = type(self)(self.name, self.sequential_order, self.story_name)
         cloned.is_outline = self.is_outline
@@ -483,6 +599,22 @@ class Epic(StoryNode):
         for story in cloned.stories:
             story.parent = cloned
         return cloned
+
+    def load_map_facts(self) -> None:
+        self._load_opening()
+        self._load_path_case()
+        self.generic_handler = False
+        self.near_duplicate = False
+        self.one_time_task = False
+        self.load_child_band(len(self.epics) + len(self.stories), "children")
+        self.shared_verb = self._shared_opening()
+
+    def _shared_opening(self) -> str:
+        names = [story.name.strip().casefold() for story in self.stories if story.name.strip()]
+        verbs = [name.split()[0] for name in names if name.split()]
+        if len(verbs) < 2 or len(set(verbs)) != 1 or len(set(names)) < 2:
+            return ""
+        return verbs[0]
 
     def append_epic(self, epic: "Epic") -> None:
         epic.parent = self
@@ -613,6 +745,37 @@ class Story(StoryNode):
     @scenarios.setter
     def scenarios(self, scenarios: List["Scenario"]) -> None:
         self._refill(self._scenarios, scenarios)
+
+    def load_map_facts(self) -> None:
+        self._load_opening()
+        self._load_path_case()
+        self.generic_handler = bool(self._GENERIC_HANDLER.match((self.name or "").strip()))
+        self.one_time_task = bool(self._ONE_OFF.search(self.name or ""))
+        self.shared_verb = ""
+        backgrounds = len(self.backgrounds)
+        total = len(self.scenarios) + backgrounds
+        label = "scenarios" if backgrounds == 0 else "children"
+        self.load_child_band(total, label)
+        self.near_duplicate = self._repeats_later_sibling()
+
+    def _repeats_later_sibling(self) -> bool:
+        siblings = list(getattr(self.parent, "stories", []) or [])
+        if len(siblings) < 2 or self not in siblings:
+            return False
+        names = [story.name.strip().lower() for story in siblings]
+        index = siblings.index(self)
+        left = names[index]
+        return any(self._near_name(left, right) for right in names[index + 1 :])
+
+    def _near_name(self, left: str, right: str) -> bool:
+        if left == right:
+            return True
+        if left.split()[:1] != right.split()[:1]:
+            return False
+        if abs(len(left) - len(right)) > 2:
+            return False
+        shorter, longer = (left, right) if len(left) <= len(right) else (right, left)
+        return longer.startswith(shorter[: max(3, len(shorter) - 1)])
 
     def clone(self) -> "Story":
         cloned = type(self)(self.name, self.sequential_order, self.story_type)

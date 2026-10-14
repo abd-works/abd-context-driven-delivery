@@ -24,12 +24,20 @@ export type PracticeInventory = {
   tree: GraphTree;
 };
 
+export type RuleHit = {
+  message: string;
+  file?: string;
+  start?: number;
+  end?: number;
+};
+
 export type GraphTree = {
   type: string;
   name: string;
   node_id: string;
   status?: string;
   violation?: string;
+  violations?: RuleHit[];
   children: GraphTree[];
 };
 

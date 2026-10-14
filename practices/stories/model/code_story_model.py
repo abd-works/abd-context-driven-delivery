@@ -454,9 +454,16 @@ class CodeStoryModel(StoryModel):
 
         for story in self.story_type.load_all(content):
             if source_file:
-                story.source = SourceLocation(source_file.replace("\\", "/"), 1, 1)
+                line = self._quoted_name_line(content, story.name)
+                story.source = SourceLocation(source_file.replace("\\", "/"), line, line)
             sub.append_story(story)
         return True
+
+    def _quoted_name_line(self, content: str, name: str) -> int:
+        for index, line in enumerate(content.splitlines(), start=1):
+            if f"'{name}'" in line or f'"{name}"' in line:
+                return index
+        return 1
 
     def _file_stem_slug(self, filename: str) -> str:
         for suffix in (

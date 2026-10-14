@@ -1,37 +1,37 @@
-"""Story graph rules — language-agnostic (map / graph shape)."""
+"""Story graph rules, one module per fidelity."""
 
-from practices.stories.rules.four_to_nine_children import FourToNineChildren
-from practices.stories.rules.kebab_case_paths import KebabCasePaths
-from practices.stories.rules.scenario_rules import (
+from practices.stories.rules.acceptance_tests import (
+    DomainFixtureExampleFiles,
+    ExampleRoleNames,
+    ExamplesExportDataNotRepository,
+    OriginatingSubEpicExamples,
+)
+from practices.stories.rules.scenarios import (
     AndChaining,
-    BehavioursNotOneTimeTasks,
     BehavioralAndSystemObservableOutcomes,
-    BranchOnMechanicalUniqueness,
     ButMarksMissingState,
+    DomainOperationInTheStep,
     ExamplesTraceDomainModel,
     FlaggedWritesIntendedGwt,
     GivenNamesComplexStateRootFirst,
+    GwtStepsTraceToDomainOperations,
     OutlineRequiresManyPermutations,
+    PlainEnglishGwtSteps,
     ScenarioNamesContinuation,
+    ScenariosShape,
     WhenHoldsTheOperation,
     WhenNamesIntentNotInterfaceGesture,
 )
-from practices.stories.rules.scenarios_shape import ScenariosShape
-from practices.stories.rules.ts_story_rules import (
-    DomainFixtureExampleFiles,
-    DomainOperationInTheStep,
-    ExampleRoleNames,
-    GwtStepsTraceToDomainOperations,
-    OriginatingSubEpicExamples,
-)
-from practices.stories.rules.story_content_rules import (
-    ExamplesExportDataNotRepository,
-    PlainEnglishGwtSteps,
+from practices.stories.rules.story_map import (
+    BehavioursNotOneTimeTasks,
+    BranchOnMechanicalUniqueness,
+    EvidenceDistinguishesObservedInferredAndIntended,
+    FourToNineChildren,
+    KebabCasePaths,
     RightSizeStoryNodes,
     StoryNameCapturesSystemMechanic,
-    VocabularyTracesToDomainSource,
+    VerbNounFormat,
 )
-from practices.stories.rules.verb_noun_format import VerbNounFormat
 
 RULES: tuple = (
     FourToNineChildren(),
@@ -41,7 +41,7 @@ RULES: tuple = (
     StoryNameCapturesSystemMechanic(),
     PlainEnglishGwtSteps(),
     RightSizeStoryNodes(),
-    VocabularyTracesToDomainSource(),
+    EvidenceDistinguishesObservedInferredAndIntended(),
     ExamplesExportDataNotRepository(),
     GwtStepsTraceToDomainOperations(),
     DomainOperationInTheStep(),

@@ -25,6 +25,7 @@ class GraphRule(PracticeGraphRule, Rule):
         self.node_types = node_types
         self.executable = executable
         self._violations: list[str] = []
+        self.hits: list[dict] = []
 
     @classmethod
     def from_check(cls, check: PracticeGraphRule, body: str = "") -> GraphRule:
@@ -50,13 +51,17 @@ class GraphRule(PracticeGraphRule, Rule):
     def violations(self) -> list[str]:
         return list(self._violations)
 
-    def record(self, message: str) -> None:
+    def record(self, message: str, file: str = "", start: int = 0, end: int = 0) -> None:
         text = (message or "").strip()
         if text and text not in self._violations:
             self._violations.append(text)
+            self.hits.append(
+                {"message": text, "file": file, "start": int(start or 0), "end": int(end or 0)}
+            )
 
     def clear_violations(self) -> None:
         self._violations.clear()
+        self.hits.clear()
 
     def failing(self) -> bool:
         return bool(self._violations)
@@ -100,10 +105,23 @@ class GraphRulesCollection(RulesCollection):
             if isinstance(value, GraphRule):
                 yield value
 
-    def record_violation(self, slug: str, message: str) -> None:
+    def record_violation(
+        self,
+        slug: str,
+        message: str,
+        file: str | None = None,
+        start: int | None = None,
+        end: int | None = None,
+    ) -> None:
         entry = self.entries.get(slug)
-        if isinstance(entry, GraphRule):
-            entry.record(message)
+        if not isinstance(entry, GraphRule):
+            return
+        source = getattr(self.node, "source", None)
+        if file is None and source is not None:
+            file = source.file
+            start = source.start_line
+            end = source.end_line
+        entry.record(message, file or "", int(start or 0), int(end or 0))
 
     def clear_violations(self) -> None:
         for rule in self.graph_rules():

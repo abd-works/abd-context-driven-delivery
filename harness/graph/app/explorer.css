@@ -742,6 +742,30 @@ ul.tree ul {
 
 .rule-status.passing { color: var(--success); }
 .rule-status.violating { color: var(--error); }
+.rule-status.prompt { color: var(--text-muted, var(--text)); }
+
+.source-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs) var(--space-s) 0;
+}
+
+.source-rule {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s, 4px);
+  cursor: pointer;
+  padding: 0 var(--space-2xs);
+}
+
+.source-rule.passing { color: var(--success); }
+.source-rule.violating { color: var(--error); }
+.source-rule.prompt { color: var(--text-muted, var(--text)); }
+.source-rule.is-active { border-color: var(--select); }
 
 .source-highlight {
   background: rgba(229, 83, 26, 0.22);

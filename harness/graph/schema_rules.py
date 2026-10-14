@@ -187,13 +187,35 @@ def rules_for_practice(practice: str) -> dict[str, tuple[str, ...]]:
 
 
 def slugs_for_type(practice: str, node_type: str) -> tuple[str, ...]:
-    return rules_for_practice(practice).get(node_type, ())
+    """Schema slugs for this explorer type.
+
+    A sub-epic is stored as its own type and carries the epic rules.
+    Epic, sub-epic, and story are story nodes, so they also carry the
+    storyNode rules.
+    """
+    table = rules_for_practice(practice)
+    key = "Epic" if practice == "stories" and node_type == "SubEpic" else node_type
+    found = list(table.get(key, ()))
+    if practice == "stories" and node_type in {"Epic", "SubEpic", "Story"}:
+        for slug in table.get("StoryNode", ()):
+            if slug not in found:
+                found.append(slug)
+    return tuple(found)
 
 
 def bind_practice_rules(practice_graph) -> None:
-    """Register every schema rule slug against the node types it applies to."""
+    """Register every schema rule slug against the node types it applies to.
+
+    Epic, sub-epic, and story are story nodes. Their filter list includes the
+    storyNode slugs, including the prompt-only rules.
+    """
     for node_type, slugs in rules_for_practice(practice_graph.name).items():
         for slug in slugs:
+            practice_graph.bind_rule(slug, [node_type])
+    if practice_graph.name != "stories":
+        return
+    for node_type in ("Epic", "SubEpic", "Story"):
+        for slug in slugs_for_type(practice_graph.name, node_type):
             practice_graph.bind_rule(slug, [node_type])
 
 

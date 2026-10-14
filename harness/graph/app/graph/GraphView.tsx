@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { KindMark } from '../kind-mark';
 import type { GraphTree } from '../filter/FilterClient';
-import type { GraphSelection } from './graph-selection';
+import { ruleHits, selectionForRule, type GraphSelection } from './graph-selection';
 import { queryProgress } from './query-progress';
 
 type GraphViewProps = {
@@ -11,6 +11,7 @@ type GraphViewProps = {
   loadingLog?: string[];
   error: string;
   selectedId: string;
+  activeRule: string;
   onSelect: (selection: GraphSelection) => void;
 };
 
@@ -20,7 +21,7 @@ function elapsedLabel(seconds: number): string {
   return `${minutes}:${rest.toString().padStart(2, '0')}`;
 }
 
-export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error, selectedId, onSelect }: GraphViewProps) {
+export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error, selectedId, activeRule, onSelect }: GraphViewProps) {
   const progress = queryProgress(loadingLog);
   const log = useRef<HTMLOListElement>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -73,7 +74,7 @@ export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error
       ) : null}
       <ul className="tree">
         {trees.map((node) => (
-          <TreeNode key={node.node_id || node.name} node={node} selectedId={selectedId} onSelect={onSelect} />
+          <TreeNode key={node.node_id || node.name} node={node} selectedId={selectedId} activeRule={activeRule} onSelect={onSelect} />
         ))}
       </ul>
     </div>
@@ -83,11 +84,13 @@ export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error
 function TreeNode({
   node,
   selectedId,
+  activeRule,
   onSelect,
   ownerId,
 }: {
   node: GraphTree;
   selectedId: string;
+  activeRule: string;
   onSelect: (selection: GraphSelection) => void;
   ownerId?: string;
 }) {
@@ -95,14 +98,14 @@ function TreeNode({
   const children = (node.children ?? []).filter(
     (child) => child.name !== 'belongsTo' && child.type !== 'belongsTo' && child.name !== 'scopes' && child.type !== 'scopes',
   );
-  const selected = node.node_id === selectedId;
   const rule = node.type === 'Rule';
   const rulesHolder = node.type === 'rules';
+  const selected = rule ? ownerId === selectedId && node.name === activeRule : node.node_id === selectedId;
   const violating = (node.children ?? []).some(
     (child) => child.name === 'rules' && (child.children ?? []).some((hit) => hit.status === 'violating'),
   );
-  const selectId = rule ? ownerId || node.node_id : node.node_id;
-  const violationHint = rule && node.status === 'violating' && node.violation ? node.violation : undefined;
+  const hits = ruleHits(node);
+  const violationHint = rule && node.status === 'violating' && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
   return (
     <li
       data-node-id={node.node_id}
@@ -131,16 +134,8 @@ function TreeNode({
             .filter(Boolean)
             .join(' ')}
           title={violationHint}
-          data-testid={violationHint ? 'tree-violation-rule' : undefined}
-          onClick={() =>
-            onSelect({
-              nodeId: selectId,
-              violation:
-                rule && node.status === 'violating' && node.violation
-                  ? { rule: node.name, message: node.violation }
-                  : undefined,
-            })
-          }
+          data-testid={rule ? (violationHint ? 'tree-violation-rule' : 'tree-rule') : undefined}
+          onClick={() => onSelect(rule ? selectionForRule(ownerId || node.node_id, node) : { nodeId: node.node_id })}
         >
           <KindMark kind={rule ? 'Rule' : rulesHolder ? 'Rules' : node.type} isFile={false} />
           <span className="node-name">{node.name}</span>
@@ -153,8 +148,9 @@ function TreeNode({
               key={child.node_id || child.name}
               node={child}
               selectedId={selectedId}
+              activeRule={activeRule}
               onSelect={onSelect}
-              ownerId={child.type === 'rules' || rule ? ownerId || node.node_id : undefined}
+              ownerId={child.type === 'rules' || child.type === 'Rule' ? ownerId || node.node_id : undefined}
             />
           ))}
         </ul>

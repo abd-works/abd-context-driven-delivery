@@ -11,6 +11,7 @@ from pathlib import Path
 
 from harness.graph.node_data import encode_node_data
 
+from practices.stories.model.source_location import SourceLocation
 from practices.stories.model.story_model import Epic, Step, StepType, Story, StoryModel
 
 
@@ -33,11 +34,14 @@ class GraphStoryModel:
         practice.loaded = ["nodes", "edges", "rules"]
 
     def _epic(self, root: str, parent_id: str, epic: Epic, top: bool, nodes: list, edges: list) -> None:
-        file = self._file_under(epic)
-        folder = self._folder(file, up=1 if top and epic.epics else 0)
+        story_file = self._file_under(epic)
+        folder = self._folder(story_file, up=1 if top and epic.epics else 0)
         semantic = "Epic" if top else "SubEpic"
         node_id = f"stories:{semantic}:{folder}:{epic.name}"
-        nodes.append([node_id, epic.name, semantic, "stories", folder or ".", 1, 1])
+        source_file, line, end = self._name_span(root, story_file, epic.name, folder)
+        epic.source = SourceLocation(source_file, line, end)
+        epic.load_map_facts()
+        nodes.append(self._row(node_id, epic.name, semantic, source_file, line, end, epic))
         edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
         for child in epic.epics:
             self._epic(root, node_id, child, False, nodes, edges)
@@ -48,7 +52,8 @@ class GraphStoryModel:
         file = self._file(story)
         node_id = f"stories:Story:{file}:{story.name}"
         line, end = self._source_span(story, root, file)
-        nodes.append([node_id, story.name, "Story", "stories", file or ".", line, end])
+        story.load_map_facts()
+        nodes.append(self._row(node_id, story.name, "Story", file or ".", line, end, story))
         edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
         for background in story.backgrounds:
             self._background(root, file, node_id, background, nodes, edges)
@@ -59,7 +64,9 @@ class GraphStoryModel:
         label = background.name or "background"
         node_id = f"stories:Background:{file}:{label}"
         line, end = self._source_span(background, root, file)
-        nodes.append([node_id, label, "Background", "stories", file or ".", line, end])
+        self._ensure_source(background, file, line, end)
+        background.load_map_facts()
+        nodes.append(self._row(node_id, label, "Background", file or ".", line, end, background))
         edges.append([parent_id, node_id, "background", 2, "direct"])
         for step in background.steps:
             self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
@@ -67,18 +74,23 @@ class GraphStoryModel:
     def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list) -> None:
         node_id = f"stories:Scenario:{file}:{scenario.name}"
         line, end = self._source_span(scenario, root, file)
-        payload = encode_node_data(
-            {
-                "is_outline": bool(getattr(scenario, "is_outline", False)),
-                "evidence": list(getattr(scenario, "evidence", []) or []),
-                "story_name": getattr(scenario, "story_name", "") or "",
-            }
+        self._ensure_source(scenario, file, line, end)
+        scenario.load_map_facts()
+        nodes.append(
+            self._row(
+                node_id,
+                scenario.name,
+                "Scenario",
+                file or ".",
+                line,
+                end,
+                scenario,
+                {
+                    "is_outline": bool(getattr(scenario, "is_outline", False)),
+                    "story_name": getattr(scenario, "story_name", "") or "",
+                },
+            )
         )
-        row = [node_id, scenario.name, "Scenario", "stories", file or ".", line, end]
-        if payload:
-            row.append("")
-            row.append(payload)
-        nodes.append(row)
         edges.append([parent_id, node_id, "scenarios", 3, "direct"])
         for step in scenario.steps:
             self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
@@ -112,6 +124,39 @@ class GraphStoryModel:
         for continuation in step.ands:
             self._step(root, file, node_id, continuation, nodes, edges, edge_kind="ands", order=9)
 
+    def _row(
+        self,
+        node_id: str,
+        name: str,
+        semantic: str,
+        file: str,
+        line: int,
+        end: int,
+        node,
+        extra: dict | None = None,
+    ) -> list:
+        facts = {
+            "opening_token": getattr(node, "opening_token", ""),
+            "opening_class": getattr(node, "opening_class", ""),
+            "child_count": getattr(node, "child_count", 0),
+            "child_label": getattr(node, "child_label", "children"),
+            "child_band": getattr(node, "child_band", ""),
+            "near_duplicate": bool(getattr(node, "near_duplicate", False)),
+            "generic_handler": bool(getattr(node, "generic_handler", False)),
+            "shared_verb": getattr(node, "shared_verb", "") or "",
+            "one_time_task": bool(getattr(node, "one_time_task", False)),
+            "artifact_name": getattr(node, "artifact_name", "") or "",
+            "camel_case_path": bool(getattr(node, "camel_case_path", False)),
+            "evidence": list(getattr(node, "evidence", []) or []),
+        }
+        if extra:
+            facts.update(extra)
+        payload = encode_node_data(facts)
+        row = [node_id, name, semantic, "stories", file, line, end]
+        if payload:
+            row.extend(["", payload])
+        return row
+
     def _file_under(self, epic: Epic) -> str:
         for story in epic.stories:
             file = self._file(story)
@@ -136,6 +181,33 @@ class GraphStoryModel:
             parts = parts[:-up]
         return "/".join(parts) or "."
 
+    def _ensure_source(self, node, file: str, line: int, end: int) -> None:
+        if self._file(node):
+            return
+        node.source = SourceLocation(file or ".", line, end)
+
+    def _name_span(self, root: str, file: str, name: str, folder: str) -> tuple[str, int, int]:
+        line = self._line_containing(root, file, name) if file and name else None
+        if line is not None:
+            return file, line, line
+        return folder or ".", 0, 0
+
+    def _line_containing(self, root: str, file: str, text: str) -> int | None:
+        if not text:
+            return None
+        for index, line in enumerate(self._file_lines(root, file), start=1):
+            if text in line:
+                return index
+        return None
+
+    def _file_lines(self, root: str, file: str) -> list[str]:
+        lines = self._lines.get(file)
+        if lines is None:
+            path = Path(root, file) if root and file else None
+            lines = path.read_text(encoding="utf-8").splitlines() if path is not None and path.is_file() else []
+            self._lines[file] = lines
+        return lines
+
     def _source_span(self, node, root: str, file: str, fallback_text: str = "") -> tuple[int, int]:
         source = getattr(node, "source", None)
         if source is not None and getattr(source, "line", None):
@@ -146,11 +218,7 @@ class GraphStoryModel:
         return line, line
 
     def _next_line(self, root: str, file: str, text: str) -> int:
-        lines = self._lines.get(file)
-        if lines is None:
-            path = Path(root, file) if root and file else None
-            lines = path.read_text(encoding="utf-8").splitlines() if path is not None and path.is_file() else []
-            self._lines[file] = lines
+        lines = self._file_lines(root, file)
         start = self._cursor.get(file, 0)
         if text:
             for index in range(start, len(lines)):

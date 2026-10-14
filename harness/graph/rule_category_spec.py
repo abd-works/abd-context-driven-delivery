@@ -45,7 +45,7 @@ with description("rule categories"):
         with it("should attach the parameter rule to the operation that fails it"):
             rule = rule_on(self.failure.serialize(), "limit-operation-parameters")
             expect(rule["status"]).to(equal("violating"))
-            expect(rule["violation"]).to(contain("takes more than two parameters"))
+            expect(rule["violations"][0]["message"]).to(contain("takes more than two parameters"))
 
         with it("should attach the parameter rule to the operation that passes it"):
             expect(rule_on(self.register.serialize(), "limit-operation-parameters")["status"]).to(equal("passing"))
@@ -72,7 +72,7 @@ with description("rule categories"):
             with it("should attach the violation on the serialized operation"):
                 rule = rule_on(self.failure.serialize(), "limit-operation-parameters")
                 expect(rule["status"]).to(equal("violating"))
-                expect(len(rule["violation"])).to(be_above(0))
+                expect(len(rule["violations"])).to(be_above(0))
 
             with it("should leave the passing rule off the serialized operation"):
                 names = [child["name"] for child in self.register.serialize()["children"]]
