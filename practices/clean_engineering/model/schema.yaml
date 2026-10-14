@@ -19,10 +19,8 @@ module:
     - vocabulary-traces-to-source
     - do-not-invent-terms
     - do-not-invent-parallel-object-models
-    - honor-every-rule-in-the-artifact
     - domain-nouns-only
     - named-seam-and-constraint
-    - modules-name-the-source-type
     - high-cohesion
     - no-module-per-class
     - single-boundary
@@ -30,7 +28,6 @@ module:
     - abstraction-focus
     - purpose-before-mechanism
     - public-seam-only
-    - module-mistakes-feed-ce
     - use-typed-signatures
     - general-purpose-surface
     - temporal-independence
@@ -38,7 +35,6 @@ module:
     - extensions-live-with-the-domain
     - low-coupling
     - layer-separation
-    - nesting
     - missing-module-context
     - language-modules-one-section
     - modules-not-model-blocks
