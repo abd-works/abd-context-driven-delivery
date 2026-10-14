@@ -19,6 +19,8 @@ from practices.clean_engineering.rules.module_graph_rules import (
     NamedSeamAndConstraint,
     PublicSeamOnly,
 )
+from practices.clean_engineering.rules.module_naming_rules import DomainNounsOnly, NoModulePerClass
+from practices.clean_engineering.rules.write_interactions import WriteInteractions
 from practices.clean_engineering.rules.practice_wide_rules import (
     DeepModule,
     ExtensionsLiveWithTheDomain,
@@ -46,6 +48,9 @@ RULES: tuple = (
     LowCoupling(),
     DeepModule(),
     ExtensionsLiveWithTheDomain(),
+    DomainNounsOnly(),
+    NoModulePerClass(),
+    WriteInteractions(),
 ) + CODE_RULES
 
 BY_SLUG = {rule.slug: rule for rule in RULES}

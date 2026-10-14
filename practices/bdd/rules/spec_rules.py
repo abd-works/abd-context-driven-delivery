@@ -14,6 +14,12 @@ from practices.bdd.rules.spec_helpers import (
 )
 from practices.bdd.rules.layer_isolation import LayerIsolation
 from practices.bdd.rules.observable_behavior import ObservableBehavior
+from practices.bdd.rules.tree_rules import (
+    DescribeSubjectNotInternal,
+    NoImplementation,
+    OneAssertionPerTest,
+    StateNotWhen,
+)
 
 _EXPECT_PRIVATE = re.compile(r"(?:expect\s*\([^)]*\._\w+|expect\([^)]*\)\.to\([^)]*\._\w+)")
 _DIRECT_PRIVATE = re.compile(
@@ -65,4 +71,8 @@ SPEC_RULES: tuple[PracticeGraphRule, ...] = (
     PlainEnglishOnly(),
     SignatureMarkers(),
     LayerIsolation(),
+    DescribeSubjectNotInternal(),
+    StateNotWhen(),
+    OneAssertionPerTest(),
+    NoImplementation(),
 )

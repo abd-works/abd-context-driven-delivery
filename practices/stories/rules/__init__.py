@@ -2,6 +2,20 @@
 
 from practices.stories.rules.four_to_nine_children import FourToNineChildren
 from practices.stories.rules.kebab_case_paths import KebabCasePaths
+from practices.stories.rules.scenario_rules import (
+    AndChaining,
+    BehavioursNotOneTimeTasks,
+    BehavioralAndSystemObservableOutcomes,
+    BranchOnMechanicalUniqueness,
+    ButMarksMissingState,
+    ExamplesTraceDomainModel,
+    FlaggedWritesIntendedGwt,
+    GivenNamesComplexStateRootFirst,
+    OutlineRequiresManyPermutations,
+    ScenarioNamesContinuation,
+    WhenHoldsTheOperation,
+    WhenNamesIntentNotInterfaceGesture,
+)
 from practices.stories.rules.scenarios_shape import ScenariosShape
 from practices.stories.rules.ts_story_rules import (
     DomainFixtureExampleFiles,
@@ -34,6 +48,18 @@ RULES: tuple = (
     DomainFixtureExampleFiles(),
     ExampleRoleNames(),
     OriginatingSubEpicExamples(),
+    AndChaining(),
+    ButMarksMissingState(),
+    WhenHoldsTheOperation(),
+    OutlineRequiresManyPermutations(),
+    ExamplesTraceDomainModel(),
+    WhenNamesIntentNotInterfaceGesture(),
+    BehavioralAndSystemObservableOutcomes(),
+    FlaggedWritesIntendedGwt(),
+    BranchOnMechanicalUniqueness(),
+    BehavioursNotOneTimeTasks(),
+    GivenNamesComplexStateRootFirst(),
+    ScenarioNamesContinuation(),
 )
 
 BY_SLUG = {rule.slug: rule for rule in RULES}
