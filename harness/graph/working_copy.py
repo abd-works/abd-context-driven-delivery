@@ -403,8 +403,9 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
     epics = [node for node in stories.by_id.values() if node.type in {"Epic", "SubEpic"}]
     for step in steps:
         body = _step_body(graph._folder, step)
+        callees = list(getattr(step, "data", {}).get("callees") or [])
         for operation in operations:
-            if re.search(rf"\.{re.escape(operation.name)}\s*\(", body):
+            if operation.name in callees or re.search(rf"\.{re.escape(operation.name)}\s*\(", body):
                 _edge(stories, "invokes", 12, "relationship", step, operation)
                 _edge(clean, "invokes", 12, "relationship", operation, step)
                 _edge(clean, "invokedBy", 9, "relationship", operation, step)
