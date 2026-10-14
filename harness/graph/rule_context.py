@@ -89,7 +89,10 @@ class RuleCheckContext:
         return model
 
     def ce_class(self, node) -> OoadClass | None:
-        if node.type != "OoadClass":
+        from harness.graph.schema_rules import ce_anchor_type
+
+        anchor = ce_anchor_type(node.practice.name, node.type)
+        if node.type != "OoadClass" and anchor != "OoadClass":
             return None
         model = self.clean_engineering_model(node)
         if model is None:
@@ -101,7 +104,10 @@ class RuleCheckContext:
         return None
 
     def ce_operation(self, node) -> tuple[OoadClass, Operation] | None:
-        if node.type != "Operation":
+        from harness.graph.schema_rules import ce_anchor_type
+
+        anchor = ce_anchor_type(node.practice.name, node.type)
+        if node.type != "Operation" and anchor != "Operation":
             return None
         model = self.clean_engineering_model(node)
         if model is None:
@@ -154,6 +160,45 @@ class RuleCheckContext:
             return None
         return self._story_model
 
+    def node_data(self, node) -> dict:
+        """Structured fields populated by channel loaders (see ``node_data.py``)."""
+        data = getattr(node, "data", None)
+        return dict(data) if isinstance(data, dict) else {}
+
+    def step_keyword(self, node) -> str:
+        data = self.node_data(node)
+        if data.get("keyword"):
+            return str(data["keyword"])
+        name = (node.name or "").strip()
+        for prefix in ("Given", "When", "Then", "And", "But"):
+            if name.casefold().startswith(prefix.casefold() + " "):
+                return prefix
+        return ""
+
+    def step_text(self, node) -> str:
+        data = self.node_data(node)
+        if data.get("text"):
+            return str(data["text"])
+        name = (node.name or "").strip()
+        for prefix in ("Given", "When", "Then", "And", "But"):
+            if name.casefold().startswith(prefix.casefold() + " "):
+                return name[len(prefix) :].strip()
+        return name
+
+    def step_callees(self, node) -> list[str]:
+        data = self.node_data(node)
+        callees = data.get("callees")
+        if isinstance(callees, list):
+            return [str(item) for item in callees if item]
+        return []
+
+    def scenario_outline(self, node) -> bool:
+        return bool(self.node_data(node).get("is_outline"))
+
+    def scenario_evidence(self, node) -> list[str]:
+        raw = self.node_data(node).get("evidence")
+        return [str(item) for item in raw] if isinstance(raw, list) else []
+
     def operation_fingerprint(self, node, operation: Operation) -> str:
         span = self.span(node).strip()
         if not span:
@@ -194,6 +239,9 @@ def _operation_name_from_param_node(node) -> str:
 def _owner_class_name(node) -> str:
     parts = str(node.node_id or "").split(":")
     if len(parts) >= 2 and parts[-1]:
-        return parts[-1]
+        tail = parts[-1]
+        if "." in tail:
+            return tail.rsplit(".", 1)[0]
+        return tail
     match = re.search(r":([A-Za-z]\w*)$", str(node.node_id or ""))
     return match.group(1) if match else ""

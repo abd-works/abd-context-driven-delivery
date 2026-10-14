@@ -1,4 +1,9 @@
-"""DDD building blocks. Each node loads only its own children."""
+"""DDD building blocks — CE subtypes (schema ``is: class|module|property``).
+
+BoundedContext and Aggregate subclass Module; Entity, ValueObject, Repository, and peers
+subclass OoadClass; DomainEvent subclasses Property. Graph rule slugs inherit from CE via
+``harness.graph.schema_rules`` (same ``is:`` mapping as schema.yaml).
+"""
 
 from __future__ import annotations
 

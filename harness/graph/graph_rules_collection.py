@@ -9,23 +9,42 @@ from harness.graph.practice_rule import PracticeGraphRule
 
 
 class GraphRule(PracticeGraphRule, Rule):
-    """One schema rule on a node. Executable rules implement check; others are prompt-only."""
+    """One schema rule on a node: slug, prose body, and optional executable check."""
 
-    def __init__(self, slug: str, body: str = "", node_types: tuple[str, ...] = ()) -> None:
+    def __init__(
+        self,
+        slug: str,
+        body: str = "",
+        node_types: tuple[str, ...] = (),
+        *,
+        executable: bool = False,
+    ) -> None:
         PracticeGraphRule.__init__(self)
         Rule.__init__(self, slug=slug, body=body)
+        self.slug = slug
         self.node_types = node_types
+        self.executable = executable
         self._violations: list[str] = []
 
     @classmethod
     def from_check(cls, check: PracticeGraphRule, body: str = "") -> GraphRule:
-        rule = cls(check.slug, body=body, node_types=tuple(check.node_types))
+        rule = cls(
+            check.slug,
+            body=body,
+            node_types=tuple(check.node_types),
+            executable=True,
+        )
         rule.check = check.check  # type: ignore[method-assign]
         return rule
 
     @classmethod
+    def prose_only(cls, slug: str, body: str = "", node_types: tuple[str, ...] = ()) -> GraphRule:
+        return cls(slug, body=body, node_types=node_types, executable=False)
+
+    @classmethod
     def prompt_only(cls, slug: str, node_types: tuple[str, ...] = ()) -> GraphRule:
-        return cls(slug, body="", node_types=node_types)
+        """Alias for prose-only rules with no markdown body loaded yet."""
+        return cls.prose_only(slug, body="", node_types=node_types)
 
     @property
     def violations(self) -> list[str]:

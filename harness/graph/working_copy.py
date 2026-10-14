@@ -45,8 +45,8 @@ def fill_working_copy(graph: Graph) -> None:
     if _overlay_selected(graph, "lern_domain_driven"):
         _record_lern(graph, source, classes)
     for practice in graph.practices.values():
-        if practice.loaded != ["nodes", "edges", "rules"]:
-            practice.loaded = ["nodes", "edges", "rules"]
+        attach_rules(practice)
+        practice.loaded = ["nodes", "edges", "rules"]
 
 
 def _offer(practice, types: list[str]) -> None:
@@ -91,7 +91,6 @@ def _record_clean(practice, root: Path) -> list[dict]:
                     parsed.append(_class_fact(practice, text, relative, owner_id, cls, class_names, nodes, edges))
     practice.apply_nodes(nodes)
     practice.apply_edges(edges)
-    attach_rules(practice)
     practice.loaded = ["nodes", "edges", "rules"]
     return parsed
 
@@ -185,9 +184,18 @@ def _class_fact(practice, text: str, relative: str, module_id: str, cls, class_n
             continue
         if str(operation.name).startswith("_"):
             continue
+        from practices.clean_engineering.model.operation import operation_source_span
+
         span = _method_span(text, operation.name, getattr(operation, "line", None) or 1)
+        model_span = operation_source_span(operation)
+        if model_span is not None:
+            start, end = model_span
+        else:
+            start = getattr(operation, "line", None) or span[0]
+            line_count = getattr(operation, "line_count", None)
+            end = start + line_count - 1 if line_count and line_count > 0 else span[1]
         op_id = f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}"
-        nodes.append([op_id, operation.name, "Operation", "clean_engineering", relative, span[0], span[1]])
+        nodes.append([op_id, operation.name, "Operation", "clean_engineering", relative, start, end])
         edges.append([class_id, op_id, "owns", 2, "direct"])
         for parameter in operation.parameters:
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
@@ -267,18 +275,9 @@ def _class_span(text: str, name: str) -> tuple[str, int]:
 
 
 def _stereotyped_name(text: str, name: str) -> str:
-    """Class name plus the <<stereotype>> tags on the comment above the declaration."""
-    match = re.search(rf"(?:export\s+)?(?:abstract\s+)?class\s+{re.escape(name)}\b", text)
-    if match is None:
-        return name
-    prefix = text[max(0, match.start() - 240) : match.start()]
-    comment = re.search(r"/\*\*([\s\S]*?)\*/\s*$", prefix)
-    if comment is None:
-        return name
-    tags = re.findall(r"<<[^>]+>>", comment.group(1))
-    if not tags:
-        return name
-    return f"{name} {' '.join(tags)}"
+    from practices.ddd.model.stereotypes import class_declaration_decorated_name
+
+    return class_declaration_decorated_name(text, name)
 
 
 def _class_names(root: Path) -> set[str]:
@@ -307,21 +306,9 @@ def _class_id_named(nodes: list, name: str) -> str:
 
 
 def _method_span(text: str, name: str, fallback: int) -> tuple[int, int]:
-    match = re.search(rf"\b{re.escape(name)}\s*\([^)]*\)\s*(?::\s*[^{{]+)?\s*\{{", text)
-    if match is None:
-        return fallback, fallback
-    start = text[: match.start()].count("\n") + 1
-    depth = 0
-    opened = False
-    for index in range(match.end() - 1, len(text)):
-        if text[index] == "{":
-            depth += 1
-            opened = True
-        elif text[index] == "}":
-            depth -= 1
-            if opened and depth == 0:
-                return start, text[: index].count("\n") + 1
-    return start, start
+    from practices.clean_engineering.model.c_family_parse import CFamilyParse
+
+    return CFamilyParse.method_span_in_text(text, name, fallback)
 
 
 def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
@@ -416,8 +403,9 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
     epics = [node for node in stories.by_id.values() if node.type in {"Epic", "SubEpic"}]
     for step in steps:
         body = _step_body(graph._folder, step)
+        callees = list(getattr(step, "data", {}).get("callees") or [])
         for operation in operations:
-            if re.search(rf"\.{re.escape(operation.name)}\s*\(", body):
+            if operation.name in callees or re.search(rf"\.{re.escape(operation.name)}\s*\(", body):
                 _edge(stories, "invokes", 12, "relationship", step, operation)
                 _edge(clean, "invokes", 12, "relationship", operation, step)
                 _edge(clean, "invokedBy", 9, "relationship", operation, step)

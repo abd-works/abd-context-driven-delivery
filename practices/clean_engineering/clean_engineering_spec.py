@@ -178,7 +178,7 @@ with description("CleanEngineering action expansion"):
 
         with it("should keep Language and model contexts only"):
             expect("## Shared rules" in self.contexts).to(be_true)
-            expect("honor-every-rule-in-the-artifact" in self.contexts).to(be_true)
+            expect("vocabulary-traces-to-source" in self.contexts).to(be_true)
             expect("## Language" in self.contexts).to(be_true)
             expect("### model" in self.contexts).to(be_true)
             expect("\n### modules\n" in self.contexts).to(equal(False))

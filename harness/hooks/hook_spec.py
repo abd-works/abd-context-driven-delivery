@@ -687,7 +687,7 @@ with description("inject_rules hook dispatch"):
                 toolsets=[CleanEngineering()],
             )
             expect(out.get("additional_context") or "").to(
-                contain("honor-every-rule-in-the-artifact")
+                contain("vocabulary-traces-to-source")
             )
 
     with context("that receives a sketch action payload with listed BDD"):

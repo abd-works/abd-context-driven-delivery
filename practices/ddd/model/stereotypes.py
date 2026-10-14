@@ -6,6 +6,50 @@ import re
 from typing import List, Optional
 
 _STEREOTYPE_RE = re.compile(r"<<([^>]+)>>")
+_CLASS_DECL = re.compile(r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)\b")
+_AT_STEREOTYPE = re.compile(r"^\s*@(\w+)\s*(?:\(|$)")
+
+# Code-channel shorthand (tactics). Model/sketch canonical form remains <<Repository>>.
+_AT_TO_STEREOTYPE: dict[str, str] = {
+    "repository": "repository",
+    "entity": "entity",
+    "aggregateroot": "aggregate root",
+    "aggregate_root": "aggregate root",
+    "valueobject": "value object",
+    "value_object": "value object",
+    "domainservice": "domain service",
+    "domain_service": "domain service",
+    "domainevent": "domain event",
+    "domain_event": "domain event",
+    "specification": "specification",
+    "factory": "factory",
+}
+
+
+def class_declaration_decorated_name(text: str, class_name: str) -> str:
+    """Class name plus tactical markers from <<tags>>, @stereotype decorators, or # comments."""
+    match = re.search(rf"(?:export\s+)?(?:abstract\s+)?class\s+{re.escape(class_name)}\b", text)
+    if match is None:
+        return class_name
+    prefix = text[max(0, match.start() - 400) : match.start()]
+    tags: list[str] = []
+    for block in re.findall(r"/\*\*([\s\S]*?)\*/", prefix):
+        tags.extend(f"<<{t.strip()}>>" for t in _STEREOTYPE_RE.findall(block))
+    for line in prefix.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            tags.extend(_STEREOTYPE_RE.findall(stripped))
+        at = _AT_STEREOTYPE.match(stripped)
+        if at:
+            mapped = _AT_TO_STEREOTYPE.get(at.group(1).lower())
+            if mapped:
+                tags.append(f"<<{mapped}>>")
+    if not tags:
+        return class_name
+    normalized = []
+    for tag in tags:
+        normalized.append(tag if tag.startswith("<<") else f"<<{tag}>>")
+    return f"{class_name} {' '.join(normalized)}"
 
 
 def class_stereotypes(name: str) -> List[str]:

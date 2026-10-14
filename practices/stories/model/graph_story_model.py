@@ -1,13 +1,17 @@
 """GraphStoryModel accepts a loaded story model and records it on a practice graph.
 
-Any format model is a StoryModel. This walks that tree into the explorer tuples.
+Populates schema fields rules depend on: Given/When/Then typing, ``ands`` edges,
+step text/concepts/actor, scenario outline + evidence, example links.
 """
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
-from practices.stories.model.story_model import Epic, Story, StoryModel
+from harness.graph.node_data import encode_node_data
+
+from practices.stories.model.story_model import Epic, Step, StepType, Story, StoryModel
 
 
 class GraphStoryModel:
@@ -43,7 +47,8 @@ class GraphStoryModel:
     def _story(self, root: str, parent_id: str, story: Story, nodes: list, edges: list) -> None:
         file = self._file(story)
         node_id = f"stories:Story:{file}:{story.name}"
-        nodes.append([node_id, story.name, "Story", "stories", file or ".", story.sequential_order or 1, story.sequential_order or 1])
+        line, end = self._source_span(story, root, file)
+        nodes.append([node_id, story.name, "Story", "stories", file or ".", line, end])
         edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
         for background in story.backgrounds:
             self._background(root, file, node_id, background, nodes, edges)
@@ -53,29 +58,59 @@ class GraphStoryModel:
     def _background(self, root: str, file: str, parent_id: str, background, nodes: list, edges: list) -> None:
         label = background.name or "background"
         node_id = f"stories:Background:{file}:{label}"
-        nodes.append([node_id, label, "Background", "stories", file or ".", background.sequential_order or 1, background.sequential_order or 1])
+        line, end = self._source_span(background, root, file)
+        nodes.append([node_id, label, "Background", "stories", file or ".", line, end])
         edges.append([parent_id, node_id, "background", 2, "direct"])
         for step in background.steps:
-            self._step(root, file, node_id, step, nodes, edges)
+            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
 
     def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list) -> None:
         node_id = f"stories:Scenario:{file}:{scenario.name}"
-        line = scenario.sequential_order or 1
-        nodes.append([node_id, scenario.name, "Scenario", "stories", file or ".", line, line])
+        line, end = self._source_span(scenario, root, file)
+        payload = encode_node_data(
+            {
+                "is_outline": bool(getattr(scenario, "is_outline", False)),
+                "evidence": list(getattr(scenario, "evidence", []) or []),
+                "story_name": getattr(scenario, "story_name", "") or "",
+            }
+        )
+        row = [node_id, scenario.name, "Scenario", "stories", file or ".", line, end]
+        if payload:
+            row.append("")
+            row.append(payload)
+        nodes.append(row)
         edges.append([parent_id, node_id, "scenarios", 3, "direct"])
         for step in scenario.steps:
-            self._step(root, file, node_id, step, nodes, edges)
+            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
         for name in scenario.examples:
             example_id = f"stories:Example:{file}:{name}"
-            nodes.append([example_id, name, "Example", "stories", file or ".", 1, 1])
+            nodes.append([example_id, name, "Example", "stories", file or ".", line, end])
             edges.append([node_id, example_id, "examples", 5, "direct"])
 
-    def _step(self, root: str, file: str, parent_id: str, step, nodes: list, edges: list) -> None:
+    def _step(
+        self,
+        root: str,
+        file: str,
+        parent_id: str,
+        step: Step,
+        nodes: list,
+        edges: list,
+        *,
+        edge_kind: str = "steps",
+        order: int = 4,
+    ) -> None:
+        semantic = _step_semantic(step)
         label = f"{step.keyword.lower()} {step.text}".strip()
-        line = self._next_line(root, file, step.text)
-        node_id = f"stories:Step:{file}:{label}:{line}"
-        nodes.append([node_id, label, "Step", "stories", file or ".", line, line])
-        edges.append([parent_id, node_id, "steps", 4, "direct"])
+        line, end = self._source_span(step, root, file, fallback_text=step.text)
+        node_id = f"stories:{semantic}:{file}:{line}:{hash(label) & 0xFFFFFF}"
+        payload = encode_node_data(_step_payload(step))
+        row = [node_id, label, semantic, "stories", file or ".", line, end]
+        if payload:
+            row.extend(["", payload])
+        nodes.append(row)
+        edges.append([parent_id, node_id, edge_kind, order, "direct"])
+        for continuation in step.ands:
+            self._step(root, file, node_id, continuation, nodes, edges, edge_kind="ands", order=9)
 
     def _file_under(self, epic: Epic) -> str:
         for story in epic.stories:
@@ -101,6 +136,15 @@ class GraphStoryModel:
             parts = parts[:-up]
         return "/".join(parts) or "."
 
+    def _source_span(self, node, root: str, file: str, fallback_text: str = "") -> tuple[int, int]:
+        source = getattr(node, "source", None)
+        if source is not None and getattr(source, "line", None):
+            start = int(source.line or 1)
+            end = int(getattr(source, "end_line", None) or start)
+            return start, end
+        line = self._next_line(root, file, fallback_text or getattr(node, "name", ""))
+        return line, line
+
     def _next_line(self, root: str, file: str, text: str) -> int:
         lines = self._lines.get(file)
         if lines is None:
@@ -114,3 +158,45 @@ class GraphStoryModel:
                     self._cursor[file] = index + 1
                     return index + 1
         return 1
+
+
+def _step_semantic(step: Step) -> str:
+    if step.step_type == StepType.GIVEN:
+        return "Given"
+    if step.step_type == StepType.WHEN:
+        return "When"
+    if step.step_type == StepType.THEN:
+        return "Then"
+    keyword = (step.keyword or "").casefold()
+    if keyword == "given":
+        return "Given"
+    if keyword == "when":
+        return "When"
+    if keyword == "then":
+        return "Then"
+    return "Step"
+
+
+def _step_payload(step: Step) -> dict:
+    phase = ""
+    if step.step_type is not None:
+        phase = step.step_type.value
+    return {
+        "keyword": step.keyword,
+        "text": step.text,
+        "phase": phase,
+        "concepts": list(step.concepts or []),
+        "values": list(step.values or []),
+        "actor": step.actor or "",
+        "continuation": step.is_continuation,
+        "callees": _callees_from_step(step),
+    }
+
+
+def _callees_from_step(step: Step) -> list[str]:
+    found: list[str] = []
+    for concept in step.concepts or []:
+        token = concept.strip()
+        if token and token[0].isupper() and token not in found:
+            found.append(token)
+    return found

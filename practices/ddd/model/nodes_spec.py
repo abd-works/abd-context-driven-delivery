@@ -30,6 +30,13 @@ with description("DDD model nodes"):
             equal("Repository")
         )
 
+    with it("should read @repository decorators from class declarations"):
+        from practices.ddd.model.stereotypes import class_declaration_decorated_name
+
+        source = "@repository\nclass CartRepository:\n    pass\n"
+        decorated = class_declaration_decorated_name(source, "CartRepository")
+        expect(ddd_class_kind(decorated)).to(equal("Repository"))
+
 
 with description("a bounded context on a graph"):
     with before.each:

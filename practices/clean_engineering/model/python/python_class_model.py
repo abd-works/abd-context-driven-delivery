@@ -25,6 +25,8 @@ from practices.clean_engineering.model.base_class_model import (
     companion_interface_name,
     is_interface_name,
 )
+from practices.clean_engineering.model.operation import operation_body_fingerprint
+from practices.clean_engineering.model.operation_metrics import apply_python_function_metrics
 from practices.clean_engineering.model.update_report import UpdateReport
 
 _MODULE_MARKER = re.compile(r"^#\s*===\s*(.+?)\s*===$", re.MULTILINE)
@@ -180,21 +182,58 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
 
 
     def _operation_from_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> Operation:
-        params = [a.arg for a in node.args.args if a.arg != "self"]
-        params += [a.arg for a in node.args.kwonlyargs]
+        params = self._parameter_strings(node)
         ret = ""
         if node.returns is not None:
             ret = ast.unparse(node.returns)
         doc = (ast.get_docstring(node) or "").strip()
-        return Operation(
+        end_line = getattr(node, "end_lineno", None) or node.lineno
+        line_count = end_line - node.lineno + 1
+        constructed: list[tuple[str, int]] = []
+        if node.name in {"__init__", "constructor"}:
+            constructed = self._constructed_types(node)
+        body_text = "\n".join(ast.unparse(stmt) for stmt in node.body)
+        operation = Operation(
             name=node.name,
             parameters=params,
             return_type=ret,
             description=doc,
             line=node.lineno,
+            end_line=end_line,
+            line_count=line_count,
+            constructed_types=constructed,
             callees=self._collect_callees(node),
             is_property=self._is_property(node),
+            body_fingerprint=operation_body_fingerprint(body_text),
         )
+        operation.is_static = any(
+            isinstance(dec, ast.Name) and dec.id == "staticmethod" for dec in node.decorator_list
+        )
+        operation.is_classmethod = any(
+            isinstance(dec, ast.Name) and dec.id == "classmethod" for dec in node.decorator_list
+        )
+        apply_python_function_metrics(operation, node)
+        return operation
+
+    def _parameter_strings(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
+        items: list[str] = []
+        for arg in list(node.args.args) + list(node.args.kwonlyargs):
+            if arg.arg == "self":
+                continue
+            if arg.annotation is not None:
+                items.append(f"{arg.arg}: {ast.unparse(arg.annotation)}")
+            else:
+                items.append(arg.arg)
+        return items
+
+    def _constructed_types(self, func: ast.AST) -> list[tuple[str, int]]:
+        found: list[tuple[str, int]] = []
+        for child in ast.walk(func):
+            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                name = child.func.id
+                if name and name[0].isupper():
+                    found.append((name, child.lineno))
+        return found
 
 
     def _properties_from_class(self, class_node: ast.ClassDef) -> list[Property]:

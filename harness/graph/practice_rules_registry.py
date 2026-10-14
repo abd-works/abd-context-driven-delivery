@@ -67,18 +67,26 @@ def checks_for_practice(practice: str) -> dict[str, PracticeGraphRule]:
     elif practice == "stories":
         for channel in _STORIES_LANGUAGE_RULES:
             merged.update(channel_rules_for_practice(practice, channel))
+    elif practice == "ddd":
+        merged.update(graph_rules_for_practice("clean_engineering"))
     return merged
 
 
 def checks_for_node(node) -> dict[str, PracticeGraphRule]:
     """Checks for this node type; code rules are language-agnostic (model shape)."""
+    from harness.graph.schema_rules import ce_anchor_type
+
     practice_name = node.practice.name
     language = language_for_node(node)
-    merged = dict(graph_rules_for_practice(practice_name))
+    merged = dict(checks_for_practice(practice_name))
     if language and language not in {"graph", "python", "typescript", "javascript"}:
         merged.update(channel_rules_for_practice(practice_name, language))
+    type_targets = {node.type}
+    anchor = ce_anchor_type(practice_name, node.type)
+    if anchor:
+        type_targets.add(anchor)
     applicable: dict[str, PracticeGraphRule] = {}
     for slug, rule in merged.items():
-        if rule.applies_to(node.type):
+        if any(rule.applies_to(t) for t in type_targets):
             applicable[slug] = rule
     return applicable

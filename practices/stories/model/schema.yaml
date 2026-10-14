@@ -81,6 +81,7 @@ scenario:
     - examples cover every domain concept the steps name
     - invokes is the union of invokes on these steps
   rules:
+    - scenarios-shape
     - scenario-names-continuation
     - outline-requires-many-permutations
     - explore-full-interaction-surface
