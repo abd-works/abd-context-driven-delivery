@@ -1,31 +1,47 @@
 # LERN overlay on ddd. Extend only.
-# Aggregate folder: src/<boundedContext>/<aggregate>/.
-# That folder holds the core, the node file, the client file, the views, and one route file.
-entityRoot:
-  - is: ddd.entityRoot
-  - [node | client]
-node:
-  - is: ddd.entityRoot
-  - hosts: ddd.entityRoot
-  - selects: [view]
-client:
-  - is: ddd.entityRoot
-  - interacts: ddd.entityRoot
-  - presents: [view]
-repository:
-  - is: ddd.repository
-  - [jsonStore]
-jsonStore:
-  - jsonFile: ddd.entityRoot
+# is: names the supertype. ddd.type is already defined in practices/ddd — do not restate it.
+# A bare name is one. A bracket list is the collection.
 aggregate:
   - is: ddd.aggregate
-  - route
-  - [view]
+  - path: "{boundedContext}/{sub-boundedContext}?/{aggregate}/"
+  - route: route
+  - view: [view]
+  - nodeRoot: nodeRoot
+  - nodeRepository: nodeRepository
+  - clientRoot: clientRoot
+  - entityRoot: ddd.entityRoot
+  - entities: [ddd.entities]
+  - repository: repository
+  - jsonStore: jsonStore
+
+nodeRoot:
+  - is: ddd.entityRoot
+  - name: string
+  - path: "{aggregate}-node"
+  - views: [view]
+nodeRepository:
+  - is: repository
+  - name: string
+  - path: "{aggregate}-node"
+  - writes: jsonStore
+jsonStore:
+  - name: string
+  - path: "{aggregate}.json"
+  - belongsTo: aggregate
+  - writtenBy: repositoryNode
+  - stores: [ddd.entityRoot]
+clientRoot:
+  - is: ddd.entityRoot
+  - name: string
+  - calls: route
+  - path: "{aggregate}-client"
 route:
-  - navigates: ddd.aggregate
-  - [destination]
-destination:
-  - invokes: [operation]
+  - is: class
+  - name: string
+  - belongsTo: aggregate
+  - nodeRoot: nodeRoot
 view:
-  - renders: client
-  - selectedBy: node
+  - is: class
+  - name: string
+  - clientRoot: clientRoot
+  - nodeRepository: nodeRepository

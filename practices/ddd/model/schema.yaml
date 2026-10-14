@@ -27,33 +27,41 @@ aggregate:
       - belongsTo: aggregate
       - associates: [entity]
       - identity: property
+      - path: "{aggregate}"
   - valueObject:
       - is: class
       - name: string
       - belongsTo: aggregate
+      - path: "{aggregate}"
   - entity:
       - is: class
       - name: string
       - belongsTo: aggregate
       - associates: [entity]
+      - path: "{aggregate}"
   - repository:
       - is: class
       - name: string
       - belongsTo: aggregate
       - accesses: entityRoot
+      - path: "{aggregate}"
   - domainEvent:
       - is: property
       - name: string
       - belongsTo: aggregate
+      - path: "{aggregate}"
   - domainService:
       - is: class
       - name: string
       - belongsTo: aggregate
+      - path: "{aggregate}"
   - factory:
       - is: class
       - name: string
       - belongsTo: aggregate
+      - path: "{aggregate}"
   - specification:
       - is: class
       - name: string
       - belongsTo: aggregate
+      - path: "{aggregate}"

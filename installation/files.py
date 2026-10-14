@@ -179,6 +179,18 @@ class FileInstallation(Installation):
             return folder
         return folder / op
 
+    def _schema_guide(self, tool: Any, toolset: Any) -> str:
+        """Practice schema joined into instructions, including a fidelity skill."""
+        if getattr(tool, "name", "") != "instructions":
+            return ""
+        guide = getattr(toolset, "schema_guide", None)
+        if not callable(guide):
+            practice = getattr(toolset, "practice_guidance", None)
+            guide = getattr(practice, "schema_guide", None) if practice is not None else None
+        if not callable(guide):
+            return ""
+        return (guide() or "").strip()
+
     def _body_for(self, kind: str, tool: Any, toolset: Any) -> str:
         if self.mcp_mode:
             return tool.docstring
@@ -235,6 +247,9 @@ class FileInstallation(Installation):
         member = tool.callable
         toolset = tool.toolset
         parts = [self._body_for(kind, tool, toolset)]
+        schema = self._schema_guide(tool, toolset)
+        if schema and schema not in parts[0]:
+            parts.append(schema)
         if self.mcp_mode:
             from harness.mcp.mcp_server import McpOperationDefinition
 

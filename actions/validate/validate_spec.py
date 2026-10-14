@@ -53,3 +53,11 @@ with description("a validate action on practice guidance") as self:
             expect(prose).to(contain("sample-rule-one"))
             expect(prose).to(contain("sketch-rule"))
             expect(prose).not_to(contain("spec-rule"))
+
+    with context("with ddd and stories guidance"):
+        with it("should return shared and active-fidelity rules from each practice"):
+            report = self.action.validate(guidance=["ddd", "stories"])
+            expect(report).to(contain("ubiquitous-language-everywhere"))
+            expect(report).to(contain("experts-words-preferred"))
+            expect(report).to(contain("do-not-invent-requirements"))
+            expect(report).to(contain("verb-noun-format"))

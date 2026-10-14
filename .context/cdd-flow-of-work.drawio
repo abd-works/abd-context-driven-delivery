@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="cdd-flow-of-work" name="Flow of Work">
-        <mxGraphModel dx="5093" dy="1001" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2100" math="0" shadow="0">
+        <mxGraphModel dx="2891" dy="766" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -35,7 +35,7 @@
                     <mxGeometry x="14" y="54" width="242" height="44" as="geometry"/>
                 </mxCell>
                 <mxCell id="disc-story" value="&lt;b&gt;Story Map&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Actors, journeys, and the interactions that deliver the outcome&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="col-discovery" vertex="1">
-                    <mxGeometry x="14" y="106" width="242" height="64" as="geometry"/>
+                    <mxGeometry x="14" y="110" width="242" height="64" as="geometry"/>
                 </mxCell>
                 <mxCell id="disc-bc" value="&lt;b&gt;Bounded Context Map&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Domain boundaries and how they connect&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="col-discovery" vertex="1">
                     <mxGeometry x="14" y="180" width="242" height="64" as="geometry"/>
@@ -65,7 +65,7 @@
                     <mxGeometry x="14" y="152" width="332" height="64" as="geometry"/>
                 </mxCell>
                 <mxCell id="spec-refine" value="&lt;b&gt;★  Refine clickable prototype&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#4a2c82&quot;&gt;Walk the slice against the scenarios&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#7c4dff;dashed=1;dashPattern=6 4;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="col-spec" vertex="1">
-                    <mxGeometry x="14" y="226" width="332" height="56" as="geometry"/>
+                    <mxGeometry x="14" y="230" width="332" height="56" as="geometry"/>
                 </mxCell>
                 <mxCell id="spec-2b" value="2b  Implementation" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=12;fontColor=#8a6d1d;" parent="col-spec" vertex="1">
                     <mxGeometry x="14" y="298" width="332" height="22" as="geometry"/>
@@ -103,7 +103,7 @@
                 <mxCell id="sol-note" value="AI oversees deterministic tools. The same input stays inside safety and quality guardrails. Every technical and functional error improves the delivery system." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=11;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="col-solution" vertex="1">
                     <mxGeometry x="14" y="402" width="332" height="78" as="geometry"/>
                 </mxCell>
-                <mxCell id="2" value="&lt;b&gt;★  Generate Working UI&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#4a2c82&quot;&gt;Real working solution that passes all tests&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#7c4dff;dashed=1;dashPattern=6 4;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="col-solution">
+                <mxCell id="2" value="&lt;b&gt;★  Generate Working UI&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#4a2c82&quot;&gt;Real working solution that passes all tests&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#7c4dff;dashed=1;dashPattern=6 4;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="col-solution" vertex="1">
                     <mxGeometry x="12" y="500" width="332" height="56" as="geometry"/>
                 </mxCell>
                 <mxCell id="col-validate" value="Validate" style="swimlane;html=1;startSize=44;fillColor=#fff8f2;strokeColor=#d79b00;fontStyle=1;fontSize=16;fontColor=#1a1a1a;rounded=1;arcSize=4;swimlaneFillColor=#fffbf7;collapsible=0;" parent="1" vertex="1">
@@ -147,46 +147,46 @@
                 <mxCell id="legend" value="&lt;b&gt;★ Prototype&lt;/b&gt; — dashed cards. A clickable prototype can start before the slice is specified, or trail it and get refined. A behavioral prototype appears once scenario tests exist.&lt;br&gt;&lt;b&gt;Thin slice&lt;/b&gt; — Specifications and Working Solution repeat for each slice. Discovery maps are updated when the slice changes the picture." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;fontColor=#333333;fontSize=12;align=left;spacingLeft=14;spacingRight=12;verticalAlign=middle;arcSize=8;" parent="1" vertex="1">
                     <mxGeometry x="40" y="810" width="1576" height="64" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-title" value="Behind the approach" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;fontColor=#1a1a1a;" vertex="1" parent="1">
+                <mxCell id="mech-title" value="Behind the approach" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;fontColor=#1a1a1a;" parent="1" vertex="1">
                     <mxGeometry x="-350" y="890" width="420" height="32" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-lead" value="A person and AI generate the domain first. Deterministic templates carry that same slice onto the target stack. Validation improves the generators and the templates." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
+                <mxCell id="mech-lead" value="A person and AI generate the domain first. Deterministic templates carry that same slice onto the target stack. Validation improves the generators and the templates." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" parent="1" vertex="1">
                     <mxGeometry x="-350" y="920" width="1400" height="22" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-gen" value="&lt;b&gt;Guided AI / Human Generation&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Sketch, grill, and align. Stories, domain, and UX become specifications a person can still read.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" vertex="1" parent="1">
+                <mxCell id="mech-gen" value="&lt;b&gt;Guided AI / Human Generation&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Sketch, grill, and align. Stories, domain, and UX become specifications a person can still read.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" parent="1" vertex="1">
                     <mxGeometry x="-350" y="958" width="260" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-domain" value="&lt;b&gt;Domain Code and Tests&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Scenario tests call the domain API. Domain code makes those tests pass, before any tech stack.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" vertex="1" parent="1">
+                <mxCell id="mech-domain" value="&lt;b&gt;Domain Code and Tests&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Scenario tests call the domain API. Domain code makes those tests pass, before any tech stack.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" parent="1" vertex="1">
                     <mxGeometry x="-12" y="958" width="260" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-templates" value="&lt;b&gt;Tech Stack Transformer Templates&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Rules, templates, and transformers aimed at the target stack. The same input produces the same scaffold.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" vertex="1" parent="1">
+                <mxCell id="mech-templates" value="&lt;b&gt;Tech Stack Transformer Templates&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Rules, templates, and transformers aimed at the target stack. The same input produces the same scaffold.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" parent="1" vertex="1">
                     <mxGeometry x="326" y="958" width="260" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-scaffold" value="&lt;b&gt;Working Code Scaffold&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Server, Playwright, and service tests, plus the modules behind the domain API, laid onto the stack.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" vertex="1" parent="1">
+                <mxCell id="mech-scaffold" value="&lt;b&gt;Working Code Scaffold&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Server, Playwright, and service tests, plus the modules behind the domain API, laid onto the stack.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" parent="1" vertex="1">
                     <mxGeometry x="664" y="958" width="260" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-check" value="&lt;b&gt;Guided AI / Human Validation&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Run the tests. Eval technical and functional errors. Confirm impact, economics, and feasibility.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" vertex="1" parent="1">
+                <mxCell id="mech-check" value="&lt;b&gt;Guided AI / Human Validation&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Run the tests. Eval technical and functional errors. Confirm impact, economics, and feasibility.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" parent="1" vertex="1">
                     <mxGeometry x="1002" y="958" width="260" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-solution" value="&lt;b&gt;Working Solution&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The thin slice, running on the target stack, with what was learned folded back into context.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" vertex="1" parent="1">
+                <mxCell id="mech-solution" value="&lt;b&gt;Working Solution&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The thin slice, running on the target stack, with what was learned folded back into context.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;verticalAlign=top;spacingTop=10;arcSize=8;" parent="1" vertex="1">
                     <mxGeometry x="1340" y="958" width="260" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-a1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="mech-gen" target="mech-domain">
+                <mxCell id="mech-a1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="mech-gen" target="mech-domain" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-a2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="mech-domain" target="mech-templates">
+                <mxCell id="mech-a2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="mech-domain" target="mech-templates" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-a3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="mech-templates" target="mech-scaffold">
+                <mxCell id="mech-a3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="mech-templates" target="mech-scaffold" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-a4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="mech-scaffold" target="mech-check">
+                <mxCell id="mech-a4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="mech-scaffold" target="mech-check" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-a5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="mech-check" target="mech-solution">
+                <mxCell id="mech-a5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#666666;strokeWidth=2;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="mech-check" target="mech-solution" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="mech-loop" value="Errors improve the generators and the templates" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;dashed=1;dashPattern=8 4;strokeColor=#d79b00;strokeWidth=2;fontSize=12;fontColor=#8a5a00;exitX=0.5;exitY=1;entryX=0.25;entryY=1;" edge="1" parent="1" source="mech-check" target="mech-gen">
+                <mxCell id="mech-loop" value="Errors improve the generators and the templates" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;dashed=1;dashPattern=8 4;strokeColor=#d79b00;strokeWidth=2;fontSize=12;fontColor=#8a5a00;exitX=0.5;exitY=1;entryX=0.25;entryY=1;" parent="1" source="mech-check" target="mech-gen" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="1132" y="1150"/>
@@ -194,64 +194,64 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="arch-title" value="Practices" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;fontColor=#1a1a1a;" vertex="1" parent="1">
+                <mxCell id="arch-title" value="Practices" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;fontColor=#1a1a1a;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1170" width="280" height="32" as="geometry"/>
                 </mxCell>
-                <mxCell id="arch-lead" value="Each practice has the same shape. Markdown holds the guidance a person and AI follow. The knowledge graph holds the model, and validators, builders, and transformers work from that graph." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
+                <mxCell id="arch-lead" value="Each practice has the same shape. Markdown holds the guidance a person and AI follow. The knowledge graph holds the model, and validators, builders, and transformers work from that graph." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1202" width="1500" height="22" as="geometry"/>
                 </mxCell>
-                <mxCell id="arch-frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#dddddd;arcSize=4;" vertex="1" parent="1">
+                <mxCell id="arch-frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#dddddd;arcSize=4;" parent="1" vertex="1">
                     <mxGeometry x="160" y="1290" width="1260" height="530" as="geometry"/>
                 </mxCell>
-                <mxCell id="arch-frame-label" value="Architecture of a practice" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#666666;" vertex="1" parent="1">
+                <mxCell id="arch-frame-label" value="Architecture of a practice" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#666666;" parent="1" vertex="1">
                     <mxGeometry x="176" y="1298" width="280" height="24" as="geometry"/>
                 </mxCell>
-                <mxCell id="prac-stories" value="&lt;b&gt;Stories&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Actors and the interactions that deliver the solution&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="prac-stories" value="&lt;b&gt;Stories&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Actors and the interactions that deliver the solution&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1346" width="280" height="64" as="geometry"/>
                 </mxCell>
-                <mxCell id="prac-ddd" value="&lt;b&gt;Domain-driven design&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Business concepts and the boundaries that protect them&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="prac-ddd" value="&lt;b&gt;Domain-driven design&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Business concepts and the boundaries that protect them&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1422" width="280" height="64" as="geometry"/>
                 </mxCell>
-                <mxCell id="prac-ce" value="&lt;b&gt;Clean engineering&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Modules, contracts, and code that can be generated and checked&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="prac-ce" value="&lt;b&gt;Clean engineering&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Modules, contracts, and code that can be generated and checked&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1498" width="280" height="64" as="geometry"/>
                 </mxCell>
-                <mxCell id="prac-bdd" value="&lt;b&gt;Behavior-driven development&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Behavior tests written in the language of the domain&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="prac-bdd" value="&lt;b&gt;Behavior-driven development&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Behavior tests written in the language of the domain&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1574" width="280" height="64" as="geometry"/>
                 </mxCell>
-                <mxCell id="prac-ux" value="&lt;b&gt;User experience&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;How people move through and act on the solution&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="prac-ux" value="&lt;b&gt;User experience&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;How people move through and act on the solution&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1650" width="280" height="64" as="geometry"/>
                 </mxCell>
-                <mxCell id="md-box" value="Markdown" style="swimlane;html=1;startSize=36;fillColor=#fffdf6;strokeColor=#d6b656;fontStyle=1;fontSize=14;fontColor=#1a1a1a;rounded=1;arcSize=6;swimlaneFillColor=#fffef9;collapsible=0;" vertex="1" parent="1">
+                <mxCell id="md-box" value="Markdown" style="swimlane;html=1;startSize=36;fillColor=#fffdf6;strokeColor=#d6b656;fontStyle=1;fontSize=14;fontColor=#1a1a1a;rounded=1;arcSize=6;swimlaneFillColor=#fffef9;collapsible=0;" parent="1" vertex="1">
                     <mxGeometry x="200" y="1340" width="300" height="380" as="geometry"/>
                 </mxCell>
-                <mxCell id="md-guidance" value="&lt;b&gt;Guidance&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;How to think and sketch at each fidelity&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" vertex="1" parent="md-box">
+                <mxCell id="md-guidance" value="&lt;b&gt;Guidance&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;How to think and sketch at each fidelity&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="md-box" vertex="1">
                     <mxGeometry x="16" y="52" width="268" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="md-rules" value="&lt;b&gt;Rules&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Checks applied when an artifact changes&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" vertex="1" parent="md-box">
+                <mxCell id="md-rules" value="&lt;b&gt;Rules&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Checks applied when an artifact changes&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="md-box" vertex="1">
                     <mxGeometry x="16" y="134" width="268" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="md-templates" value="&lt;b&gt;Templates&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The shape of the next artifact&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" vertex="1" parent="md-box">
+                <mxCell id="md-templates" value="&lt;b&gt;Templates&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The shape of the next artifact&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="md-box" vertex="1">
                     <mxGeometry x="16" y="216" width="268" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="md-schema" value="&lt;b&gt;Schema&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The model the practice is made of&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" vertex="1" parent="md-box">
+                <mxCell id="md-schema" value="&lt;b&gt;Schema&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The model the practice is made of&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="md-box" vertex="1">
                     <mxGeometry x="16" y="298" width="268" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="kg-box" value="&lt;b&gt;Code based Knowledge Graph&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px;font-weight:normal;color:#333333&quot;&gt;The practice models and the relationships between them. read out of the code.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=16;align=left;spacingLeft=16;spacingRight=12;verticalAlign=middle;arcSize=6;" vertex="1" parent="1">
+                <mxCell id="kg-box" value="&lt;b&gt;Code based Knowledge Graph&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px;font-weight:normal;color:#333333&quot;&gt;The practice models and the relationships between them. read out of the code.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=16;align=left;spacingLeft=16;spacingRight=12;verticalAlign=middle;arcSize=6;" parent="1" vertex="1">
                     <mxGeometry x="540" y="1340" width="340" height="380" as="geometry"/>
                 </mxCell>
-                <mxCell id="kg-validators" value="&lt;b&gt;Validators&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Check the rules against the graph&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="kg-validators" value="&lt;b&gt;Validators&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Check the rules against the graph&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="1100" y="1330" width="300" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="kg-builders" value="&lt;b&gt;Builders&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Produce the practice artifacts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="kg-builders" value="&lt;b&gt;Builders&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Produce the practice artifacts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="1100" y="1410" width="300" height="112" as="geometry"/>
                 </mxCell>
-                <mxCell id="kg-transformers" value="&lt;b&gt;Transformers&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Carry the model to the next fidelity and the tech stack&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="kg-transformers" value="&lt;b&gt;Transformers&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Carry the model to the next fidelity and the tech stack&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="1100" y="1538" width="300" height="112" as="geometry"/>
                 </mxCell>
-                <mxCell id="arch-to-md" value="same shape" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#9673a6;strokeWidth=2;fontSize=11;fontColor=#666666;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="prac-ce" target="md-box">
+                <mxCell id="arch-to-md" value="same shape" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#9673a6;strokeWidth=2;fontSize=11;fontColor=#666666;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="prac-ce" target="md-box" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="kg-to-val" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;entryX=0;entryY=0.5;" edge="1" parent="1" source="kg-box" target="kg-validators">
+                <mxCell id="kg-to-val" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;entryX=0;entryY=0.5;" parent="1" source="kg-box" target="kg-validators" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="920" y="1360"/>
@@ -259,7 +259,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="kg-to-build" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;entryX=0;entryY=0.5;" edge="1" parent="1" source="kg-box" target="kg-builders">
+                <mxCell id="kg-to-build" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;entryX=0;entryY=0.5;" parent="1" source="kg-box" target="kg-builders" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="930" y="1466"/>
@@ -267,7 +267,7 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="kg-to-xform" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;entryX=0;entryY=0.5;" edge="1" parent="1" source="kg-box" target="kg-transformers">
+                <mxCell id="kg-to-xform" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;entryX=0;entryY=0.5;" parent="1" source="kg-box" target="kg-transformers" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="950" y="1594"/>
@@ -275,25 +275,25 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="expose-title" value="Exposed as" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;fontColor=#1a1a1a;" vertex="1" parent="1">
+                <mxCell id="expose-title" value="Exposed as" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;fontColor=#1a1a1a;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1860" width="280" height="32" as="geometry"/>
                 </mxCell>
-                <mxCell id="expose-lead" value="Cross-cutting. Install writes these from the same marks, and they are how a practice reaches the agent." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
+                <mxCell id="expose-lead" value="Cross-cutting. Install writes these from the same marks, and they are how a practice reaches the agent." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1890" width="900" height="22" as="geometry"/>
                 </mxCell>
-                <mxCell id="expose-skill" value="&lt;b&gt;Skills&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The practice the agent follows&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="expose-skill" value="&lt;b&gt;Skills&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The practice the agent follows&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="-200" y="1928" width="300" height="88" as="geometry"/>
                 </mxCell>
-                <mxCell id="expose-mcp" value="&lt;b&gt;MCP&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Tools the host can call&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="expose-mcp" value="&lt;b&gt;MCP&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Tools the host can call&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="124" y="1928" width="300" height="88" as="geometry"/>
                 </mxCell>
-                <mxCell id="expose-hooks" value="&lt;b&gt;Hooks&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Editor events that run the practice&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="expose-hooks" value="&lt;b&gt;Hooks&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Editor events that run the practice&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="448" y="1928" width="300" height="88" as="geometry"/>
                 </mxCell>
-                <mxCell id="expose-tools" value="&lt;b&gt;Agent tools&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Operations that run&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="expose-tools" value="&lt;b&gt;Agent tools&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Operations that run&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="772" y="1928" width="300" height="88" as="geometry"/>
                 </mxCell>
-                <mxCell id="expose-instructions" value="&lt;b&gt;Agent instructions&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Operations that only instruct&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="1">
+                <mxCell id="expose-instructions" value="&lt;b&gt;Agent instructions&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Operations that only instruct&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="1096" y="1928" width="300" height="88" as="geometry"/>
                 </mxCell>
             </root>

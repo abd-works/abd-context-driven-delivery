@@ -12,7 +12,7 @@ and CleanEngineering already enforce, not a restatement of them.
 `acceptance_tests` with `format="typescript"`; production code arrives via
 Stories' `ce()` companion at `code` / `typescript`.
 
-One aggregate. `{Domain}Client` and `{Domain}Node` extend `{Domain}`. The view paints the client. The route asks the node. The node persists through the repository. The repository owns the JSON file.
+One aggregate. `{Domain}Client` and `{Domain}Node` extend `{Domain}`. The view paints the client. The route asks the node. `{Domain}Repository` is in-memory. `{Domain}RepositoryNode` extends it, runs Zod `.parse()`, and writes `<aggregate>.json`.
 
 | Layer | File | Role |
 |---|---|---|
@@ -20,17 +20,17 @@ One aggregate. `{Domain}Client` and `{Domain}Node` extend `{Domain}`. The view p
 | View | `src/…/<aggregate>/<screen-slug>.tsx` | Hold the client in React state. Paint fields and actions. |
 | Client | `<aggregate>-client.tsx` | `{Domain}Client`. Field changes return a new instance. Call the route. |
 | Routes | `<aggregate>-routes.ts` | Parse the request. Call the node. Return `destination`. |
-| Node | `<aggregate>-node.ts` | `{Domain}Node`. Map the step to a path. Repository I/O. |
-| Domain | `<aggregate>.ts` | Aggregate root, value objects, `{Domain}Repository`. Framework-free. |
-| Store | `<aggregate>.json` | One lowdb file. The repository is the only writer. |
+| Node | `<aggregate>-node.ts` | `{Domain}Node` maps the step to a path. `{Domain}RepositoryNode` runs Zod `.parse()` and writes `<aggregate>.json`. |
+| Domain | `<aggregate>.ts` | `{Domain}`, `{SubDomain}`, in-memory `{Domain}Repository`. Framework-free. |
+| Store | `<aggregate>.json` | One lowdb file. `{Domain}RepositoryNode` is the only writer. |
 
 1. Boot mounts the view for the current path.
 2. The view constructs `{Domain}Client` and paints its fields.
 3. A field edit replaces React state with a new client.
 4. Submit calls the aggregate route.
 5. The route builds `{Domain}Node` and runs the domain operation.
-6. The node calls `{Domain}Repository` (`load`, `create`, `search`, or `update`).
-7. The repository runs Zod `.parse()` and writes `<aggregate>.json`.
+6. The node calls `{Domain}RepositoryNode` (`load`, `create`, `search`, or `update`).
+7. `{Domain}RepositoryNode` runs Zod `.parse()` and writes `<aggregate>.json`. `{Domain}Repository` stays in memory.
 8. The route asks `{Domain}Node.destination` and returns that path.
 9. The next view in the aggregate folder mounts.
 
@@ -44,11 +44,15 @@ classDiagram
     <<value object>>
   }
   class Repository {
-    <<interface>>
+    <<in memory>>
     +load(id)
     +create(input)
     +search(query)
     +update(root)
+  }
+  class RepositoryNode {
+    +parse()
+    +write()
   }
   class DomainNode {
     +destination()
@@ -68,8 +72,9 @@ classDiagram
   Domain <|-- DomainClient
   Domain o-- ValueObject
   Repository ..> Domain : root
-  DomainNode --> Repository
-  Repository --> JsonStore
+  Repository <|-- RepositoryNode
+  DomainNode --> RepositoryNode
+  RepositoryNode --> JsonStore
   View --> DomainClient : renders
   DomainClient --> Routes : HTTP
   Routes --> DomainNode : asks
@@ -83,7 +88,7 @@ sequenceDiagram
   participant Client as DomainClient
   participant Routes
   participant Node as DomainNode
-  participant Repository
+  participant Repository as RepositoryNode
   participant Store as JsonStore
 
   Boot->>View: mount screen
@@ -127,11 +132,11 @@ those definitions; this spec only says how they land on lowdb.
 | **Value Object** | Fully described by values — interchangeable, replaceable, immutable. Prefer VO unless tracked identity is required. |
 | **Repository** | Hides storage so the business loads, saves, and queries **entire aggregates** as if they lived in a memory collection. Collection-style seam: the business finds, stores, and retires this aggregate through the root. |
 
-Each **domain module** is one aggregate. The **Repository** is the only
-persistence compartment for that aggregate: it returns **entities** by
-**loading**, **creating**, **searching**, and **updating** the **aggregate
-root**. Nested entities and value objects travel inside that root's snapshot;
-callers never open the JSON store themselves.
+Each **domain module** is one aggregate. `{Domain}Repository` is the in-memory
+collection: `load`, `create`, `search`, `update` on the **aggregate root**.
+`{Domain}RepositoryNode` extends that collection and is the only class that
+opens this aggregate's JSON file. `{SubDomain}` objects travel inside the
+root's snapshot.
 
 ---
 
@@ -146,8 +151,8 @@ through `@src`.
 src/
   <boundedContext>/
     <aggregate>/
-      <aggregate>.ts                    ← core aggregate, repository, VOs
-      <aggregate>-node.ts               ← Node tier; selects the next view
+      <aggregate>.ts                    ← {Domain}, {SubDomain}, in-memory {Domain}Repository
+      <aggregate>-node.ts               ← {Domain}Node; {Domain}RepositoryNode writes lowdb
       <aggregate>-client.tsx            ← browser client; the view renders this
       <screen-slug>.tsx                 ← views in this folder
       <aggregate>-routes.ts             ← one route file for this aggregate
@@ -198,10 +203,10 @@ Required operations, named in ubiquitous language:
 | `search(query?)` | aggregate roots | find by attributes / example |
 | `update(root)` | updated aggregate root | persist a mutation already applied on the root |
 
-Zod `.parse()` runs at the repository boundary. One `*Repository` class per
-aggregate lives on the domain core (`<domain>.ts`). It is not a client type and
-does not take a `Node` suffix — `{Domain}Node` is the Express host, not the
-collection. Routes and views never call `JSONFilePreset` / `db.data` themselves.
+`{Domain}Repository` on `<aggregate>.ts` is in-memory only: `load`, `create`,
+`search`, `update`. `{Domain}RepositoryNode` on `<aggregate>-node.ts` extends
+it, runs Zod `.parse()`, and writes `<aggregate>.json`. Routes and views never
+call `JSONFilePreset` / `db.data` themselves.
 
 Cross-aggregate consistency is **outside** a single JSON file. Choose one
 coordination style **when generating stories** (see `ask-cross-aggregate-sync`
@@ -209,13 +214,19 @@ in § Shared rules) — then keep that choice for the slice.
 
 ---
 
-### Three tiers per domain (`src/<domain-slug>/`)
+### Files per aggregate (`src/<boundedContext>/<aggregate>/`)
 
-| File | Suffix | Role |
+Each aggregate folder contains every file below. One `<screen-slug>.tsx` per
+screen; the other five files are one per aggregate.
+
+| File | Class | Role |
 |---|---|---|
-| `<domain-slug>.ts` | *(none)* | Core aggregate, repository interface, value objects, exceptions — framework-free |
-| `<domain-slug>-node.ts` | `Node` | Express wiring, `{Domain}Node`, `destination`, session on the request context |
-| `<domain-slug>-client.tsx` | `Client` | Browser subtype: field entry, touched flags, requirement lines, host operations |
+| `<screen-slug>.tsx` | `{Screen}View` | Holds `{Domain}Client` in React state. Paints fields and actions. |
+| `<aggregate>-routes.ts` | — | Express router. Parses the request, calls `{Domain}Node`, returns `destination`. |
+| `<aggregate>-client.tsx` | `{Domain}Client` | Browser subtype of `{Domain}`: field entry, touched flags, requirement lines, host operations. |
+| `<aggregate>-node.ts` | `{Domain}Node`, `{Domain}RepositoryNode` | `{Domain}Node` maps the step to a path and holds session on the request context. `{Domain}RepositoryNode` extends `{Domain}Repository`, runs Zod `.parse()`, and writes `<aggregate>.json`. |
+| `<aggregate>.ts` | `{Domain}`, `{SubDomain}`, `{Domain}Repository` | `{Domain}` is the aggregate root. `{SubDomain}` is an object inside the aggregate. `{Domain}Repository` is the in-memory collection. Framework-free. |
+| `<aggregate>.json` | — | One lowdb store. `{Domain}RepositoryNode` is the only writer. |
 
 Rule `node-tier-uses-node-suffix` names the Node.js tier **`Node`**, not
 `Server` — this tier runs in-process with Express and the Vitest server channel,
@@ -224,14 +235,16 @@ not on an external host.
 Rule `client-subtypes-domain-hosts-browser-logic`: `{Domain}Client`
 and `{Domain}Node` both **extend** `{Domain}`. Domain operations on the core
 class are the operations the client hosts for the browser. A field change returns
-a **new client instance** for React state.
+a **new client instance** for React state. The view paints that client. The
+route file defines no domain class; it asks `{Domain}Node`.
 
-Tier classes keep every inherited base operation unchanged; subclasses only add
-layer-specific behaviour (`destination`, repository I/O).
+`{Domain}Client` and `{Domain}Node` keep every inherited base operation
+unchanged. `{Domain}Repository` stays in memory. `{Domain}RepositoryNode` adds
+the Zod `.parse()` and the write to `<aggregate>.json`.
 
 Rules `share-domain-logic`, `maintain-layer-purity`, `use-ubiquitous-language`,
 `cross-layer-method-naming`, `preserve-arg-names-across-layers`, and
-`property-casing-transform` govern imports and naming across these three files.
+`property-casing-transform` govern imports and naming across these files.
 
 ---
 
@@ -265,14 +278,15 @@ thin: parse the request, delegate to a `*Node` class or call
 `*Node.destination`. Rules `router-asks-the-node`, `ensure-type-safe-routes`
 (typed request extensions), and `standard-mutation-response` govern this tier.
 
-Create the aggregate's one repository at the **caller** — production passes the
-`*Repository` into route factories; tests construct their own in the scenario
-that needs one. Node modules export `{Domain}Node`, not a second repository.
+Production routes use `{Domain}RepositoryNode`. Tests that prove the entity use
+the in-memory `{Domain}Repository`. Node modules export `{Domain}Node` and
+`{Domain}RepositoryNode`.
 
 ### Types & entities
 
-Business rules live on domain classes; Zod validates at the repository
-boundary. Rules `implement-domain-entities-correctly` and
+Business rules live on domain classes. Zod `.parse()` runs on
+`{Domain}RepositoryNode`, which writes `<aggregate>.json`. `{Domain}Repository`
+stays in memory. Rules `implement-domain-entities-correctly` and
 `implement-full-interfaces` govern entities and interfaces.
 
 ### Packaging
@@ -383,7 +397,7 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 
 - **`epic-package-screens-only`** — Views belong to the domain. Keep the aggregate under `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, one `<aggregate>-routes.ts`, and the json store). Limit `packages/<epicSlug>/` to epic boot (`app.ts`, `serve.ts`, `main.tsx`) — no `*-view.tsx`, `*-redirect.tsx`, `*-node.ts`, `*-client.tsx`, views, route file, `source/`, or `data/` tree under the epic package.
 - **`domain-core-file-matches-folder-slug`** — Name the domain core file after the aggregate folder slug in kebab-case (`src/<boundedContext>/<aggregate>/<aggregate>.ts`). Keep exported classes PascalCase (`{Domain}`). Place `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, and one route file in that same aggregate folder.
-- **`node-tier-uses-node-suffix`** — Name the Node.js LERN tier with the `Node` suffix and `<domain>-node.ts` filenames (`{Domain}Node`). Type request-context fields as `*Node`, not `Server`. The repository is `*Repository`, never `*RepositoryNode`.
+- **`node-tier-uses-node-suffix`** — Name the Node.js LERN tier with the `Node` suffix and `<domain>-node.ts` filenames (`{Domain}Node`, `{Domain}RepositoryNode`). Type request-context fields as `*Node`, not `Server`. `{Domain}RepositoryNode` extends the in-memory `{Domain}Repository` and is the class that runs Zod `.parse()` and writes `<aggregate>.json`.
 - **`client-subtypes-domain-hosts-browser-logic`** — For each aggregate folder, derive `<aggregate>.ts`, `<aggregate>-client.tsx`, and `<aggregate>-node.ts` from the folder slug. The `*Client` and `*Node` classes extend the core domain class. The view renders the client. The node selects the view. Domain operations on the core are the operations the client hosts for the browser; field changes return a new client instance for React state.
 
 ### Navigation and views
@@ -395,8 +409,8 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 ### Persistence and repositories
 
 - **`one-json-store-per-aggregate`** — Each aggregate root owns its own JSON file in its aggregate folder. Do not put several aggregates in one file. Repositories never open another aggregate's JSON file.
-- **`repository-owns-aggregate-lifecycle`** — The domain-core `*Repository` interface is the collection seam for the root: `load`, `create`, `search`, `update` — named in ubiquitous language. Zod `.parse()` runs at this boundary.
-- **`one-repository-per-aggregate`** — One `*Repository` per aggregate folder, declared on the aggregate. The client does not declare a repository. Repository names keep the `Repository` suffix only — never `*RepositoryNode`.
+- **`repository-owns-aggregate-lifecycle`** — `{Domain}Repository` is the in-memory collection seam for the root: `load`, `create`, `search`, `update` — named in ubiquitous language. `{Domain}RepositoryNode` extends it, runs Zod `.parse()`, and writes `<aggregate>.json`.
+- **`one-repository-per-aggregate`** — One in-memory `{Domain}Repository` on `<aggregate>.ts` and one `{Domain}RepositoryNode` on `<aggregate>-node.ts`. The client does not declare a repository.
 
 ### Naming, purity, and packaging
 
@@ -409,7 +423,7 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 - **`consistent-view-naming`** — React components end in `View`; screen filenames stay kebab-case.
 - **`ensure-type-safe-routes`** — Route handlers compile without implicit `any`; request extensions are typed.
 - **`standard-mutation-response`** — Every mutation on the same aggregate returns the same response shape.
-- **`implement-domain-entities-correctly`** — Business rules live on domain classes; Zod validates at the repository boundary, not inline in routes or views.
+- **`implement-domain-entities-correctly`** — Business rules live on domain classes. `{Domain}Repository` is in-memory only. `{Domain}RepositoryNode` runs Zod `.parse()` and writes `<aggregate>.json`. Routes and views do not validate or write the store.
 - **`implement-full-interfaces`** — Every `implements` clause covers all interface members; no stub no-ops.
 - **`use-valid-package-names`** — One epic package per feature with `@src` imports into `src/`; no phantom imports or legacy flat `*-shared` / `*-server` / `*-client` package split.
 - **`include-all-external-dependencies`** — Every import has a declared dependency (`lowdb` on the server); the project compiles after a clean install.
