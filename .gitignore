@@ -29,6 +29,7 @@ installation/.install-state.json
 # Hook runtime logs under active session folders (archived to .sessions/closed/ on close)
 .context/sessions/*/logs/
 .sessions/**/logs/dispatch.debug
+.sessions/**/chat-injections/
 .context/prompt-log.txt
 .context/hooks/turn/auto_turn.last_run.json
 tools/.context/hooks/turn/auto_turn.last_run.json
