@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 if TYPE_CHECKING:
-    from workspace.legacy.workspace import WorkSession
+    from workspace.workspace import WorkSession
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -111,7 +111,7 @@ class SessionLog(ISessionLog):
 
     @staticmethod
     def _session_cls():
-        from workspace.legacy.workspace import WorkSession, Workspace
+        from workspace.workspace import WorkSession, Workspace
 
         return WorkSession, Workspace
 
@@ -221,7 +221,7 @@ class SessionLog(ISessionLog):
         open_turn = getattr(self._session, "open_turn", None)
         if open_turn is None:
             return
-        from workspace.legacy.workspace import ToolCall
+        from workspace.workspace import ToolCall
 
         open_turn.tool_calls.append(
             ToolCall(

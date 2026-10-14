@@ -1,39 +1,33 @@
-"""Workspace aggregate, WorkSession, GitRepo."""
+"""Workspace — WorkSession, Workspace, SessionPaths, and session logging."""
+
+from workspace.context_index import ContextIndex
+from workspace.session_log import SessionLog
+from workspace.workspace import (
+    ContextTool,
+    PathOverride,
+    SessionModel,
+    SessionPaths,
+    ToolCall,
+    Turn,
+    TurnCommit,
+    WorkSession,
+    Workspace,
+    docs_dir,
+    session_dir,
+)
 
 __all__ = [
-    "WorkSession",
-    "WorkSessionGuidance",
-    "WorkSessionRulesCollection",
-    "WorkSessionRule",
-    "Example",
-    "Examples",
+    "ContextIndex",
+    "ContextTool",
+    "PathOverride",
+    "SessionLog",
+    "SessionModel",
+    "SessionPaths",
+    "ToolCall",
     "Turn",
     "TurnCommit",
-    "GitRepo",
-    "NullGitRepo",
+    "WorkSession",
+    "Workspace",
+    "docs_dir",
+    "session_dir",
 ]
-
-
-def __getattr__(name: str):
-    if name in (
-        "WorkSession",
-        "WorkSessionGuidance",
-        "WorkSessionRulesCollection",
-        "WorkSessionRule",
-        "Example",
-        "Examples",
-        "Turn",
-        "TurnCommit",
-    ):
-        from workspace import workspace as _w
-
-        return getattr(_w, name)
-    if name in ("GitRepo", "NullGitRepo", "Repo"):
-        from git import GitRepo, NullGitRepo, Repo
-
-        return {
-            "GitRepo": GitRepo,
-            "NullGitRepo": NullGitRepo,
-            "Repo": Repo,
-        }[name]
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

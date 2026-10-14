@@ -1,31 +1,5 @@
-# Modules
+# tools/workspace
 
-*WorkSession* opens a named work session so turns, branches, and decision records hang off one folder.
-## tools.workspace
-### Public Seam
-#### WorkSession
-#### WorkSessionGuidance
-#### WorkSessionRulesCollection
-#### WorkSessionRule
-#### Turn
-#### TurnCommit
-#### Workspace
-#### SessionLog
-#### ISessionLog
-#### SessionModel
-#### SessionPaths
-#### PathOverride
-#### ToolCall
-#### Example
-#### Examples
-#### Mistake
-#### Correction
-#### Repair
-#### Repairs
-### Dependencies
- - `tools.git` — uses
----
+Live surface: `Workspace`, `WorkSession`, `SessionPaths`, `SessionModel`, `Turn`, `ContextIndex`, `SessionLog`, `ContextTool`.
 
-### Constraint
-
-*(none named in this file yet)*
+Retired: WorkSessionGuidance, WorkSessionRulesCollection, WorkSessionRule, and `work-guidelines.md` hook merge.

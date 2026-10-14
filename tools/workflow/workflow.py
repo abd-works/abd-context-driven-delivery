@@ -14,7 +14,7 @@ from harness.mcp.mcp_server import mcp
 from harness.agent_tools import agent_instructions, agent_toolset, subAgent
 from harness.agent_tools.agent_tools import agent_tool
 from workflow.work_ticket import WorkTicket
-from workspace.legacy.workspace import Workspace
+from workspace.workspace import Workspace
 from workspace.workspace import Turn
 
 @dataclass(frozen=True)

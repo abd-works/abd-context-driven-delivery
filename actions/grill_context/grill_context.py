@@ -21,7 +21,7 @@ class GrillContext(GuidanceAction):
         ``root`` may be ``session.path``, ``session.docs_dir``, or ``session.folder``
         — all resolve to the same ``.context`` file.
         """
-        from workspace.legacy.workspace import SessionPaths
+        from workspace.workspace import SessionPaths
 
         return SessionPaths().docs_dir(root) / "grill-answers.md"
 

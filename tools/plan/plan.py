@@ -10,8 +10,7 @@ from typing import Any
 from git.git import Repo, TicketState
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
-from workspace.legacy.workspace import Workspace
-from workspace.workspace import Turn, WorkSession
+from workspace.workspace import Turn, WorkSession, Workspace
 from workflow.workflow import Workflow
 
 @dataclass
