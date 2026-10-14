@@ -46,6 +46,17 @@ with description("schema rules on a node"):
             contain("too many parameters")
         )
 
+    with it("should hang slug, prose body, and executable flag on each node rule"):
+        rule = self.operation.rules["limit-operation-parameters"]
+        expect(rule.slug).to(equal("limit-operation-parameters"))
+        expect(rule.body).not_to(equal(""))
+        expect(rule.executable).to(equal(True))
+
+    with it("should attach prose-only rules without an executable check"):
+        prose = self.operation.rules["write-invariants"]
+        expect(prose.executable).to(equal(False))
+        expect(prose.body).not_to(equal(""))
+
     with it("should match slugs_for_type for operations"):
         expect(slugs_for_type("clean_engineering", "Operation")).to(
             contain("limit-operation-parameters")
