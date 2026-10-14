@@ -19,7 +19,9 @@ def stories_rule_by_slug(slug: str):
     return rule
 
 
-def _story_nodes_from_ts(practice: PracticeGraph, source: str, relative: str) -> list[Node]:
+def _story_nodes_from_ts(
+    practice: PracticeGraph, source: str, relative: str, *, node_type: str | None = None
+) -> list[Node]:
     nodes: list[Node] = []
     for index, name in enumerate(re.findall(r"""story\s*\(\s*['"]([^'"]+)['"]""", source)):
         node_id = f"stories:Story:map.{index}.{name.replace(' ', '_')}"
@@ -29,14 +31,16 @@ def _story_nodes_from_ts(practice: PracticeGraph, source: str, relative: str) ->
         nodes.append(node)
     for index, name in enumerate(re.findall(r"""given\s*\(\s*['"]([^'"]+)['"]""", source)):
         node_id = f"stories:Step:map.given.{index}"
-        node = Node(practice, "Step", node_id, name, Source(relative, 1, 1))
+        node = Node(practice, "Given", node_id, name, Source(relative, 1, 1))
         practice.by_id[node_id] = node
         practice.nodes.setdefault("Step", []).append(node)
         nodes.append(node)
     return nodes
 
 
-def violations_for_story_source(rule, source: str, *, relative: str = "faultyAsset.ts") -> list[str]:
+def violations_for_story_source(
+    rule, source: str, *, relative: str = "faultyAsset.ts", node_type: str | None = None
+) -> list[str]:
     temp = tempfile.TemporaryDirectory()
     root = Path(temp.name)
     path = root / relative
@@ -45,13 +49,22 @@ def violations_for_story_source(rule, source: str, *, relative: str = "faultyAss
     practice.source_root = str(root)
     practice._temp_dir = temp  # type: ignore[attr-defined]
     _story_nodes_from_ts(practice, source, relative)
+    if node_type:
+        for nodes in practice.nodes.values():
+            for node in nodes:
+                node.type = node_type
     context = RuleCheckContext(practice, root)
     messages: list[str] = []
     for _node_id, message in rule.check_practice(context):
         messages.append(message)
-    for node_type in rule.node_types:
-        for node in practice.nodes.get(node_type, []):
+    for nt in rule.node_types:
+        for node in practice.nodes.get(nt, []):
             messages.extend(rule.check(node, context))
+    # Story rules often register as Step; match Given/When/Then nodes too.
+    if "Step" in rule.node_types:
+        for phase in ("Given", "When", "Then"):
+            for node in practice.nodes.get(phase, []):
+                messages.extend(rule.check(node, context))
     return messages
 
 
@@ -61,10 +74,13 @@ def assert_stories_ts_pair(
     clean_source: str,
     *,
     relative: str = "faultyAsset.ts",
+    clean_relative: str | None = None,
 ) -> None:
     rule = stories_rule_by_slug(slug)
     fault_hits = violations_for_story_source(rule, fault_source, relative=relative)
-    clean_hits = violations_for_story_source(rule, clean_source, relative=relative)
+    clean_hits = violations_for_story_source(
+        rule, clean_source, relative=clean_relative or relative
+    )
     if not fault_hits:
         raise AssertionError(f"{slug}: expected fault violations, got none")
     if clean_hits:

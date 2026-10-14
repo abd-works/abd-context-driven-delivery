@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import re
+
 from harness.graph.practice_rule import PracticeGraphRule
+
+_SCENARIO_CALLS = re.compile(r"\bscenario\s*\(")
 
 
 def _band(count: int) -> str | None:
@@ -36,6 +40,9 @@ def _child_tally(node, context) -> tuple[int, str]:
         scenarios = context.child_count(node, ("scenarios",))
         backgrounds = context.child_count(node, ("background",))
         total = scenarios + backgrounds
+        if total == 0:
+            text = context.text(node)
+            total = len(_SCENARIO_CALLS.findall(text))
         label = "scenarios" if backgrounds == 0 else "children"
         return total, label
     if node.type == "Scenario":
