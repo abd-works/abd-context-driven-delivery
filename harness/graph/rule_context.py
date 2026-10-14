@@ -160,6 +160,45 @@ class RuleCheckContext:
             return None
         return self._story_model
 
+    def node_data(self, node) -> dict:
+        """Structured fields populated by channel loaders (see ``node_data.py``)."""
+        data = getattr(node, "data", None)
+        return dict(data) if isinstance(data, dict) else {}
+
+    def step_keyword(self, node) -> str:
+        data = self.node_data(node)
+        if data.get("keyword"):
+            return str(data["keyword"])
+        name = (node.name or "").strip()
+        for prefix in ("Given", "When", "Then", "And", "But"):
+            if name.casefold().startswith(prefix.casefold() + " "):
+                return prefix
+        return ""
+
+    def step_text(self, node) -> str:
+        data = self.node_data(node)
+        if data.get("text"):
+            return str(data["text"])
+        name = (node.name or "").strip()
+        for prefix in ("Given", "When", "Then", "And", "But"):
+            if name.casefold().startswith(prefix.casefold() + " "):
+                return name[len(prefix) :].strip()
+        return name
+
+    def step_callees(self, node) -> list[str]:
+        data = self.node_data(node)
+        callees = data.get("callees")
+        if isinstance(callees, list):
+            return [str(item) for item in callees if item]
+        return []
+
+    def scenario_outline(self, node) -> bool:
+        return bool(self.node_data(node).get("is_outline"))
+
+    def scenario_evidence(self, node) -> list[str]:
+        raw = self.node_data(node).get("evidence")
+        return [str(item) for item in raw] if isinstance(raw, list) else []
+
     def operation_fingerprint(self, node, operation: Operation) -> str:
         span = self.span(node).strip()
         if not span:

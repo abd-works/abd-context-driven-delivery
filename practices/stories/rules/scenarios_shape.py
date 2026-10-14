@@ -13,17 +13,35 @@ class ScenariosShape(PracticeGraphRule):
         steps = context.children(node, "steps")
         if not steps:
             return [f"Scenario {node.name!r} has no steps."]
-        labels = [step.name.lower() for step in steps]
-        has_given = any(label.startswith("given") for label in labels)
-        has_when = any(label.startswith("when") for label in labels)
-        has_then = any(label.startswith("then") for label in labels)
+        phases = {_phase(step, context) for step in steps}
         missing = []
-        if not has_given:
+        if "given" not in phases:
             missing.append("Given")
-        if not has_when:
+        if "when" not in phases:
             missing.append("When")
-        if not has_then:
+        if "then" not in phases:
             missing.append("Then")
         if missing:
             return [f"Scenario {node.name!r} is missing required phase(s): {', '.join(missing)}."]
         return []
+
+
+def _phase(step, context) -> str:
+    data = context.node_data(step)
+    phase = str(data.get("phase") or "").casefold()
+    if phase in {"given", "when", "then"}:
+        return phase
+    if step.type == "Given":
+        return "given"
+    if step.type == "When":
+        return "when"
+    if step.type == "Then":
+        return "then"
+    keyword = context.step_keyword(step).casefold()
+    if keyword in {"given", "when", "then"}:
+        return keyword
+    label = (step.name or "").casefold()
+    for prefix in ("given", "when", "then"):
+        if label.startswith(prefix + " "):
+            return prefix
+    return ""

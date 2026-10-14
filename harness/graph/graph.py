@@ -534,6 +534,7 @@ class Node:
         self.name = name
         self.source = source
         self.stage = ""
+        self.data: dict = {}
         self.children: list[Node] = []
         self.parent: Node | None = None
         self._rules = None
@@ -567,6 +568,8 @@ class Node:
         practice_name = str(practice).strip()
         if practice_name not in _GRAPH_PRACTICE_NAMES:
             return None
+        from harness.graph.node_data import decode_node_data
+
         return {
             "node_id": node_id,
             "name": name,
@@ -576,6 +579,7 @@ class Node:
             "line": int(line or 1),
             "end_line": int(end_line or 1),
             "stage": Node._stage_cell(row),
+            "data": decode_node_data(row),
         }
 
     @classmethod
@@ -588,7 +592,8 @@ class Node:
             Source(row["file"], row["line"], row["end_line"], practice.source_root),
         )
         node.stage = str(row.get("stage") or "")
-        if row["semantic_type"] == "Step":
+        node.data = dict(row.get("data") or {})
+        if row["semantic_type"] in {"Step", "Given", "When", "Then"}:
             node.source.align_to_label(row["name"])
         return node
 
