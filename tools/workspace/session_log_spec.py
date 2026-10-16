@@ -17,7 +17,7 @@ sys.modules.pop("sessions", None)
 from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
-from workspace.legacy.session_log import SessionLog
+from workspace.session_log import SessionLog
 from harness.agent_tools.examples.logged_probe import LoggedProbe
 
 

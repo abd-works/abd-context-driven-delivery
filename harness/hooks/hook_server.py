@@ -739,19 +739,8 @@ class HookServer:
         )
 
     def _work_session_rules(self) -> Any:
-        from types import SimpleNamespace
-
-        from harness.hooks.session_logs import SessionLogs
-        from workspace.workspace import WorkSessionRulesCollection
-
-        logs = SessionLogs(self._repo_root)
-        path = logs.session_folder(logs.active_session_name()) / "work-guidelines.md"
-        if not path.is_file():
-            return None
-        return WorkSessionRulesCollection.from_markdown(
-            path.read_text(encoding="utf-8"),
-            parent=SimpleNamespace(path=path),
-        )
+        """Retired WorkSessionGuidance — no session-scoped rule merge."""
+        return None
 
     def _write_last_chat_injected(self, result: HookResult) -> None:
         from harness.hooks.session_logs import SessionLogs

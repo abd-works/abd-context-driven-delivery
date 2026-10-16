@@ -18,7 +18,7 @@ from mamba import before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from git import DirtyBranchSwitchError, NullGitRepo
-from workspace.legacy.workspace import ContextTool, PathOverride, Turn, Workspace
+from workspace.workspace import ContextTool, PathOverride, Turn, Workspace
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.mcp.mcp_server import McpHost
 
@@ -559,17 +559,17 @@ with description("Turn"):
 with description("WorkSession"):
     with context("that is a toolset"):
         with it("should load as workspace.workspace:WorkSession"):
-            from workspace.legacy.workspace import WorkSession
+            from workspace.workspace import WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="ws-session-load-"))
-            loaded = type(AgentToolSet.instantiate("workspace.legacy.workspace:WorkSession"))
+            loaded = type(AgentToolSet.instantiate("workspace.workspace:WorkSession"))
             kit = loaded(workspace=str(tmp), session="probe-tools")
             expect("finish_work_session" in kit.tools).to(equal(True))
             expect("start_work_session" in kit.tools).to(equal(True))
             expect("worksession_chat" in kit.tools).to(equal(True))
 
         with it("should finish from workspace and session context"):
-            from workspace.legacy.workspace import WorkSession
+            from workspace.workspace import WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="ws-session-cli-"))
             git = NullGitRepo()
@@ -583,7 +583,7 @@ with description("WorkSession"):
             expect(kit.ended).not_to(equal(""))
 
         with it("should finish the default session when no work session name is bound"):
-            from workspace.legacy.workspace import SessionModel, WorkSession
+            from workspace.workspace import SessionModel, WorkSession
 
             git = NullGitRepo()
             git.mark_dirty(True)
@@ -598,7 +598,7 @@ with description("WorkSession"):
             expect(git.pushes).to(equal([]))
 
         with it("should start from workspace and session context without attached Guidance"):
-            from workspace.legacy.workspace import WorkSession
+            from workspace.workspace import WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="ws-session-start-cli-"))
             kit = WorkSession(workspace=str(tmp), session="sprint-start-cli")

@@ -20,7 +20,7 @@ from mamba import before, context, description, it
 from git import Repo
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.markdown import Markdown
-from workspace.legacy.workspace import WorkSession, Workspace
+from workspace.workspace import WorkSession, Workspace
 
 _git = Repo.git
 
@@ -78,7 +78,7 @@ with description("WorkSession on a PracticeGuidance"):
             ).to(be_false)
 
         with it("should compose a Workspace as guidance.workspace"):
-            from workspace.legacy.workspace import Workspace
+            from workspace.workspace import Workspace
 
             expect(isinstance(self.tool.workspace, Workspace)).to(be_true)
 
@@ -122,8 +122,8 @@ with description("WorkSession on a PracticeGuidance"):
 with description("a WorkSession with a name and path"):
     with before.each:
         self.tmp = Path(tempfile.mkdtemp(prefix="session_props_"))
-        from workspace.legacy.workspace import Workspace, WorkSession
-        from workspace.legacy.session_log import SessionLog
+        from workspace.workspace import Workspace, WorkSession
+        from workspace.session_log import SessionLog
         SessionLog.set_instance(None)
         self.session = Workspace(str(self.tmp)).open_work_session("my-sprint")
 
@@ -148,7 +148,7 @@ with description("a WorkSession with a name and path"):
 
     with it("should return a dict with all fields via to_dict"):
         # Arrange
-        from workspace.legacy.workspace import Workspace, WorkSession
+        from workspace.workspace import Workspace, WorkSession
         s = Workspace(str(self.tmp)).open_work_session(
             "sprint-1", goal="ship it", fidelities="behavior", contexts="bdd"
         )
@@ -168,7 +168,7 @@ with description("a WorkSession with a name and path"):
 
 with description("a WorkSession without a name"):
     with it("should raise ValueError when folder is accessed"):
-        from workspace.legacy.workspace import Workspace, WorkSession
+        from workspace.workspace import Workspace, WorkSession
         s = WorkSession(Workspace("."), "")
         # Act / Assert â empty name must refuse folder access
         raised = False
@@ -183,7 +183,7 @@ with description("a WorkSession that is loaded"):
     with context("with no existing session.md"):
         with it("should return a Session with path and name set and no goal"):
             import tempfile
-            from workspace.legacy.workspace import Workspace, WorkSession
+            from workspace.workspace import Workspace, WorkSession
             tmp = Path(tempfile.mkdtemp(prefix="session_load_"))
             # Act
             s = WorkSession.load(str(tmp), "no-file")
@@ -195,7 +195,7 @@ with description("a WorkSession that is loaded"):
     with context("with an existing session.md"):
         with it("should return a Session with fields parsed from the file"):
             import tempfile
-            from workspace.legacy.workspace import Workspace, WorkSession
+            from workspace.workspace import Workspace, WorkSession
             tmp = Path(tempfile.mkdtemp(prefix="session_load_existing_"))
             s = Workspace(str(tmp)).open_work_session("loaded-sprint", goal="test goal",
                         fidelities="development")
@@ -208,7 +208,7 @@ with description("a WorkSession that is loaded"):
 
         with it("should keep Start when ensure_started is called again with a new goal"):
             import tempfile
-            from workspace.legacy.workspace import Workspace, WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="session_resume_no_rewrite_"))
             s = Workspace(str(tmp)).open_work_session(
@@ -225,7 +225,7 @@ with description("a WorkSession that is loaded"):
 with description("a WorkSession that is started"):
     with it("should create the session.md file at the sprint folder path"):
         import tempfile
-        from workspace.legacy.workspace import Workspace, WorkSession
+        from workspace.workspace import Workspace, WorkSession
         tmp = Path(tempfile.mkdtemp(prefix="session_started_"))
         s = Workspace(str(tmp)).open_work_session("start-test", goal="build feature")
         # Act
@@ -267,7 +267,7 @@ def _purge_clone(primary: Path) -> None:
 with description("a WorkSession that is started in a git working area"):
     with it("should isolate session work in a sibling worktree without stealing the primary checkout"):
         from git import GitRepo, Repo
-        from workspace.legacy.workspace import Workspace, WorkSession
+        from workspace.workspace import Workspace, WorkSession
 
         tmp = _init_clone("session_git_started_")
         started_on = GitRepo(tmp).current_branch
@@ -286,7 +286,7 @@ with description("a WorkSession that is started in a git working area"):
     with context("that is started again while already on the session branch"):
         with it("should stay on that worktree when the tree is dirty"):
             from git import GitRepo
-            from workspace.legacy.workspace import Workspace
+            from workspace.workspace import Workspace
 
             tmp = _init_clone("session_git_already_on_")
             started_on = GitRepo(tmp).current_branch
@@ -301,7 +301,7 @@ with description("a WorkSession that is started in a git working area"):
     with context("that is an existing session whose branch we are not on"):
         with it("should keep the dirty primary checkout and reuse the session worktree"):
             from git import GitRepo
-            from workspace.legacy.workspace import Workspace
+            from workspace.workspace import Workspace
 
             tmp = _init_clone("session_git_resume_dirty_")
             started_on = GitRepo(tmp).current_branch
@@ -317,7 +317,7 @@ with description("a WorkSession that is started in a git working area"):
 
         with it("should switch to the existing session worktree from the primary clone"):
             from git import GitRepo
-            from workspace.legacy.workspace import Workspace
+            from workspace.workspace import Workspace
 
             tmp = _init_clone("session_git_resume_clean_")
             started_on = GitRepo(tmp).current_branch
@@ -336,7 +336,7 @@ with description("a WorkSession that is started in a git working area"):
 
         with it("should return to the first session worktree after a later session was opened"):
             from git import GitRepo
-            from workspace.legacy.workspace import Workspace
+            from workspace.workspace import Workspace
 
             tmp = _init_clone("session_git_two_sprints_")
             started_on = GitRepo(tmp).current_branch
@@ -362,7 +362,7 @@ with description("a WorkSession that is started in a git working area"):
 
     with it("should stay in the primary clone when the session branch is the default branch"):
         from git import GitRepo
-        from workspace.legacy.workspace import Workspace, WorkSession
+        from workspace.workspace import Workspace, WorkSession
 
         class DefaultBranchSession(WorkSession):
             @property
@@ -384,7 +384,7 @@ with description("a WorkSession that is started in a git working area"):
 with description("a work session checkout that needs a venv"):
     with context("when the checkout has no setup.ps1 to build one"):
         with it("should open without building or reporting a venv"):
-            from workspace.legacy.workspace import Workspace
+            from workspace.workspace import Workspace
 
             tmp = _init_clone("session_venv_skip_")
             session = Workspace(str(tmp)).open_work_session("venv-skip")
@@ -394,7 +394,7 @@ with description("a work session checkout that needs a venv"):
 
     with context("when opening had to rebuild the venv"):
         with it("should say so in the open message"):
-            from workspace.legacy.workspace import Workspace, WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             class RebuildingSession(WorkSession):
                 def _ensure_worktree_venv(self) -> None:
@@ -410,7 +410,7 @@ with description("a work session checkout that needs a venv"):
 
 with description("a sibling worktree directory name"):
     with it("should abbreviate hyphenated clone folders and append the session slug"):
-        from workspace.legacy.workspace import WorkSession
+        from workspace.workspace import WorkSession
 
         expect(WorkSession._abbrev_repo_name("abd-context-driven-delivery")).to(
             equal("abd-cdd")
@@ -435,7 +435,7 @@ with description("a sibling worktree directory name"):
 with description("a work session that is saving a chat message"):
     with before.each:
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         self.tmp = Path(tempfile.mkdtemp(prefix="session_save_chat_"))
         self.git = NullGitRepo(self.tmp)
@@ -458,7 +458,7 @@ with description("a work session that is saving a chat message"):
 with description("a work session that has saved more than one chat message"):
     with it("should return every chat message for that session"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_chats_"))
         git = NullGitRepo(tmp)
@@ -477,7 +477,7 @@ with description("a work session that has saved more than one chat message"):
 with description("a WorkSession that is closed"):
     with it("should save the running chat file on the close commit and the session tag"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_close_chat_"))
         git = NullGitRepo(tmp)
@@ -497,7 +497,7 @@ with description("a WorkSession that is closed"):
 
     with it("should save this Cursor chat when no CliAgent chats are bound"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_close_this_chat_"))
         git = NullGitRepo(tmp)
@@ -511,7 +511,7 @@ with description("a WorkSession that is closed"):
 
     with it("should commit the complete worktree on close"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_close_full_commit_"))
         git = NullGitRepo(tmp)
@@ -543,7 +543,7 @@ with description("a WorkSession that is closed"):
 
     with it("should write an End section with outcome into session.md"):
         import tempfile
-        from workspace.legacy.workspace import Workspace, WorkSession
+        from workspace.workspace import Workspace, WorkSession
         tmp = Path(tempfile.mkdtemp(prefix="session_closed_"))
         s = Workspace(str(tmp)).open_work_session("close-test")
         s.ensure_started()
@@ -556,7 +556,7 @@ with description("a WorkSession that is closed"):
 
     with it("should preserve hand-written prose between Start and End (regression: closing must not clobber it)"):
         import tempfile
-        from workspace.legacy.workspace import Workspace, WorkSession
+        from workspace.workspace import Workspace, WorkSession
         tmp = Path(tempfile.mkdtemp(prefix="session_closed_body_"))
         s = Workspace(str(tmp)).open_work_session("close-body-test")
         s.ensure_started()
@@ -585,7 +585,7 @@ with description("a WorkSession that is closed"):
         import shutil
         import tempfile
         from git import GitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_git_closed_"))
         _git(tmp, "init")
@@ -603,7 +603,7 @@ with description("a WorkSession that is closed"):
 with description("a WorkSession that is closed in a git worktree"):
     with it("should merge onto main, keep the primary checkout, and remove a clean worktree"):
         from git import GitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = _init_clone("session_git_close_clean_")
         started_on = GitRepo(tmp).current_branch
@@ -623,7 +623,7 @@ with description("a WorkSession that is closed in a git worktree"):
         _purge_clone(tmp)
 
     with it("should archive the session folder under .sessions/closed at the repo root"):
-        from workspace.legacy.workspace import WorkSession, Workspace
+        from workspace.workspace import WorkSession, Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_archive_close_"))
         durable = tmp / ".context" / "story-map.md"
@@ -642,7 +642,7 @@ with description("a WorkSession that is closed in a git worktree"):
 
     with it("should leave git clean after archive when session.md was tracked"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_close_git_clean_"))
         git = NullGitRepo(tmp)
@@ -658,7 +658,7 @@ with description("a WorkSession that is closed in a git worktree"):
 
     with it("should restore a closed session folder when the session is reopened"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_reopen_closed_"))
         git = NullGitRepo(tmp)
@@ -681,7 +681,7 @@ with description("a WorkSession that is closed in a git worktree"):
 
     with it("should restore a dated closed archive folder on reopen"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_reopen_dated_"))
         git = NullGitRepo(tmp)
@@ -698,7 +698,7 @@ with description("a WorkSession that is closed in a git worktree"):
 
     with it("should replace a stale active session folder when a closed archive exists"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_reopen_stale_"))
         git = NullGitRepo(tmp)
@@ -718,7 +718,7 @@ with description("a WorkSession that is closed in a git worktree"):
 
     with it("should restore a nested closed archive and remove the closed entry"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_reopen_nested_"))
         git = NullGitRepo(tmp)
@@ -746,7 +746,7 @@ with description("a WorkSession that is closed in a git worktree"):
 
     with it("should keep the sibling worktree path when session.md stores path as dot"):
         from git import GitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = _init_clone("session_reopen_worktree_path_")
         session = Workspace(str(tmp)).open_work_session("path-dot")
@@ -767,7 +767,7 @@ with description("a WorkSession that is closed in a git worktree"):
 
     with it("should close a forgotten turn before session close"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import Turn, Workspace
+        from workspace.workspace import Turn, Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_git_close_turn_"))
         git = NullGitRepo(tmp)
@@ -786,7 +786,7 @@ with description("a WorkSession that is closed in a git worktree"):
 
     with it("should not remove a dirty worktree"):
         from git import GitRepo
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = _init_clone("session_git_close_dirty_")
         session = Workspace(str(tmp)).open_work_session("close-dirty")
@@ -800,7 +800,7 @@ with description("a WorkSession that is closed in a git worktree"):
         _purge_clone(tmp)
 
     with it("should remove an empty orphan checkout folder after close"):
-        from workspace.legacy.workspace import WorkSession, Workspace
+        from workspace.workspace import WorkSession, Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_orphan_dir_"))
         orphan = tmp.parent / "abd-cdd-orphan-empty"
@@ -813,16 +813,16 @@ with description("a WorkSession that is closed in a git worktree"):
 
 with description("a WorkSession tool"):
     with before.each:
-        from workspace.legacy.workspace import Workspace, WorkSession
-        from workspace.legacy.session_log import SessionLog
+        from workspace.workspace import Workspace, WorkSession
+        from workspace.session_log import SessionLog
         SessionLog.set_instance(None)
         self.tmp = Path(tempfile.mkdtemp(prefix="session_tool_"))
         self.session = WorkSession(Workspace(str(self.tmp)), "")
 
     with context("open"):
         with it("should ensure session, load index, and record root in one call"):
-            from workspace.legacy.context_index import ContextIndex
-            from workspace.legacy.workspace import Workspace, WorkSession
+            from workspace.context_index import ContextIndex
+            from workspace.workspace import Workspace, WorkSession
 
             keyed = Workspace(str(self.tmp)).open_work_session(
                 "open-sprint",
@@ -837,7 +837,7 @@ with description("a WorkSession tool"):
             expect("test-kit" in idx.read_text(encoding="utf-8")).to(be_true)
 
         with it("should consume and delete a live handoff on open"):
-            from workspace.legacy.workspace import Workspace, WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             session = WorkSession(Workspace(str(self.tmp)), "handoff-sprint")
             session.folder.mkdir(parents=True)
@@ -853,7 +853,7 @@ with description("a WorkSession tool"):
             expect(archive.exists()).to(equal(False))
 
         with it("should delete a docs_dir handoff on open"):
-            from workspace.legacy.workspace import Workspace, WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             session = WorkSession(Workspace(str(self.tmp)), "docs-handoff")
             session.docs_dir.mkdir(parents=True)
@@ -885,7 +885,7 @@ with description("a WorkSession tool"):
 
         with it("should expose cli_agent only after a CLI agent ran"):
             from git import NullGitRepo
-            from workspace.legacy.workspace import Workspace
+            from workspace.workspace import Workspace
 
             git = NullGitRepo(self.tmp)
             session = Workspace(str(self.tmp)).open_work_session(
@@ -899,7 +899,7 @@ with description("a WorkSession tool"):
 
         with it("should archive session logs under .sessions/closed instead of deleting them"):
             from git import NullGitRepo
-            from workspace.legacy.workspace import Workspace
+            from workspace.workspace import Workspace
 
             git = NullGitRepo(self.tmp)
             session = Workspace(str(self.tmp)).open_work_session(
@@ -920,7 +920,7 @@ with description("a WorkSession tool"):
 
         with it("should call cleanup on cli_agent when that property is set"):
             from git import NullGitRepo
-            from workspace.legacy.workspace import Workspace
+            from workspace.workspace import Workspace
 
             git = NullGitRepo(self.tmp)
             session = Workspace(str(self.tmp)).open_work_session(
@@ -938,8 +938,8 @@ with description("a WorkSession tool"):
     with context("read_context_index"):
         with it("should return a missing message when no context-index.md exists"):
             # Arrange: session with workspace pointing at an empty tmp dir
-            from workspace.legacy.workspace import Workspace, WorkSession
-            from workspace.legacy.session_log import SessionLog
+            from workspace.workspace import Workspace, WorkSession
+            from workspace.session_log import SessionLog
             SessionLog.set_instance(None)
             fresh_tmp = Path(tempfile.mkdtemp(prefix="session_read_idx_"))
             session = WorkSession(Workspace(str(fresh_tmp)), "", workspace_root=str(fresh_tmp))
@@ -951,9 +951,9 @@ with description("a WorkSession tool"):
         with context("when a context-index.md exists"):
             with it("should return the file contents"):
                 # Arrange
-                from workspace.legacy.workspace import Workspace, WorkSession
-                from workspace.legacy.session_log import SessionLog
-                from workspace.legacy.context_index import ContextIndex
+                from workspace.workspace import Workspace, WorkSession
+                from workspace.session_log import SessionLog
+                from workspace.context_index import ContextIndex
                 SessionLog.set_instance(None)
                 idx_tmp = Path(tempfile.mkdtemp(prefix="session_read_idx_exist_"))
                 ContextIndex.upsert_entry(str(idx_tmp), "mytool", "fixtures/my-tool")
@@ -973,35 +973,35 @@ with description("a WorkSession tool"):
 
 with description("docs_dir"):
     with it("should resolve a sprint folder up to path/.context"):
-        from workspace.legacy.workspace import SessionPaths
+        from workspace.workspace import SessionPaths
         sprint = Path("/work/.sessions/my-sprint")
         # Act / Assert
         expect(SessionPaths().docs_dir(sprint)).to(equal(Path("/work/.context")))
 
     with it("should return path/.context for a working area path"):
-        from workspace.legacy.workspace import SessionPaths
+        from workspace.workspace import SessionPaths
         working = Path("/work/sandbox")
         # Act / Assert
         expect(SessionPaths().docs_dir(working)).to(equal(working / ".context"))
 
     with it("should not nest .context when destination is already .context"):
-        from workspace.legacy.workspace import SessionPaths
+        from workspace.workspace import SessionPaths
         ctx = Path("/work/sandbox/.context")
         expect(SessionPaths().docs_dir(ctx)).to(equal(ctx))
 
     with it("should treat a sibling under .context as the durable docs dir"):
-        from workspace.legacy.workspace import SessionPaths
+        from workspace.workspace import SessionPaths
         invented = Path("/work/sandbox/.context/my-sprint")
         expect(SessionPaths().docs_dir(invented)).to(equal(Path("/work/sandbox/.context")))
 
 with description("session_dir"):
     with it("should return a sprint folder unchanged"):
-        from workspace.legacy.workspace import SessionPaths
+        from workspace.workspace import SessionPaths
         sprint = Path("/work/.sessions/my-sprint")
         expect(SessionPaths().session_dir(sprint)).to(equal(sprint))
 
     with it("should build .sessions/{name} under the repository root"):
-        from workspace.legacy.workspace import SessionPaths
+        from workspace.workspace import SessionPaths
         working = Path("/work/sandbox")
         expect(SessionPaths().session_dir(working, "my-sprint")).to(
             equal(working / ".sessions" / "my-sprint")
@@ -1011,7 +1011,7 @@ with description("session_dir"):
         import shutil
         import tempfile
         from git import GitRepo
-        from workspace.legacy.workspace import SessionPaths, WorkSession, Workspace
+        from workspace.workspace import SessionPaths, WorkSession, Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="session_decouple_"))
         worktree = tmp.parent / "abd-cdd-decouple"
@@ -1030,7 +1030,7 @@ with description("session_dir"):
 
 with description("SessionModel"):
     with it("should persist under .sessions/{session}/model"):
-        from workspace.legacy.workspace import SessionModel
+        from workspace.workspace import SessionModel
 
         tmp = Path(tempfile.mkdtemp(prefix="session_model_"))
         path = SessionModel(tmp).write("composer-2.5-fast", "ticket-25")
@@ -1038,7 +1038,7 @@ with description("SessionModel"):
         expect(SessionModel(tmp).read("ticket-25")).to(equal("composer-2.5-fast"))
 
     with it("should use sessions/default when session name is empty"):
-        from workspace.legacy.workspace import SessionModel
+        from workspace.workspace import SessionModel
 
         tmp = Path(tempfile.mkdtemp(prefix="session_model_default_"))
         SessionModel(tmp).write("kimi-k3-max", "")
@@ -1046,7 +1046,7 @@ with description("SessionModel"):
         expect(SessionModel(tmp).read("default")).to(equal("kimi-k3-max"))
 
     with it("should copy session model into a new folder falling back to default"):
-        from workspace.legacy.workspace import SessionModel
+        from workspace.workspace import SessionModel
 
         tmp = Path(tempfile.mkdtemp(prefix="session_model_copy_"))
         SessionModel(tmp).write("cursor-grok-4.6-medium", "default")
@@ -1060,7 +1060,7 @@ with description("SessionModel"):
 
 with description("Workspace /model"):
     with it("should expose set get and list session model tools plus a model prompt"):
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         ws = Workspace()
         expect("set_session_model" in ws.tools).to(be_true)
@@ -1071,7 +1071,7 @@ with description("Workspace /model"):
         )
 
     with it("should persist via set_session_model and change instructions mention IDE model"):
-        from workspace.legacy.workspace import Workspace
+        from workspace.workspace import Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="ws_model_"))
         ws = Workspace(str(tmp))
@@ -1095,7 +1095,7 @@ with description("Workspace /model"):
 with description("a WorkSession that inherits a model"):
     with it("should copy default model into a new session folder on ensure_started"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import SessionModel, Workspace, WorkSession
+        from workspace.workspace import SessionModel, Workspace, WorkSession
 
         tmp = Path(tempfile.mkdtemp(prefix="session_inherit_model_"))
         SessionModel(tmp).write("composer-2.5-fast", "default")
@@ -1107,7 +1107,7 @@ with description("a WorkSession that inherits a model"):
 with description("default work session when none is set"):
     with it("should open the default session folder when workspace open has no name"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import SessionModel, Workspace
+        from workspace.workspace import SessionModel, Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="ws-default-open-"))
         git = NullGitRepo(tmp)
@@ -1121,7 +1121,7 @@ with description("default work session when none is set"):
 
     with it("should warn when default session opens off main without switching branch"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import SessionModel, Workspace
+        from workspace.workspace import SessionModel, Workspace
 
         tmp = Path(tempfile.mkdtemp(prefix="ws-default-warn-"))
         git = NullGitRepo(tmp)
@@ -1140,7 +1140,7 @@ with description("default work session when none is set"):
 
     with it("should close the default session on main with commit only and no push"):
         from git import NullGitRepo
-        from workspace.legacy.workspace import SessionModel, Workspace, WorkSession
+        from workspace.workspace import SessionModel, Workspace, WorkSession
 
         tmp = Path(tempfile.mkdtemp(prefix="ws-default-close-"))
         git = NullGitRepo(tmp)

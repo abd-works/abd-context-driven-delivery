@@ -15,7 +15,7 @@ for _cat in ("tools", "practices", "actions"):
 from expects import be_none, equal, expect
 from mamba import context, description, it
 
-from workspace.legacy.context_index import ContextIndex
+from workspace.context_index import ContextIndex
 
 
 with description("ContextIndex.context_index_path"):

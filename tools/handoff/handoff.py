@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from workspace.legacy.workspace import SessionPaths, Workspace
+from workspace.workspace import SessionPaths, Workspace
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
 from installation.destination import noCatalog

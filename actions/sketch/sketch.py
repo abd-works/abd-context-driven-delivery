@@ -26,7 +26,7 @@ class Sketch(GuidanceAction):
 
     def _sketch_path(self, destination: str, slug: str) -> Path:
         """Resolve sketch path under the destination docs dir (pure)."""
-        from workspace.legacy.workspace import SessionPaths
+        from workspace.workspace import SessionPaths
 
         docs = SessionPaths().docs_dir(destination)
         if docs.name == ".context":
