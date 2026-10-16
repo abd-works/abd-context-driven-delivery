@@ -415,15 +415,14 @@ class Installer:
             self.ensure_runtimes()
 
     def ensure_runtimes(self) -> dict[str, Any]:
-        """Start the hook daemon, CodeQL query-server, and MCP host; fail if any stay down."""
+        """Start the hook daemon and MCP host; fail if either stays down."""
         hook_pid = self._ensure_hook_runtime()
-        codeql_pid = self._ensure_codeql_runtime()
         mcp = self._ensure_mcp_runtime()
         print(
-            f"hook server pid={hook_pid} codeql query-server pid={codeql_pid} mcp host={mcp}",
+            f"hook server pid={hook_pid} mcp host={mcp}",
             file=sys.stderr,
         )
-        return {"hook": "running", "codeql": "running", "mcp": mcp}
+        return {"hook": "running", "mcp": mcp}
 
     def _ensure_hook_runtime(self) -> int | None:
         from harness.hooks.hook_daemon import HookDaemon
@@ -434,14 +433,6 @@ class Installer:
         if live is None:
             raise RuntimeError("install failed: hook server is not running")
         return live[2]
-
-    def _ensure_codeql_runtime(self) -> int | None:
-        from harness.mcp.codeql_query_daemon import QueryServerClient
-
-        client = QueryServerClient().ensure_query_server(self.repo)
-        if client is None:
-            raise RuntimeError("install failed: CodeQL query server is not running")
-        return client.pid
 
     def _ensure_mcp_runtime(self) -> str:
         from harness.mcp.mcp_server import McpInstallation

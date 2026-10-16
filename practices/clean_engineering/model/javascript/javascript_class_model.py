@@ -86,8 +86,6 @@ class JavaScriptOoadClass(OoadClass):
         self.intent = source.intent
         self.collaborators = list(source.collaborators)
         self.line = source.line
-        self.narration_comment_lines = list(source.narration_comment_lines)
-        self.commented_code_lines = list(source.commented_code_lines)
 
     def render(self, known_names: Optional[List[str]] = None) -> str:
         names = known_names or []

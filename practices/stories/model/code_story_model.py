@@ -424,7 +424,7 @@ class CodeStoryModel(StoryModel):
         self.append_epic(epic)
         return epic
 
-    def take_sub_epic_file(self, parts: List[str], content: str) -> bool:
+    def take_sub_epic_file(self, parts: List[str], content: str, source_file: str = "") -> bool:
         """One file is one sub-epic. Every story in the file belongs to it.
 
         A parent folder with the same slug is that sub-epic, so the file is not a second level.
@@ -450,12 +450,30 @@ class CodeStoryModel(StoryModel):
         sub = self.sub_epic_for(epic, nested)
         if epic_name:
             sub.name = epic_name
+        from practices.stories.model.source_location import SourceLocation
+
         for story in self.story_type.load_all(content):
+            if source_file:
+                line = self._quoted_name_line(content, story.name)
+                story.source = SourceLocation(source_file.replace("\\", "/"), line, line)
             sub.append_story(story)
         return True
 
+    def _quoted_name_line(self, content: str, name: str) -> int:
+        for index, line in enumerate(content.splitlines(), start=1):
+            if f"'{name}'" in line or f'"{name}"' in line:
+                return index
+        return 1
+
     def _file_stem_slug(self, filename: str) -> str:
-        for suffix in ("_story.test.ts", "_story.spec.ts", "_story.test.py", "_story.test.js", "Story.java"):
+        for suffix in (
+            ".story.shared.ts",
+            "_story.test.ts",
+            "_story.spec.ts",
+            "_story.test.py",
+            "_story.test.js",
+            "Story.java",
+        ):
             if filename.endswith(suffix):
                 stem = filename[: -len(suffix)]
                 if suffix == "Story.java":

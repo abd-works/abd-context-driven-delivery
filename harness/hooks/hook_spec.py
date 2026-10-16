@@ -414,7 +414,7 @@ with description("hook dispatch"):
             finally:
                 tmp.cleanup()
 
-        with it("should send the edit check on stop after a later tool replaces the chat rules"):
+        with it("should not submit the rules notice as the next user message"):
             tmp = tempfile.TemporaryDirectory()
             try:
                 root = Path(tmp.name)
@@ -426,25 +426,25 @@ with description("hook dispatch"):
                         path = (payload.get("tool_input") or {}).get("path") or ""
                         if path.endswith("story-map.md"):
                             return {
-                                "additional_context": "These rules are injected in the chat.\nReply with exactly: These rules are injected in the chat.\nverb-noun-format"
+                                "additional_context": (
+                                    "These rules are injected in the chat.\n"
+                                    "The user sees the chat line. Do not paste the rule text into the chat.\n"
+                                    "--- chat ---\n"
+                                    "rules injected for stories-story-map\n"
+                                    "--- end chat ---\n"
+                                    "verb-noun-format"
+                                )
                             }
                         return {"additional_context": "later read rules"}
 
                 server = HookServer(root, HandlerCatalog([_EditCheck], root))
-                edit = {
-                    "hook_event_name": "afterFileEdit",
-                    "conversation_id": "chat-a",
-                    "file_path": "story-map.md",
-                    "tool_input": {"path": "story-map.md"},
-                }
-                server.handle_stdin(json.dumps(edit).encode())
                 server.handle_stdin(
                     json.dumps(
                         {
-                            "hook_event_name": "postToolUse",
-                            "tool_name": "Read",
+                            "hook_event_name": "afterFileEdit",
                             "conversation_id": "chat-a",
-                            "tool_input": {"path": "hook_server.py"},
+                            "file_path": "story-map.md",
+                            "tool_input": {"path": "story-map.md"},
                         }
                     ).encode()
                 )
@@ -453,33 +453,21 @@ with description("hook dispatch"):
                         {
                             "hook_event_name": "stop",
                             "conversation_id": "chat-a",
-                            "generation_id": "edit-turn",
                         }
                     ).encode()
                 )
-                expect(stopped.followup_message or "").to(contain("These rules are injected in the chat."))
-                expect(stopped.followup_message or "").to(contain("verb-noun-format"))
-                expect(stopped.followup_message or "").not_to(contain("later read rules"))
-                duplicate = server.handle_stdin(
+                expect(stopped.followup_message).to(equal(None))
+                replayed = server.handle_stdin(
                     json.dumps(
                         {
-                            "hook_event_name": "stop",
+                            "hook_event_name": "beforeSubmitPrompt",
                             "conversation_id": "chat-a",
-                            "generation_id": "edit-turn",
                         }
                     ).encode()
                 )
-                expect(duplicate.followup_message or "").to(contain("These rules are injected in the chat."))
-                again = server.handle_stdin(
-                    json.dumps(
-                        {
-                            "hook_event_name": "stop",
-                            "conversation_id": "chat-a",
-                            "generation_id": "next-turn",
-                        }
-                    ).encode()
-                )
-                expect(again.followup_message).to(equal(None))
+                text = replayed.additional_context or ""
+                expect(text).to(equal("verb-noun-format"))
+                expect(text).not_to(contain("rules injected for"))
             finally:
                 tmp.cleanup()
 
@@ -699,7 +687,7 @@ with description("inject_rules hook dispatch"):
                 toolsets=[CleanEngineering()],
             )
             expect(out.get("additional_context") or "").to(
-                contain("honor-every-rule-in-the-artifact")
+                contain("vocabulary-traces-to-source")
             )
 
     with context("that receives a sketch action payload with listed BDD"):

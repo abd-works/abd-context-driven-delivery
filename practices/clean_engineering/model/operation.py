@@ -2,7 +2,32 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from typing import List
+
+
+def operation_body_fingerprint(body: str) -> str:
+    """Stable hash of normalized method body text (shared by Python AST and C-family parse)."""
+    normalized = re.sub(r"\s+", " ", body.strip())
+    if len(normalized) < 40:
+        return ""
+    return hashlib.sha256(normalized.encode()).hexdigest()[:24]
+
+
+def operation_source_span(operation: "Operation") -> tuple[int, int] | None:
+    """1-based inclusive source lines for this operation when the model recorded them."""
+    start = operation.line
+    if not start:
+        return None
+    end = operation.end_line
+    if end is not None and end >= start:
+        return start, end
+    if operation.line_count and operation.line_count > 0:
+        return start, start + operation.line_count - 1
+    return None
+
+from harness.graph.bound_node import BoundChildren
 
 from practices.clean_engineering.model.base_class_model import OoadNode
 from practices.clean_engineering.model.update_report import ChildCollectionPair
@@ -52,51 +77,51 @@ class Operation(OoadNode):
         parameters: List[str] | None = None,
         **fields: object,
     ) -> None:
-        super().__init__(name, sequential_order)
+        graph = fields.pop("graph", None)
+        super().__init__(name, sequential_order, graph)
         self.return_type = return_type
         self.description = description
         self.callees: List[str] = list(callees) if callees is not None else []
-        self.parameters: List[Parameter] = []
+        self._parameters = BoundChildren(self, "parameters")
         self.invariants: List = []
-        self._legacy_parameters: List[str] = []
         self.line: int | None = None
-        self.line_count = 0
-        self.nesting_depth = 0
-        self.literals: List[str] = []
-        self.param_count = 0
-        self.has_calculation = False
-        self.has_validation = False
-        self.bare_except_lines: List[int] = []
-        self.swallowed_except_lines: List[int] = []
-        self.assigned_names: List[tuple] = []
-        self.loop_target_names: List[tuple] = []
-        self.body_fingerprint = ""
-        self.constructed_types: List[tuple] = []
-        self.public_attr_assigns: List[tuple] = []
+        self.end_line: int | None = None
+        self.line_count: int | None = None
+        self.body_fingerprint: str = ""
+        self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
-        self.returns_private_attr = False
-        self.magic_numbers: List[tuple] = []
-        self.docstring_parrots_name = False
+        self.is_static = False
+        self.is_classmethod = False
+        self.max_control_flow_depth: int = 0
+        self.has_bare_catch: bool = False
+        self.swallows_exceptions: bool = False
+        self.unnamed_literal_numbers: list[str] = []
+        self.narrative_comment_lines: int = 0
+        self.peer_private_access: bool = False
         for key, value in fields.items():
             setattr(self, key, value)
         if parameters:
             self._take_parameters(parameters)
 
-    def _take_parameters(self, parameters: list) -> None:
-        if parameters and isinstance(parameters[0], Parameter):
-            self.parameters = [parameter.clone() for parameter in parameters]
-            self._legacy_parameters = [parameter.save() for parameter in self.parameters]
-            return
-        self.legacy_parameters = list(parameters)
-
     @property
-    def legacy_parameters(self) -> List[str]:
-        return list(self._legacy_parameters)
+    def parameters(self) -> List[Parameter]:
+        return self._parameters
 
-    @legacy_parameters.setter
-    def legacy_parameters(self, values: List[str]) -> None:
-        self._legacy_parameters = list(values)
-        self._sync_parameters_from_legacy()
+    @parameters.setter
+    def parameters(self, parameters: List[Parameter]) -> None:
+        self._refill(self._parameters, parameters)
+
+    def _take_parameters(self, parameters: list) -> None:
+        from practices.clean_engineering.model.type_refs import parse_parameter
+
+        taken: List[Parameter] = []
+        for index, item in enumerate(parameters, start=1):
+            if isinstance(item, Parameter):
+                taken.append(item.clone())
+                continue
+            name, type_hint = parse_parameter(str(item))
+            taken.append(Parameter(name or f"arg{index}", index, type_hint=type_hint))
+        self.parameters = taken
 
     def clone(self) -> "Operation":
         cloned = type(self)(
@@ -108,28 +133,20 @@ class Operation(OoadNode):
         )
         cloned.parameters = [parameter.clone() for parameter in self.parameters]
         cloned.invariants = [item.clone() for item in self.invariants]
-        cloned._legacy_parameters = list(self._legacy_parameters)
-        for name in (
-            "line",
-            "line_count",
-            "nesting_depth",
-            "literals",
-            "param_count",
-            "has_calculation",
-            "has_validation",
-            "bare_except_lines",
-            "swallowed_except_lines",
-            "assigned_names",
-            "loop_target_names",
-            "body_fingerprint",
-            "constructed_types",
-            "public_attr_assigns",
-            "is_property",
-            "returns_private_attr",
-            "magic_numbers",
-            "docstring_parrots_name",
-        ):
-            setattr(cloned, name, getattr(self, name))
+        cloned.line = self.line
+        cloned.end_line = self.end_line
+        cloned.line_count = self.line_count
+        cloned.body_fingerprint = self.body_fingerprint
+        cloned.constructed_types = list(self.constructed_types)
+        cloned.is_property = self.is_property
+        cloned.is_static = self.is_static
+        cloned.is_classmethod = self.is_classmethod
+        cloned.max_control_flow_depth = self.max_control_flow_depth
+        cloned.has_bare_catch = self.has_bare_catch
+        cloned.swallows_exceptions = self.swallows_exceptions
+        cloned.unnamed_literal_numbers = list(self.unnamed_literal_numbers)
+        cloned.narrative_comment_lines = self.narrative_comment_lines
+        cloned.peer_private_access = self.peer_private_access
         return cloned
 
     def save(self) -> str:
@@ -140,14 +157,6 @@ class Operation(OoadNode):
 
     def render(self) -> str:
         return self.save()
-
-    def _sync_parameters_from_legacy(self) -> None:
-        from practices.clean_engineering.model.type_refs import parse_parameter
-
-        self.parameters = []
-        for index, raw in enumerate(self._legacy_parameters, start=1):
-            name, type_hint = parse_parameter(raw)
-            self.parameters.append(Parameter(name or f"arg{index}", index, type_hint=type_hint))
 
     def to_field(self) -> "Operation":
         return self
@@ -171,28 +180,20 @@ class Operation(OoadNode):
         self.callees = list(copied.callees)
         self.parameters = copied.parameters
         self.invariants = copied.invariants
-        self._legacy_parameters = list(copied._legacy_parameters)
-        for name in (
-            "line",
-            "line_count",
-            "nesting_depth",
-            "literals",
-            "param_count",
-            "has_calculation",
-            "has_validation",
-            "bare_except_lines",
-            "swallowed_except_lines",
-            "assigned_names",
-            "loop_target_names",
-            "body_fingerprint",
-            "constructed_types",
-            "public_attr_assigns",
-            "is_property",
-            "returns_private_attr",
-            "magic_numbers",
-            "docstring_parrots_name",
-        ):
-            setattr(self, name, getattr(copied, name))
+        self.line = copied.line
+        self.end_line = copied.end_line
+        self.line_count = copied.line_count
+        self.body_fingerprint = copied.body_fingerprint
+        self.constructed_types = list(copied.constructed_types)
+        self.is_property = copied.is_property
+        self.is_static = copied.is_static
+        self.is_classmethod = copied.is_classmethod
+        self.max_control_flow_depth = copied.max_control_flow_depth
+        self.has_bare_catch = copied.has_bare_catch
+        self.swallows_exceptions = copied.swallows_exceptions
+        self.unnamed_literal_numbers = list(copied.unnamed_literal_numbers)
+        self.narrative_comment_lines = copied.narrative_comment_lines
+        self.peer_private_access = copied.peer_private_access
 
     def load_parameters(self) -> None:
         while self.has_more_parameter():

@@ -910,3 +910,64 @@ AggregateError [ECONNREFUSED]:
     at internalConnectMultiple (node:net:1339:18)
     at afterConnectMultiple (node:net:1942:7)
 [2m11:35:58 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:07:57 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:08:03 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:08:13 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:08:20 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:08:28 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:08:36 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:08:45 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:08:55 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:09:27 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:12:17 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:12:17 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/data-management/DataManagementView.tsx[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m changed tsconfig file detected: C:/dev/abd-context-driven-delivery/harness/codeQl_graph/app/tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/App.tsx[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/explorer.css[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2minventory-bundle.ts[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/kind-mark.tsx[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/main.tsx[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mpython-call.ts[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mbrand/abd.works.wordmark.black.svg[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mbrand/abd.works.wordmark.white.svg[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mfilter/FilterClient.ts[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/filter/FilterView.tsx[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mgraph/GraphClient.ts[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/graph/GraphView.tsx[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mgraph/query-progress.ts[22m
+[2m1:43:26 a.m.[22m [36m[1m[vite][22m[39m server restarted.
+
+--- npm run dev ---
+
+--- npm run dev ---
+
+--- npm run dev ---
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  VITE v6.4.3  ready in 298 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+10:12:59 a.m. [vite] vite.config.ts changed, restarting server...
+10:12:59 a.m. [vite] server restarted.
+10:14:19 a.m. [vite] (client) hmr update /graph/GraphView.tsx
+10:14:23 a.m. [vite] (client) hmr update /graph/GraphView.tsx
+10:18:40 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+10:18:41 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)
+10:18:41 a.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1339:18)
+    at afterConnectMultiple (node:net:1942:7)

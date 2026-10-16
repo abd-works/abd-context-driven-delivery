@@ -1,5 +1,0 @@
-﻿name: cdd/lern-ddd-graph-query-typescript
-version: 0.0.1
-dependencies:
-  codeql/javascript-all: "*"
-  cdd/ddd-graph-query-typescript: "*"

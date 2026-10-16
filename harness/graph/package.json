@@ -1,0 +1,7 @@
+{
+  "name": "@cdd/graph",
+  "private": true,
+  "scripts": {
+    "test": "python -m mamba graph_spec.py"
+  }
+}

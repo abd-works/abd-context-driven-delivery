@@ -3,12 +3,14 @@
 import sys
 from pathlib import Path
 
-from expects import equal, expect, raise_error
+from expects import be, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 _REPO = Path(__file__).resolve().parents[3]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
+
+from harness.graph.graph import Graph
 
 from practices.ux.model.nodes import Screen
 from practices.ux.model.ux_map import UxMap
@@ -51,3 +53,28 @@ with description("a UxMap"):
             expect(self.ux_map.all_story_names()).to(
                 equal(["Browse Product Catalog"])
             )
+
+
+with description("a ux map on a graph"):
+    with before.each:
+        self.graph = Graph()
+        self.ux_map = UxMap.create(self.graph)
+        self.catalog = Screen("Catalog", 0)
+        self.ux_map.append_screen(self.catalog)
+
+    with it("should be the graph node for the screen"):
+        expect(self.catalog.node).to(be(self.catalog))
+
+    with it("should keep the screen on the map graph"):
+        expect(self.catalog.graph).to(be(self.graph))
+
+    with it("should record screens and belongsTo"):
+        practice = self.graph.practice("ux")
+        screens = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("screens", [])]
+        belongs = [(edge.parent.name, edge.child.name) for edge in practice.edges.get("belongsTo", [])]
+        expect(screens).to(contain(("UxMap", "Catalog")))
+        expect(belongs).to(contain(("Catalog", "UxMap")))
+
+    with it("should open the same map from the graph"):
+        restored = UxMap.create(self.graph)
+        expect(restored.screens[0].name).to(equal("Catalog"))

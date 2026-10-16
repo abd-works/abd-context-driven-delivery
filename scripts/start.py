@@ -15,12 +15,12 @@ for _entry in (str(_REPO), str(_SCRIPTS)):
         sys.path.insert(0, _entry)
 
 from instances import (
-    CODEQL_APP_PORTS,
-    CODEQL_WEB_PORTS,
+    GRAPH_APP_PORTS,
+    GRAPH_WEB_PORTS,
     PingReport,
     RepoProcesses,
-    codeql_app,
-    codeql_web,
+    graph_app,
+    graph_web,
 )
 
 
@@ -30,35 +30,33 @@ class ServiceStart:
     def __init__(self, processes: RepoProcesses | None = None) -> None:
         self.processes = processes or RepoProcesses()
         self.repo = self.processes.repo
-        self.app = self.repo / "harness" / "codeQl_graph" / "app"
+        self.app = self.repo / "harness" / "graph" / "app"
         self.logs = _SCRIPTS / ".run"
 
-    def codeql_app(self) -> int:
+    def graph_app(self) -> int:
         return self._http(
-            codeql_app,
+            graph_app,
             "npm run dev",
             self.app,
-            self.logs / "codeql-app.log",
+            self.logs / "graph-app.log",
             os.environ.copy(),
-            preferred_ports=CODEQL_APP_PORTS,
-            expect_service="codeql_app",
+            preferred_ports=GRAPH_APP_PORTS,
+            expect_service="graph_app",
         )
 
-    def codeql_web(self) -> int:
+    def graph_web(self) -> int:
         env = os.environ.copy()
-        env.setdefault("CODEQL_USE_QUERY_SERVER", "true")
-        env.setdefault("CODEQL_QUERY_SERVER_BATCH_SIZE", "4")
         python = self.repo / ".venv" / "Scripts" / "python.exe"
         if python.is_file():
             env["PYTHON"] = str(python)
         return self._http(
-            codeql_web,
+            graph_web,
             "npm run server",
             self.app,
-            self.logs / "codeql-web.log",
+            self.logs / "graph-web.log",
             env,
-            preferred_ports=CODEQL_WEB_PORTS,
-            expect_service="codeql_web",
+            preferred_ports=GRAPH_WEB_PORTS,
+            expect_service="graph_web",
         )
 
     def hook(self) -> int:

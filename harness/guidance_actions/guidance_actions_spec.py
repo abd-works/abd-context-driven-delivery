@@ -32,8 +32,7 @@ for _cat in ("tools", "practices", "actions"):
 sys.path.insert(0, _root)
 for _name in list(sys.modules):
     if (
-        _name in {"harness", "scan", "lifecycle", "guidance_actions", "workspace", "practices", "tools"}
-        or _name.startswith("harness.")
+        _name in {"scan", "lifecycle", "guidance_actions", "workspace", "practices", "tools"}
         or _name.startswith("scan.")
         or _name.startswith("guidance_actions.")
         or _name.startswith("practices.")
@@ -73,6 +72,16 @@ with description("GuidanceAction"):
         expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
         expect(listed[0].fidelities.current.name).to(equal("story_map"))
         expect(listed[1].fidelities.current.name).to(equal("model"))
+
+    with it("should list stories at the scenarios fidelity from the short fidelity slug"):
+        from harness.guidance_actions import GuidanceAction
+
+        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-scenarios-"))))
+        kit._bind_guidance(["scenarios"])
+        listed = kit.listed()
+        expect(len(listed)).to(equal(1))
+        expect(type(listed[0]).__name__).to(equal("Stories"))
+        expect(listed[0].fidelities.current.name).to(equal("scenarios"))
 
     with it("should keep prose that contains a colon as guidance text"):
         from harness.guidance_actions import GuidanceAction

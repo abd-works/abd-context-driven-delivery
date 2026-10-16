@@ -112,8 +112,9 @@ class Property(OoadNode):
         sequential_order: int = 0,
         type_hint: str = "",
         description: str = "",
+        graph: Optional["Graph"] = None,
     ) -> None:
-        super().__init__(name, sequential_order)
+        super().__init__(name, sequential_order, graph)
         self.type_hint = type_hint
         self.description = description
         self.access = "both"

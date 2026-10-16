@@ -221,7 +221,6 @@ def _add_member(oclass: OoadClassTransformer, stripped: str) -> OperationTransfo
     operation = OperationTransformer(name, len(oclass.operation_nodes) + 1)
     for index, param_name in enumerate(param_names, start=1):
         operation.parameters.append(ParameterTransformer(param_name, index))
-    operation.legacy_parameters = list(param_names)
     oclass.operation_nodes.append(operation)
     oclass.operations.append(Operation(name=name, parameters=list(param_names)))
     return operation

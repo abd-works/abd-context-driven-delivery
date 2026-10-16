@@ -90,16 +90,48 @@ with description("a shared rules section containing rule bullets") as self:
                 }
             )
             text = result.get("additional_context") or ""
-            expect(text).to(contain("These rules are injected in the chat."))
-            expect(text).to(contain("The user sees the chat line. Do not paste the rule text into the chat."))
-            expect(text).to(contain("--- chat ---"))
-            expect(text).to(contain("rules injected for"))
             expect(text).to(contain("You just edited pkg/foo_sample_bar.py."))
             expect(text).to(contain("The full rule text follows."))
             expect(text).to(contain("Fix any violations from the edit you just made."))
             expect(text).to(contain("sample-rule-one"))
             expect(text).to(contain("sample rule one"))
             expect(text).to(contain("**/*sample*"))
+            expect(text).not_to(contain("rules injected for"))
+            expect(text).not_to(contain("These rules are injected in the chat."))
+            expect(text).not_to(contain("echo the following"))
+
+        with it("should toast the injected rules as a read-only notice"):
+            import json
+            from tempfile import TemporaryDirectory
+
+            notice = _REPO_ROOT / ".cursor" / "prompt-echo-toast.json"
+            before = notice.read_text(encoding="utf-8") if notice.is_file() else ""
+            try:
+                with TemporaryDirectory() as tmp:
+                    self.guidance.rules.inject_rules(
+                        {
+                            "hook_event_name": "afterFileEdit",
+                            "file_path": "pkg/foo_sample_bar.py",
+                            "conversation_id": "chat-a",
+                            "workspace_roots": [tmp],
+                        }
+                    )
+                    toasted = json.loads(
+                        (Path(tmp) / ".cursor" / "prompt-echo-toast.json").read_text(
+                            encoding="utf-8"
+                        )
+                    )
+                    expect(toasted["message"]).to(
+                        equal(
+                            "rules injected for sample-tool-sketch\n"
+                            "rules injected for sample-tool-spec"
+                        )
+                    )
+            finally:
+                if before:
+                    notice.write_text(before, encoding="utf-8")
+                elif notice.is_file():
+                    notice.unlink()
 
         with it("should not toast the ide when the call has no chat"):
             notice = _REPO_ROOT / ".cursor" / "prompt-echo-toast.json"

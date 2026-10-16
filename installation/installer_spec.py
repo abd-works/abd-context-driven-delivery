@@ -1035,7 +1035,7 @@ with description("the installer import path") as self:
         expect(refs).to(contain("harness.transformers.transformers:Transformers"))
         expect(refs).to(contain("patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
         expect(refs).to(contain("patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
-        expect(refs).to(contain("harness.codeQl_graph.graph:CodeQLGraph"))
+        expect(refs).to(contain("harness.graph.graph:Graph"))
         expect(refs).to(contain("harness.guidance.guidance:Guidance"))
         expect(refs).not_to(contain("harness.guidance.guidance:PracticeGuidance"))
         expect(refs).not_to(contain("harness.guidance.guidance:FidelityGuidance"))
@@ -1054,11 +1054,10 @@ with description("the installer import path") as self:
 
 
 with description("install standup of runtime hosts") as self:
-    with it("should leave hook, codeql query, and mcp hosts answering"):
+    with it("should leave hook and mcp hosts answering"):
         installer = Installer(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
         status = installer.ensure_runtimes()
         expect(status["hook"]).to(equal("running"))
-        expect(status["codeql"]).to(equal("running"))
         expect(status["mcp"]).to(equal("running"))
 
 

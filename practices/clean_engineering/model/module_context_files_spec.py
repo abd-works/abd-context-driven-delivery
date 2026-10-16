@@ -1,4 +1,4 @@
-"""Read module-context.md next to the class CodeQL named."""
+"""Read module-context.md next to a class."""
 
 import sys
 from pathlib import Path
@@ -12,7 +12,7 @@ from mamba import description, it
 
 from practices.clean_engineering.model.module_context_files import ModuleContextFiles
 
-_EXAMPLES = Path(__file__).resolve().parent / "python" / "codeql" / ".examples"
+_EXAMPLES = Path(__file__).resolve().parent / "python" / ".examples"
 
 
 class ContextRow:
@@ -21,7 +21,7 @@ class ContextRow:
         return {"name": class_name, "message": str(path.resolve()), "contributor": class_name}
 
 
-with description("module-context.md next to a CodeQL class"):
+with description("module-context.md next to a class"):
     with it("should flag a class folder with no module-context.md"):
         hits = ModuleContextFiles().rows_for_missing_module_context([ContextRow().for_folder("OrphanModule", "missing-module-context")])
         expect(any("OrphanModule" in (h["name"] + h["message"]) for h in hits)).to(equal(True))

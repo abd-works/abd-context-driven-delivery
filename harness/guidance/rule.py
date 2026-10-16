@@ -133,16 +133,15 @@ class RulesCollection(MarkdownCollection):
             return {}
         path = self._payload_path(hook_payload)
         bags = self._bags_for_path(path) if path else []
-        parts, labels = self._bodies(bags)
+        parts, _labels = self._bodies(bags)
         if not parts:
             return {}
         body = self._inject_context(path, bags, parts, hook_payload)
-        if hook_payload.get("conversation_id") or hook_payload.get("workspace_roots"):
+        notice = self._read_only_notice(bags)
+        if notice and (hook_payload.get("conversation_id") or hook_payload.get("workspace_roots")):
             echo = PromptEcho()
             echo.toast_roots = hook_payload.get("workspace_roots")
-            echo.show_ide_toast(
-                echo.inject_rules_toast(echo.chat_edit_source(hook_payload), labels),
-            )
+            echo.show_ide_toast(notice)
         return {"additional_context": body}
 
     def _payload_path(self, hook_payload: dict[str, Any]) -> str:
@@ -247,18 +246,6 @@ class RulesCollection(MarkdownCollection):
                 labels.append(getattr(parent, "name", None) or type(parent).__name__)
         return parts, labels
 
-    def _rule_names(self, bags: list[RulesCollection]) -> list[str]:
-        names: list[str] = []
-        seen: set[str] = set()
-        for bag in bags:
-            for rule in bag:
-                slug = (rule.slug or "").strip()
-                if not slug or slug in seen:
-                    continue
-                seen.add(slug)
-                names.append(slug)
-        return names
-
     def _matched_globs(self, bags: list[RulesCollection]) -> list[str]:
         patterns: list[str] = []
         seen: set[str] = set()
@@ -273,32 +260,19 @@ class RulesCollection(MarkdownCollection):
     def _inject_echo_instruction(
         self, path: str, bags: list[RulesCollection], hook_payload: dict[str, Any] | None = None
     ) -> str:
-        if self._just_edited(hook_payload or {}):
-            lines = [
-                "These rules are injected in the chat.",
-                "The user sees the chat line. Do not paste the rule text into the chat.",
-                *self._chat_block(bags),
-                f"You just edited {self._edited_label(path)}.",
-                "The full rule text follows.",
-                "Fix any violations from the edit you just made.",
-            ]
-        else:
-            rule_names = self._rule_names(bags)
-            if not rule_names:
-                return ""
-            lines = [
-                "Before you continue, echo the following message to the user:",
-                "",
-                "The following rules need to be followed while editing this document:",
-                *rule_names,
-                path,
-            ]
+        if not self._just_edited(hook_payload or {}):
+            return ""
+        lines = [
+            f"You just edited {self._edited_label(path)}.",
+            "The full rule text follows.",
+            "Fix any violations from the edit you just made.",
+        ]
         for pattern in self._matched_globs(bags):
             lines.append(pattern)
         return "\n".join(lines)
 
-    def _chat_block(self, bags: list[RulesCollection]) -> list[str]:
-        return ["--- chat ---", *self._chat_lines(bags), "--- end chat ---"]
+    def _read_only_notice(self, bags: list[RulesCollection]) -> str:
+        return "\n".join(self._chat_lines(bags))
 
     def _chat_lines(self, bags: list[RulesCollection]) -> list[str]:
         practice = self._owner_practice()
@@ -386,41 +360,7 @@ class RulesCollection(MarkdownCollection):
             entries[rule.slug] = rule
         collection = cls(entries, applies_to=applies_to, parent=parent)
         collection.markdown = text
-        collection._attribute_from_queries(parent)
         return collection
-
-    def _attribute_from_queries(self, parent: Any) -> None:
-        """Credit each rule to the practice its query declares, so a pattern's rules
-        still name the parent practice they came from."""
-        practice = self._parent_practice(parent)
-        if not practice:
-            return
-        from harness.guidance.rule_query import RuleQuery
-
-        shared = getattr(parent, "fidelities", None) is not None
-        language = getattr(parent, "format", None) or "typescript"
-        for rule in self.entries.values():
-            if not isinstance(rule, Rule):
-                continue
-            query = RuleQuery.locate(rule.slug, practice, str(language))
-            if query is None:
-                continue
-            rule.attribute_to(query.practice or practice, tag=rule.tag, shared=shared)
-            rule.fidelity = query.fidelity or rule.fidelity
-            rule.pattern = query.pattern
-
-    @staticmethod
-    def _parent_practice(parent: Any) -> str:
-        if parent is None:
-            return ""
-        practice = getattr(parent, "practice_guidance", None)
-        if practice is None and getattr(parent, "fidelities", None) is not None:
-            practice = parent
-        if practice is None:
-            return ""
-        from harness.markdown import AssetLocator
-
-        return AssetLocator(practice, "").class_file_directory().name
 
     def __iter__(self) -> Iterator[Rule]:
         for value in self.entries.values():

@@ -60,11 +60,6 @@ def _stories_tree(root: Path) -> None:
         ".context/rules/stories/story_map/rules.md",
         "- **`project-code-rule`** - fidelity rule\n",
     )
-    _write(
-        root,
-        ".context/rules/stories/codeql/project-story-rule.ql",
-        "select 1\n",
-    )
 
 
 class _Node:

@@ -11,7 +11,7 @@ for _cat in ("practices", "tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_true, equal, expect, raise_error
+from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from practices.stories.stories import Stories
@@ -132,6 +132,26 @@ with description("Stories"):
         with it("should NOT inline CleanEngineering generate instructions"):
             prose = _expanded(Stories(), "instructions")
             expect("Deepen OO design" in prose).to(equal(False))
+
+        with it("should include the stories schema with the practice instructions"):
+            stories = Stories()
+            expect(stories.instructions).to(contain("storyNode:"))
+            expect(stories.instructions).to(contain("conforms to this schema"))
+
+        with it("should include the stories schema in the practice skill"):
+            import tempfile
+
+            from installation.files import FileInstallation
+
+            stories = Stories()
+            tool = stories.tools["instructions"]
+            with tempfile.TemporaryDirectory() as tmp:
+                FileInstallation(
+                    "Cursor", tmp, "skill", mcp_mode=True, repo=_REPO_ROOT
+                ).write(tool)
+                text = next(Path(tmp).rglob("SKILL.md")).read_text(encoding="utf-8")
+            expect(text).to(contain("storyNode:"))
+            expect(text).to(contain("conforms to this schema"))
 
     with context("whose transform tool converts markdown to python"):
         with before.each:

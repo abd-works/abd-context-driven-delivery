@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
+from harness.graph.bound_node import BoundChildren, BoundNode
+from harness.graph.graph import Graph
+
 from practices.clean_engineering.model.field_types import Relationship
 from practices.clean_engineering.model.update_report import ChildCollectionPair, TranslationError, UpdateReport
 
@@ -66,15 +69,23 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
     return None
 
 
-class OoadNode:
+class OoadNode(BoundNode):
+    _graph_practice = "clean_engineering"
     _semantic_type_name: str = "OoadNode"
+    _belongs = {
+        ("OoadClass", "Module"),
+        ("OoadClass", "CleanEngineeringModel"),
+        ("Module", "Module"),
+        ("Module", "CleanEngineeringModel"),
+        ("Operation", "OoadClass"),
+        ("Property", "OoadClass"),
+        ("Parameter", "Operation"),
+        ("Invariant", "Operation"),
+        ("Invariant", "Property"),
+    }
 
-    def __init__(self, name: str, sequential_order: int) -> None:
-        self.name = name
-        self.sequential_order = sequential_order
-
-    def semantic_type(self) -> str:
-        return self._semantic_type_name
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
+        super().__init__(name, sequential_order, graph)
 
     def translate_from(self, source: "OoadNode") -> UpdateReport:
         if self.semantic_type() != source.semantic_type():
@@ -144,20 +155,38 @@ class OoadClass(OoadNode):
         relationships: List[Relationship] | None = None,
         collaborators: List[str] | None = None,
         line: int | None = None,
+        graph: Optional[Graph] = None,
     ) -> None:
-        super().__init__(name, sequential_order)
+        super().__init__(name, sequential_order, graph)
         self.intent = intent
         self.line = line
-        self.docstring_parrots_name: bool = False
-        self.narration_comment_lines: List[int] = []
-        self.commented_code_lines: List[int] = []
-        self.properties: List["Property"] = properties if properties is not None else []
-        self.operations: List["Operation"] = operations if operations is not None else []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
+        self._properties = BoundChildren(self, "participants")
+        self._operations = BoundChildren(self, "participants")
+        if properties:
+            self._properties.extend(properties)
+        if operations:
+            self._operations.extend(operations)
         for relationship in relationships or []:
             self.place_relationship(relationship)
         self.property_nodes: List["Property"] = []
         self.operation_nodes: List["Operation"] = []
+
+    @property
+    def properties(self) -> List["Property"]:
+        return self._properties
+
+    @properties.setter
+    def properties(self, properties: List["Property"]) -> None:
+        self._refill(self._properties, properties)
+
+    @property
+    def operations(self) -> List["Operation"]:
+        return self._operations
+
+    @operations.setter
+    def operations(self, operations: List["Operation"]) -> None:
+        self._refill(self._operations, operations)
 
     def update_self(self, source: "OoadNode") -> None:
         assert isinstance(source, OoadClass)
@@ -178,9 +207,6 @@ class OoadClass(OoadNode):
             collaborators=list(self.collaborators),
             line=self.line,
         )
-        cloned.docstring_parrots_name = self.docstring_parrots_name
-        cloned.narration_comment_lines = list(self.narration_comment_lines)
-        cloned.commented_code_lines = list(self.commented_code_lines)
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
         cloned.property_nodes = [item.clone() for item in self.property_nodes]
@@ -240,8 +266,8 @@ class OoadClass(OoadNode):
             return_type=source.return_type,
             description=source.description,
             callees=list(source.callees),
+            parameters=[parameter.clone() for parameter in source.parameters],
         )
-        node.legacy_parameters = list(source.legacy_parameters)
         node.invariants = [item.clone() for item in getattr(source, "invariants", [])]
         return node
 
@@ -379,16 +405,33 @@ class Module(OoadNode):
         constraint: str = "",
         seam_terms: List[str] | None = None,
         dependencies: List[str] | None = None,
+        graph: Optional[Graph] = None,
     ) -> None:
-        super().__init__(name, sequential_order)
+        super().__init__(name, sequential_order, graph)
         self.description = description
         self.seam = seam
         self.constraint = constraint
         self.seam_terms: List[str] = list(seam_terms) if seam_terms is not None else []
         self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
-        self.modules: List["Module"] = []
-        self.classes: List[OoadClass] = []
+        self._modules = BoundChildren(self, "participants")
+        self._classes = BoundChildren(self, "participants")
         self._class_blocks: List[str] = []
+
+    @property
+    def modules(self) -> List["Module"]:
+        return self._modules
+
+    @modules.setter
+    def modules(self, modules: List["Module"]) -> None:
+        self._refill(self._modules, modules)
+
+    @property
+    def classes(self) -> List[OoadClass]:
+        return self._classes
+
+    @classes.setter
+    def classes(self, classes: List[OoadClass]) -> None:
+        self._refill(self._classes, classes)
 
     def as_record(self) -> dict:
         return {
@@ -501,10 +544,35 @@ class Module(OoadNode):
 class CleanEngineeringModel(OoadNode):
     _semantic_type_name = "CleanEngineeringModel"
 
-    def __init__(self, name: str = "", sequential_order: int = 1) -> None:
-        super().__init__(name, sequential_order)
+    def __init__(self, name: str | Graph = "", sequential_order: int = 1, graph: Optional[Graph] = None) -> None:
+        opened = isinstance(name, Graph)
+        if opened:
+            graph = name
+            name = "model"
+        super().__init__(name, sequential_order, graph)
         self.path = ""
-        self.modules: List[Module] = []
+        self._modules = BoundChildren(self, "participants")
+        if opened:
+            self._copy_modules_on_graph()
+
+    @property
+    def modules(self) -> List[Module]:
+        return self._modules
+
+    @modules.setter
+    def modules(self, modules: List[Module]) -> None:
+        self._refill(self._modules, modules)
+
+    def _copy_modules_on_graph(self) -> None:
+        others = [
+            node
+            for node in self._copies_on_graph("CleanEngineeringModel")
+            if getattr(node, "modules", None)
+        ]
+        if not others:
+            return
+        for module in others[0].modules:
+            self.modules.append(module.clone())
 
     @property
     def classes(self) -> List[OoadClass]:

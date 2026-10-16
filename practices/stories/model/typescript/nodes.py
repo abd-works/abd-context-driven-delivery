@@ -182,16 +182,17 @@ class TypeScriptStory(CodeStory):
     def load_all(cls, content: str) -> List["TypeScriptStory"]:
         comment_chunks = re.split(r"(?=/\*\*\s*\n \* Story:)", content)
         named = [chunk for chunk in comment_chunks if re.search(r"\*\s*Story:", chunk)]
-        if named and content.count("story(") <= len(named):
-            stories = [cls.load(chunk, "") for chunk in comment_chunks if "Story:" in chunk or "story(" in chunk]
+        if named and len(re.findall(r"(?i)story\(", content)) <= len(named):
+            stories = [cls.load(chunk, "") for chunk in comment_chunks if "Story:" in chunk or re.search(r"(?i)story\(", chunk)]
             return stories or [cls.load(content, "")]
-        calls = list(re.finditer(r"(?m)^story\(", content))
+        calls = list(re.finditer(r"(?im)^[ \t]*(?:shareStory|story)\(", content))
         if len(calls) <= 1:
             return [cls.load(content, "")]
         stories = []
+        preamble = content[: calls[0].start()]
         for index, match in enumerate(calls):
             end = calls[index + 1].start() if index + 1 < len(calls) else len(content)
-            stories.append(cls.load(content[match.start():end], ""))
+            stories.append(cls.load(preamble + content[match.start() : end], ""))
         return stories
 
     @classmethod
@@ -199,7 +200,10 @@ class TypeScriptStory(CodeStory):
         name_match = re.search(r"\*\s*Story:\s*(.+)", content)
         story_name = name_match.group(1).strip() if name_match else story_slug.replace("-", " ").title()
         if name_match is None:
-            call = re.search(r"story\(\s*(['\"])((?:\\.|(?!\1).)*)\1", content)
+            call = re.search(
+                r"(?i)(?:shareStory|story)\(\s*(['\"])((?:\\.|(?!\1).)*)\1",
+                content,
+            )
             if call:
                 story_name = call.group(2)
         story_name = re.sub(r"\s*\([^)]*\)\.?\s*$", "", story_name).strip()
@@ -207,6 +211,9 @@ class TypeScriptStory(CodeStory):
         actor_match = re.search(r"\*\s*Actor:\s*(.+)", content)
         if actor_match:
             story.actors = [actor_match.group(1).strip()]
+        evidence_match = re.search(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)", content)
+        if evidence_match:
+            story.evidence = [part.strip() for part in evidence_match.group(1).split(",") if part.strip()]
         story.fill(content)
         return story
 

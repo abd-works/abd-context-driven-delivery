@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+from harness.graph.graph import Graph
 
 from .update_report import ChildCollectionPair
 from .ux_node import UxNode
@@ -245,8 +247,9 @@ class Screen(UxNode):
         layout: str = "",
         description: str = "",
         chrome_of: str = "",
+        graph: Optional[Graph] = None,
     ) -> None:
-        super().__init__(name, sequential_order)
+        super().__init__(name, sequential_order, graph)
         self.slug = slug or _slugify(name)
         self.layout = layout
         self.description = description

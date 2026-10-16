@@ -1,8 +1,16 @@
-"""DDD building blocks. Each node loads only its own children."""
+"""DDD building blocks — CE subtypes (schema ``is: class|module|property``).
+
+BoundedContext and Aggregate subclass Module; Entity, ValueObject, Repository, and peers
+subclass OoadClass; DomainEvent subclasses Property. Graph rule slugs inherit from CE via
+``harness.graph.schema_rules`` (same ``is:`` mapping as schema.yaml).
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
+
+from harness.graph.bound_node import BoundChildren
+from harness.graph.graph import Graph
 
 from practices.clean_engineering.model.base_class_model import Module, OoadClass
 from practices.clean_engineering.model.operation import Operation
@@ -51,6 +59,7 @@ class InvariantObject(Property):
     """A property that changes with its entity. Stereotype is invariant."""
 
     _semantic_type_name = "InvariantObject"
+    _graph_practice = "ddd"
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "InvariantObject | None" = None, **kwargs) -> None:
         if source is not None:
@@ -65,6 +74,8 @@ class Entity(OoadClass):
     """Identity that stays the same when its values change."""
 
     _semantic_type_name = "Entity"
+    _graph_practice = "ddd"
+    _belongs = {("InvariantObject", "Entity")}
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "Entity | None" = None, **kwargs) -> None:
         if source is not None:
@@ -102,6 +113,7 @@ class ValueObject(OoadClass):
     """No write operations and no setters. create, clone, and mix return a new instance."""
 
     _semantic_type_name = "ValueObject"
+    _graph_practice = "ddd"
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "ValueObject | None" = None, **kwargs) -> None:
         if source is not None:
@@ -123,6 +135,7 @@ class Repository(OoadClass):
     """A collection. Operations are any of create, read, update, delete, and search."""
 
     _semantic_type_name = "Repository"
+    _graph_practice = "ddd"
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "Repository | None" = None, **kwargs) -> None:
         if source is not None:
@@ -142,6 +155,7 @@ class DomainService(OoadClass):
     """No state. An operation here is one no domain object can perform."""
 
     _semantic_type_name = "DomainService"
+    _graph_practice = "ddd"
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "DomainService | None" = None, **kwargs) -> None:
         if source is not None:
@@ -159,6 +173,7 @@ class DomainEvent(Property):
     """One producer aggregate, one or many consumers, and a subject property."""
 
     _semantic_type_name = "DomainEvent"
+    _graph_practice = "ddd"
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "DomainEvent | None" = None, **kwargs) -> None:
         if source is not None:
@@ -186,6 +201,7 @@ class DomainEvent(Property):
 
 class Specification(OoadClass):
     _semantic_type_name = "Specification"
+    _graph_practice = "ddd"
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
@@ -193,6 +209,7 @@ class Specification(OoadClass):
 
 class Factory(OoadClass):
     _semantic_type_name = "Factory"
+    _graph_practice = "ddd"
 
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
@@ -202,6 +219,17 @@ class Aggregate(Module):
     """Knows its root entity and its integrations. The entity loads invariant objects."""
 
     _semantic_type_name = "Aggregate"
+    _graph_practice = "ddd"
+    _belongs = {
+        ("Entity", "Aggregate"),
+        ("ValueObject", "Aggregate"),
+        ("Repository", "Aggregate"),
+        ("DomainService", "Aggregate"),
+        ("DomainEvent", "Aggregate"),
+        ("Factory", "Aggregate"),
+        ("Specification", "Aggregate"),
+        ("OoadClass", "Aggregate"),
+    }
 
     def __init__(self, name: str = "", sequential_order: int = 0, source: "Aggregate | None" = None, **kwargs) -> None:
         if source is not None:
@@ -228,17 +256,38 @@ class BoundedContext(Module):
     """A module of aggregates. A nested context is a context whose parent is a context."""
 
     _semantic_type_name = "BoundedContext"
+    _graph_practice = "ddd"
+    _belongs = {
+        ("Aggregate", "BoundedContext"),
+        ("BoundedContext", "BoundedContext"),
+    }
 
-    def __init__(self, name: str = "", sequential_order: int = 0, source: "BoundedContext | None" = None, **kwargs) -> None:
+    def __init__(self, name: str = "", sequential_order: int = 0, source: "BoundedContext | None" = None, graph: Graph | None = None, **kwargs) -> None:
+        if isinstance(name, Graph):
+            graph = name
+            name = "bounded context"
         if source is not None:
-            super().__init__(source.name, source.sequential_order)
+            super().__init__(source.name, source.sequential_order, graph=graph)
             self.owner = source.owner
         else:
-            super().__init__(name, sequential_order)
+            super().__init__(name, sequential_order, graph=graph)
             self.owner = ""
-        self.contexts: list[BoundedContext] = []
-        self.aggregates: list[Aggregate] = []
+        self.contexts = BoundChildren(self, "contexts")
+        self.aggregates = BoundChildren(self, "aggregates")
         self._map: BoundedContextMap | None = None
+        if graph is None:
+            return
+        others = [
+            node
+            for node in self._copies_on_graph("BoundedContext")
+            if node.aggregates or node.contexts
+        ]
+        if not others:
+            return
+        for child in others[0].contexts:
+            self.append_context(BoundedContext(child.name, child.sequential_order))
+        for aggregate in others[0].aggregates:
+            self.append_aggregate(aggregate.clone())
 
     def append_context(self, context: "BoundedContext") -> None:
         context._map = self._map

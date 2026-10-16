@@ -1,8 +1,7 @@
 """Python code channel for the CleanEngineering model - module-first.
 
-ONE parse surface for transform + validate: regex for design stubs, ast for
-executable Python (fills Operation metrics). Scanners must not import ast
-directly - call parse / parse_detailed instead.
+Regex covers design stubs. The ast covers executable Python. Rules read the
+source themselves when the graph loads.
 """
 from __future__ import annotations
 
@@ -26,21 +25,13 @@ from practices.clean_engineering.model.base_class_model import (
     companion_interface_name,
     is_interface_name,
 )
+from practices.clean_engineering.model.operation import operation_body_fingerprint
+from practices.clean_engineering.model.operation_metrics import apply_python_function_metrics
 from practices.clean_engineering.model.update_report import UpdateReport
 
 _MODULE_MARKER = re.compile(r"^#\s*===\s*(.+?)\s*===$", re.MULTILINE)
 _CLASS_PATTERN = re.compile(r'class\s+(\w+)[^:]*:\s*\n\s+"""([^"]*?)"""', re.DOTALL)
 _CLASS_NAME_ONLY = re.compile(r"class\s+(\w+)")
-
-_NESTING_TYPES = (
-    ast.If,
-    ast.For,
-    ast.While,
-    ast.AsyncFor,
-    ast.Try,
-    ast.With,
-    ast.AsyncWith,
-)
 
 
 @dataclass
@@ -162,14 +153,8 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             intent=intent.strip(),
             line=node.lineno,
         )
-        name_words = set(node.name.lower().replace("_", " ").split())
-        doc_words = set(intent.lower().strip(".").split()) if intent else set()
-        oclass.docstring_parrots_name = bool(name_words and doc_words and doc_words <= name_words)
         oclass.operations = self._operations_from_class(node)
         oclass.properties = self._properties_from_class(node)
-        narr, code_c = self._file_comment_issues(self._text)
-        oclass.narration_comment_lines = narr
-        oclass.commented_code_lines = code_c
         return oclass
 
     def _attach_top_level_ops(self, module: PythonModule, tree: ast.AST) -> None:
@@ -180,12 +165,9 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
         ]
         if not top_ops:
             return
-        narr, code_c = self._file_comment_issues(self._text)
         if not module.classes:
             holder = PythonOoadClass(name="_module", sequential_order=1)
             holder.operations = top_ops
-            holder.narration_comment_lines = narr
-            holder.commented_code_lines = code_c
             module.classes.append(holder)
             return
         module.classes[0].operations.extend(top_ops)
@@ -200,43 +182,58 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
 
 
     def _operation_from_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> Operation:
-        params = [a.arg for a in node.args.args if a.arg != "self"]
-        params += [a.arg for a in node.args.kwonlyargs]
+        params = self._parameter_strings(node)
         ret = ""
         if node.returns is not None:
             ret = ast.unparse(node.returns)
-        line_count = 0
-        if getattr(node, "end_lineno", None) and node.lineno:
-            line_count = node.end_lineno - node.lineno + 1
-        bare_except_lines, swallowed_except_lines = self._collect_except_issues(node)
         doc = (ast.get_docstring(node) or "").strip()
-        name_words = set(node.name.lower().replace("_", " ").split())
-        doc_words = set(doc.lower().strip(".").split()) if doc else set()
-        return Operation(
+        end_line = getattr(node, "end_lineno", None) or node.lineno
+        line_count = end_line - node.lineno + 1
+        constructed: list[tuple[str, int]] = []
+        if node.name in {"__init__", "constructor"}:
+            constructed = self._constructed_types(node)
+        body_text = "\n".join(ast.unparse(stmt) for stmt in node.body)
+        operation = Operation(
             name=node.name,
             parameters=params,
             return_type=ret,
             description=doc,
             line=node.lineno,
+            end_line=end_line,
             line_count=line_count,
-            nesting_depth=self._max_nesting(node.body, 0),
+            constructed_types=constructed,
             callees=self._collect_callees(node),
-            literals=self._collect_literals(node),
-            param_count=len(params),
-            has_calculation=self._has_calculation(node),
-            has_validation=self._has_validation(node),
-            bare_except_lines=bare_except_lines,
-            swallowed_except_lines=swallowed_except_lines,
-            assigned_names=self._collect_assigned_names(node),
-            loop_target_names=self._collect_loop_targets(node),
-            body_fingerprint=self._body_fingerprint(node),
-            constructed_types=self._constructed_types(node),
-            public_attr_assigns=self._public_attr_assigns(node),
             is_property=self._is_property(node),
-            returns_private_attr=self._returns_private_attr(node),
-            magic_numbers=self._magic_numbers(node),
-            docstring_parrots_name=bool(name_words and doc_words and doc_words <= name_words),
+            body_fingerprint=operation_body_fingerprint(body_text),
         )
+        operation.is_static = any(
+            isinstance(dec, ast.Name) and dec.id == "staticmethod" for dec in node.decorator_list
+        )
+        operation.is_classmethod = any(
+            isinstance(dec, ast.Name) and dec.id == "classmethod" for dec in node.decorator_list
+        )
+        apply_python_function_metrics(operation, node)
+        return operation
+
+    def _parameter_strings(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
+        items: list[str] = []
+        for arg in list(node.args.args) + list(node.args.kwonlyargs):
+            if arg.arg == "self":
+                continue
+            if arg.annotation is not None:
+                items.append(f"{arg.arg}: {ast.unparse(arg.annotation)}")
+            else:
+                items.append(arg.arg)
+        return items
+
+    def _constructed_types(self, func: ast.AST) -> list[tuple[str, int]]:
+        found: list[tuple[str, int]] = []
+        for child in ast.walk(func):
+            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                name = child.func.id
+                if name and name[0].isupper():
+                    found.append((name, child.lineno))
+        return found
 
 
     def _properties_from_class(self, class_node: ast.ClassDef) -> list[Property]:
@@ -246,20 +243,6 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
                 hint = ast.unparse(node.annotation) if node.annotation else ""
                 props.append(Property(name=node.target.id, type_hint=hint))
         return props
-
-
-    def _max_nesting(self, body: list, depth: int) -> int:
-        deepest = depth
-        for node in body:
-            if isinstance(node, _NESTING_TYPES):
-                child_depth = depth + 1
-                for field_name in ("body", "orelse", "handlers", "finalbody"):
-                    children = getattr(node, field_name, None)
-                    if children:
-                        deepest = max(deepest, self._max_nesting(children, child_depth))
-            elif hasattr(node, "body") and isinstance(node.body, list):
-                deepest = max(deepest, self._max_nesting(node.body, depth))
-        return deepest
 
 
     def _collect_callees(self, func: ast.AST) -> list[str]:
@@ -272,175 +255,8 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
                     names.append(child.func.attr)
         return names
 
-
-    def _collect_literals(self, func: ast.AST) -> list[str]:
-        out: list[str] = []
-        for child in ast.walk(func):
-            if isinstance(child, ast.Constant) and isinstance(child.value, str):
-                out.append(child.value)
-        return out
-
-
-    _CALC_OPS = (
-        ast.BinOp,
-        ast.BoolOp,
-        ast.Compare,
-        ast.ListComp,
-        ast.SetComp,
-        ast.DictComp,
-        ast.GeneratorExp,
-    )
-
-
-    def _has_calculation(self, func: ast.AST) -> bool:
-        return any(isinstance(child, type(self)._CALC_OPS) for child in ast.walk(func))
-
-
-    def _has_validation(self, func: ast.AST) -> bool:
-        for child in ast.walk(func):
-            if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
-                if any(
-                    child.func.attr.startswith(v)
-                    for v in ("validate", "check", "verify", "assert", "ensure")
-                ):
-                    return True
-            if isinstance(child, ast.If) and isinstance(child.test, ast.Compare):
-                if any(isinstance(stmt, ast.Raise) for stmt in child.body):
-                    return True
-        return False
-
-
-    def _collect_except_issues(self, func: ast.AST) -> tuple[list[int], list[int]]:
-        bare: list[int] = []
-        swallowed: list[int] = []
-        for child in ast.walk(func):
-            if not isinstance(child, ast.ExceptHandler):
-                continue
-            line = child.lineno
-            if child.type is None:
-                bare.append(line)
-            body = child.body
-            if len(body) == 1 and isinstance(body[0], ast.Pass):
-                swallowed.append(line)
-            elif (
-                len(body) == 1
-                and isinstance(body[0], ast.Expr)
-                and isinstance(body[0].value, ast.Constant)
-                and isinstance(body[0].value.value, str)
-            ):
-                swallowed.append(line)
-        return bare, swallowed
-
-
-    def _collect_assigned_names(self, func: ast.AST) -> list[tuple[str, int]]:
-        names: list[tuple[str, int]] = []
-        for child in ast.walk(func):
-            if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store):
-                names.append((child.id, child.lineno))
-            elif isinstance(child, ast.arg) and child.arg not in {"self", "cls"}:
-                names.append((child.arg, getattr(child, "lineno", 0) or 0))
-        return names
-
-
-    def _collect_loop_targets(self, func: ast.AST) -> list[tuple[str, int]]:
-        targets: list[tuple[str, int]] = []
-        for child in ast.walk(func):
-            if isinstance(child, (ast.For, ast.AsyncFor)):
-                if isinstance(child.target, ast.Name):
-                    targets.append((child.target.id, child.target.lineno))
-                elif isinstance(child.target, ast.Tuple):
-                    for elt in child.target.elts:
-                        if isinstance(elt, ast.Name):
-                            targets.append((elt.id, elt.lineno))
-        return targets
-
-
-    def _body_fingerprint(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-        import hashlib
-
-        normalized = ast.dump(ast.Module(body=node.body, type_ignores=[]))
-        return hashlib.sha256(normalized.encode()).hexdigest()
-
-
-    def _constructed_types(self, func: ast.AST) -> list[tuple[str, int]]:
-        out: list[tuple[str, int]] = []
-        for child in ast.walk(func):
-            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
-                if child.func.id and child.func.id[0].isupper():
-                    out.append((child.func.id, child.lineno))
-        return out
-
-
-    def _public_attr_assigns(self, func: ast.AST) -> list[tuple[str, int]]:
-        out: list[tuple[str, int]] = []
-        for child in ast.walk(func):
-            if not isinstance(child, ast.Assign):
-                continue
-            for target in child.targets:
-                if (
-                    isinstance(target, ast.Attribute)
-                    and isinstance(target.value, ast.Name)
-                    and target.value.id == "self"
-                    and not target.attr.startswith("_")
-                ):
-                    out.append((target.attr, child.lineno))
-        return out
-
-
     def _is_property(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
         return any(isinstance(d, ast.Name) and d.id == "property" for d in node.decorator_list)
-
-
-    def _returns_private_attr(self, func: ast.AST) -> bool:
-        for child in ast.walk(func):
-            if not isinstance(child, ast.Return) or child.value is None:
-                continue
-            val = child.value
-            if (
-                isinstance(val, ast.Attribute)
-                and isinstance(val.value, ast.Name)
-                and val.value.id == "self"
-                and val.attr.startswith("_")
-            ):
-                return True
-        return False
-
-
-    def _magic_numbers(self, func: ast.AST) -> list[tuple[float, int]]:
-        safe = {0, 1, 2, -1, 0.0, 1.0, 0.5, 100, 10, True, False, None}
-        out: list[tuple[float, int]] = []
-        for child in ast.walk(func):
-            if isinstance(child, ast.Constant) and isinstance(child.value, (int, float)):
-                if child.value not in safe:
-                    out.append((float(child.value), child.lineno))
-        return out
-
-
-    def _file_comment_issues(self, text: str) -> tuple[list[int], list[int]]:
-        import re
-
-        narration = re.compile(
-            r"^\s*#\s*(get|set|return|handle|create|init|import|increment|decrement|define|declare)\s",
-            re.I,
-        )
-        commented = re.compile(
-            r"^\s*#\s*(def |class |import |from |if |for |while |return |raise |try:)",
-        )
-        useful = re.compile(
-            r"^\s*#\s*(TODO|FIXME|HACK|NOTE|XXX|BUG|WARN|WHY|REASON|LEGAL|LICENSE|COPYRIGHT|type:\s*ignore|noqa)",
-            re.I,
-        )
-        narr_lines: list[int] = []
-        code_lines: list[int] = []
-        for i, line in enumerate(text.splitlines(), start=1):
-            stripped = line.strip()
-            if not stripped.startswith("#") or useful.match(stripped):
-                continue
-            if narration.match(stripped):
-                narr_lines.append(i)
-            elif commented.match(stripped):
-                code_lines.append(i)
-        return narr_lines, code_lines
 
 
     def _populate_classes_regex(self, text: str, module: PythonModule) -> None:

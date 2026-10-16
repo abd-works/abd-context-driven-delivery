@@ -5,12 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from harness.codeQl_graph.graph import CodeQLGraph
+    from harness.graph.graph import Graph
     from harness.guidance.guidance import PracticeGuidance
 
 
 class Session:
-    """Holds the in-memory CodeQLGraph and each PracticeGuidance for one process."""
+    """Holds the in-memory Graph and each PracticeGuidance for one process."""
 
     def __init__(self) -> None:
         self._knowledge_graph = None
@@ -19,9 +19,9 @@ class Session:
     @property
     def knowledge_graph(self):
         if self._knowledge_graph is None:
-            from harness.codeQl_graph.graph import CodeQLGraph
+            from harness.graph.graph import Graph
 
-            self._knowledge_graph = CodeQLGraph()
+            self._knowledge_graph = Graph()
         return self._knowledge_graph
 
     @knowledge_graph.setter

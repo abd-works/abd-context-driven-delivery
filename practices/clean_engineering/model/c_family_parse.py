@@ -1,14 +1,12 @@
-"""Shared brace-language parse -> CleanEngineering model (TypeScript / JavaScript / Java).
-
-Fills the same Operation metrics as the Python channel so RuleEvals stay language-agnostic.
-"""
+"""Shared brace-language parse -> CleanEngineering model (TypeScript / JavaScript / Java)."""
 from __future__ import annotations
 
-import hashlib
 import re
 from typing import Callable
 
 from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation
+from practices.clean_engineering.model.operation import operation_body_fingerprint
+from practices.clean_engineering.model.operation_metrics import apply_brace_body_metrics
 from practices.clean_engineering.model.property import Property, append_invariant, take_property_note
 
 _CLASS_RE = re.compile(
@@ -25,24 +23,7 @@ _TOP_FN_RE = re.compile(
     r"(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*[^{]+)?\s*\{",
 )
 _CALL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
-_CALC_RE = re.compile(r"[+\-*/%]|===|!==|==|!=|<=|>=|&&|\|\|")
 _STRING_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
-_PUBLIC_ATTR = re.compile(r"\b(?:this|self)\.([A-Za-z]\w*)\s*=")
-_PRIVATE_RETURN = re.compile(r"\breturn\s+(?:this|self)\._\w+")
-_CATCH_RE = re.compile(r"\bcatch\s*(\([^)]*\))?\s*\{")
-_FOR_OF_RE = re.compile(
-    r"\bfor\s*\(\s*(?:const|let|var|int|final)?\s*([A-Za-z_]\w*)\s*(?::|of|in)\b"
-)
-_VALIDATION_RE = re.compile(
-    r"\b(?:throw|raise|assert|require|Preconditions\.|Objects\.requireNonNull)\b"
-)
-_NARRATION = re.compile(
-    r"^\s*//\s*(get|set|return|handle|create|init|import|increment|define)\s",
-    re.I,
-)
-_COMMENTED_CODE = re.compile(
-    r"^\s*//\s*(function |class |if |for |while |return |throw |try)",
-)
 _FIELD_RE = re.compile(
     r"^\s*(?:(?:public|private|protected|readonly|static)\s+)*(\w+)\s*:\s*([^;=]+);",
     re.M,
@@ -67,9 +48,28 @@ class CFamilyParse:
         self._model_factory = model_factory
         self._class_factory = class_factory
 
+    @staticmethod
+    def method_span_in_text(text: str, name: str, fallback_line: int = 1) -> tuple[int, int]:
+        """Brace-language method extent in full file text (used by graph load when end_line missing)."""
+        match = re.search(rf"\b{re.escape(name)}\s*\([^)]*\)\s*(?::\s*[^{{]+)?\s*\{{", text)
+        if match is None:
+            line = fallback_line
+            return line, line
+        start = text[: match.start()].count("\n") + 1
+        depth = 0
+        opened = False
+        for index in range(match.end() - 1, len(text)):
+            if text[index] == "{":
+                depth += 1
+                opened = True
+            elif text[index] == "}":
+                depth -= 1
+                if opened and depth == 0:
+                    return start, text[:index].count("\n") + 1
+        return start, start
+
     def parse(self, text: str) -> CleanEngineeringModel:
         self._text = text
-        self._narration, self._commented = self._comment_issues(text)
         model = self._model_factory()
         module = model.load_module(Module(name="", sequential_order=1))
         self._append_classes(module)
@@ -77,16 +77,6 @@ class CFamilyParse:
         if module.classes:
             model.modules.append(module)
         return model
-
-    def _comment_issues(self, text: str) -> tuple[list[int], list[int]]:
-        narration: list[int] = []
-        commented: list[int] = []
-        for i, line in enumerate(text.splitlines(), start=1):
-            if _NARRATION.match(line):
-                narration.append(i)
-            elif _COMMENTED_CODE.match(line):
-                commented.append(i)
-        return narration, commented
 
     def _append_classes(self, module: Module) -> None:
         class_order = 1
@@ -100,8 +90,6 @@ class CFamilyParse:
                 sequential_order=class_order,
                 line=self._line_at(self._text, match.start()),
             )
-            oclass.narration_comment_lines = list(self._narration)
-            oclass.commented_code_lines = list(self._commented)
             oclass.operations = [
                 self._loaded_operation(oclass, filled) for filled in self._methods_from_body(body, match.group(1))
             ]
@@ -118,6 +106,7 @@ class CFamilyParse:
                 continue
             op = Operation(name="constructor", parameters=self._split_params(ctor.group(1)))
             op.line = self._line_at(self._text, self._body_start + ctor.start())
+            self._apply_method_end_line(op, body, ctor.end() - 1)
             oclass.operations.insert(0, self._loaded_operation(oclass, self._operation_from_body(op, ctor_body)))
 
     def _attach_top_level(self, module: Module) -> None:
@@ -126,8 +115,6 @@ class CFamilyParse:
             return
         if not module.classes:
             holder = self._class_factory(name="_module", sequential_order=1)
-            holder.narration_comment_lines = list(self._narration)
-            holder.commented_code_lines = list(self._commented)
             holder.operations = [self._loaded_operation(holder, op) for op in top_ops]
             module.classes.append(holder)
             return
@@ -179,10 +166,12 @@ class CFamilyParse:
                 return_type=(match.group(3) or "").strip(),
             )
             op.line = self._line_at(self._text, self._body_start + match.start())
+            self._apply_method_end_line(op, class_body, match.end() - 1)
             filled = self._operation_from_body(op, method_body)
-            prefix = class_body[max(0, match.start() - 12) : match.start()]
+            prefix = class_body[max(0, match.start() - 24) : match.start()]
             if re.search(r"\bget\s*$", prefix):
                 filled.is_property = True
+            filled.is_static = bool(re.search(r"\bstatic\b", prefix))
             ops.append(filled)
         return ops
 
@@ -202,61 +191,39 @@ class CFamilyParse:
         ]
         for note in notes:
             append_invariant(op, note)
-        base_line = op.line or 1
-        op.param_count = len(op.parameters)
-        op.line_count = body.count("\n") + 1
-        op.nesting_depth = self._max_brace_depth(body)
         op.callees = callees
-        op.literals = [m.group(0).strip("\"'`") for m in _STRING_RE.finditer(body)]
-        op.has_calculation = bool(_CALC_RE.search(stripped))
-        op.has_validation = bool(_VALIDATION_RE.search(stripped))
-        op.bare_except_lines, op.swallowed_except_lines = self._catch_issues(body, base_line)
-        op.body_fingerprint = hashlib.sha256(re.sub(r"\s+", " ", body).strip().encode()).hexdigest()
-        op.magic_numbers = self._magic_numbers(body, base_line)
-        op.assigned_names = self._assigned_names(op, body)
-        op.loop_target_names = [(m.group(1), base_line) for m in _FOR_OF_RE.finditer(body)]
-        op.constructed_types = [(c, base_line) for c in callees if c and c[0].isupper()]
-        op.public_attr_assigns = [(m.group(1), base_line) for m in _PUBLIC_ATTR.finditer(body)]
-        op.returns_private_attr = bool(_PRIVATE_RETURN.search(body))
-        op.docstring_parrots_name = False
+        op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
+        op.body_fingerprint = operation_body_fingerprint(body)
+        apply_brace_body_metrics(op, body)
+        if op.name in {"constructor", "__init__"}:
+            op.constructed_types = self._constructed_types(body, op.line or 1)
         return op
 
-    def _magic_numbers(self, body: str, base_line: int) -> list[tuple[float, int]]:
-        magic: list[tuple[float, int]] = []
-        for i, ln in enumerate(body.splitlines(), start=base_line):
-            for num in re.findall(r"\b(\d+(?:\.\d+)?)\b", ln):
-                val = float(num)
-                if val not in {0, 1, 2, -1, 0.0, 1.0, 0.5, 100, 10}:
-                    magic.append((val, i))
-        return magic
+    def _apply_method_end_line(self, op: Operation, class_body: str, search_from: int) -> None:
+        brace_open = class_body.find("{", search_from)
+        if brace_open < 0:
+            return
+        close_idx = self._closing_brace_index(class_body, brace_open)
+        if close_idx >= 0:
+            op.end_line = self._line_at(self._text, self._body_start + close_idx)
 
-    def _assigned_names(self, op: Operation, body: str) -> list[tuple[str, int]]:
-        base_line = op.line or 1
-        assigned = [(parameter.name, base_line) for parameter in op.parameters]
-        assigned.extend(
-            (m.group(1), base_line)
-            for m in re.finditer(
-                r"\b(?:let|const|var|int|String|double|boolean|final)?\s*([a-z]\w*)\s*=",
-                body,
-            )
-        )
-        return assigned
+    def _closing_brace_index(self, text: str, open_index: int) -> int:
+        depth = 0
+        for index in range(open_index, len(text)):
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    return index
+        return -1
 
-    def _catch_issues(self, body: str, base_line: int) -> tuple[list[int], list[int]]:
-        bare: list[int] = []
-        swallowed: list[int] = []
-        for match in _CATCH_RE.finditer(body):
-            catch_body, _rel = self._brace_body(body, match.end() - 1)
-            if catch_body is None:
-                continue
-            lineno = base_line + body.count("\n", 0, match.start())
-            binding = (match.group(1) or "").strip()
-            if not binding or binding == "()":
-                bare.append(lineno)
-            stripped = catch_body.strip()
-            if not stripped or stripped in {";", "pass", "// ignore", "/* ignore */"}:
-                swallowed.append(lineno)
-        return bare, swallowed
+    def _constructed_types(self, body: str, start_line: int) -> list[tuple[str, int]]:
+        found: list[tuple[str, int]] = []
+        for index, line in enumerate(body.splitlines()):
+            for match in re.finditer(r"\bnew\s+([A-Z]\w*)\s*\(", line):
+                found.append((match.group(1), start_line + index))
+        return found
 
     def _split_params(self, raw: str) -> list[str]:
         if not raw.strip():
@@ -367,17 +334,6 @@ class CFamilyParse:
                     return text[open_index + 1 : i], open_index + 1
             i += 1
         return None, -1
-
-    def _max_brace_depth(self, body: str) -> int:
-        depth = 0
-        max_depth = 0
-        for ch in body:
-            if ch == "{":
-                depth += 1
-                max_depth = max(max_depth, depth)
-            elif ch == "}":
-                depth = max(0, depth - 1)
-        return max_depth
 
     def _line_at(self, text: str, index: int) -> int:
         return text.count("\n", 0, index) + 1
