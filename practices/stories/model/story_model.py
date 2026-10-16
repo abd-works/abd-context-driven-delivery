@@ -318,6 +318,10 @@ class Increment(StoryNode):
 class Step(StoryNode):
     _semantic_type_name = "Step"
 
+    def semantic_type(self) -> str:
+        phase = getattr(getattr(self, "step_type", None), "value", None)
+        return {"given": "Given", "when": "When", "then": "Then"}.get(str(phase or "").casefold(), "Step")
+
     def __init__(
         self,
         text: "str | Step",

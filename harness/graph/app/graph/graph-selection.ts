@@ -28,6 +28,7 @@ export function selectionForRule(ownerId: string, node: GraphTree): GraphSelecti
       ? {
           rule: node.name,
           message: hits.map((hit) => hit.message).filter(Boolean).join('\n'),
+          ruleText: node.text || undefined,
           startLine: first?.start,
           endLine: first?.end,
         }

@@ -27,13 +27,15 @@ class AndChaining(PracticeGraphRule):
     node_types = ("Scenario",)
 
     def check(self, node, context) -> list[str]:
+        if context.children(node, "steps"):
+            return _and_chaining_from_graph(node, context)
         scenario = scenario_for_graph_node(node, context)
         if scenario is None:
-            return _and_chaining_from_graph(node, context)
+            return []
         for when_steps, then_steps in scenario.when_then_runs():
             if when_steps and not then_steps:
                 return [
-                    f"Scenario {node.name!r} starts a new When before the previous interaction has a Then; chain with And."
+                    f"Scenario {node.name!r} has a When with no Then; add the result or chain it with And."
                 ]
         return []
 
@@ -149,19 +151,12 @@ class FlaggedWritesIntendedGwt(PracticeGraphRule):
         return []
 
 class GivenNamesComplexStateRootFirst(PracticeGraphRule):
+    """Writing guidance only. A Given does not have to name a repository or an aggregate root."""
+
     slug = "given-names-complex-state-root-first"
     node_types = ("Given", "Step")
 
     def check(self, node, context) -> list[str]:
-        if context.step_keyword(node).casefold() not in {"given", ""} and node.type != "Given":
-            return []
-        text = context.step_text(node)
-        if len(text.split()) < 8:
-            return []
-        if not re.search(r"\b(root|aggregate|cart|order|account)\b", text, re.I):
-            return [
-                f"Complex Given {text!r} should open with the aggregate root before owned parts."
-            ]
         return []
 
 class ScenarioNamesContinuation(PracticeGraphRule):
@@ -181,16 +176,22 @@ class ScenarioNamesContinuation(PracticeGraphRule):
         return []
 
 def _and_chaining_from_graph(scenario_node, context) -> list[str]:
-    steps = context.children(scenario_node, "steps")
-    seen_then = False
-    for step in steps:
-        kw = context.step_keyword(step).casefold()
-        if kw == "then":
-            seen_then = True
-        if kw == "when" and not seen_then:
-            return [
-                f"Scenario {scenario_node.name!r} has When before any Then; add Given/Then or chain with And."
-            ]
+    """A When opens an interaction. That interaction needs a Then before the next When."""
+    open_when = False
+    for step in context.children(scenario_node, "steps"):
+        phase = _phase(step, context)
+        if phase == "when":
+            if open_when:
+                return [
+                    f"Scenario {scenario_node.name!r} has two When steps with no Then between them; continue that interaction with And."
+                ]
+            open_when = True
+        elif phase == "then":
+            open_when = False
+    if open_when:
+        return [
+            f"Scenario {scenario_node.name!r} has a When with no Then; add the result or chain it with And."
+        ]
     return []
 
 class ScenariosShape(PracticeGraphRule):
@@ -202,6 +203,7 @@ class ScenariosShape(PracticeGraphRule):
         if not steps:
             return [f"Scenario {node.name!r} has no steps."]
         phases = {_phase(step, context) for step in steps}
+        phases.update(_background_givens(node, context))
         missing = []
         if "given" not in phases:
             missing.append("Given")
@@ -212,6 +214,31 @@ class ScenariosShape(PracticeGraphRule):
         if missing:
             return [f"Scenario {node.name!r} is missing required phase(s): {', '.join(missing)}."]
         return []
+
+def _background_givens(scenario, context) -> set[str]:
+    """A Given on the story background, or on the scenario's own background, supplies the phase."""
+    found: set[str] = set()
+    owners = list(context.children(scenario, "background"))
+    story = _story_of(scenario)
+    if story is not None:
+        owners.extend(context.children(story, "background"))
+    for background in owners:
+        for step in context.children(background, "steps"):
+            if _phase(step, context) == "given":
+                found.add("given")
+    return found
+
+
+def _story_of(node):
+    current = getattr(node, "parent", None)
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if getattr(current, "type", "") == "Story":
+            return current
+        current = getattr(current, "parent", None)
+    return None
+
 
 def _phase(step, context) -> str:
     data = context.node_data(step)

@@ -40,9 +40,6 @@ _SKIPPED = _CHILD_LISTS | {"scopes"}
 _SEMANTIC = {
     "class": "OoadClass",
     "subEpic": "Epic",
-    "given": "Step",
-    "when": "Step",
-    "then": "Step",
     "spec": "Spec",
     "map": "UxMap",
     "storyNode": "StoryNode",
@@ -51,8 +48,11 @@ _SEMANTIC = {
     "valueObject": "ValueObject",
     "domainEvent": "DomainEvent",
     "domainService": "DomainService",
-    "node": "DomainNode",
-    "client": "DomainClient",
+    "node": "NodeRoot",
+    "nodeRoot": "NodeRoot",
+    "client": "ClientRoot",
+    "clientRoot": "ClientRoot",
+    "nodeRepository": "NodeRepository",
     "share": "StoryShared",
     "server": "ServerSpec",
     "domain": "DomainSpec",
@@ -66,6 +66,10 @@ _SEMANTIC = {
 _PHASES = {"given": "given", "when": "when", "then": "then"}
 
 _DISPLAY = {"demonstrates": "grouped"}
+
+# These are the back-edges. They stay on the clean-engineering node. Mirroring them
+# onto the step lists the same operation a second time, under the reverse name.
+_MIRROR_SKIP = {"invokedBy", "demonstratedThrough", "usedBy"}
 
 _ORDER = {
     "demonstrates": 3,
@@ -108,12 +112,12 @@ def sync_schema_edges(graph) -> None:
             if field.phase and _phase(owner) != field.phase:
                 continue
             for target in nodes:
-                if target is owner or target.semantic_type() not in field.targets:
+                if target is owner or not _matches_target(target, field.targets):
                     continue
                 if not _matches(field.kind, owner, target, nodes):
                     continue
                 _record(field.kind, owner, target)
-                for inverse in _inverses(target.semantic_type(), semantic, field.kind):
+                for inverse in _inverses(target.semantic_type(), owner, field.kind):
                     _record(inverse, target, owner)
 
 
@@ -128,27 +132,35 @@ def _bound_nodes(graph) -> list:
 def _record(kind: str, parent, child) -> None:
     fact = {"kind": kind, "order": _ORDER.get(kind, 1), "display": _DISPLAY.get(kind, "relationship")}
     parent.practice.record(fact, parent, child)
-    if parent.practice is not child.practice:
+    if parent.practice is not child.practice and kind not in _MIRROR_SKIP:
         child.practice.record(fact, child, parent)
 
 
-def _inverses(owner: str, target: str, forward: str) -> list[str]:
+def _inverses(owner: str, other, forward: str) -> list[str]:
+    practice = getattr(getattr(other, "practice", None), "name", "")
+    semantic = other.semantic_type() if hasattr(other, "semantic_type") else str(other)
     found = []
     for field in _fields():
         if field.owner != owner or field.kind == forward or field.kind in _CHILD_LISTS or field.kind == "scopes":
             continue
-        if target in field.targets and field.kind not in found:
+        if _name_satisfies(semantic, practice, field.targets) and field.kind not in found:
             found.append(field.kind)
     return found
 
 
 def _matches(kind: str, owner, target, nodes: list) -> bool:
     if kind == "invokes":
-        return _calls(owner, target.name) or target.name in list(getattr(owner, "callees", []) or [])
+        hit = _calls(owner, target.name) or target.name in list(getattr(owner, "callees", []) or [])
+        if not hit:
+            return False
+        return _on_the_class_in_play(owner, target, nodes)
     if kind == "observes":
+        if target.semantic_type() == "Property":
+            hit = _is_step(owner) and _accesses(_evidence(owner), target.name)
+            return hit and _on_the_class_in_play(owner, target, nodes)
         return _mentions(_evidence(owner), target.name)
     if kind == "demonstrates":
-        return _mentions(_evidence(owner), target.name)
+        return target.name in _built_types(_evidence(owner))
     if kind == "retrievedUsing":
         return _accesses(_evidence(owner), target.name) or _calls(owner, target.name)
     if kind == "uses":
@@ -177,7 +189,7 @@ def _epic_uses(epic, module, nodes: list) -> bool:
             for class_node in nodes:
                 if class_node.semantic_type() == "OoadClass" and _module_of(class_node) is module and _mentions(_evidence(node), class_node.name):
                     return True
-        if node.semantic_type() != "Step":
+        if not _is_step(node):
             continue
         for member in nodes:
             if _module_of(member) is not module:
@@ -202,8 +214,9 @@ def _calls(owner, name: str) -> bool:
     text = _evidence(owner)
     if not text or not name:
         return False
-    for step in _steps_under(owner):
-        text += "\n" + _evidence(step)
+    if not _is_step(owner):
+        for step in _steps_under(owner):
+            text += "\n" + _evidence(step)
     pattern = re.compile(rf"(?<![\w]){re.escape(name)}\s*\(")
     return pattern.search(text) is not None
 
@@ -211,7 +224,7 @@ def _calls(owner, name: str) -> bool:
 def _steps_under(owner) -> list:
     if not hasattr(owner, "_subtree"):
         return []
-    return [node for node in owner._subtree() if node is not owner and node.semantic_type() == "Step"]
+    return [node for node in owner._subtree() if node is not owner and _is_step(node)]
 
 
 def _accesses(text: str, name: str) -> bool:
@@ -227,11 +240,101 @@ def _mentions(text: str, name: str) -> bool:
 
 
 def _evidence(node) -> str:
+    """The source the model stored for this node: its own text, or its own line span."""
     source = getattr(node, "source", None)
     if source is None:
         return ""
     stored = getattr(source, "__dict__", {}).get("text")
-    return stored if isinstance(stored, str) else ""
+    if isinstance(stored, str) and stored:
+        return stored
+    text = getattr(source, "text", None)
+    return text if isinstance(text, str) else ""
+
+
+def _matches_target(node, targets: tuple[str, ...]) -> bool:
+    practice = getattr(getattr(node, "practice", None), "name", "")
+    return _name_satisfies(node.semantic_type(), practice, targets)
+
+
+def _name_satisfies(semantic: str, practice: str, targets: tuple[str, ...]) -> bool:
+    names = _type_names(semantic, practice)
+    return any(target in names for target in targets)
+
+
+def _on_the_class_in_play(step, member, nodes: list) -> bool:
+    """A step names the class its examples build. Members of another class with the same name stay off that step."""
+    if not _is_step(step) and step.semantic_type() != "Scenario":
+        return True
+    playing = _classes_in_play(step)
+    if not playing:
+        return True
+    owners = {
+        _owning_class(node)
+        for node in nodes
+        if node.semantic_type() == member.semantic_type() and node.name == member.name and _owning_class(node) in playing
+    }
+    if not owners:
+        return True
+    return _owning_class(member) in owners
+
+
+def _classes_in_play(step) -> set[str]:
+    scenario = step
+    seen: set[int] = set()
+    while scenario is not None and id(scenario) not in seen:
+        seen.add(id(scenario))
+        if scenario.semantic_type() == "Scenario":
+            break
+        scenario = getattr(scenario, "parent", None)
+    if scenario is None or scenario.semantic_type() != "Scenario":
+        return set()
+    found: set[str] = set()
+    for node in scenario._subtree():
+        if node.semantic_type() == "Example":
+            found.update(_built_types(_evidence(node)))
+    return found
+
+
+def _owning_class(node) -> str:
+    current = getattr(node, "parent", None)
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if current.semantic_type() == "OoadClass":
+            return current.name
+        current = getattr(current, "parent", None)
+    return ""
+
+
+def _is_step(node) -> bool:
+    practice = getattr(getattr(node, "practice", None), "name", "")
+    return _name_satisfies(node.semantic_type(), practice, ("Step",))
+
+
+def _type_names(semantic: str, practice: str) -> set[str]:
+    from harness.graph.schema_rules import _is_supertypes_for_practice, semantic_type
+
+    names = {semantic}
+    current = semantic
+    seen: set[str] = set()
+    is_map = _is_supertypes_for_practice(practice) if practice else {}
+    while current and current not in seen:
+        seen.add(current)
+        ref = is_map.get(current, "")
+        if not ref:
+            break
+        current = semantic_type(ref.split(".")[-1])
+        names.add(current)
+    return names
+
+
+def _built_types(text: str) -> set[str]:
+    """The class an example builds: its return type, or the class it constructs."""
+    if not text:
+        return set()
+    found = set(re.findall(r"\)\s*:\s*([A-Za-z_]\w*)", text))
+    found.update(re.findall(r"\bnew\s+([A-Za-z_]\w*)", text))
+    return found
 
 
 def _phase(node) -> str:
@@ -274,12 +377,15 @@ def _parse(text: str) -> list[SchemaField]:
         if not targets:
             continue
         kind = field.group(1)
+        phase = _PHASES.get(owner_key, "")
+        if _semantic(owner_key).casefold() == phase:
+            phase = ""
         fields.append(
             SchemaField(
                 _semantic(owner_key),
                 kind,
                 tuple(_semantic(name) for name in targets),
-                _PHASES.get(owner_key, ""),
+                phase,
             )
         )
     return fields

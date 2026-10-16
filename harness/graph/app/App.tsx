@@ -13,6 +13,7 @@ import type { ViolationFocus } from './source/violation-prompt';
 
 const PRACTICES = ['clean_engineering', 'stories', 'ddd', 'bdd', 'ux'];
 const LAST_FOLDER = 'cdd-graph-folder';
+const LAST_OVERLAYS = 'cdd-graph-overlays';
 const EMPTY: FilterSelection = {
   practices: [],
   overlays: [],
@@ -61,7 +62,7 @@ export function App() {
   useEffect(() => {
     const saved = window.localStorage.getItem(LAST_FOLDER)?.trim();
     if (saved) {
-      void load(saved);
+      void load(saved, { ...EMPTY, overlays: readOverlays() });
     }
   }, []);
 
@@ -116,7 +117,7 @@ export function App() {
     setLoadingLog([]);
     setError('');
     try {
-      await graphs.load(trimmed, practiceRoots(trimmed));
+      await graphs.load(trimmed, practiceRoots(trimmed), next.overlays);
       if (generation !== loadGeneration.current) {
         return;
       }
@@ -130,6 +131,7 @@ export function App() {
       await applyFilter(synced, bundle.practices);
       setLoadedFolder(trimmed);
       window.localStorage.setItem(LAST_FOLDER, trimmed);
+      writeOverlays(synced.overlays);
       setLoadingLog([]);
     } catch (cause) {
       if (generation !== loadGeneration.current) {
@@ -164,6 +166,7 @@ export function App() {
     const next = { ...selection, overlays };
     if (!folder.trim()) {
       setSelection(next);
+      writeOverlays(overlays);
       return;
     }
     setLoading(true);
@@ -171,9 +174,11 @@ export function App() {
     setError('');
     try {
       const bundle = normalizeInventoryBundle(await filters.applyOverlays(overlays));
-      adoptInventory(bundle, next);
-      setSelection(next);
-      await applyFilter(next, bundle.practices);
+      const widened = overlaySelection(selection, next, catalog, bundle.practices);
+      adoptInventory(bundle, widened);
+      setSelection(widened);
+      writeOverlays(widened.overlays);
+      await applyFilter(widened, bundle.practices);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -227,7 +232,7 @@ export function App() {
     const shown = resolved.practices.length ? resolved.practices : Object.keys(bundle.practices);
     setTrees(
       shown
-        .map((name) => keep(bundle.practices[name]?.tree, names, resolved.node_types))
+        .map((name) => keep(bundle.practices[name]?.tree, names, resolved.node_types, resolved.rules))
         .filter((tree): tree is GraphTree => Boolean(tree)),
     );
   }
@@ -350,6 +355,22 @@ function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
 
+function readOverlays(): string[] {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(LAST_OVERLAYS) ?? '[]') as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+function writeOverlays(overlays: string[]) {
+  window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(overlays));
+}
+
 function joined(values: string[]): string {
   return values.join('\n');
 }
@@ -360,6 +381,29 @@ function listed(
   field: 'node_types' | 'edge_types' | 'rules',
 ): string[] {
   return unique(practices.flatMap((name) => catalog[name]?.[field] ?? []));
+}
+
+function overlaySelection(
+  previous: FilterSelection,
+  next: FilterSelection,
+  previousCatalog: Record<string, PracticeInventory>,
+  catalog: Record<string, PracticeInventory>,
+): FilterSelection {
+  const scope = next.practices.length ? next.practices : Object.keys(catalog);
+  const nodes = listed(scope, catalog, 'node_types');
+  const edges = visibleRelationships(listed(scope, catalog, 'edge_types'));
+  const rules = listed(scope, catalog, 'rules');
+  const priorNodes = listed(scope, previousCatalog, 'node_types');
+  const priorEdges = visibleRelationships(listed(scope, previousCatalog, 'edge_types'));
+  const priorRules = listed(scope, previousCatalog, 'rules');
+  return {
+    ...next,
+    node_types: previous.node_types.length ? mergeKept(previous.node_types, nodes, nodes.filter((item) => !priorNodes.includes(item))) : [],
+    relationships: previous.relationships.length
+      ? mergeKept(previous.relationships, edges, edges.filter((item) => !priorEdges.includes(item)))
+      : [],
+    rules: previous.rules.length ? mergeKept(previous.rules, rules, rules.filter((item) => !priorRules.includes(item))) : [],
+  };
 }
 
 function practiceSelection(
@@ -397,14 +441,17 @@ function mergeKept(current: string[], available: string[], added: string[]): str
   return kept;
 }
 
-function keep(node: GraphTree | undefined, ids: Set<string>, types: string[]): GraphTree | null {
+function keep(node: GraphTree | undefined, ids: Set<string>, types: string[], selectedRules: string[]): GraphTree | null {
   if (!node) {
     return null;
   }
-  const rules = node.children.filter((child) => child.type === 'rules');
+  const rules = visibleRules(
+    node.children.filter((child) => child.type === 'rules'),
+    selectedRules,
+  );
   const children = node.children
     .filter((child) => child.type !== 'rules')
-    .map((child) => keep(child, ids, types))
+    .map((child) => keep(child, ids, types, selectedRules))
     .filter((child): child is GraphTree => Boolean(child));
   const holder = node.type === node.name;
   if (holder) {
@@ -422,6 +469,18 @@ function keep(node: GraphTree | undefined, ids: Set<string>, types: string[]): G
     return { ...node, children };
   }
   return { ...node, children: [...children, ...rules] };
+}
+
+function visibleRules(rules: GraphTree[], selected: string[]): GraphTree[] {
+  if (selected.length === 0) {
+    return rules;
+  }
+  return rules
+    .map((holder) => ({
+      ...holder,
+      children: holder.children.filter((rule) => selected.includes(rule.name)),
+    }))
+    .filter((holder) => holder.children.length > 0);
 }
 
 function findNode(nodes: GraphTree[], id: string): GraphTree | null {

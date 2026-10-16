@@ -101,11 +101,18 @@ function TreeNode({
   const rule = node.type === 'Rule';
   const rulesHolder = node.type === 'rules';
   const selected = rule ? ownerId === selectedId && node.name === activeRule : node.node_id === selectedId;
-  const violating = (node.children ?? []).some(
-    (child) => child.name === 'rules' && (child.children ?? []).some((hit) => hit.status === 'violating'),
-  );
+  const rulesContainViolation =
+    rulesHolder && (node.children ?? []).some((hit) => hit.status === 'violating');
+  const violating =
+    rulesContainViolation ||
+    (node.children ?? []).some(
+      (child) => child.name === 'rules' && (child.children ?? []).some((hit) => hit.status === 'violating'),
+    );
   const hits = ruleHits(node);
-  const violationHint = rule && node.status === 'violating' && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
+  const violationHint =
+    rule && node.status === 'violating' && hits.length > 0
+      ? [hits.map((hit) => hit.message).join('\n'), node.text].filter(Boolean).join('\n\n')
+      : undefined;
   return (
     <li
       data-node-id={node.node_id}

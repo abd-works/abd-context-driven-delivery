@@ -425,25 +425,3 @@ shareStory('Sign In With Existing Account', () => {
       });
   });
 });
-
-shareStory('Submit Order', () => {
-  /** Evidence: observed */
-  scenario('Place the order', ({ when, then }) => {
-    when('the customer submits the order', () => undefined);
-    then('the order is accepted', () => undefined);
-  });
-});
-
-shareStory('Submit Orders', () => {
-  scenario('Place the orders', ({ when, then }) => {
-    when('the customer submits the orders', () => undefined);
-    then('the orders are accepted', () => undefined);
-  });
-});
-
-shareStory('Handle Request', () => {
-  scenario('Accept the request', ({ when, then }) => {
-    when('the system handles the request', () => undefined);
-    then('the request is accepted', () => undefined);
-  });
-});

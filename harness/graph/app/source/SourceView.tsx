@@ -135,6 +135,7 @@ function SourceEditor({
     const prompt = buildViolationCorrectPrompt({
       rule: violation.rule,
       message: violation.message,
+      ruleText: violation.ruleText,
       nodeName: source.name,
       nodeType: source.type,
       file: file,
@@ -167,6 +168,11 @@ function SourceEditor({
           <div className="violation-banner-copy">
             <p className="violation-rule">{violation.rule}</p>
             <p className="violation-message">{violation.message}</p>
+            {violation.ruleText ? (
+              <p className="violation-rule-text" data-testid="violation-rule-text">
+                {violation.ruleText}
+              </p>
+            ) : null}
           </div>
           <button type="button" className="copy-prompt" data-testid="violation-correct" onClick={() => void copyCorrectPrompt()}>
             Correct

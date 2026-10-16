@@ -12,8 +12,8 @@ export class GraphClient {
     return this.python.run('choose_overlay_folder');
   }
 
-  load(folder: string, practices: Record<string, string>): Promise<string> {
-    return this.python.run('load_working_copy', { folder, practices, database: folder });
+  load(folder: string, practices: Record<string, string>, overlays: string[] = []): Promise<string> {
+    return this.python.run('load_working_copy', { folder, practices, database: folder, overlays });
   }
 
   inventory(): Promise<InventoryBundle> {

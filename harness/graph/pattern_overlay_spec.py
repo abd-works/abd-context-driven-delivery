@@ -45,8 +45,13 @@ with description("pattern overlays"):
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
         graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"])
-        names = {node.type for node in graph.practice("ddd").by_id.values()}
-        expect("DomainNode" in names).to(equal(True))
-        expect("DomainClient" in names).to(equal(True))
-        story_types = {node.type for node in graph.practice("stories").by_id.values()}
+        ddd = graph.practice("ddd")
+        names = {node.type for node in ddd.by_id.values()}
+        expect("NodeRoot" in names).to(equal(True))
+        expect("ClientRoot" in names).to(equal(True))
+        expect("Route" in ddd.node_types).to(equal(True))
+        expect("JsonStore" in ddd.node_types).to(equal(True))
+        expect("nodeRoot" in ddd.edge_type_kinds).to(equal(True))
+        expect("calls" in ddd.edge_type_kinds).to(equal(True))
+        story_types = graph.practice("stories").node_types
         expect("StoryShared" in story_types).to(equal(True))

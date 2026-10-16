@@ -111,8 +111,10 @@ given:
   id: dotPath
   order: number
   examples?: [example]
+  invokes?: [operation | property]
   where:
     - id is the text slugs from the root to this node, joined by dots
+    - examples are the fixtures this given names; invokes is a domain operation it calls directly
   rules:
     - given-only-what-the-system-checks
     - given-names-complex-state-root-first
@@ -136,9 +138,10 @@ then:
   is: step
   id: dotPath
   order: number
-  observes: example
+  observes: [example | property]
   where:
     - id is the text slugs from the root to this node, joined by dots
+    - observes is an example this then names, or a property it reads directly
   rules:
     - behavioral-and-system-observable-outcomes
     - browser-then-asserts-screen-widgets

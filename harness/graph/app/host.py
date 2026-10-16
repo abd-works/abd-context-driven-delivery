@@ -146,8 +146,9 @@ class GraphHost:
             self.graph.filter.select_node_types(node_types)
         if relationships:
             self.graph.filter.select_relationships(relationships)
-        if selection.get("violations"):
+        if rules:
             self.graph.filter.select_rules(rules)
+        if selection.get("violations"):
             self.graph.filter.select_violations()
 
     def _members(self) -> list[dict]:

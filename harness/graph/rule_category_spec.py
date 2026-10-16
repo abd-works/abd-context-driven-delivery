@@ -64,6 +64,14 @@ with description("rule categories"):
             names = [child["name"] for child in category["children"]]
             expect("limit-operation-parameters" in names).to(equal(False))
 
+        with context("with one rule selected"):
+            with before.each:
+                self.graph.filter.select_rules(["limit-operation-parameters"])
+
+            with it("should attach only the selected rule"):
+                category = next(child for child in self.failure.serialize()["children"] if child["name"] == "rules")
+                expect([child["name"] for child in category["children"]]).to(equal(["limit-operation-parameters"]))
+
         with context("with violations of the parameter rule"):
             with before.each:
                 self.graph.filter.select_rules(["limit-operation-parameters"])

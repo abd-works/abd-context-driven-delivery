@@ -1,7 +1,7 @@
 """Load a working copy into the explorer graph from the practice models.
 
-Clean engineering and DDD come from the TypeScript class parser. Stories come
-from the story model. A selected pattern overlay adds the nodes that overlay names.
+Each practice loads through its root model when it has one. A pattern overlay
+has no root model: each schema type loads through the model it extends.
 """
 
 from __future__ import annotations
@@ -10,8 +10,9 @@ import os
 import re
 from pathlib import Path
 
-from harness.graph.graph import Graph
+from harness.graph.graph import EdgeType, Graph
 from harness.graph.rules import attach_rules
+from harness.graph.schema_catalog import SchemaType, overlay_schema, path_matches, practice_schema
 
 _GETTER = re.compile(r"\bget\s+(\w+)\s*\(")
 _FOREIGN = re.compile(r"//\s*foreign\s+(\w+)")
@@ -36,27 +37,28 @@ def fill_working_copy(graph: Graph) -> None:
         _record_ddd(graph.practice("ddd"), source, classes)
     if "stories" in graph.practices:
         _record_stories(graph.practice("stories"), source)
-        if clean is not None:
-            _record_story_edges(graph, classes)
-    if "bdd" in graph.practices:
-        _offer(graph.practice("bdd"), ["Spec", "Description", "Context", "Observation"])
-    if "ux" in graph.practices:
-        _offer(graph.practice("ux"), ["UxMap", "Screen"])
-    if _overlay_selected(graph, "lern_domain_driven"):
-        _record_lern(graph, source, classes)
+    _publish_unmodeled(graph)
+    _load_overlay(graph, source)
     for practice in graph.practices.values():
+        practice.root_node.populate()
+    from harness.graph.schema_edges import sync_schema_edges
+
+    sync_schema_edges(graph)
+    for practice in graph.practices.values():
+        practice.rebuild_tree()
         attach_rules(practice)
         practice.loaded = ["nodes", "edges", "rules"]
 
 
-def _offer(practice, types: list[str]) -> None:
-    for name in types:
-        practice.node_types.add(name)
-    practice.loaded = ["nodes", "edges", "rules"]
+_MODELED = {"clean_engineering", "ddd", "stories"}
 
 
-def _overlay_selected(graph: Graph, pattern: str) -> bool:
-    return any(pattern in item.replace("\\", "/").split("/") for item in graph.overlays)
+def _publish_unmodeled(graph: Graph) -> None:
+    """A practice with no root model still offers every type its schema names."""
+    for name in graph.practices:
+        if name in _MODELED:
+            continue
+        _publish(graph, practice_schema(name, []))
 
 
 def _record_clean(practice, root: Path) -> list[dict]:
@@ -391,118 +393,127 @@ def _record_stories(practice, source: Path) -> None:
     GraphStoryModel(model).record(practice)
 
 
-def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
-    stories = graph.practice("stories")
-    clean = graph.practice("clean_engineering")
-    operations = [node for node in clean.by_id.values() if node.type == "Operation"]
-    properties = [node for node in clean.by_id.values() if node.type == "Property"]
-    classes_by_name = {node.name: node for node in clean.by_id.values() if node.type == "OoadClass"}
-    modules = {node.name: node for node in clean.by_id.values() if node.type == "Module"}
-    steps = [node for node in stories.by_id.values() if node.type == "Step"]
-    examples = [node for node in stories.by_id.values() if node.type == "Example"]
-    epics = [node for node in stories.by_id.values() if node.type in {"Epic", "SubEpic"}]
-    for step in steps:
-        body = _step_body(graph._folder, step)
-        callees = list(getattr(step, "data", {}).get("callees") or [])
-        for operation in operations:
-            if operation.name in callees or re.search(rf"\.{re.escape(operation.name)}\s*\(", body):
-                _edge(stories, "invokes", 12, "relationship", step, operation)
-                _edge(clean, "invokes", 12, "relationship", operation, step)
-                _edge(clean, "invokedBy", 9, "relationship", operation, step)
-                module_name = Path(operation.source.file).parent.name
-                module = modules.get(module_name)
-                epic = _epic_for(step, epics)
-                if module is not None and epic is not None:
-                    _edge(clean, "usedBy", 14, "relationship", module, epic)
-                    _edge(stories, "uses", 9, "relationship", epic, module)
-        for example in examples:
-            if re.search(rf"\b{re.escape(example.name)}\b", body) and step.name.lower().startswith("then"):
-                _edge(stories, "observes", 8, "relationship", step, example)
-    for example in examples:
-        text = _example_source(graph._folder, example.name)
-        for name, class_node in classes_by_name.items():
-            if re.search(rf"\b{re.escape(name)}\b", text):
-                _edge(stories, "demonstrates", 4, "grouped", example, class_node)
-                _edge(clean, "demonstrates", 4, "grouped", class_node, example)
-                _edge(clean, "demonstratedThrough", 8, "relationship", class_node, example)
-        for prop in properties:
-            if re.search(rf"\.{re.escape(prop.name)}\b", text):
-                _edge(stories, "retrievedUsing", 11, "relationship", example, prop)
-                _edge(clean, "retrievedUsing", 11, "relationship", prop, example)
-
-
-def _edge(practice, kind: str, order: int, display: str, parent, child) -> None:
-    practice.record({"kind": kind, "order": order, "display": display}, parent, child)
-
-
-def _step_body(root: Path | None, step) -> str:
-    if root is None or not step.source.file:
-        return ""
-    path = root / step.source.file
-    if not path.is_file():
-        return ""
-    lines = path.read_text(encoding="utf-8").splitlines()
-    start = max(0, step.source.start_line - 1)
-    chunk = lines[start : start + 40]
-    return "\n".join(chunk)
-
-
-def _example_source(root: Path | None, name: str) -> str:
-    if root is None:
-        return ""
-    for file in root.rglob("*.ts"):
-        text = file.read_text(encoding="utf-8")
-        if re.search(rf"function\s+{re.escape(name)}\b", text):
-            return text
-    return ""
-
-
-def _epic_for(step, epics: list):
-    file = step.source.file
-    for epic in epics:
-        if epic.source.file and file.startswith(str(Path(epic.source.file).parent).replace("\\", "/")):
-            return epic
-    return epics[0] if epics else None
-
-
-def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
-    """LERN overlay nodes. File shape selects the overlay type."""
-    ddd = graph.practice("ddd") if "ddd" in graph.practices else None
-    stories = graph.practice("stories") if "stories" in graph.practices else None
-    if ddd is None or stories is None:
+def _load_overlay(graph: Graph, root: Path) -> None:
+    """Overlay types load through the base their schema ``is:`` names."""
+    types = overlay_schema(graph.overlays)
+    if not types:
         return
-    roots = {cls["name"]: cls for cls in classes if cls["name"] in {item["name"] for item in classes}}
-    entity_ids = {node.name: node for node in ddd.by_id.values() if node.type == "EntityRoot"}
-    for file in sorted(root.rglob("*")):
-        if not file.is_file():
+    _publish(graph, types)
+    for schema_type in types:
+        _load_schema_type(graph, root, schema_type, types)
+    _link_schema_fields(graph, types)
+
+
+def _publish(graph: Graph, types: tuple[SchemaType, ...] | list[SchemaType]) -> None:
+    for schema_type in types:
+        practice = graph.practices.get(schema_type.practice)
+        if practice is None:
             continue
+        practice.node_types.add(schema_type.semantic)
+        for kind, _targets in schema_type.fields:
+            if kind not in practice.edge_types:
+                practice.edge_types[kind] = EdgeType(kind, 5, "relationship")
+
+
+def _load_schema_type(graph: Graph, root: Path, schema_type: SchemaType, types: tuple[SchemaType, ...]) -> None:
+    practice = graph.practices.get(schema_type.practice)
+    if practice is None:
+        return
+    for file in _schema_files(root, schema_type, types):
         relative = file.relative_to(root).as_posix()
-        if file.name.endswith("-node.ts"):
-            _lern_type(ddd, relative, "DomainNode", entity_ids, "hosts")
-        elif file.name.endswith("-client.tsx"):
-            _lern_type(ddd, relative, "DomainClient", entity_ids, "interacts")
-        elif file.name.endswith(".story.shared.ts"):
-            _lern_story(stories, relative, "StoryShared")
-        elif file.name.endswith(".story.server.spec.ts"):
-            _lern_story(stories, relative, "ServerSpec")
-        elif file.name.endswith(".story.domain.spec.ts"):
-            _lern_story(stories, relative, "DomainSpec")
-        elif "playwright" in file.name and file.suffix == ".ts":
-            _lern_story(stories, relative, "PlaywrightSpec")
+        node_id = f"{schema_type.practice}:{schema_type.semantic}:{relative}"
+        if node_id in practice.by_id:
+            continue
+        text = file.read_text(encoding="utf-8")
+        end = max(1, text.count("\n") + (0 if text.endswith("\n") else 1))
+        name = _loaded_name(schema_type, file, text)
+        practice.apply_nodes([[node_id, name, schema_type.semantic, schema_type.practice, relative, 1, end]])
 
 
-def _lern_type(practice, relative: str, semantic: str, entities: dict, kind: str) -> None:
-    name = Path(relative).stem
-    node_id = f"ddd:{semantic}:{relative}"
-    practice.apply_nodes([[node_id, name, semantic, "ddd", relative, 1, 1]])
-    folder = Path(relative).parent.name
-    for entity in entities.values():
-        if folder and folder.replace("-", "").lower() in entity.source.file.replace("-", "").lower():
-            practice.record({"kind": kind, "order": 5, "display": "relationship"}, practice.by_id[node_id], entity)
-            return
+def _loaded_name(schema_type: SchemaType, file: Path, text: str) -> str:
+    """The base model names the node when it can read the file. The schema type stays."""
+    if file.suffix.lower() not in {".ts", ".tsx"} or not schema_type.is_ref:
+        return file.stem
+    from practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
+
+    model = TypeScriptCleanEngineeringModel.parse(text)
+    for module in model.modules:
+        for cls in module.classes:
+            return cls.name
+    return file.stem
 
 
-def _lern_story(practice, relative: str, semantic: str) -> None:
-    name = Path(relative).name
-    node_id = f"stories:{semantic}:{relative}"
-    practice.apply_nodes([[node_id, name, semantic, "stories", relative, 1, 1]])
+def _schema_files(root: Path, schema_type: SchemaType, types: tuple[SchemaType, ...]) -> list[Path]:
+    found = []
+    for file in sorted(root.rglob("*")):
+        if not file.is_file() or _ignored(file.relative_to(root)):
+            continue
+        if not path_matches(schema_type.path, file.relative_to(root)):
+            continue
+        if _best_schema_type(file.relative_to(root), types) is not schema_type:
+            continue
+        found.append(file)
+    return found
+
+
+def _best_schema_type(relative: Path, types: tuple[SchemaType, ...]) -> SchemaType | None:
+    matches = [item for item in types if path_matches(item.path, relative)]
+    if not matches:
+        return None
+    return max(matches, key=lambda item: _path_rank(item, relative.stem))
+
+
+def _path_rank(schema_type: SchemaType, stem: str) -> tuple[bool, int]:
+    folded = stem.lower().replace("-", "")
+    token = schema_type.key[:1].lower() + schema_type.key[1:]
+    short = token.removesuffix("Root") if token.endswith("Root") else token
+    named = short.lower() in folded
+    literal = len(re.sub(r"\{[^}]+\}", "", schema_type.path))
+    return (named, literal)
+
+
+def _link_schema_fields(graph: Graph, types: tuple[SchemaType, ...]) -> None:
+    nodes = _nodes_by_semantic(graph)
+    for schema_type in types:
+        practice = graph.practices.get(schema_type.practice)
+        if practice is None:
+            continue
+        for kind, targets in schema_type.fields:
+            _link_kind(practice, nodes, schema_type.semantic, kind, targets)
+
+
+def _nodes_by_semantic(graph: Graph) -> dict[str, list]:
+    found: dict[str, list] = {}
+    for practice in graph.practices.values():
+        for node in practice.by_id.values():
+            found.setdefault(node.type, []).append(node)
+    return found
+
+
+def _link_kind(practice, nodes: dict[str, list], owner_type: str, kind: str, targets: tuple[str, ...]) -> None:
+    from harness.graph.schema_rules import semantic_type
+
+    owners = nodes.get(owner_type, [])
+    targets_nodes = []
+    for target in targets:
+        targets_nodes.extend(nodes.get(semantic_type(target), []))
+    for owner in owners:
+        for target in targets_nodes:
+            if owner is target or not _same_folder(owner, target):
+                continue
+            practice.record({"kind": kind, "order": 5, "display": "relationship"}, owner, target)
+
+
+def _same_folder(left, right) -> bool:
+    first = _folder(left)
+    second = _folder(right)
+    if not first or first == "." or not second or second == ".":
+        return False
+    return first == second or first.startswith(second + "/") or second.startswith(first + "/")
+
+
+def _folder(node) -> str:
+    path = Path(node.source.file)
+    if path.suffix:
+        return path.parent.as_posix()
+    return path.as_posix().strip("/")

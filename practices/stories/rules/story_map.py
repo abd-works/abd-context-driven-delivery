@@ -100,7 +100,20 @@ class EvidenceDistinguishesObservedInferredAndIntended(PracticeGraphRule):
         labels = node.data.get("evidence") or []
         if isinstance(labels, str):
             labels = [labels]
-        if any(str(item).strip().casefold() in _EVIDENCE for item in labels):
+        labels = [str(item).strip() for item in labels if str(item).strip()]
+        if any(item.casefold() in _EVIDENCE for item in labels):
             return []
         kind = node.type.lower().replace("subepic", "sub-epic")
-        return [f"{kind} {node.name!r}: evidence must be observed, inferred, or intended."]
+        if labels:
+            shown = ", ".join(labels)
+            return [f"{kind} {node.name!r}: evidence {shown!r} must be observed, inferred, or intended."]
+        if _observed_by_its_test(node, context):
+            return []
+        return [f"{kind} {node.name!r} has no evidence label. Mark it observed, inferred, or intended."]
+
+
+def _observed_by_its_test(node, context) -> bool:
+    """An acceptance test that asserts the result is the observation."""
+    reader = getattr(context, "span", None)
+    text = reader(node) if reader is not None else ""
+    return "expect(" in text or " assert " in f" {text} "

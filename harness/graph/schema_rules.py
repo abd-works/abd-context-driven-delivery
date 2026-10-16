@@ -254,7 +254,7 @@ def _parse_is_supertypes(text: str) -> dict[str, str]:
             continue
         if not owner_key:
             continue
-        is_line = re.match(r"^\s+- is:\s+(\S+)\s*$", line)
+        is_line = re.match(r"^\s+-?\s*is:\s+(\S+)\s*$", line)
         if is_line:
             by_type[semantic_type(owner_key)] = is_line.group(1).strip()
     return by_type

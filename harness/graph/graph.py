@@ -540,6 +540,21 @@ class Node:
         self._rules = None
         self._populated = False
 
+    def semantic_type(self) -> str:
+        return self.type
+
+    def _subtree(self) -> list["Node"]:
+        return self._walk_subtree(set())
+
+    def _walk_subtree(self, seen: set[str]) -> list["Node"]:
+        if self.node_id in seen:
+            return []
+        seen.add(self.node_id)
+        found = [self]
+        for child in self.children:
+            found.extend(child._walk_subtree(seen))
+        return found
+
     @property
     def rules(self):
         """Schema rules for this node, with violations on each entry."""
@@ -639,7 +654,7 @@ class Node:
         return placed
 
     def _follows_source(self, edge: Edge) -> bool:
-        return edge.child.type in {"Background", "Scenario", "Step", "Story"}
+        return edge.child.type in {"Background", "Scenario", "Step", "Given", "When", "Then", "Story"}
 
     def _source_position(self, edge: Edge) -> tuple:
         source = edge.child.source
@@ -657,7 +672,8 @@ class Node:
     def serialize(self, seen: set[str] | None = None, via: Node | None = None, stack: set[str] | None = None) -> dict:
         """Write the full child list once, on the home parent.
 
-        A relationship copy is empty. A node already on the path is a stub, so a call back to this step stops.
+        A relationship copy is empty, except an example: each step that uses it still
+        shows the class it demonstrates. A node already on the path is a stub.
         """
         seen = set() if seen is None else seen
         stack = set() if stack is None else stack
@@ -665,7 +681,8 @@ class Node:
             return {"type": self.type, "name": self.name, "node_id": self.node_id, "children": []}
         home = via is None or via is self.parent
         first_home = home and self.node_id not in seen
-        children = self.children if first_home else []
+        under_example = self.type == self.name and via is not None and via.type == "Example"
+        children = self.children if first_home or self.type == "Example" or under_example else []
         if first_home:
             seen.add(self.node_id)
         path = stack | {self.node_id}
@@ -710,7 +727,9 @@ class Node:
                 status = "prompt"
             else:
                 status = "passing"
-            if violations_only and (status != "violating" or (selected and slug not in selected)):
+            if violations_only and status != "violating":
+                continue
+            if selected and slug not in selected:
                 continue
             rows.append(
                 {
@@ -718,6 +737,7 @@ class Node:
                     "name": slug,
                     "node_id": f"{self.node_id}:rules:{slug}",
                     "status": status,
+                    "text": str(getattr(entry, "body", "") or ""),
                     "violations": hits,
                     "children": [],
                 }
@@ -920,7 +940,7 @@ class Graph:
                 "edge_count": practice.edge_count,
                 "node_types": sorted(practice.node_types),
                 "edge_types": list(practice.edge_type_kinds),
-                "rules": list(practice.rules_run),
+                "rules": sorted(set(practice.applicable) | set(practice.rules_run)),
                 "tree": practice.root_node.serialize(),
             }
         return report

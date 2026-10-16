@@ -168,9 +168,17 @@ const engineeringTree = {
                   children: [
                     {
                       type: 'Rule',
+                      name: 'class-rule',
+                      node_id: 'op-failure:rules:class-rule',
+                      status: 'passing',
+                      children: [],
+                    },
+                    {
+                      type: 'Rule',
                       name: 'limit-operation-parameters',
                       node_id: 'op-failure:rules:limit-operation-parameters',
                       status: 'violating',
+                      text: 'Keep an operation to at most two parameters.',
                       violations: [
                         {
                           message: "Operation 'failure' takes more than two parameters.",
@@ -581,6 +589,22 @@ it('should reload the last folder when the app opens', async () => {
   expect(calls.some((call) => call.operation === 'load_working_copy' && call.body.folder === folder)).toBe(true);
 });
 
+it('should reload saved overlays with the last folder', async () => {
+  window.localStorage.setItem('cdd-graph-folder', folder);
+  window.localStorage.setItem('cdd-graph-overlays', JSON.stringify([overlayFolder]));
+  render(<App />);
+  await screen.findByRole('button', { name: 'Expand clean_engineering' });
+  expect(
+    calls.some(
+      (call) =>
+        call.operation === 'load_working_copy' &&
+        call.body.folder === folder &&
+        (call.body.overlays as string[]).includes(overlayFolder),
+    ),
+  ).toBe(true);
+  expect(screen.getByText('lern_domain_driven')).toBeTruthy();
+});
+
 it('should start with the source pane asking for a node', () => {
   render(<App />);
   expect(screen.getByText('Select a node')).toBeTruthy();
@@ -632,6 +656,20 @@ it('should send violations when the switch is turned on', async () => {
   );
 });
 
+it('should show only the rule selected in the rule filter', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  pickOnly('filter-rule', ['limit-operation-parameters']);
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  await expand(user, 'AccountCredentials');
+  await expand(user, 'failure');
+  await user.click(screen.getByTestId('tree-expand-rules'));
+  const holder = document.querySelector('[data-node-id="op-failure:rules"]');
+  expect(holder?.textContent).toContain('limit-operation-parameters');
+  expect(holder?.textContent).not.toContain('class-rule');
+});
+
 it('should show a passing rule and a violating rule under the operation', async () => {
   const user = userEvent.setup();
   await openFolder(user);
@@ -663,6 +701,19 @@ it('should keep the violation attached when violations are filtered', async () =
   expect(document.querySelector('.rule-status.passing')).toBeNull();
 });
 
+it('should colour the rules node when it contains a violation', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  await expand(user, 'AccountCredentials');
+  await expand(user, 'failure');
+  const violating = document.querySelector('[data-node-id="op-failure:rules"] button.tree-violating');
+  expect(violating?.textContent).toContain('rules');
+  await expand(user, 'register');
+  expect(document.querySelector('[data-node-id="op-1:rules"] button.tree-violating')).toBeNull();
+});
+
 it('should expose the violation message when hovering a violating rule', async () => {
   const user = userEvent.setup();
   await openFolder(user);
@@ -672,7 +723,7 @@ it('should expose the violation message when hovering a violating rule', async (
   await expand(user, 'failure');
   await user.click(screen.getByTestId('tree-expand-rules'));
   expect(screen.getByTestId('tree-violation-rule').getAttribute('title')).toBe(
-    "Operation 'failure' takes more than two parameters.",
+    "Operation 'failure' takes more than two parameters.\n\nKeep an operation to at most two parameters.",
   );
 });
 
@@ -690,6 +741,7 @@ it('should show the violation banner, highlight the source, and copy a Correct p
   const banner = await screen.findByTestId('violation-banner');
   expect(banner.textContent).toContain('limit-operation-parameters');
   expect(banner.textContent).toContain('takes more than two parameters');
+  expect(screen.getByTestId('violation-rule-text').textContent).toBe('Keep an operation to at most two parameters.');
   expect(calls.some((call) => call.operation === 'source' && call.body.node_id === 'op-failure')).toBe(true);
   const listed = await screen.findByTestId('source-rules');
   expect(listed.textContent).toContain('limit-operation-parameters');
@@ -702,6 +754,7 @@ it('should show the violation banner, highlight the source, and copy a Correct p
   expect(copied).toContain('test-driven');
   expect(copied).toContain(registerText);
   expect(copied).toContain("Violation: Operation 'failure' takes more than two parameters.");
+  expect(copied).toContain('Keep an operation to at most two parameters.');
 });
 
 it('should build a Correct prompt with the rule, excerpt, and violation message', () => {
@@ -912,6 +965,9 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
     return 'Merged working copy onto master';
   }
   if (operation === 'load_working_copy') {
+    if (Array.isArray(body.overlays)) {
+      activeOverlays = body.overlays as string[];
+    }
     return 'Reloaded the working copy';
   }
   if (operation === 'progress') {

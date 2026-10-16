@@ -1,6 +1,7 @@
 export type ViolationFocus = {
   rule: string;
   message: string;
+  ruleText?: string;
   startLine?: number;
   endLine?: number;
 };
@@ -8,6 +9,7 @@ export type ViolationFocus = {
 export function buildViolationCorrectPrompt(input: {
   rule: string;
   message: string;
+  ruleText?: string;
   nodeName: string;
   nodeType: string;
   file: string;
@@ -30,5 +32,6 @@ export function buildViolationCorrectPrompt(input: {
     '```',
     '',
     `Violation: ${input.message}`,
+    input.ruleText ? `\n${input.ruleText}` : '',
   ].join('\n');
 }

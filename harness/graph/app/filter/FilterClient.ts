@@ -36,6 +36,7 @@ export type GraphTree = {
   name: string;
   node_id: string;
   status?: string;
+  text?: string;
   violation?: string;
   violations?: RuleHit[];
   children: GraphTree[];

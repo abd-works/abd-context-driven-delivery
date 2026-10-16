@@ -828,6 +828,13 @@ ul.tree ul {
   color: var(--error);
 }
 
+.violation-rule-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--text);
+}
+
 .source-snippet .violation-highlight {
   background-color: color-mix(in srgb, var(--error) 22%, transparent) !important;
 }
