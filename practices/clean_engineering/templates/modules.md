@@ -18,36 +18,20 @@ fidelity: modules
     `------` / `+ operation()` dumps. Those wait for **model**. Modules stop at
     Purpose, Seam, Dependencies, Constraint. A dump here is a second object
     model in prose, and the markdown and the later class blocks will disagree.
-  - `language-modules-one-section` — `module-context.md` is one `## Language`
-    section: opening prose, `###` concepts, build order, then `# {path}` cards.
-    Do not add `## Modules`. A second heading splits the same document into two
-    fidelities.
+  - `language-opens-the-card` — Language is the first lines under `# {path}`.
+    Do not add `## Language` or `## Modules`. A section above the cards splits
+    the words from the module they name.
 
-  Write human-readable markdown only. Sit a module heading immediately above
-  its `- **Purpose:**` block — no blank line between them.
+  Write human-readable markdown only. Sit the language immediately under the
+  module heading — no blank line — then the Purpose block.
 -->
 
-## Modules
-
-*{Root}* is {the job a caller hires it for — then what it holds and does.
-This paragraph IS the definition. Identity and purpose. Not a decorator or merge.}
-### Public Seam
-#### {Concept}
-
-- {why a caller uses this (the outcome), then the mark they type if there is one}
-- {as many bullets as the concept warrants}
-- **Invariant:** {rule that must always hold — only when one exists}
-
-#### {AnotherConcept}
-
-- {why a caller uses this — same shape as any other concept}
-
-
-#### {Dependencies}
- - {what is the dependecy, what kind of dependency is it}
----
-
 # {module_path}
+*{Concept}* is {the job a caller hires it for — then what it holds and does.
+These lines ARE the definition. Identity and purpose. Not a decorator or merge.}
+
+{Another sentence naming the next term a caller uses, and the mark they type.}
+
 - **Purpose:** {the job a caller hires this module for — not how it is wired}
 - **Seam (terms):** {Concept}, {AnotherConcept}, ...
 - **Dependencies (one-way):** {other_module}, ...

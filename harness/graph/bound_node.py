@@ -6,7 +6,8 @@ Pass a graph the same way you pass another model.
 
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from contextlib import contextmanager
+from typing import Iterable, Iterator, Optional
 
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.schema_edges import sync_schema_edges
@@ -218,10 +219,28 @@ class BoundNode(Node):
         if name in {"source", "story_names", "collaborators", "dependencies", "type_hint", "return_type", "callees"} and getattr(self, "_ready", False):
             self._sync_schema_edges()
 
+    @contextmanager
+    def batch_schema_sync(self) -> Iterator[None]:
+        """Hold schema-edge rebuilds until a batch of child links is finished.
+
+        Each link used to rebuild every schema edge. On a story map that is
+        quadratic in the nodes already attached, and a workspace load never
+        returns.
+        """
+        graph = self.graph
+        graph._defer_schema_sync = True
+        try:
+            yield
+        finally:
+            graph._defer_schema_sync = False
+            self._sync_schema_edges()
+
     def _sync_schema_edges(self) -> None:
         graph = getattr(self, "practice", None)
         graph = getattr(graph, "graph", None)
         if graph is None or getattr(graph, "_syncing_schema", False):
+            return
+        if getattr(graph, "_defer_schema_sync", False):
             return
         graph._syncing_schema = True
         try:

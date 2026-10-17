@@ -80,8 +80,8 @@ class ModuleContext:
         return _hit(
             row,
             f"Module '{self.path.parent.parent.name}' module-context has a "
-            f"'Modules' heading. Language and modules are one ## Language "
-            f"section — drop ## Modules.",
+            f"'Modules' heading. Language is the opening lines of each # path "
+            f"card — drop ## Modules and do not add ## Language.",
         )
 
     def public_seam_hits(self, row: dict) -> List[dict]:

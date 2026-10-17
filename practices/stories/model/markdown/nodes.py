@@ -141,11 +141,14 @@ class MarkdownScenario(Scenario):
     """Scenario leaf node for the Markdown format. Knows how to parse BDD markdown files."""
 
     @classmethod
-    def from_workspace(cls, root: "Path") -> List["MarkdownScenario"]:
+    def from_workspace(cls, root: "Path", *, on_file=None) -> List["MarkdownScenario"]:
         """Find all scenario markdown files under *root* and return parsed scenarios."""
         root = Path(root).resolve()
         if root.is_file():
-            return cls.parse_file(root, root.name)
+            rel = root.name
+            if on_file is not None:
+                on_file(rel)
+            return cls.parse_file(root, rel)
         scenarios: List["MarkdownScenario"] = []
         seen: set = set()
         for pattern in (
@@ -158,6 +161,8 @@ class MarkdownScenario(Scenario):
                 if rel in seen:
                     continue
                 seen.add(rel)
+                if on_file is not None:
+                    on_file(rel)
                 scenarios.extend(cls.parse_file(md, rel))
         return scenarios
 
@@ -545,13 +550,18 @@ class MarkdownStory(Story):
     def load_scenario(self, source: Scenario) -> MarkdownScenario:
         return MarkdownScenario(source.name, source.sequential_order, source.story_name)
 
-    def load_scenarios(self, root) -> None:
+    def load_scenarios(self, root, scenarios=None) -> None:
         name = self.name.strip()
         took_examples = False
         seen = set()
-        for scenario in MarkdownScenario.from_workspace(root):
+        found = scenarios if scenarios is not None else MarkdownScenario.from_workspace(root)
+        for scenario in found:
             if (scenario.story_name or "").strip() != name:
                 continue
+            carried = getattr(scenario, "story_backgrounds", None)
+            scenario = scenario.clone()
+            if carried is not None:
+                scenario.story_backgrounds = carried
             key = (
                 scenario.name,
                 tuple(
@@ -563,7 +573,6 @@ class MarkdownStory(Story):
                 continue
             seen.add(key)
             self.scenarios.append(scenario)
-            carried = getattr(scenario, "story_backgrounds", None)
             if carried and not any(background.steps for background in self.backgrounds):
                 if not self.backgrounds:
                     self.backgrounds = list(carried)
@@ -593,11 +602,11 @@ class MarkdownEpic(Epic):
     def load_story(self, source: Story) -> MarkdownStory:
         return MarkdownStory(source.name, source.sequential_order, source.story_type)
 
-    def _load_scenarios(self, root) -> None:
+    def _load_scenarios(self, scenarios) -> None:
         for child in self.epics:
-            child._load_scenarios(root)
+            child._load_scenarios(scenarios)
         for story in self.stories:
-            story.load_scenarios(root)
+            story.load_scenarios(None, scenarios)
 
 
 # -- Root node + I/O -----------------------------------------------------------
@@ -630,7 +639,7 @@ class MarkdownStoryModel(StoryModel):
         return MarkdownIncrement(source.name, source.sequential_order)
 
     @classmethod
-    def from_workspace(cls, root: "Path") -> Optional["MarkdownStoryModel"]:
+    def from_workspace(cls, root: "Path", *, on_file=None) -> Optional["MarkdownStoryModel"]:
         """Find story-map.md files under *root*, merge, and return; None if absent."""
         root = Path(root).resolve()
         if root.is_file():
@@ -643,31 +652,40 @@ class MarkdownStoryModel(StoryModel):
         if not candidates:
             return None
         merged = cls()
+        with merged.batch_schema_sync():
+            merged._read_workspace(root, candidates, on_file)
+        if not merged.epics:
+            return None
+        return merged
+
+    def _read_workspace(self, root, candidates, on_file=None) -> None:
         for md_path in candidates:
-            text = md_path.read_text(encoding="utf-8")
-            try:
-                parsed = cls().parse(text)
-            except MarkdownParseError:
-                continue
-            for epic in parsed.epics:
-                merged.epics.append(epic)
             if root.is_file():
                 rel = root.name
             else:
                 rel = str(md_path.relative_to(root)).replace("\\", "/")
-            merged.attach_source_locations(text, rel)
-            if not getattr(merged, "source", None):
+            if on_file is not None:
+                on_file(rel)
+            text = md_path.read_text(encoding="utf-8")
+            try:
+                parsed = type(self)().parse(text)
+            except MarkdownParseError:
+                continue
+            for epic in parsed.epics:
+                self.epics.append(epic)
+            self.attach_source_locations(text, rel)
+            if not getattr(self, "source", None):
                 from practices.stories.model.source_location import SourceLocation as _SL
-                merged.source = _SL(rel, 1)
-        if not merged.epics:
-            return None
+                self.source = _SL(rel, 1)
+        if not self.epics:
+            return
         workspace = root.parent if root.is_file() else root
-        merged._attach_markdown(workspace)
-        return merged
+        self._attach_markdown(workspace, on_file=on_file)
 
-    def _attach_markdown(self, root) -> None:
+    def _attach_markdown(self, root, on_file=None) -> None:
+        scenarios = MarkdownScenario.from_workspace(root, on_file=on_file)
         for epic in self.epics:
-            epic._load_scenarios(root)
+            epic._load_scenarios(scenarios)
         if self.increments:
             return
         for increment in MarkdownIncrement.from_workspace(root):

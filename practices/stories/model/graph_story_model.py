@@ -22,16 +22,29 @@ class GraphStoryModel:
         self.model = model
         self._lines: dict[str, list[str]] = {}
         self._cursor: dict[str, int] = {}
+        self._on_node = None
+        self._node_at = 0
+        self._node_total = 0
 
-    def record(self, practice) -> None:
+    def record(self, practice, *, on_node=None) -> None:
         nodes: list[list] = []
         edges: list[list] = []
         root_id = practice.root_node.node_id
-        for epic in self.model.epics:
-            self._epic(practice.source_root, root_id, epic, True, nodes, edges)
-        practice.apply_nodes(nodes)
-        practice.apply_edges(edges)
-        practice.loaded = ["nodes", "edges", "rules"]
+        self._on_node = on_node
+        self._node_at = 0
+        self._node_total = sum(self._story_count(epic) for epic in self.model.epics)
+        try:
+            with self.model.batch_schema_sync():
+                for epic in self.model.epics:
+                    self._epic(practice.source_root, root_id, epic, True, nodes, edges)
+            practice.apply_nodes(nodes)
+            practice.apply_edges(edges)
+            practice.loaded = ["nodes", "edges", "rules"]
+        finally:
+            self._on_node = None
+
+    def _story_count(self, epic: Epic) -> int:
+        return len(epic.stories) + sum(self._story_count(child) for child in epic.epics)
 
     def _epic(self, root: str, parent_id: str, epic: Epic, top: bool, nodes: list, edges: list) -> None:
         story_file = self._file_under(epic)
@@ -49,6 +62,9 @@ class GraphStoryModel:
             self._story(root, node_id, story, nodes, edges)
 
     def _story(self, root: str, parent_id: str, story: Story, nodes: list, edges: list) -> None:
+        self._node_at += 1
+        if self._on_node is not None:
+            self._on_node(f"{self._node_at}/{self._node_total} · {story.name}")
         file = self._file(story)
         node_id = f"stories:Story:{file}:{story.name}"
         line, end = self._source_span(story, root, file)

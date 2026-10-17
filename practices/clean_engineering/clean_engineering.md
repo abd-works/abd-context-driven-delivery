@@ -63,7 +63,7 @@ Each **module** is a named structural boundary that groups closely related class
 
 #### Language
 
-When language sits in `module-context.md`, use the top-level Language section **and** follow `templates/modules.md`. Do not skip this subsection.
+When language sits in `module-context.md`, write it as the first lines under each `# {path}` card and follow `templates/modules.md`. Do not add a `## Language` or `## Modules` section above the cards.
 
 Lead with the job a caller hires it for; then the mark they type (`@markdown`, `@agent_toolset`). Name the cases they hit (file vs section), not an internal verb (`extract`, `expand`, `invoke`).
 
@@ -128,6 +128,7 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 
 - `deep-module` — Keep most classes private (at most **40%** public) in each first-class module. A first-class module is a folder that owns `.context/module-context.md`. Nested folders that also own that file are separate modules — respect them. Nested folders that do not own it roll up to the nearest enclosing module-context folder, or to the folder you are querying if none sits in between. Count classes, not operations: a public method on a hidden class is not a second seam. Every public class is a signature you cannot change without editing every caller, so public classes are much harder to refactor than private ones.
 - `abstraction-focus` — Name *what* the module does for callers, not internal steps or storage. A seam named after its implementation has to be renamed, with every caller updated, whenever the implementation changes.
+- `language-opens-the-card` — Language is the first lines under `# {path}`. Do not add `## Language` or `## Modules`. A section above the cards splits the words from the module they name.
 - `purpose-before-mechanism` — Open each concept, Purpose, and seam term with the job a caller hires it for. A decorator, merge, mark, or storage choice is how — it never leads. Either say what the caller uses each concept for, or omit them.
 - `public-seam-only` — Document only the public seam and dependencies on other modules. The seam is what a caller types (`@agent_instructions`, `tools(...)`). A runtime name nobody writes (`expand`, `invoke`, `install_to`) is an internal — leave it out. Do not document tests, scan reports, or session dumps. Do not put **Sources / context** that only lists files inside the module folder — those are the subject, not a source. Documented internals are misunderstood as public promises, and callers start writing code against them.
 - `use-typed-signatures` — Use typed public signatures. Do not put vanilla `dict`, `Any`, or untyped lists on them — an untyped bag moves every shape error to runtime and leaves the caller guessing which keys are required.

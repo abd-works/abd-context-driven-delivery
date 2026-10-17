@@ -44,11 +44,25 @@ export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error
     progress.steps.length === 0 || progress.steps[progress.steps.length - 1]?.name !== progress.headline.split(' ').at(-1);
   const headline = progress.headline === 'Loading the graph…' ? loadingLabel ?? progress.headline : progress.headline;
   const shown = elapsed > 0 ? `${headline} · ${elapsedLabel(elapsed)}` : headline;
+  const fraction = progress.total > 0 ? Math.min(100, Math.round((100 * progress.index) / progress.total)) : 0;
   return (
     <div className="panel" data-testid="practice-graph-tree">
       {loading ? (
         <div className="empty-state work-progress is-working" data-testid="extraction-progress">
           <p className="query-now">{shown}</p>
+          {progress.total > 0 ? (
+            <div
+              className="load-meter"
+              data-testid="load-meter"
+              role="progressbar"
+              aria-valuenow={progress.index}
+              aria-valuemin={0}
+              aria-valuemax={progress.total}
+              aria-label={headline}
+            >
+              <span style={{ width: `${fraction}%` }} />
+            </div>
+          ) : null}
           {loadingLog.length > 0 ? (
             <ol className="loading-log" data-testid="loading-log" ref={log}>
               {progress.steps.map((step) => (

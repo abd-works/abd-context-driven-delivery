@@ -8,6 +8,10 @@ import sys
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
+for _category in ("tools", "practices", "actions", "patterns"):
+    _entry = str(_REPO / _category)
+    if _entry not in sys.path:
+        sys.path.insert(0, _entry)
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
@@ -867,6 +871,12 @@ class Graph:
     def watch_progress(self, callback) -> None:
         """The app host reports load progress through this callback."""
         self._progress = callback
+
+    def report_progress(self, message: str, step: str = "load") -> None:
+        """Tell the explorer which practice, file, node, or rule is in progress."""
+        if self._progress is None:
+            return
+        self._progress({"step": step, "message": message})
 
     @property
     def folder(self) -> str:

@@ -9,6 +9,8 @@ export type QueryProgress = {
   headline: string;
   steps: QueryStep[];
   detail: string;
+  index: number;
+  total: number;
 };
 
 function queryName(path: string): string {
@@ -26,6 +28,8 @@ export function queryProgress(messages: string[]): QueryProgress {
   let current: QueryStep | null = null;
   let detail = '';
   let status = '';
+  let index = 0;
+  let total = 0;
   for (const line of messages) {
     if (line.includes('WARNING')) {
       continue;
@@ -33,6 +37,11 @@ export function queryProgress(messages: string[]): QueryProgress {
     const text = statusText(line);
     if (text) {
       status = text;
+      const fraction = text.match(/(\d+)\/(\d+)/);
+      if (fraction) {
+        index = Number(fraction[1]);
+        total = Number(fraction[2]);
+      }
     }
     const compiled = line.match(/\[(\d+)\/(\d+)[^\]]*\]\s*Compiled\s+(.+)$/);
     if (compiled) {
@@ -96,5 +105,5 @@ export function queryProgress(messages: string[]): QueryProgress {
     seen.add(key);
     return true;
   });
-  return { headline, steps: unique.slice(-120), detail };
+  return { headline, steps: unique.slice(-120), detail, index, total };
 }

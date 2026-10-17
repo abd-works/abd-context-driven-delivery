@@ -99,6 +99,9 @@ def sync_schema_edges(graph) -> None:
     nodes = _bound_nodes(graph)
     if len(nodes) < 2:
         return
+    by_type: dict[str, list] = {}
+    for node in nodes:
+        by_type.setdefault(node.semantic_type(), []).append(node)
     fields = _fields()
     for owner in nodes:
         semantic = owner.semantic_type()
@@ -107,8 +110,11 @@ def sync_schema_edges(graph) -> None:
                 continue
             if field.phase and _phase(owner) != field.phase:
                 continue
-            for target in nodes:
-                if target is owner or target.semantic_type() not in field.targets:
+            targets: list = []
+            for type_name in field.targets:
+                targets.extend(by_type.get(type_name, ()))
+            for target in targets:
+                if target is owner:
                     continue
                 if not _matches(field.kind, owner, target, nodes):
                     continue

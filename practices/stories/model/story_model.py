@@ -842,7 +842,7 @@ class StoryModel(StoryNode):
             self._copy_map(maps[0])
 
     @classmethod
-    def load(cls, root) -> "StoryModel":
+    def load(cls, root, *, on_file=None) -> "StoryModel":
         """Read the story map, scenarios, and increments from a folder."""
         from pathlib import Path
 
@@ -851,34 +851,34 @@ class StoryModel(StoryNode):
 
         root = Path(root).resolve()
         story_map_root = root.parent if root.is_file() else root
-        story_map = cls._story_map_at(story_map_root, JsonStoryModel, MarkdownStoryModel)
+        story_map = cls._story_map_at(story_map_root, JsonStoryModel, MarkdownStoryModel, on_file)
         if story_map.epics:
             return story_map
         for name in ("story_map.md", "story-map.md"):
             candidate = root / name
             if not candidate.is_file():
                 continue
-            parsed = MarkdownStoryModel.from_workspace(candidate)
+            parsed = MarkdownStoryModel.from_workspace(candidate, on_file=on_file)
             if parsed and parsed.epics:
                 return parsed
-        parsed = MarkdownStoryModel.from_workspace(root)
+        parsed = MarkdownStoryModel.from_workspace(root, on_file=on_file)
         if parsed and parsed.epics:
             return parsed
         return story_map
 
     @staticmethod
-    def _story_map_at(story_map_root, json_story_map, markdown_story_map) -> "StoryModel":
+    def _story_map_at(story_map_root, json_story_map, markdown_story_map, on_file=None) -> "StoryModel":
         story_map_dir = story_map_root
         while story_map_dir and story_map_dir != story_map_dir.parent:
             candidate = story_map_dir / "story-map.md"
             if candidate.exists():
-                loaded = markdown_story_map.from_workspace(candidate)
+                loaded = markdown_story_map.from_workspace(candidate, on_file=on_file)
                 if loaded:
                     return loaded
             story_map_dir = story_map_dir.parent
         return (
             json_story_map.from_workspace(story_map_root)
-            or markdown_story_map.from_workspace(story_map_root)
+            or markdown_story_map.from_workspace(story_map_root, on_file=on_file)
             or StoryModel()
         )
 

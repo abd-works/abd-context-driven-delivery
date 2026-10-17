@@ -26,6 +26,20 @@ _CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
 _SKIP_DIRS = {".codeql", ".git", ".context", "node_modules", "__pycache__", ".sessions"}
 
 
+def _report(graph: Graph, message: str) -> None:
+    graph.report_progress(message)
+
+
+def _typescript_files(folder: Path) -> list[Path]:
+    if not folder.is_dir():
+        return []
+    return [
+        file
+        for file in folder.rglob("*")
+        if file.is_file() and file.suffix.lower() in {".ts", ".tsx"}
+    ]
+
+
 def fill_working_copy(graph: Graph) -> None:
     source = graph._folder
     if source is None:
@@ -39,8 +53,10 @@ def fill_working_copy(graph: Graph) -> None:
         if clean is not None:
             _record_story_edges(graph, classes)
     if "bdd" in graph.practices:
+        _report(graph, "bdd · node types")
         _offer(graph.practice("bdd"), ["Spec", "Description", "Context", "Observation"])
     if "ux" in graph.practices:
+        _report(graph, "ux · node types")
         _offer(graph.practice("ux"), ["UxMap", "Screen"])
     if _overlay_selected(graph, "lern_domain_driven"):
         _record_lern(graph, source, classes)
@@ -62,12 +78,13 @@ def _overlay_selected(graph: Graph, pattern: str) -> bool:
 def _record_clean(practice, root: Path) -> list[dict]:
     from practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 
+    _report(practice.graph, "clean_engineering · folders")
     roles = _code_folders(root)
     parsed: list[dict] = []
     nodes = []
     edges = []
     root_id = practice.root_node.node_id
-    class_names = _class_names(root)
+    class_names = _class_names(root, practice.graph)
     ids = {rel: f"clean_engineering:{kind}:{rel}" for rel, kind in roles.items()}
     for rel in sorted(roles, key=lambda item: (item.count("/"), item)):
         kind = roles[rel]
@@ -77,18 +94,18 @@ def _record_clean(practice, root: Path) -> list[dict]:
         if kind == "Package":
             edges.append([ids[rel], parent, "belongsTo", 5, "relationship"])
     src = root / "src"
-    if src.is_dir():
-        for file in sorted(src.rglob("*")):
-            if file.suffix.lower() not in {".ts", ".tsx"} or not file.is_file() or _ignored(file.relative_to(root)):
-                continue
-            text = file.read_text(encoding="utf-8")
-            relative = file.relative_to(root).as_posix()
-            owner = _nearest(str(Path(relative).parent).replace("\\", "/"), roles)
-            owner_id = ids.get(owner, root_id)
-            model = TypeScriptCleanEngineeringModel.parse(text)
-            for module in model.modules:
-                for cls in module.classes:
-                    parsed.append(_class_fact(practice, text, relative, owner_id, cls, class_names, nodes, edges))
+    files = sorted(file for file in _typescript_files(src) if not _ignored(file.relative_to(root)))
+    total = len(files)
+    for index, file in enumerate(files, start=1):
+        text = file.read_text(encoding="utf-8")
+        relative = file.relative_to(root).as_posix()
+        _report(practice.graph, f"clean_engineering · classes · {index}/{total} · {relative}")
+        owner = _nearest(str(Path(relative).parent).replace("\\", "/"), roles)
+        owner_id = ids.get(owner, root_id)
+        model = TypeScriptCleanEngineeringModel.parse(text)
+        for module in model.modules:
+            for cls in module.classes:
+                parsed.append(_class_fact(practice, text, relative, owner_id, cls, class_names, nodes, edges))
     practice.apply_nodes(nodes)
     practice.apply_edges(edges)
     practice.loaded = ["nodes", "edges", "rules"]
@@ -280,14 +297,15 @@ def _stereotyped_name(text: str, name: str) -> str:
     return class_declaration_decorated_name(text, name)
 
 
-def _class_names(root: Path) -> set[str]:
+def _class_names(root: Path, graph: Graph | None = None) -> set[str]:
     names = set()
-    src = root / "src"
-    if not src.is_dir():
-        return names
-    for file in src.rglob("*"):
-        if file.suffix.lower() in {".ts", ".tsx"} and file.is_file():
-            names.update(_CLASS_NAMES.findall(file.read_text(encoding="utf-8")))
+    files = _typescript_files(root / "src")
+    total = len(files)
+    for index, file in enumerate(files, start=1):
+        relative = file.relative_to(root).as_posix()
+        if graph is not None:
+            _report(graph, f"clean_engineering · class names · {index}/{total} · {relative}")
+        names.update(_CLASS_NAMES.findall(file.read_text(encoding="utf-8")))
     return names
 
 
@@ -314,6 +332,7 @@ def _method_span(text: str, name: str, fallback: int) -> tuple[int, int]:
 def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
     from practices.ddd.model.stereotypes import inferred_tactical_kind
 
+    _report(practice.graph, "ddd · bounded contexts")
     names = {cls["name"] for cls in classes}
     members: dict[str, list[dict]] = {}
     for cls in classes:
@@ -380,15 +399,24 @@ def _record_stories(practice, source: Path) -> None:
     from practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
     files: dict[str, str] = {}
-    if source.is_dir():
-        for path in source.rglob("*"):
-            if path.suffix.lower() not in {".ts", ".tsx"} or not path.is_file():
-                continue
-            files[path.relative_to(source).as_posix()] = path.read_text(encoding="utf-8")
-    model = TypeScriptStoryModel("tests").load(files)
+    sources = _typescript_files(source)
+    total = len(sources)
+    graph = practice.graph
+
+    def report(phase: str, detail: str) -> None:
+        _report(graph, f"stories · {phase} · {detail}")
+
+    for index, path in enumerate(sources, start=1):
+        relative = path.relative_to(source).as_posix()
+        _report(graph, f"stories · {index}/{total} · {relative}")
+        files[relative] = path.read_text(encoding="utf-8")
+    _report(graph, "stories · parse")
+    model = TypeScriptStoryModel("tests").load(files, on_file=lambda detail: report("parse", detail))
     if not model.epics:
-        model = StoryModel.load(source)
-    GraphStoryModel(model).record(practice)
+        _report(graph, "stories · markdown")
+        model = StoryModel.load(source, on_file=lambda detail: report("markdown", detail))
+    _report(graph, "stories · record")
+    GraphStoryModel(model).record(practice, on_node=lambda detail: report("record", detail))
 
 
 def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
@@ -401,7 +429,9 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
     steps = [node for node in stories.by_id.values() if node.type == "Step"]
     examples = [node for node in stories.by_id.values() if node.type == "Example"]
     epics = [node for node in stories.by_id.values() if node.type in {"Epic", "SubEpic"}]
-    for step in steps:
+    total_steps = len(steps)
+    for index, step in enumerate(steps, start=1):
+        _report(graph, f"stories · steps · {index}/{total_steps} · {step.name}")
         body = _step_body(graph._folder, step)
         callees = list(getattr(step, "data", {}).get("callees") or [])
         for operation in operations:
@@ -418,8 +448,10 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
         for example in examples:
             if re.search(rf"\b{re.escape(example.name)}\b", body) and step.name.lower().startswith("then"):
                 _edge(stories, "observes", 8, "relationship", step, example)
-    for example in examples:
-        text = _example_source(graph._folder, example.name)
+    total_examples = len(examples)
+    for index, example in enumerate(examples, start=1):
+        _report(graph, f"stories · examples · {index}/{total_examples} · {example.name}")
+        text = _example_source(graph._folder, example.name, graph)
         for name, class_node in classes_by_name.items():
             if re.search(rf"\b{re.escape(name)}\b", text):
                 _edge(stories, "demonstrates", 4, "grouped", example, class_node)
@@ -447,10 +479,15 @@ def _step_body(root: Path | None, step) -> str:
     return "\n".join(chunk)
 
 
-def _example_source(root: Path | None, name: str) -> str:
+def _example_source(root: Path | None, name: str, graph: Graph | None = None) -> str:
     if root is None:
         return ""
-    for file in root.rglob("*.ts"):
+    files = [file for file in root.rglob("*.ts") if file.is_file()]
+    total = len(files)
+    for index, file in enumerate(files, start=1):
+        if graph is not None:
+            relative = file.relative_to(root).as_posix()
+            _report(graph, f"stories · example {name} · {index}/{total} · {relative}")
         text = file.read_text(encoding="utf-8")
         if re.search(rf"function\s+{re.escape(name)}\b", text):
             return text

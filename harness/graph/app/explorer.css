@@ -276,6 +276,21 @@ html[data-theme="engineering"] .site-nav {
   text-transform: none;
   letter-spacing: 0;
   color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.load-meter {
+  height: 6px;
+  margin-top: var(--space-sm);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.load-meter > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
 }
 
 .loading-log li.is-current {

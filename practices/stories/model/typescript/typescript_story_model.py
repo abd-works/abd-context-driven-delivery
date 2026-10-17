@@ -56,15 +56,23 @@ class TypeScriptStoryModel(CodeStoryModel):
         stem = name[: -len(suffix)]
         return stem.replace("_", "-")
 
-    def load(self, external: Dict[str, str]) -> "TypeScriptStoryModel":
+    def load(self, external: Dict[str, str], *, on_file=None) -> "TypeScriptStoryModel":
         if not isinstance(external, dict):
             raise CodeStoryModelError("TypeScript story map parse expects a path->content dict")
         self.epics.clear()
         seen: set[tuple[str, ...]] = set()
-        for path in self._ordered_paths(external):
+        ordered = self._ordered_paths(external)
+        leaves = [path for path in ordered if self._is_gwt_leaf(path)]
+        total = len(leaves)
+        with self.batch_schema_sync():
+            self._read_leaves(external, leaves, seen, on_file, total)
+        return self
+
+    def _read_leaves(self, external, leaves, seen, on_file, total: int) -> None:
+        for index, path in enumerate(leaves, start=1):
+            if on_file is not None:
+                on_file(f"{index}/{total} · {path}")
             content = external[path]
-            if not self._is_gwt_leaf(path):
-                continue
             parts = path.strip("/").replace("\\", "/").split("/")
             stripped = self.strip_tests_root_prefix(parts)
             if stripped is None:
@@ -90,4 +98,3 @@ class TypeScriptStoryModel(CodeStoryModel):
             epic = self.epic_for(epic_slug)
             sub = self.sub_epic_for(epic, sub_slugs)
             sub.append_story(self.story_type.load(content, story_slug))
-        return self

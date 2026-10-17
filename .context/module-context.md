@@ -1,2199 +1,599 @@
-# Modules
+# actions
+*Actions* are the slash kits. You pass *Guidance* (or a string) and they run once per item — generate, document, scan, grill — so a practice keeps its words and does not reimplement the prelude.
 
-*Context-Driven Delivery* is how an agent installs practices, opens a work session, and runs generate, document, and scan from the markdown that sits beside the code. Public classes and dependencies below are the latest CodeQL first-class prefixes and `moduleDependsOn` edges.
+- **Purpose:** Give every practice the same slash kits so the practice owns words, not session plumbing.
+- **Seam (terms):** GuidanceAction, GuidanceArg
+- **Dependencies (one-way):** `harness/guidance_actions`
 
-## actions
-### Public Seam
-#### Document
+## Constraint
 
-#### Generate
-
-#### Render
-
-#### Satisfy
-
-#### Validate
-
-### Dependencies
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
----
-
-## builders
----
-
-## harness
-### Public Seam
-#### AppliesTo
-
-#### FidelityGuidance
-
-#### Guidance
-
-#### GuidanceAction
-
-#### GuidanceCollection
-
-#### Markdown
-
-#### OtherTool
-
-#### PracticeGuidance
-
-#### Render
-
-#### Rule
-
-#### RulesCollection
-
-#### SampleAgenticOps
-
-#### SampleGuidance
-
-#### SampleHookOps
-
-#### SampleMcpGuidance
-
-#### SampleMcpOps
-
-#### SampleMcpPractice
-
-#### SamplePracticeGuidance
-
-#### SamplePracticeWithFidelities
-
-#### SampleTool
-
-#### Session
-
-#### SplitPracticeGuidance
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## installation
-### Public Seam
-#### Agent
-
-#### AgentGuidance
-
-#### Command
-
-#### Destination
-
-#### FileInstallation
-
-#### Installation
-
-#### Installer
-
-#### Rules
-
-#### Skill
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## practices
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## actions.grill_context
-### Public Seam
-#### GrillContext
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.iterate` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## actions.improvement
-### Public Seam
-#### Improvement
-
-### Dependencies
- - `harness` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## actions.iterate
-### Public Seam
-#### Iterate
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.grill_context` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
----
-
-## actions.partition
-### Public Seam
-#### Partition
-
-#### PartitionIndex
-
-#### Segment
-
-#### SegmentCompletenessConfig
-
-#### SegmentEntry
-
-### Dependencies
- - `harness` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## actions.sketch
-### Public Seam
-#### Sketch
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.grill_context` — moduleDependsOn
- - `actions.iterate` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## builders.create_agent_toolset
-### Public Seam
-#### CreateAgentToolset
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## builders.create_context_tool
-### Public Seam
-#### CreateContextTool
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## harness.agent_tools
-### Public Seam
-#### AgentInstructions
-
-#### AgentInstructionsMark
-
-#### AgentOperation
-
-#### AgentTool
-
-#### AgentToolDestination
-
-#### AgentToolMark
-
-#### AgentToolSet
-
-#### AgentToolSetMark
-
-#### AgentToolSetOrigin
-
-#### AgentToolSetTools
-
-#### AgentToolValidationError
-
-#### Collect
-
-#### ExpansionMode
-
-#### ExpansionResult
-
-#### InstallDestination
-
-#### ToolSetCollection
-
-#### ToolSetCollectionMark
-
-#### ToolsetManifest
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## harness.hooks
-### Public Seam
-#### CursorEvent
-
-#### HandlerCatalog
-
-#### Hook
-
-#### HookDaemon
-
-#### HookHandler
-
-#### HookIllegitimateHandler
-
-#### HookInstallation
-
-#### HookPayload
-
-#### HookResult
-
-#### HookServer
-
-#### HookStandupFailed
-
-#### Hooks
-
-#### SessionLogs
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## harness.knowledge_graph
-### Public Seam
-#### CodeQL
-
-#### CodeQLBackground
-
-#### CodeQLCall
-
-#### CodeQLClass
-
-#### CodeQLExampleExport
-
-#### CodeQLOperation
-
-#### CodeQLPracticeGraphExport
-
-#### CodeQLProperty
-
-#### CodeQLRunError
-
-#### CodeQLScenario
-
-#### CodeQLStep
-
-#### CodeQLStory
-
-#### CodeQLStoryCall
-
-#### CodeQLStoryObservation
-
-#### DotMarkup
-
-#### Failures
-
-#### FidelityGuidance
-
-#### Filter
-
-#### GraphAggregate
-
-#### GraphBackground
-
-#### GraphBoundedContext
-
-#### GraphClass
-
-#### GraphCleanEngineeringModel
-
-#### GraphContext
-
-#### GraphDescription
-
-#### GraphDomainEvent
-
-#### GraphDomainService
-
-#### GraphEntity
-
-#### GraphEntityRoot
-
-#### GraphEpic
-
-#### GraphExample
-
-#### GraphLoader
-
-#### GraphModule
-
-#### GraphObservation
-
-#### GraphOperation
-
-#### GraphParameter
-
-#### GraphProperty
-
-#### GraphQueryRun
-
-#### GraphRepository
-
-#### GraphRule
-
-#### GraphRulesCollection
-
-#### GraphScenario
-
-#### GraphStep
-
-#### GraphStory
-
-#### GraphStoryMap
-
-#### GraphSubEpic
-
-#### GraphValueObject
-
-#### HookServer
-
-#### Kind
-
-#### KnowledgeGraph
-
-#### McpServer
-
-#### Node
-
-#### NodeRelations
-
-#### NodeRules
-
-#### NodeView
-
-#### NodeWalk
-
-#### PracticeGraph
-
-#### PracticeGuidance
-
-#### PromptEcho
-
-#### QueryServerDown
-
-#### Relationship
-
-#### Rows
-
-#### Rule
-
-#### RuleRegistry
-
-#### RuleSlugs
-
-#### RuleTiming
-
-#### RuleViolation
-
-#### RulesCollection
-
-#### Session
-
-#### StorySourceQuery
-
-#### Validate
-
-#### VocabularyHelper
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## harness.markdown
-### Public Seam
-#### AssetLocation
-
-#### AssetLocator
-
-#### HTML
-
-#### Markdown
-
-#### MarkdownCollection
-
-#### MarkdownFile
-
-#### MarkdownSlot
-
-#### MarkdownText
-
-#### YamlBinder
-
-### Dependencies
- - `actions.partition` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## harness.mcp
-### Public Seam
-#### CodeQLQueryServer
-
-#### CursorMcpJson
-
-#### HostDiscovery
-
-#### HostPid
-
-#### Mcp
-
-#### McpHost
-
-#### McpIllegitimateTool
-
-#### McpInstallation
-
-#### McpOperationDefinition
-
-#### McpPrompt
-
-#### McpServer
-
-#### McpStandupFailed
-
-#### McpTool
-
-#### QueryServerClient
-
-#### StartHost
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.diagnose` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## practices.agent_bdd
-### Public Seam
-#### AgentBdd
-
-#### AgentBddConf
-
-#### AgentBlockLocal
-
-#### AgentHarnessError
-
-#### AgentJudgeError
-
-#### AgentResult
-
-#### AgentSession
-
-#### AgentSpecManifest
-
-#### AgentSpecRunbook
-
-#### ChatInboxPending
-
-#### HarnessLog
-
-#### JudgeResult
-
-#### RunResponse
-
-#### ToolsRunYaml
-
-#### ToolsetInvoke
-
-#### YamlFence
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## practices.bdd
-### Public Seam
-#### Bdd
-
-#### Context
-
-#### Description
-
-#### Observation
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## practices.clean_engineering
-### Public Seam
-#### ArgNamingScanner
-
-#### AskCrossAggregateSyncScanner
-
-#### CallInfo
-
-#### CasingTransformScanner
-
-#### ClassInfo
-
-#### CleanEngineering
-
-#### CrossLayerNamingScanner
-
-#### DependencyDeclarationsScanner
-
-#### DomainStructureScanner
-
-#### EntityBehaviorScanner
-
-#### ImportInfo
-
-#### InterfaceImplementationScanner
-
-#### InterfaceInfo
-
-#### LERNScanner
-
-#### LayerPurityScanner
-
-#### LernDomainDriven
-
-#### MERNScanner
-
-#### MernDomainDriven
-
-#### MethodInfo
-
-#### MutationResponseScanner
-
-#### OneJsonStorePerAggregateScanner
-
-#### PackageNamesScanner
-
-#### PropertyInfo
-
-#### RepositoryOwnsAggregateLifecycleScanner
-
-#### RouteDelegationScanner
-
-#### Scan
-
-#### ScanReport
-
-#### Scanner
-
-#### ScannerCollection
-
-#### ScannerReport
-
-#### ShareDomainLogicScanner
-
-#### TestIsolationScanner
-
-#### TestScriptsScanner
-
-#### TestStructureScanner
-
-#### TypeSafetyScanner
-
-#### TypeScriptScanner
-
-#### UbiquitousLanguageScanner
-
-#### ViewNamingScanner
-
-#### Violation
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.grill_context` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## practices.ddd
-### Public Seam
-#### Aggregate
-
-#### AggregateEntry
-
-#### BoundedContext
-
-#### BoundedContextEntry
-
-#### Cart
-
-#### Ddd
-
-#### DomainEvent
-
-#### DomainService
-
-#### Entity
-
-#### EntityRoot
-
-#### Plan
-
-#### Repository
-
-#### SelectSim
-
-#### ValueObject
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## practices.kanban
----
-
-## practices.stories
-### Public Seam
-#### ArchitectureContext
-
-#### Background
-
-#### Cart
-
-#### Change
-
-#### ChangeKind
-
-#### ChildCollectionPair
-
-#### Clause
-
-#### CodeStoryMap
-
-#### CodeStoryMapError
-
-#### DiagramStoryMap
-
-#### DrawIOEpic
-
-#### DrawIOIncrement
-
-#### DrawIOParseError
-
-#### DrawIOScenario
-
-#### DrawIOStory
-
-#### DrawIOStoryMap
-
-#### DrawIOSubEpic
-
-#### Epic
-
-#### Example
-
-#### ExampleFactories
-
-#### HelperMethod
-
-#### Increment
-
-#### Interaction
-
-#### JavaEpic
-
-#### JavaScenario
-
-#### JavaScriptEpic
-
-#### JavaScriptExampleFactories
-
-#### JavaScriptScenario
-
-#### JavaScriptStory
-
-#### JavaScriptStoryMap
-
-#### JavaScriptSubEpic
-
-#### JavaScriptTree
-
-#### JavaStory
-
-#### JavaStoryMap
-
-#### JavaSubEpic
-
-#### JavaTree
-
-#### JsonEpic
-
-#### JsonIncrement
-
-#### JsonParseError
-
-#### JsonScenario
-
-#### JsonStory
-
-#### JsonStoryMap
-
-#### JsonSubEpic
-
-#### Language
-
-#### MarkdownEpic
-
-#### MarkdownIncrement
-
-#### MarkdownParseError
-
-#### MarkdownScenario
-
-#### MarkdownStory
-
-#### MarkdownStoryMap
-
-#### MarkdownSubEpic
-
-#### MiroApiClient
-
-#### MiroApiError
-
-#### MiroAuthError
-
-#### MiroEpic
-
-#### MiroIncrement
-
-#### MiroParseError
-
-#### MiroScenario
-
-#### MiroStory
-
-#### MiroStoryMap
-
-#### MiroSubEpic
-
-#### MiroUploader
-
-#### NodeSnapshot
-
-#### Phase
-
-#### PlacementError
-
-#### PythonEpic
-
-#### PythonExampleFactories
-
-#### PythonScenario
-
-#### PythonStory
-
-#### PythonStoryMap
-
-#### PythonSubEpic
-
-#### PythonTree
-
-#### Scenario
-
-#### SourceLocation
-
-#### Step
-
-#### StepBody
-
-#### Stories
-
-#### Story
-
-#### StoryContext
-
-#### StoryMap
-
-#### StoryNames
-
-#### StoryNode
-
-#### StoryType
-
-#### SubEpic
-
-#### Test
-
-#### TestCase
-
-#### TestSuite
-
-#### Tier
-
-#### TranslationError
-
-#### TypeScriptEpic
-
-#### TypeScriptScenario
-
-#### TypeScriptStory
-
-#### TypeScriptStoryMap
-
-#### TypeScriptSubEpic
-
-#### TypeScriptTree
-
-#### UpdateReport
-
-#### Vertex
-
-#### Workspace
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## practices.ux
-### Public Seam
-#### Ux
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## tools.catalog_generator
-### Public Seam
-#### ActionResolution
-
-#### Brand
-
-#### Catalog
-
-#### CatalogAction
-
-#### CatalogContextTool
-
-#### CatalogFidelity
-
-#### CatalogFidelityGuidance
-
-#### CatalogPage
-
-#### CatalogTool
-
-#### CatalogUtility
-
-#### GitCitation
-
-#### HeadingSection
-
-#### IllustratedExampleRow
-
-#### RegistryEntry
-
-#### SkillSlashName
-
-#### TemplateFrontmatter
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## tools.context_setup
-### Public Seam
-#### CaptureResult
-
-#### ContextIndex
-
-#### ContextSetup
-
-#### ConversionResult
-
-#### EmbedResult
-
-#### EmbeddingProvider
-
-#### OpenAIEmbeddingProvider
-
-#### PageCapture
-
-#### RankedChunk
-
-#### ScoutResult
-
-#### ScreenResult
-
-#### SearchResult
-
-#### SmokeTestResult
-
-#### StructureNote
-
-### Dependencies
- - `actions.partition` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
----
-
-## tools.diagnose
-### Public Seam
-#### Diagnose
+Slash names match the operation (`/grill`, not `/grill-context`). Echo and handoff live under `tools/`.
 
 ---
 
-## tools.echo
-### Public Seam
-#### Echo
+## actions/scan
+*Scan* runs a Guidance’s scanners over paths so a rule fires on disk, not only in chat. *Scanner* and *ScannerCollection* are the checks that Guidance names.
 
-### Dependencies
- - `tools.catalog_generator` — moduleDependsOn
+- **Purpose:** Run a Guidance’s scanners over paths so rules fire on disk.
+- **Seam (terms):** Scan, Scanner, ScannerCollection
+- **Dependencies (one-way):** `harness/guidance_actions`
+
 ---
 
-## tools.git
-### Public Seam
-#### Branch
+## actions/document
+*Document* records what already exists for the Guidance you list. It writes the finding and leaves the artifact as it is.
 
-#### CliAgentBinding
+- **Purpose:** Record what already exists for listed Guidance without correcting it.
+- **Seam (terms):** Document
+- **Dependencies (one-way):** `harness/guidance_actions`, `actions/scan`
 
-#### Commit
-
-#### DirtyBranchSwitchError
-
-#### GhConnectError
-
-#### Git
-
-#### GitConnectError
-
-#### Project
-
-#### ProjectItem
-
-#### Repo
-
-#### Ticket
-
-#### TicketNotFoundError
-
-#### TicketState
-
-#### Worktree
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
 ---
 
-## tools.handoff
-### Public Seam
-#### Handoff
+## actions/generate
+*Generate* writes each listed Guidance’s artifact at the fidelity that Guidance is on now.
 
-### Dependencies
- - `harness.knowledge_graph` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
+- **Purpose:** Write each listed Guidance’s artifact at its current fidelity.
+- **Seam (terms):** Generate
+- **Dependencies (one-way):** `harness/guidance_actions`
+
 ---
 
-## tools.plan
-### Public Seam
-#### HILCheck
+## actions/validate
+*Validate* checks an artifact against the rules for that Guidance, or adds a named *Rule* from a failed example. *RulesCollection* and *AppliesTo* say which rules run and where.
 
-#### JudgeCheckpoint
+- **Purpose:** Check artifacts against rules, or add a named rule from a failed example.
+- **Seam (terms):** Validate, Rule, RulesCollection, AppliesTo
+- **Dependencies (one-way):** `harness/guidance_actions`, `actions/scan`
 
-#### Plan
-
-#### PlanCommands
-
-#### PlanExecution
-
-#### PlanSeed
-
-#### PlanTurns
-
-#### ProgressView
-
-#### SmallWorkRunner
-
-#### SmallWorkState
-
-#### ThemedIssue
-
-#### TurnAttachments
-
-#### TurnTemplate
-
-### Dependencies
- - `actions.partition` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
 ---
 
-## tools.prompt_echo
-### Public Seam
-#### Echo
+## actions/satisfy
+*Satisfy* validates, applies the implied fixes, and validates again on the same Guidance.
 
-#### FidelityGuidance
+- **Purpose:** Validate, apply the implied fixes, validate again.
+- **Seam (terms):** Satisfy
+- **Dependencies (one-way):** `actions/validate`, `harness/guidance_actions`
 
-#### Generate
-
-#### GuidanceAction
-
-#### PracticeGuidance
-
-#### PromptEcho
-
-#### Sketch
-
-### Dependencies
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.prompt_log` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
 ---
 
-## tools.prompt_log
-### Public Seam
-#### PromptLog
+## actions/render
+*Render* turns content that is already generated into another format on that Guidance.
 
-### Dependencies
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
+- **Purpose:** Turn already-generated content into another format on that Guidance.
+- **Seam (terms):** Render
+- **Dependencies (one-way):** `harness/guidance_actions`
+
 ---
 
-## tools.record_decisions
-### Public Seam
-#### RecordDecisions
+## actions/partition
+*Partition* splits a corpus into a *PartitionIndex* plus verbatim *Segment* chunks, and fails a chunk that drops a named *SegmentEntry*.
 
-### Dependencies
- - `harness.knowledge_graph` — moduleDependsOn
+- **Purpose:** Split source into an index plus verbatim segments, and fail a chunk that drops a named entry.
+- **Seam (terms):** Partition, PartitionIndex, Segment, SegmentEntry
+- **Dependencies (one-way):** `harness/guidance_actions`
+
 ---
 
-## tools.workflow
-### Public Seam
-#### WorkTicket
+## actions/grill_context
+*GrillContext* interviews the plan against files you have actually read, and writes each answer down so the next turn can cite it.
 
-#### Workflow
+- **Purpose:** Interview the plan against files you have actually read, and persist each answer.
+- **Seam (terms):** GrillContext
+- **Dependencies (one-way):** `harness/agent_tools`
 
-#### WorkflowConfig
+## Constraint
 
-### Dependencies
- - `actions.partition` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
+Do not offer options until the cited context files are read. Answers go to `{path}/.context/grill-answers.md`.
+
 ---
 
-## tools.workspace
-### Public Seam
-#### ContextIndex
+## actions/sketch
+*Sketch* keeps a rough draft as a file through the grill, so the working record is on disk before anyone generates.
 
-#### ContextTool
+- **Purpose:** Persist a rough draft through grill before generate, so the sketch is a file.
+- **Seam (terms):** Sketch
+- **Dependencies (one-way):** `actions/grill_context`
 
-#### Correction
-
-#### Example
-
-#### Examples
-
-#### ISessionLog
-
-#### Mistake
-
-#### PathOverride
-
-#### Repair
-
-#### Repairs
-
-#### SessionLog
-
-#### SessionModel
-
-#### SessionPaths
-
-#### ToolCall
-
-#### Turn
-
-#### TurnCommit
-
-#### WorkSession
-
-#### WorkSessionGuidance
-
-#### WorkSessionRule
-
-#### WorkSessionRulesCollection
-
-#### Workspace
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.record_decisions` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
 ---
 
-## practices.clean_engineering.model
-### Public Seam
-#### CFamilyParse
+## actions/sketch_render
+*SketchRender* takes an approved sketch and renders it with the calls *build_render_calls* already named.
 
-#### Change
+- **Purpose:** On approval, render the sketch with explicit render calls.
+- **Seam (terms):** SketchRender, build_render_calls
+- **Dependencies (one-way):** `actions/sketch`, `actions/render`, `actions/grill_context`
 
-#### ChangeKind
-
-#### ChildCollectionPair
-
-#### CleanEngineeringModel
-
-#### ContainmentForest
-
-#### DiagramClass
-
-#### DiagramModule
-
-#### DiagramNode
-
-#### File
-
-#### Geometry
-
-#### GraphMemberRows
-
-#### ImportedClass
-
-#### JavaCleanEngineeringModel
-
-#### JavaOoadClass
-
-#### JavaScriptCleanEngineeringModel
-
-#### JavaScriptModule
-
-#### JavaScriptOoadClass
-
-#### JavaScriptOperation
-
-#### JavaScriptProperty
-
-#### JsonCleanEngineeringModel
-
-#### JsonModule
-
-#### JsonOoadClass
-
-#### JsonOperation
-
-#### JsonParseError
-
-#### JsonProperty
-
-#### JsonRelationship
-
-#### MarkdownCleanEngineeringModel
-
-#### MarkdownModule
-
-#### MarkdownOoadClass
-
-#### MiroClass
-
-#### MiroCleanEngineeringModel
-
-#### MiroImportedClass
-
-#### MiroModule
-
-#### Module
-
-#### ModuleContext
-
-#### ModuleContextFiles
-
-#### OoadClass
-
-#### OoadNode
-
-#### Operation
-
-#### OperationField
-
-#### Page
-
-#### Parameter
-
-#### ParsedPython
-
-#### Property
-
-#### PropertyField
-
-#### PythonCleanEngineeringModel
-
-#### PythonModule
-
-#### PythonOoadClass
-
-#### Relationship
-
-#### Responsibilities
-
-#### SourceSpan
-
-#### TranslationError
-
-#### TypeScriptCleanEngineeringModel
-
-#### TypeScriptModule
-
-#### TypeScriptOoadClass
-
-#### TypeScriptOperation
-
-#### TypeScriptProperty
-
-#### UpdateReport
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
 ---
 
-## practices.ux.model
-### Public Seam
-#### Change
+## actions/iterate
+*Iterate* grills, then generates one small validated slice, then stops. The next tick starts from that slice.
 
-#### ChangeKind
+- **Purpose:** Grill, then generate one small validated slice per tick.
+- **Seam (terms):** Iterate
+- **Dependencies (one-way):** `actions/grill_context`, `actions/generate`, `actions/validate`
 
-#### ChildCollectionPair
-
-#### ContentType
-
-#### ContentTypes
-
-#### Control
-
-#### Interaction
-
-#### NavComponent
-
-#### NavComponents
-
-#### ReferencePaths
-
-#### Region
-
-#### Screen
-
-#### StoryDemoControl
-
-#### Transition
-
-#### Transitions
-
-#### TranslationError
-
-#### UpdateReport
-
-#### UxComponent
-
-#### UxComponentCollection
-
-#### UxContext
-
-#### UxMap
-
-#### UxNode
-
-#### Workspace
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
 ---
 
-## practices.ux.scripts
-### Dependencies
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
+## actions/improvement
+*Improvement* opens a repair on a Guidance and checks the same scanner theme again after the fix. `/repair` and `verify_fix` are the two calls.
+
+- **Purpose:** Open a repair on a Guidance and re-check the same scanner theme after the fix.
+- **Seam (terms):** Improvement, repair, verify_fix
+- **Dependencies (one-way):** `harness/guidance_actions`, `actions/scan`
+
 ---
 
-## practices.ux.story-demo
+# builders
+*Builders* scaffold a new `@agent_toolset` or *PracticeGuidance* package from templates and a worked example, so you do not copy a peer folder by hand.
+
+- **Purpose:** Generate a new `@agent_toolset` or *PracticeGuidance* package from templates and a worked example.
+- **Seam (terms):** CreateAgentToolset, CreateContextTool
+- **Dependencies (one-way):** `harness/guidance`
+
+## Constraint
+
+Scaffolding stays in this tree. Do not invent new practices inside `harness/`.
+
 ---
 
-## practices.clean_engineering.model.drawio
-### Public Seam
-#### BaseAboveDerivedScanner
+## builders/create_agent_toolset
+*CreateAgentToolset* scaffolds a decorated *AgentToolSet* — `@agent_tool` operations and `@agent_instructions` recipes — matching `harness/agent_tools`.
 
-#### ClassTitleNoMarkdownBoldScanner
+- **Purpose:** Scaffold a decorated *AgentToolSet* — `@agent_tool` operations and `@agent_instructions` recipes — matching `harness/agent_tools`.
+- **Seam (terms):** CreateAgentToolset
+- **Dependencies (one-way):** `harness/agent_tools`
 
-#### DistinctAnchorPointsScanner
-
-#### DrawIOClass
-
-#### DrawIOCleanEngineeringModel
-
-#### DrawIOModule
-
-#### Drawio
-
-#### DrawioScanner
-
-#### DrawioViolation
-
-#### EdgesApproachPerpendicularScanner
-
-#### EdgesDoNotCrossClassesScanner
-
-#### EdgesDoNotCrossOtherEdgesScanner
-
-#### EdgesDoNotOverlapEdgesScanner
-
-#### ImportedClass
-
-#### LeafNodesNotInHorizontalRowScanner
-
-#### Page
-
-#### PreferShortRoutesScanner
-
-#### StereotypeAboveClassNameScanner
-
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `actions.sketch` — moduleDependsOn
- - `builders.create_agent_toolset` — moduleDependsOn
- - `builders.create_context_tool` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.agent_tools` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.markdown` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.ddd` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.context_setup` — moduleDependsOn
- - `tools.git` — moduleDependsOn
- - `tools.handoff` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
 ---
 
-## practices.ux.model.drawio
-### Public Seam
-#### DrawioUxMap
+## builders/create_context_tool
+*CreateContextTool* scaffolds a new practice package under `practices/` from templates.
 
-### Dependencies
- - `harness` — moduleDependsOn
- - `harness.hooks` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `harness.mcp` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.prompt_echo` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
+- **Purpose:** Scaffold a new practice package under `practices/` from templates.
+- **Seam (terms):** CreateContextTool
+- **Dependencies (one-way):** `harness/guidance`
+
 ---
 
-## practices.ux.model.html
-### Public Seam
-#### HtmlUxMap
+# harness
+*Harness* is the in-process home for agent-callable classes, co-located markdown, guidance, and the explorer *Graph*. Callers import a child package; this folder does not add a second seam. *Session* holds that graph for one process.
 
-### Dependencies
- - `actions` — moduleDependsOn
- - `actions.partition` — moduleDependsOn
- - `harness` — moduleDependsOn
- - `harness.knowledge_graph` — moduleDependsOn
- - `installation` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
+- **Purpose:** Give practices and kits one in-process home for agent-callable classes, co-located markdown, guidance, and the explorer graph.
+- **Seam (terms):** AgentToolSet, Markdown, Guidance, GuidanceAction, Graph, Session
+- **Dependencies (one-way):** *(children declare their own)*
+
+## Constraint
+
+Callers import child packages (`harness.markdown`, `harness.agent_tools`, `harness.graph`, …). This folder does not add a second seam.
+
 ---
 
-## practices.ux.model.json
-### Public Seam
-#### JsonUxMap
+## harness/markdown
+*Markdown* keeps a practice’s words next to its class. `@markdown` loads one match and `@markdownCollection` loads several, as a file named after the property or a section titled after the property.
 
-### Dependencies
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.markdown` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
+- **Purpose:** Keep a practice’s words next to its class and read them as HTML or a collection.
+- **Seam (terms):** Markdown, MarkdownCollection, HTML, `@markdown`, `@markdownCollection`
+- **Dependencies (one-way):** *(none)*
+
+## Constraint
+
+Property name is the match. **File:** `{name}.md` beside the class. **Section:** `## Name` in `{slug}.md`.
+
 ---
 
-## practices.ux.model.markdown
-### Public Seam
-#### MarkdownUxMap
+## harness/agent_tools
+*AgentToolSet* publishes an ordinary class so an agent can list its operations, run some as Python, and follow others as instructions. Stamp `@agent_toolset` on the class, `@agent_tool` or `@agent_instructions` on each member, and name deferred work with `tools(...)` and nested recipes with `instructions(...)`.
 
-### Dependencies
- - `harness.knowledge_graph` — moduleDependsOn
- - `practices.agent_bdd` — moduleDependsOn
- - `practices.clean_engineering.model` — moduleDependsOn
- - `practices.clean_engineering.model.drawio` — moduleDependsOn
- - `practices.stories` — moduleDependsOn
- - `practices.ux.model` — moduleDependsOn
- - `practices.ux.model.drawio` — moduleDependsOn
- - `practices.ux.model.html` — moduleDependsOn
- - `practices.ux.model.json` — moduleDependsOn
- - `tools.catalog_generator` — moduleDependsOn
- - `tools.plan` — moduleDependsOn
- - `tools.workflow` — moduleDependsOn
- - `tools.workspace` — moduleDependsOn
+- **Purpose:** Publish an ordinary class as operations an agent can list, run as Python, or follow as instructions.
+- **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, `@agent_toolset`, `@agent_tool`, `@agent_instructions`, `tools(...)`, `instructions(...)`
+- **Dependencies (one-way):** `harness/markdown`
+
 ---
 
-## practices.ux.story-demo.play-dual-runner
+## harness/guidance
+*Guidance* is one class plus the co-located markdown the agent follows. *PracticeGuidance* adds fidelities and format render. *FidelityGuidance* is one named stage of that practice.
+
+- **Purpose:** Let a practice be one class plus co-located markdown, including fidelities and format render.
+- **Seam (terms):** Guidance, GuidanceCollection, PracticeGuidance, FidelityGuidance
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/markdown`
+
 ---
+
+## harness/guidance_actions
+*GuidanceAction* is the shared prelude: bind a *GuidanceArg* — a list, one Guidance, or a string — and run the operation.
+
+- **Purpose:** Share one prelude across generate, document, scan, and the other kits: bind the guidance list and run the operation.
+- **Seam (terms):** GuidanceAction, GuidanceArg
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/hooks`, `harness/mcp`
+
+---
+
+## harness/graph
+*Graph* holds the practice graphs — nodes, edges, and rules — and serves the explorer.
+
+- **Purpose:** Hold practice graphs — nodes, edges, and rules — and serve the explorer.
+- **Seam (terms):** Graph
+- **Dependencies (one-way):** `harness/agent_tools`, `practices/clean_engineering`, `practices/stories`, `practices/ddd`, `practices/bdd`, `practices/ux`
+
+---
+
+## harness/session
+*Session* holds the in-memory *Graph* and each *PracticeGuidance* for one process.
+
+- **Purpose:** Hold the in-memory *Graph* and each *PracticeGuidance* for one process.
+- **Seam (terms):** Session
+- **Dependencies (one-way):** `harness/graph`, `harness/guidance`
+
+---
+
+## harness/sketch
+*SketchOutline* reads one practice’s section of a sketch and hands back its tree as indented lines. *SketchLens* names which practice section you asked for.
+
+- **Purpose:** Read one practice’s section of a sketch and hand back its tree as indented lines.
+- **Seam (terms):** SketchOutline, SketchLens
+- **Dependencies (one-way):** *(none)*
+
+---
+
+## harness/transformers
+*Transformers* loads each practice *Transformer* a sketch names and renders that practice’s logical templates.
+
+- **Purpose:** Load each practice transformer named by a sketch and render that practice’s logical templates.
+- **Seam (terms):** Transformers, Transformer
+- **Dependencies (one-way):** `harness/sketch`, `harness/agent_tools`, `practices/bdd`, `practices/clean_engineering`, `practices/ddd`, `practices/stories`
+
+---
+
+## harness/mcp
+*Mcp* marks a member `@mcp` and runs a stdio host so Cursor can call it. *McpInstallation* writes the config; *McpServer* and *McpHost* run the process.
+
+- **Purpose:** Mark a member `@mcp` and run a stdio host so Cursor can call it.
+- **Seam (terms):** Mcp, McpInstallation, McpServer, McpHost
+- **Dependencies (one-way):** `installation`, `harness/agent_tools`
+
+## Constraint
+
+Cursor starts `python -m harness.mcp`. `cdd.ping` is always listed. Only members marked `@mcp` enroll.
+
+---
+
+## harness/hooks
+*Hook* marks a member `@Hook("event")` so a Cursor stdin event runs that Python. *Hooks* can disable every hook on a toolset. *HookInstallation* and *HookServer* publish and serve them.
+
+- **Purpose:** Mark a member `@Hook("event")` so Cursor stdin events run that Python and return one merged result.
+- **Seam (terms):** Hook, Hooks, HookInstallation, HookServer
+- **Dependencies (one-way):** `installation`, `harness/agent_tools`
+
+## Constraint
+
+The event name is the Cursor event (`sessionStart`, `preToolUse`, …). `@Hooks(disabled=True)` on a toolset skips every hook on it.
+
+---
+
+# installation
+*Installation* publishes a toolset’s marked members into Cursor, VS Code, or Kilo. *Installer* walks the marks. *Destination* is the channel — `@skill`, `@command`, `@rules`, `@mcp`, `@Hook`. *FileInstallation* writes the skill, command, and rules files.
+
+- **Purpose:** Publish a toolset’s marked members into Cursor (or VS Code / Kilo) as skills, MCP, hooks, commands, or rules.
+- **Seam (terms):** Installer, Destination, Installation, FileInstallation, Skill, Command, Rules
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/mcp`, `harness/hooks`
+
+## Constraint
+
+Marks live on members; *Installer* walks them, including `harness/`. If `.install-state.json` points at a missing directory, install to `{repo}/.cursor`. Leave `installation/` and `harness/` off `PYTHONPATH` so `import mcp` stays the MCP SDK.
+
+---
+
+# practices
+*Practices* are fields of expertise — Clean Engineering, BDD, Stories, UX, DDD, agent BDD, CDD, Kanban — each a *PracticeGuidance* plus co-located markdown. *Stage* names the deepen step: discovery, specification, or implementation. Generate and validate stay on *Actions*.
+
+- **Purpose:** Hold one *PracticeGuidance* per field so the same kits generate and check work against that field’s words.
+- **Seam (terms):** PracticeGuidance, Stage
+- **Dependencies (one-way):** `harness/guidance`, `tools/workspace`
+
+## Constraint
+
+Do not put `/generate` on the practice. Pass the practice into the kit.
+
+---
+
+## practices/cdd
+*Cdd* is the stage menu across Stories, DDD, UX, Clean Engineering, and BDD.
+
+- **Purpose:** Offer the stage menu across Stories, DDD, UX, Clean Engineering, and BDD.
+- **Seam (terms):** Cdd
+- **Dependencies (one-way):** `harness/guidance`, `practices/stories`, `practices/ddd`, `practices/ux`, `practices/clean_engineering`, `practices/bdd`
+
+---
+
+## practices/clean_engineering
+*CleanEngineering* partitions, types, and implements objects — modules, then model, then code — in the caller’s language.
+
+- **Purpose:** Partition, type, and implement objects — modules, then model, then code — in the caller’s language.
+- **Seam (terms):** CleanEngineering
+- **Dependencies (one-way):** `harness/guidance`
+
+---
+
+### practices/clean_engineering/model
+*CleanEngineeringModel* is the one OOAD model. *Module* and *OoadClass* are what the channels parse and render across markdown, JSON, languages, and draw.io.
+
+- **Purpose:** Keep one OOAD model and parse or render it across markdown, JSON, languages, and draw.io.
+- **Seam (terms):** CleanEngineeringModel, Module, OoadClass
+- **Dependencies (one-way):** `practices/clean_engineering`
+- **Packages:** `diagram`, `java`, `javascript`, `json`, `markdown`, `miro`, `python`, `sketch`, `transformation`, `typescript`
+
+---
+
+#### practices/clean_engineering/model/drawio
+*Drawio* creates, scans, and repairs Clean Engineering draw.io diagrams. *DrawIOCleanEngineeringModel* is the draw.io channel for that same model.
+
+- **Purpose:** Create, scan, and repair Clean Engineering draw.io diagrams, and host the draw.io channel.
+- **Seam (terms):** Drawio, DrawIOCleanEngineeringModel
+- **Dependencies (one-way):** `practices/clean_engineering/model`, `harness/agent_tools`
+
+---
+
+## practices/bdd
+*Bdd* locks describe/it observations first, fills the tests red then green, and hands class code to Clean Engineering.
+
+- **Purpose:** Lock describe/it observations first, then fill tests red-green, then hand class code to Clean Engineering.
+- **Seam (terms):** Bdd
+- **Dependencies (one-way):** `harness/guidance`, `practices/clean_engineering`
+- **Packages:** `practices/bdd/model`, `practices/bdd/model/sketch`, `practices/bdd/model/transformation`
+
+---
+
+## practices/stories
+*Stories* maps stakeholder behaviour as Epic then Story, so later fidelities share one hierarchy.
+
+- **Purpose:** Map stakeholder behaviour as Epic → Story so later fidelities share one hierarchy.
+- **Seam (terms):** Stories
+- **Dependencies (one-way):** `harness/guidance`, `practices/clean_engineering`
+- **Packages:** `practices/stories/model` (`drawio`, `java`, `javascript`, `json`, `markdown`, `miro`, `python`, `sketch`, `typescript`)
+
+---
+
+## practices/ux
+*Ux* decides the screens, then the greybox, then the production UI, in the domain’s own words.
+
+- **Purpose:** Decide screens, then greybox, then production UI, in domain words.
+- **Seam (terms):** Ux
+- **Dependencies (one-way):** `harness/guidance`, `practices/stories`, `practices/clean_engineering`
+
+---
+
+### practices/ux/model
+*UxMap* is the one information architecture — *Screen*, *Region*, and *Control* — so a diagram, JSON, and HTML stay the same hierarchy.
+
+- **Purpose:** Keep information architecture as one UX map so diagram, JSON, and HTML stay the same hierarchy.
+- **Seam (terms):** UxMap, Screen, Region, Control
+- **Dependencies (one-way):** *(none)*
+
+---
+
+#### practices/ux/model/drawio
+*DrawioUxMap* reads and writes the default IA diagram as a *UxMap*.
+
+- **Purpose:** Read and write the default IA diagram as a *UxMap*.
+- **Seam (terms):** DrawioUxMap
+- **Dependencies (one-way):** `practices/ux/model`
+
+---
+
+#### practices/ux/model/html
+*HtmlUxMap* renders the mockup review shell and round-trips the *UxMap* embedded in it.
+
+- **Purpose:** Render the mockup review shell and round-trip the embedded *UxMap*.
+- **Seam (terms):** HtmlUxMap
+- **Dependencies (one-way):** `practices/ux/model`, `practices/ux/model/json`
+
+---
+
+#### practices/ux/model/json
+*JsonUxMap* round-trips *UxMap* fields as JSON for transform and scanners.
+
+- **Purpose:** Round-trip *UxMap* fields as JSON for transform and scanners.
+- **Seam (terms):** JsonUxMap
+- **Dependencies (one-way):** `practices/ux/model`
+
+---
+
+#### practices/ux/model/markdown
+*MarkdownUxMap* keeps optional UX notes and invariants beside the map.
+
+- **Purpose:** Keep optional UX notes and invariants beside the map.
+- **Seam (terms):** MarkdownUxMap
+- **Dependencies (one-way):** `practices/ux/model`
+
+---
+
+### practices/ux/scripts
+The UX scripts emit the story JavaScript the UX examples play.
+
+- **Purpose:** Emit story JavaScript for UX examples.
+- **Seam (terms):** emit_story_javascript
+- **Dependencies (one-way):** `practices/stories`
+
+---
+
+### practices/ux/story-demo
+*StoryDemoPage* plays a story in the UX shell — frames and controls. *StoryDemoControl* is the control that carries the story steps.
+
+- **Purpose:** Play a story in the UX shell — frames, controls, and the dual runner.
+- **Seam (terms):** StoryDemoPage, StoryDemoControl
+- **Dependencies (one-way):** `practices/ux/model`
+
+---
+
+#### practices/ux/story-demo/play-dual-runner
+*PlayDualRunner* collects and plays those story steps in the browser and under node.
+
+- **Purpose:** Collect and play story steps in the browser and under node.
+- **Seam (terms):** PlayDualRunner
+- **Dependencies (one-way):** `practices/ux/story-demo`
+
+---
+
+## practices/ddd
+*Ddd* draws where the language changes — bounded context, then building blocks, then tactics — and reuses Clean Engineering for the object ladder.
+
+- **Purpose:** Draw where language changes — bounded context, then building blocks, then tactics — and reuse Clean Engineering for the OO ladder.
+- **Seam (terms):** Ddd
+- **Dependencies (one-way):** `harness/guidance`, `practices/clean_engineering`
+- **Packages:** `practices/ddd/model` (`drawio`, `markdown`, `sketch`, `transformation`)
+
+## Constraint
+
+Do not restate Clean Engineering class analysis in DDD artifacts. Use the fidelity’s Clean Engineering companion.
+
+---
+
+## practices/agent_bdd
+*AgentBdd* drives a real agent through `agent(...)` and asserts on the parsed run. `instruct`, `instruct_use_tool`, and `ai_judge` are the calls inside that block.
+
+- **Purpose:** Drive a real agent through `agent(...)` and assert on the parsed run.
+- **Seam (terms):** AgentBdd, agent, instruct, instruct_use_tool, ai_judge
+- **Dependencies (one-way):** `practices/bdd`
+
+## Constraint
+
+Specs call the harness only inside `with agent(...)`.
+
+---
+
+## practices/kanban
+*Kanban Lead* carves an ask into backlog items and passes each item to the practice agent that owns it.
+
+- **Purpose:** Carve an ask into backlog items and pass each item to the practice agent that owns it.
+- **Seam (terms):** Kanban Lead
+- **Dependencies (one-way):** `practices/stories`, `practices/ux`, `practices/ddd`, `practices/clean_engineering`, `practices/bdd`
+
+## Constraint
+
+One agent role per session. Follow the prompt for how to carve the backlog.
+
+---
+
+# tools
+*Tools* are the session, git, and workflow utilities the kits call.
+
+## tools/workspace
+*WorkSession* opens a named work session so turns, branches, and decision records hang off one folder. *Workspace* is that folder. *Turn* is one slice of work on the session.
+
+- **Purpose:** Open a named work session so turns, branches, and decision records hang off one folder.
+- **Seam (terms):** WorkSession, Workspace, Turn
+- **Dependencies (one-way):** `tools/git`
+
+---
+
+## tools/git
+*Git* models a local clone and the GitHub board as domain objects: *Repo*, *Branch*, *Commit*, *Project*, *Ticket*, and *TicketState*.
+
+- **Purpose:** Model a local clone and GitHub workflow — repo, branch, commit, project, ticket — so callers use domain objects.
+- **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, Git
+- **Dependencies (one-way):** *(none)*
+
+## Constraint
+
+Slash commands for the board live on `tools/workflow`. Do not deploy `/git`.
+
+---
+
+## tools/workflow
+*Workflow* moves GitHub issues on Project columns and names the reusable workflows a plan is based on.
+
+- **Purpose:** Move GitHub issues on Project columns and name the reusable workflows a plan is based on.
+- **Seam (terms):** Workflow
+- **Dependencies (one-way):** `tools/git`, `tools/workspace`, `tools/handoff`
+
+---
+
+## tools/plan
+*Plan* runs a reusable or named workflow, including themed small-work issues, one ticket at a time. *PlanCommands*, *PlanExecution*, and *SmallWorkRunner* are how a caller starts and advances that run.
+
+- **Purpose:** Run a reusable or named workflow, including themed small-work issues, one ticket at a time.
+- **Seam (terms):** Plan, PlanCommands, PlanExecution, SmallWorkRunner
+- **Dependencies (one-way):** `tools/workspace`, `tools/git`, `tools/workflow`
+
+---
+
+## tools/handoff
+*Handoff* compacts the current agent session into a document a fresh agent can resume from.
+
+- **Purpose:** Compact the current agent session into a handoff document a fresh agent can resume from.
+- **Seam (terms):** Handoff
+- **Dependencies (one-way):** `tools/workspace`, `harness/agent_tools`
+
+---
+
+## tools/echo
+*Echo* shows action instructions inside a labelled fence so you can read them and the agent does not follow them.
+
+- **Purpose:** Show action instructions inside a labelled fence so the user can read them without the agent following them.
+- **Seam (terms):** Echo
+- **Dependencies (one-way):** `harness/agent_tools`
+
+---
+
+## tools/prompt_echo
+*PromptEcho* toasts the invoked action, practice, fidelity, or guideline on `preToolUse`. Callers mark the member with `@echo`.
+
+- **Purpose:** Toast the invoked action, practice, fidelity, or guideline on `preToolUse`.
+- **Seam (terms):** Echo, PromptEcho
+- **Dependencies (one-way):** `installation`, `harness/hooks`, `harness/agent_tools`
+
+## Constraint
+
+Callers mark members with `@echo`.
+
+---
+
+## tools/prompt_log
+*PromptLog* appends a read-only audit of what Cursor sent the model on hook events.
+
+- **Purpose:** Append a read-only audit of what Cursor sent the model on hook events.
+- **Seam (terms):** PromptLog
+- **Dependencies (one-way):** `harness/hooks`, `harness/agent_tools`
+
+## Constraint
+
+`@Hooks(disabled=True)` on *PromptLog* skips every audit handler.
+
+---
+
+## tools/diagnose
+*Diagnose* runs a phase-sequenced bug hunt as a sub-agent when a host stays red.
+
+- **Purpose:** Run a phase-sequenced bug-hunting loop as a sub-agent when a host stays red.
+- **Seam (terms):** Diagnose
+- **Dependencies (one-way):** `harness/agent_tools`
+
+---
+
+## tools/record_decisions
+*RecordDecisions* writes a Context Decision Record when a choice is hard to reverse, surprising without context, and a real trade-off.
+
+- **Purpose:** Write a Context Decision Record when a choice is hard to reverse, surprising without context, and a real trade-off.
+- **Seam (terms):** RecordDecisions
+- **Dependencies (one-way):** `harness/agent_tools`
+
+## Constraint
+
+`/record-decisions-session` is the slash command. Do not deploy a `record_decisions` skill.
+
+---
+
+## tools/context_setup
+*ContextSetup* converts a folder of documents to markdown, partitions it through the practices you select, and embeds a *ContextIndex* you can ask.
+
+- **Purpose:** Convert a folder of documents to markdown, partition through selected practices, and embed an index you can ask.
+- **Seam (terms):** ContextSetup, ContextIndex
+- **Dependencies (one-way):** `actions/partition`, `practices/clean_engineering`, `practices/ddd`, `practices/stories`, `practices/ux`
+
+---
+
+## tools/catalog_generator
+*Catalog* discovers the registered toolsets and renders the self-contained CDD catalog pages. `@noCatalog` leaves a class, fidelity, or operation out of those pages.
+
+- **Purpose:** Discover registered toolsets and render the self-contained CDD catalog pages.
+- **Seam (terms):** Catalog, noCatalog
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/guidance`

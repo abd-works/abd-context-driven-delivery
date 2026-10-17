@@ -36,20 +36,26 @@ def attach_rules(practice) -> None:
         node._rules.record_violation(slug, message)
         rows_by_slug.setdefault(slug, []).append([slug, node_id, message])
 
-    for check in registry.values():
+    checks = list(registry.values())
+    for index, check in enumerate(checks, start=1):
+        practice.graph.report_progress(f"{practice.name} · rule {check.slug} · {index}/{len(checks)}")
         for node_id, message in check.check_practice(context):
             record(check.slug, node_id, message)
 
-    for nodes in practice.nodes.values():
-        for node in nodes:
-            if not hasattr(node, "_rules") or node._rules is None:
-                attach_node_rules(node)
-            allowed = schema_slugs_for(node)
-            for check in checks_for_node(node).values():
-                if check.slug not in allowed:
-                    continue
-                for message in check.check(node, context):
-                    record(check.slug, node.node_id, message)
+    nodes = [node for group in practice.nodes.values() for node in group]
+    for index, node in enumerate(nodes, start=1):
+        practice.graph.report_progress(f"{practice.name} · rules · {index}/{len(nodes)} · {node.type} {node.name}")
+        if not hasattr(node, "_rules") or node._rules is None:
+            attach_node_rules(node)
+        allowed = schema_slugs_for(node)
+        for check in checks_for_node(node).values():
+            if check.slug not in allowed:
+                continue
+            practice.graph.report_progress(
+                f"{practice.name} · rule {check.slug} · {index}/{len(nodes)} · {node.name}"
+            )
+            for message in check.check(node, context):
+                record(check.slug, node.node_id, message)
 
     for slug, rows in rows_by_slug.items():
         practice.apply_rules(slug, rows)

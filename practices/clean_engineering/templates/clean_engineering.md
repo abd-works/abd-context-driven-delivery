@@ -55,9 +55,8 @@ fidelity: all
   Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
   same module H1 — interface first, then implementation. No fidelity section
   headers (## Model fidelity / ## Code fidelity) in the output.
-  Language and modules are one section: concept prose, build order, and
-  `# {path}` cards. Do not emit `## Language` then `## Modules`.
-  That one section goes BEFORE the first H1 module card (or the H1s sit in it).
+  At modules, language is the first lines under each `# {path}` card.
+  Do not emit `## Language` or `## Modules` above those cards.
   At modules fidelity, stop after Purpose / Seam / Dependencies / Constraint.
   Do not emit ## {ClassName} typed compact blocks, *is a type of*,
   Child : Parent, Sources/context of this folder's own files, scan dumps,
@@ -66,8 +65,8 @@ fidelity: all
 
   Write human-readable markdown only. Strip template markup (`<!-- Mu -->`,
   `<!-- Mv -->`, `<!-- L -->`, `<!-- Md -->`, `<!-- C -->`, and similar)
-  before writing. Sit a module heading immediately above its
-  `- **Purpose:**` block — no blank line between them.
+  before writing. At modules, sit the language immediately under `# {path}`,
+  then the `- **Purpose:**` block.
 
   Subtypes use ## {ChildClass} : {ClassName} notation; deltas only.
   Substitute {ClassName} / {owned_property} / {param} / {Type} / ... when generating.
