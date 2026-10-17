@@ -34,14 +34,10 @@ SKETCH_RENDER_FORMATS: dict[str, dict[str, list[str]]] = {
 class SketchRender(GuidanceAction):
     """Sketch interactively; render the approved sketch in a background sub-agent."""
 
-    def __init__(self, path: str = ".", session: str = "") -> None:
-        super().__init__(path=path, session=session)
-        self.path = path
-
     def _sketch(self):
         from sketch.sketch import Sketch
 
-        return Sketch(path=self.path, session=self._session_name)
+        return Sketch()
 
     def _grill_context(self) -> GrillContext:
         return GrillContext()
@@ -172,5 +168,4 @@ class SketchRender(GuidanceAction):
         self.confirm_render_formats()
         self.build_render_calls()
         self.render_approved_sketch()
-        self.end()
         return "Sketch complete; render launched in background."

@@ -113,7 +113,8 @@ class FileInstallation(Installation):
         if destination == "rules":
             kebab = self._kebab_folder(folder)
             if getattr(toolset, "practice_guidance", None) is not None:
-                stem = self._command_stem(toolset, kebab.name)
+                slug = getattr(toolset, "slug", None)
+                stem = self._op_slug(str(slug)) if slug else self._command_stem(toolset, kebab.name)
                 parent = kebab.parent if kebab.name else kebab
                 return Path("rules") / parent / f"{stem}.mdc"
             return Path("rules") / kebab.with_suffix(".mdc")

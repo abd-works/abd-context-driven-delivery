@@ -20,8 +20,8 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
-    def __init__(self, agent_dir: str = "", path: str = ".", session: str = "") -> None:
-        super().__init__(path=path, session=session)
+    def __init__(self, agent_dir: str = "") -> None:
+        super().__init__()
         self._agent_dir = agent_dir
 
     def _sketch_path(self, destination: str, slug: str) -> Path:
@@ -123,5 +123,4 @@ class Sketch(GuidanceAction):
         self.save_sketch()
         self.review_sketch()
         self.each(lambda item: self._generate().generate(item if isinstance(item, str) else [item]))
-        self.end()
         return "Sketch complete; generate instructions applied."

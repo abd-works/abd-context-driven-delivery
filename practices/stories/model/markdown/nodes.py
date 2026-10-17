@@ -24,8 +24,8 @@ from practices.stories.model.story_model import Increment
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
 _BULLET_PATTERN = re.compile(r"^(\s*)-\s+(.+)$")
 _NUMBERED_PATTERN = re.compile(r"^(\s*)\d+\.\s+(.+)$")
-_OUTLINE_EPIC_PATTERN = re.compile(r"^(\s*)\(E\)\s+(.+)$")
-_OUTLINE_STORY_PATTERN = re.compile(r"^(\s*)\(S\)\s+(.+)$")
+_OUTLINE_EPIC_PATTERN = re.compile(r"^(\s*)(?:#{1,6}\s+)?\(E\)\s+(.+)$")
+_OUTLINE_STORY_PATTERN = re.compile(r"^(\s*)(?:#{1,6}\s+)?\(S\)\s+(.+)$")
 _OUTLINE_ESTIMATE_PATTERN = re.compile(r"^(\s*)\*\s+(\S.+)$")
 
 
@@ -612,8 +612,8 @@ class MarkdownEpic(Epic):
 # -- Root node + I/O -----------------------------------------------------------
 
 _DOC_TITLE_PREFIXES = ("story map", "thin slic", "acceptance criteria", "specification by example")
-_OUTLINE_EPIC_RE = re.compile(r"^(\s*)\(E\)\s+(.+)$")
-_OUTLINE_STORY_RE = re.compile(r"^(\s*)\(S\)\s+(.+)$")
+_OUTLINE_EPIC_RE = _OUTLINE_EPIC_PATTERN
+_OUTLINE_STORY_RE = _OUTLINE_STORY_PATTERN
 _OUTLINE_ESTIMATE_RE = re.compile(r"^(\s*)\*\s+(\S.+)$")
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$")
 _BULLET_RE = re.compile(r"^(\s*)-\s+(.+)$")
@@ -792,7 +792,7 @@ class MarkdownStoryModel(StoryModel):
         self._outline_lines: List[str] = []
         self._outline_indent = 4
         for epic in story_map.epics:
-            self._outline_lines.append(f"(E) {self.strip_backticks(epic.name)}")
+            self._outline_lines.append(f"# (E) {self.strip_backticks(epic.name)}")
             if getattr(epic, "estimate", ""):
                 self._outline_lines.append(f"    * {epic.estimate}")
             self._render_outline_stories(epic, "    ")
@@ -803,7 +803,8 @@ class MarkdownStoryModel(StoryModel):
         pad = " " * self._outline_indent
         story_pad = " " * (self._outline_indent + 4)
         for sub in subs:
-            self._outline_lines.append(f"{pad}(E) {self.strip_backticks(sub.name)}")
+            marks = "#" * (self._outline_indent // 4 + 1)
+            self._outline_lines.append(f"{pad}{marks} (E) {self.strip_backticks(sub.name)}")
             self._render_outline_stories(sub, story_pad)
             if getattr(sub, "estimate", ""):
                 self._outline_lines.append(f"{story_pad}* {sub.estimate}")
@@ -815,11 +816,12 @@ class MarkdownStoryModel(StoryModel):
         for story in sub.stories:
             actor = story.actors[0] if story.actors else ""
             name = self.strip_backticks(story.name)
+            marks = "#" * (len(story_pad) // 4 + 1)
             if actor:
                 actor_name = self.strip_backticks(actor)
-                self._outline_lines.append(f"{story_pad}(S) {actor_name} --> {name}")
+                self._outline_lines.append(f"{story_pad}{marks} (S) {actor_name} --> {name}")
                 continue
-            self._outline_lines.append(f"{story_pad}(S) --> {name}")
+            self._outline_lines.append(f"{story_pad}{marks} (S) --> {name}")
 
     def parse(self, text: str) -> "MarkdownStoryModel":
         if not isinstance(text, str) or text.strip() == "":

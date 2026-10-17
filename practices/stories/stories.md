@@ -187,3 +187,11 @@ If this change will not stay here, follow `practices/stories/scenarios.mdc`.
 - **`extract-assertion-helper`** - Extract the same assertion shape after it appears more than twice and pass its concrete values as data, because copied assertions become inconsistent when behaviour changes.
 
 ---
+
+## Common mistakes still being made
+
+Scratch pad — mistakes people still make against this practice. Each entry: the mistake, an example, what should have happened instead. (Disposition TBD.)
+
+_No entries yet._
+
+---

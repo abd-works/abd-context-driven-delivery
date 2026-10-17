@@ -308,4 +308,13 @@ If this change will not stay here, follow `practices/clean_engineering/model.mdc
 - `never-swallow-exceptions` — Do not catch and ignore. Log and re-raise, or convert to a domain exception that still names the failure. A `pass` in `except` hides a broken invariant.
 - `limit-comments` — write comment in operations and properties only when the signature cannot say a constraint or explain why the code behaves the way it does. Do not narrate a line that already names what it does.
 
+---
+
+## Common mistakes still being made
+
+Scratch pad — mistakes people still make against this practice. Each entry: the mistake, an example, what should have happened instead. (Disposition TBD.)
+
+_No entries yet._
+
+---
 

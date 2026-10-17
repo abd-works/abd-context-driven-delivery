@@ -36,3 +36,13 @@ stage: implementation
 #### Overview
 
 Deliver that slice as working code.
+
+---
+
+## Common mistakes still being made
+
+Scratch pad — mistakes people still make against this practice. Each entry: the mistake, an example, what should have happened instead. (Disposition TBD.)
+
+_No entries yet._
+
+---

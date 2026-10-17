@@ -276,3 +276,13 @@ If this change will not stay here, follow `practices/ddd/building_blocks.mdc`.
 - **`preserve-upstream-names`** — Public API names match the building_blocks model. Renaming here breaks traceability back to the map and the stories.
 - **`load-with-identity-in-hand`** — A live `load` takes the identity already in hand. Do not assume ambient session state. Reach owned aggregates through their owner.
 - **`ports-behind-adapters`** — Persistence, messaging, and external systems integrate through ports — not direct imports from the domain core.
+
+---
+
+## Common mistakes still being made
+
+Scratch pad — mistakes people still make against this practice. Each entry: the mistake, an example, what should have happened instead. (Disposition TBD.)
+
+_No entries yet._
+
+---

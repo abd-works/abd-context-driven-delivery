@@ -1,4 +1,4 @@
-"""First-order guidance-action prelude — workspace, then the session's hanging turn and decisions."""
+"""First-order guidance-action prelude — bind guidance, then run the operation."""
 
 from __future__ import annotations
 
@@ -6,10 +6,9 @@ import json
 import re
 from typing import Any, NotRequired, TypedDict
 
-from harness.agent_tools import AgentToolSet, agent_instructions, agent_tool, agent_toolset, instructions, tools
+from harness.agent_tools import AgentToolSet, agent_instructions, agent_toolset
 from prompt_echo.prompt_echo import PromptEcho, echo
 from harness.hooks.hooks import Hook
-from harness.mcp.mcp_server import mcp
 
 class GuidanceRef(TypedDict):
     """One Guidance: a toolset ref, plus the fidelity or context that ref accepts."""
@@ -35,41 +34,12 @@ def listed(action) -> list:
 
 @agent_toolset
 class GuidanceAction:
-    """Open workspace if needed. Turn and decision records hang off the work session."""
+    """Bind guidance and run an operation on that string or each listed Guidance."""
 
-    def __init__(self, path: str = ".", session: str = "") -> None:
+    def __init__(self) -> None:
         super().__init__()
-        # Session / git load — parked. Bind guidance and run the operation only.
-        # self.workspace = Workspace(str(path))
-        # self.workspace.load()
-        self.workspace = None
-        self._session_name = session
         self._guidance_text: str | None = None
         self._tool_items: list = []
-        # if session:
-        #     self._open_session(session, path=path)
-
-    def _session(self):
-        return self.workspace.current_work_session
-
-    def _decisions(self):
-        session = self._session()
-        if session is not None:
-            return session.decisions
-        from record_decisions.record_decisions import RecordDecisions
-
-        return RecordDecisions()
-
-    def _turn(self):
-        from workspace.workspace import Turn
-
-        session = self._session()
-        if session is not None:
-            return session.turn()
-        return Turn()
-
-    def _open_session(self, name: str = "", *, path: str = "") -> str:
-        return ""
 
     def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
         """Guidance ref or dict: iterate Guidance. Other strings: run once on that text."""
@@ -133,21 +103,7 @@ class GuidanceAction:
         self._bind_guidance(guidance)
         # self.begin(guidance, action=action)
         results = self.each(operation)
-        # self.end()
         return results
-
-    @mcp
-    @agent_tool
-    def open_workspace(self, name: str = "", path: str = "") -> str:
-        """Open a work session on this workspace if one is not already open. Pass a name to open or switch to that session; returns the session name and any branch warning."""
-        return ""
-        # if self.workspace.current_work_session is not None and not name:
-        #     return self.workspace.current_work_session.name
-        # warning = self._open_session(name or self._session_name, path=path)
-        # session_name = self.workspace.current_work_session.name
-        # if warning:
-        #     return f"{warning}\n{session_name}"
-        # return session_name
 
     @echo
     @agent_instructions
@@ -156,15 +112,12 @@ class GuidanceAction:
         self._bind_guidance(guidance)
         return ""
         # warning = ""
-        # if self.workspace.current_work_session is None:
-        #     warning = self._open_session(self._session_name)
-        # session = self._session()
+        # session = self.workspace.current_work_session
         # if session is not None:
         #     try:
         #         session.turn
         #         if action:
         #             session.turn.action = action
-        #         instructions(self._decisions().record_decisions_session())
         #     except (AttributeError, TypeError):
         #         pass
         #     if not warning:
@@ -235,12 +188,6 @@ class GuidanceAction:
             return
         if "guidance" in raw:
             self._bind_guidance(raw.get("guidance"))
-
-    @agent_instructions
-    def end(self) -> str:
-        """Close the guidance action by committing the session turn."""
-        return ""
-        # tools(self._turn().turn(utility="guidance_action"))
 
 
 class GuidanceCatalog:

@@ -87,10 +87,6 @@ class GuidanceAction:
         # run always calls begin; Sketch.sketch and GrillContext.grill call begin directly
         ...
 
-    def open_workspace(self, name: str = "", path: str = "") -> str:
-        # never the action echo
-        ...
-
     def inject_rules(self, hook_payload: HookPayload) -> HookResult:
         # -> PromptEcho.inject_rules_toast
         # -> PromptEcho.show_ide_toast

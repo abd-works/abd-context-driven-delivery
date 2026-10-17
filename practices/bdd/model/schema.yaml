@@ -13,6 +13,7 @@ spec:
     - observable-behavior
     - domain-practice-alignment
     - usage-order-behaviors
+    - shared-describe-subject
     - full-surface-coverage
     - framework-syntax
 

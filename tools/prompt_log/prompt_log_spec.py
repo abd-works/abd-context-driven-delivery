@@ -1,4 +1,6 @@
 """BDD development specs for the prompt_log audit hook."""
+import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -10,8 +12,9 @@ _tools = str(_REPO_ROOT / "tools")
 if _tools not in sys.path:
     sys.path.insert(0, _tools)
 
-from expects import contain, equal, expect
-from mamba import context, description, it
+from expects import contain, equal, expect, have_key
+from mamba import after, before, context, description, it
+from installation.installer import Installer
 
 import prompt_log.prompt_log as pl  # noqa: E402
 
@@ -168,3 +171,20 @@ with description("a prompt log hook"):
                 out = pl.handle(payload, target=log_file)
                 expect(out).to(equal({"continue": True}))
                 expect(log_file.read_text(encoding="utf-8")).to(contain("engineer.md"))
+
+    with context("that has been installed to Cursor") as self:
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            self.tree = Path(self._tmp)
+            Installer(ide="Cursor", path=self.tree).install([pl.PromptLog()])
+
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with it("should write hooks.json dispatch for beforeSubmitPrompt"):
+            data = json.loads((self.tree / "hooks.json").read_text(encoding="utf-8"))
+            expect(data["hooks"]).to(have_key("beforeSubmitPrompt"))
+
+        with it("should not write a skill file for a hook-only operation"):
+            hook_skills = list((self.tree / "skills").glob("hook-*/SKILL.md"))
+            expect(hook_skills).to(equal([]))

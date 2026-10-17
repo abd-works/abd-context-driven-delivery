@@ -14,6 +14,7 @@ from practices.bdd.rules.spec_helpers import (
 )
 from practices.bdd.rules.layer_isolation import LayerIsolation
 from practices.bdd.rules.observable_behavior import ObservableBehavior
+from practices.bdd.rules.shared_describe_subject import SharedDescribeSubject
 from practices.bdd.rules.tree_rules import (
     DescribeSubjectNotInternal,
     NoImplementation,
@@ -71,6 +72,7 @@ SPEC_RULES: tuple[PracticeGraphRule, ...] = (
     PlainEnglishOnly(),
     SignatureMarkers(),
     LayerIsolation(),
+    SharedDescribeSubject(),
     DescribeSubjectNotInternal(),
     StateNotWhen(),
     OneAssertionPerTest(),

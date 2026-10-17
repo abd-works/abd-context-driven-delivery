@@ -34,16 +34,11 @@ class Improvement(GuidanceAction):
         def on(item) -> None:
             if isinstance(item, str):
                 return
-            current = self._session()
-            if current is None:
-                raise ValueError("No current work session — open failed")
-            repair = current.repairs.for_violation(asset, violation)
-            repair.open(asset, violation)
             item.contexts
             item.examples
             item.templates
 
-        self.run(guidance, on, action="repair")
+        self.run(guidance, on)
         return (
             "Diagnose why the toolset's expected behavior failed for {{asset}} "
             "(run diagnose.diagnose:Diagnose). State the proposed kit change "

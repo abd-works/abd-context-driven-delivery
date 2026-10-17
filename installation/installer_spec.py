@@ -23,50 +23,13 @@ from harness.guidance.fixtures.agentic_ops.agentic_ops import (
 from harness.guidance.fixtures.agentic_ops.hook_ops import SampleHookOps
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SampleGuidance,
-    SampleMcpGuidance,
-    SampleMcpPractice,
     SamplePracticeGuidance,
     SamplePracticeWithFidelities,
 )
 from harness.hooks.hooks import Hook
-from prompt_log.prompt_log import PromptLog
 from harness.mcp.mcp_server import McpServer
-from agent_bdd.spec_helpers import repo_root_from
-from harness.agent_tools.agent_tools import AgentToolSet
-
-CAR = "practices.examples.car.car:Car"
-CAR_SKILL = ".cursor/skills/practices/examples/car/SKILL.md"
-CAR_ROAD_STORY = ".cursor/skills/practices/examples/car/car-road-story/SKILL.md"
-TRAVEL_TO = ".cursor/skills/actions/examples/car-story/travel-to/SKILL.md"
-CAR_INSPECT = ".cursor/skills/actions/examples/car-story/inspect-trip/SKILL.md"
 
 
-def stage_invoke_commands(repo_root: Path) -> None:
-    car = AgentToolSet.instantiate(CAR)
-    car_story = AgentToolSet.instantiate("actions.examples.car_story.car_story:CarStory")
-    Installer("Cursor", path=repo_root / ".cursor").install([car, car_story], replace=False)
-
-
-with description("an operation annotated as a Cursor hook"):
-
-    with context("that names a documented Cursor event"):
-        with it("should store that event on the member"):
-            for event in sorted(Hook.EVENTS):
-
-                @Hook(event)
-                def handler(self, payload: dict) -> dict:
-                    return {}
-
-                expect(handler._hook).to(equal(True))
-                expect(handler._hook_name).to(equal(event))
-
-    with context("that names an unknown event"):
-        with it("should raise ValueError"):
-            expect(HookDecoration().unknown_event).to(raise_error(ValueError))
-
-    with context("that omits the event"):
-        with it("should raise ValueError"):
-            expect(HookDecoration().omitted_event).to(raise_error(ValueError))
 
 
 class HookDecoration:
@@ -138,929 +101,6 @@ class InstalledTree:
         return None
 
 
-with description("a bare agentic toolset registered for deploy") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.installer = Installer(ide="Cursor", path=self.tree)
-        self.installer.install([SampleAgenticOps()])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a Cursor deploy output tree"):
-        with it("should write one skill file per agent-instructions operation marked for skill"):
-            expect(InstalledTree(self.tree).skill_names()).to(contain("generate"))
-
-        with it("should write one command file per agent-instructions operation marked for command"):
-            expect(InstalledTree(self.tree).command_names()).to(contain("sketch"))
-
-        with it(
-            "should write a skill or command for an agent-tool operation only when that operation is also marked skill or command"
-        ):
-            expect(InstalledTree(self.tree).skill_names()).to(contain("listed"))
-            ping = list(self.tree.rglob("*ping*"))
-            expect(ping).to(equal([]))
-
-        with it("should not write a context guidance skill or fidelity commands"):
-            expect(InstalledTree(self.tree).skill_names()).not_to(contain("sample_tool"))
-            expect(InstalledTree(self.tree).command_names()).not_to(contain("sample-ops-behavior"))
-
-    with context("with a deploy output tree"):
-        with it(
-            "should render skill and command bodies from the tool docstring"
-        ):
-            skill_text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
-            command_text = InstalledTree(self.tree).command_path("sketch").read_text(encoding="utf-8")
-            tool = SampleAgenticOps()
-            generate_body = tool.tools["generate"].docstring
-            sketch_body = tool.tools["sketch"].docstring
-            expect(skill_text).to(contain(generate_body))
-            expect(command_text).to(contain(sketch_body))
-            expect(generate_body).to(contain("compound generate instructions"))
-
-
-with description("a bare agentic toolset with mcp-published operations registered for deploy") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.installer = Installer(ide="Cursor", path=self.tree)
-        self.mcp = self.installer.install([SampleMcpOps()])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a deployed skill file for an mcp-published agent-instructions operation"):
-        with it("should still write the skill file so there is a slash command"):
-            expect(InstalledTree(self.tree).skill_path("generate").is_file()).to(equal(True))
-
-        with it("should put the tool docstring at the top of the file"):
-            text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
-            expect(text).to(contain("full generate instructions that must not appear"))
-
-        with it("should place one MCP invoke tail after the docstring"):
-            text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
-            expect(text).to(contain("Use MCP tool:"))
-
-        with it(
-            "should name the tool as the toolset slug and operation with the method parameter signature in backticks"
-        ):
-            text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
-            expect(text).to(contain("`sample-mcp.generate"))
-
-        with it("should not append the CLI tools.ps1 invoke fence"):
-            text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
-            expect(text).not_to(contain("tools.ps1"))
-
-    with context("with a deployed command file for an mcp-published command operation"):
-        with it("should write the tool docstring plus MCP invoke tail"):
-            text = InstalledTree(self.tree).command_path("sketch").read_text(encoding="utf-8")
-            expect(text).to(contain("Use MCP tool:"))
-            expect(text).to(contain("full sketch instructions that must not appear"))
-
-    with context("with a deploy output tree for tools whose members are annotated mcp"):
-        with it("should record each mcp-published operation for server enrollment"):
-            names = [op.mcp_name for op in self.mcp.mcp_operations]
-            expect(names).to(contain("sample-mcp.generate"))
-            expect(names).to(contain("sample-mcp.sketch"))
-
-        with it("should not bind tool handlers during deploy"):
-            server_bound = getattr(self.mcp, "_bound", False)
-            expect(server_bound).to(equal(False))
-
-        with it("should diagnose that the MCP host answers ping"):
-            expect(self.mcp.diagnosis["ping"]).to(equal("pong"))
-
-
-with description("context guidance registered for deploy") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.tool = SampleGuidance(format="markdown")
-        self.installer = Installer(ide="Cursor", path=self.tree)
-        self.installer.install([self.tool])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a Cursor deploy output tree"):
-        with it("should write a skill file whose body is the overview"):
-            skill = InstalledTree(self.tree).skill_path("sample-tool")
-            expect(skill.is_file()).to(equal(True))
-            expect(skill.read_text(encoding="utf-8")).to(contain("sample preamble"))
-
-        with it("should write one rules file whose body is the rules section markdown"):
-            rule = InstalledTree(self.tree).rule_path("sample-tool.mdc")
-            expect(rule.is_file()).to(equal(True))
-            expect(rule.read_text(encoding="utf-8")).to(contain("sample rule one"))
-
-
-with description("context guidance with mcp-published guidance registered for deploy") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.installer = Installer(ide="Cursor", path=self.tree)
-        self.mcp = self.installer.install([SampleMcpGuidance(format="markdown")])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a deployed practice skill when guidance is mcp-published"):
-        with it("should write the overview plus MCP invoke tail"):
-            text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
-            expect(text).to(contain("Use MCP tool:"))
-            expect(text).to(contain("sample preamble"))
-            expect(text).not_to(contain("active format template body for sample tool"))
-
-    with context("with a deploy output tree for tools whose members are annotated mcp"):
-        with it("should record each mcp-published operation for server enrollment"):
-            names = [op.mcp_name for op in self.mcp.mcp_operations]
-            expect(names).to(contain("sample-tool.instructions"))
-
-        with it("should not bind tool handlers during deploy"):
-            expect(getattr(self.mcp, "_bound", False)).to(equal(False))
-
-
-with description("a context tool module with shared contexts format registered for deploy") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.tool = SamplePracticeGuidance(format="markdown")
-        self.installer = Installer(ide="Cursor", path=self.tree)
-        self.installer.install([self.tool])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a Cursor deploy output tree"):
-        with it("should write a skill file whose body is the overview"):
-            text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
-            expect(text).to(contain("sample preamble"))
-
-        with it("should write one practice guidance rules file whose body is the shared rules section"):
-            expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").is_file()).to(equal(True))
-            expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").read_text(encoding="utf-8")).to(
-                contain("sample rule one")
-            )
-
-
-with description("a context tool module with fidelity sections registered for deploy") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.tool = SamplePracticeWithFidelities(format="markdown")
-        Installer(ide="Cursor", path=self.tree).install([self.tool])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a Cursor deploy output tree"):
-        with it("should write one fidelity skill file per fidelity"):
-            sketch = InstalledTree(self.tree).skill_path("sample-tool-sketch")
-            expect(sketch.is_file()).to(equal(True))
-            expect(sketch.read_text(encoding="utf-8")).to(contain("sample-tool-sketch()"))
-
-        with it("should write one fidelity command file per fidelity"):
-            sketch = InstalledTree(self.tree).command_path("sample-tool-sketch")
-            expect(sketch.is_file()).to(equal(True))
-
-        with it("should list each fidelity MCP signature and a one-liner on the practice skill"):
-            text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
-            expect(text).to(contain("sample preamble"))
-            expect(text).to(contain("sketch"))
-            expect(text).to(contain("Use MCP tool:"))
-            expect(text).to(contain("sample-tool-sketch()"))
-            expect(text).not_to(contain("sketch guidance body only"))
-
-        with it("should write one fidelity rules file whose body is that fidelity's rules section"):
-            sketch_rules = InstalledTree(self.tree).rule_path("sample-tool-sketch.mdc")
-            expect(sketch_rules.is_file()).to(equal(True))
-            expect(sketch_rules.read_text(encoding="utf-8")).to(contain("sketch rule body"))
-
-
-with description("a context tool module with fidelities and assembly registered for deploy") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.tool = SamplePracticeWithFidelities(format="markdown")
-        Installer(ide="Cursor", path=self.tree).install([self.tool])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a Cursor deploy output tree"):
-        with it("should emit the practice skill, practice rules, fidelity commands, and fidelity rules in one pass"):
-            expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
-            expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").is_file()).to(equal(True))
-            expect(InstalledTree(self.tree).skill_path("sample-tool-sketch").is_file()).to(equal(True))
-            expect(InstalledTree(self.tree).command_path("sample-tool-sketch").is_file()).to(equal(True))
-            expect(InstalledTree(self.tree).rule_path("sample-tool-spec.mdc").is_file()).to(equal(True))
-
-
-with description("practice guidance that has been deployed") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        Installer(ide="Cursor", path=self.tree).install(
-            [SamplePracticeGuidance(format="markdown")]
-        )
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with members that are not annotated mcp"):
-        with context("with deployed skill command and rules bodies"):
-            with it("should not append a YAML CLI invoke fence"):
-                skill = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
-                rule = InstalledTree(self.tree).rule_path("sample-tool.mdc").read_text(encoding="utf-8")
-                for text in (skill, rule):
-                    expect(text).not_to(contain("tools.ps1"))
-                    expect(text).not_to(contain("toolset:"))
-
-
-with description("lifecycle actions registered for deploy") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        from actions.document.document import Document
-        from actions.generate.generate import Generate
-        from actions.grill_context.grill_context import GrillContext
-        from actions.improvement.improvement import Improvement
-        from actions.iterate.iterate import Iterate
-        from actions.partition.partition import Partition
-        from actions.render.render import Render
-        from actions.satisfy.satisfy import Satisfy
-        from actions.sketch.sketch import Sketch
-        from actions.sketch_render.sketch_render import SketchRender
-        from actions.validate.validate import Validate
-
-        self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
-            [
-                Document(),
-                Generate(),
-                GrillContext(),
-                Improvement(),
-                Iterate(),
-                Partition(),
-                Render(),
-                Satisfy(),
-                Sketch(),
-                SketchRender(),
-                Validate(),
-            ]
-        )
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a Cursor deploy output tree"):
-        with it("should write a skill file for each skill-marked action"):
-            names = InstalledTree(self.tree).skill_names()
-            for name in (
-                "generate",
-                "sketch",
-                "sketch-render",
-                "document",
-                "satisfy",
-                "iterate",
-                "repair",
-                "verify-fix",
-                "partition",
-                "render",
-                "validate",
-                "grill",
-            ):
-                expect(names).to(contain(name))
-            expect("create-rule" in names).to(equal(False))
-
-        with it("should not publish an mcp operation marked noDeploy"):
-            names = [op.mcp_name for op in self.mcp.mcp_operations]
-            expect(names).to(contain("validate.validate"))
-            expect("validate.createRule" in names).to(equal(False))
-
-        with it("should record mcp-published action operations"):
-            from installation.installer import Installer as LiveInstaller
-            from actions.generate.generate import Generate
-
-            installer = LiveInstaller(ide="Cursor", path=self.tree, repo=_REPO_ROOT)
-            mcp = installer.install([Generate()])
-            names = [op.mcp_name for op in mcp.mcp_operations]
-            expect(names).to(contain("generate.generate"))
-
-
-with description("clean engineering skills registered for deploy") as self:
-    with before.each:
-        from practices.clean_engineering.clean_engineering import CleanEngineering
-
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([CleanEngineering()])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a Cursor deploy output tree"):
-        with it("should keep new_project_rule off the fidelity MCP name"):
-            from installation.installer import Installer as LiveInstaller
-            from practices.clean_engineering.clean_engineering import CleanEngineering
-
-            mcp = LiveInstaller(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
-                [CleanEngineering()]
-            )
-            names = [op.mcp_name for op in mcp.mcp_operations]
-            expect(names).to(contain("clean-engineering-model"))
-            expect(names.count("clean-engineering-model")).to(equal(1))
-            expect("clean-engineering-model.new_project_rule" in names).to(equal(True))
-
-        with it("should write kebab-case practice and fidelity skills"):
-            names = InstalledTree(self.tree).skill_names()
-            expect(names).to(contain("clean-engineering"))
-            expect(names).to(contain("clean-engineering-code"))
-            expect(names).to(contain("clean-engineering-model"))
-            expect(names).to(contain("clean-engineering-modules"))
-            expect("clean_engineering" in names).to(equal(False))
-            expect((self.tree / "skills/practices/clean-engineering/SKILL.md").is_file()).to(
-                equal(True)
-            )
-            expect((self.tree / "skills/practices/clean-engineering/clean-engineering-code/SKILL.md").is_file()).to(
-                equal(True)
-            )
-            expect((self.tree / "skills/practices/clean_engineering").exists()).to(equal(False))
-
-        with it("should remove a leftover underscored practice skill folder"):
-            leftover = self.tree / "skills/practices/clean_engineering"
-            leftover.mkdir(parents=True, exist_ok=True)
-            (leftover / "SKILL.md").write_text("stale\n", encoding="utf-8")
-            from practices.clean_engineering.clean_engineering import CleanEngineering
-
-            Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
-                [CleanEngineering()]
-            )
-            expect(leftover.exists()).to(equal(False))
-            expect((self.tree / "skills/practices/clean-engineering/SKILL.md").is_file()).to(
-                equal(True)
-            )
-
-
-with description("install of a subset of toolsets") as self:
-    with it("should leave skills already written on the tree"):
-        from practices.clean_engineering.clean_engineering import CleanEngineering
-
-        tree = Path(tempfile.mkdtemp())
-        try:
-            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([CleanEngineering()])
-            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
-                [AgentToolSet.instantiate(CAR)],
-                replace=False,
-            )
-            expect((tree / "skills/practices/clean-engineering/SKILL.md").is_file()).to(
-                equal(True)
-            )
-            expect((tree / "skills/practices/examples/car/SKILL.md").is_file()).to(equal(True))
-        finally:
-            shutil.rmtree(tree, ignore_errors=True)
-
-
-with description("practice guidance that has been deployed for VS Code") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        Installer(ide="VS Code", path=self.tree).install(
-            [SamplePracticeWithFidelities(format="markdown")]
-        )
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with a VS Code deploy output tree"):
-        with it("should write fidelity command files under github prompts not under cursor commands"):
-            expect(InstalledTree(self.tree).prompt_path("sample-tool-sketch").is_file()).to(equal(True))
-
-
-_REPO = repo_root_from(__file__, parents=1)
-
-
-with description("harness deploy for car invoke BDD"):
-    with context("after install"):
-        with it("should write the car context tool skill"):
-            stage_invoke_commands(_REPO)
-            skill = _REPO / CAR_SKILL
-            expect(skill.is_file()).to(be_true)
-            body = skill.read_text(encoding="utf-8")
-            expect("road_story" in body or "car-road-story" in body).to(be_true)
-            expect("tools.ps1" in body).to(equal(False))
-            expect("toolset:" in body).to(equal(False))
-
-        with it("should write fidelity and action command prompts"):
-            stage_invoke_commands(_REPO)
-            expect((_REPO / CAR_ROAD_STORY).is_file()).to(be_true)
-            expect((_REPO / TRAVEL_TO).is_file()).to(be_true)
-            expect((_REPO / CAR_INSPECT).is_file()).to(be_true)
-
-        with it("should not embed YAML CLI invoke fences in deployed command bodies"):
-            stage_invoke_commands(_REPO)
-            for path in (CAR_ROAD_STORY, TRAVEL_TO, CAR_INSPECT):
-                text = (_REPO / path).read_text(encoding="utf-8")
-                expect("tools.ps1" in text).to(equal(False))
-                expect("toolset:" in text).to(equal(False))
-
-
-# --- mcp_server_spec.py ---
-with description("an MCP manifest file") as self:
-    with context("that has been written by a deploy whose walked members are annotated mcp"):
-        with before.each:
-            self._tmp = tempfile.mkdtemp()
-            self.tree = Path(self._tmp)
-            Installer(ide="Cursor", path=self.tree).install([SampleMcpOps()])
-
-        with after.each:
-            shutil.rmtree(self._tmp, ignore_errors=True)
-
-        with it("should list a stdio host that discovers toolsets from the workspace"):
-            text = (self.tree / "mcp.json").read_text(encoding="utf-8")
-            expect(text).to(contain("python"))
-            expect(text).to(contain("start_host.py"))
-            expect(text).not_to(contain("--toolsets"))
-            expect(text).to(contain("PYTHONPATH"))
-
-        with it("should publish the stdio server as cdd"):
-            data = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))
-            expect(data["mcpServers"]).to(have_key("cdd"))
-
-    with context("that has been written by a deploy with no mcp-published members"):
-        with before.each:
-            self._tmp = tempfile.mkdtemp()
-            self.tree = Path(self._tmp)
-            Installer(ide="Cursor", path=self.tree).install([SampleAgenticOps()])
-
-        with after.each:
-            shutil.rmtree(self._tmp, ignore_errors=True)
-
-        with it("should omit the MCP manifest file"):
-            expect((self.tree / "mcp.json").exists()).to(equal(False))
-
-
-with description("an MCP install into a project .cursor folder") as self:
-    with before.each:
-        self._user_mcp = Path.home() / ".cursor" / "mcp.json"
-        self._user_mcp_before = (
-            self._user_mcp.read_text(encoding="utf-8") if self._user_mcp.is_file() else None
-        )
-        self._user_mcp.parent.mkdir(parents=True, exist_ok=True)
-        self._user_mcp.write_text(
-            json.dumps(
-                {
-                    "mcpServers": {
-                        "cdd": {
-                            "type": "stdio",
-                            "command": "python",
-                            "args": ["-u", str(_REPO_ROOT / "harness" / "mcp" / "scripts" / "start_host.py")],
-                        }
-                    }
-                },
-                indent=2,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-        self._tmp = tempfile.mkdtemp()
-        self.project = Path(self._tmp)
-        self.cursor = self.project / ".cursor"
-        self.cursor.mkdir()
-        Installer(ide="Cursor", path=self.cursor, repo=_REPO_ROOT).install([SampleMcpOps()])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-        if self._user_mcp_before is None:
-            if self._user_mcp.is_file():
-                self._user_mcp.unlink()
-        else:
-            self._user_mcp.write_text(self._user_mcp_before, encoding="utf-8")
-
-    with it("should set cwd and CDD_PROJECT to the project root"):
-        data = json.loads((self.cursor / "mcp.json").read_text(encoding="utf-8"))
-        server = data["mcpServers"]["cdd"]
-        expect(server["cwd"]).to(equal(str(self.project)))
-        expect(server["env"]["CDD_PROJECT"]).to(equal(str(self.project)))
-
-    with it("should leave the user Cursor mcp.json unchanged"):
-        data = json.loads(self._user_mcp.read_text(encoding="utf-8"))
-        expect(data["mcpServers"]["cdd"]["command"]).to(equal("python"))
-
-
-with description("an installer that has finished writing the IDE path") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.installer = Installer(ide="Cursor", path=self.tree)
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with mcp-published operations installed"):
-        with before.each:
-            self.mcp = self.installer.install([SampleMcpOps()])
-
-        with it("should diagnose that the MCP host answers ping"):
-            expect(self.mcp.diagnosis["ping"]).to(equal("pong"))
-
-        with it("should list the built-in health-check tool"):
-            expect(self.mcp.diagnosis["tools"]).to(contain("cdd.ping"))
-
-        with it("should diagnose that the hook server answers ping"):
-            expect(self.installer._hook.diagnosis["ping"]).to(equal("pong"))
-
-    with context("with no mcp-published members installed"):
-        with before.each:
-            self.mcp = self.installer.install([SampleAgenticOps()])
-
-        with it("should diagnose that the MCP host answers ping"):
-            expect(self.mcp.diagnosis["ping"]).to(equal("pong"))
-
-        with it("should diagnose that the hook server answers ping"):
-            expect(self.installer._hook.diagnosis["ping"]).to(equal("pong"))
-
-    with context("with hook operations installed"):
-        with before.each:
-            self.mcp = self.installer.install([SampleHookOps()])
-
-        with it("should diagnose that the hook server answers ping"):
-            expect(self.installer._hook.diagnosis["ping"]).to(equal("pong"))
-
-        with it("should list the installed hook event"):
-            expect(self.installer._hook.diagnosis["events"]).to(contain("stop"))
-
-
-with description("a bare agentic toolset with an agent-tool operation annotated for mcp") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.tool = SampleMcpOps()
-        self.installer = Installer(ide="Cursor", path=self.tree)
-        self.mcp = self.installer.install([self.tool])
-        self.server = McpServer()
-        self.server.bind_from(self.mcp)
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("that has been deployed"):
-        with context("with an MCP server started from manifest toolset refs written during that deploy"):
-            with it("should enroll that operation as a prompt under the mcp name for generate"):
-                expect("sample-mcp.generate" in self.server.prompts).to(equal(True))
-
-            with it("should enroll from mcp operations recorded at deploy not from a second annotation scan on the class"):
-                expect(len(self.mcp.mcp_operations) > 0).to(equal(True))
-
-            with context("with a prompts call for that enrolled mcp name"):
-                with it("should return the orchestration result from that operation"):
-                    result = self.server.invoke_prompt("sample-mcp.generate")
-                    expect(str(result)).to(contain("full generate instructions"))
-
-
-with description("context guidance with guidance annotated for mcp") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.installer = Installer(ide="Cursor", path=self._tmp)
-        self.tool = SampleMcpGuidance(format="markdown")
-        self.mcp = self.installer.install([self.tool])
-        self.server = McpServer()
-        self.server.bind_from(self.mcp)
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("that has been deployed"):
-        with context("with an MCP server started from manifest toolset refs written during that deploy"):
-            with context("with a prompts call for that enrolled mcp name"):
-                with it("should return the same compound instructions string the read path assembles"):
-                    result = self.server.invoke_prompt("sample-tool.instructions")
-                    expect(result).to(equal(self.tool.instructions))
-
-
-with description("practice guidance with guidance annotated for mcp") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.installer = Installer(ide="Cursor", path=self._tmp)
-        self.tool = SampleMcpPractice(format="markdown")
-        self.mcp = self.installer.install([self.tool])
-        self.server = McpServer()
-        self.server.bind_from(self.mcp)
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("that has been deployed"):
-        with context("with an MCP server started from manifest toolset refs written during that deploy"):
-            with context("with a prompts call for the practice skill enrolled mcp name"):
-                with it("should return practice guidance instructions as the prompt source"):
-                    result = self.server.invoke_prompt("sample-tool.instructions")
-                    expect(result).to(equal(self.tool.instructions))
-
-
-with description("fidelity guidance with guidance annotated for mcp") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.installer = Installer(ide="Cursor", path=self._tmp)
-        self.tool = SampleMcpPractice(format="markdown")
-        self.mcp = self.installer.install([self.tool])
-        self.server = McpServer()
-        self.server.bind_from(self.mcp)
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("that has been deployed"):
-        with context("with an MCP server started from manifest toolset refs written during that deploy"):
-            with context("with a prompts call for that fidelity enrolled mcp name"):
-                with it("should return fidelity guidance instructions as the prompt source"):
-                    names = list(self.server.prompts)
-                    expect(any("instructions" in n for n in names)).to(equal(True))
-
-
-with description("an MCP server") as self:
-    with context("that has started from practice guidance toolset refs"):
-        with before.each:
-            self.server = McpServer(repo=_REPO_ROOT)
-            self.server.start(
-                (
-                    "practices.stories.stories:Stories",
-                    "harness.guidance.guidance:FidelityGuidance",
-                )
-            )
-
-        with it("should enroll nested fidelity instructions under the fidelity slug"):
-            expect("stories-scenarios" in self.server.prompts).to(equal(True))
-
-
-# --- hook_installation_spec.py ---
-with description("a Cursor hooks config") as self:
-    with context("that has been deployed with hook sources in the walk"):
-        with before.each:
-            self._tmp = tempfile.mkdtemp()
-            self.tree = Path(self._tmp)
-            Installer(ide="Cursor", path=self.tree).install([SampleHookOps()])
-
-        with after.each:
-            shutil.rmtree(self._tmp, ignore_errors=True)
-
-        with it("should write hooks.json dispatch for each registered hook event"):
-            data = json.loads((self.tree / "hooks.json").read_text(encoding="utf-8"))
-            expect(data["version"]).to(equal(1))
-            expect(data["hooks"]).to(have_key("stop"))
-            command = data["hooks"]["stop"][0]["command"]
-            expect(command.replace("\\", "/")).to(contain("harness/hooks/hook_server.py"))
-
-        with it("should write the skill file for the skill-annotated operation"):
-            skill_files = [
-                path
-                for path in self.tree.rglob("SKILL.md")
-                if not path.parent.name.startswith("hook-")
-            ]
-            expect(len(skill_files) > 0).to(equal(True))
-
-        with it("should write handler refs for dispatch"):
-            data = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))
-            expect(data["handlers"][0]["event"]).to(equal("stop"))
-            expect(data["handlers"][0]["operation"]).to(equal("auto_turn"))
-
-    with context("that has been deployed with the prompt log hook toolset"):
-        with before.each:
-            self._tmp = tempfile.mkdtemp()
-            self.tree = Path(self._tmp)
-            Installer(ide="Cursor", path=self.tree).install([PromptLog()])
-
-        with after.each:
-            shutil.rmtree(self._tmp, ignore_errors=True)
-
-        with it("should write hooks.json dispatch for beforeSubmitPrompt"):
-            data = json.loads((self.tree / "hooks.json").read_text(encoding="utf-8"))
-            expect(data["hooks"]).to(have_key("beforeSubmitPrompt"))
-
-        with it("should not write a skill file for a hook-only operation"):
-            hook_skills = list((self.tree / "skills").glob("hook-*/SKILL.md"))
-            expect(hook_skills).to(equal([]))
-
-    with context("that has been partially deployed with no hook sources emitted"):
-        with before.each:
-            self._tmp = tempfile.mkdtemp()
-            self.tree = Path(self._tmp)
-            prior = self.tree / "hooks.json"
-            prior.write_text(
-                '{"version": 1, "hooks": {"stop": [{"command": "keep-me"}]}}\n',
-                encoding="utf-8",
-            )
-            Installer(ide="Cursor", path=self.tree).install([SampleAgenticOps()])
-
-        with after.each:
-            shutil.rmtree(self._tmp, ignore_errors=True)
-
-        with it("should leave hooks manifest unchanged from a prior full deploy"):
-            text = (self.tree / "hooks.json").read_text(encoding="utf-8")
-            expect(text).to(contain("keep-me"))
-
-
-with description("a Cursor hooks config that installed practice inject_rules") as self:
-    with before.each:
-        from practices.bdd.bdd import Bdd
-        from practices.clean_engineering.clean_engineering import CleanEngineering
-
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
-            [Bdd(), CleanEngineering()]
-        )
-        self.handlers = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))
-        self.inject_refs = [
-            item["ref"]
-            for item in self.handlers.get("handlers") or []
-            if item.get("operation") == "inject_rules"
-            and item.get("event") == "postToolUse"
-        ]
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with it("should write one Bdd inject_rules handler"):
-        expect(self.inject_refs.count("practices.bdd.bdd:Bdd")).to(equal(1))
-
-    with it("should write one CleanEngineering inject_rules handler"):
-        expect(
-            self.inject_refs.count(
-                "practices.clean_engineering.clean_engineering:CleanEngineering"
-            )
-        ).to(equal(1))
-
-
-with description("example car kits annotated hooks disabled") as self:
-    with it("should not write inject_rules handlers for Car or CarStory"):
-        from practices.examples.car.car import Car
-        from actions.examples.car_story.car_story import CarStory
-
-        tree = Path(tempfile.mkdtemp())
-        try:
-            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([Car(), CarStory()])
-            dest = tree / "hook-handlers.json"
-            if dest.is_file():
-                refs = [
-                    item.get("ref", "")
-                    for item in json.loads(dest.read_text(encoding="utf-8")).get("handlers")
-                    or []
-                ]
-            else:
-                refs = []
-            expect(any("car:Car" in ref for ref in refs)).to(equal(False))
-            expect(any("CarStory" in ref for ref in refs)).to(equal(False))
-        finally:
-            shutil.rmtree(tree, ignore_errors=True)
-
-
-with description("an installer that recorded files from a prior install") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.installer = Installer(ide="Cursor", path=self.tree)
-        self.installer.install([SampleAgenticOps()])
-        self.orphan = self.tree / "skills" / "stale-orphan" / "SKILL.md"
-        self.orphan.parent.mkdir(parents=True, exist_ok=True)
-        self.orphan.write_text("orphan", encoding="utf-8")
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("whose clean operation runs directly"):
-        with it("should remove only files recorded in install state"):
-            prior_skill = InstalledTree(self.tree).skill_path("generate")
-            expect(prior_skill is not None).to(equal(True))
-            removed = Installer(ide="Cursor", path=self.tree).clean()
-            expect(len(removed) > 0).to(be_true)
-            expect(prior_skill.is_file()).to(equal(False))
-            expect(self.orphan.is_file()).to(equal(True))
-
-    with context("that runs install again for a different toolset"):
-        with before.each:
-            self.installer.install([SampleGuidance(format="markdown")])
-
-        with it("should remove tracked files from the prior install before writing"):
-            expect(InstalledTree(self.tree).skill_path("generate") is None).to(equal(True))
-            expect(InstalledTree(self.tree).skill_path("sample-tool") is not None).to(equal(True))
-
-        with it("should leave untracked orphans in place"):
-            expect(self.orphan.is_file()).to(equal(True))
-
-
-with description("an installer that recorded an MCP host from a prior install") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        Installer(ide="Cursor", path=self.tree).install([SampleMcpOps()])
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("whose clean operation runs directly"):
-        with it("should keep the MCP manifest so Cursor can respawn the host"):
-            Installer(ide="Cursor", path=self.tree).clean()
-            expect((self.tree / "mcp.json").is_file()).to(equal(True))
-
-
-with description("the installer toolset installing itself") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        self.mcp = Installer(ide="Cursor", path=self.tree).install(
-            [Installer(ide="Cursor", path=self.tree)]
-        )
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with it("should write an install skill that names the MCP tool"):
-        text = InstalledTree(self.tree).skill_path("install").read_text(encoding="utf-8")
-        expect(text).to(contain("Use MCP tool:"))
-        expect(text).to(contain("installer.install"))
-
-    with it("should record install and clean as MCP operations"):
-        names = [op.mcp_name for op in self.mcp.mcp_operations]
-        expect(names).to(contain("installer.install"))
-        expect(names).to(contain("installer.clean"))
-
-    with it("should enroll a session start hook that respawns the MCP host"):
-        handlers = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))
-        events = [item["event"] for item in handlers.get("handlers") or []]
-        expect(events).to(contain("sessionStart"))
-        expect(events).to(contain("afterAgentResponse"))
-
-
-with description("install when a toolset cannot be instantiated") as self:
-    with it("should raise instead of skipping the toolset"):
-        tree = Path(tempfile.mkdtemp())
-        try:
-            def run():
-                Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
-                    ["no.such.module:Nope"]
-                )
-
-            expect(run).to(raise_error(RuntimeError, "install failed for no.such.module:Nope"))
-        finally:
-            shutil.rmtree(tree, ignore_errors=True)
-
-
-with description("the installer import path") as self:
-    with before.each:
-        self.repo = Path(__file__).resolve().parents[1]
-        Installer(repo=self.repo).ensure_import_path()
-
-    with it("should put catalog folders on sys.path so short catalog imports resolve"):
-        import harness.agent_tools as agent_tools
-        import harness.guidance_actions as guidance_actions
-
-        installer = Installer(repo=self.repo)
-        expect("agent_toolset" in dir(agent_tools)).to(equal(True))
-        expect(guidance_actions.GuidanceAction.__name__).to(equal("GuidanceAction"))
-        expect(installer.pythonpath()).to(contain("actions"))
-        expect(installer.pythonpath()).to(contain("patterns"))
-        expect(installer.pythonpath()).not_to(contain(str(self.repo / "installation") + os.sep))
-        expect(installer.pythonpath().split(os.pathsep)).not_to(
-            contain(str(self.repo / "harness"))
-        )
-
-    with it("should not collect toolsets under examples folders"):
-        refs = Installer(ide="Cursor", path=self.repo / ".cursor", repo=self.repo).collect_toolsets()
-        expect(any("examples" in ref.replace("\\", "/") for ref in refs)).to(equal(False))
-        expect(any("car_story" in ref for ref in refs)).to(equal(False))
-
-    with it("should collect deployable toolsets under harness"):
-        refs = Installer(ide="Cursor", path=self.repo / ".cursor", repo=self.repo).collect_toolsets()
-        expect(refs).to(contain("harness.transformers.transformers:Transformers"))
-        expect(refs).to(contain("patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
-        expect(refs).to(contain("patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
-        expect(refs).to(contain("harness.graph.graph:Graph"))
-        expect(refs).to(contain("harness.guidance.guidance:Guidance"))
-        expect(refs).not_to(contain("harness.guidance.guidance:PracticeGuidance"))
-        expect(refs).not_to(contain("harness.guidance.guidance:FidelityGuidance"))
-
-    with it("should not record a temp install path in the shared install state"):
-        shared = Path(__file__).resolve().parent / ".install-state.json"
-        before = shared.read_text(encoding="utf-8") if shared.is_file() else ""
-        tmp = tempfile.mkdtemp()
-        try:
-            Installer(ide="Cursor", path=tmp, repo=self.repo).install([])
-            after = shared.read_text(encoding="utf-8") if shared.is_file() else ""
-            expect(after).to(equal(before))
-            expect(Installer(path=tmp, repo=self.repo)._is_ephemeral_install_path(tmp)).to(equal(True))
-        finally:
-            shutil.rmtree(tmp, ignore_errors=True)
-
-
-with description("install standup of runtime hosts") as self:
-    with it("should leave hook and mcp hosts answering"):
-        installer = Installer(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
-        status = installer.ensure_runtimes()
-        expect(status["hook"]).to(equal("running"))
-        expect(status["mcp"]).to(equal("running"))
-
-
 def _skill_tool(name: str):
     def _fn(self):
         return None
@@ -1069,195 +109,941 @@ def _skill_tool(name: str):
     return type("Tool", (), {"name": name, "deploy_name": name, "install_to_skill": True, "callable": _fn})()
 
 
-with description("markdown skill paths for a kit with several skill operations"):
-    with it("should write each skill as a peer folder named for the operation"):
-        from installation.files import FileInstallation
+# (E) Install CDD Tools
+# (E) Install Agent Toolset
+with description("an agent toolset") as self:
+    with context("with operations annotated for installation"):
+        # (S) Installer --> Generate skills and commands from Agent Toolset
+        with context("that are annotated as skills and commands"):
+            with before.each:
+                self._tmp = tempfile.mkdtemp()
+                self.tree = Path(self._tmp)
+                self.installer = Installer(ide="Cursor", path=self.tree)
+                self.installer.install([SampleAgenticOps()])
 
-        writer = FileInstallation("Cursor", Path("."), "skill")
-        tools = {"validate": _skill_tool("validate"), "createRule": _skill_tool("createRule")}
-        toolset = type("Kit", (), {"install_folder": Path("actions/validate"), "tools": tools})()
-        expect(
-            writer.relative_path("skill", toolset, tools["validate"].callable, "validate").as_posix()
-        ).to(equal("skills/actions/validate/validate/SKILL.md"))
-        expect(
-            writer.relative_path("skill", toolset, tools["createRule"].callable, "createRule").as_posix()
-        ).to(equal("skills/actions/validate/create-rule/SKILL.md"))
+            with after.each:
+                shutil.rmtree(self._tmp, ignore_errors=True)
 
-    with it("should keep a single matching operation at the kit folder"):
-        from installation.files import FileInstallation
+            with context("with operations that are annotated as skills"):
+                with it("should write a skill file for each of them"):
+                    names = InstalledTree(self.tree).skill_names()
+                    expect(names).to(contain("generate"))
+                    expect(names).to(contain("listed"))
 
-        writer = FileInstallation("Cursor", Path("."), "skill")
-        tools = {"generate": _skill_tool("generate")}
-        toolset = type("Kit", (), {"install_folder": Path("actions/generate"), "tools": tools})()
-        expect(
-            writer.relative_path("skill", toolset, tools["generate"].callable, "generate").as_posix()
-        ).to(equal("skills/actions/generate/SKILL.md"))
+                with it("should write the operation's instructions on the skill"):
+                    skill_text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
+                    expect(skill_text).to(contain(SampleAgenticOps().tools["generate"].docstring))
 
-    with it("should name a single unmatched operation for the operation not the kit folder"):
-        from installation.files import FileInstallation
+            with context("with operations that are annotated as commands"):
+                with it("should write a command file for each of them"):
+                    expect(InstalledTree(self.tree).command_names()).to(contain("sketch"))
 
-        writer = FileInstallation("Cursor", Path("."), "skill")
-        tools = {"grill": _skill_tool("grill")}
-        toolset = type("Kit", (), {"install_folder": Path("actions/grill_context"), "tools": tools})()
-        expect(
-            writer.relative_path("skill", toolset, tools["grill"].callable, "grill").as_posix()
-        ).to(equal("skills/actions/grill-context/grill/SKILL.md"))
+                with it("should write the operation's instructions on the command"):
+                    command_text = InstalledTree(self.tree).command_path("sketch").read_text(encoding="utf-8")
+                    expect(command_text).to(contain(SampleAgenticOps().tools["sketch"].docstring))
 
-    with it("should kebab-case an underscored practice folder to match fidelity skill names"):
-        from installation.files import FileInstallation
+            with context("with operations that are not annotated"):
+                with it("should not write a skill or command"):
+                    expect(list(self.tree.rglob("*ping*"))).to(equal([]))
 
-        writer = FileInstallation("Cursor", Path("."), "skill")
-        tools = {"instructions": _skill_tool("instructions")}
-        toolset = type(
-            "Practice",
-            (),
-            {"install_folder": Path("practices/clean_engineering"), "tools": tools},
-        )()
-        expect(
-            writer.relative_path(
-                "skill", toolset, tools["instructions"].callable, "instructions"
-            ).as_posix()
-        ).to(equal("skills/practices/clean-engineering/SKILL.md"))
+            with it("should not write a Guidance or practice guidance skill or fidelity commands"):
+                expect(InstalledTree(self.tree).skill_names()).not_to(contain("sample-tool"))
+                expect(InstalledTree(self.tree).command_names()).not_to(contain("sample-ops-behavior"))
+
+            with it("should not write an MCP manifest"):
+                expect((self.tree / "mcp.json").exists()).to(equal(False))
+
+            with context("also annotated for MCP"):
+                with before.each:
+                    self._branch_tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._branch_tmp)
+                    self.installer = Installer(ide="Cursor", path=self.tree)
+                    self.mcp = self.installer.install([SampleMcpOps()])
+
+                with after.each:
+                    shutil.rmtree(self._branch_tmp, ignore_errors=True)
+
+                # (S) Installer --> Generate Skills and Commands With MCP Calls
+                with context("with a skill file for an operation annotated for MCP"):
+                    with it("should still write the skill file so there is a slash command"):
+                        expect(InstalledTree(self.tree).skill_path("generate").is_file()).to(equal(True))
+
+                    with it("should put the tool docstring at the top of the file"):
+                        text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
+                        expect(text).to(contain("full generate instructions that must not appear"))
+
+                    with it("should place one MCP invoke tail after the docstring"):
+                        text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
+                        expect(text).to(contain("Use MCP tool:"))
+
+                    with it(
+                        "should name the tool as the toolset slug and operation with the method parameter signature in backticks"
+                    ):
+                        text = InstalledTree(self.tree).skill_path("generate").read_text(encoding="utf-8")
+                        expect(text).to(contain("`sample-mcp.generate"))
+
+                    with it("should write the tool docstring plus MCP invoke tail on the command file"):
+                        text = InstalledTree(self.tree).command_path("sketch").read_text(encoding="utf-8")
+                        expect(text).to(contain("Use MCP tool:"))
+                        expect(text).to(contain("full sketch instructions that must not appear"))
+
+                # (S) Installer --> Enroll Agent Toolset as MCP Tools
+                with context("with mcp operations recorded at install"):
+                    with it("should record each mcp-published operation for server enrollment"):
+                        names = [op.mcp_name for op in self.mcp.mcp_operations]
+                        expect(names).to(contain("sample-mcp.generate"))
+                        expect(names).to(contain("sample-mcp.sketch"))
+
+                    with it("should not bind tool handlers during deploy"):
+                        server_bound = getattr(self.mcp, "_bound", False)
+                        expect(server_bound).to(equal(False))
+
+                # (S) Installer --> Configure and Start MCP Host Session
+                with context("with the MCP host stood up"):
+                    with it("should diagnose that the MCP host answers ping"):
+                        expect(self.mcp.diagnosis["ping"]).to(equal("pong"))
+
+                    with it("should list the built-in health-check tool"):
+                        expect(self.mcp.diagnosis["tools"]).to(contain("cdd.ping"))
+
+                with it("should return that operation's instructions when the installed tool is invoked"):
+                    server = McpServer()
+                    server.bind_from(self.mcp)
+                    result = server.invoke_prompt("sample-mcp.generate")
+                    expect(result).to(equal("full generate instructions that must not appear in the slash file"))
+
+                # (S) Installer --> Configure and Start MCP Host Session
+                with context("with mcp.json on the tree"):
+                    with it("should list a stdio host that discovers toolsets from the workspace"):
+                        text = (self.tree / "mcp.json").read_text(encoding="utf-8")
+                        expect(text).to(contain("python"))
+                        expect(text).to(contain("start_host.py"))
+                        expect(text).not_to(contain("--toolsets"))
+                        expect(text).to(contain("PYTHONPATH"))
+
+                    with it("should publish the stdio server as cdd"):
+                        data = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))
+                        expect(data["mcpServers"]).to(have_key("cdd"))
+
+                with context("with an MCP server started from manifest toolset refs written during that install"):
+                    with before.each:
+                        self.server = McpServer()
+                        self.server.bind_from(self.mcp)
+
+                    with it("should enroll that operation as a prompt under the mcp name for generate"):
+                        expect("sample-mcp.generate" in self.server.prompts).to(equal(True))
+
+                    with it(
+                        "should enroll from mcp operations recorded at deploy not from a second annotation scan on the class"
+                    ):
+                        expect(len(self.mcp.mcp_operations) > 0).to(equal(True))
+
+            # (S) Installer --> Register Agent Toolsets as Cursor hooks
+            with context("that are annotated as Cursor hooks"):
+                with before.each:
+                    self._branch_tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._branch_tmp)
+                    self.installer = Installer(ide="Cursor", path=self.tree)
+                    self.mcp = self.installer.install([SampleHookOps()])
+
+                with after.each:
+                    shutil.rmtree(self._branch_tmp, ignore_errors=True)
+
+                with context("with hooks.json and hook-handlers.json on the tree"):
+                    with it("should write hooks.json dispatch for each registered hook event"):
+                        data = json.loads((self.tree / "hooks.json").read_text(encoding="utf-8"))
+                        expect(data["version"]).to(equal(1))
+                        expect(data["hooks"]).to(have_key("stop"))
+                        command = data["hooks"]["stop"][0]["command"]
+                        expect(command.replace("\\", "/")).to(contain("harness/hooks/hook_server.py"))
+
+                    with it("should write the skill file for the skill-annotated operation"):
+                        skill_files = [
+                            path
+                            for path in self.tree.rglob("SKILL.md")
+                            if not path.parent.name.startswith("hook-")
+                        ]
+                        expect(len(skill_files) > 0).to(equal(True))
+
+                    with it("should write handler refs for dispatch"):
+                        data = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))
+                        expect(data["handlers"][0]["event"]).to(equal("stop"))
+                        expect(data["handlers"][0]["operation"]).to(equal("auto_turn"))
+
+                with context("with the hook host stood up"):
+                    with it("should diagnose that the hook server answers ping"):
+                        expect(self.installer._hook.diagnosis["ping"]).to(equal("pong"))
+
+                    with it("should list the installed hook event"):
+                        expect(self.installer._hook.diagnosis["events"]).to(contain("stop"))
+
+            with context("that are not annotated as Cursor hooks and a hooks manifest is already on the IDE path"):
+                with before.each:
+                    self._branch_tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._branch_tmp)
+                    prior = self.tree / "hooks.json"
+                    prior.write_text(
+                        '{"version": 1, "hooks": {"stop": [{"command": "keep-me"}]}}\n',
+                        encoding="utf-8",
+                    )
+                    Installer(ide="Cursor", path=self.tree).install([SampleAgenticOps()])
+
+                with after.each:
+                    shutil.rmtree(self._branch_tmp, ignore_errors=True)
+
+                with it("should leave hooks manifest unchanged from a prior full deploy"):
+                    text = (self.tree / "hooks.json").read_text(encoding="utf-8")
+                    expect(text).to(contain("keep-me"))
 
 
-with description("markdown skill paths for a fidelity nested under a practice"):
-    with it("should keep the practice folder and name the leaf practice-fidelity"):
-        from installation.files import FileInstallation
+    with context("that is a Guidance toolset"):
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            self.tree = Path(self._tmp)
+            self.tool = SampleGuidance(format="markdown")
+            self.installer = Installer(ide="Cursor", path=self.tree)
+            self.mcp = self.installer.install([self.tool])
 
-        writer = FileInstallation("Cursor", Path("."), "skill")
-        tools = {"instructions": _skill_tool("instructions")}
-        practice = type("Practice", (), {"slug": "stories"})()
-        toolset = type(
-            "Fidelity",
-            (),
-            {
-                "install_folder": Path("practices/stories/scenarios"),
-                "tools": tools,
-                "practice_guidance": practice,
-                "slug": "stories-scenarios",
-            },
-        )()
-        expect(
-            writer.relative_path(
-                "skill", toolset, tools["instructions"].callable, "instructions"
-            ).as_posix()
-        ).to(equal("skills/practices/stories/stories-scenarios/SKILL.md"))
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
 
-    with it("should kebab-case the practice parent so it matches the fidelity leaf"):
-        from installation.files import FileInstallation
+        # (S) Installer --> Deploy Guidance Instructions
+        with context("with instructions"):
+            with it("should write a skill file whose body is the overview"):
+                skill = InstalledTree(self.tree).skill_path("sample-tool")
+                expect(skill.is_file()).to(equal(True))
+                expect(skill.read_text(encoding="utf-8")).to(contain("sample preamble"))
 
-        writer = FileInstallation("Cursor", Path("."), "skill")
-        tools = {"instructions": _skill_tool("instructions")}
-        practice = type("Practice", (), {"slug": "clean-engineering"})()
-        toolset = type(
-            "Fidelity",
-            (),
-            {
-                "install_folder": Path("practices/clean_engineering/code"),
-                "tools": tools,
-                "practice_guidance": practice,
-                "slug": "clean-engineering-code",
-            },
-        )()
-        expect(
-            writer.relative_path(
-                "skill", toolset, tools["instructions"].callable, "instructions"
-            ).as_posix()
-        ).to(equal("skills/practices/clean-engineering/clean-engineering-code/SKILL.md"))
+            with it("should write the overview plus an MCP invoke tail on the skill"):
+                text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
+                expect(text).to(contain("Use MCP tool:"))
+                expect(text).to(contain("sample preamble"))
+                expect(text).not_to(contain("active format template body for sample tool"))
+
+            with it("should record the instructions property for MCP enrollment"):
+                names = [op.mcp_name for op in self.mcp.mcp_operations]
+                expect(names).to(contain("sample-tool.instructions"))
+
+            with it("should not bind tool handlers during install"):
+                expect(getattr(self.mcp, "_bound", False)).to(equal(False))
+
+            with it("should return the instructions the property assembles when the installed tool is invoked"):
+                server = McpServer()
+                server.bind_from(self.mcp)
+                result = server.invoke_prompt("sample-tool.instructions")
+                expect(result).to(equal(self.tool.instructions))
 
 
-def _write_skill_tool(name: str, overview: str):
-    def _fn(self):
-        return overview
+        # (S) Installer --> Deploy Guidance Rules
+        with context("with rules"):
+            with it("should write a rules file from the rules property"):
+                rule = InstalledTree(self.tree).rule_path("sample-tool.mdc")
+                expect(rule.is_file()).to(equal(True))
+                expect(rule.read_text(encoding="utf-8")).to(contain("sample rule one"))
 
-    _fn.__name__ = name
-    _fn._skill = True
-    guidance = type(
-        "Guidance",
-        (),
-        {
-            "install_folder": Path("sample-tool"),
-            "overview": overview,
-            name: overview,
-            "tools": {},
-        },
-    )()
-    return type(
-        "Tool",
-        (),
-        {
-            "kind": "instructions",
-            "name": name,
-            "deploy_name": name,
-            "callable": _fn,
-            "toolset": guidance,
-            "docstring": overview,
-        },
-    )()
+    with context("that has been installed"):
+        with context("to a path"):
+            with context("that has a prior publish of agent skills and commands on the IDE path"):
+                with before.each:
+                    self._tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._tmp)
+                    self.installer = Installer(ide="Cursor", path=self.tree)
+                    self.installer.install([SampleAgenticOps()])
+                    self.orphan = self.tree / "skills" / "stale-orphan" / "SKILL.md"
+                    self.orphan.parent.mkdir(parents=True, exist_ok=True)
+                    self.orphan.write_text("orphan", encoding="utf-8")
 
+                with after.each:
+                    shutil.rmtree(self._tmp, ignore_errors=True)
 
-with description("markdown skill front matter") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
+                # (S) Installer --> Clean previously installed skills
+                with context("that has been cleansed"):
+                    with before.each:
+                        self.removed = Installer(ide="Cursor", path=self.tree).clean()
 
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
+                    with it("should remove the published skill"):
+                        expect(len(self.removed) > 0).to(be_true)
+                        expect(InstalledTree(self.tree).skill_path("generate") is None).to(equal(True))
 
-    with it("should put the skill folder name and overview in YAML front matter"):
-        from installation.files import FileInstallation
+                    with it("should leave the file that was never published"):
+                        expect(self.orphan.is_file()).to(equal(True))
 
-        writer = FileInstallation("Cursor", self.tree, "skill")
-        writer.write(_write_skill_tool("instructions", "sample preamble"))
-        text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
-        front = text.split("---", 2)[1]
-        expect(text.startswith("---\n")).to(equal(True))
-        expect(front).to(contain("name: sample-tool"))
-        expect(front).to(contain("description:"))
-        expect(front).to(contain("sample preamble"))
-        expect(text).to(contain("sample preamble"))
+                # (S) Installer --> Install While preserving skills from prior installed Skills
+                with context("that has been published again without removing the prior skills"):
+                    with before.each:
+                        self.installer.install(
+                            [SamplePracticeWithFidelities(format="markdown")],
+                            replace=False,
+                        )
 
-    with it("should keep the MCP invoke tail out of the skill description"):
-        from installation.files import FileInstallation
+                    with it("should keep the skill from the prior publish"):
+                        expect(InstalledTree(self.tree).skill_path("generate").is_file()).to(equal(True))
 
-        overview = "sample preamble"
-        writer = FileInstallation("Cursor", self.tree, "skill")
-        text = writer._skill_front_matter(
-            "sample-tool",
-            writer._skill_overview(
-                type("Host", (), {"overview": overview})(),
-                [overview, "Use MCP tool: `sample-tool.instructions()`"],
-            ),
-        )
-        expect(text).to(contain("sample preamble"))
-        expect(text).not_to(contain("Use MCP tool:"))
+                    with it("should publish the new skill"):
+                        expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
 
+                    with it("should leave the file that was never published"):
+                        expect(self.orphan.is_file()).to(equal(True))
 
-with description("markdown rules front matter"):
-    with it("should copy alwaysApply and globs from rules.appliesTo"):
-        from installation.files import FileInstallation
-        from harness.guidance.rule import AppliesTo, RulesCollection
+                # (S) Installer --> Install While preserving skills from other sources
+                with context("that has been published again in place of the prior skills"):
+                    with before.each:
+                        self.installer.install([SamplePracticeWithFidelities(format="markdown")])
 
-        guidance = type(
-            "Guidance",
-            (),
-            {"rules": RulesCollection(applies_to=AppliesTo(always_apply=False, globs="**/*spec.py"))},
-        )()
-        writer = FileInstallation("Cursor", Path("."), "rules")
-        text = writer._rules_front_matter(
-            "Whenever you write specs. Follow these rules.\n\n- **a** — b",
-            guidance,
-        )
-        expect(text).to(contain("alwaysApply: false"))
-        expect(text).to(contain("globs: **/*spec.py"))
-        expect(text).to(contain("Whenever you write specs"))
+                    with it("should remove the skill from the prior publish"):
+                        expect(InstalledTree(self.tree).skill_path("generate") is None).to(equal(True))
 
-    with it("should leave alwaysApply off when the bag has no glob"):
-        from installation.files import FileInstallation
-        from harness.guidance.rule import RulesCollection
+                    with it("should publish the new skill"):
+                        expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
 
-        guidance = type("Guidance", (), {"rules": RulesCollection()})()
-        writer = FileInstallation("Cursor", Path("."), "rules")
-        text = writer._rules_front_matter("Practice rules.\n", guidance)
-        expect(text).to(contain("alwaysApply: false"))
-        expect(text).not_to(contain("globs:"))
+                    with it("should leave the file that was never published"):
+                        expect(self.orphan.is_file()).to(equal(True))
+
+            with context("that has a prior publish of MCP tools on the IDE path"):
+                with before.each:
+                    self._tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._tmp)
+                    Installer(ide="Cursor", path=self.tree).install([SampleMcpOps()])
+
+                with after.each:
+                    shutil.rmtree(self._tmp, ignore_errors=True)
+
+                # (S) Installer --> Cleanse previously installed MCP tools
+                with context("that has been cleansed"):
+                    with before.each:
+                        Installer(ide="Cursor", path=self.tree).clean()
+
+                    with it("should keep the MCP manifest so Cursor can respawn the host"):
+                        expect((self.tree / "mcp.json").is_file()).to(equal(True))
+
+            # (S) Installer --> Install MCP to User Project Specific Location
+            with context("with a project .cursor folder and a user Cursor mcp.json that already names cdd"):
+                with before.each:
+                    self._user_mcp = Path.home() / ".cursor" / "mcp.json"
+                    self._user_mcp_before = (
+                        self._user_mcp.read_text(encoding="utf-8") if self._user_mcp.is_file() else None
+                    )
+                    self._user_mcp.parent.mkdir(parents=True, exist_ok=True)
+                    self._user_mcp.write_text(
+                        json.dumps(
+                            {
+                                "mcpServers": {
+                                    "cdd": {
+                                        "type": "stdio",
+                                        "command": "python",
+                                        "args": [
+                                            "-u",
+                                            str(
+                                                _REPO_ROOT
+                                                / "harness"
+                                                / "mcp"
+                                                / "scripts"
+                                                / "start_host.py"
+                                            ),
+                                        ],
+                                    }
+                                }
+                            },
+                            indent=2,
+                        )
+                        + "\n",
+                        encoding="utf-8",
+                    )
+                    self._tmp = tempfile.mkdtemp()
+                    self.project = Path(self._tmp)
+                    self.cursor = self.project / ".cursor"
+                    self.cursor.mkdir()
+                    Installer(ide="Cursor", path=self.cursor, repo=_REPO_ROOT).install([SampleMcpOps()])
+
+                with after.each:
+                    shutil.rmtree(self._tmp, ignore_errors=True)
+                    if self._user_mcp_before is None:
+                        if self._user_mcp.is_file():
+                            self._user_mcp.unlink()
+                    else:
+                        self._user_mcp.write_text(self._user_mcp_before, encoding="utf-8")
+
+                with it("should set cwd and CDD_PROJECT to the project root on project mcp.json"):
+                    data = json.loads((self.cursor / "mcp.json").read_text(encoding="utf-8"))
+                    server = data["mcpServers"]["cdd"]
+                    expect(server["cwd"]).to(equal(str(self.project)))
+                    expect(server["env"]["CDD_PROJECT"]).to(equal(str(self.project)))
+
+                with it("should leave the user Cursor mcp.json unchanged"):
+                    data = json.loads(self._user_mcp.read_text(encoding="utf-8"))
+                    expect(data["mcpServers"]["cdd"]["command"]).to(equal("python"))
+
+            # (S) Installer --> Generate Installer Skill
+            with context("with the installer toolset as the only deploy subject"):
+                with before.each:
+                    self._tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._tmp)
+                    self.mcp = Installer(ide="Cursor", path=self.tree).install(
+                        [Installer(ide="Cursor", path=self.tree)]
+                    )
+
+                with after.each:
+                    shutil.rmtree(self._tmp, ignore_errors=True)
+
+                with it("should write an install skill that names the MCP tool"):
+                    text = InstalledTree(self.tree).skill_path("install").read_text(encoding="utf-8")
+                    expect(text).to(contain("Use MCP tool:"))
+                    expect(text).to(contain("installer.install"))
+
+                with it("should record install and clean as MCP operations"):
+                    names = [op.mcp_name for op in self.mcp.mcp_operations]
+                    expect(names).to(contain("installer.install"))
+                    expect(names).to(contain("installer.clean"))
+
+                with it("should enroll a session start hook that respawns the MCP host"):
+                    handlers = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))
+                    events = [item["event"] for item in handlers.get("handlers") or []]
+                    expect(events).to(contain("sessionStart"))
+                    expect(events).to(contain("afterAgentResponse"))
+
+            # (S) Installer --> Raise Error on Install Failure
+            with context("that is given a toolset reference that cannot be instantiated"):
+                with it("should raise instead of skipping the toolset"):
+                    tree = Path(tempfile.mkdtemp())
+                    try:
+
+                        def run():
+                            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install(
+                                ["no.such.module:Nope"]
+                            )
+
+                        expect(run).to(raise_error(RuntimeError, "install failed for no.such.module:Nope"))
+                    finally:
+                        shutil.rmtree(tree, ignore_errors=True)
+
+            with context("whose install standup has finished on the IDE path"):
+                with it("should leave hook and mcp hosts answering"):
+                    installer = Installer(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+                    status = installer.ensure_runtimes()
+                    expect(status["hook"]).to(equal("running"))
+                    expect(status["mcp"]).to(equal("running"))
+
+            with context("that resolves deploy imports and toolsets from the repo catalog"):
+                with before.each:
+                    self.repo = Path(__file__).resolve().parents[1]
+                    Installer(repo=self.repo).ensure_import_path()
+
+                with it("should not collect toolsets under examples folders"):
+                    refs = Installer(
+                        ide="Cursor", path=self.repo / ".cursor", repo=self.repo
+                    ).collect_toolsets()
+                    expect(any("examples" in ref.replace("\\", "/") for ref in refs)).to(equal(False))
+                    expect(any("car_story" in ref for ref in refs)).to(equal(False))
+
+                with it("should collect deployable toolsets under harness and patterns"):
+                    refs = Installer(
+                        ide="Cursor", path=self.repo / ".cursor", repo=self.repo
+                    ).collect_toolsets()
+                    expect(refs).to(contain("harness.transformers.transformers:Transformers"))
+                    expect(refs).to(contain("patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
+                    expect(refs).to(contain("patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
+                    expect(refs).to(contain("harness.graph.graph:Graph"))
+                    expect(refs).to(contain("harness.guidance.guidance:Guidance"))
+                    expect(refs).not_to(contain("harness.guidance.guidance:PracticeGuidance"))
+                    expect(refs).not_to(contain("harness.guidance.guidance:FidelityGuidance"))
+
+                with it("should put catalog folders on sys.path so short catalog imports resolve"):
+                    import harness.agent_tools as agent_tools
+                    import harness.guidance_actions as guidance_actions
+
+                    installer = Installer(repo=self.repo)
+                    expect("agent_toolset" in dir(agent_tools)).to(equal(True))
+                    expect(guidance_actions.GuidanceAction.__name__).to(equal("GuidanceAction"))
+                    expect(installer.pythonpath()).to(contain("actions"))
+                    expect(installer.pythonpath()).to(contain("patterns"))
+                    expect(installer.pythonpath()).not_to(contain(str(self.repo / "installation") + os.sep))
+                    expect(installer.pythonpath().split(os.pathsep)).not_to(
+                        contain(str(self.repo / "harness"))
+                    )
+
+                with it("should not record a temp install path in the shared install state"):
+                    shared = Path(__file__).resolve().parent / ".install-state.json"
+                    before = shared.read_text(encoding="utf-8") if shared.is_file() else ""
+                    tmp = tempfile.mkdtemp()
+                    try:
+                        Installer(ide="Cursor", path=tmp, repo=self.repo).install([])
+                        after = shared.read_text(encoding="utf-8") if shared.is_file() else ""
+                        expect(after).to(equal(before))
+                        expect(
+                            Installer(path=tmp, repo=self.repo)._is_ephemeral_install_path(tmp)
+                        ).to(equal(True))
+                    finally:
+                        shutil.rmtree(tmp, ignore_errors=True)
+
+# (E) Install CDD Tools
+# (E) Install Practice Guidance Class
+with description("a practice guidance class") as self:
+    # (S) Installer --> Deploy Practice guidance instructions
+    with context("with instructions"):
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            self.tree = Path(self._tmp)
+            self.tool = SamplePracticeGuidance(format="markdown")
+            self.installer = Installer(ide="Cursor", path=self.tree)
+            self.mcp = self.installer.install([self.tool])
+
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with it("should write a skill file whose body is the overview"):
+            text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
+            expect(text).to(contain("sample preamble"))
+
+        with it("should put the skill folder name and overview in YAML front matter"):
+            text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
+            front = text.split("---", 2)[1]
+            expect(text.startswith("---\n")).to(equal(True))
+            expect(front).to(contain("name: sample-tool"))
+            expect(front).to(contain("description:"))
+            expect(front).to(contain("sample preamble"))
+
+        with it("should keep the MCP invoke tail out of the skill description"):
+            from installation.files import FileInstallation
+
+            overview = "sample preamble"
+            writer = FileInstallation("Cursor", self.tree, "skill")
+            text = writer._skill_front_matter(
+                "sample-tool",
+                writer._skill_overview(
+                    type("Host", (), {"overview": overview})(),
+                    [overview, "Use MCP tool: `sample-tool.instructions()`"],
+                ),
+            )
+            expect(text).to(contain("sample preamble"))
+            expect(text).not_to(contain("Use MCP tool:"))
+
+        with it("should not append a YAML CLI invoke fence to the skill body"):
+            skill = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
+            expect(skill).not_to(contain("tools.ps1"))
+            expect(skill).not_to(contain("toolset:"))
+
+        with it("should return the instructions the property assembles when the installed tool is invoked"):
+            server = McpServer()
+            server.bind_from(self.mcp)
+            result = server.invoke_prompt("sample-tool.instructions")
+            expect(result).to(equal(self.tool.instructions))
+
+        with context("with an underscored practice module path"):
+            with it("should kebab-case the practice folder to match fidelity skill names"):
+                from installation.files import FileInstallation
+
+                writer = FileInstallation("Cursor", Path("."), "skill")
+                tools = {"instructions": _skill_tool("instructions")}
+                toolset = type(
+                    "Practice",
+                    (),
+                    {"install_folder": Path("practices/sample_tool"), "tools": tools},
+                )()
+                expect(
+                    writer.relative_path(
+                        "skill", toolset, tools["instructions"].callable, "instructions"
+                    ).as_posix()
+                ).to(equal("skills/practices/sample-tool/SKILL.md"))
+
+    # (S) Installer --> Deploy Practice guidance rules
+    with context("with rules"):
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            self.tree = Path(self._tmp)
+            self.tool = SamplePracticeGuidance(format="markdown")
+            self.installer = Installer(ide="Cursor", path=self.tree)
+            self.mcp = self.installer.install([self.tool])
+
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with it("should write a rules file from the rules property"):
+            expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").read_text(encoding="utf-8")).to(
+                contain("sample rule one")
+            )
+
+        with it("should copy alwaysApply and globs from the rules property onto the rules file"):
+            text = InstalledTree(self.tree).rule_path("sample-tool.mdc").read_text(encoding="utf-8")
+            expect(text).to(contain("alwaysApply: false"))
+            expect(text).to(contain("globs: **/*sample*"))
+
+        with it("should not append a YAML CLI invoke fence to the rules body"):
+            rule = InstalledTree(self.tree).rule_path("sample-tool.mdc").read_text(encoding="utf-8")
+            expect(rule).not_to(contain("tools.ps1"))
+            expect(rule).not_to(contain("toolset:"))
+
+        with context("that inject after a tool runs"):
+            with before.each:
+                from practices.bdd.bdd import Bdd
+                from practices.clean_engineering.clean_engineering import CleanEngineering
+
+                self._branch_tmp = tempfile.mkdtemp()
+                self.tree = Path(self._branch_tmp)
+                Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                    [Bdd(), CleanEngineering()]
+                )
+                self.handlers = json.loads(
+                    (self.tree / "hook-handlers.json").read_text(encoding="utf-8")
+                )
+                self.inject_refs = [
+                    item["ref"]
+                    for item in self.handlers.get("handlers") or []
+                    if item.get("operation") == "inject_rules"
+                    and item.get("event") == "postToolUse"
+                ]
+
+            with after.each:
+                shutil.rmtree(self._branch_tmp, ignore_errors=True)
+
+            with it("should write one Bdd inject_rules handler"):
+                expect(self.inject_refs.count("practices.bdd.bdd:Bdd")).to(equal(1))
+
+            with it("should write one CleanEngineering inject_rules handler"):
+                expect(
+                    self.inject_refs.count(
+                        "practices.clean_engineering.clean_engineering:CleanEngineering"
+                    )
+                ).to(equal(1))
+
+        with context("that do not inject"):
+            with before.each:
+                from practices.examples.car.car import Car
+                from actions.examples.car_story.car_story import CarStory
+
+                self._branch_tmp = tempfile.mkdtemp()
+                self._car_tree = Path(self._branch_tmp)
+                Installer(ide="Cursor", path=self._car_tree, repo=_REPO_ROOT).install(
+                    [Car(), CarStory()]
+                )
+
+            with after.each:
+                shutil.rmtree(self._branch_tmp, ignore_errors=True)
+
+            with it("should not write inject_rules handlers for Car or CarStory"):
+                dest = self._car_tree / "hook-handlers.json"
+                if dest.is_file():
+                    refs = [
+                        item.get("ref", "")
+                        for item in json.loads(dest.read_text(encoding="utf-8")).get("handlers")
+                        or []
+                    ]
+                else:
+                    refs = []
+                expect(any("car:Car" in ref for ref in refs)).to(equal(False))
+                expect(any("CarStory" in ref for ref in refs)).to(equal(False))
+
+    # (S) Installer --> Deploy Practice guidance fidelities
+    with context("with fidelities"):
+        with before.each:
+            self._tmp = tempfile.mkdtemp()
+            self.tree = Path(self._tmp)
+            self.tool = SamplePracticeWithFidelities(format="markdown")
+            self.mcp = Installer(ide="Cursor", path=self.tree).install([self.tool])
+
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with it("should write practice and fidelity skill folders in kebab-case not underscored slugs"):
+            names = InstalledTree(self.tree).skill_names()
+            expect(names).to(contain("sample-tool"))
+            expect(names).to(contain("sample-tool-sketch"))
+            expect("sample_tool" in names).to(equal(False))
+            expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
+
+        with it("should emit the practice skill, practice rules, fidelity commands, and fidelity rules in one pass"):
+            expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).skill_path("sample-tool-sketch").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).command_path("sample-tool-sketch").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).rule_path("sample-tool-spec.mdc").is_file()).to(equal(True))
+
+        with context("with a leftover underscored practice skill folder beside the installed tree"):
+            with before.each:
+                kebab_dir = InstalledTree(self.tree).skill_path("sample-tool").parent
+                self.leftover = kebab_dir.parent / "sample_tool"
+                self.leftover.mkdir(parents=True, exist_ok=True)
+                (self.leftover / "SKILL.md").write_text("stale\n", encoding="utf-8")
+                Installer(ide="Cursor", path=self.tree).install(
+                    [SamplePracticeWithFidelities(format="markdown")]
+                )
+
+            with it("should remove the leftover underscored folder"):
+                expect(self.leftover.exists()).to(equal(False))
+
+            with it("should keep the kebab-case practice skill"):
+                expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
+
+        with context("with an underscored module path and fidelity folders under it"):
+            with it("should keep the practice folder and name the leaf practice-fidelity"):
+                from installation.files import FileInstallation
+
+                writer = FileInstallation("Cursor", Path("."), "skill")
+                tools = {"instructions": _skill_tool("instructions")}
+                practice = type("Practice", (), {"slug": "sample-tool"})()
+                toolset = type(
+                    "Fidelity",
+                    (),
+                    {
+                        "install_folder": Path("practices/sample_tool/sketch"),
+                        "tools": tools,
+                        "practice_guidance": practice,
+                        "slug": "sample-tool-sketch",
+                    },
+                )()
+                expect(
+                    writer.relative_path(
+                        "skill", toolset, tools["instructions"].callable, "instructions"
+                    ).as_posix()
+                ).to(equal("skills/practices/sample-tool/sample-tool-sketch/SKILL.md"))
+
+            with it("should kebab-case the practice parent so it matches the fidelity leaf"):
+                from installation.files import FileInstallation
+
+                writer = FileInstallation("Cursor", Path("."), "skill")
+                tools = {"instructions": _skill_tool("instructions")}
+                practice = type("Practice", (), {"slug": "sample-tool"})()
+                toolset = type(
+                    "Fidelity",
+                    (),
+                    {
+                        "install_folder": Path("practices/sample_tool/spec"),
+                        "tools": tools,
+                        "practice_guidance": practice,
+                        "slug": "sample-tool-spec",
+                    },
+                )()
+                expect(
+                    writer.relative_path(
+                        "skill", toolset, tools["instructions"].callable, "instructions"
+                    ).as_posix()
+                ).to(equal("skills/practices/sample-tool/sample-tool-spec/SKILL.md"))
+
+        # (S) Installer --> Deploy Practice guidance fidelity instructions
+        with context("that have instructions"):
+            with it("should write one fidelity skill file per fidelity"):
+                sketch = InstalledTree(self.tree).skill_path("sample-tool-sketch")
+                expect(sketch.is_file()).to(equal(True))
+                expect(sketch.read_text(encoding="utf-8")).to(contain("sample-tool-sketch()"))
+
+            with it("should write one fidelity command file per fidelity"):
+                sketch = InstalledTree(self.tree).command_path("sample-tool-sketch")
+                expect(sketch.is_file()).to(equal(True))
+
+            with it("should list each fidelity MCP signature and a one-liner on the practice skill"):
+                text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
+                expect(text).to(contain("sample preamble"))
+                expect(text).to(contain("sketch"))
+                expect(text).to(contain("Use MCP tool:"))
+                expect(text).to(contain("sample-tool-sketch()"))
+                expect(text).not_to(contain("sketch guidance body only"))
+
+            with it("should return that fidelity's instructions when the installed tool is invoked"):
+                server = McpServer()
+                server.bind_from(self.mcp)
+                sketch = self.tool.fidelities.entries["sketch"]
+                result = server.invoke_prompt("sample-tool-sketch")
+                expect(result).to(equal(sketch.instructions))
+
+            with context("from stories"):
+                with before.each:
+                    from practices.stories.stories import Stories
+
+                    self._branch_tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._branch_tmp)
+                    self.tool = Stories()
+                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                        [self.tool]
+                    )
+                    self.server = McpServer()
+                    self.server.bind_from(self.mcp)
+
+                with after.each:
+                    shutil.rmtree(self._branch_tmp, ignore_errors=True)
+
+                with it("should enroll nested fidelity instructions under the fidelity slug"):
+                    expect("stories-scenarios" in self.server.prompts).to(equal(True))
+
+                with it("should return that fidelity's instructions when the installed tool is invoked"):
+                    scenarios = self.tool.fidelities.entries["scenarios"]
+                    result = self.server.invoke_prompt("stories-scenarios")
+                    expect(result).to(equal(scenarios.instructions))
+
+            with context("that has been installed for VS Code"):
+                with before.each:
+                    self._branch_tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._branch_tmp)
+                    Installer(ide="VS Code", path=self.tree).install(
+                        [SamplePracticeWithFidelities(format="markdown")]
+                    )
+
+                with after.each:
+                    shutil.rmtree(self._branch_tmp, ignore_errors=True)
+
+                with it("should write fidelity command files under github prompts not under cursor commands"):
+                    expect(InstalledTree(self.tree).prompt_path("sample-tool-sketch").is_file()).to(equal(True))
+
+        # (S) Installer --> Deploy Practice guidance fidelity rules
+        with context("that have rules"):
+            with it("should write one fidelity rules file whose body is that fidelity's rules section"):
+                sketch_rules = InstalledTree(self.tree).rule_path("sample-tool-sketch.mdc")
+                expect(sketch_rules.is_file()).to(equal(True))
+                expect(sketch_rules.read_text(encoding="utf-8")).to(contain("sketch rule body"))
+
+            with it("should leave alwaysApply off and omit globs on a fidelity rules file"):
+                text = InstalledTree(self.tree).rule_path("sample-tool-sketch.mdc").read_text(encoding="utf-8")
+                expect(text).to(contain("alwaysApply: false"))
+                expect(text).not_to(contain("globs:"))
+
+# (E) Install CDD Tools
+# (E) Install Action Classes
+# (S) Installer --> Install Lifecycle actions
+with description("lifecycle actions annotated for installation") as self:
+    with context("that has been installed to Cursor"):
+        with after.each:
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+        with context("with operations annotated as skills"):
+            with context("with only a single skill operation"):
+                with before.each:
+                    from actions.document.document import Document
+                    from actions.generate.generate import Generate
+                    from actions.grill_context.grill_context import GrillContext
+                    from actions.iterate.iterate import Iterate
+                    from actions.partition.partition import Partition
+                    from actions.render.render import Render
+                    from actions.satisfy.satisfy import Satisfy
+                    from actions.sketch.sketch import Sketch
+                    from actions.sketch_render.sketch_render import SketchRender
+
+                    self._tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._tmp)
+                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                        [
+                            Document(),
+                            Generate(),
+                            GrillContext(),
+                            Iterate(),
+                            Partition(),
+                            Render(),
+                            Satisfy(),
+                            Sketch(),
+                            SketchRender(),
+                        ]
+                    )
+
+                with it("should write a skill file for each operation annotated as a skill"):
+                    expect(InstalledTree(self.tree).skill_names()).to(
+                        equal(
+                            {
+                                "document",
+                                "generate",
+                                "grill",
+                                "iterate",
+                                "partition",
+                                "render",
+                                "satisfy",
+                                "sketch",
+                                "sketch-render",
+                            }
+                        )
+                    )
+
+                with it("should keep a single matching operation at the kit folder"):
+                    expect(
+                        (self.tree / "skills" / "actions" / "generate" / "SKILL.md").is_file()
+                    ).to(equal(True))
+
+                with it("should name a single unmatched operation for the operation not the kit folder"):
+                    expect(
+                        (
+                            self.tree / "skills" / "actions" / "grill-context" / "grill" / "SKILL.md"
+                        ).is_file()
+                    ).to(equal(True))
+
+            # (S) Installer --> Install Lifecycle actions as several tools
+            with context("with several skill operations"):
+                with before.each:
+                    from actions.improvement.improvement import Improvement
+
+                    self._tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._tmp)
+                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                        [Improvement()]
+                    )
+
+                with it("should write each skill as a peer folder named for the operation"):
+                    root = self.tree / "skills" / "actions" / "improvement"
+                    expect(
+                        sorted(path.relative_to(root).as_posix() for path in root.rglob("SKILL.md"))
+                    ).to(equal(["repair/SKILL.md", "verify-fix/SKILL.md"]))
+
+        with context("with operations annotated for MCP"):
+            with context("with only a single MCP operation"):
+                with before.each:
+                    from actions.generate.generate import Generate
+
+                    self._tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._tmp)
+                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                        [Generate()]
+                    )
+
+                with it("should record that operation"):
+                    expect([op.mcp_name for op in self.mcp.mcp_operations]).to(
+                        equal(["generate.generate"])
+                    )
+
+                with it("should return that operation's instructions when the installed tool is invoked"):
+                    server = McpServer()
+                    server.bind_from(self.mcp)
+                    result = server.invoke_prompt("generate.generate")
+                    expect(str(result)).to(contain("Write artifacts for each listed Guidance"))
+
+            # (S) Installer --> Install Lifecycle actions as several tools
+            with context("with several MCP operations"):
+                with before.each:
+                    from actions.improvement.improvement import Improvement
+                    from actions.validate.validate import Validate
+
+                    self._tmp = tempfile.mkdtemp()
+                    self.tree = Path(self._tmp)
+                    self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+                        [Improvement(), Validate()]
+                    )
+
+                with it("should record each operation annotated for MCP"):
+                    expect(sorted(op.mcp_name for op in self.mcp.mcp_operations)).to(
+                        equal(
+                            [
+                                "improvement.repair",
+                                "improvement.verify_fix",
+                                "validate.validate",
+                            ]
+                        )
+                    )
+
+                with it("should not publish an operation annotated not to deploy"):
+                    names = [op.mcp_name for op in self.mcp.mcp_operations]
+                    expect("validate.createRule" in names).to(equal(False))
+
+with description("an operation annotated as a Cursor hook"):
+
+    with context("that names a documented Cursor event"):
+        with it("should store that event on the member"):
+            for event in sorted(Hook.EVENTS):
+
+                @Hook(event)
+                def handler(self, payload: dict) -> dict:
+                    return {}
+
+                expect(handler._hook).to(equal(True))
+                expect(handler._hook_name).to(equal(event))
+
+    with context("that names an unknown event"):
+        with it("should raise ValueError"):
+            expect(HookDecoration().unknown_event).to(raise_error(ValueError))
+
+    with context("that omits the event"):
+        with it("should raise ValueError"):
+            expect(HookDecoration().omitted_event).to(raise_error(ValueError))

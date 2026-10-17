@@ -518,7 +518,7 @@ class McpPrompt:
 
     def _expanded_instructions(self, tool: Any, member: Any, arguments: dict[str, object]) -> str:
         if hasattr(tool, "begin") and "guidance" in arguments:
-            tool.begin(arguments["guidance"], action=self._op.operation)
+            tool.begin(arguments["guidance"])
         from harness.agent_tools.agent_tools import AgentInstructions
 
         expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)

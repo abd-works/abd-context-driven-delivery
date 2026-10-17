@@ -19,12 +19,12 @@ section: body
 
 ---
 
-(E) Epic Verb–Noun
-    (E) Sub-Epic Verb–Noun
-        (S) Actor --> Story Verb–Noun
-        (S) Actor --> Story Verb–Noun
-    (E) Sub-Epic Verb–Noun
-        (S) Actor --> Story Verb–Noun
+# (E) Epic Verb–Noun
+    ## (E) Sub-Epic Verb–Noun
+        ### (S) Actor --> Story Verb–Noun
+        ### (S) Actor --> Story Verb–Noun
+    ## (E) Sub-Epic Verb–Noun
+        ### (S) Actor --> Story Verb–Noun
 
 ---
 

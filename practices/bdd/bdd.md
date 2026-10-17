@@ -110,6 +110,7 @@ Whenever you write or reshape describe / that / with / it-should specs, or code 
 - **`usage-order-behaviors`** — Order describes, contexts, and examples as a **usage story** or operational sequence (what happens first → next). Do not order by implementation layer, package, or internal type. In usage order a missing step is obvious; ordered by layer, nobody can tell what is not covered.
 - **`describe-is-subject-not-internal`** — A `describe` is a domain subject, state, or observable condition — never a manager, hub, runner, service, or other internal (`SessionLog`, `ToolsetRunner`, …). A spec named after a class has to be rewritten when that class is replaced, even though the behavior did not change.
 - **`describe-is-plain-english`** — Full English phrases (e.g. "an action that is annotated with log", "an action that is not annotated"). Never symbol/mechanism names (`"@log marker"`) as the subject.
+- **`shared-describe-subject`** — Keep **one** outermost `describe` per domain subject. When two top-level describes share the same opening phrase and only diverge in a trailing qualifier (`registered for deploy` vs `with mcp-published operations`, `context guidance registered for` vs `context guidance with`, `a context tool module with fidelity sections` vs `with fidelities and assembly`), that divergence is a **branch** — promote the shared phrase to the single describe and nest each qualifier as a sibling `with` / `that` context. Do not repeat the shared setup string in a second top-level describe.
 - **`state-not-when`** — Never name a nested state with `when`. Use `that …` for events/conditions on the subject and `with …` for standing conditions. Ask: what event or condition must already be true for this observation?
 - **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
 - **`context-setup-expresses-state`** — Any `before.each`, `before.all`, or Arrange nested directly under a `that`/`with` must establish the state named in that label. Read label and setup together: if the label says the subject is annotated, configured, or classified a certain way, the setup must make that true — not merely boot the host, wire paths, or call a factory. Put host boot, browser launch, and construction plumbing in a parent context whose label says the host is started, loaded, or running (`that is hosted on…`, `that the server has started…`).
@@ -153,6 +154,7 @@ If this change will not stay here, follow `practices/bdd.mdc`.
 - **`state-not-when`** — Nest by the state or condition that enables an observation, never by a `when` trigger.
 - **`nest-by-enabling-events`** — Sub-groupings are conditions that unlock further behavior, not implementation steps.
 - **`context-setup-expresses-state`** — Setup under a label must establish that label's state, not unrelated host boot.
+- **`shared-describe-subject`** — Same rule as shared rules (above); at behavior fidelity, scan the spec file for repeated top-level `describe` prefixes before adding another subject line.
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
 - **`framework-syntax`** — Refer to [`practices/language-tools.md`](/practices/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
 
@@ -234,4 +236,69 @@ If this change will not stay here, follow `practices/bdd/behavior.mdc`.
 - **`context-setup-expresses-state`** — Same rule as behavior (above). At development fidelity, `before.each` is Arrange: it must express the parent context's named state, not smuggle host boot under a domain classification branch.
 - **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept. Tests that assemble state through getters or pass setup bags couple to how you built it, not what it does.
 - **`honors-documented-surface-contracts`** — Public API must match documented surface contracts; if a spec fights the contract, fix the spec.
+
+---
+
+## Common mistakes still being made
+
+Scratch pad — mistakes people still make against this practice. Each entry: the mistake, an example, what should have happened instead. (Disposition TBD.)
+
+### Not nesting contexts properly
+
+**Mistake:** Repeating the same top-level `describe` subject with only a trailing qualifier, or nesting `that` / `with` layers that do not read as one enabling sentence (setup grouped for file convenience instead of state).
+
+**Example:** Two top-level describes in one spec file: `a bare agentic toolset registered for deploy` and `a bare agentic toolset with mcp-published operations registered for deploy`, each with its own install `before.each`. Or a configuration branch *outside* install while a sibling repeats the same `that has been deployed to Cursor` wrapper.
+
+**What should have happened:** One outer `describe` for the shared subject (`an agent toolset registered for deploy`). Branch with sibling contexts (`that has been installed … from operations not marked mcp` vs `… marked mcp`). Shared subject promotion is also what **`shared-describe-subject`** flags.
+
+### Treating results of install as install configuration
+
+**Mistake:** Naming an **outcome on the tree** (assembled artifacts, deployed skill files, MCP enrollment) in a `with` context that sits **above** the context whose `before.each` runs install — so the label sounds like a precondition or fixture choice instead of something true **after** install.
+
+**Example:**
+
+```python
+with context("with fidelity artifacts assembled in one install pass"):
+    with context("that has been deployed to Cursor"):
+        with before.each:
+            Installer(ide="Cursor", path=self.tree).install([SamplePracticeWithFidelities()])
+```
+
+**What should have happened:** Install state first; outcome contexts nested under it:
+
+```python
+with context("that has been installed to Cursor from practice guidance with fidelity markdown sections"):
+    with before.each:
+        Installer(ide="Cursor", path=self.tree).install([SamplePracticeWithFidelities()])
+    with context("with fidelity artifacts assembled in one install pass"):
+        with it("should emit the practice skill, practice rules, fidelity commands, and fidelity rules in one pass"):
+            ...
+```
+
+Read the parent label and `before.each` together: **`context-setup-expresses-state`** — the setup must establish the state the label names; observables on the install tree belong under `that has been installed …`, not as a peer that implies a second way to “configure” the same subject.
+
+### Missing the core subject under test
+
+**Mistake:** Naming the actor, the mechanism, or one part as the subject. The tree then hangs contexts off the installer, the annotation, or the path, and you never see the thing the examples are actually about.
+
+**Example:** Installer specs kept opening `an installer deploying to an IDE path`, and a Guidance context that listed skill, MCP, and rules annotations. The subject under test is the installed CDD toolset. Guidance is one part of that toolset. Instructions and rules are parts of Guidance. Installed, and to a path, are states of the toolset.
+
+**What should have happened:** Name the core subject first. Then name its subcomponents. From each subcomponent, derive the nested contexts (what it is made of), the events (what has already happened to it), and the expectations (what you can observe).
+
+```
+an agent toolset                          ← subject
+  with operations annotated for installation   ← subcomponent
+    that are annotated as skills and commands
+      it should write a skill file for each of them
+  that is a Guidance toolset              ← subcomponent
+    with instructions
+    with rules
+  that has been installed                 ← event on the subject
+    to a path                             ← where that event landed
+      that has been cleansed
+        it should remove the published skill
+```
+
+Do not open a new describe for the installer, the path, or the annotation when those are a state or a part of the same subject.
+
 ---

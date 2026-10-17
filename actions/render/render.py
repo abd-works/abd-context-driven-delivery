@@ -11,13 +11,6 @@ from harness.mcp.mcp_server import Mcp
 class Render(GuidanceAction):
     """Render already-generated output for provided context tools."""
 
-    def __init__(self, path: str = ".", session: str = "") -> None:
-        self.path = path
-        self._session_name = session
-        self._guidance_text: str | None = None
-        self._tool_items: list = []
-        self.workspace = None
-
     @Mcp
     @Skill
     @agent_tool
