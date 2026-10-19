@@ -4,7 +4,7 @@ from __future__ import annotations
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE
 from harness.mcp.mcp_server import mcp
-from installation.files import skill
+from harness.installation.files import skill
 
 
 @agent_toolset

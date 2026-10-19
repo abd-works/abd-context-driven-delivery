@@ -7,12 +7,20 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from git.git import Repo, TicketState
+from space.repo import Repo, TicketState
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
-from workspace.legacy.workspace import Workspace
-from workspace.workspace import Turn, WorkSession
+from workspace.legacy.workspace import WorkSession, Workspace
 from workflow.workflow import Workflow
+
+
+class PlanTurn:
+    """One planned step on a Plan."""
+
+    def __init__(self) -> None:
+        self.state = None
+        self.judge_checkpoint = None
+        self.hil_check = None
 
 @dataclass
 class JudgeCheckpoint:
@@ -49,27 +57,27 @@ class TurnTemplate:
 class TurnAttachments:
     """HILCheck and JudgeCheckpoint hanging on Turns."""
 
-    def add_hil(self, turn: Turn, hil: HILCheck | None = None) -> HILCheck:
+    def add_hil(self, turn: PlanTurn, hil: HILCheck | None = None) -> HILCheck:
         check = hil or HILCheck()
         turn.hil_check = check  # type: ignore[attr-defined]
         return check
 
-    def edit_hil(self, turn: Turn, hil: HILCheck) -> HILCheck:
+    def edit_hil(self, turn: PlanTurn, hil: HILCheck) -> HILCheck:
         turn.hil_check = hil  # type: ignore[attr-defined]
         return hil
 
-    def delete_hil(self, turn: Turn) -> None:
+    def delete_hil(self, turn: PlanTurn) -> None:
         turn.hil_check = None  # type: ignore[attr-defined]
 
     def add_judge(
-        self, turn: Turn, rubric: str, checkpoint: JudgeCheckpoint | None = None
+        self, turn: PlanTurn, rubric: str, checkpoint: JudgeCheckpoint | None = None
     ) -> JudgeCheckpoint:
         check = checkpoint or JudgeCheckpoint(rubric=rubric)
         check.rubric = rubric
         turn.judge_checkpoint = check  # type: ignore[attr-defined]
         return check
 
-    def edit_judge(self, turn: Turn, rubric: str) -> JudgeCheckpoint:
+    def edit_judge(self, turn: PlanTurn, rubric: str) -> JudgeCheckpoint:
         check = getattr(turn, "judge_checkpoint", None)
         if check is None:
             check = JudgeCheckpoint(rubric=rubric)
@@ -78,7 +86,7 @@ class TurnAttachments:
         turn.judge_checkpoint = check  # type: ignore[attr-defined]
         return check
 
-    def delete_judge(self, turn: Turn) -> None:
+    def delete_judge(self, turn: PlanTurn) -> None:
         turn.judge_checkpoint = None  # type: ignore[attr-defined]
 
 @dataclass
@@ -119,7 +127,7 @@ class Plan:
         self._workspace = seed.workspace
         self._workflow = seed.workflow
         self._workflow_name = seed.workflow_name
-        self._turns: list[Turn] = []
+        self._turns: list[PlanTurn] = []
         self._work_session: WorkSession | None = None
 
     @property
@@ -135,7 +143,7 @@ class Plan:
         return self._workflow_name
 
     @property
-    def turns(self) -> list[Turn]:
+    def turns(self) -> list[PlanTurn]:
         return list(self._turns)
 
     @property
@@ -182,9 +190,9 @@ class Plan:
             plans = workspace.plans
         plans.append(plan)
 
-    def add_turn(self, turn: Turn | None = None, **fields: Any) -> Turn:
+    def add_turn(self, turn: PlanTurn | None = None, **fields: Any) -> PlanTurn:
         if turn is None:
-            turn = Turn()
+            turn = PlanTurn()
         for field_name, field_value in fields.items():
             setattr(turn, field_name, field_value)
         if not hasattr(turn, "state") or turn.state is None:  # type: ignore[attr-defined]
@@ -212,12 +220,12 @@ class PlanTurns:
     def __init__(self, plan: Plan) -> None:
         self._plan = plan
 
-    def edit(self, turn: Turn, **fields: Any) -> Turn:
+    def edit(self, turn: PlanTurn, **fields: Any) -> PlanTurn:
         for field_name, field_value in fields.items():
             setattr(turn, field_name, field_value)
         return turn
 
-    def delete(self, turn: Turn) -> None:
+    def delete(self, turn: PlanTurn) -> None:
         turns = self._plan._turns
         if turn in turns:
             turns.remove(turn)
@@ -674,7 +682,7 @@ class PlanExecution:
             session.open_turn = first
         return session
 
-    def execute_turn(self) -> Turn | None:
+    def execute_turn(self) -> PlanTurn | None:
         turn = self._open_turn()
         if turn is None:
             return None
@@ -713,7 +721,7 @@ class PlanExecution:
             judge_result=getattr(judge, "judge_result", None) if judge else None,
         )
 
-    def advance_turn(self) -> Turn | None:
+    def advance_turn(self) -> PlanTurn | None:
         session = self._plan.work_session
         turn = self._open_turn()
         if session is None or turn is None:
@@ -726,7 +734,7 @@ class PlanExecution:
         )
         return self._promote_next(session, turn)
 
-    def fix_and_rerun(self, mistake: str, correction: str) -> Turn | None:
+    def fix_and_rerun(self, mistake: str, correction: str) -> PlanTurn | None:
         turn = self._open_turn()
         if turn is None:
             return None
@@ -736,13 +744,13 @@ class PlanExecution:
             turn.record_correction(correction)
         return self.execute_turn()
 
-    def _open_turn(self) -> Turn | None:
+    def _open_turn(self) -> PlanTurn | None:
         session = self._plan.work_session
         if session is None:
             return None
         return session.open_turn
 
-    def _promote_next(self, session: WorkSession, current: Turn) -> Turn | None:
+    def _promote_next(self, session: WorkSession, current: PlanTurn) -> PlanTurn | None:
         turns = self._plan.turns
         idx = turns.index(current) if current in turns else -1
         nxt = turns[idx + 1] if 0 <= idx < len(turns) - 1 else None

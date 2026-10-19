@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from installation.destination import Destination, Installation
+from harness.installation.destination import Destination, Installation
 
 
 class Hooks:
@@ -50,7 +50,7 @@ class Hook(Destination):
         }
     )
 
-    def __new__(cls, fn: Any = None, event: str | None = None):
+    def __new__(cls, fn: Any = None, event: str | None = None, *, disabled: bool = False):
         if isinstance(fn, str):
             event = fn
             fn = None
@@ -64,9 +64,16 @@ class Hook(Destination):
             )
         inst = object.__new__(cls)
         inst.name = event
+        inst.disabled = disabled
         if callable(fn):
             return inst.annotate(fn)
         return inst
+
+    def annotate(self, fn: Any) -> Any:
+        marked = super().annotate(fn)
+        if self.disabled:
+            setattr(marked, "_hook_disabled", True)
+        return marked
 
     @classmethod
     def normalize_event(cls, event: str) -> str:

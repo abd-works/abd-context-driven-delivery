@@ -6,7 +6,7 @@ from pathlib import Path
 
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
-from installation.files import skill
+from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 
 _FORMAT_PATH = Path(__file__).parent / "CDR-FORMAT.md"

@@ -16,7 +16,7 @@ from harness.agent_tools.agent_tools import (
     instructions,
     toolsetCollection,
 )
-from installation.files import command, rules, skill
+from harness.installation.files import command, rules, skill
 from prompt_echo.prompt_echo import echo
 from harness.mcp.mcp_server import mcp
 from harness.markdown import (

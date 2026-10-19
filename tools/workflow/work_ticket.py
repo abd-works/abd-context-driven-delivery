@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from git.git import Repo, Ticket, issue_theme_label
+from space.repo import Repo, Ticket, issue_theme_label
 
 if TYPE_CHECKING:
     from workflow.workflow import Workflow

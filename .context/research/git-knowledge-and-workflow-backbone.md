@@ -479,7 +479,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | `harness/agent_tools` | manifest paths |
 | `tools/agent_skills` | deploy, `configure_git_notes`, team `.vscode` settings |
 | `tools/handoff` | handoff payload + span |
-| `tools/catalog_generator` | HTML shells (catalog, kanban) |
+| `harness/catalog_generator` | HTML shells (catalog, kanban) |
 | `tools/trace_graph` *(new)* | `build_eval_graph`, `regen_*_index` |
 
 ### External tools (team baseline)

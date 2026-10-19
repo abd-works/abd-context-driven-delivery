@@ -1,4 +1,4 @@
-"""Install CDD toolsets by calling installation/installer.py."""
+"""Install CDD toolsets by calling harness/installation/installer.py."""
 from __future__ import annotations
 
 import argparse
@@ -20,7 +20,7 @@ def main() -> int:
         help="Leave files from the previous install in place.",
     )
     args = parser.parse_args()
-    from installation.installer import Installer
+    from harness.installation.installer import Installer
 
     Installer(ide=args.ide, path=args.path, repo=_REPO).install(replace=not args.no_replace)
     return 0

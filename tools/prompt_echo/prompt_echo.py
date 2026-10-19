@@ -24,7 +24,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.agent_tools import agent_toolset
-from installation.destination import Destination
+from harness.installation.destination import Destination
 from harness.hooks.hooks import Hook
 
 
@@ -327,7 +327,7 @@ class PromptEcho:
         return "action", str(getattr(self._begin_toolset, "slug", match.name)).replace("_", "-")
 
     def _load_echo_toolsets(self, repo: Path | None) -> list:
-        from installation.installer import Installer
+        from harness.installation.installer import Installer
         from harness.agent_tools.agent_tools import AgentToolSet
 
         installer = Installer(repo=repo or _REPO_ROOT)

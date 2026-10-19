@@ -1,0 +1,27 @@
+# LERN overlay on ddd. Extend only.
+entityRoot:
+  - is: ddd.entityRoot
+  - [node | client]
+node:
+  - is: ddd.entityRoot
+  - hosts: ddd.entityRoot
+  - [view]
+client:
+  - is: ddd.entityRoot
+  - interacts: ddd.entityRoot
+repository:
+  - is: ddd.repository
+  - [jsonStore]
+jsonStore:
+  - jsonFile: ddd.entityRoot
+aggregate:
+  - is: ddd.aggregate
+  - route
+  - [view]
+route:
+  - navigates: ddd.aggregate
+  - [destination]
+destination:
+  - invokes: [operation]
+view:
+  - renders: [ddd.entity | operation]

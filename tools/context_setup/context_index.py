@@ -11,7 +11,7 @@ _log = logging.getLogger(__name__)
 
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
-from installation.files import skill
+from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 
 if TYPE_CHECKING:

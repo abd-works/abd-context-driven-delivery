@@ -501,7 +501,8 @@ class AssetLocator:
 
     def _locate(self) -> AssetLocation:
         self._module_dir = self.class_file_directory()
-        self._domain_slug = self._module_dir.name
+        declared = getattr(self._instance, "domain_slug", None)
+        self._domain_slug = str(declared) if declared else self._module_dir.name
         filter_value = self._active_resource(self._filter_key) if self._filter_key else None
         if self._label == "templates":
             return self._locate_template_or_missing(filter_value)
@@ -1120,6 +1121,7 @@ _MARK_ATTRS = (
     "_skill_name",
     "_command_name",
     "_hook_name",
+    "_diagnostic",
 )
 
 

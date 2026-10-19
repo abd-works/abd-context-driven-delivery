@@ -6,7 +6,7 @@ from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions
-from installation.files import Skill
+from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 
 _SATISFY_MARKDOWN = Path(__file__).with_name("satisfy.md").read_text(encoding="utf-8")

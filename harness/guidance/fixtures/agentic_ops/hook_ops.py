@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset
-from installation.files import skill
+from harness.installation.files import skill
 from harness.hooks.hooks import hook
 
 

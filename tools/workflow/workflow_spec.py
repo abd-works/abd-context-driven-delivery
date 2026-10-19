@@ -16,8 +16,7 @@ sys.modules.pop("workflow", None)
 from expects import be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from git import TicketNotFoundError
-from git.git import Commit, Repo, Ticket
+from space.repo import Commit, Repo, Ticket, TicketNotFoundError
 from workflow.work_ticket import WorkTicket, format_session_ticket_context
 from workflow.workflow import Workflow
 

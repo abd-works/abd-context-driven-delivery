@@ -1,6 +1,6 @@
 """WordNet checks for DDD type names.
 
-CodeQL emits the class name. NLTK WordNet decides whether a CamelCase token is an
+The class name is split into tokens. NLTK WordNet decides whether a CamelCase token is an
 agent noun (Manager, Helper, Processor). Leftover technical suffixes from the
 rule stay in Python because they are not parts of speech.
 """

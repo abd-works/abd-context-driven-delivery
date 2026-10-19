@@ -252,7 +252,7 @@ with description("Sketch toolset"):
             )
             expect(joined).to(contain("observable-behavior"))
             expect(joined).to(contain("no-implementation"))
-            expect(joined).to(contain("not a graph .ql query"))
+            expect(joined).to(contain("not a graph query"))
 
 
 with description("an MCP sketch prompt"):

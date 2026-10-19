@@ -68,6 +68,7 @@ with description("context guidance"):
             inject = type(guidance.rules).inject_rules
             expect(getattr(inject, "_echo", False)).to(equal(True))
             expect(getattr(inject, "_hook", False)).to(equal(True))
+            expect(getattr(inject, "_hook_disabled", False)).to(equal(True))
             expect(getattr(inject, "_hook_name", "")).to(equal("postToolUse"))
             from prompt_echo.prompt_echo import TOAST_NOTICE
 
@@ -76,10 +77,10 @@ with description("context guidance"):
             expect(notice).to(contain("rules :"))
             expect(notice).to(contain("SampleGuidance"))
 
-        with it("should list inject_rules on tools so hook install can enroll it"):
+        with it("should list inject_rules on tools but not enroll a disabled hook"):
             guidance = SampleGuidance(format="markdown")
             expect("inject_rules" in guidance.tools).to(equal(True))
-            expect(guidance.tools["inject_rules"].install_to_hook).to(equal(True))
+            expect(guidance.tools["inject_rules"].install_to_hook).to(equal(False))
             expect("inject_rules" in guidance.rules.tools).to(equal(True))
 
         with it("should rehost inject_rules on the practice so install enrolls CleanEngineering"):

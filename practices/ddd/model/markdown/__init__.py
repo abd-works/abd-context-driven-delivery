@@ -1,1 +1,1 @@
-"""Markdown and CodeQL channel packages."""
+"""Markdown channel packages."""

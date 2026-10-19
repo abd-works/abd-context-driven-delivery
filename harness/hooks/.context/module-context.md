@@ -7,6 +7,7 @@ Object model: [hooks-runtime-model.md](hooks-runtime-model.md). Toast work lives
 ### Hook
 
 - Put `@Hook("sessionStart")` (or `hook`) on a toolset member so that Cursor event runs the method.
+- Put `@Hook("postToolUse", disabled=True)` on one operation to skip install and runtime dispatch for that member only; the method body may still run when called in process.
 - The body receives the event payload and returns the fields Cursor reads (`permission`, `continue`, `user_message`, `agent_message`, `followup_message`, `additional_context`).
 - **Invariant:** the event string is one of `Hook.EVENTS`. Unknown names fail at decoration.
 
@@ -34,4 +35,4 @@ Build order: `installation` → `harness/hooks`
 
 ## Constraint
 
-The event name is the Cursor event (`sessionStart`, `preToolUse`, …) from `Hook.EVENTS` in `harness.hooks.hooks`. `@Hooks(disabled=True)` on a toolset skips every hook on it. *Echo* / *PromptEcho* live in `tools/prompt_echo`.
+The event name is the Cursor event (`sessionStart`, `preToolUse`, …) from `Hook.EVENTS` in `harness.hooks.hooks`. `@Hooks(disabled=True)` on a toolset skips every hook on it; `@Hook(..., disabled=True)` on one operation skips only that member. *Echo* / *PromptEcho* live in `tools/prompt_echo`.

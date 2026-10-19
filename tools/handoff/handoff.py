@@ -11,8 +11,8 @@ from pathlib import Path
 from workspace.legacy.workspace import SessionPaths, Workspace
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
-from installation.destination import noCatalog
-from installation.files import skill
+from harness.installation.destination import noCatalog
+from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 
 @noCatalog

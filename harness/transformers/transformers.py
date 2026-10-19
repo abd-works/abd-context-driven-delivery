@@ -10,7 +10,7 @@ from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.mcp.mcp_server import mcp
 from harness.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
-from installation.files import Skill
+from harness.installation.files import Skill
 from practices.bdd.bdd import Bdd
 from practices.clean_engineering.clean_engineering import CleanEngineering
 from practices.ddd.ddd import Ddd

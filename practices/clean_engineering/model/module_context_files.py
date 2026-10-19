@@ -1,8 +1,7 @@
-"""Read `.context/module-context.md` next to a CodeQL class row.
+"""Read `.context/module-context.md` next to a class source file.
 
-The Python extractor does not put markdown in the database. CodeQL emits the
-class and the absolute path of its `.py` file; these helpers open the sibling
-module-context file and apply the same text checks the scanners use.
+These helpers open the sibling module-context file and apply the same text
+checks the scanners use.
 """
 
 from __future__ import annotations

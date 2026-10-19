@@ -26,7 +26,7 @@ class StartHost:
         """Workspace first, then this script's checkout. Worktrees must not pin __file__."""
         here = Path(start or os.getcwd()).resolve()
         for candidate in (here, *here.parents):
-            if (candidate / "installation" / "installer.py").is_file():
+            if (candidate / "harness" / "installation" / "installer.py").is_file():
                 return candidate
         return self.FALLBACK_REPO
 
@@ -56,7 +56,7 @@ def main() -> None:
     os.environ["CDD_PROJECT"] = str(project)
     if str(repo) not in sys.path:
         sys.path.insert(0, str(repo))
-    from installation.installer import Installer
+    from harness.installation.installer import Installer
 
     installer = Installer(repo=repo)
     installer.ensure_import_path()

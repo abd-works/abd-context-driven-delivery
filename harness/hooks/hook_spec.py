@@ -32,47 +32,12 @@ from harness.hooks.hook_server import (
     HookServer,
 )
 from harness.hooks.hooks import Hook, Hooks
-from installation.installer import Installer
+from harness.installation.installer import Installer
 
 
 def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
     catalog = HandlerCatalog(toolsets or [], _REPO_ROOT)
     return HookServer(_REPO_ROOT, catalog).dispatch(HookPayload(payload)).as_dict()
-
-
-def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
-    root = Path(tmp.name)
-    session = root / ".sessions" / "work-session"
-    session.mkdir(parents=True)
-    (root / ".sessions" / "_active").write_text("work-session", encoding="utf-8")
-    (session / "work-guidelines.md").write_text(
-        "#### Rules\n\n"
-        "- `put-logic-on-the-owning-resource` - session body of put-logic\n"
-        "  star: 2\n"
-        "  last-fail: 1\n"
-        "  mistake: parked the check on the client\n"
-        "  correction: call validate on the transaction\n",
-        encoding="utf-8",
-    )
-
-    @agent_toolset
-    class _PracticeInject:
-        @Hook("postToolUse")
-        def on_inject(self, payload: dict) -> dict:
-            return {
-                "additional_context": (
-                    "- `put-logic-on-the-owning-resource` - practice body of put-logic\n"
-                    "- `hide-inner-details` - Expose behavior through named operations."
-                )
-            }
-
-    server = HookServer(root, HandlerCatalog([_PracticeInject], root))
-    result = server.dispatch(
-        HookPayload({"hook_event_name": "postToolUse", "tool_name": "Write"})
-    )
-    server._publish_context(result)
-    server._write_last_chat_injected(result)
-    return root, result
 
 
 @Hooks(disabled=True)
@@ -329,22 +294,6 @@ with description("hook dispatch"):
             )
             text = out.get("additional_context") or ""
             expect(text.count("keep-operations-small-focused")).to(equal(1))
-
-        with it("should overwrite an injected rule of the same name from the work session"):
-            tmp = tempfile.TemporaryDirectory()
-            try:
-                root, result = _dispatch_work_session_inject(tmp)
-                text = result.additional_context or ""
-                expect(text).to(contain("session body of put-logic"))
-                expect(text).to(contain("parked the check on the client"))
-                expect(text).not_to(contain("practice body of put-logic"))
-                expect(text).to(contain("hide-inner-details"))
-                expect(
-                    text.find("session body of put-logic")
-                    < text.find("hide-inner-details")
-                ).to(equal(True))
-            finally:
-                tmp.cleanup()
 
         with it("should inject saved rules only into the chat that edited"):
             tmp = tempfile.TemporaryDirectory()

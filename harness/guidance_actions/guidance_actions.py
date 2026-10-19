@@ -204,7 +204,7 @@ class GuidanceCatalog:
     def _load(cls) -> None:
         if cls._refs is not None:
             return
-        from installation.installer import Installer
+        from harness.installation.installer import Installer
         from harness.agent_tools.agent_tools import AgentToolSet
 
         refs: dict[str, str | dict[str, Any]] = {}

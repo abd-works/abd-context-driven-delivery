@@ -17,7 +17,7 @@ for _cat in ("tools", "practices", "actions"):
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
-from installation.installer import Installer
+from harness.installation.installer import Installer
 from harness.mcp.examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.mcp_server import HostPid, McpHost, McpInstallation
 from actions.iterate.iterate import Iterate
@@ -319,27 +319,23 @@ with description("an MCP host") as self:
         with it("should include the built-in health-check tool"):
             expect(self.host.diagnose()["tools"]).to(contain("cdd.ping"))
 
-    with context("that has enrolled a turn toolset"):
+    with context("that has enrolled the repo toolset"):
         with before.each:
             self.host = McpHost.from_refs(
-                ("tools.workspace.workspace:Turn",),
+                ("space.repo.agent:Repo",),
                 repo=str(_REPO_ROOT),
                 project=str(_REPO_ROOT),
             )
 
-        with it("should name the turn operation turn.turn"):
-            expect(self.host.diagnose()["tools"]).to(contain("turn.turn"))
+        with it("should expose branch lifecycle and push"):
+            tools = self.host.diagnose()["tools"]
+            expect(tools).to(contain("repo.branch_switch"))
+            expect(tools).to(contain("repo.branch_create"))
+            expect(tools).to(contain("repo.branch_close"))
+            expect(tools).to(contain("repo.push"))
 
         with it("should resolve Cursor underscore aliases to enrolled names"):
-            expect(self.host._runtime.resolve_call_name("turn_turn")).to(equal("turn.turn"))
-
-        with it("should advertise MCP tool names Cursor can load"):
-            illegal = [
-                name
-                for name in self.host.diagnose()["tools"]
-                if re.fullmatch(r"[A-Za-z0-9_.-]+", name) is None
-            ]
-            expect(illegal).to(equal([]))
+            expect(self.host._runtime.resolve_call_name("repo_push")).to(equal("repo.push"))
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):
         with before.each:

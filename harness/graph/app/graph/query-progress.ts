@@ -83,7 +83,7 @@ export function queryProgress(messages: string[]): QueryProgress {
       detail = text;
       continue;
     }
-    if (line.includes('.ql') || /^\(\d+%\)/.test(text)) {
+    if (/^\(\d+%\)/.test(text)) {
       detail = text;
     }
   }

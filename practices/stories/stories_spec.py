@@ -141,7 +141,7 @@ with description("Stories"):
         with it("should include the stories schema in the practice skill"):
             import tempfile
 
-            from installation.files import FileInstallation
+            from harness.installation.files import FileInstallation
 
             stories = Stories()
             tool = stories.tools["instructions"]

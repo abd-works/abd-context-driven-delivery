@@ -124,7 +124,7 @@ class RulesCollection(MarkdownCollection):
         return AppliesTo(always_apply=self.always_apply, globs=self.glob)
 
     @echo
-    @Hook("postToolUse")
+    @Hook("postToolUse", disabled=True)
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         from prompt_echo.prompt_echo import PromptEcho
 
@@ -386,7 +386,7 @@ class RulesCollection(MarkdownCollection):
     def markdown_block(self) -> str:
         """Original Rules markdown for the practice and the active fidelity.
 
-        Evaluate the sketch against this block as an AI check — not a graph .ql query.
+        Evaluate the sketch against this block as an AI check — not a graph query.
         """
         return self._original_rules_markdown()
 

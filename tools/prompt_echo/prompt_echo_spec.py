@@ -13,7 +13,7 @@ if _tools not in sys.path:
 from expects import contain, equal, expect
 from mamba import context, description, it
 
-from installation.installer import Installer  # noqa: F401 — load Destination before hooks
+from harness.installation.installer import Installer  # noqa: F401 — load Destination before hooks
 from tempfile import TemporaryDirectory
 
 from prompt_echo.prompt_echo import PromptEcho, echo

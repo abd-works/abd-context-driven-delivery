@@ -22,7 +22,7 @@ from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from installation.destination import Destination, Installation
+from harness.installation.destination import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
@@ -386,7 +386,7 @@ class McpInstallation(Installation):
         self.track_write(dest)
 
     def _stdio_manifest(self) -> dict[str, Any]:
-        from installation.installer import Installer
+        from harness.installation.installer import Installer
 
         repo = self.repo or Path(__file__).resolve().parents[2]
         project = self._project_root()
@@ -550,16 +550,16 @@ class McpServer:
         self._session = None
 
     def _apply_catalog_import_path(self) -> None:
-        from installation.installer import Installer
+        from harness.installation.installer import Installer
 
         Installer(repo=self.repo).ensure_import_path()
 
     @property
     def session(self):
         if self._session is None:
-            from harness.session import Session
+            from space.session import Session
 
-            self._session = Session()
+            self._session = Session(self.project)
         return self._session
 
     @property
@@ -1049,7 +1049,7 @@ class McpHost:
             Path(manifest)
         )
         if not refs:
-            from installation.installer import Installer
+            from harness.installation.installer import Installer
 
             refs = tuple(Installer(repo=resolved).collect_toolsets())
         try:

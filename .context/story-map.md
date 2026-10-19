@@ -15,32 +15,9 @@ section: body
 
 # Story Map — Context-Driven Delivery
 
-**Sources / context:** `README.md` (install, practice plus action plus optional format, discovery / specification / implementation); `.context/principles/context-as-code-strategy.md` (sandbox, scaffold, document one slice, tests until green, human review, next increment); `practices/cdd/agents/context.md`, `discovery.md`, `specification.md`, `implementation.md`; `.context/module-context.md` (Installer, Context Setup, Stories, Ddd, Handoff, Eval).
+**Sources / context:** `README.md` (install, practice plus action plus optional format, discovery / specification / implementation); `.context/principles/context-as-code-strategy.md` (sandbox, scaffold, document one slice, tests until green, human review, next increment); `practices/cdd/agents/context.md`, `discovery.md`, `specification.md`, `implementation.md`; `.context/module-context.md` (Installer, Context Setup, Stories, Ddd, Handoff, Eval); `tools/context_setup/.context/module-context.md`; `tools/context_setup/.context/cdr/0001-plain-toolset-not-context-domain.md`; `tools/context_setup/context_setup.py`; `tools/context_setup/context_index.py`; `tools/context_setup/context_setup_spec.py`; `tools/context_setup/context_index_spec.py`.
 
-**Evidence:** Inferred from those sources. No live session was walked in this pass, so none of these nodes are marked observed. Intended where a role prompt prescribes a confirm-or-handoff step the strategy does not show as a separate command.
-
----
-
----
-fidelity: [discovery]
-artifact: [story-map]
-format: md
-section: body
----
-
-<!-- Discovery fidelity — every sub-epic decomposed to named stories.
-     Do not wrap epic, sub-epic, story, or actor names in backticks.
-
-     Disk layout (`artifacts-mirror-story-hierarchy` + `kebab-case-paths`):
-     tests/{epic-verb-noun}/{sub-epic-verb-noun}/{story-kebab-slug}.py
-     — epic/sub-epic folders kebab-case; one story file per story (no {story}/ folder).
-     Exception: Python epic helper only — {epic_slug}_helper.py at epic root. -->
-
-# Story Map — Context-Driven Delivery
-
-**Sources / context:** `README.md` (install, practice plus action plus optional format, discovery / specification / implementation); `.context/principles/context-as-code-strategy.md` (sandbox, scaffold, document one slice, tests until green, human review, next increment); `practices/cdd/agents/context.md`, `discovery.md`, `specification.md`, `implementation.md`; `.context/module-context.md` (Installer, Context Setup, Stories, Ddd, Handoff, Eval).
-
-**Evidence:** Inferred from those sources. No live session was walked in this pass, so none of these nodes are marked observed. Intended where a role prompt prescribes a confirm-or-handoff step the strategy does not show as a separate command.
+**Evidence:** Inferred from those sources. No live session was walked in this pass, so none of these nodes are marked observed. Context-setup nodes are inferred from the operations and action recipes in `context_setup.py` and `context_index.py`, and from the specs that assert those recipes and tool results. They are not observed, because this pass did not run a capture or an ask. Intended where a role prompt prescribes a confirm-or-handoff step the strategy does not show as a separate command.
 
 ---
 
@@ -61,6 +38,7 @@ section: body
 ###     (S) Installer --> Cleanse previously installed MCP tools
 ###     (S) Installer --> Install MCP to User Project Specific Location
 ###     (S) Installer --> Raise Error on Install Failure
+###     (S) Installer --> Diagnose the finished install
 ##  (E) Install Practice Guidance Class
 ###     (S) Installer --> Deploy Practice guidance instructions
 ###     (S) Installer --> Deploy Practice guidance rules
@@ -70,102 +48,57 @@ section: body
 ##  (E) Install Action Classes
 ###     (S) Installer --> Install Lifecycle actions
 ###     (S) Installer --> Install Lifecycle actions as several tools
+# (E) Open Work Session
+##  (E) Open Named Work Session
+###     (S) WorkSession --> Open Work Session Folder
+###     (S) WorkSession --> Load Work Session Guidance
+###     (S) WorkSession --> Hold Open Turn
+###     (S) WorkSession --> Remember Completed Turns
+##  (E) Announce Work Session Turn
+###     (S) WorkSession --> Announce Work Session Turn
+###     (S) Turn --> Commit Current Checkout
+###     (S) Turn --> Record Turn Commit
+###     (S) Turn --> Record Mistake
+###     (S) Turn --> Record Correction
+##  (E) Record Work Session Rules
+###     (S) WorkSession --> Add Work Session Rule
+###     (S) WorkSession --> Attach Mistake And Correction
+###     (S) WorkSession --> Raise Work Session Rule Star
+###     (S) WorkSession --> Inject Work Session Rules
+###     (S) WorkSession --> Write Last Chat Injected Rules
+##  (E) Hold Process Session
+###     (S) Session --> Hold Knowledge Graph
+###     (S) Session --> Hold Practice Guidance
+###     (S) Session --> Reset Process Session
+###     (S) Session --> Persist Session Across Hook Runs
+###     (S) Session --> Hold Session On Mcp Server
 # (E) Deliver Verified Context
 ##  (E) Open Practice Catalog
 ###     (S) User --> Open Practice Catalog
 ####        Tests
-                # tools/catalog_generator/catalog_spec.py
+                # harness/catalog_generator/catalog_spec.py
                 with context("that have been built from the guidance registry")
                     with it("should write each practice guidance markdown property as HTML to its own page")
                     with it("should write each fidelity guidance markdown property as HTML to its own page")
                     with it("should not scrape deployed markdown files or heading structure from disk")
+##  (E) Prepare Context Index
+###     (S) Context Setup --> Convert Documents To Markdown
+###     (S) Context Setup --> Review Document Structure
+###     (S) User --> Choose Indexer Practices
+###     (S) Context Setup --> Partition Selected Context
+###     (S) Context Index --> Embed Segment Files
+###     (S) Context Index --> Search Ranked Chunks
+###     (S) Context Index --> Answer Question With Citations
 ##  (E) Isolate Running Application
 ###     (S) User --> Capture Live Application
-####        Tests
-                # tools/context_setup/context_setup_spec.py
-                with context("whose capture_from_live_app action is expanded")
-                    with it("should instruct the AI to classify external dependencies")
-                    with it("should mention the complex-stub trigger threshold")
-                    with it("should write the complex-stub pre-pass as stub-focus-map.md not Stories story-map.md")
-                    with it("should instruct the AI to write external stubs")
-                    with it("should tell the AI to write global stubs under tests/stubs/{system}/")
-                    with it("should tell the AI domain-owned stubs go on the aggregate")
-                    with it("should forbid a domain folder inside tests")
-                    with it("should scout under sandbox/extracted-context")
-                    with it("should accept capture_repo on capture_from_live_app")
-                    with it("should tell the AI to set capture_repo then call smoke_test with repo_path and surface")
-                    with it("should list smoke_test as a tool to call")
-                    with it("should list scout_app as a tool to call")
-                    with it("should list complete_capture as a tool to call")
-                    with it("should mention PASS WARN FAIL review verdicts")
-                    with it("should list embed as the final indexing step")
-
-                # tools/context_setup/context_setup_spec.py
-                with context("whose capture_from_live_app action tool_steps are resolved")
-                    with it("should include smoke_test")
-                    with it("should include scout_app")
-                    with it("should include complete_capture")
-                    with it("should include embed from ContextIndex")
 ###     (S) Context Setup --> Classify External Dependencies
-####        Tests
-                # tools/context_setup/context_setup_spec.py
-                with context("whose capture_from_live_app action is expanded")
-                    with it("should instruct the AI to classify external dependencies")
+###     (S) Context Setup --> Write Stub Focus Documents
 ###     (S) Context Setup --> Write Boundary Stubs
-####        Tests
-                # tools/context_setup/context_setup_spec.py
-                with context("whose capture_from_live_app action is expanded")
-                    with it("should instruct the AI to write external stubs")
-
-                # tools/context_setup/context_setup_spec.py
-                with context("whose capture_from_live_app action is expanded")
-                    with it("should tell the AI to write global stubs under tests/stubs/{system}/")
-
-                # tools/context_setup/context_setup_spec.py
-                with context("whose capture_from_live_app action is expanded")
-                    with it("should tell the AI domain-owned stubs go on the aggregate")
 ###     (S) Context Setup --> Smoke Test Application
-####        Tests
-                # tools/context_setup/context_setup_spec.py
-                with context("whose smoke_test tool is given a running web server")
-                    with it("should return a SmokeTestResult")
-                    with it("should report passed=True when the root is reachable")
-                    with it("should contain one ScreenResult for the probed path")
-                    with it("should record status 200 for the root")
-                    with it("should write an inventory file")
-                    with it("should write the inventory under tests/stubs/")
-
-                # tools/context_setup/context_setup_spec.py
-                with context("whose smoke_test tool is probing a non-existent server")
-                    with it("should return passed=False when the server is not reachable")
-                    with it("should record status 0 for the unreachable path")
-
-                # tools/context_setup/context_setup_spec.py
-                with context("whose smoke_test tool probes multiple paths")
-                    with it("should produce one ScreenResult per path")
-                    with it("should mark all reachable paths as passed")
+###     (S) Context Setup --> Smoke Test Desktop Process
 ###     (S) Context Setup --> Scout Application Pages
-####        Tests
-                # tools/context_setup/context_setup_spec.py
-                with context("whose scout_app tool captures pages from a running web server")
-                    with it("should return a ScoutResult")
-                    with it("should capture one PageCapture per entry point")
-                    with it("should write a screenshot for each captured page")
-                    with it("should write an aria.yaml for each captured page")
-                    with it("should write the extraction-overview.md")
-                    with it("should write capture under sandbox/extracted-context/app-extraction")
-                    with it("should report the correct page count via page_count property")
-                    with it("should list both page slugs via page_slugs property")
+###     (S) Context Setup --> Review Capture Verdicts
 ###     (S) Context Setup --> Complete Capture Pages
-####        Tests
-                # tools/context_setup/context_setup_spec.py
-                with context("whose complete_capture tool adds a missing page to an existing capture")
-                    with it("should return a CaptureResult")
-                    with it("should add one new PageCapture for the missing page")
-                    with it("should write a screenshot for the added page")
-                    with it("should write an aria.yaml for the added page")
-                    with it("should report total_page_count as scout count plus added count")
-                    with it("should update the extraction-overview.md with the new page section")
 ##  (E) Scaffold Solution Outline
 ###     (S) User --> Open Capture Session
 ####        Tests
@@ -349,6 +282,6 @@ section: body
 
 ## Scope boundary
 
-**In scope:** The repeatable path a person uses to get verified context for an existing application. Install publishes skills, rules, commands, the MCP manifest, and hooks, then the catalog is opened. Context Setup isolates the running app. Stories and Ddd scaffold the outline, document one slice, and prove that slice with story tests and domain wraps. The person reviews meaning, accepts the stage, and logs a mistake and its correction. The next increment covers another distinct behavior, and Handoff writes the session handoff.
+**In scope:** The repeatable path a person uses to get verified context for an existing application. Install publishes skills, rules, commands, the MCP manifest, and hooks. A Work Session then opens under `.sessions`, announces turns, and records work-session rules; a process Session holds the knowledge graph and practice guidance. Then the catalog is opened. Context Setup converts a document folder to markdown, notes flat structure, partitions through the practices the person selects, and embeds a Context Index. It also isolates a running application: classify external dependencies, write stub-focus documents when the complex-stub trigger fires, write boundary stubs, smoke-test web and desktop surfaces, scout pages, review PASS, WARN, and FAIL verdicts, and complete capture for pages that did not pass. Context Index embeds segment files, searches ranked chunks, and answers a question with citations. Stories and Ddd scaffold the outline, document one slice, and prove that slice with story tests and domain wraps. The person reviews meaning, accepts the stage, and logs a mistake and its correction. The next increment covers another distinct behavior, and Handoff writes the session handoff.
 
 **Out of scope:** The one-time repository clone. The toolset authoring spine in `harness/.context/story-map.md`. Scenario text, acceptance-test code, and domain class bodies. Clean Engineering, BDD, Diagnose, and workflow tickets, which the strategy names as available and leaves off this path.

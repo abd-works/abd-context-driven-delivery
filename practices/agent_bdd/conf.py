@@ -37,7 +37,7 @@ class AgentBddConf:
 
     def ensure_import_paths(self) -> None:
         """Make repo root and category dirs importable without shadowing the MCP SDK."""
-        from installation.installer import Installer
+        from harness.installation.installer import Installer
 
         Installer(repo=self._repo_root).ensure_import_path()
 

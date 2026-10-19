@@ -757,7 +757,6 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
                 "practices",
                 "actions",
                 "builders",
-                "installation",
             )
         ]
         for root in search_roots:
@@ -796,7 +795,7 @@ class AgentToolDestination:
 
     @property
     def deploy_suppressed(self) -> bool:
-        from installation.destination import omitted_from_deploy
+        from harness.installation.destination import omitted_from_deploy
 
         return omitted_from_deploy(self.callable)
 
@@ -806,6 +805,8 @@ class AgentToolDestination:
 
     @property
     def install_to_hook(self) -> bool:
+        if getattr(self.callable, "_hook_disabled", False):
+            return False
         return not self.deploy_suppressed and bool(getattr(self.callable, "_hook", False))
 
     @property

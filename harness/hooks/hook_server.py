@@ -52,7 +52,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from installation.installer import Installer
+from harness.installation.installer import Installer
 from harness.hooks.hooks import Hook
 
 Installer(repo=_REPO_ROOT).ensure_import_path()
@@ -229,6 +229,8 @@ class HookHandler:
     def is_enabled(self, payload: HookPayload | None = None) -> bool:
         if bool(getattr(self.owner, "_hooks_disabled", False)):
             return False
+        if bool(getattr(self.tool.callable, "_hook_disabled", False)):
+            return False
         pattern = self._pattern_name()
         if not pattern:
             return True
@@ -397,7 +399,7 @@ class HandlerCatalog:
         return list(self.refs_from_handlers((self.repo_root or Path()) / ".cursor" / "hook-handlers.json"))
 
     def _collect_refs(self) -> list[str]:
-        from installation.installer import Installer
+        from harness.installation.installer import Installer
 
         return list(Installer(repo=self.repo_root).collect_toolsets())
 
@@ -476,7 +478,6 @@ class HookServer:
         self._catalog = catalog
         self._session = None
         self._payload: HookPayload | None = None
-        self._injected: dict[str, list[str]] = {"practices": [], "fidelities": []}
         if catalog is not None:
             self._absorb_catalog_failures()
 
@@ -585,9 +586,9 @@ class HookServer:
     @property
     def session(self):
         if self._session is None:
-            from harness.session import Session
+            from space.session import Session
 
-            self._session = Session()
+            self._session = Session(self._repo_root)
         return self._session
 
     def skip(self, tool: str, error: BaseException) -> None:
@@ -606,7 +607,6 @@ class HookServer:
 
     def dispatch(self, payload: HookPayload) -> HookResult:
         self._payload = payload
-        self._injected = {"practices": [], "fidelities": []}
         event = CursorEvent(payload.hook_event_name)
         fields = payload.as_dict()
         path = payload.edited_path()
@@ -622,7 +622,6 @@ class HookServer:
         merged = HookResult()
         for item in results:
             merged = merged.merge(item)
-        merged = self._merge_work_session(merged)
         self._append_debug(f"MERGED {json.dumps(merged.as_dict())}")
         return merged
 
@@ -645,7 +644,6 @@ class HookServer:
                 self.skip(label, error)
                 continue
             results.append(result)
-            self._record_injected(handler, result)
             self._append_debug(f"HANDLER {label} result={json.dumps(result.as_dict())}")
         self._absorb_catalog_failures()
         self._append_debug(f"ENABLED {enabled or ['(none)']}")
@@ -678,80 +676,6 @@ class HookServer:
 
     def run(self) -> None:
         print(json.dumps(self.handle_stdin(sys.stdin.buffer.read()).as_dict()))
-
-    def _record_injected(self, handler: HookHandler, result: HookResult) -> None:
-        if not result.additional_context or self._payload is None:
-            return
-        practice, fidelities = self._injected_tags(handler, self._payload)
-        if practice and practice not in self._injected["practices"]:
-            self._injected["practices"].append(practice)
-        for name in fidelities:
-            if name not in self._injected["fidelities"]:
-                self._injected["fidelities"].append(name)
-
-    def _injected_tags(
-        self, handler: HookHandler, payload: HookPayload
-    ) -> tuple[str, list[str]]:
-        practice = handler.owner.__module__.rsplit(".", 1)[-1]
-        rules = getattr(handler.tool.toolset, "rules", None)
-        path = self._tool_path(payload)
-        if rules is None or not path or not hasattr(rules, "_bags_for_path"):
-            return practice, []
-        fidelities: list[str] = []
-        for bag in rules._bags_for_path(path):
-            name = self._bag_fidelity(bag)
-            if name:
-                fidelities.append(name)
-        return practice, fidelities
-
-    def _bag_fidelity(self, bag: Any) -> str | None:
-        parent = getattr(bag, "parent", None)
-        if parent is None or getattr(parent, "fidelities", None) is not None:
-            return None
-        return getattr(parent, "name", None) or getattr(parent, "fidelity", None)
-
-    def _tool_path(self, payload: HookPayload) -> str:
-        raw = payload.as_dict().get("tool_input") or {}
-        if not isinstance(raw, dict):
-            return ""
-        return str(raw.get("path") or raw.get("file_path") or "")
-
-    def _merge_work_session(self, merged: HookResult) -> HookResult:
-        if not merged.additional_context or self._payload is None:
-            return merged
-        rules = self._work_session_rules()
-        if rules is None:
-            return merged
-        data = self._payload.as_dict()
-        data["additional_context"] = merged.additional_context
-        data["injected_practices"] = self._injected.get("practices") or []
-        data["injected_fidelities"] = self._injected.get("fidelities") or []
-        body = (rules.inject_rules(data).get("additional_context") or "").strip()
-        if not body:
-            return merged
-        return HookResult(
-            merged.permission,
-            merged.continue_flag,
-            merged.user_message,
-            merged.agent_message,
-            merged.followup_message,
-            body,
-        )
-
-    def _work_session_rules(self) -> Any:
-        from types import SimpleNamespace
-
-        from harness.hooks.session_logs import SessionLogs
-        from workspace.workspace import WorkSessionRulesCollection
-
-        logs = SessionLogs(self._repo_root)
-        path = logs.session_folder(logs.active_session_name()) / "work-guidelines.md"
-        if not path.is_file():
-            return None
-        return WorkSessionRulesCollection.from_markdown(
-            path.read_text(encoding="utf-8"),
-            parent=SimpleNamespace(path=path),
-        )
 
     def _write_last_chat_injected(self, result: HookResult) -> None:
         from harness.hooks.session_logs import SessionLogs

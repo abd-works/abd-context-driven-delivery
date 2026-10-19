@@ -14,7 +14,7 @@ if _tools not in sys.path:
 
 from expects import contain, equal, expect, have_key
 from mamba import after, before, context, description, it
-from installation.installer import Installer
+from harness.installation.installer import Installer
 
 import prompt_log.prompt_log as pl  # noqa: E402
 

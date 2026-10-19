@@ -216,12 +216,21 @@ Property name is the match. **File:** `{name}.md` beside the class. **Section:**
 
 ---
 
-## harness/session
-*Session* holds the in-memory *Graph* and each *PracticeGuidance* for one process.
+## space/session
+*Session* holds the in-memory *Graph*, each *PracticeGuidance*, and the active work-session folder under ``{repo}/.sessions/{slug}/``.
 
-- **Purpose:** Hold the in-memory *Graph* and each *PracticeGuidance* for one process.
+- **Purpose:** Hold graph and practices for hooks/MCP; ``open`` / ``current`` delegate to legacy *WorkSession* (implicit ``default`` when none is active).
 - **Seam (terms):** Session
-- **Dependencies (one-way):** `harness/graph`, `harness/guidance`
+- **Dependencies (one-way):** `harness/graph`, `harness/guidance`, `harness/hooks`, `space/session/legacy`, `space/repo`
+
+---
+
+## space/repo
+*Repo* models a local clone and GitHub workflow; *Repo* agent toolset exposes branch switch/create/close (optional worktrees).
+
+- **Purpose:** Domain types (*Repo*, *Branch*, *Commit*, …) plus ``branch_*`` and ``push`` / ``push_commit`` on ``space.repo.agent:Repo`` (agent composes commit messages from diffs and CDD tool usage).
+- **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, RepoConnectError
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/mcp`, `harness/installation`
 
 ---
 
@@ -269,7 +278,7 @@ The event name is the Cursor event (`sessionStart`, `preToolUse`, …). `@Hooks(
 
 ---
 
-# installation
+# harness/installation
 *Installation* publishes a toolset’s marked members into Cursor, VS Code, or Kilo. *Installer* walks the marks. *Destination* is the channel — `@skill`, `@command`, `@rules`, `@mcp`, `@Hook`. *FileInstallation* writes the skill, command, and rules files.
 
 - **Purpose:** Publish a toolset’s marked members into Cursor (or VS Code / Kilo) as skills, MCP, hooks, commands, or rules.
@@ -278,7 +287,7 @@ The event name is the Cursor event (`sessionStart`, `preToolUse`, …). `@Hooks(
 
 ## Constraint
 
-Marks live on members; *Installer* walks them, including `harness/`. If `.install-state.json` points at a missing directory, install to `{repo}/.cursor`. Leave `installation/` and `harness/` off `PYTHONPATH` so `import mcp` stays the MCP SDK.
+Marks live on members; *Installer* walks them, including `harness/`. If `.install-state.json` points at a missing directory, install to `{repo}/.cursor`. Import this package as `harness.installation`. Leave `harness/` off `PYTHONPATH` so `import mcp` stays the MCP SDK.
 
 ---
 
@@ -481,20 +490,13 @@ One agent role per session. Follow the prompt for how to carve the backlog.
 
 - **Purpose:** Open a named work session so turns, branches, and decision records hang off one folder.
 - **Seam (terms):** WorkSession, Workspace, Turn
-- **Dependencies (one-way):** `tools/git`
+- **Dependencies (one-way):** `space/git`
 
 ---
 
-## tools/git
-*Git* models a local clone and the GitHub board as domain objects: *Repo*, *Branch*, *Commit*, *Project*, *Ticket*, and *TicketState*.
-
-- **Purpose:** Model a local clone and GitHub workflow — repo, branch, commit, project, ticket — so callers use domain objects.
-- **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, Git
-- **Dependencies (one-way):** *(none)*
-
 ## Constraint
 
-Slash commands for the board live on `tools/workflow`. Do not deploy `/git`.
+Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Import repository types from ``space.repo`` only.
 
 ---
 
@@ -503,7 +505,7 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`.
 
 - **Purpose:** Move GitHub issues on Project columns and name the reusable workflows a plan is based on.
 - **Seam (terms):** Workflow
-- **Dependencies (one-way):** `tools/git`, `tools/workspace`, `tools/handoff`
+- **Dependencies (one-way):** `space/git`, `tools/workspace`, `tools/handoff`
 
 ---
 
@@ -512,7 +514,7 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`.
 
 - **Purpose:** Run a reusable or named workflow, including themed small-work issues, one ticket at a time.
 - **Seam (terms):** Plan, PlanCommands, PlanExecution, SmallWorkRunner
-- **Dependencies (one-way):** `tools/workspace`, `tools/git`, `tools/workflow`
+- **Dependencies (one-way):** `tools/workspace`, `space/git`, `tools/workflow`
 
 ---
 
@@ -591,7 +593,7 @@ Callers mark members with `@echo`.
 
 ---
 
-## tools/catalog_generator
+## harness/catalog_generator
 *Catalog* discovers the registered toolsets and renders the self-contained CDD catalog pages. `@noCatalog` leaves a class, fidelity, or operation out of those pages.
 
 - **Purpose:** Discover registered toolsets and render the self-contained CDD catalog pages.

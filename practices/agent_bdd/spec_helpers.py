@@ -89,7 +89,7 @@ def invoke_request_for_path(command: str | Path, *, repo_root: Path) -> dict:
 
 
 def stage_invoke_commands(repo_root: Path) -> None:
-    from installation.installer import Installer
+    from harness.installation.installer import Installer
     from harness.agent_tools.agent_tools import AgentToolSet
 
     car = AgentToolSet.instantiate(CAR)
