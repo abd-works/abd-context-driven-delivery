@@ -11,7 +11,7 @@ import threading
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
-for _entry in (_REPO, _REPO / "tools", _REPO / "practices", _REPO / "actions"):
+for _entry in (_REPO, _REPO / "tools", _REPO / "cdd_guidance" / "practices", _REPO / "cdd_guidance" / "actions"):
     _path = str(_entry)
     if _path not in sys.path:
         sys.path.insert(0, _path)
@@ -61,8 +61,8 @@ class HookDaemon:
         extra = [
             root,
             str(Path(root) / "tools"),
-            str(Path(root) / "practices"),
-            str(Path(root) / "actions"),
+            str(Path(root) / "cdd_guidance" / "practices"),
+            str(Path(root) / "cdd_guidance" / "actions"),
         ]
         existing = env.get("PYTHONPATH", "")
         env["PYTHONPATH"] = os.pathsep.join(

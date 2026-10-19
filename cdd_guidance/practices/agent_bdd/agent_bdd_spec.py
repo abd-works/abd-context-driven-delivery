@@ -14,7 +14,7 @@ from agent_bdd.agent_bdd_common import (
     yaml_from_prompt,
 )
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _TOOLS_SPEC = _REPO_ROOT / "harness" / "agent_tools" / "agent_tools_agent_spec.py"
 
 
@@ -41,6 +41,7 @@ with description("an agent spec file"):
         with it("should build a generator runbook from create_context_tool_agent_spec"):
             agent_spec = (
                 _REPO_ROOT
+                / "cdd_guidance"
                 / "builders"
                 / "create_context_tool"
                 / "create_context_tool_agent_spec.py"
@@ -54,7 +55,7 @@ with description("an agent spec file"):
 
     with context("with agent context manager"):
         with it("should enter and exit via __enter__ for in-chat harness"):
-            session_file = _REPO_ROOT / "practices" / "agent_bdd" / ".agent_bdd_sessions" / "context-manager-spec.json"
+            session_file = _REPO_ROOT / "cdd_guidance" / "practices" / "agent_bdd" / ".agent_bdd_sessions" / "context-manager-spec.json"
             cm = agent(_REPO_ROOT, session_file, in_chat=True)
             block = cm.__enter__()
             try:
@@ -66,17 +67,17 @@ with description("an agent spec file"):
         with it("should strip prose after embedded run-request YAML in instruct_use_tool prompts"):
             prompt = (
                 "Invoke this request:\n"
-                "toolset: builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
                 "Return the complete response.\n"
             )
             body = yaml_from_prompt(prompt)
-            expect(body).to(equal("toolset: builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
+            expect(body).to(equal("toolset: cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
 
         with it("should reject captured CLI output when action does not match prompt YAML"):
             prompt = (
                 "Pipe this YAML on stdin:\n"
-                "toolset: builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
             )
             wrong = "```yaml\nok: true\naction: generate\ninstructions: test\n```"
@@ -87,7 +88,7 @@ with description("an agent spec file"):
         with it("should reject non-YAML shell captures without raising"):
             prompt = (
                 "Pipe this YAML on stdin:\n"
-                "toolset: practices.clean_engineering.clean_engineering:CleanEngineering\n"
+                "toolset: cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering\n"
                 "action: generate\n"
             )
             garbage = "lines = [f\"toolset: {invoke['toolset']}\", f\"action: {invoke['action']}\"]"

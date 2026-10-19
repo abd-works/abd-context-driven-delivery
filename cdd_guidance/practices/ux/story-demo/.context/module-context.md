@@ -23,6 +23,6 @@ Callers load a story via `StoryDemoPage.load(createStory, mode)`, Play via explo
 
 Constraint: vanilla `Control` has no `story_steps`. HTML imports `story-test-core` only.
 
-Worked UX example (not part of this package): `practices/ux/examples/manage-customer-orders/`.
+Worked UX example (not part of this package): `practices/ux/_examples/manage-customer-orders/`.
 
 Engagement wire (e.g. Create Character HTML) lives under `sandbox/…`.

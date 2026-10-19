@@ -8,12 +8,12 @@ from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
 _AGENT_BDD_DIR = Path(__file__).resolve().parent
-_REPO_ROOT = _AGENT_BDD_DIR.parents[1]
+_REPO_ROOT = _AGENT_BDD_DIR.parents[2]
 for _p in [
     str(_REPO_ROOT),
     *[
         str(_REPO_ROOT / c)
-        for c in ("practices", "tools", "actions")
+        for c in ("cdd_guidance/practices", "tools", "cdd_guidance/actions")
     ],
 ]:
     if _p not in sys.path:
@@ -21,16 +21,16 @@ for _p in [
 
 from harness.agent_tools.agent_tools import AgentToolSet
 import agent_bdd.conf  # noqa: F401 - repo root on sys.path
-import practices  # noqa: F401
+import cdd_guidance.practices  # noqa: F401
 from harness.markdown import Markdown
 from harness.agent_tools import AgentToolSet
 from validate.validate import Validate
-from practices.bdd.bdd import Bdd
+from cdd_guidance.practices.bdd.bdd import Bdd
 
 _AGENT_BDD_TOOLSET = "agent_bdd.agent_bdd:AgentBdd"
-_BDD_DIR = _REPO_ROOT / "practices" / "bdd"
-_GENERATE_DIR = _REPO_ROOT / "practices" / "actions" / "generate"
-_VALIDATE_DIR = _REPO_ROOT / "practices" / "actions" / "validate"
+_BDD_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "bdd"
+_GENERATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "generate"
+_VALIDATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "validate"
 _GENERATE_TOOLSET = "generate.generate:Generate"
 _VALIDATE_TOOLSET = "validate.validate:Validate"
 

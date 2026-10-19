@@ -8,7 +8,7 @@ from pathlib import Path
 
 from harness.graph.ce_rule_eval_harness import violations_for_rule
 from harness.graph.rule_context import RuleCheckContext
-from practices.clean_engineering.rules import BY_SLUG
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 
 
 def _practice_from_example_folder(folder: Path):
@@ -32,7 +32,7 @@ def assert_module_example_pair(slug: str) -> None:
     rule = BY_SLUG[slug]
     root_path = (
         Path(__file__).resolve().parents[2]
-        / "practices/clean_engineering/model/python/.examples"
+        / "cdd_guidance/practices/clean_engineering/model/python/_examples"
         / slug
     )
     fault_practice, fault_root = _practice_from_example_folder(root_path / "faulty")

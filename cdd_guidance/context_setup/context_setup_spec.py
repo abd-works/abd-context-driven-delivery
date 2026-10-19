@@ -1,4 +1,4 @@
-"""BDD spec for tools/context_setup/context_setup.py — ContextSetup toolset.
+"""BDD spec for cdd_guidance/context_setup/context_setup.py — ContextSetup toolset.
 
 Covers Increment 1 stories:
   Tool --> Convert To Markdown           (convert tool)
@@ -22,7 +22,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 import mcp.types  # SDK, before harness/mcp is on PYTHONPATH
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -32,7 +32,7 @@ from mamba import after, before, context, description, it
 
 from inspect import signature
 
-from context_setup.context_setup import (
+from cdd_guidance.context_setup.context_setup import (
     CaptureResult,
     ContextSetup,
     ConversionResult,

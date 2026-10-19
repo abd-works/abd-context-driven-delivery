@@ -1,4 +1,4 @@
-"""Evaluate DDD tactical rules against python/.examples fixtures."""
+"""Evaluate DDD tactical rules against python/_examples fixtures."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ from pathlib import Path
 
 from harness.graph.ce_rule_eval_harness import practice_from_source
 from harness.graph.rule_context import RuleCheckContext
-from practices.ddd.model.stereotypes import inferred_tactical_kind
-from practices.ddd.rules.tactical_helpers import stereotyped_declaration_name
+from cdd_guidance.practices.ddd.model.stereotypes import inferred_tactical_kind
+from cdd_guidance.practices.ddd.rules.tactical_helpers import stereotyped_declaration_name
 
 
 def ddd_rule_by_slug(slug: str):
-    from practices.ddd.rules import BY_SLUG
+    from cdd_guidance.practices.ddd.rules import BY_SLUG
 
     rule = BY_SLUG.get(slug)
     if rule is None:
@@ -68,7 +68,7 @@ def assert_ddd_example_pair(
 ) -> None:
     root = (
         Path(__file__).resolve().parents[2]
-        / "practices/ddd/model/python/.examples"
+        / "cdd_guidance/practices/ddd/model/python/_examples"
         / slug
     )
     faulty = (root / "faulty" / "faultyAsset.py").read_text(encoding="utf-8")

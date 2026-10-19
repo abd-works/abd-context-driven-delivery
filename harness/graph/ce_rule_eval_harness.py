@@ -8,11 +8,11 @@ from pathlib import Path
 from harness.graph.graph import PracticeGraph
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.working_copy import _class_fact
-from practices.clean_engineering.model.javascript.javascript_class_model import (
+from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import (
     JavaScriptCleanEngineeringModel,
 )
-from practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
-from practices.clean_engineering.model.typescript.typescript_class_model import (
+from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import (
     TypeScriptCleanEngineeringModel,
 )
 
@@ -24,7 +24,7 @@ _LANG = {
 
 
 def ce_rule_by_slug(slug: str):
-    from practices.clean_engineering.rules import BY_SLUG
+    from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 
     rule = BY_SLUG.get(slug)
     if rule is None:
@@ -83,9 +83,9 @@ def assert_rule_pair(slug: str, fault_source: str, clean_source: str, *, lang: s
 def example_asset_paths(slug: str, *, channel: str = "python") -> tuple[Path, Path]:
     root = (
         Path(__file__).resolve().parents[2]
-        / "practices/clean_engineering/model"
+        / "cdd_guidance/practices/clean_engineering/model"
         / channel
-        / ".examples"
+        / "_examples"
         / slug
     )
     faulty = root / "faulty" / "faultyAsset.py"

@@ -21,7 +21,8 @@ class Validate(GuidanceAction):
     @Skill
     @agent_instructions
     def validate(self, guidance: GuidanceArg, rule: Rule | None = None) -> str:
-        """Check artifacts against rules. Pass a string to validate that text once. Pass a list of Guidance to walk each Guidance's rules. Pass a single Rule to check only that rule."""
+        """Check artifacts against rules.
+        rule: one Rule to check. Omit it to walk each guidance's rules."""
         self._bind_guidance(guidance)
         instructions(_VALIDATE_MARKDOWN)
         def on(item) -> str:
@@ -77,8 +78,10 @@ class Validate(GuidanceAction):
     @Mcp
     @Skill
     @agent_instructions
-    def createRule(self, guidance: GuidanceArg, failed: str, wanted: str) -> str:
-        """Add a named rule to each listed Guidance from a failed example and the wanted behavior. Then validate the asset with that rule so the same mistake is detected. Pass a string to create the rule against that text once."""
+    def createRule(self, guidance: GuidanceArg, failed: str = "", wanted: str = "") -> str:
+        """Add a named rule to each listed guidance from a failed example and the wanted behavior. Then validate the asset with that rule so the same mistake is detected.
+        failed: path to the example that broke. Pass the file. Do not paste its body.
+        wanted: path to the behavior the rule must require. Pass the file. Do not paste its body."""
         def on(item) -> None:
             if isinstance(item, str):
                 return

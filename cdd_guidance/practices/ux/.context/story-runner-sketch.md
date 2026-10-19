@@ -417,7 +417,7 @@ Play next (explorer) always advances `steps[index]` — not “the bound control
 Product types and concrete factories: `sandbox/play-core-mechanics` / `sandbox/character`.
 Domain / example outcomes stay in Create Character (etc.) story tests — page behaviors assert “shows snapshot,” not handbook ranks.
 HTML page imports `story-test-core` only (not `node:test`).
-Locks / connected notes: `practices/cdd/.context/connected-practices.md`
+Locks / connected notes: `cdd_guidance/practices/cdd/.context/connected-practices.md`
 Invariants (prose): `ux-context.md` · Control model: `ux-model-sketch.md`
 
 ## log

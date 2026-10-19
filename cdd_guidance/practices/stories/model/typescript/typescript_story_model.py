@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from practices.stories.model.code_story_model import (
+from cdd_guidance.practices.stories.model.code_story_model import (
     CodeStoryModel,
     CodeStoryModelError,
 )
-from practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
-from practices.stories.model.typescript.story_file import story_test_file_path
+from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
+from cdd_guidance.practices.stories.model.typescript.story_file import story_test_file_path
 
 _SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
 

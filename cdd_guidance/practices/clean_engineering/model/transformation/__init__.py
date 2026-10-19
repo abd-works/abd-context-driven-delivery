@@ -1,4 +1,4 @@
-from practices.clean_engineering.model.transformation.clean_engineering_transformer import (
+from cdd_guidance.practices.clean_engineering.model.transformation.clean_engineering_transformer import (
     CleanEngineeringTransformer,
     FileTransformer,
     ModuleTransformer,

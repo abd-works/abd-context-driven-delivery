@@ -19,11 +19,11 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, be_above
 
-from practices.stories.model.story_model import (
+from cdd_guidance.practices.stories.model.story_model import (
     StoryType,
 )
-from practices.stories.model.story_model import Scenario
-from practices.stories.model.diagram_story_model import (
+from cdd_guidance.practices.stories.model.story_model import Scenario
+from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramStory,
     DiagramStoryModel,

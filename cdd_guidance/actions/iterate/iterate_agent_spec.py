@@ -20,7 +20,7 @@ from agent_bdd import (
 _REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
 _ITERATOR = "iterate.iterate:Iterate"
-_BDD = "practices.bdd.bdd:Bdd"
+_BDD = "cdd_guidance.practices.bdd.bdd:Bdd"
 
 
 with description("an iterate action"):
@@ -28,7 +28,7 @@ with description("an iterate action"):
         with it("should run Iterate.iterate with that tool, not the Guidance iterate"):
             with agent(_REPO_ROOT, _SESSIONS / "iterate-owns-tools.json"):
                 read_workspace(".cursor/commands/iterate.md")
-                read_workspace("actions/iterate/iterate.py")
+                read_workspace("cdd_guidance/actions/iterate/iterate.py")
 
                 response = run_toolset(
                     toolset=_ITERATOR,
@@ -51,5 +51,5 @@ with description("an iterate action"):
                     f"action: {response.action}\narguments: {response.arguments}",
                     "PASS only if iterate is owned by iterate.iterate:Iterate and the "
                     "BDD context tool is an argument in tools (one or more context tools). "
-                    "FAIL if the run owner is practices.bdd.bdd:Bdd with action iterate.",
+                    "FAIL if the run owner is cdd_guidance.practices.bdd.bdd:Bdd with action iterate.",
                 )

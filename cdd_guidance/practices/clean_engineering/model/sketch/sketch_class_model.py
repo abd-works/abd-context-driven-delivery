@@ -4,17 +4,21 @@ from __future__ import annotations
 
 import re
 
-from harness.sketch.sketch_outline import SketchLens, SketchOutline
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
 )
-from practices.clean_engineering.model.operation import Operation, Parameter
-from practices.clean_engineering.model.property import Property, append_invariant, take_property_note
+from cdd_guidance.practices.clean_engineering.model.operation import Operation, Parameter
+from cdd_guidance.practices.clean_engineering.model.property import Property, append_invariant, take_property_note
 
 _NESTING_INDENT = 2
 _CLASS = re.compile(r"^([A-Z][A-Za-z0-9]+)(?:\s*:\s*(.+))?$")
+_BOLD_CLASS = re.compile(r"^\*\*([A-Z][A-Za-z0-9]+)\*\*$")
+_MODULE = re.compile(r"Module:\**\s*`([^`]+)`", re.I)
+_UML_OP = re.compile(r"^[+\-]\s*([A-Za-z_][A-Za-z0-9_]*)\((.*)\)\s*(?::\s*(.+))?$")
+_UML_PROP = re.compile(r"^[+\-]\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$")
 _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _RETURN_TYPE = re.compile(
     r"^(void|string|number|bool|boolean|int|float|object|any|list|dict|str|None|Path)$"
@@ -29,8 +33,10 @@ _PROSE = re.compile(
 class SketchCleanEngineeringModel(CleanEngineeringModel):
     @classmethod
     def parse(cls, text: str) -> "SketchCleanEngineeringModel":
-        model = cls(name="KnowledgeGraph", sequential_order=1)
-        module = Module(name="KnowledgeGraph", sequential_order=1)
+        declared = _MODULE.search(text)
+        module_name = declared.group(1) if declared else "KnowledgeGraph"
+        model = cls(name=module_name, sequential_order=1)
+        module = Module(name=module_name, sequential_order=1)
         body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.clean_engineering)
         for oclass in _classes_in(body):
             existing = next((row for row in module.classes if row.name == oclass.name), None)
@@ -62,6 +68,8 @@ def _merge_class(into: OoadClass, incoming: OoadClass) -> None:
 
 
 def _classes_in(text: str) -> list[OoadClass]:
+    if any(_BOLD_CLASS.match(raw.strip()) for raw in text.splitlines()):
+        return _uml_classes(text)
     lines = [raw.strip() for raw in text.splitlines() if raw.strip() and raw.strip() != "Fidelity:"]
     classes: list[OoadClass] = []
     current: OoadClass | None = None
@@ -94,6 +102,104 @@ def _classes_in(text: str) -> list[OoadClass]:
             continue
         index = _add_member(current, lines, index)
     return classes
+
+
+def _is_rule(stripped: str) -> bool:
+    return len(stripped) >= 4 and set(stripped) <= {"-"}
+
+
+def _uml_classes(text: str) -> list[OoadClass]:
+    """`### **Session**` plus `+ name(args): type` lines. Indented bold labels stay notes."""
+    classes: list[OoadClass] = []
+    current: OoadClass | None = None
+    lines = text.splitlines()
+    index = 0
+    while index < len(lines):
+        raw = lines[index]
+        stripped = raw.strip()
+        if not stripped or stripped.startswith(("//", "#")):
+            index += 1
+            continue
+        if _is_rule(stripped):
+            index += 1
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        heading = _BOLD_CLASS.match(stripped)
+        if heading and indent == 0:
+            current = OoadClass(name=heading.group(1), sequential_order=len(classes) + 1)
+            classes.append(current)
+            index += 1
+            continue
+        if current is None or indent == 0:
+            index += 1
+            continue
+        operation = _UML_OP.match(stripped)
+        prop = None if operation else _UML_PROP.match(stripped)
+        if operation or prop:
+            index = _add_uml_member(current, lines, index, operation, prop)
+            continue
+        if current.operations and re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
+            append_invariant(current.operations[-1], stripped)
+        index += 1
+    return classes
+
+
+def _add_uml_member(oclass, lines, index, operation_match, prop_match) -> int:
+    if operation_match:
+        operation = Operation(name=operation_match.group(1), return_type=operation_match.group(3) or "")
+        for order, part in enumerate(_split_params(operation_match.group(2) or ""), start=1):
+            name, _, hint = part.partition(":")
+            hint = hint.split("=")[0].strip()
+            operation.parameters.append(Parameter(name=name.strip(), sequential_order=order, type_hint=hint))
+        oclass.operations.append(operation)
+        owner = operation
+    else:
+        owner = Property(name=prop_match.group(1), type_hint=prop_match.group(2).strip())
+        oclass.properties.append(owner)
+    index += 1
+    while index < len(lines):
+        stripped = lines[index].strip()
+        if not stripped:
+            index += 1
+            continue
+        if _is_rule(stripped) or _BOLD_CLASS.match(stripped) or _UML_OP.match(stripped) or _UML_PROP.match(stripped):
+            break
+        if stripped.startswith("->"):
+            callee = stripped[2:].strip()
+            if callee and isinstance(owner, Operation) and callee not in owner.callees:
+                owner.callees.append(callee)
+            index += 1
+            continue
+        if stripped.startswith("//"):
+            append_invariant(owner, stripped[2:].strip())
+            index += 1
+            continue
+        if re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", stripped):
+            append_invariant(owner, stripped)
+            index += 1
+            continue
+        break
+    return index
+
+
+def _split_params(text: str) -> list[str]:
+    parts: list[str] = []
+    buf = ""
+    depth = 0
+    for char in text:
+        if char in "[{(":
+            depth += 1
+        elif char in "]})":
+            depth = max(0, depth - 1)
+        if char == "," and depth == 0:
+            if buf.strip():
+                parts.append(buf.strip())
+            buf = ""
+            continue
+        buf += char
+    if buf.strip():
+        parts.append(buf.strip())
+    return parts
 
 
 def _add_member(oclass: OoadClass, lines: list[str], index: int) -> int:

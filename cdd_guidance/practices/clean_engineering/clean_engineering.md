@@ -259,7 +259,7 @@ Ask what the caller can do now that they could not do before, what they see when
 
 #### Guidance
 
-Follow the idioms in [`../language-tools.md`](../language-tools.md).
+Follow the idioms in [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md).
 
 Start by **Implementing the public surface.** Where the model asked for an interface, the class implements it in the same file and the interface stays public-only. Where it did not, continue to implement the class. Implement public properties and operations first; write out private members next — the seam the model named is the contract, and privates follow from what those operations need, not the other way around. Relationships keep the kind and cardinality already named. 
 

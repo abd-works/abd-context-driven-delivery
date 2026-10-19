@@ -6,7 +6,7 @@ import re
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from practices.clean_engineering.model.rules_shared.span_helpers import control_flow_depth
+from cdd_guidance.practices.clean_engineering.model.rules_shared.span_helpers import control_flow_depth
 
 
 class HideInnerDetails(PracticeGraphRule):

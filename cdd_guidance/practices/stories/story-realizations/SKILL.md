@@ -3,8 +3,10 @@
 **Purpose:** Turn a set of story scenarios into scenario realization documents — one Markdown file per scope — that trace each Given/When/Then step down through the domain model's call graph and back, showing how objects and external systems collaborate to produce observable outcomes.
 
 **Format references:**
-- Scenario structure: `@practices/stories/stories.md` — the GWT step vocabulary and rules.
-- Interaction notation: `@practices/clean_engineering/clean_engineering.md` — the `write-interactions` rule and model fidelity guidance.
+- Scenario structure and fidelity: `@practices/stories/stories.md` `#scenarios` — GWT plus **Scenario realizations (default on)** unless the user says **no realizations**.
+- Acceptance tests: `@practices/stories/stories.md` `#acceptance_tests` — implement through the realized call graph.
+- BDD: `@practices/bdd/bdd.md` `#realization` — same call-graph notation on `it should` observations (not GWT).
+- Interaction notation: `@practices/clean_engineering/clean_engineering.md` — `write-interactions`; arrows round-trip via `practices/clean_engineering/model/call_graph.py` and the stories/BDD model channels.
 
 ---
 

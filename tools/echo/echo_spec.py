@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices"):
+for _cat in ("tools", "cdd_guidance/practices"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -48,6 +48,14 @@ with description("an Echo"):
             footer_pos = result.index(_FENCE_FOOTER)
             body_pos = result.index(body)
             expect(header_pos < body_pos < footer_pos).to(be_true)
+
+        with it("should read the instructions from a file when paths is set"):
+            import tempfile
+            with tempfile.TemporaryDirectory() as folder:
+                source = Path(folder) / "instructions.md"
+                source.write_text("from the file", encoding="utf-8")
+                result = Echo().fence(paths=str(source))
+                expect("from the file" in result).to(be_true)
 
         with it("should return the fenced block as a plain string"):
             result = Echo().fence("x")

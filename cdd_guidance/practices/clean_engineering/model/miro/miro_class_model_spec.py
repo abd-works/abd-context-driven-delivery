@@ -13,10 +13,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+_REPO_ROOT = Path(__file__).resolve().parents[5]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -24,7 +24,7 @@ for _cat in ("tools", "practices", "actions"):
 from mamba import description, context, it, before
 from expects import be_false, be_true, contain, equal, expect, have_len
 
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
@@ -32,10 +32,10 @@ from practices.clean_engineering.model.base_class_model import (
     Property,
     Relationship,
 )
-from practices.clean_engineering.model.markdown.markdown_class_model import (
+from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
     MarkdownCleanEngineeringModel,
 )
-from practices.clean_engineering.model.miro.miro_class_model import (
+from cdd_guidance.practices.clean_engineering.model.miro.miro_class_model import (
     MiroCleanEngineeringModel,
 )
 

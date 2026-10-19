@@ -42,6 +42,7 @@ class Installer:
         {
             "__pycache__",
             "examples",
+            "_examples",
             "example",
             "fixtures",
             "fixture",
@@ -49,9 +50,16 @@ class Installer:
             ".venv",
             "node_modules",
             ".git",
+            "retired",
         }
     )
-    _CATALOG_DIRS = ("tools", "practices", "actions", "patterns")
+    _CATALOG_DIRS = (
+        "tools",
+        "cdd_guidance/practices",
+        "cdd_guidance/actions",
+        "cdd_guidance/patterns",
+        "cdd_guidance/builders",
+    )
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
     _SKIP_ROOT_TOOLSET_NAMES = frozenset(
@@ -63,7 +71,7 @@ class Installer:
             "FidelityGuidance",
         }
     )
-    _DEPLOYED_CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook")
+    _DEPLOYED_CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook", "agent")
     _GREEN_SURFACE_CHANGE = 0.10
     _YELLOW_SURFACE_CHANGE = 0.50
     _DIAGNOSTICS_LOG = "diagnostics.json"
@@ -122,7 +130,7 @@ class Installer:
             return False
 
     def import_path_entries(self, repo: Path | str | None = None) -> list[str]:
-        """Repo root plus tools, practices, actions, and patterns. Never ``harness/`` (that shadows the MCP SDK). The deploy walk still parses ``harness/``."""
+        """Repo root plus tools and the guidance packages under ``cdd_guidance``. Never ``harness/`` (that shadows the MCP SDK). The deploy walk still parses ``harness/``."""
         root = Path(repo).resolve() if repo is not None else self.repo
         entries = [str(root)]
         for name in self._CATALOG_DIRS:
@@ -266,7 +274,7 @@ class Installer:
         self._state_file.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
     def _prune_empty_parents(self, file_path: Path) -> None:
-        stop_at = {self.path / name for name in ("skills", "rules", "commands", "prompts")}
+        stop_at = {self.path / name for name in ("skills", "rules", "commands", "prompts", "agents")}
         parent = file_path.parent
         while parent not in stop_at and parent != self.path:
             if not parent.is_dir() or any(parent.iterdir()):
@@ -389,6 +397,7 @@ class Installer:
         self.ensure_import_path()
         self._reset_channels()
         self._install_all(toolsets)
+        self._install_agents()
         self._remove_legacy_underscore_skills()
         self._prune_empty_skill_dirs()
         self._save_state()
@@ -399,6 +408,30 @@ class Installer:
             if report.startswith("!"):
                 print(report, file=sys.stderr)
         return self._mcp
+
+    def _install_agents(self) -> None:
+        """Copy cdd_guidance/agents into the IDE agents folder. The source stays on cdd_guidance."""
+        source = self.repo / "cdd_guidance" / "agents"
+        if not source.is_dir():
+            return
+        for path in sorted(source.glob("*.md")):
+            dest = self.path / "agents" / f"{self._agent_name(path)}.md"
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+            self._track_write(dest)
+
+    def _agent_name(self, path: Path) -> str:
+        text = path.read_text(encoding="utf-8")
+        if not text.startswith("---"):
+            return path.stem
+        for line in text.splitlines()[1:]:
+            if line.strip() == "---":
+                break
+            if line.startswith("name:"):
+                name = line.split(":", 1)[1].strip()
+                if name:
+                    return name
+        return path.stem
 
     def _reset_channels(self) -> None:
         from harness.hooks.hooks import HookInstallation
@@ -542,7 +575,14 @@ class Installer:
             if last is None
             else self._surface_color(self._surface_change(added, removed, actual, baseline))
         )
-        body = self._compare_report(actual, baseline, added, removed)
+        body = "\n".join(
+            part
+            for part in (
+                self._compare_report(actual, baseline, added, removed),
+                self._runtime_status_report(),
+            )
+            if part.strip()
+        )
         if color != "red":
             return self._colored_report(color, body)
         return self._colored_report(color, f"!\n{body}\n{self.diagnose_instructions()}")
@@ -659,7 +699,40 @@ class Installer:
             items = channels.get(name, [])
             entry[name] = {"count": len(items), "items": items}
         installs.append(entry)
-        path.write_text(json.dumps({"installs": installs}, indent=2), encoding="utf-8")
+        data: dict[str, Any] = {}
+        if path.is_file():
+            data = json.loads(path.read_text(encoding="utf-8"))
+        data["installs"] = installs
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+    def write_diagnostics_section(self, section: str, payload: dict[str, Any]) -> None:
+        """Add or replace one top-level section in diagnostics.json. Install history stays."""
+        path = self._diagnostics_log()
+        data: dict[str, Any] = {}
+        if path.is_file():
+            data = json.loads(path.read_text(encoding="utf-8"))
+        current = data.get(section)
+        if isinstance(payload, dict):
+            merged = dict(current) if isinstance(current, dict) else {}
+            merged.update(payload)
+            child_colors = [
+                value.get("color")
+                for value in merged.values()
+                if isinstance(value, dict) and value.get("color") in {"green", "yellow", "red"}
+            ]
+            if child_colors:
+                merged["color"] = (
+                    "red"
+                    if "red" in child_colors
+                    else "yellow"
+                    if "yellow" in child_colors
+                    else "green"
+                )
+            data[section] = merged
+        else:
+            data[section] = payload
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
     def _deployed_channels(self) -> dict[str, list[str]]:
         return {
@@ -669,6 +742,7 @@ class Installer:
             "rules": self._rule_names(),
             "mcp": self._mcp_names(),
             "hook": self._hook_names(),
+            "agent": self._markdown_names("agents", "*.md"),
         }
 
     def _markdown_names(self, folder_name: str, file_name: str) -> list[str]:
@@ -713,6 +787,68 @@ class Installer:
             for item in data.get("handlers") or []
             if item.get("operation") or item.get("event")
         )
+
+    def _mcp_host_is_running(self) -> bool:
+        from harness.mcp.mcp_server import McpInstallation
+
+        return McpInstallation(self.ide, self.path, repo=self.repo).cursor_host_is_running()
+
+    def _hook_server_status(self) -> tuple[bool, int | None]:
+        from harness.hooks.hook_daemon import HookDaemon
+        from harness.hooks.hook_server import HookServer
+
+        live = HookDaemon().live_address(HookServer.state_path(self.repo))
+        if live is None:
+            return False, None
+        return True, live[2]
+
+    def _registered_hook_events(self) -> list[str]:
+        dest = self.path / "hooks.json"
+        if not dest.is_file():
+            return []
+        try:
+            data = json.loads(dest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return []
+        hooks = data.get("hooks")
+        if not isinstance(hooks, dict):
+            return []
+        return sorted(str(name) for name in hooks if name)
+
+    def _registered_hook_operations(self) -> list[str]:
+        dest = self.path / "hook-handlers.json"
+        if not dest.is_file():
+            return []
+        try:
+            data = json.loads(dest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return []
+        names = {
+            str(item.get("operation") or "")
+            for item in data.get("handlers") or []
+            if item.get("operation")
+        }
+        return sorted(name for name in names if name)
+
+    def _runtime_status_report(self) -> str:
+        mcp = "running" if self._mcp_host_is_running() else "not running"
+        hook_live, hook_pid = self._hook_server_status()
+        hook = f"running (pid {hook_pid})" if hook_live else "not running"
+        events = self._registered_hook_events()
+        operations = self._registered_hook_operations()
+        lines = [
+            f"mcp host: {mcp}",
+            f"hook server: {hook}",
+        ]
+        if events:
+            lines.append(f"hooks registered (events): {', '.join(events)}")
+        else:
+            lines.append("hooks registered (events): none")
+        if operations:
+            lines.append(f"hook handlers (operations): {', '.join(operations)}")
+        else:
+            lines.append("hook handlers (operations): none")
+        return "\n".join(lines)
 
     @markdown("install")
     def install_instructions(self) -> str:

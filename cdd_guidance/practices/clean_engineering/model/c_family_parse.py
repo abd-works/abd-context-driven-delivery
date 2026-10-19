@@ -4,10 +4,10 @@ from __future__ import annotations
 import re
 from typing import Callable
 
-from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation
-from practices.clean_engineering.model.operation import operation_body_fingerprint
-from practices.clean_engineering.model.operation_metrics import apply_brace_body_metrics
-from practices.clean_engineering.model.property import Property, append_invariant, take_property_note
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation
+from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import apply_brace_body_metrics
+from cdd_guidance.practices.clean_engineering.model.property import Property, append_invariant, take_property_note
 
 _CLASS_RE = re.compile(
     r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?class\s+(\w+)",
@@ -303,7 +303,7 @@ class CFamilyParse:
 
     def _bind_member_relationships(self, oclass: OoadClass) -> None:
         """A field relates only when its type names a domain class."""
-        from practices.clean_engineering.model.property import bind_property_relationship
+        from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
 
         for prop in oclass.properties:
             bind_property_relationship(prop)

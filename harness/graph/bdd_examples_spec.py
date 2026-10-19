@@ -14,7 +14,7 @@ from mamba import context, description, it
 from harness.graph.bdd_example_harness import assert_bdd_source_pair
 
 _LAYER_FAULT = Path(
-    "/workspace/practices/bdd/model/python/.examples/layer-isolation/widget_spec.py"
+    "/workspace/practices/bdd/model/python/_examples/layer-isolation/widget_spec.py"
 ).read_text(encoding="utf-8")
 _LAYER_CLEAN = "def test_apply():\n    assert True\n"
 

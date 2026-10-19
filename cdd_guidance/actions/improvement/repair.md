@@ -17,7 +17,7 @@ If the answer you are about to write could be a bullet list of file edits that m
 When the cause is not already a one-line miss of a documented recipe, run **Diagnose** and stay in its phases:
 
 ```
-python -m harness manifest diagnose.diagnose:Diagnose
+python -m harness manifest cdd_guidance.actions.diagnose.diagnose:Diagnose
 ```
 
 On Windows use `.\tools.ps1` (sets venv + UTF-8). Invoke `diagnose` (`kind: sub_agent`). Follow `response.instructions` only. Do not skip phases unless you can say why in one sentence.

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-for _path in (_REPO_ROOT, _REPO_ROOT / "tools", _REPO_ROOT / "practices", _REPO_ROOT / "actions"):
+for _path in (_REPO_ROOT, _REPO_ROOT / "tools", _REPO_ROOT / "cdd_guidance" / "practices", _REPO_ROOT / "cdd_guidance" / "actions"):
     value = str(_path)
     if value not in sys.path:
         sys.path.insert(0, value)
@@ -16,8 +16,8 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 _PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
-_HOSTING_DEMO = "harness.mcp.examples.hosting_demo.hosting_demo:HostingDemo"
-_BDD = "practices.bdd.bdd:Bdd"
+_HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
+_BDD = "cdd_guidance.practices.bdd.bdd:Bdd"
 
 
 class HostDiscovery:
@@ -34,8 +34,8 @@ class HostDiscovery:
                     [
                         str(_REPO_ROOT),
                         str(_REPO_ROOT / "tools"),
-                        str(_REPO_ROOT / "practices"),
-                        str(_REPO_ROOT / "actions"),
+                        str(_REPO_ROOT / "cdd_guidance" / "practices"),
+                        str(_REPO_ROOT / "cdd_guidance" / "actions"),
                     ]
                 ),
             },

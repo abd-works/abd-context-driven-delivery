@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from practices.stories.model.story_model import Scenario, Step, StoryModel
+from cdd_guidance.practices.stories.model.story_model import Scenario, Step, StoryModel
 
 
 def iter_scenarios(model: StoryModel):

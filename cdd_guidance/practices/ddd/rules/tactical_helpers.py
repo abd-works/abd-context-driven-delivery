@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from practices.ddd.model.stereotypes import (
+from cdd_guidance.practices.ddd.model.stereotypes import (
     class_declaration_decorated_name,
     class_stereotypes,
     inferred_tactical_kind,

@@ -88,10 +88,10 @@ Do not offer options until the cited context files are read. Answers go to `{pat
 ---
 
 ## actions/sketch
-*Sketch* keeps a rough draft as a file through the grill, so the working record is on disk before anyone generates.
+*Sketch* keeps a rough draft as a file through the grill, so the working record is on disk before anyone generates. *SketchOutline* reads one practice’s section of that sketch and hands back its tree as indented lines; *SketchLens* names which practice section you asked for.
 
-- **Purpose:** Persist a rough draft through grill before generate, so the sketch is a file.
-- **Seam (terms):** Sketch
+- **Purpose:** Persist a rough draft through grill before generate; read one practice’s sketch section as indented lines for transforms and practice models.
+- **Seam (terms):** Sketch, SketchOutline, SketchLens
 - **Dependencies (one-way):** `actions/grill_context`
 
 ---
@@ -217,11 +217,11 @@ Property name is the match. **File:** `{name}.md` beside the class. **Section:**
 ---
 
 ## space/session
-*Session* holds the in-memory *Graph*, each *PracticeGuidance*, and the active work-session folder under ``{repo}/.sessions/{slug}/``.
+*Session* holds the host session for hooks and MCP: the in-memory graph and the active practice guidance. Name, work path, repo path, and session path belong on this session.
 
-- **Purpose:** Hold graph and practices for hooks/MCP; ``open`` / ``current`` delegate to legacy *WorkSession* (implicit ``default`` when none is active).
+- **Purpose:** Keep one host session for hooks and MCP.
 - **Seam (terms):** Session
-- **Dependencies (one-way):** `harness/graph`, `harness/guidance`, `harness/hooks`, `space/session/legacy`, `space/repo`
+- **Dependencies (one-way):** `harness/graph`, `harness/guidance`, `harness/hooks`, `space/repo`
 
 ---
 
@@ -234,21 +234,12 @@ Property name is the match. **File:** `{name}.md` beside the class. **Section:**
 
 ---
 
-## harness/sketch
-*SketchOutline* reads one practice’s section of a sketch and hands back its tree as indented lines. *SketchLens* names which practice section you asked for.
-
-- **Purpose:** Read one practice’s section of a sketch and hand back its tree as indented lines.
-- **Seam (terms):** SketchOutline, SketchLens
-- **Dependencies (one-way):** *(none)*
-
----
-
 ## harness/transformers
 *Transformers* loads each practice *Transformer* a sketch names and renders that practice’s logical templates.
 
 - **Purpose:** Load each practice transformer named by a sketch and render that practice’s logical templates.
 - **Seam (terms):** Transformers, Transformer
-- **Dependencies (one-way):** `harness/sketch`, `harness/agent_tools`, `practices/bdd`, `practices/clean_engineering`, `practices/ddd`, `practices/stories`
+- **Dependencies (one-way):** `actions/sketch`, `harness/agent_tools`, `practices/bdd`, `practices/clean_engineering`, `practices/ddd`, `practices/stories`
 
 ---
 
@@ -296,7 +287,7 @@ Marks live on members; *Installer* walks them, including `harness/`. If `.instal
 
 - **Purpose:** Hold one *PracticeGuidance* per field so the same kits generate and check work against that field’s words.
 - **Seam (terms):** PracticeGuidance, Stage
-- **Dependencies (one-way):** `harness/guidance`, `tools/workspace`
+- **Dependencies (one-way):** `harness/guidance`
 
 ## Constraint
 
@@ -485,15 +476,6 @@ One agent role per session. Follow the prompt for how to carve the backlog.
 # tools
 *Tools* are the session, git, and workflow utilities the kits call.
 
-## tools/workspace
-*WorkSession* opens a named work session so turns, branches, and decision records hang off one folder. *Workspace* is that folder. *Turn* is one slice of work on the session.
-
-- **Purpose:** Open a named work session so turns, branches, and decision records hang off one folder.
-- **Seam (terms):** WorkSession, Workspace, Turn
-- **Dependencies (one-way):** `space/git`
-
----
-
 ## Constraint
 
 Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Import repository types from ``space.repo`` only.
@@ -505,7 +487,7 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Imp
 
 - **Purpose:** Move GitHub issues on Project columns and name the reusable workflows a plan is based on.
 - **Seam (terms):** Workflow
-- **Dependencies (one-way):** `space/git`, `tools/workspace`, `tools/handoff`
+- **Dependencies (one-way):** `space/repo`, `tools/handoff`
 
 ---
 
@@ -514,16 +496,16 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Imp
 
 - **Purpose:** Run a reusable or named workflow, including themed small-work issues, one ticket at a time.
 - **Seam (terms):** Plan, PlanCommands, PlanExecution, SmallWorkRunner
-- **Dependencies (one-way):** `tools/workspace`, `space/git`, `tools/workflow`
+- **Dependencies (one-way):** `space/repo`, `tools/workflow`
 
 ---
 
 ## tools/handoff
-*Handoff* compacts the current agent session into a document a fresh agent can resume from.
+*Handoff* writes a resume document a fresh agent can continue from, under the session folder ``{repo}/sessions/{name}/``.
 
 - **Purpose:** Compact the current agent session into a handoff document a fresh agent can resume from.
 - **Seam (terms):** Handoff
-- **Dependencies (one-way):** `tools/workspace`, `harness/agent_tools`
+- **Dependencies (one-way):** `harness/agent_tools`
 
 ---
 
@@ -562,12 +544,12 @@ Callers mark members with `@echo`.
 
 ---
 
-## tools/diagnose
-*Diagnose* runs a phase-sequenced bug hunt as a sub-agent when a host stays red.
+## actions/diagnose
+*Diagnose* runs a phase-sequenced bug hunt as a sub-agent when a host stays red. Pass practice guidance when the fix and the regression test should follow that practice.
 
 - **Purpose:** Run a phase-sequenced bug-hunting loop as a sub-agent when a host stays red.
 - **Seam (terms):** Diagnose
-- **Dependencies (one-way):** `harness/agent_tools`
+- **Dependencies (one-way):** `harness/guidance_actions`
 
 ---
 
@@ -584,7 +566,7 @@ Callers mark members with `@echo`.
 
 ---
 
-## tools/context_setup
+## cdd_guidance/context_setup
 *ContextSetup* converts a folder of documents to markdown, partitions it through the practices you select, and embeds a *ContextIndex* you can ask.
 
 - **Purpose:** Convert a folder of documents to markdown, partition through selected practices, and embed an index you can ask.

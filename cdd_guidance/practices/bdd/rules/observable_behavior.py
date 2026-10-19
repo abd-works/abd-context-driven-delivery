@@ -1,4 +1,4 @@
-"""observable-behavior — ported from practices/bdd/scanners (source slice on spec nodes)."""
+"""observable-behavior — ported from cdd_guidance.practices/bdd/scanners (source slice on spec nodes)."""
 
 from __future__ import annotations
 

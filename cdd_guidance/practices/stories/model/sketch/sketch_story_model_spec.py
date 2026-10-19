@@ -3,10 +3,10 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+_REPO_ROOT = Path(__file__).resolve().parents[5]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools", "actions"):
+for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -14,8 +14,8 @@ for _cat in ("practices", "tools", "actions"):
 from expects import contain, equal, expect
 from mamba import description, it
 
-from actions.render.render import Render
-from practices.stories.model.sketch.sketch_story_model import SketchStoryModel
+from cdd_guidance.actions.render.render import Render
+from cdd_guidance.practices.stories.model.sketch.sketch_story_model import SketchStoryModel
 
 _SKETCH = """# Single Client View - sketch
 
@@ -61,7 +61,7 @@ with description("SketchStoryModel"):
 
     with it("should render markdown story-map outline from a sketch via Render"):
         results = Render().render(
-            "practices.stories.stories:Stories",
+            "cdd_guidance.practices.stories.stories:Stories",
             format="markdown",
             content=_SKETCH,
             source="sketch",

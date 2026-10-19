@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
-for _category in ("tools", "practices", "actions", "patterns"):
+for _category in ("tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/patterns"):
     _entry = str(_REPO / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
@@ -23,7 +23,7 @@ Tuple = list[str]
 _GRAPH_PRACTICE_NAMES = frozenset({"clean_engineering", "stories", "ddd", "bdd", "ux"})
 
 def pattern_overlay_root(pattern: str) -> Path:
-    return _REPO / "patterns" / pattern
+    return _REPO / "cdd_guidance" / "patterns" / pattern
 
 
 def resolve_overlay_root(overlay: str) -> Path:
@@ -46,7 +46,7 @@ def normalize_overlay(overlay: str) -> str:
 
 
 def available_pattern_overlays() -> list[str]:
-    patterns = _REPO / "patterns"
+    patterns = _REPO / "cdd_guidance" / "patterns"
     if not patterns.is_dir():
         return []
     found: list[str] = []

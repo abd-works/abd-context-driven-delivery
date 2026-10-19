@@ -7,9 +7,9 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from practices.ux.model.json.nodes import JsonUxMap
-from practices.ux.model.nodes import StoryDemoControl
-from practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
+from cdd_guidance.practices.ux.model.nodes import StoryDemoControl
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 _SHELL_PATH = Path(__file__).resolve().parents[2] / "templates" / "html" / "mockup_shell.html"
 

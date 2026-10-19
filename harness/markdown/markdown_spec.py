@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools", "actions"):
+for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -20,8 +20,8 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.markdown import AssetLocator, HTML, Markdown, YamlBinder, canonical_format
 
-_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "practices" / "clean_engineering"
-_STORIES_DIR = _REPO_ROOT / "practices" / "stories"
+_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
+_STORIES_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "stories"
 
 
 with description("a co-located markdown file beside the module"):
@@ -81,8 +81,8 @@ with description("an asset locator"):
         with it("should resolve to kind folder"):
             expect(self.location.kind).to(equal("folder"))
 
-        with it("should resolve to practices/clean_engineering/examples"):
-            expect(self.location.folder).to(equal((_CLEAN_ENGINEERING_DIR / "examples").resolve()))
+        with it("should resolve to practices/clean_engineering/_examples"):
+            expect(self.location.folder).to(equal((_CLEAN_ENGINEERING_DIR / "_examples").resolve()))
 
     with context("that locates overview on a CleanEngineering"):
         with before.each:

@@ -3,16 +3,16 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from expects import equal, expect
 from mamba import description, it
 
-from practices.clean_engineering.model.module_context_files import ModuleContextFiles
+from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContextFiles
 
-_EXAMPLES = Path(__file__).resolve().parent / "python" / ".examples"
+_EXAMPLES = Path(__file__).resolve().parent / "python" / "_examples"
 
 
 class ContextRow:

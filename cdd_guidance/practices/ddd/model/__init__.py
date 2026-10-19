@@ -37,7 +37,7 @@ def load_bounded_context_map(root):
     path = next((item for item in preferred if item.is_file()), None)
     if path is None:
         return []
-    from practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
+    from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 
     return MarkdownBoundedContextMap().load(str(path)).contexts
 

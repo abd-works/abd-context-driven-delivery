@@ -3,14 +3,19 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
+    _p = str(_REPO_ROOT / _cat)
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+sys.modules.pop("sketch", None)
 
 from expects import equal, expect
 from mamba import before, description, it
 
-from harness.sketch.sketch_outline import SketchLens, SketchOutline
+from sketch.sketch_outline import SketchLens, SketchOutline
 
 _HEADED = """# Single Client View — sketch
 

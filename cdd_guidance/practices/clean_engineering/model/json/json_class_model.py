@@ -10,16 +10,16 @@ _repo = Path(__file__).resolve().parents[3]
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
 
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
     OoadNode,
 )
-from practices.clean_engineering.model.field_types import Relationship
-from practices.clean_engineering.model.operation import Operation
-from practices.clean_engineering.model.property import Property
-from practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
 
 class JsonParseError(ValueError):

@@ -14,6 +14,8 @@ from harness.graph.bound_node import BoundChildren as _BoundChildren
 from harness.graph.bound_node import BoundNode
 from harness.graph.graph import Graph
 
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+
 from .source_location import SourceLocation
 
 # Pairs the schema names with belongsTo. The facade does not grow a method for them.
@@ -352,6 +354,9 @@ class Step(StoryNode):
         self.values: List[str] = list(values) if values is not None else []
         self.actor = actor
         self.source = source
+        self.call_graph: List[CallGraphEntry] = (
+            list(origin.call_graph) if origin is not None and getattr(origin, "call_graph", None) else []
+        )
         if origin is not None:
             for extra in origin.ands:
                 self._ands.append(type(self)(extra))
@@ -393,6 +398,7 @@ class Step(StoryNode):
             name=self.name,
         )
         cloned.ands = [step.clone() for step in self.ands]
+        cloned.call_graph = list(self.call_graph)
         return cloned
 
 
@@ -846,8 +852,8 @@ class StoryModel(StoryNode):
         """Read the story map, scenarios, and increments from a folder."""
         from pathlib import Path
 
-        from practices.stories.model.json.nodes import JsonStoryModel
-        from practices.stories.model.markdown.nodes import MarkdownStoryModel
+        from cdd_guidance.practices.stories.model.json.nodes import JsonStoryModel
+        from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 
         root = Path(root).resolve()
         story_map_root = root.parent if root.is_file() else root
@@ -921,7 +927,7 @@ class StoryModelFactory:
 
         target = Path(path)
         if target.is_file() and target.suffix == ".drawio":
-            from practices.stories.model.drawio.nodes import DrawIOStoryModel
+            from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
 
             return DrawIOStoryModel().load(target.read_text(encoding="utf-8"))
         return StoryModel.load(path)

@@ -1,6 +1,6 @@
 """JavaScript story file. create and load live on JavaScriptStory."""
 
-from practices.stories.model.javascript.nodes import JavaScriptStory
+from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptStory
 
 
 def render_story_file(story, **kwargs) -> str:

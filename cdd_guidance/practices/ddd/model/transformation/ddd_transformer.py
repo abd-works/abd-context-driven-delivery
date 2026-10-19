@@ -7,9 +7,9 @@ from pathlib import Path
 
 from jinja2 import Environment
 
-from harness.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
-from practices.ddd.model.nodes import Aggregate, BoundedContext
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext
 
 _NESTING_INDENT = 2
 _EVENT_MAP = ("event_map", "event map")

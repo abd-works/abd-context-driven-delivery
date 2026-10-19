@@ -29,8 +29,8 @@ def operation_source_span(operation: "Operation") -> tuple[int, int] | None:
 
 from harness.graph.bound_node import BoundChildren
 
-from practices.clean_engineering.model.base_class_model import OoadNode
-from practices.clean_engineering.model.update_report import ChildCollectionPair
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
+from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair
 
 
 class Parameter(OoadNode):
@@ -112,7 +112,7 @@ class Operation(OoadNode):
         self._refill(self._parameters, parameters)
 
     def _take_parameters(self, parameters: list) -> None:
-        from practices.clean_engineering.model.type_refs import parse_parameter
+        from cdd_guidance.practices.clean_engineering.model.type_refs import parse_parameter
 
         taken: List[Parameter] = []
         for index, item in enumerate(parameters, start=1):

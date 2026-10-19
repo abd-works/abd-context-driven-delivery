@@ -101,7 +101,7 @@
       </code></pre></div></figure></div></details><h4>Guidance</h4><div class="fidelity-guidance-body">
 <p>Apply <code>@stories</code> <code>#scenarios</code> § Guidance and § Rules to acceptance tests. Use the <strong>Test shape ladder</strong> in the <code>testing-approach</code> rule under <code>clean_engineering/rules/</code>: start with the real application when it is available, use deterministic external-system stubs while developing, and replace them with end-to-end boundaries when requested.</p>
 <p><strong>Develop the behaviour, not only the test.</strong> Acceptance-test work owns both the executable specification and the production code that satisfies it. Take one Scenario at a time: write the failing acceptance test, invoke the Clean Engineering companion at <code>code</code> fidelity, implement the smallest production change that can pass, rerun the test, refactor when it is green, and then continue to the next behaviour. After two failed fix attempts, diagnose the failure before changing more code.</p>
-<p>Refer to <a href="../language-tools.md"><code>../language-tools.md</code></a> for language-specific test tools and idioms.</p>
+<p>Refer to <a href="../cdd_guidance/rules/language-tools.md"><code>cdd_guidance/rules/language-tools.md</code></a> for language-specific test tools and idioms.</p>
 </div><h4>Rules</h4>
 <p>Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules.</p>
 <p>If this change will not stay here, follow <code>practices/stories/scenarios.mdc</code>.</p>
@@ -124,7 +124,7 @@
 # format: py
 # ---
 #
-# Scenario template — refer to practices/language-tools.md for tooling.
+# Scenario template — refer to cdd_guidance/rules/language-tools.md for tooling.
 #
 # ## Artifact layout (`artifacts-mirror-story-hierarchy`)
 #

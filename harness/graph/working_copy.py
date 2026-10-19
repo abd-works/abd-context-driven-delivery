@@ -23,7 +23,7 @@ _FIELD_INIT = re.compile(
 _STATIC_LINE = re.compile(r"^\s*(?:(?:public|private|protected|readonly|declare|override)\s+)*static\b")
 _HEADING = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
 _CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
-_SKIP_DIRS = {".codeql", ".git", ".context", "node_modules", "__pycache__", ".sessions"}
+_SKIP_DIRS = {".codeql", ".git", ".context", "node_modules", "__pycache__", ".sessions", "retired"}
 
 
 def _report(graph: Graph, message: str) -> None:
@@ -76,7 +76,7 @@ def _overlay_selected(graph: Graph, pattern: str) -> bool:
 
 
 def _record_clean(practice, root: Path) -> list[dict]:
-    from practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
+    from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 
     _report(practice.graph, "clean_engineering · folders")
     roles = _code_folders(root)
@@ -201,7 +201,7 @@ def _class_fact(practice, text: str, relative: str, module_id: str, cls, class_n
             continue
         if str(operation.name).startswith("_"):
             continue
-        from practices.clean_engineering.model.operation import operation_source_span
+        from cdd_guidance.practices.clean_engineering.model.operation import operation_source_span
 
         span = _method_span(text, operation.name, getattr(operation, "line", None) or 1)
         model_span = operation_source_span(operation)
@@ -292,7 +292,7 @@ def _class_span(text: str, name: str) -> tuple[str, int]:
 
 
 def _stereotyped_name(text: str, name: str) -> str:
-    from practices.ddd.model.stereotypes import class_declaration_decorated_name
+    from cdd_guidance.practices.ddd.model.stereotypes import class_declaration_decorated_name
 
     return class_declaration_decorated_name(text, name)
 
@@ -324,13 +324,13 @@ def _class_id_named(nodes: list, name: str) -> str:
 
 
 def _method_span(text: str, name: str, fallback: int) -> tuple[int, int]:
-    from practices.clean_engineering.model.c_family_parse import CFamilyParse
+    from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
 
     return CFamilyParse.method_span_in_text(text, name, fallback)
 
 
 def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
-    from practices.ddd.model.stereotypes import inferred_tactical_kind
+    from cdd_guidance.practices.ddd.model.stereotypes import inferred_tactical_kind
 
     _report(practice.graph, "ddd · bounded contexts")
     names = {cls["name"] for cls in classes}
@@ -394,9 +394,9 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
 
 
 def _record_stories(practice, source: Path) -> None:
-    from practices.stories.model.graph_story_model import GraphStoryModel
-    from practices.stories.model.story_model import StoryModel
-    from practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
+    from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
+    from cdd_guidance.practices.stories.model.story_model import StoryModel
+    from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
     files: dict[str, str] = {}
     sources = _typescript_files(source)

@@ -14,7 +14,7 @@ _repo = Path(__file__).resolve().parents[3]
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
 
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
@@ -23,7 +23,7 @@ from practices.clean_engineering.model.base_class_model import (
     companion_interface_name,
     is_interface_name,
 )
-from practices.clean_engineering.model.update_report import UpdateReport
+from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
 
 _TYPE_MAP = {
     "str": "String",
@@ -65,7 +65,7 @@ class JavaCleanEngineeringModel(CleanEngineeringModel):
 
     @classmethod
     def parse(cls, text: str) -> "JavaCleanEngineeringModel":
-        from practices.clean_engineering.model.c_family_parse import CFamilyParse
+        from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
 
         return CFamilyParse(
             model_factory=lambda: cls(name="", sequential_order=1),
@@ -74,7 +74,7 @@ class JavaCleanEngineeringModel(CleanEngineeringModel):
 
     @classmethod
     def parse_detailed(cls, text: str):
-        from practices.clean_engineering.model.python.python_class_model import ParsedPython
+        from cdd_guidance.practices.clean_engineering.model.python.python_class_model import ParsedPython
 
         model = cls.parse(text)
         return ParsedPython(model=model, content=text, lines=text.split("\n"), tree=None)

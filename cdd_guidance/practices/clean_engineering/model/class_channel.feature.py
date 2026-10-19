@@ -15,17 +15,17 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import before, context, describe, included_context, it, shared_context
 
-from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, is_interface_name
-from practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
-from practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
-from practices.clean_engineering.model.typescript.typescript_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, is_interface_name
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import (
     TypeScriptCleanEngineeringModel,
     _camel_identifier,
     _ts_type,
 )
 
-EXPECTED = Path(__file__).resolve().parent / ".examples" / "expected"
-ACTUAL = Path(__file__).resolve().parent / ".examples" / "actual"
+EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected"
+ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
 
 # TypeScript path, Draw.io path. Module names are the class-model.md headings.
 _FILES = {

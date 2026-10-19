@@ -1,12 +1,12 @@
 """Story graph rules, one module per fidelity."""
 
-from practices.stories.rules.acceptance_tests import (
+from cdd_guidance.practices.stories.rules.acceptance_tests import (
     DomainFixtureExampleFiles,
     ExampleRoleNames,
     ExamplesExportDataNotRepository,
     OriginatingSubEpicExamples,
 )
-from practices.stories.rules.scenarios import (
+from cdd_guidance.practices.stories.rules.scenarios import (
     AndChaining,
     BehavioralAndSystemObservableOutcomes,
     ButMarksMissingState,
@@ -22,7 +22,7 @@ from practices.stories.rules.scenarios import (
     WhenHoldsTheOperation,
     WhenNamesIntentNotInterfaceGesture,
 )
-from practices.stories.rules.story_map import (
+from cdd_guidance.practices.stories.rules.story_map import (
     BehavioursNotOneTimeTasks,
     BranchOnMechanicalUniqueness,
     EvidenceDistinguishesObservedInferredAndIntended,

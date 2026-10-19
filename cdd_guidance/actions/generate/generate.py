@@ -16,7 +16,7 @@ class Generate(GuidanceAction):
     @Skill
     @agent_instructions
     def generate(self, guidance: GuidanceArg) -> str:
-        """Write artifacts for each listed Guidance at its current fidelity. The shared rules and that fidelity's rules are part of these instructions. After the artifact is written, call validate with the same guidance. Pass a string to generate from that text once."""
+        """Write artifacts for each listed guidance at its current fidelity. The shared rules and that fidelity's rules are part of these instructions. After the artifact is written, call validate with the same guidance."""
         self._bind_guidance(guidance)
         rules = self._rules(guidance)
         instructions(rules)

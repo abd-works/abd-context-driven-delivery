@@ -45,6 +45,13 @@ section: body
 *Given* a ++`<ConceptA>`++ with {`<field_1>`}  
   *And* the ++`<ConceptB>`++ for that ++`<ConceptA>`++ is {`<field_2>`}  
 *When* the **`<Actor>`** `<action>`  
+
+```realization
+<entry>.<operation>(<args>)
+  -> <collaborator>.<operation>(<args>)
+  <- <result>
+```
+
 *Then* the ++`<result concept>`++ `<outcome>` is visible on the public interface  
   *And* a ++`<related concept>`++ shows {`<field_3>`}
 

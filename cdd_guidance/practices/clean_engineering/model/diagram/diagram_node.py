@@ -5,12 +5,12 @@ import re
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Tuple
 
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
 )
-from practices.clean_engineering.model.diagram.geometry import (
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     CELL_MIN_HEIGHT,
     CELL_WIDTH,
     LINE_HEIGHT,

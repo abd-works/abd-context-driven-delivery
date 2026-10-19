@@ -11,7 +11,7 @@ alwaysApply: true
 1. **Same base classes, different output.** `MiroClass` extends shared `DiagramClass` (`OoadClass` + `DiagramNode`). `MiroModule` extends shared `DiagramModule` (`Module` + `DiagramNode`). Mirror Draw.io: `load_module` / `load_class` copy onto the subtype with `update_self`.
 2. **Do not touch `base_class_model.py`.** That is shared by all backends. Never replicate its node types or graph semantics.
 3. **Positioning, ordering, and layout live in `model/diagram`.** Geometry, `DiagramNode.keep_or_place`, containment forest, module/class height, path nesting, and `is_modules_view` are shared. This channel only writes Mermaid and canvas-composer SVG.
-4. **`UpdateReport` is imported from `practices.clean_engineering.model.update_report`, never redefined.**
+4. **`UpdateReport` is imported from `cdd_guidance.practices.clean_engineering.model.update_report`, never redefined.**
 
 ## Output format
 

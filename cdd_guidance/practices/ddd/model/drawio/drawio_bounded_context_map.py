@@ -7,8 +7,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from practices.ddd.model.markdown.nodes import MarkdownAggregate, MarkdownBoundedContextMap
-from practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap, Integration
+from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownAggregate, MarkdownBoundedContextMap
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap, Integration
 
 _CONTEXT_STYLE = (
     "swimlane;startSize=36;rounded=1;fillColor=#1a3a6e;swimlaneFillColor=#16325f;"

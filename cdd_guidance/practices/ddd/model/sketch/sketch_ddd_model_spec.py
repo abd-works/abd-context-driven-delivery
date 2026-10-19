@@ -3,8 +3,8 @@
 from mamba import description, context, it
 from expects import expect, equal, contain
 
-from practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
-from practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
+from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
+from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 
 _SKETCH = """\
 # Example sketch

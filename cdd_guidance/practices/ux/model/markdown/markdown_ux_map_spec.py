@@ -6,12 +6,12 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import before, description, it
 
-_REPO = Path(__file__).resolve().parents[4]
+_REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from practices.ux.model.markdown.nodes import MarkdownUxMap
-from practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.markdown.nodes import MarkdownUxMap
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
 with description("MarkdownUxMap"):

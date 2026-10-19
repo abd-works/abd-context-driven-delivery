@@ -4,7 +4,7 @@
 # format: py
 # ---
 #
-# Scenario template — refer to practices/language-tools.md for tooling.
+# Scenario template — refer to cdd_guidance/rules/language-tools.md for tooling.
 #
 # ## Artifact layout (`artifacts-mirror-story-hierarchy`)
 #
@@ -50,6 +50,10 @@
 # never repeat literals across scenarios. Golden layout: `practices/stories/examples/telco-website/`.
 #
 # from .examples.account_credentials_examples import valid_account_credentials
+#
+# Scenario realizations (default on unless the user says "no realizations"):
+# After GWT is agreed, add a ```realization``` block under each When (see templates/md/scenarios.md).
+# The stories model round-trips that block into spec `realization` data and `# ->` comments here.
 #
 # Pattern: GWT structure only — replace pass with real code under each with.
 

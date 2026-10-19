@@ -3,10 +3,10 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools"):
+for _cat in ("cdd_guidance/practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -14,7 +14,7 @@ for _cat in ("practices", "tools"):
 from expects import be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from practices.stories.stories import Stories
+from cdd_guidance.practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
 
 _SAMPLE_MARKDOWN = """\

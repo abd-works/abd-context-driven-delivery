@@ -559,6 +559,9 @@ with description("an agent toolset") as self:
                         report = self.installer.diagnose_install()
                         expect(report).to(contain("installed"))
                         expect(report).to(contain("skill 1 -> 1 (delta 0)"))
+                        expect(report).to(contain("mcp host:"))
+                        expect(report).to(contain("hook server:"))
+                        expect(report).to(contain("hooks registered (events):"))
 
                     with it("should mark the install green"):
                         expect(self.installer.diagnose_install()).to(contain("green"))
@@ -644,8 +647,8 @@ with description("an agent toolset") as self:
                         ide="Cursor", path=self.repo / ".cursor", repo=self.repo
                     ).collect_toolsets()
                     expect(refs).to(contain("harness.transformers.transformers:Transformers"))
-                    expect(refs).to(contain("patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
-                    expect(refs).to(contain("patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
+                    expect(refs).to(contain("cdd_guidance.patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
+                    expect(refs).to(contain("cdd_guidance.patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
                     expect(refs).to(contain("harness.graph.graph:Graph"))
                     expect(refs).to(contain("harness.guidance.guidance:Guidance"))
                     expect(refs).not_to(contain("harness.guidance.guidance:PracticeGuidance"))
@@ -741,7 +744,7 @@ with description("a practice guidance class") as self:
                 toolset = type(
                     "Practice",
                     (),
-                    {"install_folder": Path("practices/sample_tool"), "tools": tools},
+                    {"install_folder": Path("cdd_guidance/practices/sample_tool"), "tools": tools},
                 )()
                 expect(
                     writer.relative_path(
@@ -759,7 +762,9 @@ with description("a practice guidance class") as self:
             self.mcp = self.installer.install([self.tool])
 
         with after.each:
-            shutil.rmtree(self._tmp, ignore_errors=True)
+            tmp = getattr(self, "_tmp", None)
+            if tmp:
+                shutil.rmtree(tmp, ignore_errors=True)
 
         with it("should write a rules file from the rules property"):
             expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").is_file()).to(equal(True))
@@ -779,16 +784,19 @@ with description("a practice guidance class") as self:
 
         with context("that do not enroll inject_rules when the hook is disabled on the operation"):
             with before.each:
-                from practices.bdd.bdd import Bdd
-                from practices.clean_engineering.clean_engineering import CleanEngineering
+                from cdd_guidance.practices.bdd.bdd import Bdd
+                from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
                 self._branch_tmp = tempfile.mkdtemp()
                 self.tree = Path(self._branch_tmp)
                 Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                     [Bdd(), CleanEngineering()]
                 )
-                self.handlers = json.loads(
-                    (self.tree / "hook-handlers.json").read_text(encoding="utf-8")
+                handlers_path = self.tree / "hook-handlers.json"
+                self.handlers = (
+                    json.loads(handlers_path.read_text(encoding="utf-8"))
+                    if handlers_path.is_file()
+                    else {"handlers": []}
                 )
                 self.inject_refs = [
                     item["ref"]
@@ -798,22 +806,26 @@ with description("a practice guidance class") as self:
                 ]
 
             with after.each:
-                shutil.rmtree(self._branch_tmp, ignore_errors=True)
+                branch = getattr(self, "_branch_tmp", None)
+                if branch:
+                    shutil.rmtree(branch, ignore_errors=True)
 
             with it("should not write a Bdd inject_rules handler"):
-                expect(self.inject_refs.count("practices.bdd.bdd:Bdd")).to(equal(0))
+                expect(self.inject_refs.count("cdd_guidance.practices.bdd.bdd:Bdd")).to(equal(0))
 
             with it("should not write a CleanEngineering inject_rules handler"):
                 expect(
                     self.inject_refs.count(
-                        "practices.clean_engineering.clean_engineering:CleanEngineering"
+                        "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
                     )
                 ).to(equal(0))
 
         with context("that do not inject"):
             with before.each:
-                from practices.examples.car.car import Car
-                from actions.examples.car_story.car_story import CarStory
+                from harness.agent_tools.agent_tools import AgentToolSet
+
+                Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
+                from cdd_guidance.actions._examples.car_story.car_story import CarStory
 
                 self._branch_tmp = tempfile.mkdtemp()
                 self._car_tree = Path(self._branch_tmp)
@@ -822,7 +834,9 @@ with description("a practice guidance class") as self:
                 )
 
             with after.each:
-                shutil.rmtree(self._branch_tmp, ignore_errors=True)
+                branch = getattr(self, "_branch_tmp", None)
+                if branch:
+                    shutil.rmtree(branch, ignore_errors=True)
 
             with it("should not write inject_rules handlers for Car or CarStory"):
                 dest = self._car_tree / "hook-handlers.json"
@@ -855,11 +869,11 @@ with description("a practice guidance class") as self:
             expect("sample_tool" in names).to(equal(False))
             expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
 
-        with it("should emit the practice skill, practice rules, fidelity commands, and fidelity rules in one pass"):
+        with it("should emit the practice skill, practice rules, fidelity skills, and fidelity rules in one pass"):
             expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
             expect(InstalledTree(self.tree).rule_path("sample-tool.mdc").is_file()).to(equal(True))
             expect(InstalledTree(self.tree).skill_path("sample-tool-sketch").is_file()).to(equal(True))
-            expect(InstalledTree(self.tree).command_path("sample-tool-sketch").is_file()).to(equal(True))
+            expect(InstalledTree(self.tree).command_path("sample-tool-sketch")).to(equal(None))
             expect(InstalledTree(self.tree).rule_path("sample-tool-spec.mdc").is_file()).to(equal(True))
 
         with context("with a leftover underscored practice skill folder beside the installed tree"):
@@ -889,7 +903,7 @@ with description("a practice guidance class") as self:
                     "Fidelity",
                     (),
                     {
-                        "install_folder": Path("practices/sample_tool/sketch"),
+                        "install_folder": Path("cdd_guidance/practices/sample_tool/sketch"),
                         "tools": tools,
                         "practice_guidance": practice,
                         "slug": "sample-tool-sketch",
@@ -911,7 +925,7 @@ with description("a practice guidance class") as self:
                     "Fidelity",
                     (),
                     {
-                        "install_folder": Path("practices/sample_tool/spec"),
+                        "install_folder": Path("cdd_guidance/practices/sample_tool/spec"),
                         "tools": tools,
                         "practice_guidance": practice,
                         "slug": "sample-tool-spec",
@@ -930,9 +944,8 @@ with description("a practice guidance class") as self:
                 expect(sketch.is_file()).to(equal(True))
                 expect(sketch.read_text(encoding="utf-8")).to(contain("sample-tool-sketch()"))
 
-            with it("should write one fidelity command file per fidelity"):
-                sketch = InstalledTree(self.tree).command_path("sample-tool-sketch")
-                expect(sketch.is_file()).to(equal(True))
+            with it("should leave each fidelity off the command list"):
+                expect(InstalledTree(self.tree).command_path("sample-tool-sketch")).to(equal(None))
 
             with it("should list each fidelity MCP signature and a one-liner on the practice skill"):
                 text = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
@@ -951,7 +964,7 @@ with description("a practice guidance class") as self:
 
             with context("from stories"):
                 with before.each:
-                    from practices.stories.stories import Stories
+                    from cdd_guidance.practices.stories.stories import Stories
 
                     self._branch_tmp = tempfile.mkdtemp()
                     self.tree = Path(self._branch_tmp)
@@ -984,8 +997,8 @@ with description("a practice guidance class") as self:
                 with after.each:
                     shutil.rmtree(self._branch_tmp, ignore_errors=True)
 
-                with it("should write fidelity command files under github prompts not under cursor commands"):
-                    expect(InstalledTree(self.tree).prompt_path("sample-tool-sketch").is_file()).to(equal(True))
+                with it("should leave each fidelity out of github prompts"):
+                    expect(InstalledTree(self.tree).prompt_path("sample-tool-sketch")).to(equal(None))
 
         # (S) Installer --> Deploy Practice guidance fidelity rules
         with context("that have rules"):
@@ -1004,21 +1017,17 @@ with description("a practice guidance class") as self:
 # (S) Installer --> Install Lifecycle actions
 with description("lifecycle actions annotated for installation") as self:
     with context("that has been installed to Cursor"):
-        with after.each:
-            shutil.rmtree(self._tmp, ignore_errors=True)
-
         with context("with operations annotated as skills"):
             with context("with only a single skill operation"):
                 with before.each:
-                    from actions.document.document import Document
-                    from actions.generate.generate import Generate
-                    from actions.grill_context.grill_context import GrillContext
-                    from actions.iterate.iterate import Iterate
-                    from actions.partition.partition import Partition
-                    from actions.render.render import Render
-                    from actions.satisfy.satisfy import Satisfy
-                    from actions.sketch.sketch import Sketch
-                    from actions.sketch_render.sketch_render import SketchRender
+                    from cdd_guidance.actions.document.document import Document
+                    from cdd_guidance.actions.generate.generate import Generate
+                    from cdd_guidance.actions.grill_context.grill_context import GrillContext
+                    from cdd_guidance.actions.iterate.iterate import Iterate
+                    from cdd_guidance.actions.partition.partition import Partition
+                    from cdd_guidance.actions.render.render import Render
+                    from cdd_guidance.actions.satisfy.satisfy import Satisfy
+                    from cdd_guidance.actions.sketch.sketch import Sketch
 
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
@@ -1032,9 +1041,13 @@ with description("lifecycle actions annotated for installation") as self:
                             Render(),
                             Satisfy(),
                             Sketch(),
-                            SketchRender(),
                         ]
                     )
+
+                with after.each:
+                    tmp = getattr(self, "_tmp", None)
+                    if tmp:
+                        shutil.rmtree(tmp, ignore_errors=True)
 
                 with it("should write a skill file for each operation annotated as a skill"):
                     expect(InstalledTree(self.tree).skill_names()).to(
@@ -1048,7 +1061,6 @@ with description("lifecycle actions annotated for installation") as self:
                                 "render",
                                 "satisfy",
                                 "sketch",
-                                "sketch-render",
                             }
                         )
                     )
@@ -1068,13 +1080,18 @@ with description("lifecycle actions annotated for installation") as self:
             # (S) Installer --> Install Lifecycle actions as several tools
             with context("with several skill operations"):
                 with before.each:
-                    from actions.improvement.improvement import Improvement
+                    from cdd_guidance.actions.improvement.improvement import Improvement
 
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
                     self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Improvement()]
                     )
+
+                with after.each:
+                    tmp = getattr(self, "_tmp", None)
+                    if tmp:
+                        shutil.rmtree(tmp, ignore_errors=True)
 
                 with it("should write each skill as a peer folder named for the operation"):
                     root = self.tree / "skills" / "actions" / "improvement"
@@ -1085,13 +1102,18 @@ with description("lifecycle actions annotated for installation") as self:
         with context("with operations annotated for MCP"):
             with context("with only a single MCP operation"):
                 with before.each:
-                    from actions.generate.generate import Generate
+                    from cdd_guidance.actions.generate.generate import Generate
 
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
                     self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Generate()]
                     )
+
+                with after.each:
+                    tmp = getattr(self, "_tmp", None)
+                    if tmp:
+                        shutil.rmtree(tmp, ignore_errors=True)
 
                 with it("should record that operation"):
                     expect([op.mcp_name for op in self.mcp.mcp_operations]).to(
@@ -1102,19 +1124,24 @@ with description("lifecycle actions annotated for installation") as self:
                     server = McpServer()
                     server.bind_from(self.mcp)
                     result = server.invoke_prompt("generate.generate")
-                    expect(str(result)).to(contain("Write artifacts for each listed Guidance"))
+                    expect(str(result)).to(contain("Write artifacts for each listed guidance"))
 
             # (S) Installer --> Install Lifecycle actions as several tools
             with context("with several MCP operations"):
                 with before.each:
-                    from actions.improvement.improvement import Improvement
-                    from actions.validate.validate import Validate
+                    from cdd_guidance.actions.improvement.improvement import Improvement
+                    from cdd_guidance.actions.validate.validate import Validate
 
                     self._tmp = tempfile.mkdtemp()
                     self.tree = Path(self._tmp)
                     self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
                         [Improvement(), Validate()]
                     )
+
+                with after.each:
+                    tmp = getattr(self, "_tmp", None)
+                    if tmp:
+                        shutil.rmtree(tmp, ignore_errors=True)
 
                 with it("should record each operation annotated for MCP"):
                     expect(sorted(op.mcp_name for op in self.mcp.mcp_operations)).to(
@@ -1130,6 +1157,18 @@ with description("lifecycle actions annotated for installation") as self:
                 with it("should not publish an operation annotated not to deploy"):
                     names = [op.mcp_name for op in self.mcp.mcp_operations]
                     expect("validate.createRule" in names).to(equal(False))
+
+with description("guidance agents"):
+    with it("should install the agents from cdd_guidance/agents"):
+        tree = Path(tempfile.mkdtemp())
+        try:
+            Installer(ide="Cursor", path=tree, repo=_REPO_ROOT)._install_agents()
+            installed = sorted(path.name for path in (tree / "agents").glob("*.md"))
+            expect(installed).to(equal(["context.md", "discoverer.md", "implementation.md", "specification.md"]))
+            expect((tree / "agents" / "discoverer.md").read_text(encoding="utf-8")).to(contain("name: discoverer"))
+            expect(((_REPO_ROOT / "cdd_guidance" / "agents" / "discovery.md").is_file())).to(equal(True))
+        finally:
+            shutil.rmtree(tree, ignore_errors=True)
 
 with description("an operation annotated as a Cursor hook"):
 

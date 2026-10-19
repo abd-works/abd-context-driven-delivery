@@ -10,10 +10,10 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from practices.ux.model.json.nodes import JsonUxMap
-from practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl
-from practices.ux.model.ux_map import UxMap
-from practices.ux.model.html.nodes import _render_control
+from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl
+from cdd_guidance.practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.html.nodes import _render_control
 
 
 with description("StoryDemoControl"):

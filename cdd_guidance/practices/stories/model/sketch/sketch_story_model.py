@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import re
 
-from harness.sketch.sketch_outline import SketchLens, SketchOutline
-from practices.stories.model.story_model import (
+from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
     Increment,

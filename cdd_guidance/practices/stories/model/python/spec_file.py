@@ -35,7 +35,8 @@ from __future__ import annotations
 import re
 from typing import Iterable, List
 
-from practices.stories.model.story_model import StepType, Story
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.stories.model.story_model import Step, StepType, Story
 
 
 def render_story_spec_file(story: Story) -> str:
@@ -87,6 +88,16 @@ def _render_scenario_block(scenario) -> List[str]:
         for step in then_steps:
             lines.append(f"                    {_py_string(step.text)},")
         lines.append("                ),")
+        realization = _interaction_realization(when_steps, then_steps)
+        if realization:
+            lines.append("                \"realization\": (")
+            for entry in realization:
+                lines.append(
+                    "                    "
+                    f"{{\"depth\": {entry.depth}, \"kind\": {_py_string(entry.kind)}, "
+                    f"\"text\": {_py_string(entry.text)}}},"
+                )
+            lines.append("                ),")
         lines.append("            },")
     lines.append("        ),")
     lines.append("    },")
@@ -125,3 +136,11 @@ def _screaming_snake(name: str) -> str:
 def _snake(name: str) -> str:
     parts = [w for w in re.split(r"[^0-9A-Za-z]+", name) if w]
     return "_".join(p.lower() for p in parts) or "scenario"
+
+
+def _interaction_realization(when_steps: list, then_steps: list) -> list[CallGraphEntry]:
+    entries: list[CallGraphEntry] = []
+    for step in list(when_steps) + list(then_steps):
+        if isinstance(step, Step) and step.call_graph:
+            entries.extend(step.call_graph)
+    return entries

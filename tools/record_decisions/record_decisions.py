@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
+from harness.guidance_actions import load_document
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
@@ -61,15 +62,22 @@ class RecordDecisions:
     @mcp
     @skill
     @agent_tool
-    def write_cdr(self, root: str, slug: str, content: str) -> str:
+    def write_cdr(
+        self,
+        root: str,
+        slug: str,
+        content: str = "",
+        paths: list[str] | str | None = None,
+    ) -> str:
         """Write one Context Decision Record to {root}/.context/cdr/{NNNN}-{slug}.md.
         NNNN is the next sequential number under .context/cdr/. Creates the directory lazily.
-        content: full markdown following CDR-FORMAT.md (title + 1-3 sentence body; optional sections only when valuable).
+        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the record body in content.
+        content: in-process text. Leave this empty on an MCP call.
         slug: kebab-case short name (e.g. 'event-sourced-orders').
         Returns the resolved path. Call immediately when a qualifying decision crystallises - do not batch."""
         target = self._cdr_path(root, slug)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content.strip() + "\n", encoding="utf-8")
+        target.write_text(load_document(content, paths).strip() + "\n", encoding="utf-8")
         return str(target)
 
     @mcp
@@ -82,6 +90,6 @@ class RecordDecisions:
         """Step 2 - Optionally call list_cdrs(root) so you do not re-record an already-captured decision."""
         tools(self.list_cdrs(root))
         """Step 3 - During the session (grill, sketch, or generate), watch for decisions that meet ALL three: hard to reverse, surprising without context, and a real trade-off. If any criterion is missing, skip the CDR."""
-        """Step 4 - When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, call write_cdr immediately with a kebab slug and content matching CDR-FORMAT.md. Do not batch; do not wait until the end."""
+        """Step 4 - When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, write the record to a file and call write_cdr immediately with a kebab slug and paths set to that file. Do not pass the record body. Do not batch; do not wait until the end."""
         """Step 5 - Keep CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences only when they add genuine value."""
         return "CDR session active for {{root}}."

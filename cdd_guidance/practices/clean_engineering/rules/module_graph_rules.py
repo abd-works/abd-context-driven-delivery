@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 from harness.graph.practice_rule import PracticeGraphRule
-from practices.clean_engineering.model.module_context_files import ModuleContextFiles
+from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContextFiles
 
 _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
 

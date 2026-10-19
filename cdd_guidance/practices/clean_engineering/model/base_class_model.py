@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Iterable, List, Optional
 from harness.graph.bound_node import BoundChildren, BoundNode
 from harness.graph.graph import Graph
 
-from practices.clean_engineering.model.field_types import Relationship
-from practices.clean_engineering.model.update_report import ChildCollectionPair, TranslationError, UpdateReport
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, TranslationError, UpdateReport
 
 if TYPE_CHECKING:
-    from practices.clean_engineering.model.operation import Operation
-    from practices.clean_engineering.model.property import Property
+    from cdd_guidance.practices.clean_engineering.model.operation import Operation
+    from cdd_guidance.practices.clean_engineering.model.property import Property
 
 
 _EXAMPLE_EXTENSION_PREFIXES = ("Fake", "Isolated", "Production")
@@ -236,7 +236,7 @@ class OoadClass(OoadNode):
         return loaded
 
     def load_property(self, source: "Property") -> "Property":
-        from practices.clean_engineering.model.property import Property as PropertyNode
+        from cdd_guidance.practices.clean_engineering.model.property import Property as PropertyNode
 
         loaded = PropertyNode(
             source.name,
@@ -251,14 +251,14 @@ class OoadClass(OoadNode):
         source_relationship = getattr(source, "relationship", None)
         loaded.relationship = source_relationship.clone() if source_relationship is not None else None
         if loaded.relationship is None:
-            from practices.clean_engineering.model.property import bind_property_relationship
+            from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
 
             bind_property_relationship(loaded)
         loaded.invariants = [item.clone() for item in getattr(source, "invariants", [])]
         return loaded
 
     def load_operation(self, source: "Operation") -> "Operation":
-        from practices.clean_engineering.model.operation import Operation as OperationNode
+        from cdd_guidance.practices.clean_engineering.model.operation import Operation as OperationNode
 
         node = OperationNode(
             source.name,
@@ -326,8 +326,8 @@ class OoadClass(OoadNode):
 
     def place_relationship(self, relationship: Relationship) -> None:
         """Put this relationship on every property whose type names the target."""
-        from practices.clean_engineering.model.property import bind_property_relationship
-        from practices.clean_engineering.model.type_refs import domain_type_names
+        from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
+        from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 
         if (relationship.kind or "").lower() == "inheritance":
             return
@@ -356,8 +356,8 @@ class OoadClass(OoadNode):
         raise NotImplementedError(f"{type(self).__name__} must implement get_next_relationship_from_file")
 
     def sync_tree_from_legacy(self) -> None:
-        from practices.clean_engineering.model.operation import Operation as OperationNode
-        from practices.clean_engineering.model.property import Property as PropertyNode
+        from cdd_guidance.practices.clean_engineering.model.operation import Operation as OperationNode
+        from cdd_guidance.practices.clean_engineering.model.property import Property as PropertyNode
 
         self.property_nodes = [
             PropertyNode.from_field(field, index)
@@ -653,7 +653,7 @@ class CleanEngineeringModelFactory:
 
         target = Path(path)
         if target.is_dir() or target.suffix.lower() == ".py":
-            from practices.clean_engineering.model.python.python_class_model import (
+            from cdd_guidance.practices.clean_engineering.model.python.python_class_model import (
                 PythonCleanEngineeringModel,
             )
 
@@ -664,24 +664,24 @@ class CleanEngineeringModelFactory:
         text = target.read_text(encoding="utf-8")
         suffix = target.suffix.lower()
         if suffix == ".drawio":
-            from practices.clean_engineering.model.drawio.drawio_class_model import (
+            from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (
                 DrawIOCleanEngineeringModel,
             )
 
             return DrawIOCleanEngineeringModel().load(text)
         if suffix == ".json":
-            from practices.clean_engineering.model.json.json_class_model import (
+            from cdd_guidance.practices.clean_engineering.model.json.json_class_model import (
                 JsonCleanEngineeringModel,
             )
 
             return JsonCleanEngineeringModel().parse(text)
         if suffix in {".svg", ".html"}:
-            from practices.clean_engineering.model.miro.miro_class_model import (
+            from cdd_guidance.practices.clean_engineering.model.miro.miro_class_model import (
                 MiroCleanEngineeringModel,
             )
 
             return MiroCleanEngineeringModel().load(text)
-        from practices.clean_engineering.model.markdown.markdown_class_model import (
+        from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
             MarkdownCleanEngineeringModel,
         )
 
@@ -692,11 +692,11 @@ class CleanEngineeringModelFactory:
 
 def __getattr__(name: str):
     if name == "Property":
-        from practices.clean_engineering.model.property import Property
+        from cdd_guidance.practices.clean_engineering.model.property import Property
 
         return Property
     if name in ("Operation", "Parameter"):
-        from practices.clean_engineering.model.operation import Operation, Parameter
+        from cdd_guidance.practices.clean_engineering.model.operation import Operation, Parameter
 
         return Operation if name == "Operation" else Parameter
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

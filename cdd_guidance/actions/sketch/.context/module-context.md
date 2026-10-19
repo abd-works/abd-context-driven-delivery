@@ -4,7 +4,11 @@
 `Sketch` produces a rough, persisted draft of a formal artifact through an interactive grill loop. It locates a sketch template via tiered discovery (caller-supplied → agent-dir convention → built-in default), writes interim `{slug}-sketch.md` files to the session docs dir after every two or three grill answers, and overwrites the same path on each refinement. Leaving a sketch only in chat is treated as a defect; the file under the docs dir is the working record. `/sketch` invokes this toolset — not each context tool's host `sketch`. When a fidelity is finished, formal artifacts come from **`/sketch_render`** (straight `render.render` from the sketch markdown) — see `actions/sketch_render` and `actions/sketch/sketch.md` → **Render from sketch**. Use `generate` only when the user explicitly wants a fresh AI-authored pass outside that transform.
 
 ## Seam
-`Sketch`
+`Sketch`, `SketchOutline`, `SketchLens`
+
+## Constraint
+
+A caller asks for one practice's section and reads the indented body it already understands. Callers do not reach for heading depths, fence markers, or section boundaries themselves.
 
 ## Dependencies
 `grill_context.grill_context`, `harness.agent_tools`, `tools.tool`, `sessions`
@@ -15,6 +19,9 @@
 - `list_sketches`
 - `sketch_session(slug, destination, agent_dir)`
 - `sketch(tools)` — practice sketch body once per passed context tool
+- `SketchOutline(text, nesting_indent)` — read one practice's section as indented lines
+- `SketchOutline.holds(lens)` / `SketchOutline.body_for(lens)`
+- `SketchLens.stories`, `.clean_engineering`, `.domain_driven_design`, `.user_experience`, `.behavior_driven_development`, `.every`
 
 ## Mechanism
 Persist-on-draft cadence — `save_sketch` is called immediately on the first draft and again after every subsequent pair of grill answers; `find_template` uses tiered discovery so host toolsets can supply a domain-specific template alongside their module.

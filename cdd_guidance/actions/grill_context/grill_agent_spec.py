@@ -21,7 +21,7 @@ from agent_bdd import (
 _REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
 _GRILL_CONTEXT = "grill_context.grill_context:GrillContext"
-_BDD = "practices.bdd.bdd:Bdd"
+_BDD = "cdd_guidance.practices.bdd.bdd:Bdd"
 
 
 with description("a grill action"):
@@ -29,7 +29,7 @@ with description("a grill action"):
         with it("should run GrillContext.grill with that tool, not the Guidance grill"):
             with agent(_REPO_ROOT, _SESSIONS / "grill-owns-tools.json"):
                 read_workspace(".cursor/commands/grill.md")
-                read_workspace("actions/grill_context/grill_context.py")
+                read_workspace("cdd_guidance/actions/grill_context/grill_context.py")
 
                 response = run_toolset(
                     toolset=_GRILL_CONTEXT,
@@ -52,7 +52,7 @@ with description("a grill action"):
                     f"action: {response.action}\narguments: {response.arguments}",
                     "PASS only if grill is owned by grill_context.grill_context:GrillContext and the "
                     "BDD context tool is an argument in tools (one or more context tools). "
-                    "FAIL if the run owner is practices.bdd.bdd:Bdd with action grill.",
+                    "FAIL if the run owner is cdd_guidance.practices.bdd.bdd:Bdd with action grill.",
                 )
 
     with context("that expands grill instructions for sketch validation and batching"):

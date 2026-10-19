@@ -34,11 +34,11 @@ class Ux(PracticeGuidance):
         """Ensure Stories or Clean Engineering JS exists - transform via that generator if needed.
         generator: 'stories' | 'clean_engineering'. Returns {format: javascript, content: ...}."""
         if generator == "stories":
-            from practices.stories.stories import Stories
+            from cdd_guidance.practices.stories.stories import Stories
 
             return Stories().render("javascript", content, source=source_format)
         if generator == "clean_engineering":
-            from practices.clean_engineering.clean_engineering import CleanEngineering
+            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             return CleanEngineering().render("javascript", content, source=source_format)
         raise ValueError(

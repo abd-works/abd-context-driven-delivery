@@ -31,11 +31,11 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-_repo = Path(__file__).resolve().parents[4]
+_repo = Path(__file__).resolve().parents[5]
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
-from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation, Property, Relationship
-from practices.clean_engineering.model.diagram.diagram_node import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation, Property, Relationship
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     ContainmentForest,
     DiagramClass,
     DiagramCleanEngineeringModel,
@@ -43,8 +43,8 @@ from practices.clean_engineering.model.diagram.diagram_node import (
     module_tab_label,
     path_parent,
 )
-from practices.clean_engineering.model.diagram.geometry import CELL_WIDTH, Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
-from practices.clean_engineering.model.drawio.diagram_node import (
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import CELL_WIDTH, Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
+from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
     DrawIOModule,
     DrawIORelationship,
@@ -53,7 +53,7 @@ from practices.clean_engineering.model.drawio.diagram_node import (
     MODULE_STYLE,
     Page,
 )
-from practices.clean_engineering.model.update_report import UpdateReport
+from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
 EDGE_STYLES = {'inheritance': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;endSize=16;endFill=0;html=1;', 'composition': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;', 'aggregation': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;', 'association': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;'}
 DEFAULT_EDGE_STYLE = EDGE_STYLES['association']
 CLUSTER_GAP_X = 360
@@ -344,7 +344,7 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             self._bind_class_properties(oclass)
 
     def _bind_class_properties(self, oclass: OoadClass) -> None:
-        from practices.clean_engineering.model.property import bind_property_relationship
+        from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
 
         for prop in oclass.properties:
             bind_property_relationship(prop)
@@ -361,7 +361,7 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             current = (getattr(prop, "stereotype", "") or "").lower()
             if rank.get((kind or "").lower(), 0) >= rank.get(current, 0):
                 prop.stereotype = (kind or "association").lower()
-            from practices.clean_engineering.model.property import bind_property_relationship
+            from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
 
             bind_property_relationship(prop)
 

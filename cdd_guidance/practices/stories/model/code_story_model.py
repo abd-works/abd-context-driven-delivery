@@ -34,7 +34,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional, Union
 
-from practices.stories.model.story_model import (
+from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
     Increment,
@@ -450,7 +450,7 @@ class CodeStoryModel(StoryModel):
         sub = self.sub_epic_for(epic, nested)
         if epic_name:
             sub.name = epic_name
-        from practices.stories.model.source_location import SourceLocation
+        from cdd_guidance.practices.stories.model.source_location import SourceLocation
 
         for story in self.story_type.load_all(content):
             if source_file:

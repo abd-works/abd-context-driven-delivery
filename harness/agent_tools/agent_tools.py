@@ -738,12 +738,21 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
     def _file_under_root(self, root: Path, parts: list[str]) -> Path | None:
         search = root
         for part in parts[:-1]:
-            hyphenated = part.replace("_", "-")
-            candidate = search / hyphenated
-            search = candidate if candidate.is_dir() else search / part
+            found = self._package_dir(search, part)
+            if found is None:
+                return None
+            search = found
         candidate_file = search / f"{parts[-1]}.py"
         if candidate_file.exists():
             return candidate_file
+        return None
+
+    def _package_dir(self, search: Path, part: str) -> Path | None:
+        hyphenated = part.replace("_", "-")
+        for name in (hyphenated, part):
+            candidate = search / name
+            if candidate.is_dir():
+                return candidate
         return None
 
     def _hyphenated_module_file(self, module_name: str) -> Path:
@@ -754,9 +763,9 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             for name in (
                 "harness",
                 "tools",
-                "practices",
-                "actions",
-                "builders",
+                "cdd_guidance/practices",
+                "cdd_guidance/actions",
+                "cdd_guidance/builders",
             )
         ]
         for root in search_roots:
@@ -887,7 +896,22 @@ class AgentTool(AgentToolDestination):
             body = self._body
         else:
             body = (inspect.getdoc(self.callable) or "").strip()
-        return self._with_sub_agent_preamble(body)
+        return self._with_guidance_parameter(self._with_sub_agent_preamble(body))
+
+    def _with_guidance_parameter(self, text: str) -> str:
+        try:
+            signature = inspect.signature(self.callable)
+        except (TypeError, ValueError):
+            return text
+        if "guidance" not in signature.parameters:
+            return text
+        from harness.guidance_actions.guidance_actions import GUIDANCE_PARAMETER
+
+        if GUIDANCE_PARAMETER in text:
+            return text
+        if not text:
+            return GUIDANCE_PARAMETER
+        return f"{text}\n\n{GUIDANCE_PARAMETER}"
 
     def _with_sub_agent_preamble(self, text: str) -> str:
         from harness.agent_tools.sub_agent.mark import (

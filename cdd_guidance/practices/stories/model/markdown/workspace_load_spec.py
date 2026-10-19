@@ -6,7 +6,7 @@ import tempfile
 from expects import contain, equal, expect, have_len
 from mamba import before, context, description, it
 
-from practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
 
 
 def _stories(model):

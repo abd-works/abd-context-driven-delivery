@@ -6,8 +6,8 @@ from typing import List, Optional, Tuple
 
 from pathlib import Path
 
-from practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
-from practices.stories.model.story_model import Background, StepType, Story
+from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
+from cdd_guidance.practices.stories.model.story_model import Background, StepType, Story
 
 
 class TypeScriptScenario(CodeScenario):
@@ -255,7 +255,7 @@ class TypeScriptStory(CodeStory):
 
 class TypeScriptEpic(CodeEpic):
     def _write_stories(self, parent: str, files: dict, tests_root: str) -> None:
-        from practices.stories.model.typescript.story_file import story_test_import_path
+        from cdd_guidance.practices.stories.model.typescript.story_file import story_test_import_path
 
         stories = self._file_stories()
         if not stories:

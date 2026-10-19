@@ -3,10 +3,10 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools"):
+for _cat in ("cdd_guidance/practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -16,8 +16,8 @@ from mamba import before, description, it
 
 from harness.graph.graph import Graph
 
-from practices.ddd.model import ddd_class_kind
-from practices.ddd.model.nodes import Aggregate, BoundedContext, Entity
+from cdd_guidance.practices.ddd.model import ddd_class_kind
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Entity
 
 
 with description("DDD model nodes"):
@@ -31,7 +31,7 @@ with description("DDD model nodes"):
         )
 
     with it("should read @repository decorators from class declarations"):
-        from practices.ddd.model.stereotypes import class_declaration_decorated_name
+        from cdd_guidance.practices.ddd.model.stereotypes import class_declaration_decorated_name
 
         source = "@repository\nclass CartRepository:\n    pass\n"
         decorated = class_declaration_decorated_name(source, "CartRepository")

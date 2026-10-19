@@ -15,7 +15,6 @@ from .nodes import (
 )
 from .reference_paths import ReferencePaths
 from .ux_map import UxMap
-from .workspace import Workspace
 
 __all__ = [
     "ContentType",
@@ -34,5 +33,4 @@ __all__ = [
     "UxComponentCollection",
     "UxContext",
     "UxMap",
-    "Workspace",
 ]

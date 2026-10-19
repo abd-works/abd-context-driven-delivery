@@ -1,6 +1,6 @@
 """DDD graph rule classes."""
 
-from practices.ddd.rules.tactical import (
+from cdd_guidance.practices.ddd.rules.tactical import (
     BuildingBlocksFidelityRequiresTacticalStereotype,
     DomainConceptsNotTechnicalNames,
     FlaccidDataObject,

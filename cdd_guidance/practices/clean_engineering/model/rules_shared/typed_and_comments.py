@@ -54,7 +54,7 @@ class LimitComments(PracticeGraphRule):
 
 
 def _param_violation(name: str, hint: str) -> list[str]:
-    from practices.clean_engineering.model.type_refs import is_primitive_type
+    from cdd_guidance.practices.clean_engineering.model.type_refs import is_primitive_type
 
     cleaned = (hint or "").strip()
     if not cleaned:

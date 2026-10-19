@@ -3,10 +3,10 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools"):
+for _cat in ("cdd_guidance/practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -14,8 +14,8 @@ for _cat in ("practices", "tools"):
 from expects import be_a, be_true, contain, equal, expect, raise_error
 from mamba import context, description, it
 
-from practices.bdd.bdd import Bdd
-from practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.bdd.bdd import Bdd
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from harness.agent_tools.agent_tools import AgentInstructions
 
 

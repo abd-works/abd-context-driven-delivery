@@ -182,7 +182,7 @@ the touched view files — it does not call `ux`.
 ## Naming / location — resolved
 
 - Class `MernDomainDriven`, module
-  `practices.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven`.
+  `cdd_guidance.practices.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven`.
 - `engineering_specification/` is a **category folder** — `mern_domain_driven`
   is the first of what will likely be several stack-specific implementation
   tools; the category folder owns no code/md of its own, just siblings.

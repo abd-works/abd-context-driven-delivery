@@ -12,9 +12,9 @@ from pathlib import Path
 from harness.graph.bound_node import BoundChildren
 from harness.graph.graph import Graph
 
-from practices.clean_engineering.model.base_class_model import Module, OoadClass
-from practices.clean_engineering.model.operation import Operation
-from practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
 
 _PATTERNS = (
     "Shared Kernel",
@@ -390,7 +390,7 @@ class DDDModelFactory:
 
 
 def _channel_for(path: str) -> type[BoundedContextMap]:
-    from practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
+    from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 
     location = Path(path)
     if location.suffix.lower() in {".md", ".markdown"}:

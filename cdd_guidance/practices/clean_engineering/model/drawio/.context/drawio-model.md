@@ -10,11 +10,11 @@ Build order: `Geometry` → `DiagramNode` → `DrawIOModule` → `DrawIOClass` �
 
 ---
 
-# practices.clean_engineering.model.drawio
+# cdd_guidance.practices.clean_engineering.model.drawio
 
 - **Purpose:** Turn a Clean Engineering model into a Draw.io mxfile and back, and scan the file against layout rules in `drawio.md`.
 - **Seam (terms):** Drawio, Diagram, Page, DiagramNode, DrawIOModule, DrawIOClass, DrawIORelationship
-- **Dependencies (one-way):** practices.clean_engineering.model
+- **Dependencies (one-way):** cdd_guidance.practices.clean_engineering.model
 
 ## Constraint
 

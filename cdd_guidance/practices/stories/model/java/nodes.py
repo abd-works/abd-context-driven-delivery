@@ -4,8 +4,8 @@ from __future__ import annotations
 import re
 from typing import List
 
-from practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
-from practices.stories.model.story_model import Background, Step, StepType, Story
+from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
+from cdd_guidance.practices.stories.model.story_model import Background, Step, StepType, Story
 
 
 class JavaScenario(CodeScenario):

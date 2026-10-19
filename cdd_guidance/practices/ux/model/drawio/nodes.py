@@ -17,10 +17,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional
 
-from practices.ux.model.drawio.cli_state import ux_map_to_cli_state
-from practices.ux.model.json.nodes import JsonUxMap
-from practices.ux.model.nodes import Region, Screen, Transition
-from practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.drawio.cli_state import ux_map_to_cli_state
+from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
+from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 _CLI = Path(__file__).with_name("drawio_ux.mjs")
 

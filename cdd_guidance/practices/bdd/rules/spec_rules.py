@@ -1,4 +1,4 @@
-"""BDD spec rules ported from practices/bdd/scanners (repo history)."""
+"""BDD spec rules ported from cdd_guidance.practices/bdd/scanners (repo history)."""
 
 from __future__ import annotations
 
@@ -7,15 +7,15 @@ from pathlib import Path
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from practices.bdd.rules.spec_helpers import (
+from cdd_guidance.practices.bdd.rules.spec_helpers import (
     has_signature_marker,
     is_spec_file,
     plain_english_violations,
 )
-from practices.bdd.rules.layer_isolation import LayerIsolation
-from practices.bdd.rules.observable_behavior import ObservableBehavior
-from practices.bdd.rules.shared_describe_subject import SharedDescribeSubject
-from practices.bdd.rules.tree_rules import (
+from cdd_guidance.practices.bdd.rules.layer_isolation import LayerIsolation
+from cdd_guidance.practices.bdd.rules.observable_behavior import ObservableBehavior
+from cdd_guidance.practices.bdd.rules.shared_describe_subject import SharedDescribeSubject
+from cdd_guidance.practices.bdd.rules.tree_rules import (
     DescribeSubjectNotInternal,
     NoImplementation,
     OneAssertionPerTest,

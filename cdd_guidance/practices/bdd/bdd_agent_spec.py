@@ -16,10 +16,10 @@ from agent_bdd import (
     sessions_dir,
 )
 
-_REPO_ROOT = repo_root_from(__file__, parents=2)
+_REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
-_BDD_PY = "practices/bdd/bdd.py"
-_TOOLSET = "practices.bdd.bdd:Bdd"
+_BDD_PY = "cdd_guidance/practices/bdd/bdd.py"
+_TOOLSET = "cdd_guidance.practices.bdd.bdd:Bdd"
 
 with description("a Bdd generator"):
     with context("with agent"):

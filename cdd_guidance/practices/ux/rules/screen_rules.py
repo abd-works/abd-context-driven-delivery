@@ -1,4 +1,4 @@
-"""UX rules from practices/ux/scanners (main history) — graph Screen / UxMap nodes."""
+"""UX rules from cdd_guidance.practices/ux/scanners (main history) — graph Screen / UxMap nodes."""
 
 from __future__ import annotations
 

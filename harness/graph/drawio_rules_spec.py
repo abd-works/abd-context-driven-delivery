@@ -15,7 +15,7 @@ from mamba import before, context, description, it
 
 from graph import Node, PracticeGraph, Source
 from harness.graph.rule_context import RuleCheckContext
-from practices.clean_engineering.model.drawio.rules import BY_SLUG
+from cdd_guidance.practices.clean_engineering.model.drawio.rules import BY_SLUG
 
 _FAULTY = """\
 <mxfile host="test">

@@ -1,7 +1,7 @@
 # Modules
 
 *ContextSetup* converts a folder of documents to markdown, partitions through selected practices, and embeds a FAISS index you can ask.
-## tools.context_setup
+## cdd_guidance.context_setup
 ### Public Seam
 #### ContextSetup
 #### ContextIndex
@@ -18,11 +18,11 @@
 #### ScoutResult
 #### CaptureResult
 ### Dependencies
- - `actions.partition` — uses
- - `practices.clean_engineering` — uses
- - `practices.ddd` — uses
- - `practices.stories` — uses
- - `practices.ux` — uses
+ - `cdd_guidance.actions.partition` — uses
+ - `cdd_guidance.practices.clean_engineering` — uses
+ - `cdd_guidance.practices.ddd` — uses
+ - `cdd_guidance.practices.stories` — uses
+ - `cdd_guidance.practices.ux` — uses
 ---
 
 ### Constraint

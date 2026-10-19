@@ -543,7 +543,8 @@ class AssetLocator:
                 section_heading=_section_heading(self._label),
                 fidelity=str(fidelity_name),
             )
-        folder = self._search_root_path / self._label
+        folder_name = "_examples" if self._label == "examples" else self._label
+        folder = self._search_root_path / folder_name
         if folder.is_dir():
             return AssetLocation("folder", self._module_dir, self._domain_slug, folder=folder.resolve())
         for name in (self._label, f"{self._label}.md"):

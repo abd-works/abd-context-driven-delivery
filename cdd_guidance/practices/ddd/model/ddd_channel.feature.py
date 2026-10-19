@@ -12,11 +12,11 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import before, describe, included_context, it, shared_context
 
-from practices.clean_engineering.model.property import Property
-from practices.ddd.model.nodes import DDDModelFactory, DomainEvent, ValueObject
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.ddd.model.nodes import DDDModelFactory, DomainEvent, ValueObject
 
-EXPECTED = Path(__file__).resolve().parent / ".examples" / "expected" / "bounded-context-map.md"
-ACTUAL = Path(__file__).resolve().parent / ".examples" / "actual"
+EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected" / "bounded-context-map.md"
+ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
 
 
 def _events(aggregate):

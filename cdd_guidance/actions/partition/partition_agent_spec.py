@@ -20,8 +20,8 @@ from agent_bdd import (
 _REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
 _PARTITION = "partition.partition:Partition"
-_BDD = "practices.bdd.bdd:Bdd"
-_CONTEXT = "practices/bdd/bdd.py"
+_BDD = "cdd_guidance.practices.bdd.bdd:Bdd"
+_CONTEXT = "cdd_guidance/practices/bdd/bdd.py"
 
 
 with description("a partition action"):
@@ -29,7 +29,7 @@ with description("a partition action"):
         with it("should run Partition.partition with that tool, not the Guidance partition"):
             with agent(_REPO_ROOT, _SESSIONS / "partition-owns-tools.json"):
                 read_workspace(".cursor/commands/partition.md")
-                read_workspace("actions/partition/partition.py")
+                read_workspace("cdd_guidance/actions/partition/partition.py")
 
                 response = run_toolset(
                     toolset=_PARTITION,
@@ -56,5 +56,5 @@ with description("a partition action"):
                     f"action: {response.action}\narguments: {response.arguments}",
                     "PASS only if partition is owned by partition.partition:Partition and the "
                     "BDD context tool is an argument in tools (one or more context tools). "
-                    "FAIL if the run owner is practices.bdd.bdd:Bdd with action partition.",
+                    "FAIL if the run owner is cdd_guidance.practices.bdd.bdd:Bdd with action partition.",
                 )

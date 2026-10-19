@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 _MODULE_DIR = Path(__file__).resolve().parent
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _root = str(_REPO_ROOT)
 _foreign = str(Path.home() / "OneDrive - abd.works" / "personal" / "paradise-mobile" / "abd-context-driven-delivery")
 sys.path[:] = [
@@ -16,7 +16,7 @@ sys.path[:] = [
 if _root in sys.path:
     sys.path.remove(_root)
 sys.path.insert(0, _root)
-for _cat in ("tools", "practices", "actions", "patterns"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/patterns"):
     _p = str(_REPO_ROOT / _cat)
     if _p in sys.path:
         sys.path.remove(_p)
@@ -24,11 +24,12 @@ for _cat in ("tools", "practices", "actions", "patterns"):
 sys.path.insert(0, _root)
 for _name in list(sys.modules):
     if (
-        _name in {"harness", "scan", "lifecycle", "workspace", "practices", "patterns", "tools"}
+        _name in {"harness", "scan", "lifecycle", "workspace", "practices", "patterns", "tools", "cdd_guidance"}
         or _name.startswith("harness.")
         or _name.startswith("scan.")
         or _name.startswith("practices.")
         or _name.startswith("patterns.")
+        or _name.startswith("cdd_guidance.")
         or _name.startswith("tools.")
     ):
         del sys.modules[_name]
@@ -36,13 +37,13 @@ for _name in list(sys.modules):
 from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from practices.clean_engineering.specifications._scan_kit import (
+from cdd_guidance.practices.clean_engineering.specifications._scan_kit import (
     DOMAIN_MODULE_RULE_GLOBS,
 )
-from patterns.lern_domain_driven.lern_domain_driven import (
+from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import (
     LernDomainDriven,
 )
-from practices.stories.stories import Stories
+from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.rule import RulesCollection
 
 _ALL_RULE_SLUGS = (
@@ -169,7 +170,7 @@ with description("a LernDomainDriven generator"):
             expect(self.rules.matches("packages/wire-pay/send-wire/send-wire.tsx")).to(equal(True))
 
         with it("should not match unrelated files outside src or packages"):
-            expect(self.rules.matches("actions/validate/validate.py")).to(equal(False))
+            expect(self.rules.matches("cdd_guidance/actions/validate/validate.py")).to(equal(False))
 
         with it("should inject rules markdown when a matching src file is written"):
             result = self.rules.inject_rules(self.payload)

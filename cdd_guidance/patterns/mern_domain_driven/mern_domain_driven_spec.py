@@ -3,10 +3,10 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools", "actions", "patterns"):
+for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions", "cdd_guidance/patterns"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -14,10 +14,10 @@ for _cat in ("practices", "tools", "actions", "patterns"):
 from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from patterns.mern_domain_driven.mern_domain_driven import (
+from cdd_guidance.patterns.mern_domain_driven.mern_domain_driven import (
     MernDomainDriven,
 )
-from practices.stories.stories import Stories
+from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.rule import RulesCollection
 
 _MODULE_DIR = Path(__file__).resolve().parent

@@ -27,7 +27,7 @@ class Relationship:
         }
 
     def translate_from(self, source: "Relationship"):
-        from practices.clean_engineering.model.update_report import UpdateReport
+        from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
 
         self.update_self(source)
         return UpdateReport()

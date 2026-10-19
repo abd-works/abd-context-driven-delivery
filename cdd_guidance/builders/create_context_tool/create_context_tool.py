@@ -1,4 +1,4 @@
-"""CreateContextTool - scaffold new PracticeGuidance domains under practices/."""
+"""CreateContextTool — scaffold new PracticeGuidance domains under cdd_guidance/practices/."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ class CreateContextTool(PracticeGuidance):
     """# Instructions"""
 
     default_workspace_folder: str = "."
-    context_index_key: str = "create_context_tool"
 
     def __init__(
         self,

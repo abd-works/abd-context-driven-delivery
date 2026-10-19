@@ -79,7 +79,7 @@ Inject all feedback back into the context, so Ai benefts from compunded leanring
 
 Collaboratively build artifacts at the right level of abstraction to support the right level of decision making.
 
-The [knowledge graph](https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/knowledge_graph) is these models and the relationships between them. CodeQL reads them out of the code.
+The [graph explorer](https://github.com/abd-works/abd-context-driven-delivery/tree/main/harness/graph) loads these models and the relationships between them from source via `harness/graph/working_copy.py`.
 
 - **Stories** — actors, systems, and the interactions that deliver the solution
 - **Domain-driven design** — the business concepts and the boundaries that protect them

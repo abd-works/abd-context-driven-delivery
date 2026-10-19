@@ -32,11 +32,8 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-# Mirror _pythonpath_env() from manifest_gate.py:
-#   root     → practices, patterns, tools, harness, actions (namespace packages)
-#   harness/ → agent_tools, guidance, markdown, cli_agent, sub_agent, swarm
-#   tools/  → scanners, diagnose, agent_skills, …
-#   practices/ → cdd, stories, ux, …
-#   patterns/ → lern_domain_driven, …
-#   actions/ → workspace, sketch, repair, grill_context, …
-where = [".", "harness", "tools", "practices", "actions", "patterns"]
+# Mirror import_path_entries() in the installer:
+#   root → cdd_guidance, tools, harness
+#   cdd_guidance/practices, actions, patterns → short catalog imports
+where = [".", "harness", "tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/patterns", "cdd_guidance/builders"]
+exclude = ["retired*"]

@@ -11,8 +11,9 @@ Sketch the behavior outline first, then layer on test/implementation detail. Con
 
 | Fidelity | Fill |
 |---|---|
-| **behavior** | Hierarchy plus public call surface (`new`, sets, calls, `expect`) — no internals |
-| **development** | Behavior surface plus novel interactions under calls (domain-walk); omit paths already green |
+| **behavior** | Hierarchy plus `it should` signatures only — no call graphs, no `expect` |
+| **realization** | Same hierarchy; fenced `->` / `<-` call graph per `it should` (sketch fidelity; no assertions) |
+| **development** | Realization graphs turned into Arrange / Act / Assert; omit paths already green |
 
 ## Notation — headings carry the hierarchy
 
@@ -35,7 +36,7 @@ This template is the BDD notation for a section of the engagement sketch. When s
 ## Template
 
 ~~~markdown
-Fidelity: behavior | development
+Fidelity: behavior | realization | development
 
 ### {subject in plain English}
 

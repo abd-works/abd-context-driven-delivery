@@ -78,7 +78,7 @@
 <h4>Overview</h4>
 <p>Write working production code — real persistence, services, and UI behind the public seams.</p>
 <h4>Guidance</h4><div class="fidelity-guidance-body">
-<p>Follow the idioms in <a href="../language-tools.md"><code>../language-tools.md</code></a>.</p>
+<p>Follow the idioms in <a href="../cdd_guidance/rules/language-tools.md"><code>cdd_guidance/rules/language-tools.md</code></a>.</p>
 <p>Start by <strong>Implementing the public surface.</strong> Where the model asked for an interface, the class implements it in the same file and the interface stays public-only. Where it did not, continue to implement the class. Implement public properties and operations first; write out private members next — the seam the model named is the contract, and privates follow from what those operations need, not the other way around. Relationships keep the kind and cardinality already named.</p>
 <p>Make sure to <strong>Implement real behavior.</strong> Fill every empty body — a stub ships as a silent no-op and hides that the seam was never finished. Wire real persistence, services, and other-module seams — not stand-ins as the shipping path. Add helpers, named constants, and domain exceptions only when the implementation needs them; speculative helpers become APIs nobody asked for. Keep an existing interface as the seam; otherwise treat the class as the seam.</p>
 <p>When writing out code take care to <strong>Fill out all interactions with real code.</strong> Turn <code>-&gt; collaborator.operation</code> notes into actual calls — have the object ask its collaborators to do the work; do not reach into their internals. A placeholder left in place means the module boundary was never exercised; reaching past the seam couples you to another module&#x27;s internals. Drop the placeholder once the call is real.</p>
@@ -114,7 +114,7 @@
 </ul></section>
 <section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/0246b0452f1ffa38d142ef13c4edc59e699e3f33/practices/clean_engineering/templates/clean_engineering.py">templates/clean_engineering.py</a></p><pre class="code-fence"><code class="language-py">&quot;&quot;&quot;
 # Conceptual Clean Engineering Reference (Python style)
-# Refer to practices/language-tools.md for tool recommendations.
+# Refer to cdd_guidance/rules/language-tools.md for tool recommendations.
 # =============================================================================
 # Put a class family in one file: the primary type, its subtypes, and
 # tightly connected peers that only make sense together (element +

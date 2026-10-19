@@ -7,19 +7,19 @@ from pathlib import Path
 
 from jinja2 import Environment
 
-from harness.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel as SourceModel,
     File as SourceFile,
     Module as SourceModule,
     OoadClass as SourceClass,
 )
-from practices.clean_engineering.model.operation import Operation
-from practices.clean_engineering.model.property import Property
-from practices.clean_engineering.model.operation import Operation as SourceOperation
-from practices.clean_engineering.model.operation import Parameter as SourceParameter
-from practices.clean_engineering.model.property import Property as SourceProperty
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.operation import Operation as SourceOperation
+from cdd_guidance.practices.clean_engineering.model.operation import Parameter as SourceParameter
+from cdd_guidance.practices.clean_engineering.model.property import Property as SourceProperty
 
 _NESTING_INDENT = 2
 _SNAKE = re.compile(r"([^0-9a-z]+)")

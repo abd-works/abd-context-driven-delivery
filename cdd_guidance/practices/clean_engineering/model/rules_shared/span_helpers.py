@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from practices.clean_engineering.model.operation_metrics import (
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     bare_catch_in_text,
     control_flow_depth_in_text,
     swallowing_catch_in_text,

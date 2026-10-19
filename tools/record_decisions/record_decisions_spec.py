@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices"):
+for _cat in ("tools", "cdd_guidance/practices"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -99,6 +99,13 @@ with description("a RecordDecisions toolset"):
                     expect("0001-foo.md" in lines[0]).to(equal(True))
 
     with context("when write_cdr is called"):
+        with it("should read the record from a file when paths is set"):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                source = Path(tmpdir) / "draft.md"
+                source.write_text("# From file\n\nKept on disk.", encoding="utf-8")
+                written = Path(_rd().write_cdr(tmpdir, "from-file", paths=str(source)))
+                expect(written.read_text(encoding="utf-8")).to(equal("# From file\n\nKept on disk.\n"))
+
         with it("should write a file at root/.context/cdr/NNNN-slug.md"):
             # Arrange
             with tempfile.TemporaryDirectory() as tmpdir:

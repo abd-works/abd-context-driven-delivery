@@ -19,7 +19,7 @@ class Satisfy(GuidanceAction):
     @Skill
     @agent_instructions
     def satisfy(self, guidance: GuidanceArg) -> str:
-        """Run validate for each provided Guidance against the content; apply generate_fixes_from_validate, then validate again when done. Pass a string to satisfy that text once."""
+        """Run validate for each listed guidance against the content; apply generate_fixes_from_validate, then validate again when done."""
         from validate.validate import Validate
 
         self._bind_guidance(guidance)

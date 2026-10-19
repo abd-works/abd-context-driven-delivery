@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -16,7 +16,6 @@ import yaml
 from expects import be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from practices.examples.car.car import Car
 from harness.agent_tools.agent_tools import (
     AgentInstructions,
     collect,
@@ -33,8 +32,8 @@ from harness.agent_tools.agent_tools import (
 from harness.hooks.hooks import hook
 from harness.mcp.mcp_server import mcp
 from harness.agent_tools.agent_tools import AgentInstructions
-from actions.examples.car_story.car_story import CarStory
-from harness.agent_tools.examples.super_delegation.super_delegation_demo import (
+from cdd_guidance.actions._examples.car_story.car_story import CarStory
+from harness.agent_tools._examples.super_delegation.super_delegation_demo import (
     EmptySuperChild,
     EmptyWithReturn,
     ExplicitSuperChild,
@@ -42,6 +41,8 @@ from harness.agent_tools.examples.super_delegation.super_delegation_demo import 
 )
 from agent_bdd.yaml_fence import load_fenced
 from harness.agent_tools.agent_tools import AgentToolSet, agent_tool as _tool, tools, instructions
+
+Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
 
 
 class CarInstance:
@@ -54,7 +55,7 @@ class CarInstance:
         return car
 
 
-_CAR_TOOLSET_PATH = "practices.examples.car.car:Car"
+_CAR_TOOLSET_PATH = "cdd_guidance.practices._examples.car.car:Car"
 
 
 @agent_toolset
@@ -180,8 +181,8 @@ class _PropertyCallerAgent:
         return "orchestrated"
 
 
-_CAR_TOOLSET = "practices.examples.car.car:Car"
-_CAR_STORY_TOOLSET = "actions.examples.car_story.car_story:CarStory"
+_CAR_TOOLSET = "cdd_guidance.practices._examples.car.car:Car"
+_CAR_STORY_TOOLSET = "cdd_guidance.actions._examples.car_story.car_story:CarStory"
 
 
 with description("a class"):
@@ -219,7 +220,7 @@ with description("a class"):
 
         with context("when expand makes tools available to the chat"):
             with it("should tell the AI to display those tools by name and purpose in the user-visible reply"):
-                from harness.agent_tools.examples.logged_probe import LoggedProbe
+                from harness.agent_tools._examples.logged_probe import LoggedProbe
 
                 response = LoggedProbe().instructions["narrate"].expand(
                     {},
@@ -271,9 +272,9 @@ with description("an action"):
 
     with context("that has templated string literals in the @agent_instructions body"):
         with it("should put {{param}} / {{self.attr}} values into expanded instructions"):
-            from harness.agent_tools.examples.templated_md import TemplatedMdDemo
+            from harness.agent_tools._examples.templated_md import TemplatedMdDemo
 
-            from harness.agent_tools.examples.templated_md import TemplatedMdDemo
+            from harness.agent_tools._examples.templated_md import TemplatedMdDemo
 
             response = TemplatedMdDemo(label="Desk").instructions["greet"].expand(
                 {},

@@ -84,7 +84,7 @@
 <p>If the answer you are about to write could be a bullet list of file edits that match <code>wrong:</code> to <code>improved:</code>, stop. You have not found the cause.</p>
 <h2>Use <code>/diagnose</code></h2>
 <p>When the cause is not already a one-line miss of a documented recipe, run <strong>Diagnose</strong> and stay in its phases:</p>
-<pre><code>python -m harness manifest diagnose.diagnose:Diagnose</code></pre>
+<pre><code>python -m harness manifest cdd_guidance.actions.diagnose.diagnose:Diagnose</code></pre>
 <p>On Windows use <code>.\tools.ps1</code> (sets venv + UTF-8). Invoke <code>diagnose</code> (<code>kind: sub_agent</code>). Follow <code>response.instructions</code> only. Do not skip phases unless you can say why in one sentence.</p>
 <p>Diagnose phases, applied to <strong>toolset behavior</strong> (not a local crash):</p>
 <ol>

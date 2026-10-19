@@ -15,9 +15,9 @@ section: body
 
 # Story Map — Context-Driven Delivery
 
-**Sources / context:** `README.md` (install, practice plus action plus optional format, discovery / specification / implementation); `.context/principles/context-as-code-strategy.md` (sandbox, scaffold, document one slice, tests until green, human review, next increment); `practices/cdd/agents/context.md`, `discovery.md`, `specification.md`, `implementation.md`; `.context/module-context.md` (Installer, Context Setup, Stories, Ddd, Handoff, Eval); `tools/context_setup/.context/module-context.md`; `tools/context_setup/.context/cdr/0001-plain-toolset-not-context-domain.md`; `tools/context_setup/context_setup.py`; `tools/context_setup/context_index.py`; `tools/context_setup/context_setup_spec.py`; `tools/context_setup/context_index_spec.py`.
+**Sources / context:** `README.md` (install, practice plus action plus optional format, discovery / specification / implementation); `.context/principles/context-as-code-strategy.md` (sandbox, scaffold, document one slice, tests until green, human review, next increment); `cdd_guidance/agents/context.md`, `discovery.md`, `specification.md`, `implementation.md`; `.context/module-context.md` (Installer, Context Setup, Stories, Ddd, Handoff, Eval); `cdd_guidance/context_setup/.context/module-context.md`; `cdd_guidance/context_setup/.context/cdr/0001-plain-toolset-not-context-domain.md`; `cdd_guidance/context_setup/context_setup.py`; `cdd_guidance/context_setup/context_index.py`; `cdd_guidance/context_setup/context_setup_spec.py`; `cdd_guidance/context_setup/context_index_spec.py`; `space/session/session.py`; `space/session/session_spec.py`; `space/session/session-sketch.md`; `space/session/.context/session-context.md`; `harness/guidance/guidance.py` (`PracticeGuidance` does not load a graph).
 
-**Evidence:** Inferred from those sources. No live session was walked in this pass, so none of these nodes are marked observed. Context-setup nodes are inferred from the operations and action recipes in `context_setup.py` and `context_index.py`, and from the specs that assert those recipes and tool results. They are not observed, because this pass did not run a capture or an ask. Intended where a role prompt prescribes a confirm-or-handoff step the strategy does not show as a separate command.
+**Evidence:** Install and context-setup nodes are inferred from those sources. No live capture was walked for them. Open Work Session nodes are observed from the examples in `space/session/session_spec.py` and the operations in `space/session/session.py`. `Session.practice(name)` builds the guideline and that practice's graph together on the first ask.
 
 ---
 
@@ -49,29 +49,129 @@ section: body
 ###     (S) Installer --> Install Lifecycle actions
 ###     (S) Installer --> Install Lifecycle actions as several tools
 # (E) Open Work Session
-##  (E) Open Named Work Session
-###     (S) WorkSession --> Open Work Session Folder
-###     (S) WorkSession --> Load Work Session Guidance
-###     (S) WorkSession --> Hold Open Turn
-###     (S) WorkSession --> Remember Completed Turns
-##  (E) Announce Work Session Turn
-###     (S) WorkSession --> Announce Work Session Turn
-###     (S) Turn --> Commit Current Checkout
-###     (S) Turn --> Record Turn Commit
-###     (S) Turn --> Record Mistake
-###     (S) Turn --> Record Correction
-##  (E) Record Work Session Rules
-###     (S) WorkSession --> Add Work Session Rule
-###     (S) WorkSession --> Attach Mistake And Correction
-###     (S) WorkSession --> Raise Work Session Rule Star
-###     (S) WorkSession --> Inject Work Session Rules
-###     (S) WorkSession --> Write Last Chat Injected Rules
+##  (E) Open Named Session
+###     (S) Session --> Open New Session
+####        Tests
+                # space/session/session_spec.py
+                with context("that is new")
+                    with it("should return keep_log to the agent")
+                    with it("should keep the name, the workpath, and the repo path")
+###     (S) Session --> Select Existing Session
+####        Tests
+                # space/session/session_spec.py
+                with context("that is selected")
+                    with context("with only a name")
+                        with it("should bind the existing session from the environment")
+                        with it("should use the workpath stored on that session")
+                    with context("with a repo path")
+                        with it("should keep logging under that repo at sessions and the name")
+                        with it("should read the workpath from that session")
+                with context("with a session path")
+                    with it("should read the repo path and the workpath from that session")
+                with context("with a workpath")
+                    with it("should keep the given workpath and take the repo root from it")
+###     (S) Session --> Open Session Loop
+####        Tests
+                # space/session/session_spec.py
+                with context("that opens a loop")
+                    with it("should append a loop marker to session.log")
+                with description("a loop")
+                    with context("that is opened")
+                        with it("should take the next loop number")
+                        with it("should append the loop marker to session.log")
+                    with context("that has log entries")
+                        with it("should return the log lines for that loop number")
+                        with context("with a chat to place under the lines")
+                            with it("should show the chat and the response under the lines they belong to")
+###     (S) Session --> Remember Practice Folders
+####        Tests
+                # space/session/session_spec.py
+                with description("a practice")
+                    with context("with the practice default folders")
+                        with it("should leave that practice out of practices.json")
+                    with context("with parent folders that are not the default")
+                        with it("should save those folders in practices.json")
+                    with context("with more than one set of peer folders")
+                        with it("should keep each set on that practice")
+##  (E) Record Session Log
+###     (S) Session --> Record Session Action
+####        Tests
+                # space/session/session_spec.py
+                with context("that logs an action")
+                    with context("with paths passed in")
+                        with it("should append a timestamped line that names the action and the path")
+                    with context("with a graph node known for the practice")
+                        with it("should name the practice graph root")
+                    with context("with rules injected from a inject rules hook")
+                        with it("should log that practice, fidelity, and rule")
+                        with it("should omit a rule that was not injected")
+                    with context("with a chat transcript")
+                        with it("should point at the chat id, the transcript file, and the line numbers")
+                with context("that is annotated with log")
+                    with it("should log that action")
+                with context("that is not annotated with log")
+                    with it("should leave session.log unchanged")
+###     (S) Session --> Record Validation Run
+####        Tests
+                # space/session/session_spec.py
+                with context("that calls validate")
+                    with context("with a practice and a fidelity")
+                        with it("should log that practice and that fidelity")
+                    with context("with a violation")
+                        with it("should log the rule, the synopsis, and the correction")
+###     (S) Session --> Attach Action Chat
+####        Tests
+                # space/session/session_spec.py
+                with context("that appends a chat to a logged action")
+                    with it("should add that chat onto that action's log line")
+###     (S) Session --> Record Session Error
+####        Tests
+                # space/session/session_spec.py
+                with context("that logs an error")
+                    with it("should write the trace and still raise the failure")
+                    with it("should point the session.log line at that session.err file")
 ##  (E) Hold Process Session
-###     (S) Session --> Hold Knowledge Graph
-###     (S) Session --> Hold Practice Guidance
+###     (S) Session --> Load Practice Guideline
+####        Tests
+                # space/session/session_spec.py
+                with description("a practice")
+                    with context("that a practice has been invoked")
+                        with it("should hold that practice's guideline and graph in memory")
+                        with it("should hold that practice's graph with the guideline")
+                        with it("should return that same practice on the next ask")
+                        with it("should leave the other practices unopened")
+                    with context("with the practice default folders")
+                        with it("should point that practice's graph root at the practice's own folder")
+                    with context("with parent folders that are not the default")
+                        with it("should point that practice's graph root at those parent folders")
+                    with context("that a practice has not been invoked")
+                        with it("should omit that practice's entry")
+                    with context("with harness/guidance as the tree for clean engineering, stories, and bdd")
+                        with it("should load those graphs from harness/guidance")
+                        with it("should finish that load within 5 seconds")
 ###     (S) Session --> Reset Process Session
-###     (S) Session --> Persist Session Across Hook Runs
-###     (S) Session --> Hold Session On Mcp Server
+####        Tests
+                # space/session/session_spec.py
+                with context("that has been reset")
+                    with it("should open that practice again on the next ask")
+###     (S) Session --> Persist Hook Session
+####        Tests
+                # space/session/session_spec.py
+                with context("that the hook server holds")
+                    with it("should live on the persistent hook server")
+                    with it("should be the same object across hook runs")
+                    with it("should open that practice's guideline")
+                    with it("should open that practice's graph with the guideline")
+                    with it("should return the same practice across hook runs")
+###     (S) Session --> Hold Mcp Session
+####        Tests
+                # space/session/session_spec.py
+                with context("that the mcp server holds")
+                    with it("should be a session")
+                    with it("should not be the hook server session")
+                    with it("should open that practice's guideline")
+                    with it("should open that practice's graph with the guideline")
+                    with it("should return the same practice across mcp calls")
 # (E) Deliver Verified Context
 ##  (E) Open Practice Catalog
 ###     (S) User --> Open Practice Catalog

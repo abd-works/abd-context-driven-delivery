@@ -21,7 +21,7 @@ class Stories(PracticeGuidance):
             fidelity=None if stage is not None else fidelity,
             default_workspace_folder="tests",
             formats={
-                "sketch": ("practices.stories.model.sketch.sketch_story_model", "SketchStoryModel"),
+                "sketch": ("cdd_guidance.practices.stories.model.sketch.sketch_story_model", "SketchStoryModel"),
                 "markdown": ("stories.model.markdown.nodes", "MarkdownStoryModel"),
                 "json": ("stories.model.json.nodes", "JsonStoryModel"),
                 "drawio": ("stories.model.drawio.nodes", "DrawIOStoryModel"),

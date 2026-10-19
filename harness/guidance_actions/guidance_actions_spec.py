@@ -24,7 +24,7 @@ sys.path[:] = [
 if _root in sys.path:
     sys.path.remove(_root)
 sys.path.insert(0, _root)
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p in sys.path:
         sys.path.remove(_p)
@@ -32,10 +32,11 @@ for _cat in ("tools", "practices", "actions"):
 sys.path.insert(0, _root)
 for _name in list(sys.modules):
     if (
-        _name in {"scan", "lifecycle", "guidance_actions", "workspace", "practices", "tools"}
+        _name in {"scan", "lifecycle", "guidance_actions", "workspace", "practices", "tools", "cdd_guidance"}
         or _name.startswith("scan.")
         or _name.startswith("guidance_actions.")
         or _name.startswith("practices.")
+        or _name.startswith("cdd_guidance.")
         or _name.startswith("tools.")
         or _name.startswith("workspace.")
     ):
@@ -54,6 +55,13 @@ with description("GuidanceAction"):
         warning = kit.begin(action="sketch")
         expect(kit.workspace).to(equal(None))
         expect(warning).to(equal(""))
+
+    with it("should tell the agent to pass files and stop a call that stalls"):
+        from harness.guidance_actions import GuidanceAction
+
+        text = GuidanceAction().act_quickly()
+        expect(text).to(contain("10 seconds"))
+        expect(text).to(contain("paths"))
 
     with it("should run the passed operation once when guidance is a string"):
         from harness.guidance_actions import GuidanceAction
@@ -97,7 +105,7 @@ with description("GuidanceAction"):
 
         kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-ref-"))))
         kit._bind_guidance(
-            "practices.clean_engineering.clean_engineering:CleanEngineering"
+            "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
         )
         listed = kit.listed()
         expect(len(listed)).to(equal(1))
@@ -139,7 +147,7 @@ with description("GuidanceAction"):
         result = kit.inject_rules(
             {
                 "tool_name": "sketch.sketch",
-                "tool_input": {"guidance": ["practices.bdd.bdd:Bdd"]},
+                "tool_input": {"guidance": ["cdd_guidance.practices.bdd.bdd:Bdd"]},
             }
         )
         expect("observable-behavior" in (result.get("additional_context") or "")).to(
@@ -158,3 +166,53 @@ with description("GuidanceAction"):
             }
         )
         expect(result).to(equal({}))
+
+    with it("should document and bind the same guidance slugs on every guidance action"):
+        import inspect
+
+        from diagnose.diagnose import Diagnose
+        from document.document import Document
+        from generate.generate import Generate
+        from grill_context.grill_context import GrillContext
+        from harness.guidance_actions.guidance_actions import GUIDANCE_PARAMETER
+        from improvement.improvement import Improvement
+        from iterate.iterate import Iterate
+        from partition.partition import Partition
+        from render.render import Render
+        from satisfy.satisfy import Satisfy
+        from sketch.sketch import Sketch
+        from validate.validate import Validate
+
+        classes = [
+            Diagnose,
+            Document,
+            Generate,
+            GrillContext,
+            Improvement,
+            Iterate,
+            Partition,
+            Render,
+            Satisfy,
+            Sketch,
+            Validate,
+        ]
+        seen: list[str] = []
+        for cls in classes:
+            kit = cls()
+            guidance_tools = [
+                tool
+                for tool in kit.tools.values()
+                if "guidance" in inspect.signature(tool.callable).parameters
+            ]
+            expect(len(guidance_tools) > 0).to(equal(True))
+            for tool in guidance_tools:
+                expect(tool.docstring).to(contain(GUIDANCE_PARAMETER))
+                seen.append(f"{cls.__name__}.{tool.name}")
+            kit._bind_guidance(["clean-engineering-model", "bdd-behavior"])
+            listed = kit.listed()
+            expect([type(item).__name__ for item in listed]).to(equal(["CleanEngineering", "Bdd"]))
+            expect(listed[0].fidelities.current.name).to(equal("model"))
+            expect(listed[1].fidelities.current.name).to(equal("behavior"))
+        expect(seen).to(contain("Render.render"))
+        expect(seen).to(contain("Validate.validate"))
+        expect(seen).to(contain("Validate.createRule"))

@@ -7,9 +7,9 @@ from pathlib import Path
 
 from jinja2 import Environment
 
-from harness.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
-from practices.bdd.model.nodes import Context, Description, Observation
+from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 
 _NESTING_INDENT = 2
 _SNAKE = re.compile(r"([^0-9a-z]+)")

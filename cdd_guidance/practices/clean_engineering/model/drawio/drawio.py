@@ -11,9 +11,9 @@ from pathlib import Path
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
-from practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
-from practices.clean_engineering.model.drawio.drawio_class_model import (
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (
     DrawIOCleanEngineeringModel,
 )
 
@@ -69,13 +69,13 @@ class Drawio:
         return str(out.resolve())
 
     def _parse_source(self, content: str):
-        from practices.clean_engineering.model.markdown.markdown_class_model import (
+        from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
             MarkdownCleanEngineeringModel,
         )
-        from practices.clean_engineering.model.json.json_class_model import (
+        from cdd_guidance.practices.clean_engineering.model.json.json_class_model import (
             JsonCleanEngineeringModel,
         )
-        from practices.clean_engineering.model.python.python_class_model import (
+        from cdd_guidance.practices.clean_engineering.model.python.python_class_model import (
             PythonCleanEngineeringModel,
         )
         parsers: dict[str, type] = {
@@ -140,5 +140,5 @@ class Drawio:
         _ = examples_root
         return (
             "Eval the repair with expect_scan_fails on the before file and "
-            "expect_scan_passes on the after file (practices.bdd.spec_helpers)."
+            "expect_scan_passes on the after file (cdd_guidance.practices.bdd.spec_helpers)."
         )

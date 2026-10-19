@@ -44,7 +44,7 @@ def _pid_alive(pid: int) -> bool:
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-for _category in ("tools", "practices", "actions", "patterns"):
+for _category in ("tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/patterns"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)

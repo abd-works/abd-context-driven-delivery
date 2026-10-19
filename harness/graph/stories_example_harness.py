@@ -11,7 +11,7 @@ from harness.graph.rule_context import RuleCheckContext
 
 
 def stories_rule_by_slug(slug: str):
-    from practices.stories.rules import BY_SLUG
+    from cdd_guidance.practices.stories.rules import BY_SLUG
 
     rule = BY_SLUG[slug]
     if rule is None:
@@ -90,7 +90,7 @@ def assert_stories_ts_pair(
 def assert_stories_example_pair(slug: str) -> None:
     root = (
         Path(__file__).resolve().parents[2]
-        / "practices/stories/model/typescript/.examples"
+        / "cdd_guidance/practices/stories/model/typescript/_examples"
         / slug
     )
     fault = (root / "faulty" / "faultyAsset.ts").read_text(encoding="utf-8")

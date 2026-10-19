@@ -6,7 +6,7 @@ from pathlib import Path
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 
 class _DrawioDiscovery(DrawioScanner):

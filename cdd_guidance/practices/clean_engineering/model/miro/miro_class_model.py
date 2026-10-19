@@ -27,7 +27,7 @@ import xml.etree.ElementTree as ET
 from html import escape
 from typing import Dict, List, Optional, Tuple
 
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
@@ -35,21 +35,21 @@ from practices.clean_engineering.model.base_class_model import (
     Property,
     Relationship,
 )
-from practices.clean_engineering.model.diagram.diagram_node import (
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     ContainmentForest,
     DiagramCleanEngineeringModel,
     is_modules_view,
     module_tab_label,
     path_parent,
 )
-from practices.clean_engineering.model.diagram.geometry import Geometry
-from practices.clean_engineering.model.miro.diagram_node import (
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from cdd_guidance.practices.clean_engineering.model.miro.diagram_node import (
     MiroClass,
     MiroImportedClass,
     MiroModule,
     Page,
 )
-from practices.clean_engineering.model.update_report import UpdateReport
+from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
 
 class MiroCleanEngineeringModel(DiagramCleanEngineeringModel):
 

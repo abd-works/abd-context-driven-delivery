@@ -1,8 +1,10 @@
 /**
  * Conceptual BDD reference (TypeScript / Vitest).
- * Refer to practices/language-tools.md for tool recommendations.
+ * Refer to cdd_guidance/rules/language-tools.md for tool recommendations.
  *
  * BEHAVIOR (SIGNATURE) — every `it` body is exactly `// BDD: SIGNATURE`.
+ * REALIZATION — `# ->` / `# <-` call-graph comments per `it` (see bdd.md `#realization`).
+ * DEVELOPMENT — replace markers with Arrange / Act / Assert.
  *
  * describe('{DomainEntity}', () => {
  *   describe('that has been created', () => {

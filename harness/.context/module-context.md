@@ -60,7 +60,7 @@ Callers import child packages (`harness.markdown`, `harness.agent_tools`, …). 
 # harness/markdown
 - **Purpose:** Let a practice keep its words next to its class and read them as HTML or a collection without assembling agent recipes here.
 - **Seam (terms):** Markdown, MarkdownCollection, HTML, `@markdown`, `@markdownCollection`
-- **Dependencies (one-way):** `actions.validate.rule.RulesCollection` (from coerce of rules extracts)
+- **Dependencies (one-way):** `cdd_guidance.actions.validate.rule.RulesCollection` (from coerce of rules extracts)
 
 ## Constraint
 
@@ -82,7 +82,7 @@ Stamp `@agent_toolset` when you want the agent (and install) to see the class; d
 # harness/guidance
 - **Purpose:** Let a practice be one class plus co-located markdown the agent follows, including fidelities and format **render**.
 - **Seam (terms):** Guidance, GuidanceCollection, PracticeGuidance, FidelityGuidance
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/markdown`, `actions.validate.rule.RulesCollection`, `installation` (`@rules`, `@skill`, `@echo`, `@mcp`)
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/markdown`, `cdd_guidance.actions.validate.rule.RulesCollection`, `installation` (`@rules`, `@skill`, `@echo`, `@mcp`)
 
 ## Constraint
 

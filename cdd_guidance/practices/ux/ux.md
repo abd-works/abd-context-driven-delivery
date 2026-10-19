@@ -23,7 +23,7 @@ sandbox/<epic>/
 
 Sketch and context markdown stay in `.context/`. Story and object-model JS stay where Stories and Clean Engineering emit them; HTML imports those modules. `UxMap.story_references` and `object_references` store **paths** to those artifacts. If they are missing, run that generator's `transform` to `javascript`.
 
-**Story Demo (mockup+).** Generated HTML uses `templates/html/mockup_shell.html` — product screens **LEFT**, story explorer **RIGHT**. `story-demo/mount-generated-mockup.js` loads `create{Story}Story` exports, runs `PlayDualRunner`, and paints the explorer. Serve from the **repo root** so `/practices/...` imports resolve. Worked example: `practices/ux/examples/manage-customer-orders/`.
+**Story Demo (mockup+).** Generated HTML uses `templates/html/mockup_shell.html` — product screens **LEFT**, story explorer **RIGHT**. `story-demo/mount-generated-mockup.js` loads `create{Story}Story` exports, runs `PlayDualRunner`, and paints the explorer. Serve from the **repo root** so `/practices/...` imports resolve. Worked example: `practices/ux/_examples/manage-customer-orders/`.
 
 **Controls.** `ux_model.Control` is vanilla. Controls that bind to GWT steps are `StoryDemoControl` (`bound_field` + `story_steps`); HTML emits `data-bound-field` / `data-story-steps`. Interactive extras (`set_input`, `item_story_steps`, `item_value`, `item_label`) emit `data-input-field` on number/quantity and `data-bound-list` on list hosts. Do not bake product words (catalog, cart) into the template — those are bound_field paths and story language only.
 

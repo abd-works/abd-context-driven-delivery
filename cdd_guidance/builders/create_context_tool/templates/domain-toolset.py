@@ -1,24 +1,29 @@
-"""{ClassName} generator."""
+"""{ClassName} practice guidance."""
 
 from __future__ import annotations
 
-from harness.agent_tools.agent_tools import agent_instructions  # noqa: F401
-from practices.base.base_context_tool import BaseContextTool
+from harness.agent_tools.agent_tools import agent_toolset
+from harness.guidance.guidance import PracticeGuidance
 
 
-class {ClassName}(BaseContextTool):
+@agent_toolset
+class {ClassName}(PracticeGuidance):
     """# Instructions"""
-
-    # Override when this domain's durable root is not "." (e.g. "tests", "src", "ux").
-    default_workspace_folder: str = "."
-    # Key in ``{workspace}/.context/context-index.md`` (e.g. "stories").
-    context_index_key: str = "{domain_slug}"
 
     def __init__(
         self,
-        format: str = "python",
+        fidelity: str = "{default_fidelity}",
+        format: str | None = None,
         path: str | None = None,
         session: str | None = None,
-        workspace: str | None = None,
     ) -> None:
-        super().__init__(format=format, path=path, session=session, workspace=workspace)
+        super().__init__(
+            format=format,
+            fidelity=fidelity,
+            default_workspace_folder=".",
+            # formats={{
+            #     "markdown": ("{domain_slug}.model.markdown.nodes", "MarkdownModel"),
+            # }},
+        )
+        if path is not None or session is not None:
+            self._attach_workspace(path=path, session=session)

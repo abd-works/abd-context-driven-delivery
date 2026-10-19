@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from grill_context.grill_context import GrillContext
-from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import GuidanceArg, GuidanceAction, load_document
 from harness.agent_tools import agent_instructions, agent_toolset, instructions
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import Skill
@@ -25,10 +25,8 @@ class Sketch(GuidanceAction):
         self._agent_dir = agent_dir
 
     def _sketch_path(self, destination: str, slug: str) -> Path:
-        """Resolve sketch path under the destination docs dir (pure)."""
-        from workspace.legacy.workspace import SessionPaths
-
-        docs = SessionPaths().docs_dir(destination)
+        """Resolve sketch path under the destination's .context folder."""
+        docs = Path(destination)
         if docs.name == ".context":
             return docs / f"{slug}-sketch.md"
         return docs / ".context" / f"{slug}-sketch.md"
@@ -70,17 +68,20 @@ class Sketch(GuidanceAction):
         self,
         destination: str,
         slug: str,
-        content: str,
+        content: str = "",
+        paths: list[str] | str | None = None,
     ) -> str:
         """Persist a sketch to the destination docs dir as {slug}-sketch.md.
         Destination is session.path (or session.docs_dir). Files land in
         {path}/.context/{slug}-sketch.md — never sessions/{name}/ and never
         {path}/.context/{session-name}/. Module sketches: destination =
         {session.path}/{module} → {destination}/.context/. Creates parents
-        if missing. Overwrites same path. Returns the resolved sketch path."""
+        if missing. Overwrites same path. Returns the resolved sketch path.
+        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the sketch body in content.
+        content: in-process text. Leave this empty on an MCP call."""
         target = self._sketch_path(destination, slug)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8")
+        target.write_text(load_document(content, paths), encoding="utf-8")
         return str(target)
 
     @Mcp
@@ -88,12 +89,15 @@ class Sketch(GuidanceAction):
     def list_sketches(self, destination: str, slug: str = "") -> str:
         """List sketch files under the destination docs dir.
         If slug is provided, filters to sketches matching that slug prefix.
-        Returns newline-separated paths; empty string if the folder is missing or empty."""
+        Returns newline-separated paths, or ``no sketches`` when the folder is missing or empty."""
         context_dir = Path(destination) / ".context"
         if not context_dir.is_dir():
-            return ""
+            return "no sketches"
         pattern = f"{slug}-sketch.md" if slug else "*-sketch.md"
-        return "\n".join(str(path) for path in sorted(context_dir.glob(pattern)))
+        paths = [str(path) for path in sorted(context_dir.glob(pattern))]
+        if not paths:
+            return "no sketches"
+        return "\n".join(paths)
 
     @Mcp
     @agent_tool
@@ -112,8 +116,7 @@ class Sketch(GuidanceAction):
     @Skill
     @agent_instructions
     def sketch(self, guidance: GuidanceArg) -> str:
-        """Confirm views only when the user did not already name them. Write a high-level shell in one integrated sketch file, one section per practice. The shell's level of detail is that fidelity's Scaffold section; the notation is the practice sketch template. Then ask which theme to start. Ask three or four questions from that fidelity's Sketch section, then sketch those answers into the existing sections. Practice Rules apply after those answers, not to the shell.
-        Pass one or more guidance tools — practice or fidelity slugs such as stories and clean-engineering-model, or module:Class refs. A list passes every practice in the session. The reply includes these sketch instructions, each practice's sketch template, and each practice's rules."""
+        """Confirm views only when the user did not already name them. Write a high-level shell in one integrated sketch file, one section per practice. The shell's level of detail is that fidelity's Scaffold section; the notation is the practice sketch template. Then ask which theme to start. Ask three or four questions from that fidelity's Sketch section, then sketch those answers into the existing sections. Practice Rules apply after those answers, not to the shell. The reply includes these sketch instructions, each practice's sketch template, and each practice's rules."""
         self.begin(guidance, action="sketch")
         for item in self.listed():
             instructions(item.rules.markdown_block)

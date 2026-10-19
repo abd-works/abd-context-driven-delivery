@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools", "actions"):
+for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -63,7 +63,7 @@ with description("a shared rules section containing rule bullets") as self:
             expect(bag.matches("src/customer/customer-server.ts")).to(equal(False))
 
         with it("should not inject AgentBdd rules for a production python file"):
-            from practices.agent_bdd.agent_bdd import AgentBdd
+            from cdd_guidance.practices.agent_bdd.agent_bdd import AgentBdd
 
             result = AgentBdd().rules.inject_rules(
                 {
@@ -166,7 +166,7 @@ with description("a shared rules section containing rule bullets") as self:
             result = RulesCollection().inject_rules(
                 {
                     "tool_name": "Write",
-                    "tool_input": {"path": "actions/validate/validate.py"},
+                    "tool_input": {"path": "cdd_guidance/actions/validate/validate.py"},
                 }
             )
             expect(result).to(equal({}))
@@ -199,13 +199,13 @@ with description("a shared rules section containing rule bullets") as self:
             expect(self.guidance.rules.markdown_block).to(contain("sample-rule-one"))
 
         with it("should return the original fidelity rules markdown for Bdd"):
-            from practices.bdd.bdd import Bdd
+            from cdd_guidance.practices.bdd.bdd import Bdd
 
             block = Bdd(fidelity="behavior").rules.markdown_block
             expect(block).to(contain("observable-behavior"))
             expect(block).to(contain("no-implementation"))
 
         with it("should not return a graph query"):
-            from practices.bdd.bdd import Bdd
+            from cdd_guidance.practices.bdd.bdd import Bdd
 
             expect(Bdd(fidelity="behavior").rules.markdown_block).not_to(contain(".ql"))

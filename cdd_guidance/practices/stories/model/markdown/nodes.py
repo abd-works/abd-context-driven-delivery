@@ -16,11 +16,15 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from practices.stories.model.story_model import Background, StepType, Scenario, Step
-from practices.stories.model.source_location import SourceLocation
-from practices.stories.model.story_model import StoryModel
-from practices.stories.model.story_model import Increment
+from cdd_guidance.practices.clean_engineering.model.call_graph import (
+    parse_call_graph_block,
+    render_call_graph_block,
+)
+from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario, Step
+from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.story_model import Increment
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
 _BULLET_PATTERN = re.compile(r"^(\s*)-\s+(.+)$")
 _NUMBERED_PATTERN = re.compile(r"^(\s*)\d+\.\s+(.+)$")
@@ -196,6 +200,9 @@ class MarkdownScenario(Scenario):
         self._active_phase: Optional[StepType] = None
         self._clause_source: Optional[SourceLocation] = None
         self._clause_keyword = ""
+        self._realization_target: Optional[Step] = None
+        self._realization_lines: List[str] = []
+        self._in_realization_fence = False
         self._parse_document_lines()
         self._flush_current()
         return self._scenarios
@@ -205,9 +212,13 @@ class MarkdownScenario(Scenario):
             if not raw.strip():
                 if self._in_background and self._background_took_step:
                     self._in_background = False
+                if self._in_realization_fence:
+                    continue
                 continue
             self._line_index = i
             self._raw_line = raw
+            if self._accept_realization_fence():
+                continue
             if self._accept_story_heading():
                 continue
             if self._accept_scenario_heading():
@@ -301,6 +312,28 @@ class MarkdownScenario(Scenario):
             or _BACKGROUND_H3.match(self._raw_line)
         )
 
+    def _accept_realization_fence(self) -> bool:
+        stripped = self._raw_line.strip()
+        if self._in_realization_fence:
+            if stripped.startswith("```"):
+                body = "\n".join(self._realization_lines)
+                if self._realization_target is not None and body.strip():
+                    self._realization_target.call_graph = parse_call_graph_block(body)
+                self._in_realization_fence = False
+                self._realization_lines = []
+                self._realization_target = None
+            else:
+                self._realization_lines.append(self._raw_line.rstrip())
+            return True
+        if not stripped.startswith("```"):
+            return False
+        tag = stripped[3:].strip().lower()
+        if tag not in ("", "realization", "call-graph"):
+            return False
+        self._in_realization_fence = True
+        self._realization_lines = []
+        return True
+
     def _accept_step_line(self) -> bool:
         parsed_step = self._parse_step(self._raw_line)
         if parsed_step is None:
@@ -316,6 +349,8 @@ class MarkdownScenario(Scenario):
             self._consume_background(keyword, step_text)
         elif self._current is not None:
             self._accept_step(keyword, step_text)
+            if keyword.lower() in ("when", "then") and self._current.steps:
+                self._realization_target = self._current.steps[-1]
         return True
 
     def _accept_example_row(self) -> None:
@@ -527,6 +562,11 @@ class MarkdownScenario(Scenario):
         lines = [f"*{step.keyword}* {MarkdownStep.prose(step)}"]
         for extra in step.ands:
             lines.append(f"*{extra.keyword}* {MarkdownStep.prose(extra)}")
+        if getattr(step, "call_graph", None):
+            lines.append("")
+            lines.append("```realization")
+            lines.append(render_call_graph_block(step.call_graph))
+            lines.append("```")
         return lines
 
     def _infer_story_name(self) -> str:
@@ -675,7 +715,7 @@ class MarkdownStoryModel(StoryModel):
                 self.epics.append(epic)
             self.attach_source_locations(text, rel)
             if not getattr(self, "source", None):
-                from practices.stories.model.source_location import SourceLocation as _SL
+                from cdd_guidance.practices.stories.model.source_location import SourceLocation as _SL
                 self.source = _SL(rel, 1)
         if not self.epics:
             return

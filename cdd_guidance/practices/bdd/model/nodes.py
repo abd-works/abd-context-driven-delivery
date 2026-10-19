@@ -6,7 +6,8 @@ from typing import List
 
 from harness.graph.bound_node import BoundChildren
 
-from practices.stories.model.story_model import StoryNode
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.stories.model.story_model import StoryNode
 
 
 class Description(StoryNode):
@@ -59,6 +60,11 @@ class Observation(StoryNode):
 
     def __init__(self, name: str, sequential_order: int = 1, graph=None) -> None:
         super().__init__(name=name, sequential_order=sequential_order, graph=graph)
+        self.call_graph: List[CallGraphEntry] = []
+        self.surface_lines: List[str] = []
 
     def clone(self) -> "Observation":
-        return type(self)(self.name, self.sequential_order)
+        cloned = type(self)(self.name, self.sequential_order)
+        cloned.call_graph = list(self.call_graph)
+        cloned.surface_lines = list(self.surface_lines)
+        return cloned

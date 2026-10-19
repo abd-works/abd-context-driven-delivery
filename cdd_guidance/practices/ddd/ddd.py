@@ -25,18 +25,18 @@ class Ddd(PracticeGuidance):
             fidelity=None if stage is not None else fidelity,
             default_workspace_folder="src",
             formats={
-                "sketch": ("practices.ddd.model.sketch.sketch_ddd_model", "SketchDddModel"),
+                "sketch": ("cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model", "SketchDddModel"),
                 "drawio": (
-                    "practices.ddd.model.drawio.drawio_bounded_context_map",
+                    "cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map",
                     "DrawIOBoundedContextMap",
                 ),
-                "markdown": ("practices.ddd.model.markdown.nodes", "MarkdownBoundedContextMap"),
+                "markdown": ("cdd_guidance.practices.ddd.model.markdown.nodes", "MarkdownBoundedContextMap"),
                 "python": (
-                    "practices.clean_engineering.model.python.python_class_model",
+                    "cdd_guidance.practices.clean_engineering.model.python.python_class_model",
                     "PythonCleanEngineeringModel",
                 ),
                 "typescript": (
-                    "practices.clean_engineering.model.typescript.typescript_class_model",
+                    "cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model",
                     "TypeScriptCleanEngineeringModel",
                 ),
             },
@@ -50,7 +50,7 @@ class Ddd(PracticeGuidance):
 
     @property
     def model(self):
-        from practices.ddd.model.transformation.ddd_transformer import DddTransformer
+        from cdd_guidance.practices.ddd.model.transformation.ddd_transformer import DddTransformer
 
         class DddPracticeModel:
             transformer = DddTransformer

@@ -14,11 +14,11 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from practices.stories.model.story_model import Story, StoryModel, StoryType
-from practices.stories.model.story_model import Increment
-from practices.stories.model.story_model import Scenario
-from practices.stories.model.diagram_story_model import DiagramEpic, DiagramEpic
-from practices.stories.model.drawio.nodes import (
+from cdd_guidance.practices.stories.model.story_model import Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.story_model import Increment
+from cdd_guidance.practices.stories.model.story_model import Scenario
+from cdd_guidance.practices.stories.model.diagram_story_model import DiagramEpic, DiagramEpic
+from cdd_guidance.practices.stories.model.drawio.nodes import (
     DrawIOEpic,
     DrawIOIncrement,
     DrawIOParseError,

@@ -22,9 +22,9 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error, contain
 
-from practices.stories.model.story_model import StoryModel, StoryType
-from practices.stories.model.story_model import Scenario
-from practices.stories.model.miro.nodes import (
+from cdd_guidance.practices.stories.model.story_model import StoryModel, StoryType
+from cdd_guidance.practices.stories.model.story_model import Scenario
+from cdd_guidance.practices.stories.model.miro.nodes import (
     MiroEpic,
     MiroIncrement,
     MiroParseError,

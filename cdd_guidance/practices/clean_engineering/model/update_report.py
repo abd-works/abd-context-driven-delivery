@@ -7,7 +7,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Callable, List, Optional
 
 if TYPE_CHECKING:
-    from practices.clean_engineering.model.base_class_model import OoadNode
+    from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
 
 
 class TranslationError(Exception):

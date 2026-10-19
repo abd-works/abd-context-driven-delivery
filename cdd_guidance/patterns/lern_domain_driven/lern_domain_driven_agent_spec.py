@@ -20,13 +20,13 @@ from agent_bdd import (
     sessions_dir,
 )
 
-_REPO_ROOT = repo_root_from(__file__, parents=2)
+_REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
 _LERN_PY = (
-    "patterns/lern_domain_driven/lern_domain_driven.py"
+    "cdd_guidance/patterns/lern_domain_driven/lern_domain_driven.py"
 )
 _TOOLSET = (
-    "patterns.lern_domain_driven.lern_domain_driven:"
+    "cdd_guidance.patterns.lern_domain_driven.lern_domain_driven:"
     "LernDomainDriven"
 )
 

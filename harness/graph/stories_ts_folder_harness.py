@@ -45,7 +45,7 @@ def assert_stories_folder_pair(
 ) -> None:
     base = (
         Path(__file__).resolve().parents[2]
-        / "practices/stories/model/typescript/.examples"
+        / "cdd_guidance/practices/stories/model/typescript/_examples"
         / example_slug
     )
     rule = stories_rule_by_slug(slug)

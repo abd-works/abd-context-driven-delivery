@@ -135,6 +135,17 @@ If this change will not stay here, follow `practices/stories/story_map.mdc`.
 - **`plain-english-gwt-steps`** - Write each step as a readable sentence with a named actor and observable behaviour. Use the plain-English example name rather than a code identifier, because test reports must make sense without source code.
 - **`seed-prior-story-as-given`** - Seed a later Story from examples produced by prior Stories instead of replaying their When steps. Reuse fixtures from the owning domain concept and keep the boundary under test real, because each Story must run independently while proving its own behaviour.
 
+#### Scenario realizations (default on)
+
+After the Given/When/Then text is agreed, **produce scenario realizations by default** unless the user says **no realizations** (or an equivalent opt-out). A realization keeps the GWT skeleton and expands each **When** (and any **Then** that itself triggers observable collaborator or system effects) into the domain call graph at sketch fidelity — same `->` / `<-` interaction notation as `@clean_engineering` **model** (`write-interactions`). **Given** and pure state **Then** steps stay plain domain language; do not invent a graph where there is no interaction.
+
+**Procedure:** Follow `@practices/stories/story-realizations` (scope, walk production code, strip helpers, external systems at the boundary). Attach each graph to the step in the scenario artifact:
+
+- **Markdown:** a ` ```realization ` fenced block immediately under the **When** or expandable **Then** step (`templates/md/scenarios.md`).
+- **Code channels:** the stories model carries `realization` on each interaction in regenerable spec data and `#` call-graph comments under the matching `when` / `then` in story tests (`practices/stories/model`).
+
+Place one `{scope-kebab-case}-realization.md` per scope when the user wants a consolidated document; otherwise keep realizations inline in the scenario file. Realizations are specification evidence — they do not replace executable acceptance tests.
+
 ---
 
 ### acceptance_tests
@@ -160,9 +171,11 @@ Ask which concrete case proves the outcome, which system already holds the start
 
 Apply `@stories` `#scenarios` § Guidance and § Rules to acceptance tests. Use the **Test shape ladder** in the `testing-approach` rule under `clean_engineering/rules/`: start with the real application when it is available, use deterministic external-system stubs while developing, and replace them with end-to-end boundaries when requested.
 
+When scenario realizations exist (inline or `{scope}-realization.md`), treat them as the agreed call graph for the **When** under test: implement and assert through the outermost domain entry point and named collaborators the realization names — do not re-route through test-only helpers that the realization stripped away.
+
 **Develop the behaviour, not only the test.** Acceptance-test work owns both the executable specification and the production code that satisfies it. Represent each named scenario example as one code fixture, and do not invent fixture values the scenario does not name. Take one Scenario at a time: write the failing acceptance test, invoke the Clean Engineering companion at `code` fidelity, implement the smallest production change that can pass, rerun the test, refactor when it is green, and then continue to the next behaviour. After two failed fix attempts, diagnose the failure before changing more code.
 
-Refer to [`../language-tools.md`](../language-tools.md) for language-specific test tools and idioms.
+Refer to [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md) for language-specific test tools and idioms.
 
 #### Rules
 

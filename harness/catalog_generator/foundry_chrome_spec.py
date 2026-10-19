@@ -6,7 +6,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools"):
+for _cat in ("cdd_guidance/practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -180,7 +180,7 @@ with description("markdown hard breaks"):
 
     with it("renders scenario steps on separate lines in the catalog example"):
         source = (
-            _REPO_ROOT / "practices" / "stories" / "catalog-examples" / "scenarios.md"
+            _REPO_ROOT / "cdd_guidance" / "practices" / "stories" / "catalog-examples" / "scenarios.md"
         ).read_text(encoding="utf-8")
         html = markdown_to_html(source.split("---", 2)[-1])
         expect(html.count("<br>") > 5).to(equal(True))
@@ -201,7 +201,7 @@ with description("step fold ranges"):
 
     with it("folds each step in the acceptance test example"):
         source = (
-            _REPO_ROOT / "practices" / "stories" / "catalog-examples" / "acceptance_tests.ts"
+            _REPO_ROOT / "cdd_guidance" / "practices" / "stories" / "catalog-examples" / "acceptance_tests.ts"
         ).read_text(encoding="utf-8")
         ranges = step_fold_ranges(source)
         lines = source.splitlines()
@@ -214,7 +214,7 @@ with description("step fold ranges"):
 
     with it("also folds scenario scaffolding in the acceptance test example"):
         source = (
-            _REPO_ROOT / "practices" / "stories" / "catalog-examples" / "acceptance_tests.ts"
+            _REPO_ROOT / "cdd_guidance" / "practices" / "stories" / "catalog-examples" / "acceptance_tests.ts"
         ).read_text(encoding="utf-8")
         ranges = scenario_step_fold_ranges(source)
         expect(len(ranges)).to(equal(4))
@@ -227,7 +227,7 @@ with description("step fold ranges"):
 with description("ddd class folds"):
     with it("expands the root to operations and collapses every other class"):
         source = (
-            _REPO_ROOT / "practices" / "ddd" / "catalog-examples" / "tactics.ts"
+            _REPO_ROOT / "cdd_guidance" / "practices" / "ddd" / "catalog-examples" / "tactics.ts"
         ).read_text(encoding="utf-8")
         lines = source.splitlines()
         ranges = ddd_class_fold_ranges(source)
@@ -256,7 +256,7 @@ with description("ddd class folds"):
 with description("story map viewport"):
     with it("frames diagram cells on the top-left page edge without removing content"):
         source = (
-            _REPO_ROOT / "practices" / "stories" / "catalog-examples" / "story_map.drawio"
+            _REPO_ROOT / "cdd_guidance" / "practices" / "stories" / "catalog-examples" / "story_map.drawio"
         ).read_text(encoding="utf-8")
         framed = _drawio_frame_viewport(source)
         expect("create-unconfirmed-user" in framed).to(equal(True))
@@ -269,7 +269,7 @@ with description("story map viewport"):
 with description("bounded context viewport"):
     with it("embeds the original diagram page and magnifies in the panel"):
         source = (
-            _REPO_ROOT / "practices" / "ddd" / "catalog-examples" / "bounded-context.drawio"
+            _REPO_ROOT / "cdd_guidance" / "practices" / "ddd" / "catalog-examples" / "bounded-context.drawio"
         )
         html = _drawio_iframe(source)
         expect('approach-stage-drawio--framed' in html).to(equal(True))
@@ -281,7 +281,7 @@ with description("bounded context viewport"):
 with description("building blocks viewport"):
     with it("embeds the original class diagram without rewriting cells"):
         source = (
-            _REPO_ROOT / "practices" / "ddd" / "catalog-examples" / "building-blocks.drawio"
+            _REPO_ROOT / "cdd_guidance" / "practices" / "ddd" / "catalog-examples" / "building-blocks.drawio"
         )
         original = source.read_text(encoding="utf-8")
         html = _drawio_iframe(source)

@@ -6,15 +6,15 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import before, context, description, it
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools", "actions"):
+for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from builders.create_context_tool.create_context_tool import CreateContextTool
+from cdd_guidance.builders.create_context_tool.create_context_tool import CreateContextTool
 
 _CREATE_DIR = Path(__file__).resolve().parent
 _META_CONTEXT_MARKER = "scaffold-vs-patch"
@@ -25,10 +25,8 @@ with description("CreateContextTool meta generator"):
         self.generator = CreateContextTool()
 
     with context("that has been created"):
-        with it("should key the context index as create_context_tool"):
-            expect(type(self.generator).context_index_key).to(
-                equal("create_context_tool")
-            )
+        with it("should key the context index from the install folder name"):
+            expect(self.generator.context_index_key).to(equal("create_context_tool"))
 
         with it("should default the workspace folder to the repo root"):
             expect(type(self.generator).default_workspace_folder).to(equal("."))

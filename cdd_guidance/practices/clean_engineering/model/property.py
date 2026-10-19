@@ -5,10 +5,10 @@ from __future__ import annotations
 import re
 from typing import List
 
-from practices.clean_engineering.model.base_class_model import OoadNode
-from practices.clean_engineering.model.field_types import Relationship
-from practices.clean_engineering.model.type_refs import domain_type_names
-from practices.clean_engineering.model.update_report import ChildCollectionPair
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
+from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair
 
 
 class Invariant(OoadNode):

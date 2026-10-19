@@ -28,7 +28,7 @@ def sessions_dir(spec_file: str | Path, *, folder: str = ".agent_bdd_sessions") 
     return Path(spec_file).resolve().parent / ".context" / folder
 
 
-CAR = "practices.examples.car.car:Car"
+CAR = "cdd_guidance.practices._examples.car.car:Car"
 CAR_CTX = {
     "fidelity": "road_story",
     "make": "Dodge",
@@ -66,7 +66,7 @@ def invoke_request_for_path(command: str | Path, *, repo_root: Path) -> dict:
             "context": dict(CAR_CTX),
         },
         TRAVEL_TO.replace("\\", "/"): {
-            "toolset": "actions.examples.car_story.car_story:CarStory",
+            "toolset": "cdd_guidance.actions._examples.car_story.car_story:CarStory",
             "action": "travelTo",
             "arguments": {
                 "guidance": [car_tool_argument()],
@@ -75,7 +75,7 @@ def invoke_request_for_path(command: str | Path, *, repo_root: Path) -> dict:
             },
         },
         CAR_INSPECT.replace("\\", "/"): {
-            "toolset": "actions.examples.car_story.car_story:CarStory",
+            "toolset": "cdd_guidance.actions._examples.car_story.car_story:CarStory",
             "action": "inspect_trip",
             "arguments": {
                 "guidance": [car_tool_argument()],
@@ -93,7 +93,7 @@ def stage_invoke_commands(repo_root: Path) -> None:
     from harness.agent_tools.agent_tools import AgentToolSet
 
     car = AgentToolSet.instantiate(CAR)
-    car_story = AgentToolSet.instantiate("actions.examples.car_story.car_story:CarStory")
+    car_story = AgentToolSet.instantiate("cdd_guidance.actions._examples.car_story.car_story:CarStory")
     Installer("Cursor", path=repo_root / ".cursor").install([car, car_story], replace=False)
 
 

@@ -47,11 +47,11 @@ def schema_key_for_type(node_type: str) -> str:
 @lru_cache(maxsize=None)
 def _direct_rules_for_practice(practice: str) -> dict[str, tuple[str, ...]]:
     """Rule slugs declared explicitly under ``rules:`` in schema (no inheritance)."""
-    path = _ROOT / "practices" / practice / "model" / "schema.yaml"
+    path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
     if not path.is_file():
         return {}
     found = _parse_rules(path.read_text(encoding="utf-8"))
-    patterns = _ROOT / "patterns"
+    patterns = _ROOT / "cdd_guidance" / "patterns"
     if patterns.is_dir():
         for schema in sorted(patterns.glob(f"*/practices/{practice}/model/schema.yaml")):
             overlay = _parse_rules(schema.read_text(encoding="utf-8"))
@@ -67,11 +67,11 @@ def _direct_rules_for_practice(practice: str) -> dict[str, tuple[str, ...]]:
 @lru_cache(maxsize=None)
 def _is_supertypes_for_practice(practice: str) -> dict[str, str]:
     """Explorer node type → ``is:`` reference (local key, CE token, or practice.type)."""
-    path = _ROOT / "practices" / practice / "model" / "schema.yaml"
+    path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
     if not path.is_file():
         return {}
     found = _parse_is_supertypes(path.read_text(encoding="utf-8"))
-    patterns = _ROOT / "patterns"
+    patterns = _ROOT / "cdd_guidance" / "patterns"
     if patterns.is_dir():
         for schema in sorted(patterns.glob(f"*/practices/{practice}/model/schema.yaml")):
             overlay = _parse_is_supertypes(schema.read_text(encoding="utf-8"))
@@ -93,11 +93,11 @@ def _is_self_ddd_ref(practice: str, node_type: str, ref: str) -> bool:
 @lru_cache(maxsize=None)
 def _schema_types_for_practice(practice: str) -> frozenset[str]:
     """Every type block named in schema.yaml (base + overlays)."""
-    path = _ROOT / "practices" / practice / "model" / "schema.yaml"
+    path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
     types: set[str] = set()
     if path.is_file():
         types.update(_parse_type_headers(path.read_text(encoding="utf-8")))
-    patterns = _ROOT / "patterns"
+    patterns = _ROOT / "cdd_guidance" / "patterns"
     if patterns.is_dir():
         for schema in sorted(patterns.glob(f"*/practices/{practice}/model/schema.yaml")):
             types.update(_parse_type_headers(schema.read_text(encoding="utf-8")))

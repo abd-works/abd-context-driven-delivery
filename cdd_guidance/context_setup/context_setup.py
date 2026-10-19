@@ -11,13 +11,13 @@ from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
-from partition.partition import Partition
+from cdd_guidance.actions.partition.partition import Partition
 
-from practices.clean_engineering.clean_engineering import CleanEngineering
-from practices.ddd.ddd import Ddd
-from practices.stories.stories import Stories
-from practices.ux.ux import Ux
-from context_setup.context_index import ContextIndex
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.ddd.ddd import Ddd
+from cdd_guidance.practices.stories.stories import Stories
+from cdd_guidance.practices.ux.ux import Ux
+from cdd_guidance.context_setup.context_index import ContextIndex
 
 _log = logging.getLogger(__name__)
 

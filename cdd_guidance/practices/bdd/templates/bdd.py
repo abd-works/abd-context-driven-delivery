@@ -1,6 +1,6 @@
 """
 # Conceptual BDD Reference (Python/Mamba style)
-# Refer to practices/language-tools.md for tool recommendations.
+# Refer to cdd_guidance/rules/language-tools.md for tool recommendations.
 # =============================================================================
 # BEHAVIOR (SIGNATURE) — `signature-markers`
 # Every `it` body is exactly `# BDD: SIGNATURE` — nothing else.
@@ -8,6 +8,15 @@
 # with description('{DomainEntity}'):
 #     with context('that has been created'):
 #         with it('should have {initial property} assigned'):
+#             # BDD: SIGNATURE
+# =============================================================================
+# REALIZATION — call graph per `it` (default after behavior unless user opts out)
+# Replace `# BDD: SIGNATURE` with `# ->` / `# <-` lines only — same notation as CE model.
+#
+#         with it('should reject an expired token'):
+#             # cart.checkout()
+#             #   -> paymentGateway.charge(amount)
+#             #   <- receipt
 #             # BDD: SIGNATURE
 # =============================================================================
 # DEVELOPMENT — `no-remaining-signatures`
@@ -50,7 +59,7 @@ with description('{DomainEntity}'):
 
 
 # Scan fixture pair — mechanical mistake specs use these helpers, not an eval harness.
-from practices.bdd.spec_helpers import expect_scan_fails, expect_scan_passes
+from cdd_guidance.practices.bdd.spec_helpers import expect_scan_fails, expect_scan_passes
 
 with description('a scan fixture pair'):
     with context('a file that violates the rule'):

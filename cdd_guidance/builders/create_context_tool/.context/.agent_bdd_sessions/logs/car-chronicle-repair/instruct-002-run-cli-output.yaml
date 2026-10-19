@@ -1,6 +1,6 @@
 ```yaml
 ok: true
-toolset: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+toolset: cdd_guidance.practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 action: repair
 result: Repair practices/create_context_tool/examples/car_chronicle/output/driving-log.md
   under {session.path}/ until validate passes.
@@ -89,7 +89,7 @@ instructions: "# Contexts\n\n## Driving voice\n\nThe chronicle is told from the 
   \ with brief evidence.\n3. Call **`scan`** on the session-rooted paths under review.\n\
   4. Do not fix. Report failures for fixing, then **validate** again when ready.\n\
   \n---\n\n\nEvery tool call uses this shape - set `tool` and `arguments`, pipe to\
-  \ CLI:\n\n```yaml\ntoolset: practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n\
+  \ CLI:\n\n```yaml\ntoolset: cdd_guidance.practices.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n\
   context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m agent_tools\
   \ run -\n\nSuggested flow (repeat and reorder as the story needs):\n\n1. tool: scan\n\
   \   arguments:\n     paths: <value>\n\nRead `resources` from each response before\

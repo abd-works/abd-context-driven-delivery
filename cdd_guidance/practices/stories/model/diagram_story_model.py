@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from practices.stories.model.story_model import Epic, Increment, Story, StoryModel, StoryType
+from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel, StoryType
 
 
 class DiagramStoryNode:

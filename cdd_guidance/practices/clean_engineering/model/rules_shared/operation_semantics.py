@@ -6,7 +6,7 @@ import re
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from practices.clean_engineering.model.rules_shared.span_helpers import method_body
+from cdd_guidance.practices.clean_engineering.model.rules_shared.span_helpers import method_body
 
 _IO = re.compile(
     r"\b(?:open|read|write|save|fetch|load|store|send|post|put|delete|upload|download|print)\w*\s*\(",
@@ -118,7 +118,7 @@ class DomainExceptionCarriesContext(PracticeGraphRule):
 
 
 def _operation_body(context, node, operation) -> str:
-    from practices.clean_engineering.model.operation import operation_source_span
+    from cdd_guidance.practices.clean_engineering.model.operation import operation_source_span
 
     text = context.text(node)
     span_lines = operation_source_span(operation)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
 class MarkdownUxMap(UxMap):

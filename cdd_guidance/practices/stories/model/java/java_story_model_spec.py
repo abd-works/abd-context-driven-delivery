@@ -10,11 +10,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from practices.stories.model.code_story_model import CodeStoryModelError
-from practices.stories.model.java.java_story_model import JavaStoryModel
-from practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from practices.stories.model.story_model import Scenario
-from practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
+from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
+from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import Scenario
+from cdd_guidance.practices.stories.model.story_model import StoryModel
 
 
 def _story_map_with_stories() -> StoryModel:

@@ -20,10 +20,10 @@ from agent_bdd import (
     sessions_dir,
 )
 
-_REPO_ROOT = repo_root_from(__file__, parents=2)
+_REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
-_MERN_PY = "patterns/mern_domain_driven/mern_domain_driven.py"
-_TOOLSET = "patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"
+_MERN_PY = "cdd_guidance/patterns/mern_domain_driven/mern_domain_driven.py"
+_TOOLSET = "cdd_guidance.patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"
 
 with description("a MernDomainDriven generator"):
     with context("with agent"):

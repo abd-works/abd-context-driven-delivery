@@ -6,7 +6,7 @@ import hashlib
 import re
 from pathlib import Path
 
-from practices.clean_engineering.model.base_class_model import CleanEngineeringModel, OoadClass, Operation
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, OoadClass, Operation
 
 _CE_CHANNELS: dict[str, type] = {}
 
@@ -15,9 +15,9 @@ def _ce_channels() -> dict[str, type]:
     global _CE_CHANNELS
     if _CE_CHANNELS:
         return _CE_CHANNELS
-    from practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
-    from practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
-    from practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
+    from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
+    from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
+    from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 
     _CE_CHANNELS.update(
         {
@@ -58,8 +58,8 @@ class RuleCheckContext:
         if node.type == "Operation":
             matched = self.ce_operation(node)
             if matched is not None:
-                from practices.clean_engineering.model.c_family_parse import CFamilyParse
-                from practices.clean_engineering.model.operation import operation_source_span
+                from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
+                from cdd_guidance.practices.clean_engineering.model.operation import operation_source_span
 
                 _oclass, operation = matched
                 model_span = operation_source_span(operation)
@@ -152,7 +152,7 @@ class RuleCheckContext:
             self._story_model_failed = True
             return None
         try:
-            from practices.stories.model.story_model import StoryModel
+            from cdd_guidance.practices.stories.model.story_model import StoryModel
 
             self._story_model = StoryModel.load(self.source_root)
         except Exception:

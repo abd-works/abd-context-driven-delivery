@@ -1,5 +1,5 @@
 /**
- * Scenario template — refer to practices/language-tools.md for tooling.
+ * Scenario template — refer to cdd_guidance/rules/language-tools.md for tooling.
  *
  * ## Artifact layout (`artifacts-mirror-story-hierarchy`)
  *
@@ -20,6 +20,11 @@
  *
  * Epic, sub-epic, and story **folders**: lowercase kebab-case. The test file is `{story_snake}_story.test.ts`.
  * Exception: Python epic helper only — `{epic_slug}_helper.py` at epic root.
+ *
+ * ## Scenario realizations (default on unless the user says "no realizations")
+ *
+ * Add a ```realization``` block under each When in `{story_snake}_story.test.md`.
+ * Spec data and story tests round-trip `realization` via `practices/stories/model`.
  *
  * ## Outcome chaining (`then-and-chaining`)
  *

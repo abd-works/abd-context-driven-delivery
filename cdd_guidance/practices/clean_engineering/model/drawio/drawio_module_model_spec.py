@@ -8,15 +8,15 @@ from typing import Tuple
 from expects import be_false, be_true, contain, equal, expect, have_len
 from mamba import before, context, description, it
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+_REPO_ROOT = Path(__file__).resolve().parents[5]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ('tools', 'practices', 'actions'):
+for _cat in ('tools', 'cdd_guidance/practices', 'cdd_guidance/actions'):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from practices.clean_engineering.model.base_class_model import (  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (  # noqa: E402
     CleanEngineeringModel,
     Module,
     OoadClass,
@@ -24,11 +24,11 @@ from practices.clean_engineering.model.base_class_model import (  # noqa: E402
     Property,
     Relationship,
 )
-from practices.clean_engineering.model.drawio.drawio import Drawio  # noqa: E402
-from practices.clean_engineering.model.drawio.drawio_class_model import (  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (  # noqa: E402
     DrawIOCleanEngineeringModel,
 )
-from practices.clean_engineering.model.markdown.markdown_class_model import (  # noqa: E402
+from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (  # noqa: E402
     MarkdownCleanEngineeringModel,
 )
 
@@ -230,7 +230,7 @@ with description('a Draw.io modules diagram'):
 
     with context('that was parsed from the AI template modules.drawio'):
         with before.each:
-            path = _REPO_ROOT / 'practices' / 'clean_engineering' / 'templates' / 'modules.drawio'
+            path = _REPO_ROOT / 'cdd_guidance' / 'practices' / 'clean_engineering' / 'templates' / 'modules.drawio'
             self.model = DrawIOCleanEngineeringModel().parse(path.read_text(encoding='utf-8'))
 
         with it('should parse five placeholder modules'):

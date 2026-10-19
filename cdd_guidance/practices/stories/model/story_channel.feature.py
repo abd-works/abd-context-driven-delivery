@@ -12,19 +12,19 @@ from pathlib import Path
 from expects import equal, expect
 from mamba import describe, context, it, before, shared_context, included_context
 
-from practices.stories.model.drawio.nodes import DrawIOStoryModel
-from practices.stories.model.json.nodes import JsonStoryModel
-from practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
-from practices.stories.model.miro.nodes import MiroStoryModel
-from practices.stories.model.story_model import StoryModel, StoryModelFactory
-from practices.stories.model.java.java_story_model import JavaStoryModel
-from practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
-from practices.stories.model.python.python_story_model import PythonStoryModel
-from practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
-from practices.stories.model.code_story_model import CodeStoryNode
+from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
+from cdd_guidance.practices.stories.model.json.nodes import JsonStoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
+from cdd_guidance.practices.stories.model.miro.nodes import MiroStoryModel
+from cdd_guidance.practices.stories.model.story_model import StoryModel, StoryModelFactory
+from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
+from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
+from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
+from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryNode
 
-EXPECTED = Path(__file__).resolve().parent / ".examples" / "expected"
-ACTUAL = Path(__file__).resolve().parent / ".examples" / "actual"
+EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected"
+ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
 
 _DIAGRAM = ("drawio", "miro")
 _CODE_WITH_EMPTY_STORIES = ("typescript",)

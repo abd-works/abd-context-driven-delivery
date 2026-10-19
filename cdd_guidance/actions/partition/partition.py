@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
 from harness.agent_tools import agent_instructions, agent_toolset
@@ -83,11 +83,19 @@ class Partition(GuidanceAction):
 
     @Mcp
     @agent_tool
-    def index(self, context: str, out_root: str | None = None) -> str:
-        """Write the partition index for this corpus under the session .context folder. Name every expected segment so completeness can be checked later."""
+    def index(
+        self,
+        context: str = "",
+        out_root: str | None = None,
+        paths: list[str] | str | None = None,
+    ) -> str:
+        """Write the partition index for this corpus under the session .context folder. Name every expected segment so completeness can be checked later.
+        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
+        context: in-process text. Leave this empty on an MCP call."""
+        source = source_label(context, paths)
         return (
-            "Index written for {{context}} under {session.path}/.context/ "
-            "(out_root overrides session.path when set)."
+            f"Index the corpus at {source} under {{session.path}}/.context/ "
+            "(out_root overrides session.path when set). Read those files locally."
         )
 
     @Mcp
@@ -102,23 +110,26 @@ class Partition(GuidanceAction):
       
     @agent_instructions
     def partition_corpus(self,
-        context: str,
+        context: str = "",
         mode: str = "one_go",
         out_root: str | None = None,
         slug: str = "",
-        scaffold: str = ""
-
+        scaffold: str = "",
+        paths: list[str] | str | None = None,
     ) -> str:
-        """Build the index and segment files for one corpus. Fail if any new chunk misses a named entry the index required."""
+        """Build the index and segment files for one corpus. Fail if any new chunk misses a named entry the index required.
+        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context."""
         self.partition_guidance
-        self.index(context, out_root)
+        source = source_label(context, paths)
+        self.index(source, out_root)
         self.segment(out_root)
         self.verify_segment_completeness(
             segment_path="{artifact}-segment.md", index_path="{subject}-index.md"
         )
         return (
-            "Partition of {{context}} finished (mode {{mode}}); "
+            f"Partition of {source} finished (mode {mode}); "
             "docs under {session.path}/.context/. "
+            "Read those files locally. "
             "Hard fail if any new chunk fails named-entry completeness."
         )
 
@@ -127,19 +138,25 @@ class Partition(GuidanceAction):
     @agent_instructions
     def partition(self,
         guidance: GuidanceArg,
-        context: str,
+        context: str = "",
         mode: str = "one_go",
         out_root: str | None = None,
+        paths: list[str] | str | None = None,
     ) -> str:
-        """Split the given context into an index plus verbatim segments for each listed Guidance. Fail if any new chunk misses a named entry the index required. Pass a string to partition that text once."""
+        """Split the given context into an index plus verbatim segments for each listed guidance. Fail if any new chunk misses a named entry the index required.
+        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
+        context: in-process text. Leave this empty on an MCP call.
+        mode: one_go, or the named partition mode.
+        out_root: folder for the index and segments. Omit it to use the session path."""
         self._bind_guidance(guidance)
+        source = source_label(context, paths)
         def on(item) -> None:
             if isinstance(item, str):
-                self.partition_corpus(context, mode, out_root)
+                self.partition_corpus(source, mode, out_root)
                 return
             item.contexts
             self.partition_corpus(
-                context,
+                source,
                 mode,
                 out_root,
                 slug=getattr(item, "context_index_key", None),
@@ -148,7 +165,8 @@ class Partition(GuidanceAction):
 
         self.run(guidance, on, action="partition")
         return (
-            "Partition of {{context}} finished (mode {{mode}}); "
+            f"Partition of {source} finished (mode {mode}); "
             "docs under {session.path}/.context/. "
+            "Read those files locally. "
             "Hard fail if any new chunk fails named-entry completeness."
         )

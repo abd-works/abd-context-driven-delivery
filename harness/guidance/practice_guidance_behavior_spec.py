@@ -10,7 +10,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools", "actions"):
+for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -18,14 +18,16 @@ for _cat in ("practices", "tools", "actions"):
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from actions.render.render import Render
+from cdd_guidance.actions.render.render import Render
 from harness.agent_tools.agent_tools import AgentInstructions
-from practices.bdd.bdd import Bdd
-from practices.clean_engineering.clean_engineering import CleanEngineering
-from practices.ddd.ddd import Ddd
-from practices.examples.car.car import Car
-from practices.stories.model.markdown.nodes import MarkdownStoryModel
-from practices.stories.stories import Stories
+from cdd_guidance.practices.bdd.bdd import Bdd
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.ddd.ddd import Ddd
+from harness.agent_tools.agent_tools import AgentToolSet
+
+Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+from cdd_guidance.practices.stories.stories import Stories
 
 _CLASS_MARKDOWN = """\
 # Shop

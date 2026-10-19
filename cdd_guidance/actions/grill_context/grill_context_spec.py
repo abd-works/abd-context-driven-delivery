@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -106,13 +106,13 @@ with description("GrillContext toolset"):
             self.tmp = tempfile.TemporaryDirectory()
 
         with context("that reads a file that exists"):
-            with it("should return the file contents as a string"):
+            with it("should return the file path"):
                 target = Path(self.tmp.name) / "notes.md"
                 target.write_text("hello world\n", encoding="utf-8")
 
                 result = self.gc.read_context_file(path=str(target))
 
-                expect(result).to(equal("hello world\n"))
+                expect(result).to(equal(str(target)))
 
     with context("write_grill_answer tool"):
         with before.each:
@@ -228,7 +228,7 @@ with description("PracticeGuidance operations for grill"):
     with it("should not expose grill on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
-                "builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+                "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
         practice = cls()

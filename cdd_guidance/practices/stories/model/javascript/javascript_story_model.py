@@ -9,9 +9,9 @@ from typing import Dict, List, Optional
 
 from pathlib import Path
 
-from practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError
-from practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
-from practices.stories.model.story_model import Epic
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError
+from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
+from cdd_guidance.practices.stories.model.story_model import Epic
 
 
 class JavaScriptStoryModel(CodeStoryModel):

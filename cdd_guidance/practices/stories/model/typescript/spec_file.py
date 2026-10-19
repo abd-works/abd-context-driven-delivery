@@ -17,9 +17,9 @@ Renders one `<story-slug>-stories.ts` file per Story:
     } as const satisfies Story
 
 Consumes:
-  - `Story` (from practices.stories.model.story_model) - carries name, users,
+  - `Story` (from cdd_guidance.practices.stories.model.story_model) - carries name, users,
     domain_terms, evidence, and (attached by workspace/loader) scenarios.
-  - `Scenario` (from practices.stories.model.story_model) - phase-grouped.
+  - `Scenario` (from cdd_guidance.practices.stories.model.story_model) - phase-grouped.
 
 Emits:
   - str (the file body).
@@ -34,7 +34,8 @@ from __future__ import annotations
 import re
 from typing import Iterable, List, Optional
 
-from practices.stories.model.story_model import StepType, Story
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.stories.model.story_model import Step, StepType, Story
 
 
 TS_TYPES_MODULE = "story-types"
@@ -93,6 +94,16 @@ def _render_scenario_block(scenario) -> List[str]:
         for step in then_steps:
             lines.append(f"          {_ts_string(step.text)},")
         lines.append("        ],")
+        realization = _interaction_realization(when_steps, then_steps)
+        if realization:
+            lines.append("        realization: [")
+            for entry in realization:
+                lines.append(
+                    "          "
+                    f"{{ depth: {entry.depth}, kind: {_ts_string(entry.kind)}, "
+                    f"text: {_ts_string(entry.text)} }},"
+                )
+            lines.append("        ],")
         lines.append("      },")
     lines.append("    ],")
     lines.append("  },")
@@ -138,6 +149,14 @@ def _ts_string_array(values: Iterable[str]) -> str:
 def _pascal(name: str) -> str:
     parts = [w for w in re.split(r"[^0-9A-Za-z]+", name) if w]
     return "".join(w[:1].upper() + w[1:] for w in parts) or "Story"
+
+
+def _interaction_realization(when_steps: list, then_steps: list) -> list[CallGraphEntry]:
+    entries: list[CallGraphEntry] = []
+    for step in list(when_steps) + list(then_steps):
+        if isinstance(step, Step) and step.call_graph:
+            entries.extend(step.call_graph)
+    return entries
 
 
 def _camel(name: str) -> str:

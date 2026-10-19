@@ -1,6 +1,6 @@
 """Shared diagramming: geometry, placed nodes, containment order."""
 
-from practices.clean_engineering.model.diagram.diagram_node import (
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     ContainmentForest,
     DiagramClass,
     DiagramModule,
@@ -10,7 +10,7 @@ from practices.clean_engineering.model.diagram.diagram_node import (
     module_tab_label,
     path_parent,
 )
-from practices.clean_engineering.model.diagram.geometry import Geometry
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 
 __all__ = [
     "ContainmentForest",

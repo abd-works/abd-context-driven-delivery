@@ -833,7 +833,10 @@ class McpHost:
             name: str, arguments: dict[str, object] | None
         ) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
             try:
-                return self._content_blocks(self.dispatch(name, arguments))
+                # Dispatch off the event loop. A synchronous tool call blocks
+                # stdin and stdout, and the client then waits until its timeout.
+                value = await anyio.to_thread.run_sync(self.dispatch, name, arguments)
+                return self._content_blocks(value)
             except Exception as error:
                 logger.exception("MCP tool %s failed", name)
                 return self._content_blocks(f"{type(error).__name__}: {error}")

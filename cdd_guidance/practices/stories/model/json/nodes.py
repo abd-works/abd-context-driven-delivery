@@ -35,11 +35,11 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional
 
-from practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from practices.stories.model.story_model import Scenario
-from practices.stories.model.source_location import SourceLocation
-from practices.stories.model.story_model import StoryModel
-from practices.stories.model.story_model import Increment
+from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import Scenario
+from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.story_model import Increment
 
 # -- Leaf node types -----------------------------------------------------------
 
@@ -283,7 +283,7 @@ class JsonStoryModel(StoryModel):
         return payload
 
     def _background_from_dict(self, record: Dict[str, Any], order: int):
-        from practices.stories.model.story_model import Background
+        from cdd_guidance.practices.stories.model.story_model import Background
 
         background = Background(record.get("name") or "background", order)
         for index, row in enumerate(record.get("exampleRows") or [], start=1):

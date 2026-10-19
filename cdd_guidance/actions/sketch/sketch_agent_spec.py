@@ -22,7 +22,7 @@ from agent_bdd import (
 _REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
 _SKETCHER = "sketch.sketch:Sketch"
-_BDD = "practices.bdd.bdd:Bdd"
+_BDD = "cdd_guidance.practices.bdd.bdd:Bdd"
 
 
 with description("a sketch action"):
@@ -30,7 +30,7 @@ with description("a sketch action"):
         with it("should run Sketch.sketch with that tool, not the Guidance sketch"):
             with agent(_REPO_ROOT, _SESSIONS / "sketch-owns-tools.json"):
                 read_workspace(".cursor/commands/sketch.md")
-                read_workspace("actions/sketch/sketch.py")
+                read_workspace("cdd_guidance/actions/sketch/sketch.py")
 
                 response = run_toolset(
                     toolset=_SKETCHER,
@@ -53,7 +53,7 @@ with description("a sketch action"):
                     f"action: {response.action}\narguments: {response.arguments}",
                     "PASS only if sketch is owned by sketch.sketch:Sketch and the "
                     "BDD context tool is an argument in tools (one or more context tools). "
-                    "FAIL if the run owner is practices.bdd.bdd:Bdd with action sketch.",
+                    "FAIL if the run owner is cdd_guidance.practices.bdd.bdd:Bdd with action sketch.",
                 )
 
     with context("that expands sketch instructions for review"):

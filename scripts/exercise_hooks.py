@@ -12,13 +12,13 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 _PRACTICES = (
-    "practices.agent_bdd.agent_bdd:AgentBdd",
-    "practices.bdd.bdd:Bdd",
-    "practices.cdd.cdd:Cdd",
-    "practices.clean_engineering.clean_engineering:CleanEngineering",
-    "practices.ddd.ddd:Ddd",
-    "practices.stories.stories:Stories",
-    "practices.ux.ux:Ux",
+    "cdd_guidance.practices.agent_bdd.agent_bdd:AgentBdd",
+    "cdd_guidance.practices.bdd.bdd:Bdd",
+    "cdd_guidance.practices.cdd.cdd:Cdd",
+    "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering",
+    "cdd_guidance.practices.ddd.ddd:Ddd",
+    "cdd_guidance.practices.stories.stories:Stories",
+    "cdd_guidance.practices.ux.ux:Ux",
 )
 _SKIP = {
     ".git",
@@ -225,7 +225,7 @@ class HookExercise:
         local = self.repo / "catalog" / "examples"
         if local.is_dir() and local not in roots:
             roots.append(local)
-        practices = self.repo / "practices"
+        practices = self.repo / "cdd_guidance" / "practices"
         if practices.is_dir():
             roots.append(practices)
         return roots
@@ -239,9 +239,9 @@ class HookExercise:
                 path = folder / name
                 posix = path.as_posix().casefold()
                 in_examples = (
-                    "/catalog/examples/" in posix
+                    "/catalog/_examples/" in posix
                     or "/examples/" in posix
-                    or "/.examples/" in posix
+                    or "/_examples/" in posix
                 )
                 if not in_examples or not self._named_for_fidelity(path, needle):
                     continue
@@ -276,7 +276,7 @@ class HookExercise:
 
     def _rank(self, path: Path, aliases: list[str]) -> tuple[int, int, str]:
         posix = path.as_posix().casefold()
-        catalog = 0 if "/catalog/examples/" in posix else 1
+        catalog = 0 if "/catalog/_examples/" in posix else 1
         owned = 0 if self._in_practice(path, aliases) else 1
         return (catalog, owned, len(posix), posix)
 

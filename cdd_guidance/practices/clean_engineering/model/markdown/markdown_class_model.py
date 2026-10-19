@@ -39,8 +39,9 @@ _repo = Path(__file__).resolve().parents[3]
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
 
-from practices.clean_engineering.model.base_class_model import OoadNode
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
+from cdd_guidance.practices.clean_engineering.model.call_graph import parse_arrow_line
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
@@ -50,8 +51,8 @@ from practices.clean_engineering.model.base_class_model import (
     companion_interface_name,
     is_interface_name,
 )
-from practices.clean_engineering.model.property import append_invariant, invariant_lines, property_notes, take_property_note
-from practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
+from cdd_guidance.practices.clean_engineering.model.property import append_invariant, invariant_lines, property_notes, take_property_note
+from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
 
 def _class_heading_name(raw: str) -> str:
@@ -351,7 +352,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
     def from_workspace(cls, root: Path) -> Optional["MarkdownCleanEngineeringModel"]:
         for path in sorted(root.glob("**/*.md")):
             text = path.read_text(encoding="utf-8", errors="ignore")
-            if "practices.clean_engineering.clean_engineering:CleanEngineering" in text and "@toolset-manifest" in text:
+            if "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering" in text and "@toolset-manifest" in text:
                 return cls().parse(text)
         return None
 
@@ -621,7 +622,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
 
     def _relationships_from_properties(self, props: List[Property]) -> None:
         """A relationship is optional on the property. A primitive or a third-party type has none."""
-        from practices.clean_engineering.model.property import bind_property_relationship
+        from cdd_guidance.practices.clean_engineering.model.property import bind_property_relationship
 
         for prop in props:
             bind_property_relationship(prop)
@@ -666,9 +667,10 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 if ops:
                     append_invariant(ops[-1], stripped[2:])
                 continue
-            if stripped.startswith("->"):
+            if stripped.startswith("->") or stripped.startswith("→"):
                 if ops:
-                    callee = stripped[2:].strip()
+                    arrow = parse_arrow_line(stripped)
+                    callee = arrow[1] if arrow else stripped[2:].strip()
                     if callee and callee not in ops[-1].callees:
                         ops[-1].callees.append(callee)
                 continue

@@ -1,6 +1,6 @@
 """TypeScript story file paths. create and load live on TypeScriptStory."""
 
-from practices.stories.model.typescript.nodes import TypeScriptStory
+from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptStory
 
 
 def story_test_import_path(deploy_root: str) -> str:

@@ -1,6 +1,6 @@
 ```yaml
 ok: true
-toolset: practices.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven
+toolset: cdd_guidance.practices.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven
 action: generate
 result: Ran clean_engineering then stories for this slice. Run validate.
 instructions: "1. Follow session_guidance (handled by the inherited body below). Fill\n\
@@ -470,7 +470,7 @@ instructions: "1. Follow session_guidance (handled by the inherited body below).
   \ Promise<{{DomainName}}>;\n}\n\n\nPrepend the following block verbatim as the very\
   \ first lines of the file you are writing - before any imports, before any code.\n\
   \nEvery tool call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\n\
-  ```yaml\ntoolset: practices.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven\n\
+  ```yaml\ntoolset: cdd_guidance.practices.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven\n\
   context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m agent_tools\
   \ run -\n\nSuggested flow (repeat and reorder as the story needs):\n\n1. tool: ensure_session\n\
   \   arguments:\n     name: <value>\n     goal: <value>\n     fidelities: <value>\n\

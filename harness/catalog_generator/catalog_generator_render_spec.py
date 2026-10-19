@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools"):
+for _cat in ("cdd_guidance/practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -28,8 +28,8 @@ from harness.catalog_generator.catalog_generator import (
     ActionResolution,
     resolve_lifecycle_actions,
 )
-from practices.ddd.ddd import Ddd
-from diagnose.diagnose import Diagnose
+from cdd_guidance.practices.ddd.ddd import Ddd
+from cdd_guidance.actions.diagnose.diagnose import Diagnose
 
 _REPO_URL = "https://github.com/org/repo"
 _REF = "abc123"
@@ -248,7 +248,7 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             workflow_html = (self.tmp / "workflow.html").read_text(encoding="utf-8")
             expect("CDD Workflow" in workflow_html).to(be_true)
             expect("Scenario 1" in workflow_html).to(be_true)
-            expect('href="actions/partition.html"' in workflow_html).to(be_true)
+            expect('href="cdd_guidance/actions/partition.html"' in workflow_html).to(be_true)
 
 
 with description("Render Flat Grid Pages"):

@@ -18,7 +18,7 @@ from expects import be, contain, equal, have_len, be_true, be_false, expect
 
 from harness.graph.graph import Graph
 
-from practices.stories.model.story_model import (
+from cdd_guidance.practices.stories.model.story_model import (
     Background,
     Epic,
     Increment,
@@ -919,12 +919,12 @@ with description("a story map on a graph") as self:
         expect(pairs).to(contain(("the User creates their account", "the email is saved")))
 
     with it("should record invokes, observes, demonstrates, and retrievedUsing from the schema"):
-        from practices.bdd.model.nodes import Observation
-        from practices.clean_engineering.model.base_class_model import Module, OoadClass
-        from practices.clean_engineering.model.operation import Operation
-        from practices.clean_engineering.model.property import Property
-        from practices.stories.model.source_location import SourceLocation
-        from practices.ux.model.nodes import Screen
+        from cdd_guidance.practices.bdd.model.nodes import Observation
+        from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
+        from cdd_guidance.practices.clean_engineering.model.operation import Operation
+        from cdd_guidance.practices.clean_engineering.model.property import Property
+        from cdd_guidance.practices.stories.model.source_location import SourceLocation
+        from cdd_guidance.practices.ux.model.nodes import Screen
 
         self.scenario.steps[0].source = SourceLocation("", text="await accountCredentials.register()")
         self.scenario.steps[1].source = SourceLocation("", text="expect(emailedValidationCode.code)")

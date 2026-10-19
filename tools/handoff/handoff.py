@@ -1,6 +1,6 @@
 """Handoff - write a compact session summary so the next agent can continue.
 
-Writes handoff-{timestamp}.md into the current session folder (.sessions/{name}/).
+Writes handoff-{timestamp}.md into the session folder (repo/sessions/{name}/).
 No archiving, no latest pointer — one timestamped file per call.
 """
 from __future__ import annotations
@@ -8,8 +8,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from workspace.legacy.workspace import SessionPaths, Workspace
 from harness.agent_tools import agent_instructions, agent_toolset
+from harness.guidance_actions import load_document
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.destination import noCatalog
 from harness.installation.files import skill
@@ -20,39 +20,29 @@ from harness.mcp.mcp_server import mcp
 class Handoff:
     """Write a compact session handoff for the next agent."""
 
-    def __init__(self, path: str = ".", workspace: str = "", session: str = "") -> None:
-        root = workspace or path
-        self.workspace = Workspace(str(root))
-        self.workspace.load()
-        if session:
-            self.workspace.open(name=session, path=root)
+    def __init__(self, path: str = ".", repo_path: str = "", session: str = "") -> None:
+        self.repo_path = Path(repo_path or path)
+        self.session_name = session or "session"
 
     def _session_folder(self) -> Path:
-        """Current active session folder; falls back to the most-recently-modified
-        session dir, then .sessions/session/ when none exist."""
-        active = self.workspace.current_work_session
-        if active is not None:
-            return active.folder
-        sessions = SessionPaths().sessions_root(self.workspace.path)
-        if sessions.is_dir():
-            candidates = [p for p in sessions.iterdir() if p.is_dir() and p.name != "closed"]
-            if candidates:
-                return max(candidates, key=lambda p: p.stat().st_mtime)
-        fallback = sessions / "session"
-        fallback.mkdir(parents=True, exist_ok=True)
-        return fallback
+        """Session artifacts live at ``{repo}/sessions/{name}/``."""
+        folder = self.repo_path / "sessions" / self.session_name
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder
 
     @mcp
     @skill
     @agent_tool
-    def write_handoff(self, content: str) -> str:
-        """Write content to the current session folder as handoff-{timestamp}.md.
-        Returns the absolute path of the written file."""
+    def write_handoff(self, content: str = "", paths: list[str] | str | None = None) -> str:
+        """Write a handoff to the current session folder as handoff-{timestamp}.md.
+        Returns the absolute path of the written file.
+        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the handoff body in content.
+        content: in-process text. Leave this empty on an MCP call."""
         folder = self._session_folder()
         folder.mkdir(parents=True, exist_ok=True)
         ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
         path = folder / f"handoff-{ts}.md"
-        path.write_text(content, encoding="utf-8")
+        path.write_text(load_document(content, paths), encoding="utf-8")
         return str(path.resolve())
 
     @mcp
@@ -107,6 +97,6 @@ class Handoff:
         ## Correction trend
         Include this section only if the corrections document was found. Compare this session's correction count (from the session block / conversation) to the previous session's count. State the trend in 1–2 sentences (e.g. "Session 2026-09-14 needed 5 corrections across 2 epics — roughly 2–3 per story. The previous session needed ~12. Trend is sharply down."). Optionally append the Corrections CLI cheat sheet (`list`, `add-correction`, `new-session`). If corrections cannot be found after the search order above, omit this section.
         """
-        self.write_handoff(content="")
-        """Call write_handoff(content) with the complete markdown above. Report the returned path to the user."""
+        self.write_handoff()
+        """Write the handoff markdown to a file and call write_handoff with paths set to that file. Do not pass the handoff body. Report the returned path to the user."""
         return "Handoff written."

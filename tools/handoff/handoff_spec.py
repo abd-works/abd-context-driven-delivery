@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -43,15 +43,14 @@ with description("the Handoff toolset manifest"):
 
 
 with description("write_handoff"):
-    with context("given a workspace with an active session folder"):
+    with context("given a session folder"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            self.sessions = self.root / ".sessions"
-            self.session_folder = self.sessions / "my-session"
+            self.session_folder = self.root / "sessions" / "my-session"
             self.session_folder.mkdir(parents=True)
             (self.session_folder / "session.md").write_text("# session", encoding="utf-8")
-            self.toolset = Handoff(path=str(self.root))
+            self.toolset = Handoff(path=str(self.root), session="my-session")
 
         with it("should write a file named handoff-{timestamp}.md in the session folder"):
             path = Path(self.toolset.write_handoff("# Handoff\n\nContent here.\n"))
@@ -67,18 +66,25 @@ with description("write_handoff"):
             path_str = self.toolset.write_handoff("content")
             expect(Path(path_str).is_absolute()).to(equal(True))
 
-    with context("given a workspace with no active session"):
+    with context("given no session name"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
             self.toolset = Handoff(path=str(self.root))
 
-        with it("should create a fallback session folder and write the file there"):
+        with it("should create a session folder and write the file there"):
             path = Path(self.toolset.write_handoff("fallback content"))
             expect(path.is_file()).to(equal(True))
+            expect(path.parent).to(equal(self.root / "sessions" / "session"))
             expect(path.name).to(match(r"^handoff-\d{8}T\d{6}\.md$"))
+
+        with it("should read the handoff from a file when paths is set"):
+            source = self.root / "draft.md"
+            source.write_text("from the file\n", encoding="utf-8")
+            written = Path(self.toolset.write_handoff(paths=str(source)))
+            expect(written.read_text(encoding="utf-8")).to(equal("from the file\n"))
 
         with it("should not write a handoff-latest.md"):
             self.toolset.write_handoff("content")
-            latest = self.root / ".sessions" / "session" / "handoff-latest.md"
+            latest = self.root / "sessions" / "session" / "handoff-latest.md"
             expect(latest.exists()).to(equal(False))

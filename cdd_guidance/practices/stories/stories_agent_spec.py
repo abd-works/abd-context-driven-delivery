@@ -16,10 +16,10 @@ from agent_bdd import (
     sessions_dir,
 )
 
-_REPO_ROOT = repo_root_from(__file__, parents=2)
+_REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
-_STORIES_PY = "practices/stories/stories.py"
-_TOOLSET = "practices.stories.stories:Stories"
+_STORIES_PY = "cdd_guidance/practices/stories/stories.py"
+_TOOLSET = "cdd_guidance.practices.stories.stories:Stories"
 
 with description("a Stories generator"):
     with context("with agent"):

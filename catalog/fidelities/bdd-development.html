@@ -79,7 +79,7 @@
 <p>Implement BDD tests with production code.</p>
 <h4>Guidance</h4><div class="fidelity-guidance-body">
 <p><strong>Procedure:</strong> Follow the <strong>Test shape ladder</strong> in <code>@clean_engineering</code> <code>## code</code> § Procedure — real conditions first, then stub TDD, then e2e swap on request.</p>
-<p><strong>Tooling &amp; Idioms:</strong> Refer to <a href="/practices/language-tools.md"><code>practices/language-tools.md</code></a> for language-specific tool recommendations and idiomatic patterns for tests.</p>
+<p><strong>Tooling &amp; Idioms:</strong> Refer to <a href="../cdd_guidance/rules/language-tools.md"><code>cdd_guidance/rules/language-tools.md</code></a> for language-specific tool recommendations and idiomatic patterns for tests.</p>
 <ol>
 <li><strong>Confirm framework</strong> — inherit from the behavior file.</li>
 <li><strong>Scan markers</strong> — list all <code>it</code> blocks still containing <code>BDD: SIGNATURE</code>; report count.</li>
@@ -120,7 +120,7 @@
 <hr></section>
 <section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/0246b0452f1ffa38d142ef13c4edc59e699e3f33/practices/bdd/templates/bdd.py">templates/bdd.py</a></p><pre class="code-fence"><code class="language-py">&quot;&quot;&quot;
 # Conceptual BDD Reference (Python/Mamba style)
-# Refer to practices/language-tools.md for tool recommendations.
+# Refer to cdd_guidance/rules/language-tools.md for tool recommendations.
 # =============================================================================
 # BEHAVIOR (SIGNATURE) — `signature-markers`
 # Every `it` body is exactly `# BDD: SIGNATURE` — nothing else.

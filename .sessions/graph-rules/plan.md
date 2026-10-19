@@ -4,7 +4,7 @@ A practice graph carries its rules on the nodes. Loading the graph runs the exec
 
 Work **one fidelity at a time**. A fidelity is done when its rule types own their checks, the graph spec asserts the violations on the serialized tree, and both the CLI and the web app show them on a loaded practice. Do not finish every class before touching tests, and do not batch a whole practice into one pass.
 
-Working copy for the graph spec and the app proof: `harness/graph/examples/input`.
+Working copy for the graph spec and the app proof: `harness/graph/_examples/input`.
 
 ---
 
@@ -409,7 +409,7 @@ This is the proof for the slice. Spec green is not enough.
 
 **CLI.** `harness/graph/app/host.py` speaks JSON lines on stdin. The web server spawns that process. For the slice, send:
 
-1. `load_working_copy` for `harness/graph/examples/input` and the practice under test.
+1. `load_working_copy` for `harness/graph/_examples/input` and the practice under test.
 2. `filter_choices` for that practice and one node type in the fidelity. The reply's `rules` list includes the slice's slugs.
 3. `return_nodes` with `{ "practices": [...], "node_types": [...], "violations": true }`. A node in the reply has a `rules` child. A rule that failed twice has both entries in `violations`, each with message and line span.
 

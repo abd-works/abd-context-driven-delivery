@@ -19,7 +19,7 @@ The assessment separates:
 - `C:\dev\paradise-mobile\pml-domainmodel\domain\AGENTS.md`
 - Paradise `domain-model.md` and `bounded-context-map.md`
 - Paradise module diagrams and TypeScript transcriptions under `domain/`
-- `C:\dev\abd-context-driven-delivery\rules\writing-guidelines.md`
+- `C:\dev\abd-context-driven-delivery\cdd_guidance\rules\writing-guidelines.md`
 
 ## Executive Assessment
 
@@ -242,7 +242,7 @@ These conventions may remain strong project rules. They do not describe every do
 
 `clean_engineering.md:150` places Markdown link syntax inside code formatting and uses a root-relative path.
 
-**Recommendation:** Use a working repository-relative Markdown link.
+**Recommendation:** Use a repository-relative Markdown link to `cdd_guidance/rules/language-tools.md`.
 
 ### Undefined scaffold rules
 

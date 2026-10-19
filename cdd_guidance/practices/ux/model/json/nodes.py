@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from practices.ux.model.nodes import (
+from cdd_guidance.practices.ux.model.nodes import (
     ContentType,
     Control,
     Interaction,
@@ -16,7 +16,7 @@ from practices.ux.model.nodes import (
     StoryDemoControl,
     Transition,
 )
-from practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
 class JsonUxMap(UxMap):

@@ -5,7 +5,13 @@ from __future__ import annotations
 from harness.graph.bound_node import BoundChildren, BoundNode
 from harness.graph.graph import Graph
 
-from practices.bdd.model.nodes import Context, Description, Observation
+from cdd_guidance.practices.clean_engineering.model.call_graph import (
+    CallGraphEntry,
+    parse_arrow_line,
+    parse_call_graph_block,
+    render_call_graph_block,
+)
+from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 
 
 class BddModel(BoundNode):
@@ -61,19 +67,42 @@ def _parse_sketch(text: str) -> list[Description]:
     descriptions: list[Description] = []
     description: Description | None = None
     stack: list[tuple[int, Context]] = []
+    fence_lines: list[str] = []
+    in_fence = False
+    pending_surface: list[str] = []
     for raw in text.splitlines():
         stripped = raw.strip()
-        if not stripped or stripped.startswith(("//", "#", "->", "Fidelity:", "```")):
+        if stripped.startswith("```"):
+            if in_fence:
+                _apply_fence_block(fence_lines, stack)
+                fence_lines = []
+                in_fence = False
+            else:
+                in_fence = True
+            continue
+        if in_fence:
+            fence_lines.append(raw)
+            continue
+        if not stripped or stripped.startswith(("//", "#", "Fidelity:")):
+            continue
+        if stripped.startswith("->"):
+            if _current_observation(stack) is None:
+                pending_surface.append(stripped[2:].strip())
+            else:
+                _append_surface_line(stripped, stack)
             continue
         indent = len(raw) - len(raw.lstrip(" "))
         level = indent // 2
         if stripped.startswith("it "):
             if not stack:
                 continue
-            stack[-1][1].observations.append(
-                Observation(stripped[3:].strip(), len(stack[-1][1].observations) + 1)
-            )
+            observation = Observation(stripped[3:].strip(), len(stack[-1][1].observations) + 1)
+            if pending_surface:
+                observation.surface_lines = list(pending_surface)
+                pending_surface = []
+            stack[-1][1].observations.append(observation)
             continue
+        pending_surface = []
         if level == 0:
             description = Description(stripped, len(descriptions) + 1)
             descriptions.append(description)
@@ -88,6 +117,51 @@ def _parse_sketch(text: str) -> list[Description]:
         parent.append(context)
         stack.append((level, context))
     return descriptions
+
+
+def _current_observation(stack: list[tuple[int, Context]]) -> Observation | None:
+    if not stack:
+        return None
+    observations = stack[-1][1].observations
+    return observations[-1] if observations else None
+
+
+def _append_surface_line(stripped: str, stack: list[tuple[int, Context]]) -> None:
+    observation = _current_observation(stack)
+    if observation is None:
+        return
+    arrow = parse_arrow_line(stripped)
+    payload = arrow[1] if arrow else stripped
+    observation.surface_lines.append(payload)
+
+
+def _apply_fence_block(lines: list[str], stack: list[tuple[int, Context]]) -> None:
+    if not stack:
+        return
+    pending_surface: list[str] = []
+    pending_graph: list[CallGraphEntry] = []
+    for raw in lines:
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("//"):
+            continue
+        if stripped.startswith("it "):
+            observation = Observation(stripped[3:].strip(), len(stack[-1][1].observations) + 1)
+            if pending_surface:
+                observation.surface_lines = list(pending_surface)
+                pending_surface = []
+            if pending_graph:
+                observation.call_graph = list(pending_graph)
+                pending_graph = []
+            stack[-1][1].observations.append(observation)
+            continue
+        arrow = parse_arrow_line(stripped)
+        if arrow is not None:
+            kind, payload = arrow
+            depth = (len(raw) - len(raw.lstrip(" "))) // 2
+            pending_graph.append(CallGraphEntry(depth=depth, kind=kind, text=payload))
+            continue
+        depth = (len(raw) - len(raw.lstrip(" "))) // 2
+        pending_graph.append(CallGraphEntry(depth=depth, kind="call", text=stripped))
 
 
 def _render_python(description: Description) -> str:
@@ -160,7 +234,17 @@ def _sketch_context(node: Context, depth: int) -> list[str]:
     pad = "  " * depth
     lines = [f"{pad}{node.name}"]
     for observation in node.observations:
-        lines.append(f"{pad}  it {observation.name}")
+        if observation.surface_lines or observation.call_graph:
+            lines.append(f"{pad}  ```")
+            for surface in observation.surface_lines:
+                lines.append(f"{pad}  -> {surface}")
+            if observation.call_graph:
+                for graph_line in render_call_graph_block(observation.call_graph).splitlines():
+                    lines.append(f"{pad}  {graph_line}")
+            lines.append(f"{pad}  it {observation.name}")
+            lines.append(f"{pad}  ```")
+        else:
+            lines.append(f"{pad}  it {observation.name}")
     for child in node.contexts:
         lines.extend(_sketch_context(child, depth + 1))
     return lines

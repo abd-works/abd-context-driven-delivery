@@ -612,7 +612,7 @@ For validation:
 compiler
 tests
 CDD scanners
-CodeQL
+graph rule evaluators
 ```
 
 ---

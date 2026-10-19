@@ -6,15 +6,15 @@ import re
 import xml.etree.ElementTree as ET
 from typing import List, Optional, Tuple
 
-from practices.clean_engineering.model.base_class_model import OoadClass
-from practices.clean_engineering.model.field_types import Relationship
-from practices.clean_engineering.model.diagram.diagram_node import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
     DiagramNode,
     ImportedClass as SharedImportedClass,
 )
-from practices.clean_engineering.model.diagram.geometry import (
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     CELL_MIN_HEIGHT,
     CELL_WIDTH,
     Geometry,

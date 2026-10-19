@@ -338,7 +338,7 @@ Paradise's running-app rule says observed behavior wins. `stories.md:66,101` say
 8. Either repeat every shared rule in fidelity sections or repeat none; currently only `do-not-invent-requirements` is repeated as "same rule as Shared."
 9. Add a scenario scaffold boundary comparable to the story-map scaffold section, or explain why scenario rules always apply.
 10. Consider a recurring-risk and first-time-risk watch list. The Paradise split makes enforcement priorities visible without weakening the canonical rules.
-11. Fix the root-relative `practices/language-tools.md` link so it works outside a repository-root renderer.
+11. Link language tooling to `cdd_guidance/rules/language-tools.md` with a path that resolves from this file.
 12. Correct grammar and spelling, including `hiererachy`, `dstinct`, `spliting`, `sucessful`, `outomes`, `apporach`, `realcode`, and `does't`.
 
 ## Paradise Artifact Drift To Address Separately

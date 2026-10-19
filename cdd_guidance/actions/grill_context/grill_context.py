@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from harness.guidance_actions import GuidanceArg, GuidanceAction
+from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import Skill
@@ -18,12 +18,12 @@ class GrillContext(GuidanceAction):
         """Resolve grill-answers.md under the durable docs dir (pure).
 
         Survives multiple sessions: ``{path}/.context/grill-answers.md``.
-        ``root`` may be ``session.path``, ``session.docs_dir``, or ``session.folder``
-        — all resolve to the same ``.context`` file.
+        ``root`` is the work path. The file is ``{root}/.context/grill-answers.md``.
         """
-        from workspace.legacy.workspace import SessionPaths
-
-        return SessionPaths().docs_dir(root) / "grill-answers.md"
+        folder = Path(root)
+        if folder.name == ".context":
+            return folder / "grill-answers.md"
+        return folder / ".context" / "grill-answers.md"
 
     def _appended_answers_content(self, existing: str | None, heading: str, body: str) -> str:
         """Compose the full grill-answers document after appending one entry (pure).
@@ -62,15 +62,18 @@ class GrillContext(GuidanceAction):
     @Mcp
     @agent_tool
     def read_context_file(self, path: str) -> str:
-        """Read a context file and return its contents.
-        Use after explore_context_files to read files assessed as relevant."""
-        return Path(path).read_text(encoding="utf-8")
+        """Confirm a context file and return its path.
+        Pass the path. Do not paste the file body into this call. Read the file with the editor.
+        Use after explore_context_files to choose files that are relevant."""
+        target = Path(path)
+        target.read_text(encoding="utf-8")
+        return str(target)
 
     @Mcp
     @agent_tool
     def write_grill_answer(self, root: str, heading: str, body: str) -> str:
         """Append one insight to grill-answers.md under the given heading.
-        root defaults to session.path (or session.docs_dir). File is
+        root is the work path. File is
         {path}/.context/grill-answers.md — durable across sessions, not under
         sessions/{name}/. If no sprint exists yet: confirm path, suggest slug, open.
         Creates the file if it does not exist. Call immediately when an insight is resolved - do not batch.
@@ -86,7 +89,7 @@ class GrillContext(GuidanceAction):
     @Skill
     @agent_instructions
     def grill(self, guidance: GuidanceArg) -> str:
-        """Interview the plan against codebase context until questions are grounded in files you have read, then generate each listed Guidance. Ask one framed question at a time and write each resolved insight to grill-answers.md. Pass a string to grill that text once."""
+        """Interview the plan against codebase context until questions are grounded in files you have read, then generate each listed guidance. Ask one framed question at a time and write each resolved insight to grill-answers.md."""
         self.begin(guidance)
         self.grill_with_context()
         self.each(lambda item: self._generate().generate(item if isinstance(item, str) else [item]))
@@ -98,12 +101,14 @@ class GrillContext(GuidanceAction):
         return Generate()
 
     @agent_instructions
-    def grill_with_context(self, plan: str) -> str:
-        """Conduct a relentless grilling interview about {plan} - ask each question with concept-grounded framing and option rationales (never bare choices), using the AskQuestion Cursor tool when available. Prefer thinking/context questions over syntax trivia. When a sketch exists for this plan, use grilling to validate what the sketch claimed — sketch and grill must not run disconnected. Batch similar questions into one AskQuestion so the loop does not run forever. Stage-specific show/persist/review cadence belongs to the wrapping stage (sketch, iterate, ...)."""
+    def grill_with_context(self, plan: str = "", paths: list[str] | str | None = None) -> str:
+        """Conduct a relentless grilling interview about the plan - ask each question with concept-grounded framing and option rationales (never bare choices), using the AskQuestion Cursor tool when available. Prefer thinking/context questions over syntax trivia. When a sketch exists for this plan, use grilling to validate what the sketch claimed — sketch and grill must not run disconnected. Batch similar questions into one AskQuestion so the loop does not run forever. Stage-specific show/persist/review cadence belongs to the wrapping stage (sketch, iterate, ...).
+        paths: a file, a list of files, or a folder for the plan. Pass paths. Read them locally. Do not pass the plan body.
+        plan: in-process text. Leave this empty on an MCP call."""
         """Step 0 - Resolve roots: explore under session.path; write grill-answers under session.docs_dir ({path}/.context/grill-answers.md). If no sprint exists yet, confirm path with the user, suggest a kebab slug from goal/context, open, then continue. Do not invent a divergent root."""
         """Step 1 - Context discovery: call explore_context_files(root=session.path) and any folders referenced in the plan. Prefer-read any active *-sketch.md for this plan so later questions can validate the sketch's thinking."""
         self.explore_context_files()
-        """Step 2 - MUST prove-read before asking. Upward context is more general; downward is more specific. Read every relevant context file referenced or implied by the decision - owning `*-segment.md`, module-context, grill-answers, sketches, peer story-context, build-order, and any path the plan or prior answers cite. A consumed handoff is gone — do not hunt archives for current state. Index/overlay mid-epic stubs are never enough for inventory. Call read_context_file (or Read) on each - chunk large files. Grep, titles, memory, or primer-only reads do not count."""
+        """Step 2 - MUST prove-read before asking. Upward context is more general; downward is more specific. Read every relevant context file referenced or implied by the decision - owning `*-segment.md`, module-context, grill-answers, sketches, peer story-context, build-order, and any path the plan or prior answers cite. A consumed handoff is gone — do not hunt archives for current state. Index/overlay mid-epic stubs are never enough for inventory. Call read_context_file to confirm each path, then Read that file locally. Do not paste the file body into an MCP call. Grep, titles, memory, or primer-only reads do not count."""
         self.read_context_file()
         """Step 2a - Proof gate: do not proceed to Step 3 until this turn can name the path(s) read and cite concrete terms from them. Missing a referenced file means read it - do not ask yet. Asking from a skim is a defect."""
         """Step 2b - Sketch-validation gate (when a sketch file is in play): ground the next question in what the sketch asserted — ask whether a claimed shape, seam, or rationale is correct, surprising, or missing. Named mistakes from prior sketch review must still constrain options. Do not interview as if the sketch did not exist or as if those mistakes never happened."""
@@ -114,4 +119,4 @@ class GrillContext(GuidanceAction):
         """Step 4 - If a question can be answered by exploring the codebase, explore first instead of asking."""
         """Step 5 - After each resolved insight, call write_grill_answer(root=session.path, ...) immediately. Do not batch writes. Keep entries concise; reference code paths rather than repeating logic."""
         self.write_grill_answer()
-        return "Grilling session for: {plan}"
+        return f"Grilling session for: {source_label(plan, paths)}"

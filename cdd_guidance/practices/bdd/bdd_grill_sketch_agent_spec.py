@@ -16,9 +16,9 @@ from agent_bdd import (
     sessions_dir,
 )
 
-_REPO_ROOT = repo_root_from(__file__, parents=2)
+_REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
-_WORKFLOW = "practices/bdd/.context/bdd-grill-sketch-workflow.md"
+_WORKFLOW = "cdd_guidance/practices/bdd/.context/bdd-grill-sketch-workflow.md"
 _RUNNER_SKILL = ".cursor/skills/bdd-grill-runner/SKILL.md"
 _JUDGE_SKILL = ".cursor/skills/bdd-grill-judge/SKILL.md"
 _COMMAND = ".cursor/commands/bdd-grill-sketch.md"

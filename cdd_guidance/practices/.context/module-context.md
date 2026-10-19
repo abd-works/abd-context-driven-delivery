@@ -9,9 +9,9 @@ Build order: `practices` → `practices/clean_engineering` → `practices/bdd` �
 - A named deepen step written on a fidelity as **Stage:** — discovery, specification, or implementation — so modules / model / code line up across practices.
 
 - **Purpose:** Hold one *PracticeGuidance* per field so the same kits can generate and check work against that field’s words.
-- **Seam (terms):** PracticeGuidance, Stage, attach_practice_workspace
-- **Dependencies (one-way):** `harness/guidance`, `tools/workspace`
-- **Constraint:** Do not put `/generate` on the practice. Pass the practice into the kit: `Generate().generate(guidance=[ce])`. `attach_practice_workspace` binds a *Workspace* onto the practice — it is not a second workspace type.
+- **Seam (terms):** PracticeGuidance, Stage
+- **Dependencies (one-way):** `harness/guidance`
+- **Constraint:** Do not put `/generate` on the practice. Pass the practice into the kit: `Generate().generate(guidance=[ce])`.
 - **Constraint:** A practice model follows `practices/stories/model/.context/practice-model.md`. The story model is the worked example. One walk on the base types. The path is one file or a folder of files; a channel only changes how the next node is read.
 
 # practices/clean_engineering

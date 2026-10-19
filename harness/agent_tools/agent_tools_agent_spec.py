@@ -84,7 +84,7 @@ with description("agenda construction"):
         with it("should tell the agent to display those tools and the agent should surface them"):
             with agent(_REPO_ROOT, _SESSIONS / "display-agenda-tools.json") as block:
                 expanded = run_toolset(
-                    toolset="agent_tools.examples.logged_probe:LoggedProbe",
+                    toolset="agent_tools._examples.logged_probe:LoggedProbe",
                     action="narrate",
                     arguments={"message": "hello"},
                     timeout_seconds=90,

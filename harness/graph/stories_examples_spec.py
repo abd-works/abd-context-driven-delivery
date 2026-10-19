@@ -69,7 +69,7 @@ with description("stories TypeScript .examples (folders)"):
 
     with context("kebab-case-paths"):
         with it("should flag camelCase story test file names"):
-            folder = _REPO / "practices/stories/model/typescript/.examples/kebab-case-paths"
+            folder = _REPO / "cdd_guidance/practices/stories/model/typescript/_examples/kebab-case-paths"
             fault = (folder / "faulty" / "HandleRequest_story.test.ts").read_text(encoding="utf-8")
             clean = (folder / "repaired" / "submit-order.story.test.js").read_text(encoding="utf-8")
             assert_stories_ts_pair(

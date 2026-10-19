@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from practices.ux.model.nodes import Control, Region, Screen
-from practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 # Layouts the CLI templates understand (alias -> CLI id).
 _CLI_LAYOUTS = {

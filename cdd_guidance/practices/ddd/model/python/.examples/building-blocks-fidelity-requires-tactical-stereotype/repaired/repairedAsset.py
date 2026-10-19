@@ -1,2 +1,0 @@
-class PlanEntity:
-    id: str

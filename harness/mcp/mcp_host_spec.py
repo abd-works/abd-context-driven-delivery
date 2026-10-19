@@ -9,7 +9,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _path = str(_REPO_ROOT / _cat)
     if _path not in sys.path:
         sys.path.insert(0, _path)
@@ -18,11 +18,11 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.installation.installer import Installer
-from harness.mcp.examples.parameter_types.parameter_types import ParameterTypes
+from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.mcp_server import HostPid, McpHost, McpInstallation
-from actions.iterate.iterate import Iterate
+from cdd_guidance.actions.iterate.iterate import Iterate
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
-from harness.mcp.examples.illegitimate_name.illegitimate_name import (
+from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
 
@@ -272,7 +272,7 @@ with description("an MCP host input schema"):
     with context("that has been derived from generate.generate"):
         with context("with a guidance parameter"):
             with it("should advertise a toolset object instead of an open object"):
-                from actions.generate.generate import Generate
+                from cdd_guidance.actions.generate.generate import Generate
 
                 schema = self.host.input_schema_for_callable(Generate.generate)
                 guidance = schema["properties"]["guidance"]
@@ -398,7 +398,7 @@ with description("an MCP host") as self:
 with description("an MCP host tool ping") as self:
     with before.each:
         self.host = McpHost.from_refs(
-            ("harness.mcp.examples.hosting_demo.hosting_demo:HostingDemo",),
+            ("harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo",),
             repo=str(_REPO_ROOT),
             project=str(_REPO_ROOT),
         )

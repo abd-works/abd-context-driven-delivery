@@ -1,6 +1,6 @@
 """Miro diagram channel for the CleanEngineering model."""
 
-from practices.clean_engineering.model.miro.miro_class_model import (
+from cdd_guidance.practices.clean_engineering.model.miro.miro_class_model import (
     MiroCleanEngineeringModel,
 )
 

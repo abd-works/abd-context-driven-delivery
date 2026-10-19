@@ -11,14 +11,14 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
 
-from practices.stories.model.diagram_story_model import (
+from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
     DiagramStoryModel,
     DiagramEpic,
 )
-from practices.stories.model.story_model import Epic, Increment, StoryModel, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import Epic, Increment, StoryModel, StoryType, Epic
 
 
 class DrawIOIncrement(DiagramIncrement):
@@ -336,7 +336,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         return super().clone().save()
 
     def render(self, canonical: StoryModel | None = None, previous: str | None = None) -> str:
-        from practices.stories.model.markdown.nodes import MarkdownStoryModel
+        from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
 
         source = canonical if canonical is not None else self
         markdown = MarkdownStoryModel()

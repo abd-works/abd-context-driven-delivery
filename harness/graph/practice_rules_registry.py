@@ -9,20 +9,20 @@ from harness.graph.language_for_node import language_for_node
 from harness.graph.practice_rule import PracticeGraphRule
 
 _PRACTICE_RULES = {
-    "clean_engineering": "practices.clean_engineering.rules",
-    "stories": "practices.stories.rules",
-    "ddd": "practices.ddd.rules",
-    "bdd": "practices.bdd.rules",
-    "ux": "practices.ux.rules",
+    "clean_engineering": "cdd_guidance.practices.clean_engineering.rules",
+    "stories": "cdd_guidance.practices.stories.rules",
+    "ddd": "cdd_guidance.practices.ddd.rules",
+    "bdd": "cdd_guidance.practices.bdd.rules",
+    "ux": "cdd_guidance.practices.ux.rules",
 }
 
 _CE_CHANNEL_RULES = {
-    "drawio": "practices.clean_engineering.model.drawio.rules",
+    "drawio": "cdd_guidance.practices.clean_engineering.model.drawio.rules",
 }
 
 _STORIES_LANGUAGE_RULES = {
-    "typescript": "practices.stories.model.typescript.rules",
-    "javascript": "practices.stories.model.javascript.rules",
+    "typescript": "cdd_guidance.practices.stories.model.typescript.rules",
+    "javascript": "cdd_guidance.practices.stories.model.javascript.rules",
 }
 
 

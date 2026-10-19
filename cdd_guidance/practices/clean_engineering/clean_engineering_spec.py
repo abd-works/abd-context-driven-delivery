@@ -8,26 +8,26 @@ from typing import Any
 from expects import be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
 from harness.agent_tools.agent_tools import AgentToolSet
-import practices  # noqa: F401 - generator package on path
+import cdd_guidance.practices  # noqa: F401 - generator package on path
 from harness.markdown import Markdown
 
 from satisfy.satisfy import Satisfy
 from validate.validate import Validate
 
-_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "practices" / "clean_engineering"
-_GENERATE_DIR = _REPO_ROOT / "actions" / "generate"
-_VALIDATE_DIR = _REPO_ROOT / "actions" / "validate"
-_SATISFY_DIR = _REPO_ROOT / "actions" / "satisfy"
-_CLEAN_ENGINEERING_TOOLSET = "practices.clean_engineering.clean_engineering:CleanEngineering"
+_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
+_GENERATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "generate"
+_VALIDATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "validate"
+_SATISFY_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "satisfy"
+_CLEAN_ENGINEERING_TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 _VALIDATE_TOOLSET = "validate.validate:Validate"
 _SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
 

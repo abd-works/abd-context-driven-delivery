@@ -127,7 +127,7 @@ with description("prompt echo detection"):
                     {
                         "tool_name": "Read",
                         "tool_input": {
-                            "path": str(_REPO_ROOT / "practices" / "ddd" / "ddd.md")
+                            "path": str(_REPO_ROOT / "cdd_guidance" / "practices" / "ddd" / "ddd.md")
                         },
                     }
                 ).get("user_message")

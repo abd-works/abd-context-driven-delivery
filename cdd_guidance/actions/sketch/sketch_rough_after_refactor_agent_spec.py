@@ -31,8 +31,8 @@ from harness.installation.installer import Installer
 _REPO = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
 _SKETCH_CMD = ".cursor/commands/sketch.md"
-_CE = "practices.clean_engineering.clean_engineering:CleanEngineering"
-_STORIES = "practices.stories.stories:Stories"
+_CE = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
+_STORIES = "cdd_guidance.practices.stories.stories:Stories"
 
 # Fixed path so the example can assert the artifact, not chat claims.
 _SKETCH_OUT = Path(".context") / "agent-bdd-plorgle-inventory-sketch.md"
@@ -94,9 +94,9 @@ with description("sketch after the refactor (#32)"):
 
         with agent(_REPO, _session("sketch-rough-32")) as block:
             read_workspace(_SKETCH_CMD)
-            read_workspace("actions/sketch/sketch.md")
+            read_workspace("cdd_guidance/actions/sketch/sketch.md")
             read_workspace(
-                "practices/clean_engineering/templates/clean_engineering-sketch.md"
+                "cdd_guidance/practices/clean_engineering/templates/clean_engineering-sketch.md"
             )
 
             response = run_skill(

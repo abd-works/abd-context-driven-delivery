@@ -1,4 +1,4 @@
-"""BDD spec for tools/context_setup/context_index.py — ContextIndex toolset.
+"""BDD spec for cdd_guidance/context_setup/context_index.py — ContextIndex toolset.
 
 Covers Increment 1 stories:
   Tool --> Embed Chunks     (embed tool)
@@ -15,7 +15,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 import mcp.types  # SDK, before harness/mcp is on PYTHONPATH
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -23,7 +23,7 @@ for _cat in ("tools", "practices", "actions"):
 from expects import be_a, be_empty, be_false, be_true, contain, equal, expect, have_len
 from mamba import after, before, context, description, it
 
-from context_setup.context_index import (
+from cdd_guidance.context_setup.context_index import (
     ContextIndex,
     EmbedResult,
     EmbeddingProvider,

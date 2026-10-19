@@ -5,10 +5,10 @@ from pathlib import Path
 from expects import expect, equal, be_true, be_false
 from mamba import description, context, it
 
-from practices.ddd.model.drawio.drawio_bounded_context_map import DrawIOBoundedContextMap
-from practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
+from cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map import DrawIOBoundedContextMap
+from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 
-_EXPECTED = Path(__file__).resolve().parent.parent / ".examples" / "expected" / "bounded-context-map.md"
+_EXPECTED = Path(__file__).resolve().parent.parent / "_examples" / "expected" / "bounded-context-map.md"
 
 
 with description("DrawIOBoundedContextMap"):
@@ -36,7 +36,7 @@ with description("DrawIOBoundedContextMap"):
 
         with it("should place the most connected context in the center"):
             model = MarkdownBoundedContextMap().parse(_EXPECTED.read_text(encoding="utf-8"))
-            from practices.ddd.model.drawio.drawio_bounded_context_map import (
+            from cdd_guidance.practices.ddd.model.drawio.drawio_bounded_context_map import (
                 _context_height,
                 _hub_context,
                 _integration_graph,

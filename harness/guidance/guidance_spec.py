@@ -5,7 +5,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools", "actions"):
+for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -84,7 +84,7 @@ with description("context guidance"):
             expect("inject_rules" in guidance.rules.tools).to(equal(True))
 
         with it("should rehost inject_rules on the practice so install enrolls CleanEngineering"):
-            from practices.clean_engineering.clean_engineering import CleanEngineering
+            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             guidance = CleanEngineering()
             expect(type(guidance.tools["inject_rules"].toolset).__name__).to(
@@ -92,14 +92,14 @@ with description("context guidance"):
             )
 
         with it("should inject the matching fidelity rules when a practice file is written"):
-            from practices.clean_engineering.clean_engineering import CleanEngineering
+            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
             from prompt_echo.prompt_echo import TOAST_NOTICE
 
             result = CleanEngineering().rules.inject_rules(
                 {
                     "tool_name": "Write",
                     "tool_input": {
-                        "path": "actions/validate/validate.py",
+                        "path": "cdd_guidance/actions/validate/validate.py",
                     },
                 }
             )
@@ -112,18 +112,18 @@ with description("context guidance"):
             expect(notice).to(contain("model"))
 
         with it("should not inject after Read using the parented practice rules collection"):
-            from practices.clean_engineering.clean_engineering import CleanEngineering
+            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
                 {
                     "tool_name": "Read",
-                    "tool_input": {"path": "actions/validate/validate.py"},
+                    "tool_input": {"path": "cdd_guidance/actions/validate/validate.py"},
                 }
             )
             expect(result).to(equal({}))
 
         with it("should inject matching code rules for an absolute path in any folder"):
-            from practices.clean_engineering.clean_engineering import CleanEngineering
+            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             result = CleanEngineering().rules.inject_rules(
                 {
@@ -232,7 +232,7 @@ with description("a context tool module with one domain markdown file named for 
             expect(self.sketch.instructions).to(contain("#### Rules"))
 
         with it("should put the fidelity template under a Template heading"):
-            from practices.stories.stories import Stories
+            from cdd_guidance.practices.stories.stories import Stories
 
             story_map = Stories(fidelity="story_map").fidelities.entries["story_map"]
             text = story_map.instructions
@@ -339,7 +339,7 @@ with description("practice guidance with fidelities examples and templates besid
 with description("practice and fidelity template files"):
     with context("with a fidelity-named file under templates/{format}"):
         with it("should load that file"):
-            from practices.stories.stories import Stories
+            from cdd_guidance.practices.stories.stories import Stories
 
             text = Stories(fidelity="story_map", format="markdown").templates
             expect(text).to(contain("Story Map"))
@@ -347,13 +347,13 @@ with description("practice and fidelity template files"):
 
     with context("with no fidelity-named file"):
         with it("should load the practice-named template"):
-            from practices.clean_engineering.clean_engineering import CleanEngineering
+            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             text = CleanEngineering(fidelity="model", format="markdown").templates
             expect(text).to(contain("clean_engineering markdown template"))
 
         with it("should load that same practice-named template for every fidelity"):
-            from practices.clean_engineering.clean_engineering import CleanEngineering
+            from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
             code = CleanEngineering(fidelity="code", format="markdown").templates
             model = CleanEngineering(fidelity="model", format="markdown").templates
@@ -361,7 +361,7 @@ with description("practice and fidelity template files"):
 
     with context("with no fidelity-named file and no practice-named template"):
         with it("should return no template"):
-            from practices.ddd.ddd import Ddd
+            from cdd_guidance.practices.ddd.ddd import Ddd
 
             expect(Ddd(fidelity="tactics", format="python").templates).to(equal(""))
             expect(Ddd(fidelity="building_blocks", format="markdown").templates).to(
@@ -370,7 +370,7 @@ with description("practice and fidelity template files"):
 
     with context("with a practice schema file"):
         with it("should return that schema and tell actions to conform to it"):
-            from practices.stories.stories import Stories
+            from cdd_guidance.practices.stories.stories import Stories
 
             stories = Stories()
             expect(stories.schema).to(contain("epic:"))

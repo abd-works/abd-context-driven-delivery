@@ -21,10 +21,10 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from practices.stories.model.story_model import Scenario
-from practices.stories.model.story_model import StoryModel
-from practices.stories.model.code_story_model import (
+from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import Scenario
+from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.code_story_model import (
     CodeEpic,
     CodeStoryModel,
     CodeStoryModelError,

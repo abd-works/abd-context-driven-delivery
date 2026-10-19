@@ -255,10 +255,10 @@ def _is_given(node) -> bool:
 def _fields() -> tuple[SchemaField, ...]:
     found: list[SchemaField] = []
     for practice in _PRACTICES:
-        path = _ROOT / "practices" / practice / "model" / "schema.yaml"
+        path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
         if path.is_file():
             found.extend(_parse(path.read_text(encoding="utf-8")))
-    patterns = _ROOT / "patterns"
+    patterns = _ROOT / "cdd_guidance" / "patterns"
     if patterns.is_dir():
         for schema in sorted(patterns.glob("*/practices/*/model/schema.yaml")):
             found.extend(_parse(schema.read_text(encoding="utf-8")))

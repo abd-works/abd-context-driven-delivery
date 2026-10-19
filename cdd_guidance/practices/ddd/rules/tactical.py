@@ -6,7 +6,7 @@ import re
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from practices.ddd.rules.tactical_helpers import (
+from cdd_guidance.practices.ddd.rules.tactical_helpers import (
     has_tactical_stereotype,
     is_screen_driver_class,
     other_classes_reference,
@@ -109,7 +109,7 @@ class ServiceIsHomeless(PracticeGraphRule):
         oclass = context.ce_class(node)
         if oclass is None or not oclass.operations:
             return []
-        from practices.clean_engineering.model.rules_shared.span_helpers import method_body
+        from cdd_guidance.practices.clean_engineering.model.rules_shared.span_helpers import method_body
 
         text = context.text(node)
         for op in oclass.operations:

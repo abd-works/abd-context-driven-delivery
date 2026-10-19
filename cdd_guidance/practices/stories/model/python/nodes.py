@@ -4,8 +4,9 @@ from __future__ import annotations
 import re
 from typing import List
 
-from practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
-from practices.stories.model.story_model import Background, StepType, Story
+from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
+from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
+from cdd_guidance.practices.stories.model.story_model import Background, StepType, Story
 
 
 class PythonScenario(CodeScenario):
@@ -77,6 +78,9 @@ class PythonScenario(CodeScenario):
             f'{pad}with {verb}("{_quote(step.text)}"):',
             f"{pad}    pass",
         ]
+        if getattr(step, "call_graph", None):
+            for graph_line in render_call_graph_block(step.call_graph).splitlines():
+                lines.append(f"{pad}    # {graph_line}")
         for extra in step.ands:
             verb = "but_" if extra.keyword == "But" else "and_"
             lines.extend([

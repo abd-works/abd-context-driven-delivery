@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
-from practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
-from practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
-from practices.clean_engineering.model.json.json_class_model import JsonCleanEngineeringModel
-from practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
-from practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
-from practices.clean_engineering.model.sketch.sketch_class_model import SketchCleanEngineeringModel
-from practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.json.json_class_model import JsonCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.sketch.sketch_class_model import SketchCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
 from harness.guidance.guidance import PracticeGuidance
 
@@ -45,7 +45,7 @@ class CleanEngineering(PracticeGuidance):
 
     @property
     def model(self):
-        from practices.clean_engineering.model.transformation.clean_engineering_transformer import (
+        from cdd_guidance.practices.clean_engineering.model.transformation.clean_engineering_transformer import (
             CleanEngineeringTransformer,
         )
 

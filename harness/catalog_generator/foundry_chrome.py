@@ -54,7 +54,7 @@ _STAGE_SCOPES: dict[str, dict[str, str]] = {
 }
 
 _STORY_EXAMPLES = (
-    Path(__file__).resolve().parents[2] / "practices" / "stories" / "catalog-examples"
+    Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / "stories" / "catalog-examples"
 )
 
 
@@ -1123,7 +1123,7 @@ def _stories_stage_overview(stage_id: str) -> str:
     stage_key = {"discovery": "discovery", "specification": "spec", "implementation": "engineer"}.get(stage_id, "")
     if not stage_key:
         return ""
-    guide = Path(__file__).resolve().parents[2] / "practices" / "stories" / "stories.md"
+    guide = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / "stories" / "stories.md"
     if not guide.is_file():
         return ""
     for item in _practice_fidelities(guide.read_text(encoding="utf-8")):
@@ -1770,7 +1770,7 @@ _BOOKEND_TABS = (
 
 def copy_practice_examples(out_root: Path) -> None:
     """Copy ``{practice}/catalog-examples`` files into the catalog."""
-    practices = Path(__file__).resolve().parents[2] / "practices"
+    practices = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices"
     if not practices.is_dir():
         return
     for practice in practices.iterdir():
@@ -1843,7 +1843,7 @@ def _practice_refine_panels(
     guide_name = _PRACTICE_GUIDES.get(practice)
     if not guide_name:
         return panels, openings, False
-    guide = Path(__file__).resolve().parents[2] / "practices" / guide_name / f"{guide_name}.md"
+    guide = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / guide_name / f"{guide_name}.md"
     if not guide.is_file():
         return panels, openings, False
     for item in _practice_fidelities(guide.read_text(encoding="utf-8")):
@@ -1948,7 +1948,7 @@ def _overview_paragraph(section: str) -> str:
 
 
 def _fidelity_example_files(practice: str, fidelity: str) -> list[Path]:
-    folder = Path(__file__).resolve().parents[2] / "practices" / practice / "catalog-examples"
+    folder = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / practice / "catalog-examples"
     if not folder.is_dir():
         return []
     names = {fidelity, fidelity.replace("_", "-"), fidelity.replace("-", "_")}

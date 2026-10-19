@@ -21,7 +21,7 @@ _LEAF_ROW_Y_TOLERANCE = 30
 _LEAF_ROW_MIN_SIZE = 4
 if __name__ == '__main__':
     import sys
-    from practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
+    from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
     scanner = DrawioScanner()
     if len(sys.argv) < 2:
         print('Commands: audit')

@@ -905,12 +905,6 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
       ],
     };
   }
-  if (operation === 'create_database') {
-    return 'Created the database';
-  }
-  if (operation === 'reload_working_copy') {
-    return 'Merged working copy onto master';
-  }
   if (operation === 'load_working_copy') {
     return 'Reloaded the working copy';
   }

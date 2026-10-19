@@ -16,11 +16,11 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, contain, expect, raise_error
 
-from practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from practices.stories.model.story_model import Scenario
-from practices.stories.model.story_model import StoryModel
-from practices.stories.model.code_story_model import CodeStoryModelError
-from practices.stories.model.python.python_story_model import PythonStoryModel
+from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import Scenario
+from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
+from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
 
 
 def _story_map_with_stories() -> StoryModel:

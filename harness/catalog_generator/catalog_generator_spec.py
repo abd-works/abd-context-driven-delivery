@@ -9,7 +9,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools", "actions"):
+for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -33,8 +33,8 @@ from harness.catalog_generator.catalog_generator import (
 )
 from harness.installation.files import skill
 from harness.installation.installer import Installer
-from practices.ddd.ddd import Ddd
-from practices.stories.stories import Stories
+from cdd_guidance.practices.ddd.ddd import Ddd
+from cdd_guidance.practices.stories.stories import Stories
 from generate.generate import Generate
 from partition.partition import Partition
 
@@ -64,7 +64,7 @@ with description("Build Run Request From Live Toolset Manifest"):
             expect(req["toolset"]).to(equal("generate.generate:Generate"))
             expect(req["action"]).to(equal("generate"))
             host = req["arguments"]["tools"][0]
-            expect(host["toolset"]).to(equal("practices.stories.stories:Stories"))
+            expect(host["toolset"]).to(equal("cdd_guidance.practices.stories.stories:Stories"))
             expect(host["context"]["fidelity"]).to(equal("story_map"))
 
 
@@ -135,7 +135,7 @@ with description("Load Context Tool And Utility Registry"):
 
         with it("omits utilities marked noCatalog"):
             expect(len(UTILITY_REGISTRY) > 0).to(be_true)
-            expect(self.utilities).to(equal([]))
+            expect([entry.class_name for entry in self.utilities]).to(equal(["Repo"]))
 
         with it("resolves CDD as the header-row entry, first in the list"):
             expect(self.practices[0].display_name).to(equal("Context-driven delivery"))
@@ -164,7 +164,7 @@ with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections")
     with description("given a fidelity with no matching ### heading in {tool}.md"):
         with before.all:
             class _NoHeading:
-                __module__ = "practices.bdd.bdd"
+                __module__ = "cdd_guidance.practices.bdd.bdd"
                 fidelities = {"discovery": "modules"}  # BDD has no ### modules section
                 _fidelity_format_defaults = {}
 

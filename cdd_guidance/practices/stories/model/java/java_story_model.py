@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError
-from practices.stories.model.java.nodes import JavaEpic, JavaStory
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError
+from cdd_guidance.practices.stories.model.java.nodes import JavaEpic, JavaStory
 
 
 class JavaStoryModel(CodeStoryModel):

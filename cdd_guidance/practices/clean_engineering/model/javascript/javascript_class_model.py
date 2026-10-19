@@ -14,7 +14,7 @@ _repo = Path(__file__).resolve().parents[3]
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
 
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
@@ -24,13 +24,13 @@ from practices.clean_engineering.model.base_class_model import (
     example_extension_kind,
     is_interface_name,
 )
-from practices.clean_engineering.model.c_family_parse import CFamilyParse
-from practices.clean_engineering.model.operation import Operation
-from practices.clean_engineering.model.property import Property
-from practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
+from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
+from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
 if TYPE_CHECKING:
-    from practices.clean_engineering.clean_engineering import CleanEngineering as CleanEngineeringGuidance
+    from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering as CleanEngineeringGuidance
 
 
 def _camel_identifier(name: str) -> str:
@@ -180,7 +180,7 @@ class JavaScriptCleanEngineeringModel(CleanEngineeringModel):
         ).parse(text)
 
     def parse_detailed(self, text: str):
-        from practices.clean_engineering.model.python.python_class_model import ParsedPython
+        from cdd_guidance.practices.clean_engineering.model.python.python_class_model import ParsedPython
 
         model = self.parse(text)
         return ParsedPython(model=model, content=text, lines=text.split("\n"), tree=None)

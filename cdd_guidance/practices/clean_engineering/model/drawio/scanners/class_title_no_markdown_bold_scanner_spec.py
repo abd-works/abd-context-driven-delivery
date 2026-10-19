@@ -7,8 +7,8 @@ from expects import equal, expect
 from mamba import before, context, description, it
 
 _HERE = Path(__file__).resolve().parent
-_REPO = Path(__file__).resolve().parents[5]
-for _p in (_REPO, _REPO / "tools", _REPO / "practices"):
+_REPO = Path(__file__).resolve().parents[6]
+for _p in (_REPO, _REPO / "tools", _REPO / "cdd_guidance" / "practices"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 sys.path.insert(0, str(_HERE))

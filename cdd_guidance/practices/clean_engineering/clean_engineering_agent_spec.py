@@ -15,9 +15,9 @@ from agent_bdd import (
     sessions_dir,
 )
 
-_REPO_ROOT = repo_root_from(__file__, parents=2)
+_REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
-_TOOLSET = "practices.clean_engineering.clean_engineering:CleanEngineering"
+_TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 _HOST = {"toolset": _TOOLSET, "context": {"format": "python"}}
 
 

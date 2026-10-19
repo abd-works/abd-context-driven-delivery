@@ -2,7 +2,7 @@
 
 *StoryModel* reads one file into epics, stories, and increments. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Markdown, JSON, and the code languages continue through one background, then scenarios, steps, and examples. Draw.io and Miro stop at stories, and they still read increments. Every channel uses the same walk. A channel only differs in how the next node is taken out of the file.
 
-Callers use the base nodes. `StoryModelFactory.load` takes a file or a folder. A given step loads its example. The CodeQL extensions hold the links to a class, an operation, a property, a module, or an example in the graph. CodeQL resolves each name when its model is built. A transform to markdown or another language copies the CodeQL model and traverses those links. The copy reads the node already on the edge. It does not look the name up again.
+Callers use the base nodes. `StoryModelFactory.load` takes a file or a folder. A given step loads its example. Cross-practice links to a class, operation, property, module, or example are recorded on the graph when the working copy loads (_record_story_edges in harness/graph/working_copy.py). A transform to another channel traverses those edges on the loaded graph. The copy reads the node already on the edge. It does not look the name up again.
 
 ```
 story_model = StoryModelFactory.load(path)
@@ -10,9 +10,9 @@ story_model = StoryModelFactory.load(path)
 
 # practices/stories/model
 
-- **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads. A diagram channel writes that hierarchy as a story map. A link to a clean engineering class, operation, property, or module is a CodeQL edge. A later channel reads that edge when it is built from the CodeQL model.
+- **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads. A diagram channel writes that hierarchy as a story map. A link to clean engineering is a graph edge recorded at load time. A later channel reads that edge from the loaded graph.
 - **Seam (terms):** StoryNode, StoryModelFactory, StoryModel, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, MiroApiClient
-- **Dependencies (one-way):** the CodeQL story types read clean engineering nodes that are already in the graph. The base factory does not load a class model.
+- **Dependencies (one-way):** story loading reads clean engineering nodes that are already on the graph when cross-practice edges are built. The base factory does not load a class model.
 
 ## StoryNode
 
@@ -34,7 +34,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 	// path is a file, or a folder of files
 	// the file type, or the files in the folder, selects the channel story model
 	// the model loads itself
-	// a link to a class, an operation, or a property is resolved on the CodeQL story model
+	// cross-practice links are resolved when the graph working copy loads
 	// the return is a StoryModel
 
 ## StoryModel
@@ -66,7 +66,7 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 - load_content(): None
 	// each channel overrides this. load calls this one operation
 	// a file channel prepares its cursor over the file
-	// CodeQL runs once over the database. Its cursor is the row lists
+	// the graph loader registers facts, then populate walks edges
 - load_epics(): None
 	// while has_more_epic: append load_next_epic()
 - has_more_epic(): bool
@@ -751,172 +751,7 @@ The Miro REST API. `MiroStoryModel.upload` posts shapes through `create_shape`. 
 - get_next_and_from_file(): Step
 - get_next_example_from_file(): Example
 
-## CodeQL story types
+## Graph explorer loading
 
-CodeQL mixes the graph node into the story types. `Node` is that common node. `CodeQLStoryNode` is every Stories type on the graph. CodeQL runs over the database for a folder. It does not copy another model. `load_content` is that one run.
-
-Every noun is a node query. Every `Kind` is an edge query. `PracticeGraph` registers each node row, then relates each edge row. A CodeQL story, step, or example is the node already registered. `load_next` reads the next child on an edge of that kind, already ordered. `named()` is lookup of a node_id this run already registered. Clean Engineering node_ids are already on the graph when a story edge names a class, operation, or property.
-
-### Node queries — `practices/stories/model/{language}/codeql/loaders`
-
-Each row: node_id, name, semantic_type, practice, file, line, end_line.
-
-- **epics.ql** — Epic. The epic column on each story file
-- **stories.ql** — Story. story() and shareStory()
-- **scenarios.ql** — Scenario. scenario() nested in a story
-- **backgrounds.ql** — Background. background() on a story
-- **steps.ql** — Step. given, when, then, and, but
-- **examples.ql** — Example. Exported factories in *.examples files
-
-### Edge queries — one file per kind
-
-Each row: parent_id, child_id, kind, sequential_order, immediate. `order by sequential_order`.
-
-- **owns.ql** — Epic → Story, Story → Scenario, Story → Background, Scenario → Step, Step → Example (given/then examples, order after the step text, immediate false under an examples collapse)
-- **belongs-to.ql** — the inverse of owns
-- **scopes.ql** — Background → Example when the background's given steps own that example
-- **invokes.ql** — Step → Operation or Property on a when (and an and that continues a when). Scenario and Story collect the same edges by walking owns
-- **demonstrates.ql** — Example → OoadClass the factory builds. order 1, immediate false under an examples collapse on the class
-- **demonstrated-through.ql** — the inverse of demonstrates
-- **retrieved-using.ql** — Example → Operation or Property that reads the example back
-- **observes.ql** — then Step → Example (or the member the then names)
-- **uses.ql** — Epic → Module. The home module of a demonstrated class or of an invoked member
-
-Display reads only sequential_order and immediate. Examples sit under an examples collapse. Steps sit immediately under the scenario.
-
-## Node
-
-The graph node mixed into a CodeQL practice type. Stories, clean engineering, and DDD use this same node.
-
-+ practice: str
-+ source
-	// the file and line this node was read from
-+ node_id: str
-	// the same id is the same node. CodeQL writes it on the node row
-+ graph
-	// the practice graph this node has joined
-----
-+ semantic_type(): str
-	// Epic, Step, OoadClass, Operation, and the other node kinds
-+ slug(name: str): str
-+ join(graph): Node
-	// registers this node and sets node_id
-+ relate(kind, to, sequential_order, immediate): GraphEdge
-	// one edge from this node to another. Values come from the edge row
-+ related(kind): list
-	// the nodes on that edge. Incoming edges are read with direction in
-+ children(): list
-	// outgoing owns, sorted by sequential_order
-	// immediate true: the child is listed here
-	// immediate false: the child sits in a collapse named after kind
-
-## CodeQLStoryNode : Node
-
-+ practice: stories
-----
-- named(name, semantic_type): Node
-	// the node this run already registered, with this name and type
-
-## CodeQLStoryModel : StoryModel, CodeQLStoryNode
-
-+ CodeQLStoryModel()
-	// empty until load
-	// the database holds a folder, or a collection of folders
-------
-+ epic_type: CodeQLEpic
-+ story_type: CodeQLStory
-----
-- load_content(): None
-	// CodeQL.populate: node queries, then edge queries
-	// this model is the registered StoryModel node
-- has_more_epic(): bool
-	// another owns edge from this model whose child is an epic
-- get_next_epic_from_file(): CodeQLEpic
-	// that child, already registered
-+ save(): str
-	// no-op. The graph is the structure this model built
-
-## CodeQLEpic : Epic, CodeQLStoryNode
-
-+ CodeQLEpic()
-	// the next epics.ql row
-------
-+ owns
-	// each story
-+ uses
-	// uses.ql. Each module already registered
-----
-- load_uses(): None
-	// the uses edges already related on this epic
-
-## CodeQLStory : Story, CodeQLStoryNode
-
-+ CodeQLStory()
-	// the next stories.ql row
-------
-+ owns
-	// scenarios and background
-+ invokes
-	// union of invokes edges on the steps this story owns
-
-## CodeQLBackground : Background, CodeQLStoryNode
-
-+ CodeQLBackground()
-	// the next backgrounds.ql row
-------
-+ owns
-	// given steps
-+ scopes
-	// examples those given steps own
-
-## CodeQLScenario : Scenario, CodeQLStoryNode
-
-+ CodeQLScenario()
-	// the next scenarios.ql row
-------
-+ owns
-	// steps, sequential_order is step order, immediate
-+ invokes
-	// union of invokes edges on those steps
-
-## CodeQLStep : Step, CodeQLStoryNode
-
-+ CodeQLStep()
-	// the next steps.ql row
-------
-+ owns
-	// examples. immediate false
-+ invokes
-	// invokes.ql when, and an and that continues a when
-+ observes
-	// observes.ql then, and an and that continues a then
-----
-- load_loads(): None
-	// the owns edges whose child is an example
-- load_invokes(): None
-	// the invokes edges already related on this step
-- load_observes(): None
-	// the observes edges already related on this step
-
-## CodeQLExample : Example, CodeQLStoryNode
-
-+ CodeQLExample()
-	// the next examples.ql row
-------
-+ demonstrates
-	// demonstrates.ql. Each class already registered
-+ retrieved_using
-	// retrieved-using.ql. The operation or property, or empty
-----
-- load_demonstrates(): None
-	// the demonstrates and retrievedUsing edges already related on this example
-
-A transform builds the other channel from this model. The copy traverses uses, owned examples, invokes, demonstrates, and retrieved using, and writes each related node in that channel's format.
-
-```
-markdown = MarkdownStoryModel(codeql_model)
-markdown.save()
-```
-
-`codeql_model.save()` returns an empty string.
+`harness/graph/working_copy.py` loads story TypeScript (and markdown fallback) via `TypeScriptStoryModel` / `StoryModel`, records nodes on the stories practice with `GraphStoryModel`, and links steps and examples to clean engineering nodes in `_record_story_edges`.
 

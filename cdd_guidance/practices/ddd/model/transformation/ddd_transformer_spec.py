@@ -2,10 +2,10 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+_REPO_ROOT = Path(__file__).resolve().parents[5]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools"):
+for _cat in ("cdd_guidance/practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -14,7 +14,7 @@ from expects import equal, expect
 from mamba import description, it
 
 from harness.transformers.transformers import Transformers
-from practices.ddd.model.transformation.ddd_transformer import DddTransformer
+from cdd_guidance.practices.ddd.model.transformation.ddd_transformer import DddTransformer
 
 
 with description("DddTransformer"):

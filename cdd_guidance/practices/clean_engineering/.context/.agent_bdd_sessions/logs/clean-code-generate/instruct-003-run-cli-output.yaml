@@ -1,6 +1,6 @@
 ```yaml
 ok: true
-toolset: practices.clean_engineering.clean_engineering:CleanEngineering
+toolset: cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering
 action: validate
 result: Validation report for artifacts under {session.path}/.
 instructions: "# Validate\n\nTake the persona of a **critical judge** — do not edit\
@@ -255,7 +255,7 @@ instructions: "# Validate\n\nTake the persona of a **critical judge** — do not
   \ / `Production{Type}` subclasses — those are **usage modes**, not an inheritance\
   \ tree.\n\n**PATTERN** (see also `templates/clean_engineering-sketch.md` and templates):\n\
   \n```\n\nEvery tool call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\
-  \n```yaml\ntoolset: practices.clean_engineering.clean_engineering:CleanEngineering\n\
+  \n```yaml\ntoolset: cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering\n\
   context:\n  format: python\ntool: <tool name>\narguments:\n  <if needed>\n```\n\n\
   Run: python -m agent_tools run -\n\nSuggested flow (repeat and reorder as the story needs):\n\
   \n1. tool: ensure_session\n   arguments:\n     name: <value>\n     goal: <value>\n\

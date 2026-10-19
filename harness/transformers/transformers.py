@@ -8,7 +8,7 @@ from jinja2 import ChoiceLoader, Environment, FileSystemLoader
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.mcp.mcp_server import mcp
-from harness.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
 from harness.installation.files import Skill
 from practices.bdd.bdd import Bdd

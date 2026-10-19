@@ -9,7 +9,7 @@ from typing import Any
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -27,9 +27,9 @@ from harness.agent_tools.agent_tools import AgentToolSet
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
 )
-_STORIES_TOOLSET = "practices.stories.stories:Stories"
+_STORIES_TOOLSET = "cdd_guidance.practices.stories.stories:Stories"
 _DEFAULT_PARTITION_SNIPPET = "Hard fail"
 
 
@@ -412,3 +412,13 @@ with description("Partition verifying segment completeness"):
 
         with it("should return completeness FAIL"):
             expect("completeness: FAIL" in self._result).to(be_true)
+
+
+with description("a partition that is given files"):
+    with it("should name the file and leave the corpus out of the result"):
+        folder = Path(tempfile.mkdtemp())
+        corpus = folder / "corpus.md"
+        corpus.write_text("a very long corpus that must stay on disk\n", encoding="utf-8")
+        result = Partition().partition("corpus note", paths=str(corpus))
+        expect(str(corpus) in result).to(equal(True))
+        expect("must stay on disk" in result).to(equal(False))

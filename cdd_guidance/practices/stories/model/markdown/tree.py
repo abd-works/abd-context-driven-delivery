@@ -24,8 +24,8 @@ from __future__ import annotations
 
 from typing import Dict
 
-from practices.stories.model.markdown.nodes import MarkdownStoryModel
-from practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+from cdd_guidance.practices.stories.model.story_model import StoryModel
 
 
 def render_md_tree(

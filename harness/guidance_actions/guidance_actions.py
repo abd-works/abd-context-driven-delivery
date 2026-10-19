@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import re
+from pathlib import Path
 from typing import Any, NotRequired, TypedDict
 
-from harness.agent_tools import AgentToolSet, agent_instructions, agent_toolset
+from harness.agent_tools import AgentToolSet, agent_instructions, agent_toolset, tools
+from harness.installation.destination import diagnostic
 from prompt_echo.prompt_echo import PromptEcho, echo
 from harness.hooks.hooks import Hook
 
@@ -20,8 +23,48 @@ class GuidanceRef(TypedDict):
 
 # Guidance list, one Guidance (ref or {toolset, …}), or a string to act on directly.
 GuidanceArg = str | GuidanceRef | list[str | GuidanceRef]
+GUIDANCE_PARAMETER = (
+    "guidance: the slugs you type, such as stories, clean-engineering-model, or bdd-behavior. "
+    "A list runs this action once per slug. A module:Class ref is that slug after lookup. "
+    "Any other string is text this action runs once."
+)
 _TOOLSET_REF = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 _GUIDANCE_SLUG = re.compile(r"^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$")
+_SKIP_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
+PATHS_NOTE = (
+    "paths: a file, a list of files, or a folder. Pass paths on an MCP call. "
+    "This action reads them locally. Leave the document body out of the call."
+)
+
+
+def load_document(content: str = "", paths: list[str] | str | None = None) -> str:
+    """The in-process text, or the files at paths. Paths win."""
+    if paths in ("", None, []):
+        return content or ""
+    entries = [paths] if isinstance(paths, str) else list(paths)
+    return "\n\n".join(_read_entry(Path(entry)) for entry in entries)
+
+
+def source_label(content: str = "", paths: list[str] | str | None = None) -> str:
+    """The path names for an instruction. The file bodies stay on disk."""
+    if paths in ("", None, []):
+        return content or ""
+    if isinstance(paths, str):
+        return paths
+    return "\n".join(str(entry) for entry in paths)
+
+
+def _read_entry(path: Path) -> str:
+    if path.is_dir():
+        files = [
+            item
+            for item in sorted(path.rglob("*"))
+            if item.is_file() and not any(part in _SKIP_PARTS for part in item.parts)
+        ]
+        return "\n\n".join(
+            item.read_text(encoding="utf-8", errors="replace") for item in files
+        )
+    return path.read_text(encoding="utf-8", errors="replace")
 
 
 def listed(action) -> list:
@@ -40,6 +83,15 @@ class GuidanceAction:
         super().__init__()
         self._guidance_text: str | None = None
         self._tool_items: list = []
+
+    @diagnostic
+    @agent_instructions
+    def diagnose_actions(self, guidance: list[str] | None = None) -> str:
+        """Call installed guidance-action MCP operations and record instruction results in diagnostics.json."""
+        from harness.guidance.guidance import probe_guidance_actions
+        from harness.installation.installer import Installer
+
+        return probe_guidance_actions(guidance, Installer())
 
     def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
         """Guidance ref or dict: iterate Guidance. Other strings: run once on that text."""
@@ -101,15 +153,27 @@ class GuidanceAction:
     def run(self, guidance: GuidanceArg, operation, *, action: str = "") -> list:
         """Bind guidance and run ``operation`` on the string or each Guidance."""
         self._bind_guidance(guidance)
+        self._log_running_action(action)
         # self.begin(guidance, action=action)
         results = self.each(operation)
         return results
 
+    def _log_running_action(self, action: str) -> None:
+        if not action:
+            return
+        from space.session import Session
+
+        session = Session._current
+        if session is None or session.session_path is None:
+            return
+        session.log_action(action, [])
+
     @echo
     @agent_instructions
     def begin(self, guidance: GuidanceArg | None = None, action: str = "") -> str:
-        """Start a guidance action: open the workspace if needed, attach this action to the session turn, and load decision records. A session is optional — the action still runs without one."""
+        """Start a guidance action: open the workspace if needed, attach this action to the session turn, and load decision records. A session is optional — the action still runs without one. Follow act_quickly."""
         self._bind_guidance(guidance)
+        tools(self.act_quickly)
         return ""
         # warning = ""
         # session = self.workspace.current_work_session
@@ -123,6 +187,18 @@ class GuidanceAction:
         #     if not warning:
         #         warning = session.branch_warning()
         # return warning
+
+    @agent_instructions
+    def act_quickly(self) -> str:
+        """Guidance action code should finish in well under 10 seconds. Pass paths — a file, a list of files, or a folder — and let the action read them. Do not put a document body on an MCP call. If a call has stalled for more than 10 seconds, stop it, find the cause, and report that diagnosis. Add a failing test for that cause before changing the code. Do not rerun the same call outside the tool."""
+        return (
+            "Guidance action code should finish in well under 10 seconds. "
+            "Pass paths — a file, a list of files, or a folder — and let the action read them. "
+            "Do not put a document body on an MCP call. "
+            "If a call has stalled for more than 10 seconds, stop it, find the cause, and report that diagnosis. "
+            "Add a failing test for that cause before changing the code. "
+            "Do not rerun the same call outside the tool."
+        )
 
     @echo
     @Hook("postToolUse")
@@ -207,9 +283,12 @@ class GuidanceCatalog:
         from harness.installation.installer import Installer
         from harness.agent_tools.agent_tools import AgentToolSet
 
+        installer = Installer()
         refs: dict[str, str | dict[str, Any]] = {}
-        for ref in Installer().collect_toolsets():
-            cls._index_ref(refs, ref, AgentToolSet)
+        practices = installer.repo / "cdd_guidance" / "practices"
+        for py_file in installer._iter_collect_files(practices):
+            for ref in installer._toolset_refs_in_file(py_file, installer.repo):
+                cls._index_ref(refs, ref, AgentToolSet)
         cls._refs = refs
 
     @classmethod

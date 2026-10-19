@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -82,6 +82,12 @@ with description("Sketch toolset"):
             self.tmp = tempfile.TemporaryDirectory()
             self.destination = self.tmp.name
             self.sketcher = Sketch()
+
+        with it("reads the sketch from a file when paths is set"):
+            source = Path(self.destination) / "draft.md"
+            source.write_text("from the file\n", encoding="utf-8")
+            path = self.sketcher.save_sketch(self.destination, "from-file", paths=str(source))
+            expect(Path(path).read_text(encoding="utf-8")).to(equal("from the file\n"))
 
         with it("writes a sprint-folder destination up into path/.context"):
             sprint = Path(self.destination) / ".context" / "sessions" / "my-sprint"
@@ -243,7 +249,7 @@ with description("Sketch toolset"):
             expect(joined).to(contain("Grill the sketch plan"))
 
         with it("inlines each listed practice's rules markdown_block"):
-            from practices.bdd.bdd import Bdd
+            from cdd_guidance.practices.bdd.bdd import Bdd
 
             sketcher = Sketch()
             sketcher.begin([Bdd(fidelity="behavior")], action="sketch")
@@ -259,7 +265,7 @@ with description("an MCP sketch prompt"):
     with it("should return sketch instructions for prose that contains a colon"):
         from harness.mcp.mcp_server import McpHost
 
-        repo = Path(__file__).resolve().parents[2]
+        repo = Path(__file__).resolve().parents[3]
         host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
         prose = "Three client perspectives: prospect onboarding and active account."
         result = str(host._runtime.invoke_prompt("sketch.sketch", {"guidance": prose}))
@@ -269,12 +275,12 @@ with description("an MCP sketch prompt"):
     with it("should inline listed practice rules into the sketch instructions"):
         from harness.mcp.mcp_server import McpHost
 
-        repo = Path(__file__).resolve().parents[2]
+        repo = Path(__file__).resolve().parents[3]
         host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
         result = str(
             host._runtime.invoke_prompt(
                 "sketch.sketch",
-                {"guidance": ["practices.bdd.bdd:Bdd"]},
+                {"guidance": ["cdd_guidance.practices.bdd.bdd:Bdd"]},
             )
         )
         expect(result).to(contain("observable-behavior"))
@@ -282,7 +288,7 @@ with description("an MCP sketch prompt"):
     with it("should include each practice sketch template and rules"):
         from harness.mcp.mcp_server import McpHost
 
-        repo = Path(__file__).resolve().parents[2]
+        repo = Path(__file__).resolve().parents[3]
         host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
         result = str(
             host._runtime.invoke_prompt(
@@ -314,7 +320,7 @@ with description("PracticeGuidance operations for sketch"):
     with it("should not expose sketch on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
-                "builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+                "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
         practice = cls()

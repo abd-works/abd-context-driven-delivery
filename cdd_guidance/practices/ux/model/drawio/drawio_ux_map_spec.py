@@ -10,8 +10,8 @@ _REPO = Path(__file__).resolve().parents[3]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from practices.ux.model.drawio.nodes import DrawioUxMap
-from practices.ux.model.nodes import Region, Screen, Transition
+from cdd_guidance.practices.ux.model.drawio.nodes import DrawioUxMap
+from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
 
 
 class SpecFixture:

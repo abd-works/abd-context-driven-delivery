@@ -1,21 +1,21 @@
 # CreateContextTool
 
-**Purpose:** Meta BaseContextTool domain that scaffolds or patches new context domains under `practices/` from `templates/` and the `examples/car_chronicle/` reference extension.
+**Purpose:** Meta **PracticeGuidance** builder that scaffolds or patches new practice packages under `cdd_guidance/practices/` from `templates/` and the `_examples/car_chronicle/` reference.
 
-**Primary use case:** Generate a thin domain package (class module, `{domain}.md`, examples, optional formats/scanners) without putting new domains inside `base/` except under this kit.
+**Primary use case:** Generate a thin practice package (class module, `{domain}.md`, templates, examples, optional `model/{format}/` and scanners) without putting new domains inside `harness/`.
 
-**Rationale:** Scaffolding lives beside the composer (`base`) so lifecycle prose stays shared while domain creation keeps its own contexts, templates, and worked samples.
+**Rationale:** Scaffolding stays in `cdd_guidance/builders/` while runtime guidance types live in `harness/guidance/`.
 
 ## Seam
 
-`CreateContextTool` is the public surface callers construct and run for scaffold/patch. Constraint: do not invent domains inside `base/` outside this kit; subclass `BaseContextTool` in a new underscored folder and leave framework instruction slots alone unless composing another toolset in plain code.
+`CreateContextTool` is the public surface callers construct for scaffold/patch. Constraint: subclass **`PracticeGuidance`** in a new underscored folder under `practices/`; follow **`harness/guidance/AGENTS.md`**; lifecycle work goes through Guidance actions with `guidance=[...]`, not methods on the practice class.
 
 ## Public API
 
 - `CreateContextTool(format=None, path=None, session=None, workspace=None)`
-- Class attrs: `default_workspace_folder`, `context_index_key`
-- Inherited operations: `guidance`, `contexts`, `examples`, `templates`, session tools. Lifecycle generate / validate / satisfy / repair live on kits (`Generate().generate(tools=[create])`).
+- Class attr: `default_workspace_folder`
+- Inherited: `instructions`, `overview`, `guidance`, `rules`, `templates`, `examples`, `fidelities` (when present in md). **generate** / **repair** / **validate** are separate Guidance actions.
 
 ## Dependencies
 
-`BaseContextTool` (subclass); scaffold assets under `templates/`; worked samples under `examples/`
+`harness/guidance` (`PracticeGuidance`); scaffold assets under `templates/`; worked sample under `_examples/car_chronicle/`

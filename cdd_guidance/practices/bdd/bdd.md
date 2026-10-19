@@ -2,7 +2,7 @@
 
 Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
 
-**Tooling & Idioms:** Refer to [`practices/language-tools.md`](/practices/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
+**Tooling & Idioms:** Refer to [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
 
 ## Guidance
 
@@ -94,6 +94,7 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 | Fidelity | Output |
 |---|---|
 | **behavior** | describe/it hierarchy with `BDD: SIGNATURE` markers in each `it` |
+| **realization** | Same hierarchy; each `it should` carries the domain call graph (`->` / `<-`) for Act and observable side effects |
 | **development** | Implemented tests + production code |
 
 ## Shared rules
@@ -115,7 +116,7 @@ Whenever you write or reshape describe / that / with / it-should specs, or code 
 - **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
 - **`context-setup-expresses-state`** — Any `before.each`, `before.all`, or Arrange nested directly under a `that`/`with` must establish the state named in that label. Read label and setup together: if the label says the subject is annotated, configured, or classified a certain way, the setup must make that true — not merely boot the host, wire paths, or call a factory. Put host boot, browser launch, and construction plumbing in a parent context whose label says the host is started, loaded, or running (`that is hosted on…`, `that the server has started…`).
 - **`full-surface-coverage`** — Full coverage means the behavior tree is complete — every observable outcome has an `it should` in the right branch. Walk the describe/`that`/`with` tree for missing subjects, states, and outcomes; do not add one `it` per public method just because the member exists.
-- **`scan-fixture-pair`** — A mechanical mistake spec passes the fail file to `expect_scan_fails` and the pass file to `expect_scan_passes` (`practices.bdd.spec_helpers`). Do not invent a parallel eval spec harness.
+- **`scan-fixture-pair`** — A mechanical mistake spec passes the fail file to `expect_scan_fails` and the pass file to `expect_scan_passes` (`cdd_guidance.practices.bdd.spec_helpers`). Do not invent a parallel eval spec harness.
 
 ## Fidelities
 
@@ -156,7 +157,7 @@ If this change will not stay here, follow `practices/bdd.mdc`.
 - **`context-setup-expresses-state`** — Setup under a label must establish that label's state, not unrelated host boot.
 - **`shared-describe-subject`** — Same rule as shared rules (above); at behavior fidelity, scan the spec file for repeated top-level `describe` prefixes before adding another subject line.
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
-- **`framework-syntax`** — Refer to [`practices/language-tools.md`](/practices/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
+- **`framework-syntax`** — Refer to [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
 
 **Pass:**
 ```typescript
@@ -166,6 +167,55 @@ it('should apply a percentage discount to eligible items', () => {
 ```
 
 **Fail:** any assertion, mock, import of production code, or helper inside the body.
+
+---
+
+### realization
+
+```yaml
+default_format: markdown
+stage: specification
+clean_engineering: model
+```
+
+#### Overview
+
+Expand each agreed `it should` into the domain call graph that executes that observation — sketch fidelity only (signatures and collaborator calls, no bodies). Notation matches `@clean_engineering` **model** interactions (`->` outbound, `<-` return). This fidelity does not restate GWT scenarios; it traces the describe/`that`/`with` tree already fixed at **behavior**.
+
+#### Sketch
+
+Ask which public operation on the subject under test each observation exercises, which collaborators participate, and what crosses an external-system boundary. Write the graph from a read of production code at those seams.
+
+#### Guidance
+
+- **Default on** after **behavior** signatures exist, unless the user says **no realizations**.
+- Walk implementation from the outermost domain entry for the observation; strip pass-through helpers and language-native noise; stop at external systems with `[ExternalSystem]` at the boundary (same rules as `@practices/stories/story-realizations`).
+- Keep Arrange surface lines (`-> subject = new …`, property sets) separate from the nested call graph under the Act that the observation proves.
+- Store graphs on observations in the BDD model: fenced blocks in `templates/bdd-sketch.md`, round-tripped through `practices/bdd/model` (same call-graph conversion as stories and clean engineering).
+
+Fill the **realization** section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`) — call-graph comments or structured `realization` data beside each `BDD: SIGNATURE` until **development** replaces them with real Arrange / Act / Assert.
+
+#### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java,**/*-sketch.md,**/*-realization.md"
+```
+
+Whenever you add or change call graphs on BDD observations, or change production code those graphs describe. Follow these rules.
+
+If this change will not stay here, follow `practices/bdd/behavior.mdc`.
+
+- **`strip-helpers-to-domain-calls`** — Same rule as story realizations: show the domain call the helper delegates to.
+- **`full-call-graph-per-observation`** — Follow every named domain or external-system collaborator from the entry operation through returns; do not stop at the first hop.
+- **`external-systems-at-their-boundary`** — Label `[ExternalSystem]` at the seam; do not recurse inside vendor code.
+- **`no-typescript-internals`** — Omit framework and language-native steps unless the observation is entirely infrastructure.
+- **`sketch-fidelity`** — Signatures and interaction arrows only; no assertions, mocks, or production imports in the realization artifact.
+- **`hierarchy-preservation`** — One graph per `it should`; do not add or remove observations when deepening to realization.
+
+**Pass:** an `it` whose body is only call-graph comments (or `BDD: SIGNATURE` plus `# ->` lines) naming real domain operations.
+
+**Fail:** assertions, mocks, or invented collaborators not traced to source.
 
 ---
 
@@ -185,12 +235,12 @@ Implement BDD tests with production code.
 
 **Procedure:** Follow the **Test shape ladder** in `@clean_engineering` `## code` § Procedure — real conditions first, then stub TDD, then e2e swap on request.
 
-**Tooling & Idioms:** Refer to [`practices/language-tools.md`](/practices/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
+**Tooling & Idioms:** Refer to [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
 
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
 3. **Identify shared setup** — extract to `beforeEach` / `with before.each:` or a factory when three or more siblings share arrangement.
-4. Pick **one** marker. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
+4. Pick **one** marker. Use the **realization** call graph for Act when present; otherwise derive Act from the observation label and domain model. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 5. Run the test — confirm RED for the right reason.
 6. Write the **minimum** production code until GREEN (PRODUCTION CODE section of the same template).
 7. Refactor only while green. Move to the next marker.
@@ -271,7 +321,7 @@ with context("that has been installed to Cursor from practice guidance with fide
     with before.each:
         Installer(ide="Cursor", path=self.tree).install([SamplePracticeWithFidelities()])
     with context("with fidelity artifacts assembled in one install pass"):
-        with it("should emit the practice skill, practice rules, fidelity commands, and fidelity rules in one pass"):
+        with it("should emit the practice skill, practice rules, fidelity skills, and fidelity rules in one pass"):
             ...
 ```
 

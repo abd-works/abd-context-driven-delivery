@@ -5,8 +5,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from practices.clean_engineering.model.property import Property
-from practices.ddd.model.nodes import (
+from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.ddd.model.nodes import (
     Aggregate,
     BoundedContext,
     BoundedContextMap,
@@ -72,20 +72,20 @@ class MarkdownDomainNode:
     def building_block_type(self, text: str) -> type:
         marks = {item.lower() for item in self.stereotypes(text)}
         if "specification" in marks:
-            from practices.ddd.model.nodes import Specification
+            from cdd_guidance.practices.ddd.model.nodes import Specification
             return Specification
         if "value object" in marks:
-            from practices.ddd.model.nodes import ValueObject
+            from cdd_guidance.practices.ddd.model.nodes import ValueObject
             return ValueObject
         if "repository" in marks:
-            from practices.ddd.model.nodes import Repository
+            from cdd_guidance.practices.ddd.model.nodes import Repository
             return Repository
         if "domain event" in marks:
             return DomainEvent
         if "domain service" in marks or "service" in marks:
             return DomainService
         if "factory" in marks:
-            from practices.ddd.model.nodes import Factory
+            from cdd_guidance.practices.ddd.model.nodes import Factory
             return Factory
         if "entity" in marks or "aggregate root" in marks:
             return Entity

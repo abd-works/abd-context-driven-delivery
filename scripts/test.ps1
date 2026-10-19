@@ -24,7 +24,7 @@ $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
 )
 
 function Set-TestEnvironment {
-    $roots = @(".", "actions", "tools", "practices", "patterns")
+    $roots = @(".", "cdd_guidance/actions", "tools", "cdd_guidance/practices", "cdd_guidance/patterns")
     # Leave the harness folder off the path so `import mcp` stays the SDK,
     # not harness/mcp. The repo root still exposes the harness package.
     $env:PYTHONPATH = (($roots | ForEach-Object { Join-Path $repo $_ }) -join [IO.Path]::PathSeparator)
@@ -104,7 +104,7 @@ try {
         $specs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
             -not (Test-AgenticBdd ([IO.Path]::GetFileName($_)))
         })
-        $storyModule = Join-Path $repo "practices\stories\templates\py"
+        $storyModule = Join-Path $repo "cdd_guidance\practices\stories\templates\py"
         $savedPath = $env:PYTHONPATH
         $env:PYTHONPATH = "$storyModule$([IO.Path]::PathSeparator)$savedPath"
         $storyFailures = Invoke-Reported "Python story tests" $stories {

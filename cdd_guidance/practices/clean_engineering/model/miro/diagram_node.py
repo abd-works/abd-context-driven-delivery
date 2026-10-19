@@ -5,13 +5,13 @@ import re
 from html import escape
 from typing import List
 
-from practices.clean_engineering.model.base_class_model import OoadClass
-from practices.clean_engineering.model.diagram.diagram_node import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
     ImportedClass,
 )
-from practices.clean_engineering.model.diagram.geometry import Geometry
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
 
 
 class MiroClass(DiagramClass):

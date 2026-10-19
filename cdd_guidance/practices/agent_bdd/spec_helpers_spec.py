@@ -2,10 +2,10 @@
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -58,7 +58,7 @@ with description("spec_helpers"):
 
     with context("invoke_toolset"):
         with it("should invoke car-start in-process"):
-            root = repo_root_from(__file__, parents=2)
+            root = repo_root_from(__file__, parents=3)
             ensure_invoke_staged(root)
             request = invoke_request_for_path(CAR_START, repo_root=root)
             response = invoke_toolset(
@@ -78,8 +78,8 @@ with description("spec_helpers"):
             )
 
         with it("should resolve repo root from this package"):
-            root = repo_root_from(__file__, parents=2)
-            expect((root / "practices" / "agent_bdd").is_dir()).to(equal(True))
+            root = repo_root_from(__file__, parents=3)
+            expect((root / "cdd_guidance" / "practices" / "agent_bdd").is_dir()).to(equal(True))
 
     with context("a pass fixture handed to generate"):
         with it("should ask the agent to generate something similar"):

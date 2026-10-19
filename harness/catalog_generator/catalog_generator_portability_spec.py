@@ -8,7 +8,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("practices", "tools"):
+for _cat in ("cdd_guidance/practices", "tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -51,12 +51,12 @@ with description("Embed Local Assets And Content Into Generated HTML"):
 
         with it("writes the literal content into the generated HTML with no runtime fetch"):
             target = CatalogPage(self.tmp).write(
-                "actions/repair.html", "<article>literal content here</article>"
+                "cdd_guidance/actions/repair.html", "<article>literal content here</article>"
             )
             expect(target.is_file()).to(be_true)
             written = target.read_text(encoding="utf-8")
             expect("literal content here" in written).to(be_true)
-            expect("practices/" in written).to(equal(False))
+            expect("cdd_guidance/practices/" in written).to(equal(False))
             expect("tools/" in written or "tools\\" in written).to(equal(False))
 
 

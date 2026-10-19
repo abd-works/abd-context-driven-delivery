@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from harness.sketch.sketch_outline import SketchLens, SketchOutline
-from practices.ddd.model.markdown.nodes import (
+from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.practices.ddd.model.markdown.nodes import (
     MarkdownAggregate,
     MarkdownBoundedContext,
     MarkdownBoundedContextMap,

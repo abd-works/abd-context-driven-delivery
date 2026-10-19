@@ -7,13 +7,13 @@ from pathlib import Path
 from expects import contain, equal, expect
 from mamba import before, description, it
 
-_REPO = Path(__file__).resolve().parents[3]
+_REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from graph import Graph  # noqa: E402
-from practices.stories.model.graph_story_model import GraphStoryModel  # noqa: E402
-from practices.stories.model.story_model import Scenario, Step, StepType, Story, StoryModel  # noqa: E402
+from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel  # noqa: E402
+from cdd_guidance.practices.stories.model.story_model import Scenario, Step, StepType, Story, StoryModel  # noqa: E402
 
 
 with description("GraphStoryModel rule data"):

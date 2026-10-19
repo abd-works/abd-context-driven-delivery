@@ -11,8 +11,8 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from practices.stories.model.javascript.spec_file import render_story_spec_file
-from practices.stories.model.story_model import Example, StepType, Scenario, Step, Story
+from cdd_guidance.practices.stories.model.javascript.spec_file import render_story_spec_file
+from cdd_guidance.practices.stories.model.story_model import Example, StepType, Scenario, Step, Story
 
 
 def load_story_dict(path: Path) -> dict:

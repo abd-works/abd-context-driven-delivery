@@ -11,11 +11,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from practices.stories.model.code_story_model import CodeStoryModelError
-from practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
-from practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from practices.stories.model.story_model import StepType, Scenario, Step
-from practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModelError
+from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
+from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import StepType, Scenario, Step
+from cdd_guidance.practices.stories.model.story_model import StoryModel
 
 
 def _make_scenario(name: str, order: int, given_text: str = "a context") -> Scenario:

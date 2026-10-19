@@ -3,12 +3,14 @@
 import asyncio
 import json
 import sys
+import tempfile
+from datetime import timedelta
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("tools", "practices", "actions"):
+for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _path = str(_REPO_ROOT / _cat)
     if _path not in sys.path:
         sys.path.insert(0, _path)
@@ -18,10 +20,10 @@ from mamba import context, description, it
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-_HOSTING_DEMO = "harness.mcp.examples.hosting_demo.hosting_demo:HostingDemo"
+_HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
 _ECHO = "echo.echo:Echo"
 _PARAMETER_TYPES = (
-    "harness.mcp.examples.parameter_types.parameter_types:ParameterTypes"
+    "harness.mcp._examples.parameter_types.parameter_types:ParameterTypes"
 )
 _ECHO_ARGUMENTS = {
     "text": "parcel",
@@ -45,8 +47,8 @@ _PYTHONPATH = ";".join(
     [
         str(_REPO_ROOT),
         str(_REPO_ROOT / "tools"),
-        str(_REPO_ROOT / "practices"),
-        str(_REPO_ROOT / "actions"),
+        str(_REPO_ROOT / "cdd_guidance" / "practices"),
+        str(_REPO_ROOT / "cdd_guidance" / "actions"),
     ]
 )
 
@@ -89,9 +91,10 @@ class StdioHostProbe:
         return _text(read_count)
 
 
-async def _with_session(toolsets: str, action):
+async def _with_session(toolsets: str, action, seconds: float | None = None):
+    timeout = None if seconds is None else timedelta(seconds=seconds)
     async with stdio_client(StdioHostProbe().host_params(toolsets)) as (read_stream, write_stream):
-        async with ClientSession(read_stream, write_stream) as session:
+        async with ClientSession(read_stream, write_stream, read_timeout_seconds=timeout) as session:
             await session.initialize()
             return await action(session)
 
@@ -300,3 +303,29 @@ with description("an MCP host over stdio"):
                 )
             )
             expect(json.loads(_text(result))).to(equal({"n": 3}))
+
+_RENDER = "cdd_guidance.actions.render.render:Render"
+
+
+with description("an MCP host rendering from a file path"):
+    with it("should return the render within 10 seconds"):
+        folder = Path(tempfile.mkdtemp(prefix="mcp-render-path-"))
+        sketch = folder / "cart-sketch.md"
+        sketch.write_text("Cart\n  owner\n", encoding="utf-8")
+
+        result = _run_async(
+            _with_session(
+                _RENDER,
+                lambda session: session.call_tool(
+                    "render.render",
+                    arguments={
+                        "guidance": ["clean-engineering-model"],
+                        "format": "python",
+                        "source": "sketch",
+                        "paths": [str(sketch)],
+                    },
+                ),
+                seconds=10,
+            )
+        )
+        expect(_text(result)).to(contain("Cart"))

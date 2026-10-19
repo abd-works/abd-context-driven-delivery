@@ -5,11 +5,11 @@ from __future__ import annotations
 from functools import lru_cache
 
 _PRACTICE_GUIDANCE = {
-    "clean_engineering": ("practices.clean_engineering.clean_engineering", "CleanEngineering"),
-    "stories": ("practices.stories.stories", "Stories"),
-    "ddd": ("practices.ddd.ddd", "Ddd"),
-    "bdd": ("practices.bdd.bdd", "Bdd"),
-    "ux": ("practices.ux.ux", "Ux"),
+    "clean_engineering": ("cdd_guidance.practices.clean_engineering.clean_engineering", "CleanEngineering"),
+    "stories": ("cdd_guidance.practices.stories.stories", "Stories"),
+    "ddd": ("cdd_guidance.practices.ddd.ddd", "Ddd"),
+    "bdd": ("cdd_guidance.practices.bdd.bdd", "Bdd"),
+    "ux": ("cdd_guidance.practices.ux.ux", "Ux"),
 }
 
 

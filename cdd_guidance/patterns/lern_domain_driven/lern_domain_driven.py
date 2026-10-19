@@ -11,7 +11,7 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
 if TYPE_CHECKING:
-    from practices.stories.stories import Stories
+    from cdd_guidance.practices.stories.stories import Stories
 
 
 @agent_toolset
@@ -28,7 +28,7 @@ class LernDomainDriven(PracticeGuidance):
 
     def _stories(self) -> "Stories":
         """Stories companion pinned at acceptance_tests fidelity, typescript format."""
-        from practices.stories.stories import Stories
+        from cdd_guidance.practices.stories.stories import Stories
 
         instance = Stories(
             fidelity="acceptance_tests",

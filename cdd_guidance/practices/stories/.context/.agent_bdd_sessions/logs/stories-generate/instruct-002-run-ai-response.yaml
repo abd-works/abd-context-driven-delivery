@@ -1,5 +1,5 @@
 ok: true
-toolset: practices.stories.stories:Stories
+toolset: cdd_guidance.practices.stories.stories:Stories
 action: generate
 result: When done, run validate.
 instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session tools\
@@ -754,7 +754,7 @@ instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session to
   }\n\ncreate{StoryVerbNoun}Story(\"fake\");\n\n\nPrepend the following block verbatim\
   \ as the very first lines of the file you are writing - before any imports, before\
   \ any code.\n\nEvery tool call uses this shape - set `tool` and `arguments`, pipe\
-  \ to CLI:\n\n```yaml\ntoolset: practices.stories.stories:Stories\ncontext:\n\
+  \ to CLI:\n\n```yaml\ntoolset: cdd_guidance.practices.stories.stories:Stories\ncontext:\n\
   \  fidelity: discovery\n  format: markdown\ntool: <tool name>\narguments:\n  <if\
   \ needed>\n```\n\nRun: python -m agent_tools run -\n\nSuggested flow (repeat and reorder\
   \ as the story needs):\n\n1. tool: ensure_session\n   arguments:\n     name: <value>\n\

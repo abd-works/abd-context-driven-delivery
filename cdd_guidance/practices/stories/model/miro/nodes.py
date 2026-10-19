@@ -13,14 +13,14 @@ import time
 import xml.etree.ElementTree as ET
 from typing import Callable, Dict, List, Optional
 
-from practices.stories.model.diagram_story_model import (
+from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
     DiagramStoryModel,
     DiagramEpic,
 )
-from practices.stories.model.story_model import Epic, StoryModel, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import Epic, StoryModel, StoryType, Epic
 
 
 class MiroIncrement(DiagramIncrement):

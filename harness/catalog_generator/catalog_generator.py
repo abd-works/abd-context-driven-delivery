@@ -49,18 +49,18 @@ _NO_CATALOG = "noCatalog"
 # other five are the board's context-tool rows.
 
 CONTEXT_TOOL_REGISTRY: tuple[tuple[str, str, str], ...] = (
-    ("Context-driven delivery", "practices.cdd.cdd", "Cdd"),
-    ("Stories", "practices.stories.stories", "Stories"),
-    ("Clean Engineering", "practices.clean_engineering.clean_engineering", "CleanEngineering"),
-    ("User Experience", "practices.ux.ux", "Ux"),
-    ("Behavior-Driven Development", "practices.bdd.bdd", "Bdd"),
-    ("Domain-Driven Design", "practices.ddd.ddd", "Ddd"),
+    ("Context-driven delivery", "cdd_guidance.practices.cdd.cdd", "Cdd"),
+    ("Stories", "cdd_guidance.practices.stories.stories", "Stories"),
+    ("Clean Engineering", "cdd_guidance.practices.clean_engineering.clean_engineering", "CleanEngineering"),
+    ("User Experience", "cdd_guidance.practices.ux.ux", "Ux"),
+    ("Behavior-Driven Development", "cdd_guidance.practices.bdd.bdd", "Bdd"),
+    ("Domain-Driven Design", "cdd_guidance.practices.ddd.ddd", "Ddd"),
 )
 
 # Installer owns install. Diagnose, echo, handoff, and workspace are live utilities.
 UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("installer", "harness.installation.installer", "Installer"),
-    ("diagnose", "diagnose.diagnose", "Diagnose"),
+    ("diagnose", "cdd_guidance.actions.diagnose.diagnose", "Diagnose"),
     ("echo", "echo.echo", "Echo"),
     ("handoff", "handoff.handoff", "Handoff"),
     ("repo", "space.repo.agent", "Repo"),
@@ -643,16 +643,16 @@ _LIFECYCLE_ACTIONS = frozenset({
 })
 
 _KIT_LIFECYCLE_SPECS: tuple[tuple[str, Path, str], ...] = (
-        ("partition", _REPO_ROOT / "actions" / "partition" / "partition.py", "partition"),
-        ("grill", _REPO_ROOT / "actions" / "grill_context" / "grill_context.py", "grill_context"),
-        ("sketch", _REPO_ROOT / "actions" / "sketch" / "sketch.py", "sketch"),
-        ("iterate", _REPO_ROOT / "actions" / "iterate" / "iterate.py", "iterate"),
-        ("generate", _REPO_ROOT / "actions" / "generate" / "generate.py", "generate"),
-        ("document", _REPO_ROOT / "actions" / "document" / "document.py", "document"),
-        ("validate", _REPO_ROOT / "actions" / "validate" / "validate.py", "validate"),
-        ("satisfy", _REPO_ROOT / "actions" / "satisfy" / "satisfy.py", "satisfy"),
-        ("repair", _REPO_ROOT / "actions" / "improvement" / "improvement.py", "improvement"),
-        ("createRule", _REPO_ROOT / "actions" / "validate" / "validate.py", "validate"),
+        ("partition", _REPO_ROOT / "cdd_guidance" / "actions" / "partition" / "partition.py", "partition"),
+        ("grill", _REPO_ROOT / "cdd_guidance" / "actions" / "grill_context" / "grill_context.py", "grill_context"),
+        ("sketch", _REPO_ROOT / "cdd_guidance" / "actions" / "sketch" / "sketch.py", "sketch"),
+        ("iterate", _REPO_ROOT / "cdd_guidance" / "actions" / "iterate" / "iterate.py", "iterate"),
+        ("generate", _REPO_ROOT / "cdd_guidance" / "actions" / "generate" / "generate.py", "generate"),
+        ("document", _REPO_ROOT / "cdd_guidance" / "actions" / "document" / "document.py", "document"),
+        ("validate", _REPO_ROOT / "cdd_guidance" / "actions" / "validate" / "validate.py", "validate"),
+        ("satisfy", _REPO_ROOT / "cdd_guidance" / "actions" / "satisfy" / "satisfy.py", "satisfy"),
+        ("repair", _REPO_ROOT / "cdd_guidance" / "actions" / "improvement" / "improvement.py", "improvement"),
+        ("createRule", _REPO_ROOT / "cdd_guidance" / "actions" / "validate" / "validate.py", "validate"),
     )
 
 class ActionResolution:
@@ -879,7 +879,7 @@ class ActionResolution:
         self.action_names = {"generate"}
         return ActionResolution(
             name=self._kit_name,
-            source_dir=_REPO_ROOT / "actions" / self._kit_dir_name,
+            source_dir=_REPO_ROOT / "cdd_guidance" / "actions" / self._kit_dir_name,
             calls=self._guidance_action_calls(),
         )
 
@@ -932,16 +932,16 @@ class ActionResolution:
 
 
 _LIFECYCLE_KIT_IMPORTS: tuple[tuple[str, str, str], ...] = (
-    ("partition", "actions.partition.partition", "Partition"),
-    ("grill", "actions.grill_context.grill_context", "GrillContext"),
-    ("sketch", "actions.sketch.sketch", "Sketch"),
-    ("iterate", "actions.iterate.iterate", "Iterate"),
-    ("generate", "actions.generate.generate", "Generate"),
-    ("document", "actions.document.document", "Document"),
-    ("validate", "actions.validate.validate", "Validate"),
-    ("satisfy", "actions.satisfy.satisfy", "Satisfy"),
-    ("repair", "actions.improvement.improvement", "Improvement"),
-    ("createRule", "actions.validate.validate", "Validate"),
+    ("partition", "cdd_guidance.actions.partition.partition", "Partition"),
+    ("grill", "cdd_guidance.actions.grill_context.grill_context", "GrillContext"),
+    ("sketch", "cdd_guidance.actions.sketch.sketch", "Sketch"),
+    ("iterate", "cdd_guidance.actions.iterate.iterate", "Iterate"),
+    ("generate", "cdd_guidance.actions.generate.generate", "Generate"),
+    ("document", "cdd_guidance.actions.document.document", "Document"),
+    ("validate", "cdd_guidance.actions.validate.validate", "Validate"),
+    ("satisfy", "cdd_guidance.actions.satisfy.satisfy", "Satisfy"),
+    ("repair", "cdd_guidance.actions.improvement.improvement", "Improvement"),
+    ("createRule", "cdd_guidance.actions.validate.validate", "Validate"),
 )
 
 def resolve_lifecycle_actions() -> list[ActionResolution]:
@@ -1758,7 +1758,7 @@ class Catalog:
 
     def _board_tool_entries(self) -> list[dict]:
         from harness.catalog_generator.foundry_chrome import STAGES
-        from practices.cdd.cdd import _CONTEXT_TOOLS_BY_STAGE
+        from cdd_guidance.practices.cdd.cdd import _CONTEXT_TOOLS_BY_STAGE
 
         tools_on_stage: dict[str, set[str]] = {
             stage: {RegistryEntry("", "", "", cls).toolset_name() for cls in classes}

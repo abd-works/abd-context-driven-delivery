@@ -11,8 +11,8 @@ from pathlib import Path
 
 from harness.graph.node_data import encode_node_data
 
-from practices.stories.model.source_location import SourceLocation
-from practices.stories.model.story_model import Epic, Step, StepType, Story, StoryModel
+from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepType, Story, StoryModel
 
 
 class GraphStoryModel:

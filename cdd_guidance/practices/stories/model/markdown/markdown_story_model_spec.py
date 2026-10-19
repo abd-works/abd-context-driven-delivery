@@ -13,11 +13,12 @@ for _candidate in _HERE.parents:
 from mamba import description, context, it, before
 from expects import equal, have_len, be_true, be_false, expect, raise_error
 
-from practices.stories.model.story_model import Epic, Story, StoryType, Epic
-from practices.stories.model.story_model import Scenario
-from practices.stories.model.story_model import StoryModel
-from practices.stories.model.markdown.nodes import (
+from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_model import Scenario, StepType
+from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.markdown.nodes import (
     MarkdownParseError,
+    MarkdownScenario,
     MarkdownStoryModel,
 )
 
@@ -304,3 +305,27 @@ _Scope: mixed markdown content should be tolerated._
                 expect(lambda: self.markdown.parse(bad_document)).to(
                     raise_error(MarkdownParseError)
                 )
+
+
+with description("a scenario markdown file with realization fences"):
+    with it("should parse and render call graphs on When steps"):
+        text = """
+### Scenario: pays with card
+
+*Given* a cart with items
+*When* the customer checks out
+
+```realization
+cart.checkout()
+  -> paymentGateway.charge(amount)
+  <- receipt
+```
+
+*Then* the receipt is visible
+"""
+        scenarios = MarkdownScenario.from_text(text, "pay/cart_story.test.md")
+        when = scenarios[0].steps_in(StepType.WHEN)[0]
+        expect(when.call_graph[1].text).to(equal("paymentGateway.charge(amount)"))
+        rendered = MarkdownScenario.render_scenarios(scenarios)
+        expect("```realization" in rendered).to(equal(True))
+        expect("paymentGateway.charge(amount)" in rendered).to(equal(True))

@@ -16,7 +16,7 @@ _repo = Path(__file__).resolve().parents[3]
 if str(_repo) not in sys.path:
     sys.path.insert(0, str(_repo))
 
-from practices.clean_engineering.model.base_class_model import (
+from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
@@ -25,9 +25,9 @@ from practices.clean_engineering.model.base_class_model import (
     companion_interface_name,
     is_interface_name,
 )
-from practices.clean_engineering.model.operation import operation_body_fingerprint
-from practices.clean_engineering.model.operation_metrics import apply_python_function_metrics
-from practices.clean_engineering.model.update_report import UpdateReport
+from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import apply_python_function_metrics
+from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
 
 _MODULE_MARKER = re.compile(r"^#\s*===\s*(.+?)\s*===$", re.MULTILINE)
 _CLASS_PATTERN = re.compile(r'class\s+(\w+)[^:]*:\s*\n\s+"""([^"]*?)"""', re.DOTALL)
@@ -293,7 +293,8 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             ret = op.return_type or "None"
             if contract:
                 lines.append("    @abstractmethod")
-            signature = f"    def {op.name}(self, {params}) -> {ret}: ..."
+            head = f"self, {params}" if params else "self"
+            signature = f"    def {op.name}({head}) -> {ret}: ..."
             lines.append(signature)
             lines.append("")
         while lines and lines[-1] == "":

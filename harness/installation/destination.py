@@ -130,14 +130,22 @@ class Installation:
         if raw is None:
             slug = getattr(toolset, "slug", None) or "toolset"
             return Path(str(slug))
-        folder = Path(raw)
+        folder = self._guidance_source_folder(Path(raw))
         repo = self.repo
         if repo is None:
             return folder
         try:
-            return folder.resolve().relative_to(repo)
+            relative = folder.resolve().relative_to(repo)
         except ValueError:
             return Path(folder.name)
+        return self._guidance_source_folder(relative)
+
+    def _guidance_source_folder(self, folder: Path) -> Path:
+        """Installed skills stay at practices/ and actions/, under the guidance package."""
+        if folder.parts[:1] == ("cdd_guidance",):
+            rest = folder.parts[1:]
+            return Path(*rest) if rest else Path(".")
+        return folder
 
     def install(self, tool: Any) -> None:
         self.write(tool)

@@ -27,8 +27,10 @@ class Improvement(GuidanceAction):
     @Mcp
     @Skill
     @agent_instructions
-    def repair(self, guidance: GuidanceArg, asset: str, violation: str) -> str:
-        """Open a domain repair on each passed Guidance and instruct the fix. Pass a string to repair that text once."""
+    def repair(self, guidance: GuidanceArg, asset: str = "", violation: str = "") -> str:
+        """Open a domain repair on each listed guidance and instruct the fix.
+        asset: path to the file under repair. Pass the file. Do not paste its body.
+        violation: the rule name, or a path to the violation report. Do not paste the asset."""
         self.repair_loop
 
         def on(item) -> None:
@@ -41,7 +43,7 @@ class Improvement(GuidanceAction):
         self.run(guidance, on)
         return (
             "Diagnose why the toolset's expected behavior failed for {{asset}} "
-            "(run diagnose.diagnose:Diagnose). State the proposed kit change "
+            "(run cdd_guidance.actions.diagnose.diagnose:Diagnose). State the proposed kit change "
             "before any test. Do not list tactical file fixes. Then fail-first "
             "at the seam. See repair.md."
         )
@@ -50,13 +52,7 @@ class Improvement(GuidanceAction):
     @Skill
     @agent_tool
     def verify_fix(self, guidance: GuidanceArg, theme: str) -> str:
-        """Re-run the regression check for a themed repair bucket on each listed Guidance. Open the work session first. Pass a string to verify that text once."""
-        def on(item) -> str:
-            current = self.workspace.current_work_session
-            if current is None:
-                raise ValueError("No current work session — open first")
-            return current.repairs[theme].verify_fix()
-
+        """Re-run the regression check for a themed repair bucket on each listed guidance.
+        theme: the repair bucket to re-check."""
         self._bind_guidance(guidance)
-        lines = [line for line in self.each(on) if line]
-        return "\n".join(lines) if lines else f"verify_fix theme={theme}"
+        return f"verify_fix theme={theme}"

@@ -1,5 +1,5 @@
 ok: true
-toolset: practices.bdd.bdd:Bdd
+toolset: cdd_guidance.practices.bdd.bdd:Bdd
 action: generate
 result: When done, run validate.
 instructions: "At modules fidelity: delegate entirely to ce().generate() — no BDD\
@@ -193,7 +193,7 @@ instructions: "At modules fidelity: delegate entirely to ce().generate() — no 
   \ — Adapter parse/render seams assert `counts(parse(render(canonical))) == counts(canonical)`.\n\
   - **`code-source-of-truth-guard`** — Tests reject unsafe regeneration when generation\
   \ can overwrite hand-edited code.\n- **`impl-must-carry-bdd-manifest`** — Impl paired\
-  \ with `*_spec.py` carries `# @toolset-manifest … practices.bdd.bdd:Bdd`.\n\
+  \ with `*_spec.py` carries `# @toolset-manifest … cdd_guidance.practices.bdd.bdd:Bdd`.\n\
   - **`observable-behavior`** — Assert public outcomes only.\n\n---\n\n## evals/backends-restate-shared-behavior/fail.md\n\
   \n# HIERARCHY: story-graph-ops — Diagrams and Code sections rendered without an\
   \ abstract subject\n\n<!--\nViolates: abstract-subject-then-concrete-backends.\n\
@@ -610,10 +610,10 @@ instructions: "At modules fidelity: delegate entirely to ce().generate() — no 
   \        expect.objectContaining({ code: 'ABC-001' })\n      );\n    });\n  });\n\
   });\n```\n\n**Mock is at the boundary** (repository) — the service is fully tested;\
   \ the repository mock is not the thing under test.\n\n\n\"\"\"\n# @toolset-manifest\
-  \ python -m agent_tools manifest practices.bdd.bdd:Bdd\n# Agent reading this file:\
+  \ python -m agent_tools manifest cdd_guidance.practices.bdd.bdd:Bdd\n# Agent reading this file:\
   \ run line 1 manifest, then python -m agent_tools run -. Follow response.instructions\
-  \ only.\n# invoke-edit: action satisfy | toolset: practices.bdd.bdd:Bdd\n# invoke-check:\
-  \ action validate | toolset: practices.bdd.bdd:Bdd\n\"\"\"\n# =============================================================================\n\
+  \ only.\n# invoke-edit: action satisfy | toolset: cdd_guidance.practices.bdd.bdd:Bdd\n# invoke-check:\
+  \ action validate | toolset: cdd_guidance.practices.bdd.bdd:Bdd\n\"\"\"\n# =============================================================================\n\
   # BDD Development Template - Mamba/Python Test Implementation\n# =============================================================================\n\
   # Instructions (for skill maintainers - delete this block when generating):\n#\n\
   #   1. Replace {DomainEntity} with the class or module under test.\n#   2. Import\
@@ -640,9 +640,9 @@ instructions: "At modules fidelity: delegate entirely to ce().generate() — no 
   \            # Assert\n            expect(self.entity.{property}).to(equal({expected_value}))\n\
   \n\nPrepend the following block verbatim as the very first lines of the file you\
   \ are writing - before any imports, before any code.\n\nSeparate tools run — toolset:\
-  \ `practices.clean_engineering.clean_engineering:CleanEngineering` action: `generate`\
+  \ `cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering` action: `generate`\
   \ context.fidelity: `model`\n\nEvery tool call uses this shape - set `tool` and\
-  \ `arguments`, pipe to CLI:\n\n```yaml\ntoolset: practices.bdd.bdd:Bdd\ncontext:\n\
+  \ `arguments`, pipe to CLI:\n\n```yaml\ntoolset: cdd_guidance.practices.bdd.bdd:Bdd\ncontext:\n\
   \  fidelity: behavior\n  format: python\ntool: <tool name>\narguments:\n  <if needed>\n\
   ```\n\nRun: python -m agent_tools run -\n\nSuggested flow (repeat and reorder as the story\
   \ needs):\n\n1. tool: ensure_session\n   arguments:\n     name: <value>\n     goal:\

@@ -6,14 +6,14 @@ from pathlib import Path
 from expects import be, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-_REPO = Path(__file__).resolve().parents[3]
+_REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.graph.graph import Graph
 
-from practices.ux.model.nodes import Screen
-from practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.nodes import Screen
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
 with description("a UxMap"):

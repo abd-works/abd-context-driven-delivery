@@ -7,7 +7,7 @@ import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from practices.clean_engineering.model.operation import Operation
+    from cdd_guidance.practices.clean_engineering.model.operation import Operation
 
 _CATCH = re.compile(r"\bcatch\s*(?:\([^)]*\))?\s*\{")
 _PY_EXCEPT = re.compile(r"\bexcept\s*(?::|\([^)]*\)\s*:)")

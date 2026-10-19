@@ -10,7 +10,7 @@ from harness.graph.rule_context import RuleCheckContext
 
 
 def bdd_rule_by_slug(slug: str):
-    from practices.bdd.rules import BY_SLUG
+    from cdd_guidance.practices.bdd.rules import BY_SLUG
 
     return BY_SLUG[slug]
 
