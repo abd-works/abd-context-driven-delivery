@@ -20,7 +20,7 @@ class GuidanceDiagnostics:
 
         guidance: practice and fidelity slugs to filter (for example ``stories`` and ``clean-engineering-model``). Omit to use the default probe pair.
 
-        Slash ``/guidance-diagnostics`` or MCP ``guidance-diagnostics.guidance_diagnostics``. Read ``.cursor/diagnostics.json`` → ``guidance``."""
+        Run via MCP ``guidance-diagnostics.guidance_diagnostics`` or slash ``/guidance-diagnostics``. Read ``.cursor/diagnostics.json`` → ``guidance`` for pass/fail per MCP name. Session logging uses ``/session-diagnostics``."""
         from harness.guidance.guidance import probe_guidance_actions, probe_guidance_instructions
         from harness.installation.installer import Installer
 

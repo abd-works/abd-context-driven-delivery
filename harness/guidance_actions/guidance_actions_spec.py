@@ -120,6 +120,37 @@ with description("GuidanceAction"):
         kit.run([first, second], seen.append, action="generate")
         expect(seen).to(equal([first, second]))
 
+    with it("should log run action when CDD_PROJECT is the work subfolder"):
+        import os
+
+        from harness.guidance_actions import GuidanceAction
+        from harness.mcp.mcp_server import McpServer
+        from space.session import Session
+
+        tmp = Path(tempfile.mkdtemp(prefix="guidance-action-session-log-"))
+        (tmp / ".git").mkdir()
+        work = tmp / "space"
+        work.mkdir()
+        Session._current = None
+        Session.new("alpha", work, tmp)
+        session = Session.current()
+        chats = session.session_path / "chats"
+        chats.mkdir(parents=True, exist_ok=True)
+        transcript = chats / "mcp-chat.md"
+        transcript.write_text("mcp\n", encoding="utf-8")
+        Session._current = None
+        os.environ["CDD_REPO"] = str(tmp)
+        os.environ["CDD_PROJECT"] = str(work)
+        os.environ["CDD_CONVERSATION_ID"] = "mcp-chat"
+        os.environ["CDD_TRANSCRIPT_PATH"] = str(transcript)
+        os.environ["CDD_TRANSCRIPT_LINES"] = "1"
+        McpServer(repo=tmp, project=work)
+        Session._current = None
+        log = tmp / ".sessions" / "alpha" / "session.log"
+        log.write_text("", encoding="utf-8")
+        GuidanceAction().run("probe", lambda item: None, action="generate")
+        expect("generate" in log.read_text(encoding="utf-8")).to(equal(True))
+
     with it("should inject listed Guidance rules markdown after this action returns"):
         from generate.generate import Generate
         from harness.guidance.fixtures.sample_tool.sample_tool_host import SampleGuidance

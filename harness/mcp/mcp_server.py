@@ -987,17 +987,24 @@ class McpHost:
 
     def dispatch(self, name: str, arguments: dict[str, object] | None = None) -> object:
         """Run one tool call. A true ``ping`` argument answers without entering the tool."""
+        from space.session import Session
+        from space.session.chat_context import clear_chat_context, pop_chat_fields
+
+        Session.refresh_current_from_repo(self._runtime.repo)
         resolved = self._runtime.resolve_call_name(name)
-        args = dict(arguments or {})
-        if args.get("ping") is True:
-            if not self._enrolled(resolved):
-                raise KeyError(resolved)
-            return {"ping": "pong", "tool": resolved}
-        if resolved == BUILTIN_PING_TOOL:
-            return self.ping()
-        if resolved in self._runtime._prompts:
-            return self._runtime.invoke_prompt(resolved, args)
-        return self._runtime.invoke_tool(resolved, args)
+        args = pop_chat_fields(arguments)
+        try:
+            if args.get("ping") is True:
+                if not self._enrolled(resolved):
+                    raise KeyError(resolved)
+                return {"ping": "pong", "tool": resolved}
+            if resolved == BUILTIN_PING_TOOL:
+                return self.ping()
+            if resolved in self._runtime._prompts:
+                return self._runtime.invoke_prompt(resolved, args)
+            return self._runtime.invoke_tool(resolved, args)
+        finally:
+            clear_chat_context()
 
     def _enrolled(self, name: str) -> bool:
         return (

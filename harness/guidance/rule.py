@@ -125,11 +125,16 @@ class RulesCollection(MarkdownCollection):
    
     @Hook("postToolUse", disabled=True)
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        hook_payload = payload or {}
+        if self._just_edited(hook_payload):
+            path = self._payload_path(hook_payload)
+            bags = self._bags_for_path(path) if path else []
+            if bags:
+                self._note_session_injected_rules(path, bags)
         if getattr(type(self).inject_rules, "_hook_disabled", False):
             return {}
         from prompt_notify.prompt_notify import PromptNotify
 
-        hook_payload = payload or {}
         if not self._just_edited(hook_payload):
             return {}
         path = self._payload_path(hook_payload)
@@ -144,6 +149,19 @@ class RulesCollection(MarkdownCollection):
             echo.toast_roots = hook_payload.get("workspace_roots")
             echo.show_ide_toast(notice)
         return {"additional_context": body}
+
+    def _note_session_injected_rules(self, path: str, bags: list[RulesCollection]) -> None:
+        try:
+            from space.session import Session
+        except ImportError:
+            return
+        session = Session.current()
+        if session is None:
+            return
+        guidance = self._owner_practice()
+        if guidance is None:
+            return
+        session.note_injected_rules_from_bags(guidance, path, bags)
 
     def _payload_path(self, hook_payload: dict[str, Any]) -> str:
         for key in ("file_path", "path", "uri"):

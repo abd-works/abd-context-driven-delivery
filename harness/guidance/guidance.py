@@ -281,6 +281,15 @@ class PracticeGuidance(Guidance):
         """Session name bound on this guidance, when one was given."""
         return self.session
 
+    @agent_instructions
+    def generate_output(self) -> str:
+        """Write this practice's artifact for the current fidelity.
+
+        Override when the practice owns generation (for example drawio render).
+        The default is instruction-only: generate already expanded instructions;
+        the agent writes under the session path.
+        """
+        return ""
 
     @property
     def clean_engineering_companion(self) -> FidelityGuidance | None:

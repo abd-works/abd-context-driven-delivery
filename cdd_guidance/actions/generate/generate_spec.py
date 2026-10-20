@@ -47,3 +47,7 @@ with description("a generate action on practice guidance") as self:
             expanded = _expanded_generate(self.action, {"guidance": [guidance]})
             expect("validate" in expanded.tools).to(equal(True))
             expect(expanded.instructions).to(contain("call validate with this same guidance"))
+
+    with context("with Bdd listed"):
+        with it("should run generate using the practice default generate_output"):
+            self.action.generate(["bdd"])

@@ -53,7 +53,7 @@ Build order: `agent_tools`
 ---
 
 # harness/agent_tools
-- **Purpose:** Register, introspect, validate, and expand one decorated *AgentToolSet* and its *AgentTool* members.
+- **Purpose:** Register, introspect, validate, and expand one decorated *AgentToolSet* and its *AgentTool* members. *agent_tools_probe* pings and invokes workspace MCP tools on the live host for `/agent-tools-diagnostics`.
 - **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, ExpansionMode, ExpansionResult, AgentToolValidationError, InstallDestination, ToolSetCollection
 - **Dependencies (one-way):** *(none)*
 

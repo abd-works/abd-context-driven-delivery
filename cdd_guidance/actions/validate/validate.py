@@ -23,8 +23,8 @@ class Validate(GuidanceAction):
     def validate(self, guidance: GuidanceArg, rule: Rule | None = None) -> str:
         """Check artifacts against rules.
         rule: one Rule to check. Omit it to walk each guidance's rules."""
-        self._bind_guidance(guidance)
         instructions(_VALIDATE_MARKDOWN)
+
         def on(item) -> str:
             if rule is not None:
                 return rule.validate()
@@ -32,9 +32,20 @@ class Validate(GuidanceAction):
                 return item
             return self._rules_for(item)
 
-        parts = [part for part in self.run(guidance, on, action="validate") if part]
+        self._bind_guidance(guidance)
+        parts = [part for part in self.each(on) if part]
+        self._log_validation_to_session()
         report = "Validation report for artifacts under {session.path}/."
         return "\n\n".join([_VALIDATE_MARKDOWN, *parts, report])
+
+    def _log_validation_to_session(self) -> None:
+        from space.session import Session
+
+        session = Session.current()
+        if session is None or session.session_path is None or self._guidance_text is not None:
+            return
+        for item in self.listed():
+            session.log_validation(item, [])
 
     def _rules_for(self, item) -> str:
         """Shared rules plus the active fidelity's rules. Every fidelity when none is active."""

@@ -1,0 +1,37 @@
+2026-10-20T07:34:32Z generate
+--- probe 76352 ---
+2026-10-20T07:45:10Z validate Bdd behavior
+2026-10-20T07:45:10Z generate C:\dev\abd-context-driven-delivery\space, C:\dev\abd-context-driven-delivery\cdd_guidance\practices\bdd bdd behavior python bdd
+--- probe 69028 ---
+--- probe 5180 ---
+2026-10-20T07:45:26Z generate C:\dev\abd-context-driven-delivery\space, C:\dev\abd-context-driven-delivery\cdd_guidance\practices\bdd bdd behavior python bdd
+2026-10-20T07:45:26Z validate Bdd behavior
+--- probe 55940 ---
+2026-10-20T15:00:15Z validate SamplePracticeGuidance sketch
+2026-10-20T15:00:15Z validate SamplePracticeGuidance sketch
+2026-10-20T15:00:15Z validate Bdd behavior
+2026-10-20T15:00:15Z generate C:\dev\abd-context-driven-delivery\space, C:\dev\abd-context-driven-delivery\cdd_guidance\practices\bdd bdd behavior python bdd
+2026-10-20T15:00:16Z validate Bdd behavior
+2026-10-20T15:00:24Z validate SamplePracticeGuidance sketch
+2026-10-20T15:00:24Z validate SamplePracticeGuidance sketch
+2026-10-20T15:00:25Z validate Bdd behavior
+2026-10-20T15:00:25Z generate C:\dev\abd-context-driven-delivery\space, C:\dev\abd-context-driven-delivery\cdd_guidance\practices\bdd bdd behavior python bdd
+--- probe 74648 ---
+2026-10-20T15:04:08Z --- 1
+2026-10-20T15:04:08Z validate Bdd behavior
+2026-10-20T15:04:08Z generate C:\dev\abd-context-driven-delivery\space, C:\dev\abd-context-driven-delivery\cdd_guidance\practices\bdd bdd behavior python bdd
+2026-10-20T15:04:09Z validate Bdd behavior
+2026-10-20T15:35:21Z --- 2
+2026-10-20T15:30:13Z satisfy C:\dev\abd-context-driven-delivery\harness\agent_tools, C:\dev\abd-context-driven-delivery\cdd_guidance\practices\clean_engineering clean_engineering code python clean_engineering b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:30:13Z validate CleanEngineering code b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:31:17Z satisfy C:\dev\abd-context-driven-delivery\harness\agent_tools, C:\dev\abd-context-driven-delivery\cdd_guidance\practices\clean_engineering clean_engineering code python clean_engineering b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:31:17Z validate CleanEngineering code b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:31:18Z satisfy C:\dev\abd-context-driven-delivery\harness\agent_tools, C:\dev\abd-context-driven-delivery\cdd_guidance\practices\clean_engineering clean_engineering code python clean_engineering b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:31:18Z validate CleanEngineering code b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:29:32Z validate CleanEngineering code b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:35:21Z retroactive C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools_probe.py, C:\dev\abd-context-driven-delivery\harness\agent_tools\.context\module-context.md, C:\dev\abd-context-driven-delivery\space\session\session.py, C:\dev\abd-context-driven-delivery\space\session\session_probe.py, C:\dev\abd-context-driven-delivery\cdd_guidance\actions\satisfy\satisfy.py, C:\dev\abd-context-driven-delivery\scripts\backfill-session-log.py b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:35:21Z session-diagnostics C:\dev\abd-context-driven-delivery\space\session\session_probe.py b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:35:21Z mark-loop C:\dev\abd-context-driven-delivery\space\session\session.py b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:35:21Z satisfy C:\dev\abd-context-driven-delivery\harness\agent_tools, C:\dev\abd-context-driven-delivery\cdd_guidance\practices\clean_engineering b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:35:21Z validate C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools_probe.py b4c2a422-7199-47ce-9656-c0429af8adb8 C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\b4c2a422-7199-47ce-9656-c0429af8adb8\b4c2a422-7199-47ce-9656-c0429af8adb8.jsonl 1-1152
+2026-10-20T15:37:24Z --- 3

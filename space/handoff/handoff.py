@@ -1,11 +1,12 @@
 """Handoff - write a compact session summary so the next agent can continue.
 
-Writes handoff-{timestamp}.md into the current session's handoffs folder
-(Session.current().session_path / handoffs).
+Writes handoff-{timestamp}.md under ``handoffs/`` in the current work folder
+(``Session.current().workpath``, else ``CDD_PROJECT``, else the process cwd).
 No archiving, no latest pointer — one timestamped file per call.
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -22,12 +23,17 @@ from space.session.session import Session
 class Handoff:
     """Write a compact session handoff for the next agent."""
 
-    def _handoffs_folder(self) -> Path:
-        """Handoffs live at ``Session.current().session_path / handoffs``."""
+    def _work_folder(self) -> Path:
         session = Session.current()
-        if session is None or session.session_path is None:
-            raise ValueError("no current session")
-        folder = session.session_path / "handoffs"
+        if session is not None and session.workpath is not None:
+            return Path(session.workpath).resolve()
+        named = os.environ.get("CDD_PROJECT")
+        if named:
+            return Path(named).resolve()
+        return Path.cwd().resolve()
+
+    def _handoffs_folder(self) -> Path:
+        folder = self._work_folder() / "handoffs"
         folder.mkdir(parents=True, exist_ok=True)
         return folder
 

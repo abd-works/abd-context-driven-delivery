@@ -14,6 +14,18 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
+from harness.agent_tools.cdd_diagnostic_bridge import probe_arguments_from_cdd_diagnostic
+from harness.guidance.guidance import (
+    ActionProbeSession,
+    _failure_text,
+    _instruction_result,
+    fill_probe_arguments,
+    installed_channel_items,
+    probe_subsection,
+)
+from harness.mcp.mcp_server import McpOperationDefinition, McpPrompt
+
 _HEAVY_INVOKE_PREFIXES = ("session.", "graph.")
 
 _INVOKE_DISPATCH_TIMEOUT_SECONDS = 12.0
@@ -24,17 +36,6 @@ _INVOKE_SKIP_PREFIXES = (
     "catalog.",
     "repo.",
 )
-
-from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
-from harness.guidance.guidance import (
-    ActionProbeSession,
-    _failure_text,
-    _instruction_result,
-    fill_probe_arguments,
-    installed_channel_items,
-    probe_subsection,
-)
-from harness.mcp.mcp_server import McpOperationDefinition, McpPrompt
 
 AGENT_TOOLS_PROBE_SECTION = "agent_tools"
 
@@ -486,6 +487,58 @@ def _probe_workspace_action(
     return item
 
 
+def _signature_parameter_names(signature: inspect.Signature) -> set[str]:
+    return {
+        name
+        for name, param in signature.parameters.items()
+        if name not in {"self", "cls"}
+        and param.kind
+        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+    }
+
+
+def _missing_required_arguments(
+    signature: inspect.Signature,
+    args: dict[str, Any],
+) -> list[str]:
+    required = [
+        name
+        for name, param in signature.parameters.items()
+        if name not in {"self", "cls"}
+        and param.kind
+        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+        and param.default is inspect.Parameter.empty
+    ]
+    return [name for name in required if name not in args]
+
+
+def _builtin_workspace_probe_arguments(
+    mcp_name: str,
+    repo_root: str,
+    param_names: set[str],
+) -> dict[str, Any]:
+    if mcp_name in {"session.session", "session.open_named"}:
+        return {"name": "_cdd_mcp_probe", "repo_path": repo_root}
+    if mcp_name == "session.new":
+        return {"name": "_cdd_mcp_probe", "workpath": repo_root, "repo_path": repo_root}
+    if mcp_name == "session.switch":
+        return {"name": "_cdd_mcp_probe", "repo_path": repo_root}
+    if mcp_name in {
+        "repo.branch",
+        "repo.worktree",
+        "repo.new_worktree",
+        "repo.switch_worktree",
+    }:
+        return {"name": "_cdd-diagnostic-probe"}
+    if mcp_name == "repo.new_branch":
+        return {"name": "_cdd-diagnostic-probe", "switch": False}
+    if mcp_name == "repo.switch_branch":
+        return {"name": "main"}
+    if mcp_name.startswith("echo-instructions.") and "body" in param_names:
+        return {"body": "agent-tools-diagnostics probe"}
+    return {}
+
+
 def fill_workspace_probe_arguments(
     mcp_name: str,
     member: Any,
@@ -496,50 +549,13 @@ def fill_workspace_probe_arguments(
         signature = inspect.signature(member)
     except (TypeError, ValueError):
         return {}, ["callable"]
-    param_names = {
-        name
-        for name, param in signature.parameters.items()
-        if name != "self" and name != "cls"
-        and param.kind
-        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-    }
-    root = str(Path(installer.repo).resolve())
-    from harness.agent_tools.cdd_diagnostic_bridge import probe_arguments_from_cdd_diagnostic
-
     bridged = probe_arguments_from_cdd_diagnostic(mcp_name, installer.repo)
     if bridged is not None:
         return bridged
-
-    args: dict[str, Any] = {}
-
-    if mcp_name in {"session.session", "session.open_named"}:
-        args = {"name": "_cdd_mcp_probe", "repo_path": root}
-    elif mcp_name == "session.new":
-        args = {"name": "_cdd_mcp_probe", "workpath": root, "repo_path": root}
-    elif mcp_name == "session.switch":
-        args = {"name": "_cdd_mcp_probe", "repo_path": root}
-    elif mcp_name in {
-        "repo.branch",
-        "repo.worktree",
-        "repo.new_worktree",
-        "repo.switch_worktree",
-    }:
-        args = {"name": "_cdd-diagnostic-probe"}
-    elif mcp_name == "repo.new_branch":
-        args = {"name": "_cdd-diagnostic-probe", "switch": False}
-    elif mcp_name == "repo.switch_branch":
-        args = {"name": "main"}
-    elif mcp_name.startswith("echo-instructions.") and "body" in param_names:
-        args = {"body": "agent-tools-diagnostics probe"}
-    required = [
-        name
-        for name, param in signature.parameters.items()
-        if name not in {"self", "cls"}
-        and param.kind
-        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-        and param.default is inspect.Parameter.empty
-    ]
-    missing = [name for name in required if name not in args]
-    if not missing and not args and not required:
+    repo_root = str(Path(installer.repo).resolve())
+    param_names = _signature_parameter_names(signature)
+    args = _builtin_workspace_probe_arguments(mcp_name, repo_root, param_names)
+    missing = _missing_required_arguments(signature, args)
+    if not missing and not args and not _missing_required_arguments(signature, {}):
         return {}, []
     return args, missing

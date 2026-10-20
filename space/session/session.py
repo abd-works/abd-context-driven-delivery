@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
+from harness.hooks.hooks import Hook
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 
@@ -22,6 +24,49 @@ if TYPE_CHECKING:
 _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
 _LOAD_FILE_BUDGET = 40
 _DEFAULT_SESSION_NAME = "default"
+_REPO_SESSIONS_DIR = ".sessions"
+_LEGACY_REPO_SESSIONS_DIR = "sessions"
+_LOOP_MARKER = re.compile(r"---\s+(\d+)\s*$")
+_KNOWN_ACTIONS = (
+    "generate",
+    "validate",
+    "sketch",
+    "document",
+    "satisfy",
+    "iterate",
+    "createRule",
+)
+
+
+def _parse_chat_file(path: Path) -> tuple[str, str, str]:
+    if not path.is_file():
+        return path.stem, "", ""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    chat_id = ""
+    line_numbers = ""
+    body_start = 0
+    for index, line in enumerate(lines):
+        if not line.strip():
+            body_start = index + 1
+            break
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        token = key.strip().lower().replace("_", "-")
+        text = value.strip()
+        if token in {"chat-id", "conversation-id"}:
+            chat_id = text
+        elif token == "lines":
+            line_numbers = text
+    else:
+        body_start = len(lines)
+    body = "\n".join(lines[body_start:]).strip()
+    if not chat_id:
+        chat_id = path.stem
+    if not line_numbers:
+        count = len(body.splitlines()) if body else 1
+        line_numbers = f"1-{count}" if count > 1 else "1"
+    return chat_id, line_numbers, body
 
 
 class Loop:
@@ -30,15 +75,37 @@ class Loop:
     def __init__(self, number: int) -> None:
         self.number = number
         self.entries: list[str] = []
+        self._session: Session | None = None
 
-    def inject(self, chat_file: Path) -> None:
+    def text(self) -> str:
+        """Log lines for this loop plus any chat injected under them."""
+        return "\n".join(self.entries)
+
+    def expanded_text(self) -> str:
+        """Log lines for this loop with referenced chat transcript slices inlined."""
+        from space.session.chat_transcript import expand_log_lines
+
+        return expand_log_lines(self.entries)
+
+    def inject(self, chat_file: Path, *, action: str | None = None) -> None:
         path = Path(chat_file)
-        self.entries.append(str(path))
-        if not path.is_file():
-            return
-        response = path.read_text(encoding="utf-8").strip()
-        if response:
-            self.entries.append(response.splitlines()[0])
+        chat_id, line_numbers, body = _parse_chat_file(path)
+        pointer = f"{chat_id} {path} {line_numbers}".strip()
+        session = self._session
+        action_name = action or self._action_from_entries()
+        if session is not None and action_name:
+            session.note_chat(chat_id, path, line_numbers)
+            session.append_chat(action_name, path)
+        self.entries.append(pointer)
+        if body:
+            self.entries.extend(body.splitlines())
+
+    def _action_from_entries(self) -> str:
+        for line in reversed(self.entries):
+            for name in _KNOWN_ACTIONS:
+                if f" {name} " in f" {line} " or line.endswith(f" {name}"):
+                    return name
+        return ""
 
 
 class Practice:
@@ -74,7 +141,7 @@ class Session:
         self._loops: list[Loop] = []
         self._parent_folders: dict = {}
         self._opened: list[Practice] = []
-        self._injected: list[tuple[str, str, str]] = []
+        self._injected: list[tuple[str, str, str, str]] = []
         self._chat: tuple[str, Path, str] | None = None
 
     @property
@@ -93,10 +160,44 @@ class Session:
         return cls._current
 
     @classmethod
+    def refresh_current_from_repo(cls, repo_path: Path | str | None = None) -> None:
+        """Reload in-memory session when repo ``.sessions/session.json`` current changed."""
+        slot = cls._slot()
+        repo = slot.repo_from_session(repo_path)
+        if repo is None:
+            return
+        slot.repo_path = repo
+        saved = cls._read_repo_current_name(repo)
+        if saved == _DEFAULT_SESSION_NAME:
+            return
+        current = cls._current
+        if (
+            current is not None
+            and current.name == saved
+            and current.session_path is not None
+            and current.repo_path == repo
+        ):
+            return
+        cls._current = None
+        session = cls._slot()
+        session.repo_path = repo
+        session.resolve(saved, repo_path=repo)
+
+    @classmethod
+    def _read_repo_current_name(cls, repo_path: Path) -> str:
+        path = cls.sessions_dir(repo_path) / "session.json"
+        if not path.is_file():
+            return _DEFAULT_SESSION_NAME
+        state = json.loads(path.read_text(encoding="utf-8"))
+        cleaned = str(state.get("current") or _DEFAULT_SESSION_NAME).strip()
+        return cleaned or _DEFAULT_SESSION_NAME
+
+    @classmethod
     @mcp
     @agent_tool
     def current(cls, repo_path: Path | str | None = None) -> Session | None:
         """Named session already in memory, or the one saved on the repo."""
+        cls.refresh_current_from_repo(repo_path)
         if cls._current is not None and cls._current.name:
             return cls._current
         session = cls._slot()
@@ -110,15 +211,39 @@ class Session:
         session.resolve(name, repo_path=repo)
         return session if session.name else None
 
+    @Hook("preToolUse")
+    def pre_tool_use_logging(self, payload: dict | None = None) -> dict:
+        """Bind repo current session and chat metadata before MCP tools run."""
+        data = payload or {}
+        Session.refresh_current_from_repo()
+        session = Session.current()
+        if session is None:
+            return {"permission": "allow"}
+        conversation_id = str(data.get("conversation_id") or "").strip()
+        transcript = str(data.get("agent_transcript_path") or "").strip()
+        if conversation_id and transcript:
+            from space.session.chat_context import set_chat_context
+
+            lines = str(
+                data.get("transcript_lines") or data.get("line_numbers") or ""
+            ).strip()
+            set_chat_context(conversation_id, transcript, lines)
+            session.note_chat(conversation_id, Path(transcript), lines or "1")
+        return {"permission": "allow"}
+
     def repo_from_session(self, repo_path: Path | str | None = None) -> Path | None:
+        """Git repo root for ``.sessions/session.json`` — not the workpath subfolder."""
         if repo_path is not None:
-            return Path(repo_path).resolve()
+            return self._git_root(Path(repo_path))
         if self.repo_path is not None:
-            return self.repo_path
+            return Path(self.repo_path).resolve()
         named = os.environ.get("CDD_REPO")
         if named:
             return Path(named).resolve()
-        return None
+        project = os.environ.get("CDD_PROJECT")
+        if project:
+            return self._git_root(Path(project))
+        return self._git_root(Path.cwd())
 
     @mcp
     @command(name="close-session")
@@ -194,7 +319,7 @@ class Session:
         slot = cls._slot()
         primary = Path(repo_path).resolve() if repo_path is not None else slot.repo_from_session() or slot._env_repo()
         work = Path(workpath).resolve() if workpath is not None else slot._env_workpath()
-        session_json = primary / "sessions" / cleaned / "session.json"
+        session_json = cls._session_folder(primary, cleaned) / "session.json"
         if session_json.is_file():
             return cls.switch(cleaned, workpath=work, repo_path=primary)
         return cls.new(cleaned, work, primary)
@@ -221,12 +346,51 @@ class Session:
         Do not call ``session.open_named``."""
         return ""
 
+    @classmethod
+    @mcp
+    @command(name="mark-loop")
+    @agent_tool
+    def mark_loop(cls) -> str:
+        """Append a loop marker ``--- N`` to the current session log and return the loop number.
+
+        Requires an open session (``session.new`` / ``session.switch`` / ``session.current``).
+        Run via MCP ``session.mark_loop`` or slash ``/mark-loop``."""
+        session = cls.current()
+        if session is None or not session.name:
+            raise ValueError("no current session; open one with session.new or session.switch")
+        opened = session.loop()
+        return str(opened.number)
+
+    @classmethod
+    @mcp
+    @command(name="read-loop")
+    @agent_tool
+    def read_loop(cls, number: int | None = None) -> str:
+        """Read one loop from the current session log with chat transcript lines inlined.
+
+        ``number`` defaults to the highest ``--- N`` marker in session.log.
+        Run via MCP ``session.read_loop`` or slash ``/read-loop``."""
+        session = cls.current()
+        if session is None or not session.name:
+            raise ValueError("no current session; open one with session.new or session.switch")
+        if number is None:
+            loop_number = session._latest_loop_with_entries()
+        else:
+            loop_number = number
+        if loop_number < 1:
+            raise ValueError("no loops in session.log; run mark-loop first")
+        opened = session.loop_at(loop_number)
+        if not opened.entries:
+            raise ValueError(f"loop {loop_number} not found (missing --- {loop_number} in session.log?)")
+        header = f"# Loop {loop_number} ({session.name})\n\n"
+        return header + opened.expanded_text()
+
     @property
     def saved_current_session(self) -> str:
-        """``current`` in repo/sessions/session.json."""
+        """``current`` in repo/.sessions/session.json."""
         if self.repo_path is None:
             return _DEFAULT_SESSION_NAME
-        path = self.repo_path / "sessions" / "session.json"
+        path = self.sessions_dir(self.repo_path) / "session.json"
         if not path.is_file():
             return _DEFAULT_SESSION_NAME
         state = json.loads(path.read_text(encoding="utf-8"))
@@ -237,11 +401,16 @@ class Session:
     def saved_current_session(self, name: str) -> None:
         if self.repo_path is None:
             return
-        path = self.repo_path / "sessions" / "session.json"
+        path = self.sessions_dir(self.repo_path) / "session.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         state = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
-        state["current"] = (name or "").strip() or _DEFAULT_SESSION_NAME
+        cleaned = (name or "").strip() or _DEFAULT_SESSION_NAME
+        state["current"] = cleaned
         path.write_text(json.dumps(state), encoding="utf-8")
+        if cleaned != _DEFAULT_SESSION_NAME:
+            from harness.hooks.session_logs import SessionLogs
+
+            SessionLogs(self.repo_path).write_active_session(cleaned)
 
     def practice(self, name: str) -> Practice:
         found = self._opened_named(name)
@@ -280,8 +449,12 @@ class Session:
         self._write_practices_json(stored)
         self._parent_folders = stored
 
-    def note_injected_rule(self, practice: str, fidelity: str, rule: str) -> None:
-        self._injected.append((practice, fidelity, rule))
+    def note_injected_rule(
+        self, practice: str, fidelity: str, rule: str, matched_path: str = ""
+    ) -> None:
+        entry = (practice, fidelity, rule, matched_path)
+        if entry not in self._injected:
+            self._injected.append(entry)
 
     def note_chat(self, chat_id: str, chat_file: Path, line_numbers: str) -> None:
         self._chat = (chat_id, Path(chat_file), line_numbers)
@@ -300,20 +473,28 @@ class Session:
         if session_path is not None:
             self.session_path = Path(session_path).resolve()
             stored = self._read_session_folder_json(self.session_path)
-            self.workpath = Path(stored["workpath"]) if stored.get("workpath") else workpath
+            if workpath is not None:
+                self.workpath = Path(workpath).resolve()
+            elif stored.get("workpath"):
+                self.workpath = Path(stored["workpath"])
             self.repo_path = self._git_root(self.session_path)
         elif repo_path is not None:
             self.repo_path = Path(repo_path).resolve()
-            self.session_path = self.repo_path / "sessions" / name
+            self.session_path = self._session_folder(self.repo_path, name)
             stored = self._read_session_folder_json(self.session_path)
-            self.workpath = Path(stored["workpath"]) if stored.get("workpath") else workpath
+            if workpath is not None:
+                self.workpath = Path(workpath).resolve()
+            elif stored.get("workpath"):
+                self.workpath = Path(stored["workpath"])
+            else:
+                self.workpath = self._env_workpath()
         elif workpath is not None:
             self.workpath = Path(workpath).resolve()
             self.repo_path = self._git_root(self.workpath)
-            self.session_path = self.repo_path / "sessions" / name
+            self.session_path = self._session_folder(self.repo_path, name)
         else:
             self.repo_path = self._env_repo()
-            self.session_path = self.repo_path / "sessions" / name
+            self.session_path = self._session_folder(self.repo_path, name)
             stored = self._read_session_folder_json(self.session_path)
             if stored.get("workpath"):
                 self.workpath = Path(stored["workpath"])
@@ -324,21 +505,180 @@ class Session:
         self._write_session_folder_json()
         return self
 
-    def loop(self) -> Loop:
-        number = self._loops[-1].number + 1 if self._loops else 1
+    def __getitem__(self, number: int) -> Loop:
+        return self.loop_at(number)
+
+    def loop_at(self, number: int) -> Loop:
+        """Return loop ``number`` with log lines read from session.log (and chat via inject)."""
         opened = Loop(number)
+        opened._session = self
+        opened.entries = self._lines_for_loop(number)
+        return opened
+
+    def _max_loop_number_from_log(self) -> int:
+        if self.session_path is None:
+            return 0
+        log = self.session_path / "session.log"
+        if not log.is_file():
+            return 0
+        highest = 0
+        for line in log.read_text(encoding="utf-8").splitlines():
+            match = _LOOP_MARKER.search(line)
+            if match:
+                highest = max(highest, int(match.group(1)))
+        return highest
+
+    def _latest_loop_with_entries(self) -> int:
+        highest = self._max_loop_number_from_log()
+        for candidate in range(highest, 0, -1):
+            if self._lines_for_loop(candidate):
+                return candidate
+        return 0
+
+    def loop(self) -> Loop:
+        from_memory = self._loops[-1].number if self._loops else 0
+        from_log = self._max_loop_number_from_log()
+        number = max(from_memory, from_log) + 1
+        opened = Loop(number)
+        opened._session = self
         self._loops.append(opened)
         self._append_log(f"--- {number}")
         return opened
 
+    @staticmethod
+    def _loop_marker_number(line: str) -> int | None:
+        match = _LOOP_MARKER.search(line)
+        if not match:
+            return None
+        return int(match.group(1))
+
+    def _lines_for_loop(self, number: int) -> list[str]:
+        if self.session_path is None:
+            return []
+        log = self.session_path / "session.log"
+        if not log.is_file():
+            return []
+        raw = log.read_text(encoding="utf-8").splitlines()
+        marker_index: int | None = None
+        for index, line in enumerate(raw):
+            if self._loop_marker_number(line) == number:
+                marker_index = index
+                break
+        if marker_index is None:
+            return []
+        collected: list[str] = [raw[marker_index]]
+        for line in raw[marker_index + 1 :]:
+            other = self._loop_marker_number(line)
+            if other is not None and other != number:
+                break
+            collected.append(line)
+        return collected
+
+    def require_chat_noted(self) -> None:
+        if self._chat is not None:
+            return
+        from space.session.chat_context import MISSING_CHAT_DETAIL, apply_chat_context
+
+        if apply_chat_context(self):
+            return
+        self._record_missing_chat_for_log(MISSING_CHAT_DETAIL)
+
+    def _record_missing_chat_for_log(self, message: str) -> None:
+        if self.session_path is None:
+            return
+        err = self.session_path / "session.err"
+        err.parent.mkdir(parents=True, exist_ok=True)
+        prior = err.read_text(encoding="utf-8") if err.is_file() else ""
+        line_number = len(prior.splitlines()) + 1
+        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        with err.open("a", encoding="utf-8") as handle:
+            handle.write(f"{stamp} {message}\n")
+        self.note_chat("no-chat", err, str(line_number))
+
     def log_action(self, action: str, paths: list[Path]) -> None:
+        if self.session_path is None:
+            return
+        self.require_chat_noted()
         self._append_log(self._action_line(action, paths))
+        self._injected.clear()
+        self._chat = None
+
+    def note_chat_from_hook(
+        self,
+        action: str,
+        *,
+        chat_id: str = "",
+        chat_file: Path | str | None = None,
+        line_numbers: str = "",
+    ) -> None:
+        """Record chat metadata so the next log_action line can point at the transcript."""
+        if not chat_id and not chat_file:
+            return
+        path = Path(chat_file) if chat_file else Path(f"chat-{chat_id or 'unknown'}")
+        self.note_chat(chat_id or path.stem, path, line_numbers or "1")
+
+    def log_guidance_action(self, action: str, guidance_items: list) -> None:
+        """Open listed practices and log this guidance action (after session.new or session.switch)."""
+        paths: list[Path] = []
+        seen: set[str] = set()
+        if self.workpath is not None:
+            work = Path(self.workpath).resolve()
+            paths.append(work)
+            seen.add(str(work))
+        for item in guidance_items:
+            key = self._practice_key_for_instance(item)
+            if key is None:
+                continue
+            opened = self.practice(key)
+            opened.guideline = item
+            for group in opened.folder_sets:
+                for folder in group:
+                    resolved = Path(folder).resolve()
+                    token = str(resolved)
+                    if token in seen:
+                        continue
+                    seen.add(token)
+                    paths.append(resolved)
+        self.log_action(action, paths)
+
+    def note_injected_rules_for_edit(self, guidance: PracticeGuidance, payload: dict) -> None:
+        """Note rule slugs from inject_rules hooks for the next log_action line."""
+        if self.session_path is None:
+            return
+        rules = getattr(guidance, "rules", None)
+        if rules is None:
+            return
+        path = rules._payload_path(payload)
+        if not path or not rules._just_edited(payload):
+            return
+        bags = rules._bags_for_path(path)
+        if not bags:
+            return
+        self.note_injected_rules_from_bags(guidance, path, bags)
+
+    def note_injected_rules_from_bags(self, guidance: PracticeGuidance, matched_path: str, bags: list) -> None:
+        if self.session_path is None or not matched_path or not bags:
+            return
+        practice = self._practice_key_for_instance(guidance) or type(guidance).__name__.casefold()
+        for bag in bags:
+            fidelity = self._fidelity_for_rules_bag(guidance, bag)
+            for rule in bag:
+                self.note_injected_rule(practice, fidelity, rule.slug, matched_path)
 
     def log_validation(self, guidance: PracticeGuidance, violations: list[str]) -> None:
+        if self.session_path is None:
+            return
+        self.require_chat_noted()
         practice = type(guidance).__name__
         fidelity = self._fidelity_name(guidance)
         detail = " ".join(violations)
-        self._append_log(f"validate {practice} {fidelity} {detail}".rstrip())
+        pointer = self._noted_chat()
+        line = f"validate {practice} {fidelity} {detail}".rstrip()
+        if pointer:
+            line = f"{line} {pointer}"
+        self._append_log(line)
+        self._injected.clear()
+        self._chat = None
 
     def log_error(self, failure: BaseException) -> None:
         trace = "".join(traceback.format_exception(type(failure), failure, failure.__traceback__))
@@ -354,20 +694,64 @@ class Session:
         self._append_log(f"{action} chat {pointer}")
 
     def keep_log(self) -> str:
+        log_file = "session.log"
+        err_file = "session.err"
+        if self.session_path is not None:
+            log_file = str(self.session_path / "session.log")
+            err_file = str(self.session_path / "session.err")
         return (
-            "log_action, log_validation, and log_error already run. "
-            "Reuse those operations, and append_chat, when a log line misses the chat or a detail."
+            "Session owns logging for this host once session.new or session.switch has run. "
+            "log_action, log_validation, and log_error already run from guidance actions and the host; "
+            "do not duplicate them unless a line is missing detail. "
+            "GuidanceAction.run calls log_guidance_action when an action name is set; "
+            "a run with no action name leaves session.log unchanged. "
+            "Each log_action and log_validation line includes a chat pointer when "
+            "CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH (or note_chat) are set; "
+            "otherwise the line still logs and points at a no-chat entry in session.err. "
+            "Lines also name paths, practices, fidelity, format, graph nodes, and injected rules. "
+            "Validate.validate calls log_validation. "
+            "append_chat attaches a transcript pointer to an existing line. "
+            "loop() writes --- N markers in the same log; session.new seeds --- 1 on a fresh log. "
+            "read_loop(number) returns log lines for one loop with chat transcript slices inlined. "
+            f"Log file: {log_file}. Errors: {err_file}."
         )
 
     def _bind_new(self, name: str, workpath: Path, repo_path: Path) -> None:
         self.name = name
         self.workpath = workpath.resolve()
         self.repo_path = repo_path.resolve()
-        self.session_path = self.repo_path / "sessions" / name
+        self.session_path = self.sessions_dir(self.repo_path) / name
         self.session_path.mkdir(parents=True, exist_ok=True)
         self._read_practices_json()
         self._write_session_folder_json()
         self.saved_current_session = name
+        self._ensure_initial_loop()
+
+    def _ensure_initial_loop(self) -> None:
+        """New sessions start session.log with ``--- 1`` before any actions."""
+        if self.session_path is None:
+            return
+        if self._max_loop_number_from_log() >= 1:
+            return
+        opened = Loop(1)
+        opened._session = self
+        self._loops = [opened]
+        self._append_log("--- 1")
+
+    @staticmethod
+    def sessions_dir(repo_path: Path) -> Path:
+        return Path(repo_path).resolve() / _REPO_SESSIONS_DIR
+
+    @classmethod
+    def _session_folder(cls, repo_path: Path, name: str) -> Path:
+        root = Path(repo_path).resolve()
+        preferred = cls.sessions_dir(root) / name
+        legacy = root / _LEGACY_REPO_SESSIONS_DIR / name
+        if (preferred / "session.json").is_file():
+            return preferred
+        if (legacy / "session.json").is_file():
+            return legacy
+        return preferred
 
     def _write_session_folder_json(self) -> None:
         if self.session_path is None:
@@ -419,6 +803,22 @@ class Session:
             if opened.name == name:
                 return opened
         return None
+
+    @staticmethod
+    def _practice_key_for_instance(guidance: PracticeGuidance) -> str | None:
+        cls_name = type(guidance).__name__
+        for key, ref in _PRACTICE_TYPES.items():
+            if ref.rsplit(":", 1)[-1] == cls_name:
+                return key
+        return None
+
+    @staticmethod
+    def _fidelity_for_rules_bag(guidance: PracticeGuidance, bag) -> str:
+        parent = getattr(bag, "parent", None)
+        if parent is guidance or parent is None:
+            current = getattr(getattr(guidance, "fidelities", None), "current", None)
+            return str(getattr(current, "name", "") or getattr(current, "fidelity", "") or "")
+        return str(getattr(parent, "name", "") or getattr(parent, "fidelity", "") or "")
 
     def _guidance_for(self, name: str) -> PracticeGuidance:
         ref = _PRACTICE_TYPES.get(name)
@@ -512,12 +912,14 @@ class Session:
     def _active_fidelity(self) -> str:
         if not self._opened:
             return ""
-        return self._fidelity_name(self._opened[0].guideline)
+        parts = [self._fidelity_name(entry.guideline) for entry in self._opened]
+        return ", ".join(part for part in parts if part)
 
     def _active_format(self) -> str:
         if not self._opened:
             return ""
-        return str(getattr(self._opened[0].guideline, "format", "") or "")
+        parts = [str(getattr(entry.guideline, "format", "") or "") for entry in self._opened]
+        return ", ".join(part for part in parts if part)
 
     def _node_names(self) -> str:
         names: list[str] = []
@@ -531,8 +933,11 @@ class Session:
     def _rule_text(self) -> str:
         if not self._injected:
             return ""
-        ordered = sorted(self._injected, key=lambda item: (item[0], item[1], item[2]))
-        return " ".join(f"{practice} {fidelity} {rule}" for practice, fidelity, rule in ordered)
+        ordered = sorted(self._injected, key=lambda item: (item[0], item[1], item[2], item[3]))
+        return " ".join(
+            " ".join(part for part in (practice, fidelity, rule, path) if part)
+            for practice, fidelity, rule, path in ordered
+        )
 
     def _noted_chat(self) -> str:
         if self._chat is None:

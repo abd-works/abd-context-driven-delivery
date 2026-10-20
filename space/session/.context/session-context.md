@@ -11,7 +11,7 @@ session --> set when ever a session is opened, created etc
     select  -> sets all logging to session variables , same as new but to exiusting
     loops 
         --> container for a discreet context, gen, eval loop ; rimary use is to demarcate boundaries in log; so we cna say x numver of log   lines were a decsreete unit if acrtivity trhart can be analysed and evaluagtfed later
-        simple tool and command /loop --> incrmeent loop number; log ---loop number
+        simple tool and command /mark-loop --> increment loop number; log --- N in session.log
         loop[number] would retureve the log entries and inject the ai chat and rtesponse under the relrevanty lines for easy analysis
 
    

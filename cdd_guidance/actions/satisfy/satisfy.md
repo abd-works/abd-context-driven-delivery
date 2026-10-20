@@ -1,8 +1,8 @@
 # Satisfy
 
-Satisfy runs in **tool mode**: it does not inline a recipe. It hands you two tool calls to make yourself, in order — first find the problems, then fix them.
+One MCP call runs **validate** for every applicable rule on the bound guidance, then appends **generate_fixes_from_validate** instructions. Your job is to apply those fixes in the repo and loop until validate is clean.
 
-1. **`validate`** — run this first. Judge the artifact under the generator **`active`** root against the **contexts** and every named rule, and call **`scan`** on the session-rooted paths. Produce the full list of violations and coverage gaps. Do not fix anything in this step.
-2. **`generate_fixes_from_validate`** — run this second, once you hold the validate report. Follow **`session_guidance`** and edit only under that layout. Generate any missing artifacts (a missing `.context/module-context.md` IS a violation — create it at the current fidelity: thin at modules with Purpose, Seam, Dependencies; full at model with + Primary use case, Rationale, Public API), then fix every reported violation in the same paths — do not invent a divergent folder.
+1. **Validate (already in this response)** — Judge artifacts under the generator **`active`** root against **contexts** and every named rule. Call **`scan`** on session-rooted paths when the practice provides it. List pass/fail per rule with evidence. Do not skip rules.
+2. **Generate fixes (instructions below validate)** — Follow **`session_guidance`** and edit only under that layout. Create missing artifacts (for example `.context/module-context.md` at the current fidelity). Fix every violation validate named. Do not invent a divergent folder.
 
-When done, run **`validate`** again and repeat the two-call loop until it passes.
+When done, run **`validate`** again on the same guidance. Repeat until clean, then report **Fixes**: each file touched and which rule slug each change addressed.

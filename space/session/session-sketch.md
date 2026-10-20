@@ -72,18 +72,25 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 - resolve(name: str, workpath: Path | None, repo_path: Path | None, session_path: Path | None): Session
 	-> Repo.find_root
 	// a given session_path: open that session; workpath is the path stored on it; repo_path is the git root of that folder
-	// a given repo_path: session_path is repo_path / "sessions" / name; open that session and read workpath from it
-	// a given workpath: repo_path is Repo.find_root(workpath); session_path is repo_path / "sessions" / name
-	// none given: repo_path is CDD_REPO, or Repo.find_root of the current directory; workpath is CDD_PROJECT, or the current directory; session_path is repo_path / "sessions" / name; a workpath already stored on that session replaces the environment workpath
+	// a given repo_path: session_path is repo_path / ".sessions" / name; open that session and read workpath from it
+	// a given workpath: repo_path is Repo.find_root(workpath); session_path is repo_path / ".sessions" / name
+	// none given: repo_path is CDD_REPO, or Repo.find_root of the current directory; workpath is CDD_PROJECT, or the current directory; session_path is repo_path / ".sessions" / name; a workpath already stored on that session replaces the environment workpath
 	// a path that was passed is kept; the other two are filled from it
 + loop(): Loop
 	// increments the loop number and appends a `--- {number}` line to session.log
 + log_action(action: str, paths: list[Path]): None
 	-> Loop.entries
 	// one timestamped line on session_path / "session.log" for this action
++ log_guidance_action(action: str, guidance_items: list): None
+	// opens each listed practice on this session, syncs that practice's guideline from the action binding, collects workpath and practice folder paths, then calls log_action
++ note_injected_rules_for_edit(guidance: PracticeGuidance, payload: dict): None
+	// notes rule slugs that match an edit payload so the next log_action line can name them
++ note_injected_rules_from_bags(guidance: PracticeGuidance, matched_path: str, bags: list): None
+	// notes rule slugs from matched rule bags (inject_rules hook path)
 	// the line names the files and folders in paths, the active guidelines, fidelity, format, and action
 	// the line names the highest graph node per practice when the graph has one
-	// the line points at the chat id, transcript file, and line numbers; it does not copy the transcript
+	// the line always points at the chat id, transcript file, and line numbers; it does not copy the transcript
+	// the host supplies CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH (or note_chat) before logging; without them the action still logs and points at a no-chat line on session.err
 	// when a practice guideline's rules were injected, the line lists those rule names only, sorted, separated by that practice and fidelity, and the file that matched the glob
 + log_validation(guidance: PracticeGuidance, violations: list[str]): None
 	// one timestamped line on session_path / "session.log"
@@ -107,7 +114,7 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 
 **Invariants**
 
-- new keeps the name, workpath, and repo_path it was given, and sets session_path to repo_path / "sessions" / name.
+- new keeps the name, workpath, and repo_path it was given, and sets session_path to repo_path / ".sessions" / name.
 - A path passed to select is kept. The other two paths are filled from the session that already exists, or from the environment when none were passed.
 - A log line is written only after workpath, repo_path, and session_path are set.
 - session.log and session.err stay under session_path.
@@ -125,7 +132,8 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 - A practice guideline's rules carry a glob. inject_rules runs for content that has been edited. The edit matches the glob and those rules are injected. An edit that misses the glob injects nothing from that guideline.
 - log_action records the injected rule names for that practice guideline and fidelity.
 - Validate.validate calls log_validation. Generate and Satisfy call Validate.validate, so those runs are the same line. Iterate tells the agent to validate and does not call Validate. Sketch does not call Validate.
-- GuidanceAction.run calls log_action for the action it is running.
+- GuidanceAction.run calls log_guidance_action for the action it is running when session.new or session.switch has bound session_path.
+- RulesCollection.inject_rules calls note_injected_rules_from_bags on the current session when rules are injected.
 - new and select each run a code section and return keep_log. keep_log is the one instruction set both of them return.
 - keep_log tells the agent that log_action, log_validation, and log_error already run, and that append_chat may attach a later chat when those miss the chat or a detail.
 - append_chat points at the transcript file. The transcript stays the chat record; the session log is the trail.

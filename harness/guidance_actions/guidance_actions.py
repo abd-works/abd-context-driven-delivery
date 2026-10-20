@@ -156,7 +156,8 @@ class GuidanceAction:
         session = Session.current()
         if session is None or session.session_path is None:
             return
-        session.log_action(action, [])
+        items = self.listed() if self._guidance_text is None else []
+        session.log_guidance_action(action, items)
 
     @echo
     @agent_instructions

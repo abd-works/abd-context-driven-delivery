@@ -1,6 +1,7 @@
 """BDD spec for space/handoff/handoff.py – Handoff toolset.
 """
 
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -13,7 +14,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import equal, expect, match, raise_error
+from expects import equal, expect, match
 from mamba import after, before, context, description, it
 
 from space.handoff.handoff import Handoff
@@ -62,10 +63,10 @@ with description("write_handoff"):
             Session._current = None
             self.tmp.cleanup()
 
-        with it("should write a file named handoff-{timestamp}.md in the session handoffs folder"):
+        with it("should write a file named handoff-{timestamp}.md in the work folder handoffs"):
             path = Path(self.toolset.write_handoff("# Handoff\n\nContent here.\n"))
             expect(path.is_file()).to(equal(True))
-            expect(path.parent).to(equal(self.root / "sessions" / "my-session" / "handoffs"))
+            expect(path.parent).to(equal(self.root / "work" / "handoffs"))
             expect(path.name).to(match(r"^handoff-\d{8}T\d{6}\.md$"))
 
         with it("should write the content verbatim"):
@@ -85,17 +86,23 @@ with description("write_handoff"):
 
         with it("should not write a handoff-latest.md"):
             self.toolset.write_handoff("content")
-            latest = self.root / "sessions" / "my-session" / "handoff-latest.md"
+            latest = self.root / ".sessions" / "my-session" / "handoff-latest.md"
             expect(latest.exists()).to(equal(False))
 
     with context("given no current session"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
-            Session._current = Session(repo_root=self.tmp.name)
+            self.root = Path(self.tmp.name)
+            Session._current = None
+            self.toolset = Handoff()
+            self._prev_cwd = Path.cwd()
+            os.chdir(self.root)
 
         with after.each:
+            os.chdir(self._prev_cwd)
             Session._current = None
             self.tmp.cleanup()
 
-        with it("should refuse to write a handoff"):
-            expect(lambda: Handoff().write_handoff("content")).to(raise_error(ValueError))
+        with it("should write under the current working folder handoffs"):
+            path = Path(self.toolset.write_handoff("content"))
+            expect(path.parent).to(equal(self.root / "handoffs"))
