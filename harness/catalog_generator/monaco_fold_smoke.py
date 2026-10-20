@@ -9,7 +9,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
-CATALOG = ROOT / "catalog"
+CATALOG = ROOT / "cdd_guidance" / "catalog"
 
 
 def _free_port() -> int:

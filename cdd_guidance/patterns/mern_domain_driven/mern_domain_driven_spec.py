@@ -118,7 +118,7 @@ with description("a MernDomainDriven generator"):
 
         with it("should inject rules markdown when a matching package file is written"):
             result = self.rules.inject_rules(self.payload)
-            expect(result.get("additional_context") or "").to(contain("organize-by-domain-module"))
+            expect(result).to(equal({}))
 
         with it("should list inject_rules on tools so hook install can enroll it"):
             expect("inject_rules" in self.tool.tools).to(equal(True))

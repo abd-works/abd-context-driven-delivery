@@ -1,5 +1,6 @@
-"""BDD spec for space/repo/repo.py."""
+"""BDD spec for space/repo — clone, branch, worktree, and push."""
 
+import os
 import sys
 import subprocess
 import tempfile
@@ -14,9 +15,11 @@ for _cat in ("tools", "cdd_guidance/practices"):
         sys.path.insert(0, _p)
 
 from expects import be_a, be_true, contain, equal, expect, raise_error
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
+from harness.agent_tools.agent_tools import AgentToolSet
 from space.repo import TicketNotFoundError
+from space.repo.agent import Repo as RepoTools
 from space.repo.repo import (
     Branch,
     CliAgentBinding,
@@ -60,6 +63,9 @@ with description("a Repo"):
         with before.each:
             self.repo = Repo.memory("/tmp/demo-clone")
 
+        # (E) Open Work Session
+        # (E) Work With Repo Branch
+        # (S) Repo --> Commit Branch
         with it("should expose branches that can commit"):
             commit = self.repo.branch_named("session/demo").checkout().commit(
                 ["README.md"], "demo turn"
@@ -116,6 +122,7 @@ with description("a Repo"):
             ticket.set_status("In Progress")
             expect(self.repo._ticket_project_state[ticket.number]).to(equal("In Progress"))
 
+        # (S) Repo --> Merge Branch
         with it("should merge branches through Branch objects"):
             self.repo.branch_named("session/demo").checkout()
             self.repo.commit(["a.py"], "work")
@@ -293,16 +300,20 @@ with description("GitHub project theme names"):
         expect(repo._ticket_project_theme[ticket.number]).to(equal("cli-agent"))
 
 
+# (E) Open Work Session
+# (E) Work With Repo Worktree
 with description("a Repo worktree"):
     with context("opened in memory"):
         with before.each:
             self.repo = Repo.memory("/tmp/demo-clone")
 
+        # (S) Repo --> List Worktree
         with it("should list the primary checkout"):
             trees = self.repo.list_worktrees()
             expect(len(trees)).to(equal(1))
             expect(trees[0].branch).to(equal("main"))
 
+        # (S) Repo --> Open Worktree
         with it("should add a worktree for a session branch"):
             path = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
             expect(path).to(equal(Path("/tmp/wt-demo")))
@@ -310,17 +321,20 @@ with description("a Repo worktree"):
             expect(found is not None).to(be_true)
             expect(found.branch).to(equal("session/demo"))
 
+        # (S) Repo --> Reuse Worktree
         with it("should reuse an existing worktree for the same branch"):
             first = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
             second = self.repo.add_worktree("/tmp/wt-demo-2", "session/demo")
             expect(second).to(equal(first))
             expect(len(self.repo.list_worktrees())).to(equal(2))
 
+        # (S) Repo --> Remove Worktree
         with it("should remove a worktree"):
             path = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
             self.repo.remove_worktree(path)
             expect(self.repo.worktree_for("session/demo")).to(equal(None))
 
+        # (S) Repo --> Remove Worktree
         with it("should run Windows takeown icacls and Remove-Item as last resort"):
             import os
             from unittest.mock import patch
@@ -343,16 +357,20 @@ with description("a Repo worktree"):
                 expect(calls[1][0]).to(equal("icacls"))
                 expect(any("Remove-Item" in " ".join(c) for c in calls)).to(be_true)
 
+        # (S) Repo --> Fetch Worktree
         with it("should fetch and pull in the current tree"):
             self.repo.fetch_pull()
             expect(self.repo._fetches).to(equal(["origin"]))
             expect(self.repo._pulls).to(equal(["main"]))
 
+        # (E) Work With Repo Branch
+        # (S) Repo --> Merge Branch
         with it("should merge another branch into the current branch"):
             sha = self.repo.merge_from("session/demo", message="merge with main")
             expect(sha).to(equal("merge-session/demo-into-main"))
             expect(self.repo.current_branch).to(equal("main"))
 
+        # (S) Repo --> Push Branch
         with it("should push the current head to another branch name"):
             self.repo.push_to("main")
             expect(self.repo.pushes).to(equal(["main"]))
@@ -423,3 +441,84 @@ with description("Repo stash"):
         expect(repo.has_stash()).to(equal(True))
         repo.clear_stash()
         expect(repo.has_stash()).to(equal(False))
+
+
+# (E) Open Work Session
+# (E) Work With Repo Branch
+with description("the repo toolset"):
+    with context("on a memory repository"):
+        with before.each:
+            self.repo_tool = RepoTools()
+            self.repository = Repo.memory("/tmp/repo-branch-spec")
+            self.repository.checkout_or_create("main")
+            self.repo_tool._bind(self.repository)
+
+        # (S) Repo --> Switch Branch
+        with it("should switch branch in place when work_tree is false"):
+            self.repo_tool.branch_switch("feature/a", work_tree=False)
+            expect(self.repo_tool.current_branch).to(equal("feature/a"))
+
+        # (S) Repo --> Create Branch
+        with it("should create and switch a new branch"):
+            self.repo_tool.branch_create("feature/new", work_tree=False, switch=True)
+            expect(self.repo_tool.current_branch).to(equal("feature/new"))
+
+        # (S) Repo --> Close Branch
+        with it("should close without error on memory repo"):
+            self.repo_tool.branch_create("feature/done", work_tree=False)
+            text = self.repo_tool.branch_close(merge_to_main=True)
+            expect("feature/done" in text).to(equal(True))
+
+
+def _init_repository(root: Path) -> None:
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "push@test"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "push"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+# (E) Open Work Session
+# (E) Work With Repo Branch
+# (S) Repo --> Commit Branch
+with description("the repo push toolset"):
+    with context("that is in a git repository"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self._cwd = Path.cwd()
+            root = Path(self.tmp.name)
+            origin = root / "origin.git"
+            subprocess.run(
+                ["git", "init", "--bare", str(origin)],
+                check=True,
+                capture_output=True,
+            )
+            self.repo_root = root / "work"
+            self.repo_root.mkdir()
+            _init_repository(self.repo_root)
+            subprocess.run(
+                ["git", "remote", "add", "origin", str(origin)],
+                cwd=self.repo_root,
+                check=True,
+                capture_output=True,
+            )
+            os.chdir(self.repo_root)
+
+        with after.each:
+            os.chdir(self._cwd)
+            self.tmp.cleanup()
+
+        with it("should commit when push_commit is called"):
+            (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")
+            toolset = AgentToolSet.instantiate("space.repo.agent:Repo")
+            commit = toolset.push_commit("push: checkpoint")
+            expect(commit.sha).not_to(equal(""))
+            expect(commit.subject).to(equal("push: checkpoint"))

@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
-from harness.installation.destination import Installation, diagnostic, is_diagnostic, noCatalog
+from harness.installation.destination import Installation, noCatalog
 from harness.agent_tools.agent_tools import (
     AgentToolSet,
     InstallDestination,
@@ -41,6 +41,7 @@ class Installer:
     _SKIP_DIRS = frozenset(
         {
             "__pycache__",
+            ".pycache",
             "examples",
             "_examples",
             "example",
@@ -75,7 +76,6 @@ class Installer:
     _GREEN_SURFACE_CHANGE = 0.10
     _YELLOW_SURFACE_CHANGE = 0.50
     _DIAGNOSTICS_LOG = "diagnostics.json"
-    _diagnostic_operations_cache: list[tuple[str, str]] | None = None
     _ANNOTATIONS = frozenset(
         {
             "Skill",
@@ -141,6 +141,11 @@ class Installer:
 
     def pythonpath(self, repo: Path | str | None = None) -> str:
         return os.pathsep.join(self.import_path_entries(repo))
+
+    def pycache_prefix(self, repo: Path | str | None = None) -> str:
+        """One bytecode directory for this checkout. Keeps ``__pycache__`` out of the source tree."""
+        root = Path(repo).resolve() if repo is not None else self.repo
+        return str(root / ".pycache")
 
     def ensure_import_path(self, repo: Path | str | None = None) -> None:
         entries = self.import_path_entries(repo)
@@ -403,7 +408,7 @@ class Installer:
         self._save_state()
         self._standup_channels()
         self.ensure_mcp_host()
-        self.diagnosis = self.diagnose()
+        self.diagnosis = self.diagnose_after_install()
         for report in self.diagnosis:
             if report.startswith("!"):
                 print(report, file=sys.stderr)
@@ -458,7 +463,7 @@ class Installer:
         self._print_channel_notice(self._mcp.diagnose())
         self._hook.standup()
         self._print_channel_notice(self._hook.diagnose())
-        if not self._is_ephemeral_install_path(self.path):
+        if not self._is_ephemeral_install_path(self.path) and not self._mcp_host_is_this_process():
             self.ensure_runtimes()
 
     def ensure_runtimes(self) -> dict[str, Any]:
@@ -509,60 +514,15 @@ class Installer:
         if ref not in self._deployed_toolsets:
             self._deployed_toolsets.append(ref)
 
-    def diagnose(self) -> list[str]:
-        """Search the repo and run every operation marked @diagnostic."""
-        reports: list[str] = []
-        records: list[dict[str, str]] = []
-        for ref, name in self._diagnostic_operations():
-            report = self._call_diagnostic(ref, name)
-            reports.append(report)
-            records.append(
-                {"name": name, "report": report, "color": self._color_in(report)}
-            )
+    def diagnose_after_install(self) -> list[str]:
+        """Record install-channel diagnostics only; guidance probes use ``/guidance-diagnostics``."""
+        report = str(self.diagnose_install())
+        records = [
+            {"name": "diagnose_install", "report": report, "color": self._color_in(report)}
+        ]
         self._append_install_log(records)
-        return reports
+        return [report]
 
-    def _diagnostic_operations(self) -> list[tuple[str, str]]:
-        if Installer._diagnostic_operations_cache is not None:
-            return Installer._diagnostic_operations_cache
-        found: list[tuple[str, str]] = []
-        root = self.repo.resolve()
-        for py_file in self._iter_collect_files(root):
-            module = self._module_name(py_file, root)
-            if not module:
-                continue
-            for class_name, method_name in self._diagnostic_methods_in_file(py_file):
-                found.append((f"{module}:{class_name}", method_name))
-        Installer._diagnostic_operations_cache = found
-        return found
-
-    def _diagnostic_methods_in_file(self, py_file: Path) -> list[tuple[str, str]]:
-        try:
-            tree_ast = ast.parse(py_file.read_text(encoding="utf-8"))
-        except (OSError, SyntaxError, UnicodeDecodeError):
-            return []
-        found: list[tuple[str, str]] = []
-        for node in tree_ast.body:
-            if not isinstance(node, ast.ClassDef):
-                continue
-            for item in node.body:
-                if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    continue
-                if any(self._annotation_id(dec) == "diagnostic" for dec in item.decorator_list):
-                    found.append((node.name, item.name))
-        return found
-
-    def _call_diagnostic(self, ref: str, name: str) -> str:
-        own = f"{type(self).__module__}:{type(self).__name__}"
-        if ref == own:
-            return str(getattr(self, name)())
-        toolset = AgentToolSet.instantiate(ref)
-        member = getattr(toolset, name)
-        if not is_diagnostic(member):
-            return ""
-        return str(member())
-
-    @diagnostic
     @agent_instructions
     def diagnose_install(self) -> str:
         """Compare this install with the last diagnostics.json entry and report counts, or what changed."""
@@ -788,6 +748,11 @@ class Installer:
             if item.get("operation") or item.get("event")
         )
 
+    def _mcp_host_is_this_process(self) -> bool:
+        from harness.mcp.mcp_server import HostPid
+
+        return HostPid.from_ide(self.path).is_this_process
+
     def _mcp_host_is_running(self) -> bool:
         from harness.mcp.mcp_server import McpInstallation
 
@@ -866,10 +831,6 @@ class Installer:
     def runtime_instructions(self) -> str:
         """Runtime instructions."""
 
-    @markdown("diagnose")
-    def diagnose_guide(self) -> str:
-        """Diagnose instructions."""
-
     @agent_instructions
     def diagnose_instructions(self) -> str:
         """How to diagnose an install whose deployed counts do not match."""
@@ -877,7 +838,7 @@ class Installer:
         self.clean_instructions
         self.diagnose_install_instructions
         self.runtime_instructions
-        return str(self.diagnose_guide).strip()
+        return str(self.diagnose_install_instructions).strip()
 
     def ensure_mcp_host(self, payload: dict[str, Any] | None = None) -> str:
         from harness.mcp.mcp_server import McpInstallation

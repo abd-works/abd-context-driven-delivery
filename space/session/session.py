@@ -1,4 +1,4 @@
-"""Session — path binding, logging, and the host's graph and practices."""
+"""Session — work paths, logging, and practice graphs for the active process session."""
 
 from __future__ import annotations
 
@@ -9,6 +9,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
+from harness.installation.files import command
+from harness.mcp.mcp_server import mcp
+
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
     from harness.guidance.guidance import PracticeGuidance
@@ -17,6 +21,7 @@ if TYPE_CHECKING:
 
 _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
 _LOAD_FILE_BUDGET = 40
+_DEFAULT_SESSION_NAME = "default"
 
 
 class Loop:
@@ -55,13 +60,14 @@ _PRACTICE_TYPES = {
 }
 
 
+@agent_toolset
 class Session:
-    """Process session. The host keeps one, and new and select bind its paths."""
+    """Process session — one in-memory current; new and switch open named sessions."""
 
     _current: Session | None = None
 
     def __init__(self, repo_root: Path | str | None = None) -> None:
-        self.name = ""
+        self._session_name = ""
         self.workpath: Path | None = None
         self.repo_path: Path | None = Path(repo_root).resolve() if repo_root else None
         self.session_path: Path | None = None
@@ -71,29 +77,122 @@ class Session:
         self._injected: list[tuple[str, str, str]] = []
         self._chat: tuple[str, Path, str] | None = None
 
+    @property
+    def name(self) -> str:
+        """Named work session (not the toolset slug)."""
+        return self._session_name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._session_name = (value or "").strip()
+
     @classmethod
-    def current(cls) -> Session:
+    def _slot(cls) -> Session:
         if cls._current is None:
             cls._current = cls()
         return cls._current
 
     @classmethod
+    @mcp
+    @command
+    @agent_tool
+    def current(cls, repo_path: Path | str | None = None) -> Session | None:
+        """Named session already in memory, or the one saved on the repo."""
+        if cls._current is not None and cls._current.name:
+            return cls._current
+        session = cls._slot()
+        repo = session.repo_from_session(repo_path)
+        if repo is None:
+            return None
+        session.repo_path = repo
+        name = session.saved_current_session
+        if name == _DEFAULT_SESSION_NAME:
+            return None
+        session.resolve(name, repo_path=repo)
+        return session if session.name else None
+
+    def repo_from_session(self, repo_path: Path | str | None = None) -> Path | None:
+        if repo_path is not None:
+            return Path(repo_path).resolve()
+        if self.repo_path is not None:
+            return self.repo_path
+        named = os.environ.get("CDD_REPO")
+        if named:
+            return Path(named).resolve()
+        return None
+
+    @mcp
+    @command(name="close-session")
+    @agent_tool
+    def close(self) -> None:
+        """Close this work session and clear the saved current session on the repo."""
+        if self.repo_path is not None:
+            self.saved_current_session = _DEFAULT_SESSION_NAME
+        self.name = ""
+        self.workpath = None
+        self.session_path = None
+        self.reset()
+
+    @classmethod
+    @mcp
+    @command
+    @agent_instructions
     def new(cls, name: str, workpath: Path, repo_path: Path) -> str:
-        session = cls.current()
+        """Open a session. Returns keep_log."""
+        session = cls._slot()
         session._bind_new(name, Path(workpath), Path(repo_path))
         return session.keep_log()
 
     @classmethod
-    def select(
+    @mcp
+    @command
+    @agent_instructions
+    def switch(
         cls,
         name: str,
         workpath: Path | None = None,
         repo_path: Path | None = None,
         session_path: Path | None = None,
     ) -> str:
-        session = cls.current()
+        """Open an existing session. Returns keep_log."""
+        session = cls._slot()
         session.resolve(name, workpath, repo_path, session_path)
         return session.keep_log()
+
+    @classmethod
+    def open_or_switch(cls, name: str, workpath: Path, repo_path: Path) -> str:
+        """Select a session folder when it exists, otherwise create it."""
+        cleaned = (name or "").strip()
+        if not cleaned:
+            raise ValueError("session name is required")
+        primary = Path(repo_path).resolve()
+        work = Path(workpath).resolve()
+        session_json = primary / "sessions" / cleaned / "session.json"
+        if session_json.is_file():
+            return cls.switch(cleaned, workpath=work, repo_path=primary)
+        return cls.new(cleaned, work, primary)
+
+    @property
+    def saved_current_session(self) -> str:
+        """``current`` in repo/sessions/session.json."""
+        if self.repo_path is None:
+            return _DEFAULT_SESSION_NAME
+        path = self.repo_path / "sessions" / "session.json"
+        if not path.is_file():
+            return _DEFAULT_SESSION_NAME
+        state = json.loads(path.read_text(encoding="utf-8"))
+        cleaned = str(state.get("current") or _DEFAULT_SESSION_NAME).strip()
+        return cleaned or _DEFAULT_SESSION_NAME
+
+    @saved_current_session.setter
+    def saved_current_session(self, name: str) -> None:
+        if self.repo_path is None:
+            return
+        path = self.repo_path / "sessions" / "session.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        state = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        state["current"] = (name or "").strip() or _DEFAULT_SESSION_NAME
+        path.write_text(json.dumps(state), encoding="utf-8")
 
     def practice(self, name: str) -> Practice:
         found = self._opened_named(name)
@@ -151,13 +250,13 @@ class Session:
         self.name = name
         if session_path is not None:
             self.session_path = Path(session_path).resolve()
-            stored = self._read_binding(self.session_path)
+            stored = self._read_session_folder_json(self.session_path)
             self.workpath = Path(stored["workpath"]) if stored.get("workpath") else workpath
             self.repo_path = self._git_root(self.session_path)
         elif repo_path is not None:
             self.repo_path = Path(repo_path).resolve()
             self.session_path = self.repo_path / "sessions" / name
-            stored = self._read_binding(self.session_path)
+            stored = self._read_session_folder_json(self.session_path)
             self.workpath = Path(stored["workpath"]) if stored.get("workpath") else workpath
         elif workpath is not None:
             self.workpath = Path(workpath).resolve()
@@ -166,12 +265,14 @@ class Session:
         else:
             self.repo_path = self._env_repo()
             self.session_path = self.repo_path / "sessions" / name
-            stored = self._read_binding(self.session_path)
+            stored = self._read_session_folder_json(self.session_path)
             if stored.get("workpath"):
                 self.workpath = Path(stored["workpath"])
             else:
                 self.workpath = self._env_workpath()
         self._read_practices_json()
+        self.saved_current_session = name
+        self._write_session_folder_json()
         return self
 
     def loop(self) -> Loop:
@@ -216,17 +317,21 @@ class Session:
         self.session_path = self.repo_path / "sessions" / name
         self.session_path.mkdir(parents=True, exist_ok=True)
         self._read_practices_json()
-        self._write_binding()
+        self._write_session_folder_json()
+        self.saved_current_session = name
 
-    def _write_binding(self) -> None:
+    def _write_session_folder_json(self) -> None:
+        if self.session_path is None:
+            return
         payload = {
             "name": self.name,
             "workpath": str(self.workpath),
             "repo_path": str(self.repo_path),
         }
+        self.session_path.mkdir(parents=True, exist_ok=True)
         (self.session_path / "session.json").write_text(json.dumps(payload), encoding="utf-8")
 
-    def _read_binding(self, session_path: Path) -> dict:
+    def _read_session_folder_json(self, session_path: Path) -> dict:
         path = Path(session_path) / "session.json"
         if not path.is_file():
             return {}

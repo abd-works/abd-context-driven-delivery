@@ -5,7 +5,7 @@ Source: `abd-skills/practices/architecture-centric-engineering/specs/mern-domain
 `scanners/typescript/*.py` × 18, `templates/`, diagrams).
 
 Decisions below are locked (see `grill-answers.md`); shapes below are draft —
-review before I scaffold with `create-context-tool`.
+review before I scaffold with `create-practice-guidance`.
 
 ---
 
@@ -190,8 +190,8 @@ the touched view files — it does not call `ux`.
 ## Next step
 
 Once the two `?` items above are resolved, scaffold for real via
-`create-context-tool`: full tree from
-`practices/create_context_tool/templates/` (folder is currently just
+`create-practice-guidance`: full tree from
+`builders/create_practice_guidance/templates/` (folder is currently just
 this session — `scaffold-vs-patch` says build the full tree), port
 `rules/*.md` prose into `mern_domain_driven.md` § Contexts as written above,
 port `scanners/typescript/*.py` onto `tools.scanners.Scanner` /

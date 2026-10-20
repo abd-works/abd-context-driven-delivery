@@ -14,7 +14,7 @@ Implements all four epics from the sketch's story map: Assemble Catalog Page Dat
 python -m harness.catalog_generator.generate_cdd_catalog
 ```
 
-Defaults `--out catalog`, `--repo-url` from `git remote get-url origin`, `--ref` from current `HEAD`; all three are overridable flags.
+Defaults `--out cdd_guidance/catalog`, `--repo-url` from `git remote get-url origin`, `--ref` from current `HEAD`; all three are overridable flags.
 
 ## Public API
 

@@ -30,6 +30,7 @@ class HostDiscovery:
             cwd=str(_REPO_ROOT),
             env={
                 **{key: value for key, value in __import__("os").environ.items()},
+                "PYTHONPYCACHEPREFIX": str(_REPO_ROOT / ".pycache"),
                 "PYTHONPATH": ";".join(
                     [
                         str(_REPO_ROOT),

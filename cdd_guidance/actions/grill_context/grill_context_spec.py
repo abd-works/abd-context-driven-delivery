@@ -228,7 +228,7 @@ with description("PracticeGuidance operations for grill"):
     with it("should not expose grill on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
-                "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
+                "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
         practice = cls()

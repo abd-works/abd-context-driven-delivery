@@ -127,7 +127,7 @@ Do not offer options until the cited context files are read. Answers go to `{pat
 *Builders* scaffold a new `@agent_toolset` or *PracticeGuidance* package from templates and a worked example, so you do not copy a peer folder by hand.
 
 - **Purpose:** Generate a new `@agent_toolset` or *PracticeGuidance* package from templates and a worked example.
-- **Seam (terms):** CreateAgentToolset, CreateContextTool
+- **Seam (terms):** CreateAgentToolset, CreatePracticeGuidance
 - **Dependencies (one-way):** `harness/guidance`
 
 ## Constraint
@@ -145,11 +145,11 @@ Scaffolding stays in this tree. Do not invent new practices inside `harness/`.
 
 ---
 
-## builders/create_context_tool
-*CreateContextTool* scaffolds a new practice package under `practices/` from templates.
+## builders/create_practice_guidance
+*CreatePracticeGuidance* scaffolds a new practice package under `practices/` from templates.
 
 - **Purpose:** Scaffold a new practice package under `practices/` from templates.
-- **Seam (terms):** CreateContextTool
+- **Seam (terms):** CreatePracticeGuidance
 - **Dependencies (one-way):** `harness/guidance`
 
 ---
@@ -487,7 +487,7 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Imp
 
 - **Purpose:** Move GitHub issues on Project columns and name the reusable workflows a plan is based on.
 - **Seam (terms):** Workflow
-- **Dependencies (one-way):** `space/repo`, `tools/handoff`
+- **Dependencies (one-way):** `space/repo`, `space/handoff`
 
 ---
 
@@ -500,8 +500,8 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Imp
 
 ---
 
-## tools/handoff
-*Handoff* writes a resume document a fresh agent can continue from, under the session folder ``{repo}/sessions/{name}/``.
+## space/handoff
+*Handoff* writes a resume document a fresh agent can continue from, under the current session folder ``handoffs/``.
 
 - **Purpose:** Compact the current agent session into a handoff document a fresh agent can resume from.
 - **Seam (terms):** Handoff
@@ -509,20 +509,20 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Imp
 
 ---
 
-## tools/echo
-*Echo* shows action instructions inside a labelled fence so you can read them and the agent does not follow them.
+## tools/echo_instructions
+*EchoInstructions* shows action instructions inside a labelled fence so you can read them and the agent does not follow them.
 
 - **Purpose:** Show action instructions inside a labelled fence so the user can read them without the agent following them.
-- **Seam (terms):** Echo
+- **Seam (terms):** EchoInstructions
 - **Dependencies (one-way):** `harness/agent_tools`
 
 ---
 
-## tools/prompt_echo
-*PromptEcho* toasts the invoked action, practice, fidelity, or guideline on `preToolUse`. Callers mark the member with `@echo`.
+## tools/prompt_notify
+*PromptNotify* toasts the invoked action, practice, fidelity, or guideline on `preToolUse`. Callers mark the member with `@echo`.
 
 - **Purpose:** Toast the invoked action, practice, fidelity, or guideline on `preToolUse`.
-- **Seam (terms):** Echo, PromptEcho
+- **Seam (terms):** Echo, PromptNotify
 - **Dependencies (one-way):** `installation`, `harness/hooks`, `harness/agent_tools`
 
 ## Constraint
@@ -553,8 +553,8 @@ Callers mark members with `@echo`.
 
 ---
 
-## tools/record_decisions
-*RecordDecisions* writes a Context Decision Record when a choice is hard to reverse, surprising without context, and a real trade-off.
+## space/record_decisions
+*RecordDecisions* writes a Context Decision Record when a choice is hard to reverse, surprising without context, and a real trade-off. Records go under the current session workpath ``.context/cdr/``.
 
 - **Purpose:** Write a Context Decision Record when a choice is hard to reverse, surprising without context, and a real trade-off.
 - **Seam (terms):** RecordDecisions

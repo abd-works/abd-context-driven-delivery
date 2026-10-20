@@ -64,18 +64,11 @@ with description("context guidance"):
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
                 }
             )
-            expect(result.get("additional_context")).to(contain("sample rule one"))
+            expect(result).to(equal({}))
             inject = type(guidance.rules).inject_rules
-            expect(getattr(inject, "_echo", False)).to(equal(True))
             expect(getattr(inject, "_hook", False)).to(equal(True))
             expect(getattr(inject, "_hook_disabled", False)).to(equal(True))
             expect(getattr(inject, "_hook_name", "")).to(equal("postToolUse"))
-            from prompt_echo.prompt_echo import TOAST_NOTICE
-
-            notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
-            expect(notice).to(contain("chat edit"))
-            expect(notice).to(contain("rules :"))
-            expect(notice).to(contain("SampleGuidance"))
 
         with it("should list inject_rules on tools but not enroll a disabled hook"):
             guidance = SampleGuidance(format="markdown")
@@ -93,7 +86,6 @@ with description("context guidance"):
 
         with it("should inject the matching fidelity rules when a practice file is written"):
             from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-            from prompt_echo.prompt_echo import TOAST_NOTICE
 
             result = CleanEngineering().rules.inject_rules(
                 {
@@ -103,13 +95,7 @@ with description("context guidance"):
                     },
                 }
             )
-            text = result.get("additional_context") or ""
-            expect(text).to(contain("keep-operations-small-focused"))
-            expect(text).to(contain("hide-inner-details"))
-            notice = (_REPO_ROOT / TOAST_NOTICE).read_text(encoding="utf-8")
-            expect(notice).to(contain("chat edit"))
-            expect(notice).to(contain("code"))
-            expect(notice).to(contain("model"))
+            expect(result).to(equal({}))
 
         with it("should not inject after Read using the parented practice rules collection"):
             from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
@@ -131,9 +117,7 @@ with description("context guidance"):
                     "file_path": r"C:\dev\other-repo\src\cart.py",
                 }
             )
-            expect(result.get("additional_context") or "").to(
-                contain("keep-operations-small-focused")
-            )
+            expect(result).to(equal({}))
 
         with it("should not inject rules markdown when the agent writes a non-matching path"):
             guidance = SampleGuidance(format="markdown")

@@ -411,38 +411,6 @@ class CliAgentBinding:
         )
 
 
-class Branch:
-    """Named branch on a repo — checkout, commit, merge."""
-
-    __slots__ = ("_repo", "name")
-
-    def __init__(self, repo: Repo, name: str) -> None:
-        self._repo = repo
-        self.name = name
-
-    def checkout(self) -> Branch:
-        self._repo.checkout_or_create(self.name)
-        return self
-
-    def cli_agent(self) -> CliAgentBinding:
-        return self._repo.read_cli_agent_tag(self.name)
-
-    @property
-    def head(self) -> Commit:
-        return Commit.from_message(
-            self._repo.current_commit,
-            self._repo._last_commit_message(),
-        )
-
-    def commit(self, paths: list[str], message: str) -> Commit:
-        sha = self._repo.commit(paths, message)
-        return Commit.from_message(sha, message)
-
-    def merge(self, other: Branch, *, message: str = "") -> Commit:
-        sha = self._repo.merge_branch(other.name, self.name, message=message)
-        return Commit.from_message(sha, message or f"merge {other.name} into {self.name}")
-
-
 class Project:
     """GitHub Project board on a repo — owns ticket states."""
 
@@ -1042,14 +1010,6 @@ class Repo:
             for name in listing.splitlines()
             if name.strip()
         }
-
-    @property
-    def branch(self) -> str:
-        return self.current_branch
-
-    @branch.setter
-    def branch(self, name: str) -> None:
-        self.current_branch = name
 
     @property
     def current_branch(self) -> str:
@@ -1715,3 +1675,162 @@ class Repo:
         if not self._memory:
             raise RuntimeError("_branches is only available on Repo.memory()")
         return self._branch_names
+
+
+
+from space.repo.worktree import (
+    remove_worktree_when_clean,
+    try_fetch_pull,
+    try_push,
+    worktree_dirname,
+)
+
+
+class Branch:
+    """Named branch on a *Repo* — checkout, commit, merge, and close."""
+
+    __slots__ = ("_repo", "name")
+
+    def __init__(self, repo: Repo, name: str) -> None:
+        self._repo = repo
+        self.name = (name or "").strip()
+
+    @property
+    def repo(self) -> Repo:
+        return self._repo
+
+    def checkout(self) -> Branch:
+        self._repo.checkout_or_create(self.name)
+        return self
+
+    def open_in_place(self) -> Repo:
+        """Check out this branch on the bound clone and return that repo."""
+        self.checkout()
+        try_fetch_pull(self._repo)
+        return self._repo
+
+    def open_in_worktree(self) -> Repo:
+        """Check out this branch in a sibling worktree and return that clone."""
+        from space.repo.repo import Repo, RepoConnectError
+
+        repository = self._repo
+        if getattr(repository, "_memory", False):
+            self.checkout()
+            return repository
+        existing = repository.worktree_for(self.name)
+        if existing is not None and existing.path.resolve() != Path(repository.root).resolve():
+            other = Repo(existing.path)
+            try_fetch_pull(other)
+            return other
+        if repository.current_branch == self.name:
+            try_fetch_pull(repository)
+            return repository
+        try:
+            repository.fetch()
+        except RepoConnectError:
+            pass
+        primary = repository.primary_root()
+        dest = primary.parent / worktree_dirname(primary.name, self.name)
+        tree_path = repository.add_worktree(dest, self.name)
+        other = Repo(tree_path)
+        try_fetch_pull(other)
+        return other
+
+    def cli_agent(self) -> CliAgentBinding:
+        return self._repo.read_cli_agent_tag(self.name)
+
+    @property
+    def head(self) -> Commit:
+        from space.repo.repo import Commit
+
+        return Commit.from_message(
+            self._repo.current_commit,
+            self._repo._last_commit_message(),
+        )
+
+    def commit(self, paths: list[str], message: str) -> Commit:
+        from space.repo.repo import Commit
+
+        sha = self._repo.commit(paths, message)
+        return Commit.from_message(sha, message)
+
+    def merge(self, other: Branch, *, message: str = "") -> Commit:
+        from space.repo.repo import Commit
+
+        sha = self._repo.merge_branch(other.name, self.name, message=message)
+        return Commit.from_message(sha, message or f"merge {other.name} into {self.name}")
+
+    def land_on_default(self) -> None:
+        """Merge default into this checkout, then land this branch onto default."""
+        from space.repo.repo import Repo, RepoConnectError
+
+        repository = self._repo
+        if getattr(repository, "_memory", False):
+            return
+        default = repository.default_branch
+        try_push(repository)
+        for candidate in (default, f"origin/{default}", "main", "origin/main"):
+            try:
+                repository.merge_from(
+                    candidate,
+                    message=f"merge {candidate} into {self.name}",
+                )
+                break
+            except RepoConnectError:
+                continue
+        try:
+            repository.push_to(default)
+        except RepoConnectError:
+            pass
+        occupier = repository.worktree_for(default)
+        if occupier is None:
+            try:
+                repository._git("branch", "-f", default, "HEAD")
+            except RepoConnectError:
+                return
+            return
+        if occupier.path.resolve() == Path(repository.root).resolve():
+            return
+        other = Repo(occupier.path)
+        other.clear_stash()
+        if other.is_dirty():
+            return
+        try:
+            other.merge_from(
+                self.name,
+                message=f"merge {self.name} into {default}",
+            )
+        except RepoConnectError:
+            return
+
+    def close(
+        self,
+        *,
+        commit_message: str = "branch: close",
+        merge_to_main: bool = True,
+        close_session: bool = True,
+    ) -> str:
+        """Commit, push, merge to default, drop worktree when clean, finish matching session."""
+        if not self.name:
+            raise ValueError("branch name is required")
+        repository = self._repo
+        if repository.is_dirty(untracked=False):
+            repository.commit([str(repository.root)], commit_message, untracked=True)
+        if merge_to_main:
+            self.land_on_default()
+        removed = remove_worktree_when_clean(repository)
+        if close_session:
+            from space.session import Session
+
+            session = Session.current(repository.root)
+            if session is not None and session.name == self.name:
+                session.close()
+        if removed:
+            return (
+                f"closed branch {self.name!r} — merged to default and "
+                "removed worktree when clean"
+            )
+        return (
+            f"closed branch {self.name!r} — merged when possible; "
+            "worktree kept (dirty or unpushed commits)"
+        )

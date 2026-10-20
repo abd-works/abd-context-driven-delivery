@@ -2,7 +2,7 @@
 
 **Purpose:** Scaffold a decorated `AgentToolSet` — `@agent_tool` operations and `@agent_instructions` recipes — from `templates/` matching by `examples/car/`.
 
-**Primary use case:** Generate a new `@agent_toolset` class that follows the domain model in `harness/agent_tools`, not a `PracticeGuidance` practice (that is CreateContextTool).
+**Primary use case:** Generate a new `@agent_toolset` class that follows the domain model in `harness/agent_tools`, not a `PracticeGuidance` practice (that is CreatePracticeGuidance).
 
 ## Seam
 

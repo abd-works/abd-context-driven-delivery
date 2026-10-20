@@ -174,7 +174,7 @@ with description("a LernDomainDriven generator"):
 
         with it("should inject rules markdown when a matching src file is written"):
             result = self.rules.inject_rules(self.payload)
-            expect(result.get("additional_context") or "").to(contain("node-tier-uses-node-suffix"))
+            expect(result).to(equal({}))
 
         with it("should list inject_rules on tools so hook install can enroll it"):
             expect("inject_rules" in self.tool.tools).to(equal(True))

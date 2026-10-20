@@ -1,0 +1,17 @@
+---
+description: "Coding rules for refactors and public seams in this repository"
+alwaysApply: true
+globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java"
+---
+
+# Coding rules
+
+## 1. `no-legacy-api-after-refactor`
+
+When you rename, move, or reshape a public seam, finish the change in one pass: delete the old API and update every caller to the new one. That includes production code, tests, imports, re-exports, configuration, and generated artifacts in the same change.
+
+Do not keep the old name alive for backward compatibility. No compatibility aliases, thin wrappers, deprecation shims, redirect modules, dual entry points, or “call the new thing but keep exporting the old symbol” patterns. Those let two names mean one thing, so fixes and searches miss half the codebase and the old seam becomes permanent by accident.
+
+There is no exception for “only tests still use it” or “we can remove it later.” Later never comes; remove the old code and refactor tests, imports, and usage now.
+
+This rule matches the clean-engineering practice `no-legacy-api-after-refactor` in `practices/clean_engineering/clean_engineering.md` and `.cursor/rules/practices/clean-engineering/clean-engineering-code.mdc`. When those documents and this file disagree, treat this rule as the stricter requirement for this repository.

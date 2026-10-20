@@ -1,0 +1,14 @@
+{
+  "name": "prompt-notify",
+  "displayName": "CDD Prompt Notify",
+  "description": "Shows PromptNotify notices as Cursor information toasts.",
+  "version": "0.0.1",
+  "publisher": "cdd",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js"
+}

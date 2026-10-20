@@ -114,10 +114,7 @@ class ToolSetCollection:
         return found
 
     def _bound_callable(self, name: str, member: Any) -> Any:
-        attr = getattr(type(self), name, None)
-        if inspect.isfunction(member) and attr is member:
-            return getattr(self, name)
-        return member
+        return AgentToolSet._bind(type(self), self, name, member)
 
 
 _COLLECT_MARKS = (
@@ -446,8 +443,17 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         seen: set[str] = set()
         members: list[tuple[str, Any]] = []
         for name, member in inspect.getmembers(owner, predicate=inspect.isfunction):
+            descriptor = AgentToolSet._descriptor(owner, name)
+            if isinstance(descriptor, (staticmethod, classmethod)):
+                member = AgentToolSet._marked_function(descriptor)
             seen.add(name)
             members.append((name, member))
+        for base in owner.__mro__:
+            for name, raw in base.__dict__.items():
+                if name in seen or not isinstance(raw, (staticmethod, classmethod)):
+                    continue
+                seen.add(name)
+                members.append((name, AgentToolSet._marked_function(raw)))
         for name, member in inspect.getmembers(owner, predicate=inspect.isdatadescriptor):
             getter = getattr(member, "fget", None)
             if getter is not None and name not in seen:
@@ -463,9 +469,35 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         ]
 
     def _bound_callable(self, name: str, member: Any) -> Any:
-        attr = getattr(type(self), name, None)
-        if inspect.isfunction(member) and attr is member:
-            return getattr(self, name)
+        return AgentToolSet._bind(type(self), self, name, member)
+
+    @classmethod
+    def _descriptor(cls, owner: type, name: str) -> Any:
+        for base in owner.__mro__:
+            if name in base.__dict__:
+                return base.__dict__[name]
+        return None
+
+    @classmethod
+    def _marked_function(cls, descriptor: staticmethod | classmethod) -> Any:
+        function = descriptor.__func__
+        for flag in _COLLECT_MARKS:
+            if getattr(descriptor, flag, False) and not getattr(function, flag, False):
+                setattr(function, flag, True)
+            named = f"{flag}_name"
+            if getattr(descriptor, named, None) and not getattr(function, named, None):
+                setattr(function, named, getattr(descriptor, named))
+        return function
+
+    @classmethod
+    def _bind(cls, owner: type, instance: Any, name: str, member: Any) -> Any:
+        descriptor = cls._descriptor(owner, name)
+        if isinstance(descriptor, staticmethod):
+            return descriptor.__func__
+        if isinstance(descriptor, classmethod):
+            return descriptor.__get__(None, owner)
+        if inspect.isfunction(member) and getattr(owner, name, None) is member:
+            return getattr(instance, name)
         return member
 
     def marked_tool_names(self, toolset_cls: type) -> set[str]:
@@ -589,8 +621,28 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
                 action_name=action_name,
             )
 
-    def _validate_action(self, action_func: Callable[..., Any]) -> None:
-        self._validate_self_param(action_func)
+    def _validate_cls_param(self, action_func: Callable[..., Any]) -> None:
+        params = list(inspect.signature(action_func).parameters.values())
+        class_name = self._validating_class_name
+        action_name = action_func.__name__
+        if not params or params[0].name != "cls":
+            raise AgentToolValidationError(
+                "first parameter must be named 'cls'",
+                class_name=class_name,
+                action_name=action_name,
+            )
+        if params[0].default is not inspect.Parameter.empty:
+            raise AgentToolValidationError(
+                "cls parameter must not have a default",
+                class_name=class_name,
+                action_name=action_name,
+            )
+
+    def _validate_action(self, action_func: Callable[..., Any], *, receiver: str | None = "self") -> None:
+        if receiver == "self":
+            self._validate_self_param(action_func)
+        elif receiver == "cls":
+            self._validate_cls_param(action_func)
         instructions = AgentInstructions.for_callable(action_func)
         body_ast = instructions.parse_source(action_func)
         all_providers = self._cross_instance_providers(body_ast) | self._for_each_providers(
@@ -610,8 +662,15 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         self._allowed_names = self.marked_tool_names(toolset_cls) | set(
             self.instruction_names(toolset_cls)
         )
-        for name, member in inspect.getmembers(toolset_cls, predicate=inspect.isfunction):
+        for name, member in self._annotated_members(toolset_cls):
             if not getattr(member, "_is_agent_instructions", False):
+                continue
+            descriptor = AgentToolSet._descriptor(toolset_cls, name)
+            if isinstance(descriptor, staticmethod):
+                self._validate_action(member, receiver=None)
+                continue
+            if isinstance(descriptor, classmethod):
+                self._validate_action(member, receiver="cls")
                 continue
             self._validate_action(member)
 

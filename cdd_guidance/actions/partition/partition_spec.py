@@ -27,7 +27,7 @@ from harness.agent_tools.agent_tools import AgentToolSet
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
+    "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _STORIES_TOOLSET = "cdd_guidance.practices.stories.stories:Stories"
 _DEFAULT_PARTITION_SNIPPET = "Hard fail"

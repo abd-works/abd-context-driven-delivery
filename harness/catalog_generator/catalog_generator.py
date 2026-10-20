@@ -61,8 +61,8 @@ CONTEXT_TOOL_REGISTRY: tuple[tuple[str, str, str], ...] = (
 UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("installer", "harness.installation.installer", "Installer"),
     ("diagnose", "cdd_guidance.actions.diagnose.diagnose", "Diagnose"),
-    ("echo", "echo.echo", "Echo"),
-    ("handoff", "handoff.handoff", "Handoff"),
+    ("echo instructions", "echo_instructions.echo_instructions", "EchoInstructions"),
+    ("handoff", "space.handoff.handoff", "Handoff"),
     ("repo", "space.repo.agent", "Repo"),
 )
 
@@ -1696,7 +1696,7 @@ class Catalog:
         self,
         repo_url: str = "",
         ref: str = "",
-        out_root: str = "catalog",
+        out_root: str = "",
         brands_root: str | Path | None = None,
         catalog_context_tool: CatalogContextTool | None = None,
         catalog_action: CatalogAction | None = None,
@@ -1706,7 +1706,9 @@ class Catalog:
         citation = GitCitation.from_checkout()
         self.repo_url = repo_url or citation.repo_url
         self.ref = ref or citation.ref
-        self.out_root = Path(out_root)
+        self.out_root = (
+            Path(out_root) if out_root else _REPO_ROOT / "cdd_guidance" / "catalog"
+        )
         from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN
 
         self.approach_md_path = (

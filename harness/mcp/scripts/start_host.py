@@ -51,6 +51,8 @@ def main() -> None:
     project = starter.find_project()
     repo = starter.find_cdd_repo(requested)
     os.chdir(repo)
+    os.environ["PYTHONPYCACHEPREFIX"] = str(repo / ".pycache")
+    sys.pycache_prefix = os.environ["PYTHONPYCACHEPREFIX"]
     os.environ["PYTHONIOENCODING"] = "utf-8"
     os.environ["CDD_REPO"] = str(repo)
     os.environ["CDD_PROJECT"] = str(project)

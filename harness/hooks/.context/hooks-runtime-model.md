@@ -1,6 +1,6 @@
 # Hooks — object model (model fidelity)
 
-Markdown channel for **`harness/hooks`**. Requirements are the live install mark, `HookInstallation` artifacts, and the Cursor process (`hook_server.py`). Partition: [module-context.md](module-context.md). *PromptEcho* types stay in [prompt-echo-model.md](../../tools/prompt_echo/.context/prompt-echo-model.md).
+Markdown channel for **`harness/hooks`**. Requirements are the live install mark, `HookInstallation` artifacts, and the Cursor process (`hook_server.py`). Partition: [module-context.md](module-context.md). *PromptNotify* types stay in [prompt-notify-model.md](../../tools/prompt_notify/.context/prompt-notify-model.md).
 
 **Install** writes files. **Runtime** is Cursor launching `hook_server.py` with stdin JSON. `@Hook` and `@mcp` on the same operation remain two independent installs.
 

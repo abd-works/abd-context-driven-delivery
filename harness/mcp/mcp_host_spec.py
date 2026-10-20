@@ -510,3 +510,15 @@ with description("the MCP host pid file") as self:
         with it("should still report the claiming process as the host itself"):
             expect(self.host_pid.is_this_process).to(equal(True))
 
+    with context("that claimed the host after a sibling deleted its pid file"):
+        with before.each:
+            self.mcp = McpInstallation("Cursor", self.tree, repo=_REPO_ROOT)
+            HostPid.from_ide(self.tree).claim()
+            (self.tree / "mcp-host.pid").unlink()
+
+        with after.each:
+            os.environ.pop("CDD_MCP_HOST_PID", None)
+
+        with it("should report the MCP host as running for install standup"):
+            expect(self.mcp.cursor_host_is_running()).to(equal(True))
+

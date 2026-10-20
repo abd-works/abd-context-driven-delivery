@@ -35,5 +35,7 @@ dependencies = [
 # Mirror import_path_entries() in the installer:
 #   root → cdd_guidance, tools, harness
 #   cdd_guidance/practices, actions, patterns → short catalog imports
+# namespaces: folders of modules are packages without an __init__.py
 where = [".", "harness", "tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/patterns", "cdd_guidance/builders"]
 exclude = ["retired*"]
+namespaces = true

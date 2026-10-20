@@ -9,7 +9,6 @@ InstallTracker = Callable[[Path], None]
 
 _NO_CATALOG_FLAG = "_no_catalog"
 _NO_DEPLOY_FLAG = "_no_deploy"
-_DIAGNOSTIC_FLAG = "_diagnostic"
 
 
 def noCatalog(target: Any = None) -> Any:
@@ -50,29 +49,6 @@ def omitted_from_catalog(obj: Any) -> bool:
         return True
     fn = getattr(obj, "__func__", None)
     return bool(fn is not None and getattr(fn, _NO_CATALOG_FLAG, False))
-
-
-def diagnostic(target: Any = None) -> Any:
-    """Mark an operation as a diagnostic.
-
-    A diagnostic run searches the repo and calls every operation carrying this flag.
-    """
-
-    def mark(obj: Any) -> Any:
-        setattr(obj, _DIAGNOSTIC_FLAG, True)
-        return obj
-
-    if target is None:
-        return mark
-    return mark(target)
-
-
-def is_diagnostic(obj: Any) -> bool:
-    """True when ``obj`` or its underlying function carries ``@diagnostic``."""
-    if getattr(obj, _DIAGNOSTIC_FLAG, False):
-        return True
-    fn = getattr(obj, "__func__", None)
-    return bool(fn is not None and getattr(fn, _DIAGNOSTIC_FLAG, False))
 
 
 def omitted_from_deploy(obj: Any) -> bool:

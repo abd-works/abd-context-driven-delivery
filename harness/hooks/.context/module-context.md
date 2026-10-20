@@ -2,18 +2,18 @@
 
 *Hook* is an operation Cursor may call when a named IDE event fires. The author marks the member; install writes Cursor’s hook files; Cursor starts `hook_server.py` with stdin JSON and gets one merged result.
 
-Object model: [hooks-runtime-model.md](hooks-runtime-model.md). Toast work lives in [tools/prompt_echo](../../tools/prompt_echo/.context/module-context.md).
+Object model: [hooks-runtime-model.md](hooks-runtime-model.md). Toast work lives in [tools/prompt_notify](../../tools/prompt_notify/.context/module-context.md).
 
 ### Hook
 
 - Put `@Hook("sessionStart")` (or `hook`) on a toolset member so that Cursor event runs the method.
-- Put `@Hook("postToolUse", disabled=True)` on one operation to skip install and runtime dispatch for that member only; the method body may still run when called in process.
+- Put `@Hook("postToolUse", disabled=True)` on one operation to skip install, runtime dispatch, and chat injection for that member. A disabled `inject_rules` returns nothing, including when another action calls it.
 - The body receives the event payload and returns the fields Cursor reads (`permission`, `continue`, `user_message`, `agent_message`, `followup_message`, `additional_context`).
 - **Invariant:** the event string is one of `Hook.EVENTS`. Unknown names fail at decoration.
 
 ### Hooks
 
-- Put `@Hooks(disabled=True)` above `@agent_toolset` to skip every hook on that class. PromptLog uses this today; PromptEcho does not.
+- Put `@Hooks(disabled=True)` above `@agent_toolset` to skip every hook on that class. PromptLog uses this today; PromptNotify does not.
 
 ### HookInstallation
 
@@ -35,4 +35,4 @@ Build order: `installation` → `harness/hooks`
 
 ## Constraint
 
-The event name is the Cursor event (`sessionStart`, `preToolUse`, …) from `Hook.EVENTS` in `harness.hooks.hooks`. `@Hooks(disabled=True)` on a toolset skips every hook on it; `@Hook(..., disabled=True)` on one operation skips only that member. *Echo* / *PromptEcho* live in `tools/prompt_echo`.
+The event name is the Cursor event (`sessionStart`, `preToolUse`, …) from `Hook.EVENTS` in `harness.hooks.hooks`. `@Hooks(disabled=True)` on a toolset skips every hook on it; `@Hook(..., disabled=True)` on one operation skips only that member. *Echo* / *PromptNotify* live in `tools/prompt_notify`.

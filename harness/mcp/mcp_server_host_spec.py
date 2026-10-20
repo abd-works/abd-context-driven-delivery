@@ -21,7 +21,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 _HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
-_ECHO = "echo.echo:Echo"
+_ECHO = "echo_instructions.echo_instructions:EchoInstructions"
 _PARAMETER_TYPES = (
     "harness.mcp._examples.parameter_types.parameter_types:ParameterTypes"
 )
@@ -62,7 +62,11 @@ class StdioHostProbe:
             command=str(_PYTHON),
             args=["-m", "harness.mcp", "--toolsets", toolsets],
             cwd=str(_REPO_ROOT),
-            env={**__import__("os").environ, "PYTHONPATH": _PYTHONPATH},
+            env={
+                **__import__("os").environ,
+                "PYTHONPATH": _PYTHONPATH,
+                "PYTHONPYCACHEPREFIX": str(_REPO_ROOT / ".pycache"),
+            },
         )
 
     async def increment_then_read_twice(self, session):
@@ -186,7 +190,7 @@ with description("an MCP host over stdio"):
                 _with_session(
                     _ECHO,
                     lambda session: session.call_tool(
-                        "echo.fence", arguments={"body": "hello mcp"}
+                        "echo-instructions.fence", arguments={"body": "hello mcp"}
                     ),
                 )
             )

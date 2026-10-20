@@ -18,7 +18,7 @@ session --> set when ever a session is opened, created etc
     log() 
         <- can be called by ai or directly by code as part of running an action or on dmenad by uer /ai ; 
         use a popular python logger as a base
-        guidance action base run operation needs @log
+        guidance action run logs the action name it is given; a run with no action name leaves the log unchanged
       --logging spec
             log in sessions/{session-name}/session.log
             errors caught by host sessios/session-name/session.err

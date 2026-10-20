@@ -172,7 +172,8 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 
 Handoff, Sketch, and GrillContext take their paths from the host Session. They do not open a workspace of their own.
 
-- Handoff writes `handoff-{timestamp}.md` in `session.session_path`.
+- Handoff writes `handoff-{timestamp}.md` in `session.session_path / handoffs`.
+- RecordDecisions writes `{NNNN}-{slug}.md` under `session.workpath / .context / cdr`.
 - Sketch writes `{slug}-sketch.md` under the session work path, in that path's `.context` folder.
 - GrillContext writes `grill-answers.md` in that same `.context` folder.
 
@@ -387,15 +388,15 @@ it should add that chat onto the validation line
   -> expect(session.session_path / "session.log").to contain the correction
 ```
 
-#### that is annotated with log
+#### that names an action
 
 ```
--> action.run(guidance)
+-> action.run(guidance, action)
 it should log that action and the paths it was given
   -> expect(session.session_path / "session.log").to contain the action
 ```
 
-#### that is not annotated with log
+#### that names no action
 
 ```
 -> action.run(guidance)

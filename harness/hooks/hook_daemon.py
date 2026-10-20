@@ -4,13 +4,17 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import signal
 import socket
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
+os.environ["PYTHONPYCACHEPREFIX"] = str(_REPO / ".pycache")
+sys.pycache_prefix = os.environ["PYTHONPYCACHEPREFIX"]
 for _entry in (_REPO, _REPO / "tools", _REPO / "cdd_guidance" / "practices", _REPO / "cdd_guidance" / "actions"):
     _path = str(_entry)
     if _path not in sys.path:
@@ -18,6 +22,12 @@ for _entry in (_REPO, _REPO / "tools", _REPO / "cdd_guidance" / "practices", _RE
 
 _PORT_RANGE_START = 20000
 _PORT_RANGE_SIZE = 10000
+_SOURCE_STAMP_FILES = (
+    Path("harness/hooks/hook_daemon.py"),
+    Path("harness/hooks/hook_server.py"),
+    Path("harness/guidance/rule.py"),
+    Path("harness/guidance_actions/guidance_actions.py"),
+)
 
 
 class HookDaemon:
@@ -65,6 +75,7 @@ class HookDaemon:
             str(Path(root) / "cdd_guidance" / "actions"),
         ]
         existing = env.get("PYTHONPATH", "")
+        env["PYTHONPYCACHEPREFIX"] = str(Path(root) / ".pycache")
         env["PYTHONPATH"] = os.pathsep.join(
             [*extra, *(existing.split(os.pathsep) if existing else ())]
         )
@@ -104,7 +115,7 @@ class HookDaemon:
             from harness.hooks.hook_server import HookServer
 
             server = inner if inner is not None else HookServer.from_toolsets(root)
-            self._publish_address(HookServer.state_path(root), listener.getsockname()[1])
+            self._publish_address(HookServer.state_path(root), listener.getsockname()[1], root)
             self._serve_until_stopped(listener, server)
         finally:
             listener.close()
@@ -126,12 +137,61 @@ class HookDaemon:
         sock.listen(socket.SOMAXCONN)
         return sock
 
-    def _publish_address(self, path: Path, port: int) -> None:
+    def source_stamp(self, repo: Path) -> str:
+        """Identity of the hook code this process loaded. A newer file is a different daemon."""
+        parts: list[str] = []
+        root = Path(repo).resolve()
+        for rel in _SOURCE_STAMP_FILES:
+            path = root / rel
+            if not path.is_file():
+                continue
+            parts.append(f"{rel.as_posix()}:{path.stat().st_mtime_ns}")
+        return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
+
+    def replace_stale(self, repo: Path, path: Path) -> None:
+        """Stop a daemon that loaded older hook code. A Cursor reload does not restart it."""
+        if not path.is_file():
+            return
+        try:
+            state = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return
+        if state.get("stamp") == self.source_stamp(repo):
+            return
+        pid = int(state.get("pid") or 0)
+        if pid and pid != os.getpid():
+            self._end_process(pid)
+        try:
+            path.unlink()
+        except OSError:
+            return
+
+    def _end_process(self, pid: int) -> None:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            return
+        deadline = time.time() + 3
+        while time.time() < deadline:
+            if not self._process_is_alive(pid):
+                return
+            time.sleep(0.05)
+
+    def _process_is_alive(self, pid: int) -> bool:
+        if pid <= 0:
+            return False
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        return True
+
+    def _publish_address(self, path: Path, port: int, repo: Path | None = None) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            json.dumps({"host": self.HOST, "port": port, "pid": os.getpid()}),
-            encoding="utf-8",
-        )
+        payload = {"host": self.HOST, "port": port, "pid": os.getpid()}
+        if repo is not None:
+            payload["stamp"] = self.source_stamp(repo)
+        path.write_text(json.dumps(payload), encoding="utf-8")
 
     def _serve_until_stopped(self, listener: socket.socket, server) -> None:
         """Answer every caller off the accept loop.

@@ -19,9 +19,7 @@ from harness.agent_tools.agent_tools import (
     instructions,
     toolsetCollection,
 )
-from harness.installation.destination import diagnostic
 from harness.installation.files import rules, skill
-from prompt_echo.prompt_echo import echo
 from harness.mcp.mcp_server import mcp
 from harness.markdown import (
     AssetLocator,
@@ -112,16 +110,7 @@ class Guidance:
         owner = practice if practice is not None else self
         return Path(inspect.getfile(type(owner))).resolve().parent / "templates"
 
-    @diagnostic
-    @agent_instructions
-    def diagnose_guidance(self, guidance: list[str] | None = None) -> str:
-        """Call installed practice instructions for the guidance filter and record them in diagnostics.json."""
-        from harness.installation.installer import Installer
-
-        return probe_guidance_instructions(guidance, Installer())
-
     @property
-    @echo
     @skill
     @mcp
     @agent_instructions
@@ -170,7 +159,6 @@ class GuidanceCollection(MarkdownCollection, Guidance):
     def templates(self) -> str: ...
 
     @collect
-    @echo
     @mcp
     @skill
     @agent_instructions
@@ -326,7 +314,6 @@ class PracticeGuidance(Guidance):
 
 
     @property
-    @echo
     @mcp
     @skill
     @agent_instructions
@@ -651,7 +638,6 @@ class FidelityGuidance(Guidance):
         """Fidelity rules section."""
 
     @property
-    @echo
     @mcp
     @skill
     @agent_instructions

@@ -9,8 +9,7 @@ from pathlib import Path
 from typing import Any, NotRequired, TypedDict
 
 from harness.agent_tools import AgentToolSet, agent_instructions, agent_toolset, tools
-from harness.installation.destination import diagnostic
-from prompt_echo.prompt_echo import PromptEcho, echo
+from prompt_notify.prompt_notify import PromptNotify, echo
 from harness.hooks.hooks import Hook
 
 class GuidanceRef(TypedDict):
@@ -84,15 +83,6 @@ class GuidanceAction:
         self._guidance_text: str | None = None
         self._tool_items: list = []
 
-    @diagnostic
-    @agent_instructions
-    def diagnose_actions(self, guidance: list[str] | None = None) -> str:
-        """Call installed guidance-action MCP operations and record instruction results in diagnostics.json."""
-        from harness.guidance.guidance import probe_guidance_actions
-        from harness.installation.installer import Installer
-
-        return probe_guidance_actions(guidance, Installer())
-
     def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
         """Guidance ref or dict: iterate Guidance. Other strings: run once on that text."""
         if guidance is None:
@@ -163,7 +153,7 @@ class GuidanceAction:
             return
         from space.session import Session
 
-        session = Session._current
+        session = Session.current()
         if session is None or session.session_path is None:
             return
         session.log_action(action, [])
@@ -215,10 +205,10 @@ class GuidanceAction:
             return {}
         body = "\n\n".join(parts)
         action = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", type(self).__name__).lower()
-        echo = PromptEcho()
+        echo = PromptNotify()
         echo.toast_roots = data.get("workspace_roots")
         echo.show_ide_toast(
-            PromptEcho().inject_rules_toast(action, labels),
+            PromptNotify().inject_rules_toast(action, labels),
         )
         return {"additional_context": body}
 
@@ -238,6 +228,8 @@ class GuidanceAction:
         if rules is None:
             return ""
         globbed = getattr(rules, "inject_rules", None)
+        if getattr(globbed, "_hook_disabled", False):
+            return ""
         if callable(globbed):
             text = (globbed(data).get("additional_context") or "").strip()
             if text:

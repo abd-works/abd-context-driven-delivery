@@ -44,6 +44,8 @@ def _pid_alive(pid: int) -> bool:
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+os.environ["PYTHONPYCACHEPREFIX"] = str(_REPO_ROOT / ".pycache")
+sys.pycache_prefix = os.environ["PYTHONPYCACHEPREFIX"]
 for _category in ("tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/patterns"):
     _entry = str(_REPO_ROOT / _category)
     if _entry not in sys.path:
@@ -476,8 +478,10 @@ class HookServer:
         self._host = host
         self._port = port
         self._catalog = catalog
-        self._session = None
         self._payload: HookPayload | None = None
+        from space.session import Session
+
+        self.session = Session.current(repo_root)
         if catalog is not None:
             self._absorb_catalog_failures()
 
@@ -488,6 +492,9 @@ class HookServer:
     @classmethod
     def ensure(cls, repo: Path) -> HookServer:
         path = cls.state_path(repo)
+        from harness.hooks.hook_daemon import HookDaemon
+
+        HookDaemon().replace_stale(repo, path)
         connected = cls._connect(repo, path)
         if connected is not None:
             return connected
@@ -583,14 +590,6 @@ class HookServer:
             self.skip(tool, error)
         self._catalog.failures.clear()
 
-    @property
-    def session(self):
-        if self._session is None:
-            from space.session import Session
-
-            self._session = Session(self._repo_root)
-        return self._session
-
     def skip(self, tool: str, error: BaseException) -> None:
         skipped = (
             error
@@ -666,6 +665,8 @@ class HookServer:
         except (json.JSONDecodeError, UnicodeDecodeError):
             return HookResult()
         result = self.dispatch(payload)
+        if self._is_rules_dump(result.additional_context or ""):
+            result.additional_context = ""
         self._publish_context(result)
         self._write_last_chat_injected(result)
         if payload.hook_event_name == "beforeSubmitPrompt":
@@ -709,11 +710,27 @@ class HookServer:
         dest = self._chat_injection_path(conversation_id)
         if not dest.is_file():
             return result
-        body = self._model_context(dest.read_text(encoding="utf-8"))
-        if not body or body.lstrip().startswith("Before you continue, echo the following message"):
+        raw_body = dest.read_text(encoding="utf-8")
+        if self._is_rules_dump(raw_body):
+            dest.unlink(missing_ok=True)
+            return result
+        body = self._model_context(raw_body)
+        if not body:
             return result
         result.additional_context = body
         return result
+
+    def _is_rules_dump(self, body: str) -> bool:
+        text = body.lstrip()
+        if not text:
+            return False
+        if text.startswith("You just edited "):
+            return True
+        if text.startswith("The following rules need to be followed"):
+            return True
+        if text.startswith("Before you continue, echo the following message"):
+            return True
+        return "The following rules need to be followed while editing this document:" in text
 
     def _model_context(self, body: str) -> str:
         """Rule text for the model. The injected-rules notice stays out of the prompt."""

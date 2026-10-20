@@ -15,9 +15,9 @@ section: body
 
 # Story Map — Context-Driven Delivery
 
-**Sources / context:** `README.md` (install, practice plus action plus optional format, discovery / specification / implementation); `.context/principles/context-as-code-strategy.md` (sandbox, scaffold, document one slice, tests until green, human review, next increment); `cdd_guidance/agents/context.md`, `discovery.md`, `specification.md`, `implementation.md`; `.context/module-context.md` (Installer, Context Setup, Stories, Ddd, Handoff, Eval); `cdd_guidance/context_setup/.context/module-context.md`; `cdd_guidance/context_setup/.context/cdr/0001-plain-toolset-not-context-domain.md`; `cdd_guidance/context_setup/context_setup.py`; `cdd_guidance/context_setup/context_index.py`; `cdd_guidance/context_setup/context_setup_spec.py`; `cdd_guidance/context_setup/context_index_spec.py`; `space/session/session.py`; `space/session/session_spec.py`; `space/session/session-sketch.md`; `space/session/.context/session-context.md`; `harness/guidance/guidance.py` (`PracticeGuidance` does not load a graph).
+**Sources / context:** `README.md` (install, practice plus action plus optional format, discovery / specification / implementation); `.context/principles/context-as-code-strategy.md` (sandbox, scaffold, document one slice, tests until green, human review, next increment); `cdd_guidance/agents/context.md`, `discovery.md`, `specification.md`, `implementation.md`; `.context/module-context.md` (Installer, Context Setup, Stories, Ddd, Handoff, Eval); `cdd_guidance/context_setup/.context/module-context.md`; `cdd_guidance/context_setup/.context/cdr/0001-plain-toolset-not-context-domain.md`; `cdd_guidance/context_setup/context_setup.py`; `cdd_guidance/context_setup/context_index.py`; `cdd_guidance/context_setup/context_setup_spec.py`; `cdd_guidance/context_setup/context_index_spec.py`; `space/session/session.py`; `space/session/session_spec.py`; `space/session/session-sketch.md`; `space/session/.context/session-context.md`; `space/repo/repo.py`; `space/repo/agent.py`; `space/repo/worktree.py`; `space/repo/push.py`; `space/repo/repo_spec.py`; `space/repo/.context/module-context.md`; `harness/guidance/guidance.py` (`PracticeGuidance` does not load a graph).
 
-**Evidence:** Install and context-setup nodes are inferred from those sources. No live capture was walked for them. Open Work Session nodes are observed from the examples in `space/session/session_spec.py` and the operations in `space/session/session.py`. `Session.practice(name)` builds the guideline and that practice's graph together on the first ask.
+**Evidence:** Install and context-setup nodes are inferred from those sources. No live capture was walked for them. Open Work Session nodes are observed from the examples in `space/session/session_spec.py` and the operations in `space/session/session.py`. `Session.practice(name)` builds the guideline and that practice's graph together on the first ask. Work With Repo Branch and Work With Repo Worktree are observed from `space/repo/repo_spec.py` and the branch, worktree, and push operations on `space.repo.agent:Repo`.
 
 ---
 
@@ -51,127 +51,32 @@ section: body
 # (E) Open Work Session
 ##  (E) Open Named Session
 ###     (S) Session --> Open New Session
-####        Tests
-                # space/session/session_spec.py
-                with context("that is new")
-                    with it("should return keep_log to the agent")
-                    with it("should keep the name, the workpath, and the repo path")
 ###     (S) Session --> Select Existing Session
-####        Tests
-                # space/session/session_spec.py
-                with context("that is selected")
-                    with context("with only a name")
-                        with it("should bind the existing session from the environment")
-                        with it("should use the workpath stored on that session")
-                    with context("with a repo path")
-                        with it("should keep logging under that repo at sessions and the name")
-                        with it("should read the workpath from that session")
-                with context("with a session path")
-                    with it("should read the repo path and the workpath from that session")
-                with context("with a workpath")
-                    with it("should keep the given workpath and take the repo root from it")
 ###     (S) Session --> Open Session Loop
-####        Tests
-                # space/session/session_spec.py
-                with context("that opens a loop")
-                    with it("should append a loop marker to session.log")
-                with description("a loop")
-                    with context("that is opened")
-                        with it("should take the next loop number")
-                        with it("should append the loop marker to session.log")
-                    with context("that has log entries")
-                        with it("should return the log lines for that loop number")
-                        with context("with a chat to place under the lines")
-                            with it("should show the chat and the response under the lines they belong to")
 ###     (S) Session --> Remember Practice Folders
-####        Tests
-                # space/session/session_spec.py
-                with description("a practice")
-                    with context("with the practice default folders")
-                        with it("should leave that practice out of practices.json")
-                    with context("with parent folders that are not the default")
-                        with it("should save those folders in practices.json")
-                    with context("with more than one set of peer folders")
-                        with it("should keep each set on that practice")
 ##  (E) Record Session Log
 ###     (S) Session --> Record Session Action
-####        Tests
-                # space/session/session_spec.py
-                with context("that logs an action")
-                    with context("with paths passed in")
-                        with it("should append a timestamped line that names the action and the path")
-                    with context("with a graph node known for the practice")
-                        with it("should name the practice graph root")
-                    with context("with rules injected from a inject rules hook")
-                        with it("should log that practice, fidelity, and rule")
-                        with it("should omit a rule that was not injected")
-                    with context("with a chat transcript")
-                        with it("should point at the chat id, the transcript file, and the line numbers")
-                with context("that is annotated with log")
-                    with it("should log that action")
-                with context("that is not annotated with log")
-                    with it("should leave session.log unchanged")
 ###     (S) Session --> Record Validation Run
-####        Tests
-                # space/session/session_spec.py
-                with context("that calls validate")
-                    with context("with a practice and a fidelity")
-                        with it("should log that practice and that fidelity")
-                    with context("with a violation")
-                        with it("should log the rule, the synopsis, and the correction")
 ###     (S) Session --> Attach Action Chat
-####        Tests
-                # space/session/session_spec.py
-                with context("that appends a chat to a logged action")
-                    with it("should add that chat onto that action's log line")
 ###     (S) Session --> Record Session Error
-####        Tests
-                # space/session/session_spec.py
-                with context("that logs an error")
-                    with it("should write the trace and still raise the failure")
-                    with it("should point the session.log line at that session.err file")
 ##  (E) Hold Process Session
 ###     (S) Session --> Load Practice Guideline
-####        Tests
-                # space/session/session_spec.py
-                with description("a practice")
-                    with context("that a practice has been invoked")
-                        with it("should hold that practice's guideline and graph in memory")
-                        with it("should hold that practice's graph with the guideline")
-                        with it("should return that same practice on the next ask")
-                        with it("should leave the other practices unopened")
-                    with context("with the practice default folders")
-                        with it("should point that practice's graph root at the practice's own folder")
-                    with context("with parent folders that are not the default")
-                        with it("should point that practice's graph root at those parent folders")
-                    with context("that a practice has not been invoked")
-                        with it("should omit that practice's entry")
-                    with context("with harness/guidance as the tree for clean engineering, stories, and bdd")
-                        with it("should load those graphs from harness/guidance")
-                        with it("should finish that load within 5 seconds")
 ###     (S) Session --> Reset Process Session
-####        Tests
-                # space/session/session_spec.py
-                with context("that has been reset")
-                    with it("should open that practice again on the next ask")
 ###     (S) Session --> Persist Hook Session
-####        Tests
-                # space/session/session_spec.py
-                with context("that the hook server holds")
-                    with it("should live on the persistent hook server")
-                    with it("should be the same object across hook runs")
-                    with it("should open that practice's guideline")
-                    with it("should open that practice's graph with the guideline")
-                    with it("should return the same practice across hook runs")
 ###     (S) Session --> Hold Mcp Session
-####        Tests
-                # space/session/session_spec.py
-                with context("that the mcp server holds")
-                    with it("should be a session")
-                    with it("should not be the hook server session")
-                    with it("should open that practice's guideline")
-                    with it("should open that practice's graph with the guideline")
-                    with it("should return the same practice across mcp calls")
+##  (E) Work With Repo Branch
+###     (S) Repo --> Switch Branch
+###     (S) Repo --> Create Branch
+###     (S) Repo --> Close Branch
+###     (S) Repo --> Merge Branch
+###     (S) Repo --> Commit Branch
+###     (S) Repo --> Push Branch
+##  (E) Work With Repo Worktree
+###     (S) Repo --> List Worktree
+###     (S) Repo --> Open Worktree
+###     (S) Repo --> Reuse Worktree
+###     (S) Repo --> Remove Worktree
+###     (S) Repo --> Fetch Worktree
 # (E) Deliver Verified Context
 ##  (E) Open Practice Catalog
 ###     (S) User --> Open Practice Catalog
@@ -382,6 +287,6 @@ section: body
 
 ## Scope boundary
 
-**In scope:** The repeatable path a person uses to get verified context for an existing application. Install publishes skills, rules, commands, the MCP manifest, and hooks. A Work Session then opens under `.sessions`, announces turns, and records work-session rules; a process Session holds the knowledge graph and practice guidance. Then the catalog is opened. Context Setup converts a document folder to markdown, notes flat structure, partitions through the practices the person selects, and embeds a Context Index. It also isolates a running application: classify external dependencies, write stub-focus documents when the complex-stub trigger fires, write boundary stubs, smoke-test web and desktop surfaces, scout pages, review PASS, WARN, and FAIL verdicts, and complete capture for pages that did not pass. Context Index embeds segment files, searches ranked chunks, and answers a question with citations. Stories and Ddd scaffold the outline, document one slice, and prove that slice with story tests and domain wraps. The person reviews meaning, accepts the stage, and logs a mistake and its correction. The next increment covers another distinct behavior, and Handoff writes the session handoff.
+**In scope:** The repeatable path a person uses to get verified context for an existing application. Install publishes skills, rules, commands, the MCP manifest, and hooks. A Work Session then opens under `.sessions`, announces turns, and records work-session rules; a process Session holds the knowledge graph and practice guidance. That same session works the repository: switch, create, close, merge, commit, and push a branch, and list, open, reuse, remove, and fetch a worktree. Then the catalog is opened. Context Setup converts a document folder to markdown, notes flat structure, partitions through the practices the person selects, and embeds a Context Index. It also isolates a running application: classify external dependencies, write stub-focus documents when the complex-stub trigger fires, write boundary stubs, smoke-test web and desktop surfaces, scout pages, review PASS, WARN, and FAIL verdicts, and complete capture for pages that did not pass. Context Index embeds segment files, searches ranked chunks, and answers a question with citations. Stories and Ddd scaffold the outline, document one slice, and prove that slice with story tests and domain wraps. The person reviews meaning, accepts the stage, and logs a mistake and its correction. The next increment covers another distinct behavior, and Handoff writes the session handoff.
 
 **Out of scope:** The one-time repository clone. The toolset authoring spine in `harness/.context/story-map.md`. Scenario text, acceptance-test code, and domain class bodies. Clean Engineering, BDD, Diagnose, and workflow tickets, which the strategy names as available and leaves off this path.

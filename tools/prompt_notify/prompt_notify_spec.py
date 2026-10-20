@@ -1,0 +1,414 @@
+"""BDD specs for prompt echo against MCP and guideline signatures."""
+import json
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+_tools = str(_REPO_ROOT / "tools")
+if _tools not in sys.path:
+    sys.path.insert(0, _tools)
+
+from expects import contain, equal, expect
+from mamba import context, description, it
+
+from harness.installation.installer import Installer  # noqa: F401 — load Destination before hooks
+from tempfile import TemporaryDirectory
+
+from prompt_notify.prompt_notify import PromptNotify, echo
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
+
+_prompt_notify = PromptNotify()
+
+
+class SpecFixture:
+    def _echo(self, hook_payload: dict) -> str:
+        return str(_prompt_notify.handle(hook_payload).get("user_message") or "")
+
+
+_spec = SpecFixture()
+
+
+with description("prompt echo detection"):
+    with context("that receives an action MCP tool name"):
+        with it("should name the action from sketch.sketch"):
+            kind, label = _prompt_notify.detect({"tool_name": "sketch.sketch", "tool_input": {}})
+            expect(kind).to(equal("action"))
+            expect(label).to(equal("sketch"))
+
+        with it("should name the action from generate_generate"):
+            kind, label = _prompt_notify.detect({"tool_name": "generate_generate", "tool_input": {}})
+            expect(kind).to(equal("action"))
+            expect(label).to(equal("generate"))
+
+        with it("should name create-rule from validate.createRule"):
+            kind, label = _prompt_notify.detect({"tool_name": "validate.createRule", "tool_input": {}})
+            expect(label).to(equal("create-rule"))
+
+    with context("that receives a CallMcpTool wrapper"):
+        with it("should read the nested MCP tool name"):
+            kind, label = _prompt_notify.detect(
+                {
+                    "tool_name": "CallMcpTool",
+                    "tool_input": {"toolName": "bdd-behavior", "arguments": {}},
+                }
+            )
+            expect(kind).to(equal("fidelity"))
+            expect(label).to(equal("bdd-behavior"))
+
+    with context("that receives a practice MCP tool name"):
+        with it("should name the practice from bdd.instructions"):
+            kind, label = _prompt_notify.detect({"tool_name": "bdd.instructions", "tool_input": {}})
+            expect(kind).to(equal("practice"))
+            expect(label).to(equal("bdd"))
+
+    with context("that receives a fidelity MCP tool name"):
+        with it("should name the fidelity from ddd-bounded-context"):
+            kind, label = _prompt_notify.detect({"tool_name": "ddd-bounded-context", "tool_input": {}})
+            expect(kind).to(equal("fidelity"))
+            expect(label).to(equal("ddd-bounded-context"))
+
+        with it("should name the fidelity from stories-story-map"):
+            kind, label = _prompt_notify.detect({"tool_name": "stories-story-map", "tool_input": {}})
+            expect(label).to(equal("stories-story-map"))
+
+    with context("that receives a skill path Read"):
+        with it("should name the fidelity from a practice skill folder"):
+            kind, label = _prompt_notify.detect(
+                {
+                    "tool_name": "Read",
+                    "tool_input": {
+                        "path": str(
+                            _REPO_ROOT
+                            / ".cursor"
+                            / "skills"
+                            / "practices"
+                            / "bdd"
+                            / "bdd-behavior"
+                            / "SKILL.md"
+                        )
+                    },
+                }
+            )
+            expect(kind).to(equal("fidelity"))
+            expect(label).to(equal("bdd-behavior"))
+
+    with context("that receives a practice rules file"):
+        with it("should name the guideline from the rules path"):
+            kind, label = _prompt_notify.detect(
+                {
+                    "tool_name": "Read",
+                    "tool_input": {
+                        "path": str(
+                            _REPO_ROOT / ".cursor" / "rules" / "practices" / "bdd.mdc"
+                        )
+                    },
+                }
+            )
+            expect(kind).to(equal("guideline"))
+            expect(label).to(equal("bdd"))
+
+    with context("that receives a legacy YAML action fence"):
+        with it("should name the action from the command text"):
+            kind, label = _prompt_notify.detect(
+                {
+                    "tool_name": "Shell",
+                    "tool_input": {"command": "echo action: scan"},
+                }
+            )
+            expect(kind).to(equal("action"))
+            expect(label).to(equal("scan"))
+
+    with context("that receives a source file whose path names a practice"):
+        with it("should not toast a practice"):
+            expect(
+                _prompt_notify.handle(
+                    {
+                        "tool_name": "Read",
+                        "tool_input": {
+                            "path": str(_REPO_ROOT / "cdd_guidance" / "practices" / "ddd" / "ddd.md")
+                        },
+                    }
+                ).get("user_message")
+            ).to(equal(None))
+
+        with it("should not toast a practice from a command that mentions one"):
+            expect(
+                _prompt_notify.handle(
+                    {
+                        "tool_name": "Shell",
+                        "tool_input": {"command": "rg stories practices/stories"},
+                    }
+                ).get("user_message")
+            ).to(equal(None))
+
+    with context("that receives an ordinary source file Read"):
+        with it("should not echo"):
+            expect(
+                _prompt_notify.handle(
+                    {
+                        "tool_name": "Read",
+                        "tool_input": {
+                            "path": str(_REPO_ROOT / "harness" / "agent_tools" / "agent_tools.py")
+                        },
+                    }
+                ).get("user_message")
+            ).to(equal(None))
+
+    with context("that receives a scan kit source file Read or edit"):
+        with it("should not toast the scan action"):
+            path = str(_REPO_ROOT / "harness" / "guidance" / "rule.py")
+            expect(
+                _prompt_notify.handle({"tool_name": "Read", "tool_input": {"path": path}}).get(
+                    "user_message"
+                )
+            ).to(equal(None))
+            expect(
+                _prompt_notify.handle(
+                    {
+                        "tool_name": "StrReplace",
+                        "tool_input": {"path": path, "old_string": "a", "new_string": "b"},
+                    }
+                ).get("user_message")
+            ).to(equal(None))
+
+    with context("that echoes a detected MCP action"):
+        with it("should include the kind and label in the user message"):
+            expect(
+                _spec._echo({"tool_name": "scan.scan", "tool_input": {"paths": ["src"]}})
+            ).to(contain("Action \u2192 scan"))
+
+        with it("should put that echo in the IDE toast notice"):
+            expect(
+                _prompt_notify.toast_notice(_spec._echo({"tool_name": "scan.scan", "tool_input": {}}))["message"]
+            ).to(contain("Action \u2192 scan"))
+
+        with it("should write that echo to the workspace toast notice"):
+            with TemporaryDirectory() as tmp:
+                _prompt_notify.repo = Path(tmp)
+                dest = _prompt_notify.show_ide_toast(
+                    _spec._echo({"tool_name": "scan.scan", "tool_input": {}}),
+                )
+                expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
+                    contain("Action \u2192 scan")
+                )
+
+        with it("should write the toast notice into every workspace root"):
+            with TemporaryDirectory() as tmp:
+                repo = Path(tmp) / "cdd"
+                other = Path(tmp) / "app"
+                repo.mkdir()
+                other.mkdir()
+                _prompt_notify.repo = repo
+                _prompt_notify.toast_roots = [str(other)]
+                dest = _prompt_notify.show_ide_toast(
+                    "chat edit \u2192 rules : code",
+                )
+                copied = other / ".cursor" / "prompt-notify-toast.json"
+                expect(dest.is_file()).to(equal(True))
+                expect(copied.is_file()).to(equal(True))
+                expect(json.loads(copied.read_text(encoding="utf-8"))["message"]).to(
+                    contain("rules : code")
+                )
+
+        with it("should write the toast when Cursor sends a slash-drive workspace root"):
+            with TemporaryDirectory() as tmp:
+                repo = Path(tmp) / "cdd"
+                other = Path(tmp) / "app"
+                repo.mkdir()
+                other.mkdir()
+                resolved = other.resolve()
+                rest = resolved.as_posix().split(":", 1)[1]
+                slash_drive = f"/{resolved.drive[0].lower()}:{rest}"
+                _prompt_notify.repo = repo
+                _prompt_notify.toast_roots = [slash_drive]
+                _prompt_notify.show_ide_toast("chat edit \u2192 rules : code")
+                copied = other / ".cursor" / "prompt-notify-toast.json"
+                expect(copied.is_file()).to(equal(True))
+
+        with it("should use the composer chat name instead of a file path"):
+            with TemporaryDirectory() as tmp:
+                db = Path(tmp) / "state.vscdb"
+                import sqlite3
+
+                con = sqlite3.connect(db)
+                con.execute("CREATE TABLE cursorDiskKV (key TEXT, value TEXT)")
+                con.execute(
+                    "INSERT INTO cursorDiskKV (key, value) VALUES (?, ?)",
+                    (
+                        "composerData:chat-1",
+                        '{"name": "mm3e story map no yaml", "subtitle": "Edited story-map.md"}',
+                    ),
+                )
+                con.commit()
+                con.close()
+                echo = PromptNotify()
+                echo.state_db = db
+                expect(
+                    echo.chat_edit_source(
+                        {
+                            "conversation_id": "chat-1",
+                            "transcript_path": str(
+                                Path(tmp) / "missing-transcript.jsonl"
+                            ),
+                        }
+                    )
+                ).to(equal("chat mm3e story map no yaml edited file"))
+
+        with it("should not use a file path from the first message as the chat title"):
+            with TemporaryDirectory() as tmp:
+                transcript = Path(tmp) / "chat.jsonl"
+                transcript.write_text(
+                    "<user_query>\n@abd-context-driven-delivery/sandbox/mm3e/story-map.md\n</user_query>\n",
+                    encoding="utf-8",
+                )
+                echo = PromptNotify()
+                echo.state_db = Path(tmp) / "missing.vscdb"
+                expect(
+                    echo.chat_edit_source({"transcript_path": str(transcript)})
+                ).to(equal("chat edit"))
+
+        with it("should name the chat that edited the file"):
+            source = _prompt_notify.chat_edit_source(
+                {"conversation_title": "Story map scenarios"}
+            )
+            expect(source).to(equal("chat Story map scenarios edited file"))
+            expect(
+                _prompt_notify.inject_rules_toast(source, ["stories scenarios"])
+            ).to(equal("chat Story map scenarios edited file \u2192 rules : stories scenarios"))
+
+        with it("should not rewrite practice echoes into a rules toast"):
+            with TemporaryDirectory() as tmp:
+                _prompt_notify.repo = Path(tmp)
+                _prompt_notify.show_ide_toast("Practice \u2192 ddd")
+                dest = _prompt_notify.show_ide_toast("Practice \u2192 stories")
+                expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
+                    equal("Practice \u2192 ddd; Practice \u2192 stories")
+                )
+
+        with it("should stack rules notices from the same burst"):
+            with TemporaryDirectory() as tmp:
+                _prompt_notify.repo = Path(tmp)
+                _prompt_notify.show_ide_toast(
+                    "rules injected for clean-engineering-code\n"
+                    "rules injected for clean-engineering-modules"
+                )
+                dest = _prompt_notify.show_ide_toast(
+                    "rules injected for ddd-tactics\nrules injected for ddd-bounded-context"
+                )
+                message = json.loads(dest.read_text(encoding="utf-8"))["message"]
+                expect(message).to(
+                    equal(
+                        "rules injected for clean-engineering-code\n"
+                        "rules injected for clean-engineering-modules\n\n"
+                        "rules injected for ddd-tactics\n"
+                        "rules injected for ddd-bounded-context"
+                    )
+                )
+
+        with it("should keep both inject toasts from the same burst"):
+            with TemporaryDirectory() as tmp:
+                repo = Path(tmp)
+                _prompt_notify.repo = repo
+                _prompt_notify.show_ide_toast(
+                    _prompt_notify.inject_rules_toast("chat edit", ["agent bdd"]),
+                )
+                dest = _prompt_notify.show_ide_toast(
+                    _prompt_notify.inject_rules_toast(
+                        "chat edit",
+                        ["clean engineering code", "ddd tactics"],
+                    ),
+                )
+                message = json.loads(dest.read_text(encoding="utf-8"))["message"]
+                expect(message).to(
+                    equal(
+                        "chat edit \u2192 rules : agent bdd, "
+                        "clean engineering code, ddd tactics"
+                    )
+                )
+
+
+@agent_toolset
+class EchoKit:
+    """Kit used to pin @echo on begin and on a method."""
+
+    @echo
+    @agent_instructions
+    def begin(self, guidance=None, action: str = "") -> str:
+        return action
+
+    @agent_tool
+    def open_workspace(self, name: str = "") -> str:
+        return name
+
+    @agent_instructions
+    def enact(self) -> str:
+        return "enact"
+
+    @echo
+    @agent_instructions
+    def spotlight(self) -> str:
+        return "spotlight"
+
+
+@agent_toolset
+class EchoPractice:
+    """Practice-shaped Guidance with echoed instructions."""
+
+    @echo
+    @agent_instructions
+    def instructions(self) -> str:
+        return "practice"
+
+
+@agent_toolset
+class EchoPracticeChild(EchoPractice):
+    @agent_instructions
+    def instructions(self) -> str:
+        return "child"
+
+
+with description("prompt echo @echo mark"):
+    with context("that inherits @echo on begin"):
+        with it("should toast the kit as an action when a recipe runs"):
+            kind, label = _prompt_notify.detect_echo(
+                {"tool_name": "echo-kit.enact", "tool_input": {}},
+                toolsets=[EchoKit()],
+            )
+            expect(kind).to(equal("action"))
+            expect(label).to(equal("echo-kit"))
+
+        with it("should not toast open_workspace from the begin mark"):
+            expect(
+                _prompt_notify.detect_echo(
+                    {"tool_name": "echo-kit.open_workspace", "tool_input": {}},
+                    toolsets=[EchoKit()],
+                )
+            ).to(equal(None))
+
+    with context("that marks a specific recipe"):
+        with it("should toast that member when it is invoked"):
+            kind, label = _prompt_notify.detect_echo(
+                {"tool_name": "echo-kit.spotlight", "tool_input": {}},
+                toolsets=[EchoKit()],
+            )
+            expect(kind).to(equal("action"))
+            expect(label).to(equal("spotlight"))
+
+    with context("that marks practice instructions"):
+        with it("should toast the practice from the instructions member"):
+            kind, label = _prompt_notify.detect_echo(
+                {"tool_name": "echo-practice.instructions", "tool_input": {}},
+                toolsets=[EchoPractice()],
+            )
+            expect(kind).to(equal("practice"))
+            expect(label).to(equal("echo-practice"))
+
+    with context("that inherits @echo on practice instructions"):
+            kind, label = _prompt_notify.detect_echo(
+                {"tool_name": "echo-practice-child.instructions", "tool_input": {}},
+                toolsets=[EchoPracticeChild()],
+            )
+            expect(kind).to(equal("practice"))
+            expect(label).to(equal("echo-practice-child"))

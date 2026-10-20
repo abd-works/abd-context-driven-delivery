@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset
-from harness.installation.destination import diagnostic
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 
@@ -12,7 +11,6 @@ from harness.mcp.mcp_server import mcp
 class GuidanceDiagnostics:
     """Probe installed guidance instructions and guidance-action MCP operations."""
 
-    @diagnostic
     @mcp
     @skill
     @command("guidance-diagnostics")

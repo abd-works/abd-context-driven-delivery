@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
-from harness.installation.files import skill
+from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 
 from space.repo import repo as clone
@@ -14,6 +14,7 @@ from space.repo.worktree import (
     checkout_in_place,
     checkout_in_worktree,
     close_branch,
+    close_worktree,
     open_repo,
 )
 
@@ -45,7 +46,7 @@ class Repo:
 
     @agent_tool
     @mcp
-    @skill(name="branch-switch")
+    @command(name="branch-switch")
     def branch_switch(self, name: str, work_tree: bool = True) -> str:
         """Switch to ``name`` — use a sibling worktree when ``work_tree`` is true.
 
@@ -64,7 +65,7 @@ class Repo:
 
     @agent_tool
     @mcp
-    @skill(name="branch-create")
+    @command(name="branch-create")
     def branch_create(
         self,
         name: str,
@@ -90,7 +91,7 @@ class Repo:
 
     @agent_tool
     @mcp
-    @skill(name="branch-close")
+    @command(name="branch-close")
     def branch_close(
         self,
         name: str = "",
@@ -113,12 +114,32 @@ class Repo:
         return result
 
     @agent_tool
+    @mcp
+    @command(name="worktree-switch")
+    def worktree_switch(self, name: str) -> str:
+        """Open branch ``name`` in a sibling worktree and bind this toolset to that checkout."""
+        branch = (name or "").strip()
+        if not branch:
+            raise ValueError("branch name is required")
+        self._bind(checkout_in_worktree(self._repository(), branch))
+        return f"worktree for {self.current_branch!r} at {self.checkout_path}"
+
+    @agent_tool
+    @mcp
+    @command(name="worktree-close")
+    def worktree_close(self, commit_message: str = "worktree: close") -> str:
+        """Commit, push, and remove this linked worktree when clean. Does not close the branch."""
+        result = close_worktree(self._repository(), commit_message=commit_message)
+        self._active = None
+        return result
+
+    @agent_tool
     def push_commit(self, message: str) -> PushCommit:
         """Commit the working tree using ``message`` (subject and optional body)."""
         return push_changes(self._repository(), message)
 
     @mcp
-    @skill(name="push")
+    @command(name="push")
     @agent_instructions
     def push(self, hint: str = "") -> str:
         """Commit local changes. Optional hint: {{hint}}.

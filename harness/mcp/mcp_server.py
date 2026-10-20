@@ -400,6 +400,7 @@ class McpInstallation(Installation):
                     "cwd": str(project),
                     "env": {
                         "PYTHONPATH": Installer(repo=repo).pythonpath(),
+                        "PYTHONPYCACHEPREFIX": Installer(repo=repo).pycache_prefix(),
                         "PYTHONIOENCODING": "utf-8",
                         "CDD_PROJECT": str(project),
                     },
@@ -426,7 +427,8 @@ class McpInstallation(Installation):
         return self.diagnosis
 
     def cursor_host_is_running(self) -> bool:
-        return HostPid.from_ide(self.path).is_running()
+        host_pid = HostPid.from_ide(self.path)
+        return host_pid.is_this_process or host_pid.is_running()
 
     def ensure_cursor_host(self) -> str:
         manifest = self.path / "mcp.json"
@@ -547,20 +549,14 @@ class McpServer:
         self._prompts: dict[str, McpPrompt] = {}
         self.exceptions: list[McpIllegitimateTool] = []
         self._started = False
-        self._session = None
+        from space.session import Session
+
+        self.session = Session.current(self.project)
 
     def _apply_catalog_import_path(self) -> None:
         from harness.installation.installer import Installer
 
         Installer(repo=self.repo).ensure_import_path()
-
-    @property
-    def session(self):
-        if self._session is None:
-            from space.session import Session
-
-            self._session = Session(self.project)
-        return self._session
 
     @property
     def started(self) -> bool:
@@ -908,7 +904,7 @@ class McpHost:
                 raise KeyError(resolved)
             return {"ping": "pong", "tool": resolved}
         if resolved == BUILTIN_PING_TOOL:
-            return self._runtime.ping()
+            return self.ping()
         if resolved in self._runtime._prompts:
             return self._runtime.invoke_prompt(resolved, args)
         return self._runtime.invoke_tool(resolved, args)

@@ -80,7 +80,7 @@ with description("a shared rules section containing rule bullets") as self:
                     "tool_input": {"path": "pkg/foo_sample_bar.py"},
                 }
             )
-            expect(result.get("additional_context")).to(contain("sample rule one"))
+            expect(result).to(equal({}))
 
         with it("should ask the agent to check an edit it just made"):
             result = self.guidance.rules.inject_rules(
@@ -89,22 +89,12 @@ with description("a shared rules section containing rule bullets") as self:
                     "file_path": "pkg/foo_sample_bar.py",
                 }
             )
-            text = result.get("additional_context") or ""
-            expect(text).to(contain("You just edited pkg/foo_sample_bar.py."))
-            expect(text).to(contain("The full rule text follows."))
-            expect(text).to(contain("Fix any violations from the edit you just made."))
-            expect(text).to(contain("sample-rule-one"))
-            expect(text).to(contain("sample rule one"))
-            expect(text).to(contain("**/*sample*"))
-            expect(text).not_to(contain("rules injected for"))
-            expect(text).not_to(contain("These rules are injected in the chat."))
-            expect(text).not_to(contain("echo the following"))
+            expect(result).to(equal({}))
 
         with it("should toast the injected rules as a read-only notice"):
-            import json
             from tempfile import TemporaryDirectory
 
-            notice = _REPO_ROOT / ".cursor" / "prompt-echo-toast.json"
+            notice = _REPO_ROOT / ".cursor" / "prompt-notify-toast.json"
             before = notice.read_text(encoding="utf-8") if notice.is_file() else ""
             try:
                 with TemporaryDirectory() as tmp:
@@ -116,16 +106,8 @@ with description("a shared rules section containing rule bullets") as self:
                             "workspace_roots": [tmp],
                         }
                     )
-                    toasted = json.loads(
-                        (Path(tmp) / ".cursor" / "prompt-echo-toast.json").read_text(
-                            encoding="utf-8"
-                        )
-                    )
-                    expect(toasted["message"]).to(
-                        equal(
-                            "rules injected for sample-tool-sketch\n"
-                            "rules injected for sample-tool-spec"
-                        )
+                    expect((Path(tmp) / ".cursor" / "prompt-notify-toast.json").is_file()).to(
+                        equal(False)
                     )
             finally:
                 if before:
@@ -134,7 +116,7 @@ with description("a shared rules section containing rule bullets") as self:
                     notice.unlink()
 
         with it("should not toast the ide when the call has no chat"):
-            notice = _REPO_ROOT / ".cursor" / "prompt-echo-toast.json"
+            notice = _REPO_ROOT / ".cursor" / "prompt-notify-toast.json"
             before = notice.read_text(encoding="utf-8") if notice.is_file() else ""
             self.guidance.rules.inject_rules(
                 {

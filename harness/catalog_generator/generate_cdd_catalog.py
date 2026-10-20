@@ -4,10 +4,10 @@ Usage (from the CDD repo root):
 
     $env:PYTHONIOENCODING="utf-8"; python -m harness.catalog_generator.generate_cdd_catalog
 
-Regenerates the whole catalog into ``catalog/`` using the current HEAD and
-the origin remote. Override any of the three defaults explicitly:
+Regenerates the whole catalog into ``cdd_guidance/catalog/`` using the current
+HEAD and the origin remote. Override any of the three defaults explicitly:
 
-    python -m harness.catalog_generator.generate_cdd_catalog --out catalog --repo-url https://github.com/org/repo --ref main
+    python -m harness.catalog_generator.generate_cdd_catalog --out cdd_guidance/catalog --repo-url https://github.com/org/repo --ref main
 """
 from __future__ import annotations
 
@@ -28,7 +28,11 @@ from harness.catalog_generator.catalog_generator import Catalog, GitCitation
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Regenerate the CDD HTML catalog.")
-    parser.add_argument("--out", default="catalog", help="output root (default: catalog)")
+    parser.add_argument(
+        "--out",
+        default="cdd_guidance/catalog",
+        help="output root (default: cdd_guidance/catalog)",
+    )
     parser.add_argument("--repo-url", default=None, help="default: resolved from git remote get-url origin")
     parser.add_argument("--ref", default=None, help="default: current HEAD")
     parser.add_argument(

@@ -15,7 +15,6 @@ from harness.agent_tools.agent_tools import (
 )
 from harness.markdown.markdown import MarkdownCollection
 from harness.hooks.hooks import Hook
-from prompt_echo.prompt_echo import echo
 
 class AppliesTo:
     """Cursor attach data for a rules section — owned in the practice markdown fence."""
@@ -123,10 +122,12 @@ class RulesCollection(MarkdownCollection):
     def appliesTo(self) -> AppliesTo:
         return AppliesTo(always_apply=self.always_apply, globs=self.glob)
 
-    @echo
+   
     @Hook("postToolUse", disabled=True)
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        from prompt_echo.prompt_echo import PromptEcho
+        if getattr(type(self).inject_rules, "_hook_disabled", False):
+            return {}
+        from prompt_notify.prompt_notify import PromptNotify
 
         hook_payload = payload or {}
         if not self._just_edited(hook_payload):
@@ -139,7 +140,7 @@ class RulesCollection(MarkdownCollection):
         body = self._inject_context(path, bags, parts, hook_payload)
         notice = self._read_only_notice(bags)
         if notice and (hook_payload.get("conversation_id") or hook_payload.get("workspace_roots")):
-            echo = PromptEcho()
+            echo = PromptNotify()
             echo.toast_roots = hook_payload.get("workspace_roots")
             echo.show_ide_toast(notice)
         return {"additional_context": body}

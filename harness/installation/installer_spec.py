@@ -566,21 +566,20 @@ with description("an agent toolset") as self:
                     with it("should mark the install green"):
                         expect(self.installer.diagnose_install()).to(contain("green"))
 
-                    with it("should run every tool marked diagnostic"):
-                        expect(getattr(Installer.diagnose_install, "_diagnostic", False)).to(equal(True))
-                        reports = self.installer.diagnose()
+                    with it("should record install channels via diagnose_after_install"):
+                        reports = self.installer.diagnose_after_install()
                         expect(any("skill 1 -> 1 (delta 0)" in report for report in reports)).to(
                             equal(True)
                         )
 
                     with it("should append this install to the diagnostics log"):
-                        self.installer.diagnose()
+                        self.installer.diagnose_after_install()
                         expect(len(json.loads(self.log.read_text(encoding="utf-8"))["installs"])).to(
                             equal(2)
                         )
 
                     with it("should record the latest skill count on that install"):
-                        self.installer.diagnose()
+                        self.installer.diagnose_after_install()
                         expect(_last_logged_install(self.log)["skill"]["count"]).to(equal(1))
 
                 with context("that has a yellow surface change"):
@@ -618,8 +617,8 @@ with description("an agent toolset") as self:
                     with it("should mark the install red"):
                         expect(self.installer.diagnose_install()).to(contain("red"))
 
-                    with it("should log each diagnostic on the install"):
-                        self.installer.diagnose()
+                    with it("should log diagnose_install on the install"):
+                        self.installer.diagnose_after_install()
                         names = [item["name"] for item in _last_logged_install(self.log)["diagnostics"]]
                         expect(names).to(contain("diagnose_install"))
 

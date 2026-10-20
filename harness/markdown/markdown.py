@@ -1122,7 +1122,6 @@ _MARK_ATTRS = (
     "_skill_name",
     "_command_name",
     "_hook_name",
-    "_diagnostic",
 )
 
 

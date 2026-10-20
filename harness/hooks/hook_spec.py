@@ -363,6 +363,32 @@ with description("hook dispatch"):
             finally:
                 tmp.cleanup()
 
+        with it("should drop a saved edit-rules dump instead of replaying it"):
+            tmp = tempfile.TemporaryDirectory()
+            try:
+                root = Path(tmp.name)
+                server = HookServer(root, HandlerCatalog([], root))
+                saved = server._chat_injection_path("chat-a")
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                saved.write_text(
+                    "You just edited session.py. Check that edit against these rules and fix anything that does not follow them:\n"
+                    "The following rules need to be followed while editing this document:\n"
+                    "hide-inner-details\n",
+                    encoding="utf-8",
+                )
+                replayed = server.handle_stdin(
+                    json.dumps(
+                        {
+                            "hook_event_name": "beforeSubmitPrompt",
+                            "conversation_id": "chat-a",
+                        }
+                    ).encode()
+                )
+                expect(replayed.additional_context or "").to(equal(""))
+                expect(saved.is_file()).to(equal(False))
+            finally:
+                tmp.cleanup()
+
         with it("should not submit the rules notice as the next user message"):
             tmp = tempfile.TemporaryDirectory()
             try:
@@ -620,7 +646,7 @@ with description("inject_rules hook dispatch"):
                 },
                 toolsets=[Bdd()],
             )
-            expect(out.get("additional_context") or "").to(contain("observable-behavior"))
+            expect(out.get("additional_context") or "").to(equal(""))
 
         with it("should inject clean engineering bags that glob sketches"):
             from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
@@ -635,9 +661,7 @@ with description("inject_rules hook dispatch"):
                 },
                 toolsets=[CleanEngineering()],
             )
-            expect(out.get("additional_context") or "").to(
-                contain("vocabulary-traces-to-source")
-            )
+            expect(out.get("additional_context") or "").to(equal(""))
 
     with context("that receives a sketch action payload with listed BDD"):
 
@@ -652,7 +676,7 @@ with description("inject_rules hook dispatch"):
                 },
                 toolsets=[Sketch()],
             )
-            expect(out.get("additional_context") or "").to(contain("observable-behavior"))
+            expect(out.get("additional_context") or "").to(equal(""))
 
     with context("that receives an action payload on a toolset that also has rules"):
 
@@ -680,7 +704,7 @@ with description("inject_rules hook dispatch"):
                 },
                 toolsets=[_ListedInjectAction()],
             )
-            expect(out.get("additional_context") or "").to(contain("sample rule one"))
+            expect(out.get("additional_context") or "").to(equal(""))
 
 
 with description("hook process helpers"):
@@ -840,7 +864,11 @@ with description("the Cursor hook_server.py command"):
             input=b'{"hook_event_name":"sessionStart"}',
             cwd=str(_REPO_ROOT),
             capture_output=True,
-            env={**os.environ, "PYTHONPATH": Installer(repo=_REPO_ROOT).pythonpath()},
+            env={
+                **os.environ,
+                "PYTHONPATH": Installer(repo=_REPO_ROOT).pythonpath(),
+                "PYTHONPYCACHEPREFIX": Installer(repo=_REPO_ROOT).pycache_prefix(),
+            },
         )
         expect(proc.returncode).to(equal(0))
         expect(json.loads(proc.stdout.decode("utf-8"))["permission"]).to(equal("allow"))

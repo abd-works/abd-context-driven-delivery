@@ -38,13 +38,13 @@ with description("an agent spec file"):
             runbook = build_runbook(_TOOLS_SPEC)
             expect(len(runbook.scenarios) > 0).to(be_true)
 
-        with it("should build a generator runbook from create_context_tool_agent_spec"):
+        with it("should build a generator runbook from create_practice_guidance_agent_spec"):
             agent_spec = (
                 _REPO_ROOT
                 / "cdd_guidance"
                 / "builders"
-                / "create_context_tool"
-                / "create_context_tool_agent_spec.py"
+                / "create_practice_guidance"
+                / "create_practice_guidance_agent_spec.py"
             )
             manifest = read_manifest(agent_spec)
             expect(manifest.session is not None).to(be_true)
@@ -67,17 +67,17 @@ with description("an agent spec file"):
         with it("should strip prose after embedded run-request YAML in instruct_use_tool prompts"):
             prompt = (
                 "Invoke this request:\n"
-                "toolset: cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
                 "Return the complete response.\n"
             )
             body = yaml_from_prompt(prompt)
-            expect(body).to(equal("toolset: cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
+            expect(body).to(equal("toolset: cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
 
         with it("should reject captured CLI output when action does not match prompt YAML"):
             prompt = (
                 "Pipe this YAML on stdin:\n"
-                "toolset: cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
             )
             wrong = "```yaml\nok: true\naction: generate\ninstructions: test\n```"
