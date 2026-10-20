@@ -8,6 +8,7 @@ from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.ddd.rules.tactical_helpers import (
     has_tactical_stereotype,
+    is_presentation_module_source,
     is_screen_driver_class,
     other_classes_reference,
     repository_lifecycle_ops,
@@ -84,6 +85,8 @@ class BuildingBlocksFidelityRequiresTacticalStereotype(PracticeGraphRule):
     node_types = _TACTICAL_CLASS
 
     def check(self, node, context) -> list[str]:
+        if is_presentation_module_source(node):
+            return []
         if has_tactical_stereotype(context, node):
             return []
         return [

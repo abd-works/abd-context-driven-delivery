@@ -23,6 +23,24 @@ with description("DDD tactical rules (python .examples)"):
                 clean_class="PlanEntity",
             )
 
+        with it("should not require stereotypes on classes in tsx presentation modules"):
+            source = """
+import type { ComponentType } from 'react';
+export class OnboardingStepScreen {
+  constructor(readonly View: ComponentType) {}
+}
+"""
+            rule = ddd_rule_by_slug("building-blocks-fidelity-requires-tactical-stereotype")
+            hits = violations_for_ddd_rule(
+                rule,
+                source,
+                class_name="OnboardingStepScreen",
+                node_type="Entity",
+                lang="typescript",
+                filename="onboarding-step-screen.tsx",
+            )
+            expect(hits).to(equal([]))
+
         with it("should accept a value object when the class doc names <<Value Object>>"):
             source = """
 /** <<Value Object>> Processor authorization fields for onboarding. */

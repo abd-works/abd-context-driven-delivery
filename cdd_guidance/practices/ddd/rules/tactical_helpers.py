@@ -93,6 +93,12 @@ def repository_lifecycle_ops(context, node) -> list[str]:
     ]
 
 
+def is_presentation_module_source(node) -> bool:
+    """React screen modules — not DDD building blocks in code."""
+    path = (getattr(getattr(node, "source", None), "file", None) or "").replace("\\", "/").lower()
+    return path.endswith(".tsx")
+
+
 def is_screen_driver_class(context, node) -> bool:
     oclass = context.ce_class(node)
     if oclass is None:
