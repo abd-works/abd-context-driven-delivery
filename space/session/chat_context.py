@@ -31,6 +31,40 @@ def clear_chat_context() -> None:
     _line_numbers.set(None)
 
 
+def chat_from_hook_payload(payload: dict | object | None) -> tuple[str, Path, str] | None:
+    """Resolve chat id and transcript from a Cursor hook or MCP pre-tool payload."""
+    data = payload if isinstance(payload, dict) else {}
+    chat_id = str(
+        data.get("conversation_id")
+        or data.get("composer_id")
+        or data.get("chat_id")
+        or data.get("CDD_CONVERSATION_ID")
+        or ""
+    ).strip()
+    transcript = str(
+        data.get("agent_transcript_path")
+        or data.get("transcript_path")
+        or data.get("transcript")
+        or data.get("CDD_TRANSCRIPT_PATH")
+        or ""
+    ).strip()
+    lines = str(
+        data.get("transcript_lines")
+        or data.get("line_numbers")
+        or data.get("CDD_TRANSCRIPT_LINES")
+        or ""
+    ).strip()
+    if chat_id and transcript:
+        path = Path(transcript)
+        if not lines and path.is_file():
+            count = len(path.read_text(encoding="utf-8").splitlines()) or 1
+            lines = f"1-{count}" if count > 1 else "1"
+        if not lines:
+            lines = "1"
+        return chat_id, path, lines
+    return chat_from_environ()
+
+
 def chat_from_environ() -> tuple[str, Path, str] | None:
     chat_id = (
         (_chat_id.get() or "")

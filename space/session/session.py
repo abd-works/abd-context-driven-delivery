@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
-from harness.hooks.hooks import Hook
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 
@@ -26,7 +25,7 @@ _LOAD_FILE_BUDGET = 40
 _DEFAULT_SESSION_NAME = "default"
 _REPO_SESSIONS_DIR = ".sessions"
 _LEGACY_REPO_SESSIONS_DIR = "sessions"
-_LOOP_MARKER = re.compile(r"---\s+(\d+)\s*$")
+_LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
 _KNOWN_ACTIONS = (
     "generate",
     "validate",
@@ -219,31 +218,6 @@ class Session:
         session.resolve(name, repo_path=repo)
         return session if session.name else None
 
-    @Hook("preToolUse")
-    def pre_tool_use_logging(self, payload: dict | None = None) -> dict:
-        """Log each host tool call to session.log and bind chat metadata."""
-        data = payload or {}
-        Session.refresh_current_from_repo()
-        session = Session.current()
-        if session is None:
-            return {"permission": "allow"}
-        conversation_id = str(data.get("conversation_id") or "").strip()
-        transcript = str(data.get("agent_transcript_path") or "").strip()
-        if conversation_id and transcript:
-            from space.session.chat_context import set_chat_context
-
-            lines = str(
-                data.get("transcript_lines") or data.get("line_numbers") or ""
-            ).strip()
-            set_chat_context(conversation_id, transcript, lines)
-            session.note_chat(conversation_id, Path(transcript), lines or "1")
-        tool_name = str(data.get("tool_name") or "").strip()
-        tool_input = data.get("tool_input")
-        if tool_name:
-            inputs = tool_input if isinstance(tool_input, dict) else {}
-            session.log_tool(tool_name, inputs)
-        return {"permission": "allow"}
-
     def repo_from_session(self, repo_path: Path | str | None = None) -> Path | None:
         """Git repo root for ``.sessions/session.json`` — not the workpath subfolder."""
         if repo_path is not None:
@@ -363,14 +337,21 @@ class Session:
     @mcp
     @command(name="mark-loop")
     @agent_tool
-    def mark_loop(cls) -> str:
-        """Append a loop marker ``--- N`` to the current session log and return the loop number.
+    def mark_loop(
+        cls,
+        conversation_id: str = "",
+        transcript_path: str = "",
+        transcript_lines: str = "",
+    ) -> str:
+        """Mark the next loop in the open session log (slash ``/mark-loop``).
 
-        Requires an open session (``session.new`` / ``session.switch`` / ``session.current``).
-        Run via MCP ``session.mark_loop`` or slash ``/mark-loop``."""
+        Pass ``conversation_id``, ``transcript_path``, and ``transcript_lines`` (cumulative JSONL
+        range for this chat). Dispatch logs ``session.mark_loop``; the ``--- N`` marker carries the
+        same pointer when chat is bound."""
         session = cls.current()
         if session is None or not session.name:
             raise ValueError("no current session; open one with session.new or session.switch")
+        session._bind_chat_for_append(conversation_id, transcript_path, transcript_lines)
         opened = session.loop()
         return str(opened.number)
 
@@ -397,6 +378,43 @@ class Session:
             raise ValueError(f"loop {loop_number} not found (missing --- {loop_number} in session.log?)")
         header = f"# Loop {loop_number} ({session.name})\n\n"
         return header + opened.expanded_text()
+
+    @classmethod
+    @mcp
+    @command(name="append-log")
+    @agent_tool
+    def append_log(
+        cls,
+        note: str,
+        loop: int | None = None,
+        paths: list[str] | None = None,
+        conversation_id: str = "",
+        transcript_path: str = "",
+        transcript_lines: str = "",
+    ) -> str:
+        """Append a correction or audit note to the open session log (slash ``/append-log``).
+
+        **Agent steps:** confirm the open session; resolve ``loop`` (argument or latest loop with
+        entries — use ``read_loop`` to inspect); capture conversation id, transcript JSONL path,
+        and line range for this turn; write a short ``note`` (what changed, ``paths``, cross-refs to
+        earlier ``session.log`` lines); call MCP ``session.append_log`` with those fields.
+
+        Omit ``loop`` to target the latest loop with log lines. Pass ``conversation_id``,
+        ``transcript_path``, and ``transcript_lines`` when hook metadata is missing.
+        Do not edit ``session.log`` by hand."""
+        session = cls.current()
+        if session is None or not session.name:
+            raise ValueError("no current session; open one with session.new or session.switch")
+        text = (note or "").strip()
+        if not text:
+            raise ValueError("note is required")
+        session._bind_chat_for_append(conversation_id, transcript_path, transcript_lines)
+        loop_number = session._resolve_append_loop(loop)
+        path_objs = [Path(item) for item in (paths or []) if str(item).strip()]
+        body = text if text.lower().startswith(f"loop {loop_number}") else f"loop {loop_number}: {text}"
+        session.log_note(body, path_objs or None)
+        log_path = session.session_path / "session.log" if session.session_path else "session.log"
+        return f"appended note to {log_path} (loop {loop_number})"
 
     @property
     def saved_current_session(self) -> str:
@@ -548,6 +566,35 @@ class Session:
                 return candidate
         return 0
 
+    def _resolve_append_loop(self, loop: int | None) -> int:
+        if loop is not None:
+            if loop < 1:
+                raise ValueError("loop must be >= 1")
+            if self._max_loop_number_from_log() < loop:
+                raise ValueError(f"loop {loop} not found in session.log (no --- {loop} marker)")
+            return loop
+        chosen = self._latest_loop_with_entries()
+        if chosen < 1:
+            chosen = self._max_loop_number_from_log()
+        if chosen < 1:
+            raise ValueError("no loop in session.log; run mark-loop first")
+        return chosen
+
+    def _bind_chat_for_append(
+        self,
+        conversation_id: str,
+        transcript_path: str,
+        transcript_lines: str,
+    ) -> None:
+        from space.session.chat_context import apply_chat_context, set_chat_context
+
+        chat_id = (conversation_id or "").strip()
+        transcript = (transcript_path or "").strip()
+        lines = (transcript_lines or "").strip()
+        if chat_id and transcript:
+            set_chat_context(chat_id, transcript, lines)
+        apply_chat_context(self)
+
     def loop(self) -> Loop:
         from_memory = self._loops[-1].number if self._loops else 0
         from_log = self._max_loop_number_from_log()
@@ -555,7 +602,11 @@ class Session:
         opened = Loop(number)
         opened._session = self
         self._loops.append(opened)
-        self._append_log(f"--- {number}")
+        self.require_chat_noted()
+        marker = f"--- {number}"
+        chat = self._noted_chat()
+        self._append_log(f"{marker} {chat}".strip() if chat else marker)
+        self._chat = None
         return opened
 
     @staticmethod
@@ -616,6 +667,13 @@ class Session:
         self._injected.clear()
         self._chat = None
 
+    def log_agent_tool(self, mcp_name: str, tool_input: dict | None = None) -> None:
+        """Append a ``tool …`` line for an enrolled ``@mcp`` ``@agent_tool`` (or prompt) invocation."""
+        name = (mcp_name or "").strip()
+        if not name:
+            return
+        self.log_tool(name, tool_input)
+
     def log_tool(self, tool_name: str, tool_input: dict | None = None) -> None:
         """Append a timestamped ``tool …`` line for a host or MCP tool invocation."""
         if self.session_path is None:
@@ -624,7 +682,9 @@ class Session:
         if not name:
             return
         paths = self._paths_from_tool_input(tool_input or {})
-        self.require_chat_noted()
+        from space.session.chat_context import apply_chat_context
+
+        apply_chat_context(self)
         parts = ["tool", name]
         if paths:
             parts.append(", ".join(str(path) for path in paths))
@@ -753,12 +813,35 @@ class Session:
         self._injected.clear()
         self._chat = None
 
-    def log_error(self, failure: BaseException) -> None:
+    def record_failure(self, failure: BaseException, *, tool: str = "") -> None:
+        """Append a full trace to session.err and a pointer line on session.log (does not raise)."""
+        if self.session_path is None:
+            return
         trace = "".join(traceback.format_exception(type(failure), failure, failure.__traceback__))
-        if self.session_path is not None:
-            err = self.session_path / "session.err"
-            err.write_text(trace, encoding="utf-8")
-            self._append_log(f"error {err}")
+        err = self.session_path / "session.err"
+        err.parent.mkdir(parents=True, exist_ok=True)
+        prior = err.read_text(encoding="utf-8") if err.is_file() else ""
+        line_number = len(prior.splitlines()) + 1
+        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        header = f"{stamp} {tool} {type(failure).__name__}: {failure}".strip()
+        with err.open("a", encoding="utf-8") as handle:
+            handle.write(f"{header}\n")
+            handle.write(trace)
+            if not trace.endswith("\n"):
+                handle.write("\n")
+        self.require_chat_noted()
+        parts = ["error", str(err), str(line_number)]
+        name = (tool or "").strip()
+        if name:
+            parts.insert(1, name)
+        chat = self._noted_chat()
+        if chat:
+            parts.append(chat)
+        self._append_log(" ".join(parts))
+        self._chat = None
+
+    def log_error(self, failure: BaseException) -> None:
+        self.record_failure(failure)
         raise failure
 
     def append_chat(self, action: str, chat_file: Path) -> None:
@@ -773,24 +856,29 @@ class Session:
             log_file = str(self.session_path / "session.log")
             err_file = str(self.session_path / "session.err")
         return (
-            "Session owns logging for this host once session.new or session.switch has run. "
-            "preToolUse logs every host tool via log_tool; log_action, log_validation, and log_error "
-            "also run from guidance actions; "
-            "do not duplicate them unless a line is missing detail. "
-            "GuidanceAction.run calls log_guidance_action when an action name is set; "
-            "a run with no action name leaves session.log unchanged. "
-            "Each log_action and log_validation line includes a chat pointer when "
-            "CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH (or note_chat) are set; "
-            "otherwise the line still logs and points at a no-chat entry in session.err. "
-            "Lines also name paths, practices, fidelity, format, graph nodes, and injected rules. "
-            "Validate.validate calls log_validation. "
-            "append_chat attaches a transcript pointer to an existing line. "
-            "loop() writes --- N markers in the same log; session.new seeds --- 1 on a fresh log. "
-            "read_loop(number) returns log lines for one loop with chat transcript slices inlined. "
-            "When the user corrects session or repo behavior (logging, close-branch, hooks), append a "
-            "log_note in the active loop: short fact, paths touched, and the chat transcript slice "
-            "for this turn (note_chat or hook metadata). Do not edit session.log by hand. "
-            "Host tools are logged by preToolUse log_tool only; guidance actions use log_action. "
+            "Session owns logging once session.new or session.switch has run. "
+            "CHAT POINTERS — required for continued conversations: you must attach chat id, agent "
+            "transcript JSONL path, and line range on every log line when metadata exists. "
+            "Hooks: CDD_CONVERSATION_ID, CDD_TRANSCRIPT_PATH, CDD_TRANSCRIPT_LINES. "
+            "MCP: pass conversation_id, transcript_path, transcript_lines on the same tool call. "
+            "Long threads: use an accurate slice for this turn or a cumulative range (e.g. 1-1152, "
+            "then 1-1450) so read_loop can inline the full dialogue for that loop. "
+            "Missing chat on an earlier line: append_chat(action, chat_file) or session.append_log "
+            "(/append-log); never hand-edit session.log. "
+            "MARK-LOOP — link the entire conversation span: call session.mark_loop (/mark-loop) only "
+            "with chat fields on that MCP invoke. Dispatch writes tool session.mark_loop with a pointer; "
+            "the --- N marker line records the same pointer when bound—both tie the loop to the transcript. "
+            "After marking, log actions in that loop with the same thread id and growing line ranges so "
+            "read_loop(number) expands every line in the loop with matching transcript slices. "
+            "WHERE LINES COME FROM: only @mcp @agent_tool / @agent_instructions invocations "
+            "(McpHost.dispatch log_agent_tool) and guidance runs (log_guidance_action, log_validation, "
+            "record_failure on MCP errors). Cursor hooks do not write session.log. "
+            "GuidanceAction.run → log_guidance_action (log_action lines) when an action name is set; "
+            "Failures: record_failure on MCP dispatch and GuidanceAction.run; log_error also re-raises. "
+            "Validate.validate → log_validation. Do not duplicate unless a line lacks detail. "
+            "session.new seeds --- 1 (chat on that marker when bound at open). "
+            "When the user corrects ai behavior or output, session.append_log with note, optional loop, "
+            "paths, and chat fields. "
             f"Log file: {log_file}. Errors: {err_file}."
         )
 

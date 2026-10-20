@@ -11,7 +11,7 @@ session --> set when ever a session is opened, created etc
     select  -> sets all logging to session variables , same as new but to exiusting
     loops 
         --> container for a discreet context, gen, eval loop ; rimary use is to demarcate boundaries in log; so we cna say x numver of log   lines were a decsreete unit if acrtivity trhart can be analysed and evaluagtfed later
-        simple tool and command /mark-loop --> increment loop number; log --- N in session.log
+        MCP ``session.mark_loop`` (/mark-loop) --> increment loop number; log --- N in session.log with chat id + transcript path + line range when bound; links entire loop for read_loop
         loop[number] would retureve the log entries and inject the ai chat and rtesponse under the relrevanty lines for easy analysis
 
    
@@ -25,11 +25,11 @@ session --> set when ever a session is opened, created etc
 
             log context --> files and folder paths being passed in;
             log the guideline, fidelity, format and actions invoked, logg hgest graph node per prqactice if known
-            chat-log --> add path refertence to chat id, file name and line numbers of relevant transcript created, <-reuse then retire what u can from  prompt logging; POINT to log files, appended to log 
+            chat-log --> every log line carries chat id, transcript JSONL path, and line range for continued conversations; append_chat / append-log repair missing pointers; mark-loop and tool lines in the same loop should share the thread so read_loop inlines the full dialogue
             log f rules were injected if so what files matched what rules only log rule names, sort and sp[earat by practidce and fidelity ]
             errors - if tools fail for ANY reason, tool , code, etc log it but dont swallow i! write fullt rce to session.err and point the log entry to a session.err line 
             log time stamp 
-            loop corrections --> when the user fixes logging or repo close behavior, append log_note in the active loop (--- N): what changed, which files, chat id + transcript line range; reference earlier log lines in the same loop when relevant (see loop 4 in space-testing)
+            loop corrections --> MCP session.append_log or slash /append-log: resolves loop (latest with entries or explicit N), appends note with chat id + transcript line range and optional paths; see loop 4 in space-testing
         
 
     guidance  (stories, bdd, etc)

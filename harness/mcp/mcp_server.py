@@ -988,11 +988,12 @@ class McpHost:
     def dispatch(self, name: str, arguments: dict[str, object] | None = None) -> object:
         """Run one tool call. A true ``ping`` argument answers without entering the tool."""
         from space.session import Session
-        from space.session.chat_context import clear_chat_context, pop_chat_fields
+        from space.session.chat_context import apply_chat_context, clear_chat_context, pop_chat_fields
 
         Session.refresh_current_from_repo(self._runtime.repo)
         resolved = self._runtime.resolve_call_name(name)
         args = pop_chat_fields(arguments)
+        self._log_agent_tool_invocation(resolved, args)
         try:
             if args.get("ping") is True:
                 if not self._enrolled(resolved):
@@ -1003,8 +1004,32 @@ class McpHost:
             if resolved in self._runtime._prompts:
                 return self._runtime.invoke_prompt(resolved, args)
             return self._runtime.invoke_tool(resolved, args)
+        except BaseException as failure:
+            session = Session.current()
+            if session is not None:
+                session.record_failure(failure, tool=resolved)
+            raise
         finally:
             clear_chat_context()
+
+    def _log_agent_tool_invocation(self, resolved: str, args: dict[str, object]) -> None:
+        if resolved == BUILTIN_PING_TOOL or args.get("ping") is True:
+            return
+        if not self._enrolled(resolved):
+            return
+        from space.session import Session
+        from space.session.chat_context import apply_chat_context
+
+        session = Session.current()
+        if session is None or session.session_path is None:
+            return
+        apply_chat_context(session)
+        logged_args = {
+            key: value
+            for key, value in args.items()
+            if isinstance(value, (str, int, float, bool, list))
+        }
+        session.log_agent_tool(resolved, logged_args)
 
     def _enrolled(self, name: str) -> bool:
         return (

@@ -27,6 +27,8 @@ from space.session import Session
 
 
 def _bind_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat") -> Path:
+    from space.session.chat_context import set_chat_context
+
     chats = session.session_path / "chats"
     chats.mkdir(parents=True, exist_ok=True)
     transcript = chats / f"{chat_id}.md"
@@ -34,6 +36,7 @@ def _bind_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat
     os.environ["CDD_CONVERSATION_ID"] = chat_id
     os.environ["CDD_TRANSCRIPT_PATH"] = str(transcript)
     os.environ["CDD_TRANSCRIPT_LINES"] = "1"
+    set_chat_context(chat_id, transcript, "1")
     return transcript
 
 
@@ -178,6 +181,9 @@ with description("a session"):
             expect("append_chat" in self.instructions).to(equal(True))
             expect("log_guidance_action" in self.instructions).to(equal(True))
             expect("session.new" in self.instructions).to(equal(True))
+            expect("CHAT POINTERS" in self.instructions).to(equal(True))
+            expect("MARK-LOOP" in self.instructions).to(equal(True))
+            expect("log_agent_tool" in self.instructions).to(equal(True))
 
         with it("should keep the name, the workpath, and the repo path"):
             session = Session.current()
@@ -343,8 +349,20 @@ with description("a session"):
             log = (Session.current().session_path / "session.log").read_text(encoding="utf-8")
             expect("session.err" in log).to(equal(True))
 
-    # (S) Session --> Record Host Tool
-    with context("that logs a host tool from preToolUse"):
+        with it("should append a second failure without overwriting session.err"):
+            session = Session.current()
+            try:
+                session.log_error(RuntimeError("first"))
+            except RuntimeError:
+                pass
+            try:
+                session.log_error(RuntimeError("second"))
+            except RuntimeError:
+                pass
+            err = (session.session_path / "session.err").read_text(encoding="utf-8")
+            expect("first" in err and "second" in err).to(equal(True))
+
+    with context("that records MCP tool failures on dispatch"):
         with before.each:
             Session._current = None
             self.repo = Path(tempfile.mkdtemp())
@@ -352,24 +370,50 @@ with description("a session"):
             self.work.mkdir()
             Session.new("alpha", self.work, self.repo)
             self.session = Session.current()
-            _bind_mandatory_chat(self.session, self.work, "tool-chat")
+            _bind_mandatory_chat(self.session, self.work, "mcp-fail-chat")
 
-        with it("should append a tool line with the tool name and path from tool_input"):
-            target = self.work / "cart.py"
-            Session._slot().pre_tool_use_logging(
-                {
-                    "tool_name": "session.read_loop",
-                    "tool_input": {"number": 1, "path": str(target)},
-                    "conversation_id": "tool-chat",
-                    "agent_transcript_path": os.environ["CDD_TRANSCRIPT_PATH"],
-                }
+        with it("should append session.err and session.log when an agent tool raises"):
+            from harness.mcp.mcp_server import McpHost
+
+            host = McpHost.from_refs(
+                ("space.session.session:Session",),
+                repo=str(self.repo),
+                project=str(self.work),
             )
+            try:
+                host.dispatch("session.append_log", {"note": ""})
+            except ValueError:
+                pass
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            err = (self.session.session_path / "session.err").read_text(encoding="utf-8")
             expect(
-                "tool session.read_loop" in log
-                and str(target) in log
-                and "tool-chat" in log
+                "error" in log
+                and "session.append_log" in log
+                and "session.err" in log
+                and "note is required" in err
             ).to(equal(True))
+
+    with context("that logs enrolled MCP tools on dispatch"):
+        with before.each:
+            Session._current = None
+            self.repo = Path(tempfile.mkdtemp())
+            self.work = self.repo / "work"
+            self.work.mkdir()
+            Session.new("alpha", self.work, self.repo)
+            self.session = Session.current()
+            _bind_mandatory_chat(self.session, self.work, "mcp-dispatch-chat")
+
+        with it("should append a tool line when the MCP host invokes an agent tool"):
+            from harness.mcp.mcp_server import McpHost
+
+            host = McpHost.from_refs(
+                ("space.session.session:Session",),
+                repo=str(self.repo),
+                project=str(self.work),
+            )
+            host.dispatch("session.mark_loop", {})
+            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            expect("tool session.mark_loop" in log and "mcp-dispatch-chat" in log).to(equal(True))
 
     with context("that records a loop correction note"):
         with before.each:
@@ -389,6 +433,23 @@ with description("a session"):
                 "note close_branch must push merge checkout main" in log
                 and str(touched) in log
                 and "note-chat" in log
+            ).to(equal(True))
+
+        with it("should append via append_log with loop number and chat fields"):
+            transcript = _bind_mandatory_chat(self.session, self.work, "append-chat")
+            result = Session.append_log(
+                "correction recorded",
+                loop=1,
+                paths=[str(self.work / "session.py")],
+                conversation_id="append-chat",
+                transcript_path=str(transcript),
+                transcript_lines="1",
+            )
+            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            expect(
+                "appended note" in result
+                and "loop 1: correction recorded" in log
+                and "append-chat" in log
             ).to(equal(True))
 
     # (S) Session --> Record Session Action

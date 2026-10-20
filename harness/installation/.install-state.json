@@ -110,6 +110,7 @@
     "commands/space/session/session.md",
     "commands/space/session/mark-loop.md",
     "commands/space/session/read-loop.md",
+    "commands/space/session/append-log.md",
     "skills/space/session/session-diagnostics/SKILL.md",
     "commands/space/session/session-diagnostics.md",
     "skills/tools/echo-instructions/echo-session/SKILL.md",

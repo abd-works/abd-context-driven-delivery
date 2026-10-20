@@ -41,3 +41,4 @@ Every generate ends with **validate**.
 3. Fill every `{Placeholder}` — class name, constructor params, tools, recipe(s), return statement.
 4. Place the generated file in the domain folder that owns the toolset.
 5. Run **validate**.
+6. With an open session, call **session.append_log** (slash **/append-log**) — one-line summary, paths touched, chat id and transcript line range.

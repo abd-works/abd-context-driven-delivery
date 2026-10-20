@@ -145,8 +145,15 @@ class GuidanceAction:
         self._bind_guidance(guidance)
         self._log_running_action(action)
         # self.begin(guidance, action=action)
-        results = self.each(operation)
-        return results
+        try:
+            return self.each(operation)
+        except BaseException as failure:
+            from space.session import Session
+
+            session = Session.current()
+            if session is not None:
+                session.record_failure(failure, tool=action or type(self).__name__)
+            raise
 
     def _log_running_action(self, action: str) -> None:
         if not action:
