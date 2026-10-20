@@ -161,7 +161,9 @@ with description("an agent toolset") as self:
 
                 with it("should write the operation's instructions on the command"):
                     command_text = InstalledTree(self.tree).command_path("sketch").read_text(encoding="utf-8")
-                    expect(command_text).to(contain(SampleAgenticOps().tools["sketch"].docstring))
+                    assembled = getattr(SampleAgenticOps(), "sketch")
+                    expect(command_text).to(contain(assembled))
+                    expect(command_text).not_to(contain("Shell tool"))
 
             with context("with operations that are not annotated"):
                 with it("should not write a skill or command"):
@@ -506,15 +508,39 @@ with description("an agent toolset") as self:
                 with after.each:
                     shutil.rmtree(self._tmp, ignore_errors=True)
 
-                with it("should write an install skill that names the MCP tool"):
-                    text = InstalledTree(self.tree).skill_path("install").read_text(encoding="utf-8")
-                    expect(text).to(contain("Use MCP tool:"))
-                    expect(text).to(contain("installer.install"))
+                with it("should write an install slash command that runs Python not MCP"):
+                    path = InstalledTree(self.tree).command_path("install")
+                    expect(path is not None).to(equal(True))
+                    text = path.read_text(encoding="utf-8")
+                    expect(text).not_to(contain("Use MCP tool:"))
+                    expect(text).not_to(contain("installer.install"))
+                    expect(text).to(contain("Shell tool"))
+                    expect(text).to(contain("scripts/install.py"))
+                    expect(text).to(contain("--self"))
+                    expect(InstalledTree(self.tree).skill_path("install")).to(equal(None))
 
-                with it("should record install and clean as MCP operations"):
+                with it("should write a clean slash command with a shell invoke tail"):
+                    path = InstalledTree(self.tree).command_path("clean")
+                    expect(path is not None).to(equal(True))
+                    text = path.read_text(encoding="utf-8")
+                    expect(text).to(contain("Shell tool"))
+                    expect(text).to(contain("python -c"))
+                    expect(text).to(contain(".clean()"))
+
+                with it("should not enroll install or clean as MCP operations"):
                     names = [op.mcp_name for op in self.mcp.mcp_operations]
-                    expect(names).to(contain("installer.install"))
-                    expect(names).to(contain("installer.clean"))
+                    expect(names).not_to(contain("installer.install"))
+                    expect(names).not_to(contain("installer.clean"))
+
+                with it("should install only itself via install_self"):
+                    tree = Path(tempfile.mkdtemp())
+                    try:
+                        Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install_self()
+                        path = InstalledTree(tree).command_path("install")
+                        expect(path is not None).to(equal(True))
+                        expect(path.read_text(encoding="utf-8")).to(contain("scripts/install.py"))
+                    finally:
+                        shutil.rmtree(tree, ignore_errors=True)
 
                 with it("should enroll a session start hook that respawns the MCP host"):
                     handlers = json.loads((self.tree / "hook-handlers.json").read_text(encoding="utf-8"))

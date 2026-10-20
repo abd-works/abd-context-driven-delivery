@@ -20,18 +20,16 @@ from harness.agent_tools.agent_tools import (
     agent_tool,
     agent_toolset,
 )
-from harness.installation.files import FileInstallation, Skill
+from harness.installation.files import FileInstallation, command
 from harness.hooks.hooks import Hook
 from harness.markdown import markdown
-from harness.mcp.mcp_server import Mcp
-
-
 @noCatalog
 @agent_toolset
 class Installer:
     """Collect installable toolsets; then install each tool."""
 
     domain_slug = "installer"
+    TOOLSET_REF = "harness.installation.installer:Installer"
     _STATE_NAME = ".install-state.json"
     _DEFAULT_PATHS = {
         "Cursor": ".cursor",
@@ -322,11 +320,10 @@ class Installer:
             for installation in self.installations_for(tool):
                 installation.install(tool)
 
-    @Mcp
-    @Skill
+    @command(name="clean")
     @agent_tool
     def clean(self) -> list[str]:
-        """Remove files written by the previous install for this IDE path."""
+        """Remove files from the previous install on this IDE path."""
         state = self._load_state()
         install_path = Path(str(state.get("path", self.path)))
         if str(install_path.resolve()) != str(self.path.resolve()):
@@ -381,15 +378,29 @@ class Installer:
                 if twin.is_dir():
                     self._rmtree(twin)
 
-    @Mcp
-    @Skill
+    @command(name="install")
     @agent_tool
     def install(
         self,
         toolsets: Iterable[Any] | None = None,
         replace: bool = True,
     ) -> Any:
-        """Install annotated toolsets into the IDE path — skills, commands, rules, MCP, and hooks. ``replace`` wipes files from the previous install first."""
+        """Install CDD into ``.cursor`` — skills, commands, rules, MCP, and hooks. ``replace`` wipes the previous install first.
+
+        Installer-only refresh (``/install`` and ``/clean`` without walking the catalog): ``python scripts/install.py --self`` from this repo — not MCP.
+
+        When install finishes, read ``.cursor/diagnostics.json`` (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, mcp host, hook server, hooks registered."""
+        return self._install_run(toolsets, replace)
+
+    def install_self(self, *, replace: bool = False) -> Any:
+        """Deploy only this Installer toolset — ``/install``, ``/clean``, and MCP-host hooks."""
+        return self._install_run([self.TOOLSET_REF], replace=replace)
+
+    def _install_run(
+        self,
+        toolsets: Iterable[Any] | None,
+        replace: bool,
+    ) -> Any:
         if replace:
             self.clean()
             self._installed_paths = []
@@ -402,12 +413,14 @@ class Installer:
         self.ensure_import_path()
         self._reset_channels()
         self._install_all(toolsets)
+        self._install_installer_toolset()
         self._install_agents()
         self._remove_legacy_underscore_skills()
         self._prune_empty_skill_dirs()
         self._save_state()
         self._standup_channels()
-        self.ensure_mcp_host()
+        if not self._mcp_host_is_this_process():
+            self.ensure_mcp_host()
         self.diagnosis = self.diagnose_after_install()
         for report in self.diagnosis:
             if report.startswith("!"):
@@ -445,6 +458,11 @@ class Installer:
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
 
+    def _install_installer_toolset(self) -> None:
+        toolset = AgentToolSet.instantiate(self.TOOLSET_REF)
+        self._remember_toolset(self.TOOLSET_REF, toolset)
+        self._install_toolset(toolset)
+
     def _install_all(self, toolsets: Iterable[Any] | None) -> None:
         if toolsets is None:
             toolsets = self.collect_toolsets()
@@ -459,8 +477,12 @@ class Installer:
                 raise RuntimeError(f"install failed for {item}") from error
 
     def _standup_channels(self) -> None:
-        self._mcp.standup()
-        self._print_channel_notice(self._mcp.diagnose())
+        # Installing via MCP runs inside the live stdio host. A second McpHost.standup()
+        # reloads every toolset and ensure_mcp_host() can rewrite user mcp.json mid-request;
+        # Cursor may drop the in-flight tool call (chat looks "hung" for tens of seconds).
+        if not self._mcp_host_is_this_process():
+            self._mcp.standup()
+            self._print_channel_notice(self._mcp.diagnose())
         self._hook.standup()
         self._print_channel_notice(self._hook.diagnose())
         if not self._is_ephemeral_install_path(self.path) and not self._mcp_host_is_this_process():

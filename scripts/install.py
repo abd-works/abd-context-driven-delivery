@@ -19,10 +19,19 @@ def main() -> int:
         action="store_true",
         help="Leave files from the previous install in place.",
     )
+    parser.add_argument(
+        "--self",
+        action="store_true",
+        help="Deploy only the Installer toolset (slash /install and /clean, hooks).",
+    )
     args = parser.parse_args()
     from harness.installation.installer import Installer
 
-    Installer(ide=args.ide, path=args.path, repo=_REPO).install(replace=not args.no_replace)
+    installer = Installer(ide=args.ide, path=args.path, repo=_REPO)
+    if args.self:
+        installer.install_self(replace=not args.no_replace)
+    else:
+        installer.install(replace=not args.no_replace)
     return 0
 
 

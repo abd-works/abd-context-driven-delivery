@@ -192,13 +192,23 @@ class FileInstallation(Installation):
             return ""
         return (guide() or "").strip()
 
+    def _instructions_at_install(self, tool: Any, toolset: Any) -> str:
+        """Expand ``@agent_instructions`` on the live toolset when writing slash markdown."""
+        try:
+            value = getattr(toolset, tool.name)
+        except Exception:
+            value = None
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        return tool.docstring
+
     def _body_for(self, kind: str, tool: Any, toolset: Any) -> str:
         if self.mcp_mode:
             return tool.docstring
-        result = getattr(toolset, tool.name, None)
-        if isinstance(result, str) and result.strip():
-            return result.strip()
+        if tool.kind == "instructions":
+            return self._instructions_at_install(tool, toolset)
         if kind == "rules":
+            result = getattr(toolset, tool.name, None)
             markdown = getattr(result, "markdown", None)
             if isinstance(markdown, str) and markdown.strip():
                 return markdown.strip()
@@ -217,6 +227,48 @@ class FileInstallation(Installation):
                 summary = stripped
                 break
         return f"{name} — {summary}" if summary else name
+
+    def _repo_script_command(self, deploy_name: str) -> str | None:
+        root = self.repo
+        if root is None:
+            return None
+        script = root / "scripts" / f"{deploy_name}.py"
+        if script.is_file():
+            return f'python "{script.resolve()}"'
+        return None
+
+    def _shell_python_c(self, tool: Any) -> str:
+        toolset = tool.toolset
+        cls = type(toolset)
+        ref = f"{cls.__module__}:{cls.__name__}"
+        method = tool.name
+        call = f'AgentToolSet.instantiate("{ref}").{method}()'
+        code = (
+            "from harness.agent_tools.agent_tools import AgentToolSet; "
+            f"print({call})"
+        )
+        escaped = code.replace("\\", "\\\\").replace('"', '\\"')
+        return f'python -c "{escaped}"'
+
+    def _shell_command(self, tool: Any) -> str:
+        scripted = self._repo_script_command(tool.deploy_name)
+        if scripted is not None:
+            return scripted
+        return self._shell_python_c(tool)
+
+    def _needs_shell_invoke(self, tool: Any, kind: str) -> bool:
+        if kind not in {"skill", "command"}:
+            return False
+        if tool.kind != "tool":
+            return False
+        return not tool.install_to_mcp
+
+    def _shell_invoke_line(self, tool: Any) -> str:
+        command = self._shell_command(tool)
+        return (
+            "Run from the repository root with the Shell tool:\n\n"
+            f"```text\n{command}\n```"
+        )
 
     def _fidelity_invoke_parts(self, toolset: Any) -> list[str]:
         entries = getattr(getattr(toolset, "fidelities", None), "entries", None) or {}
@@ -263,6 +315,8 @@ class FileInstallation(Installation):
                 parts.extend(fidelity_parts)
             else:
                 parts.append(McpOperationDefinition.from_tool(tool).invoke_line())
+        elif self._needs_shell_invoke(tool, kind):
+            parts.append(self._shell_invoke_line(tool))
         text = self.render("\n\n".join(p for p in parts if p), member, toolset)
         rel = self.relative_path(kind, toolset, member, tool.deploy_name)
         if kind == "rules":
@@ -283,11 +337,20 @@ class FileInstallation(Installation):
         return self._without_mcp_invoke(source)
 
     def _without_mcp_invoke(self, text: str) -> str:
-        lines = [
-            line
-            for line in text.splitlines()
-            if not line.strip().lower().startswith("use mcp tool:")
-        ]
+        lines: list[str] = []
+        skip_shell_block = False
+        for line in text.splitlines():
+            stripped = line.strip().lower()
+            if stripped.startswith("use mcp tool:"):
+                continue
+            if stripped.startswith("run from the repository root with the shell tool:"):
+                skip_shell_block = True
+                continue
+            if skip_shell_block:
+                if stripped.startswith("```"):
+                    skip_shell_block = False
+                continue
+            lines.append(line)
         return "\n".join(lines).strip()
 
     def _skill_front_matter(self, name: str, overview: str) -> str:

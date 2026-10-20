@@ -5,7 +5,7 @@ Agentic tools that bring the best of agile product, delivery, and engineering pr
 ## Install
 
 1. Clone this repository into the project workspace, or as a sibling checkout the agent can see.
-2. In chat, run `[/install](harness/installation/installer.py)`. That writes skills, rules, MCP, and hooks into the IDE path (`.cursor` for Cursor).
+2. In chat, run `/install`, or from the repo root: `python scripts/install.py`. That writes commands, skills, rules, MCP, and hooks into the IDE path (`.cursor` for Cursor).
 
 Open `[cdd_guidance/catalog/index.html](cdd_guidance/catalog/index.html)` for the board of practices, stages, and actions.
 

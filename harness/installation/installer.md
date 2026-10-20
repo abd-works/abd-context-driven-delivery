@@ -4,13 +4,20 @@
 
 Install annotated toolsets into the IDE path — skills, commands, rules, MCP, and hooks. `replace` wipes files from the previous install first.
 
-A full install on this repo normally finishes in a few seconds. **If an install call is still running after 10 seconds, stop waiting.** Cancel or kill the hung process, diagnose, fix, retry — prefer the repo venv one-liner over a stuck MCP round-trip when chat install hangs.
+Use slash **`/install`** (command — not a skill, not MCP). Deployed **commands** and **skills**:
 
-**After install finishes, read the diagnostic report back to the user.** `install` always runs `diagnose_after_install` (install-channel counts and runtime status only) and appends to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **mcp host**, **hook server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install via MCP and only got an MCP handle, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.
+- ``@agent_instructions`` (not ``@mcp``): ``FileInstallation`` evaluates the instructions on the toolset at install time and writes that text into the ``.md`` file. MCP-published ops keep the short docstring in the slash file and put the full text behind the MCP invoke tail.
+- ``@agent_tool`` (not ``@mcp``): automatic Shell invoke tail (mirror of the MCP tail). ``scripts/{command}.py`` is used when present (e.g. ``scripts/install.py``).
+
+Every full install also re-deploys the Installer toolset last so the slash commands stay current.
+
+When install runs **inside** the live MCP host process, the installer skips a second `McpHost.standup()` and skips `ensure_mcp_host()` so it does not reload every toolset or rewrite Cursor `mcp.json` during an unrelated tool request.
+
+**After install finishes, read the diagnostic report back to the user.** `install` always runs `diagnose_after_install` (install-channel counts and runtime status only) and appends to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **mcp host**, **hook server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install in the shell, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.
 
 ## Clean
 
-Remove files written by the previous install for this IDE path.
+Remove files written by the previous install for this IDE path. Slash **`/clean`** — same automatic Shell tail (``@agent_tool`` without MCP).
 
 ## Diagnose Install
 
