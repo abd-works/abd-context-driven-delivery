@@ -228,7 +228,7 @@ Property name is the match. **File:** `{name}.md` beside the class. **Section:**
 ## space/repo
 *Repo* models a local clone and GitHub workflow; *Repo* agent toolset exposes branch switch/create/close (optional worktrees).
 
-- **Purpose:** Domain types (*Repo*, *Branch*, *Commit*, …) plus ``branch_*`` and ``push`` / ``push_commit`` on ``space.repo.agent:Repo`` (agent composes commit messages from diffs and CDD tool usage).
+- **Purpose:** Domain types (*Repo*, *Branch*, *Commit*, …) plus slash/MCP ``branch`` / ``worktree`` / ``push`` on ``space.repo.repo:Repo`` (agent composes commit messages from diffs and CDD tool usage).
 - **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, RepoConnectError
 - **Dependencies (one-way):** `harness/agent_tools`, `harness/mcp`, `harness/installation`
 

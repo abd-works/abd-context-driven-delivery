@@ -322,16 +322,18 @@ with description("an MCP host") as self:
     with context("that has enrolled the repo toolset"):
         with before.each:
             self.host = McpHost.from_refs(
-                ("space.repo.agent:Repo",),
+                ("space.repo.repo:Repo",),
                 repo=str(_REPO_ROOT),
                 project=str(_REPO_ROOT),
             )
 
         with it("should expose branch lifecycle and push"):
             tools = self.host.diagnose()["tools"]
-            expect(tools).to(contain("repo.branch_switch"))
-            expect(tools).to(contain("repo.branch_create"))
-            expect(tools).to(contain("repo.branch_close"))
+            expect(tools).to(contain("repo.branch"))
+            expect(tools).to(contain("repo.worktree"))
+            expect(tools).to(contain("repo.switch_branch"))
+            expect(tools).to(contain("repo.new_branch"))
+            expect(tools).to(contain("repo.close_branch"))
             expect(tools).to(contain("repo.push"))
 
         with it("should resolve Cursor underscore aliases to enrolled names"):

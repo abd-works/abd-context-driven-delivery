@@ -63,7 +63,7 @@ UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("diagnose", "cdd_guidance.actions.diagnose.diagnose", "Diagnose"),
     ("echo instructions", "echo_instructions.echo_instructions", "EchoInstructions"),
     ("handoff", "space.handoff.handoff", "Handoff"),
-    ("repo", "space.repo.agent", "Repo"),
+    ("repo", "space.repo.repo", "Repo"),
 )
 
 @dataclass

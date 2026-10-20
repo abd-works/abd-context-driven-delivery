@@ -94,7 +94,6 @@ class Session:
 
     @classmethod
     @mcp
-    @command
     @agent_tool
     def current(cls, repo_path: Path | str | None = None) -> Session | None:
         """Named session already in memory, or the one saved on the repo."""
@@ -135,7 +134,6 @@ class Session:
 
     @classmethod
     @mcp
-    @command
     @agent_instructions
     def new(cls, name: str, workpath: Path, repo_path: Path) -> str:
         """Open a session. Returns keep_log."""
@@ -145,7 +143,6 @@ class Session:
 
     @classmethod
     @mcp
-    @command
     @agent_instructions
     def switch(
         cls,
@@ -160,17 +157,58 @@ class Session:
         return session.keep_log()
 
     @classmethod
-    def open_or_switch(cls, name: str, workpath: Path, repo_path: Path) -> str:
+    @mcp
+    @command(name="session")
+    @agent_tool
+    def session(
+        cls,
+        name: str,
+        workpath: Path | None = None,
+        repo_path: Path | None = None,
+    ) -> str:
+        """Chaining: create session ``name`` when missing; switch and set repo current when it exists."""
+        return cls.open_or_switch(name, workpath=workpath, repo_path=repo_path)
+
+    @classmethod
+    def open_or_switch(
+        cls,
+        name: str,
+        workpath: Path | None = None,
+        repo_path: Path | None = None,
+    ) -> str:
         """Select a session folder when it exists, otherwise create it."""
         cleaned = (name or "").strip()
         if not cleaned:
             raise ValueError("session name is required")
-        primary = Path(repo_path).resolve()
-        work = Path(workpath).resolve()
+        slot = cls._slot()
+        primary = Path(repo_path).resolve() if repo_path is not None else slot.repo_from_session() or slot._env_repo()
+        work = Path(workpath).resolve() if workpath is not None else slot._env_workpath()
         session_json = primary / "sessions" / cleaned / "session.json"
         if session_json.is_file():
             return cls.switch(cleaned, workpath=work, repo_path=primary)
         return cls.new(cleaned, work, primary)
+
+    @classmethod
+    @command(name="new-session")
+    @agent_instructions
+    def new_session_command(cls) -> str:
+        """Open a new CDD session folder under the repo.
+
+        Ask the user for the session name when it is not already clear from the chat.
+        Resolve workpath from CDD_PROJECT or the current working directory and repo from CDD_REPO or git root.
+        Call MCP ``session.new`` with name, workpath, and repo_path. Do not call ``session.open_named``."""
+        return ""
+
+    @classmethod
+    @command(name="switch-session")
+    @agent_instructions
+    def switch_session_command(cls) -> str:
+        """Switch to an existing CDD session and set it current on disk.
+
+        Ask the user for the session name when it is not already clear from the chat.
+        Call MCP ``session.switch`` with that name (paths optional — loaded from the session folder).
+        Do not call ``session.open_named``."""
+        return ""
 
     @property
     def saved_current_session(self) -> str:

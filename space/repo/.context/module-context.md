@@ -18,7 +18,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 
 ## Seam
 
-`space.repo.agent:Repo` — branch lifecycle (`/branch-switch`, `/branch-create`, `/branch-close`; MCP `repo.branch_*`) and `/push` (MCP `repo.push` expands to `push_commit` with a message built from diffs and CDD practice/fidelity/format). Optional sibling worktrees via `work_tree`. Workflow board moves stay on `tools/workflow`. Seam terms: Repo, Branch, Commit, Project, Ticket, TicketState, PushCommit, ResearchTag.
+`space.repo.repo:Repo` — chaining slash `/branch {name}` and `/worktree {name}` (MCP `repo.branch`, `repo.worktree`); primitive slash `/new-branch`, `/switch-branch`, `/close-branch`, `/new-worktree`, `/switch-worktree`, `/close-worktree` (instruction commands → MCP `repo.new_branch`, …). Branch primitives never add worktrees. `/push` (MCP `repo.push` → `push_commit`). Workflow board moves stay on `tools/workflow`. Seam terms: Repo, Branch, Commit, Project, Ticket, TicketState, ResearchTag.
 
 ## Constraint
 
@@ -34,7 +34,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 
 - `Repo.find_root(start)` / `Repo.open(start)` — locate and open a real clone
 - `Repo.memory(root)` / `NullGitRepo(root)` — in-memory clone for specs
-- `Repo.branch` / `Repo.branch_named(name)` → `Branch`
+- `Repo.branch_named(name)` → `Branch` (current: `branch_named(current_branch)`)
 - `Branch.checkout()`, `Branch.commit(paths, message)` → `Commit`, `Branch.merge(other)` → `Commit`
 - `Commit.format(subject, trailers)` / `Commit.from_message(sha, message)` — message + trailer `data`
 - `Repo.attach_project(owner, number)` → `Project` (links the board onto this repository)
@@ -55,7 +55,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
   `merge_branch`, `note`, `read_notes`, `find_mistakes`,
   `write_annotated_tag` / `read_annotated_tag` / `list_annotated_tags`,
   `is_dirty` (ignores `events.log`), `current_branch`
-- Worktree surface: `Worktree`, `list_worktrees`, `worktree_for`, `add_worktree`,
+- Worktree surface: `Worktree` (path + branch record and checkout/sync/close on `repo.py`), `list_worktrees`, `worktree_for`, `add_worktree`,
   `remove_worktree`, `fetch` / `pull` / `fetch_pull`, `merge_from` (merge into the
   current branch without checking the other out), `push_to`, `has_stash`,
   `is_linked_worktree`, `primary_root`

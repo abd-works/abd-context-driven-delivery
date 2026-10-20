@@ -19,7 +19,6 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.repo import TicketNotFoundError
-from space.repo.agent import Repo as RepoTools
 from space.repo.repo import (
     Branch,
     CliAgentBinding,
@@ -448,25 +447,27 @@ with description("Repo stash"):
 with description("the repo toolset"):
     with context("on a memory repository"):
         with before.each:
-            self.repo_tool = RepoTools()
+            self.repo_tool = Repo()
             self.repository = Repo.memory("/tmp/repo-branch-spec")
             self.repository.checkout_or_create("main")
             self.repo_tool._bind(self.repository)
 
         # (S) Repo --> Switch Branch
-        with it("should switch branch in place when work_tree is false"):
-            self.repo_tool.branch_switch("feature/a", work_tree=False)
+        with it("should switch branch in place on the current clone"):
+            self.repository.checkout_or_create("feature/a")
+            self.repo_tool._bind(self.repository)
+            self.repo_tool.switch_branch("feature/a")
             expect(self.repo_tool.current_branch).to(equal("feature/a"))
 
         # (S) Repo --> Create Branch
         with it("should create and switch a new branch"):
-            self.repo_tool.branch_create("feature/new", work_tree=False, switch=True)
+            self.repo_tool.new_branch("feature/new", switch=True)
             expect(self.repo_tool.current_branch).to(equal("feature/new"))
 
         # (S) Repo --> Close Branch
         with it("should close without error on memory repo"):
-            self.repo_tool.branch_create("feature/done", work_tree=False)
-            text = self.repo_tool.branch_close(merge_to_main=True)
+            self.repo_tool.new_branch("feature/done", switch=True)
+            text = self.repo_tool.close_branch(merge_to_main=True)
             expect("feature/done" in text).to(equal(True))
 
 
@@ -518,7 +519,7 @@ with description("the repo push toolset"):
 
         with it("should commit when push_commit is called"):
             (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")
-            toolset = AgentToolSet.instantiate("space.repo.agent:Repo")
+            toolset = AgentToolSet.instantiate("space.repo.repo:Repo")
             commit = toolset.push_commit("push: checkpoint")
             expect(commit.sha).not_to(equal(""))
             expect(commit.subject).to(equal("push: checkpoint"))
