@@ -117,6 +117,21 @@ export class Porting {
                 filename="porting.ts",
             )
             expect(violations_for_rule(rule, practice, root)).to(equal([]))
+        with it("should not flag fromFields mapping factories"):
+            rule = ce_rule_by_slug("limit-operation-parameters")
+            source = """
+export class NumberInventorySearch {
+  static fromFields(body: { a: string; b: string; c: string; d: string }) {
+    void body;
+  }
+}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="numbers.ts",
+            )
+            expect(violations_for_rule(rule, practice, root)).to(equal([]))
     with context("use-property-not-accessor"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("use-property-not-accessor")
