@@ -50,6 +50,7 @@ class Installer:
             "node_modules",
             ".git",
             "retired",
+            "_retired",
         }
     )
     _CATALOG_DIRS = (
