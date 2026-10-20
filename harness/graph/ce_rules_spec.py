@@ -9,7 +9,7 @@ for path in (_HERE, _REPO):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from expects import be_true, equal, expect
+from expects import be_true, contain, equal, expect
 from mamba import context, description, it
 
 from harness.graph.ce_multi_language_fixtures import (
@@ -29,7 +29,13 @@ from harness.graph.ce_multi_language_fixtures import (
     _USE_EXCEPTIONS_PROPERLY_FAULT,
 )
 from harness.graph.ce_module_example_harness import assert_module_example_pair
-from harness.graph.ce_rule_eval_harness import assert_python_example_pair, assert_rule_pair
+from harness.graph.ce_rule_eval_harness import (
+    assert_python_example_pair,
+    assert_rule_pair,
+    ce_rule_by_slug,
+    practice_from_source,
+    violations_for_rule,
+)
 
 _LANGS = ("python", "typescript", "javascript")
 
@@ -68,12 +74,149 @@ with description("Clean Engineering graph rules (python .examples pairs)"):
     with context("limit-operation-parameters"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("limit-operation-parameters")
+        with it("should allow three domain parameters and flag a fourth"):
+            rule = ce_rule_by_slug("limit-operation-parameters")
+            ok = """
+export class Api {
+  send(a: string, b: string, c: string): void {
+    void a; void b; void c;
+  }
+}
+"""
+            bad = """
+export class Api {
+  send(a: string, b: string, c: string, d: string): void {
+    void a; void b; void c; void d;
+  }
+}
+"""
+            for source, expect_hits in ((ok, []), (bad, 1)):
+                practice, root = practice_from_source(
+                    source,
+                    lang="typescript",
+                    filename="api.ts",
+                )
+                hits = violations_for_rule(rule, practice, root)
+                if expect_hits == 0:
+                    expect(hits).to(equal([]))
+                else:
+                    expect(len(hits)).to(equal(1))
+                    expect(hits[0]).to(contain("maximum 3, excluding self"))
+        with it("should not flag create factories that take many parameters"):
+            rule = ce_rule_by_slug("limit-operation-parameters")
+            source = """
+export class Porting {
+  create(a: string, b: string, c: string, d: string, e: string, f: string, g: string) {
+    void a; void b; void c; void d; void e; void f; void g;
+  }
+}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="porting.ts",
+            )
+            expect(violations_for_rule(rule, practice, root)).to(equal([]))
     with context("use-property-not-accessor"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("use-property-not-accessor")
     with context("use-consistent-naming"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("use-consistent-naming")
+        with it("should not flag constructor or single-word methods as snake_case on a TypeScript class"):
+            rule = ce_rule_by_slug("use-consistent-naming")
+            source = """
+export class AccountCredentialsNode {
+  constructor(response?: unknown, cookieHeader?: string) {
+    void response;
+    void cookieHeader;
+  }
+
+  async register(): Promise<void> {}
+
+  async authenticateAccount(): Promise<void> {}
+
+  async signOut(): Promise<void> {}
+}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="account-node.ts",
+            )
+            hits = violations_for_rule(rule, practice, root)
+            expect(hits).to(equal([]))
+    with context("state-change-returns-record-or-named-failure"):
+        with it("should not flag signOut with one property assignment after a post helper"):
+            rule = ce_rule_by_slug("state-change-returns-record-or-named-failure")
+            source = """
+export class AccountCredentialsClient {
+  async signOut(): Promise<void> {
+    await this._postOperation('/api/account/sign-out', {}, 0, 'Sign-in failed');
+    this.token = null;
+    this._goToDestination();
+  }
+}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="account-client.ts",
+            )
+            hits = violations_for_rule(rule, practice, root)
+            expect(hits).to(equal([]))
+        with it("should flag verify when two property assignments lack a returned record"):
+            rule = ce_rule_by_slug("state-change-returns-record-or-named-failure")
+            source = """
+export class AccountCredentialsClient {
+  async verify(code: string): Promise<void> {
+    this.validation.validationCode = code;
+    await this._postOperation('/api/account/verify', { code }, 0, 'Mismatch');
+    this.validation.verified = true;
+  }
+}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="account-client.ts",
+            )
+            hits = violations_for_rule(rule, practice, root)
+            expect(len(hits)).to(equal(1))
+            expect(hits[0]).to(contain("verify"))
+    with context("use-intention-revealing-names"):
+        with it("should allow value on a TypeScript property setter"):
+            rule = ce_rule_by_slug("use-intention-revealing-names")
+            source = """
+export class AccountCredentialsClient {
+  override set email(value: string) {
+    super.email = value;
+  }
+}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="account-client.ts",
+            )
+            hits = violations_for_rule(rule, practice, root)
+            expect(hits).to(equal([]))
+        with it("should still flag value on an ordinary method parameter"):
+            rule = ce_rule_by_slug("use-intention-revealing-names")
+            source = """
+export class AccountCredentialsClient {
+  apply(value: string): void {
+    this.email = value;
+  }
+}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="account-client.ts",
+            )
+            hits = violations_for_rule(rule, practice, root)
+            expect(hits).not_to(equal([]))
     with context("prefer-instance-operations"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("prefer-instance-operations")
@@ -152,6 +295,29 @@ with description("Clean Engineering graph rules (multi-language scanner fixtures
                 _USE_EXPLICIT_DEPENDENCIES_FAULT,
                 _USE_EXPLICIT_DEPENDENCIES_CLEAN,
             )
+        with it("should allow an Entity aggregate to construct peer types in the same module"):
+            rule = ce_rule_by_slug("use-explicit-dependencies")
+            source = """
+/** <<Value Object>> */
+export class Identity {
+  constructor(public email: string) {}
+}
+
+/** <<Aggregate Root>> <<Entity>> */
+export class CustomerProfile {
+  constructor(email: string, identity?: Identity) {
+    this.identity = identity ?? new Identity(email);
+  }
+  identity: Identity;
+}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="customer-profile.ts",
+            )
+            hits = violations_for_rule(rule, practice, root)
+            expect(hits).to(equal([]))
 
     with context("use-exceptions-properly"):
         with it("should flag bare catch in python, typescript, and javascript"):
