@@ -82,8 +82,9 @@ class Rule:
 
     def validate(self) -> str:
         return instructions(
-            f"Evaluate the current context against this rule ({self.slug}):",
+            f"### `{self.slug}`",
             self.body,
+            f"Evaluate the current context against this rule ({self.slug}):",
         )
 
     @classmethod

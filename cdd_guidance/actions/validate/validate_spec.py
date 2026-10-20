@@ -32,37 +32,37 @@ with description("a validate action on practice guidance") as self:
         self.action = Validate()
 
     with context("with no rule passed"):
+        with it("should document graph JSON in validate instructions"):
+            prose = _expanded_validate(self.action, {"guidance": [self.guidance]})
+            expect(prose).to(contain("graph_return_nodes"))
+
         with it("should return validate instructions for every rule in one shot"):
-            prose = _expanded_validate(
-                self.action, {"guidance": [self.guidance]}
-            )
-            expect(prose).to(contain("sample-rule-one"))
+            report = self.action.validate(guidance=[self.guidance])
+            expect(report).to(contain("sample-rule-one"))
 
     with context("with one rule passed"):
         with it("should return validate instructions for that rule only"):
             rule = self.guidance.rules.entries["sample-rule-one"]
-            prose = _expanded_validate(
-                self.action, {"guidance": [self.guidance], "rule": rule}
-            )
-            expect(prose).to(contain("sample-rule-one"))
+            report = self.action.validate(guidance=[self.guidance], rule=rule)
+            expect(report).to(contain("sample-rule-one"))
 
     with context("with a fidelity active"):
         with it("should pass that fidelity's rules with the shared rules"):
             guidance = SamplePracticeGuidance(format="markdown", fidelity="sketch")
-            prose = _expanded_validate(self.action, {"guidance": [guidance]})
-            expect(prose).to(contain("sample-rule-one"))
-            expect(prose).to(contain("sketch-rule"))
-            expect(prose).not_to(contain("spec-rule"))
+            report = self.action.validate(guidance=[guidance])
+            expect(report).to(contain("sample-rule-one"))
+            expect(report).to(contain("sketch-rule"))
+            expect(report).not_to(contain("spec-rule"))
 
     with context("with stories practice guidance"):
         with it("should load the shared rules collection from the whole practice slug"):
-            prose = _expanded_validate(self.action, {"guidance": ["stories"]})
-            expect(prose).to(contain("vocabulary-traces-to-domain-source"))
+            report = self.action.validate(guidance=["stories"])
+            expect(report).to(contain("vocabulary-traces-to-domain-source"))
 
         with it("should load shared and fidelity rules when the fidelity slug is scenarios"):
-            prose = _expanded_validate(self.action, {"guidance": ["scenarios"]})
-            expect(prose).to(contain("vocabulary-traces-to-domain-source"))
-            expect(prose).to(contain("gwt-steps-trace-to-domain-operations"))
+            report = self.action.validate(guidance=["scenarios"])
+            expect(report).to(contain("vocabulary-traces-to-domain-source"))
+            expect(report).to(contain("gwt-steps-trace-to-domain-operations"))
 
     with context("with ddd and stories guidance"):
         with it("should return shared and active-fidelity rules from each practice"):
@@ -71,3 +71,19 @@ with description("a validate action on practice guidance") as self:
             expect(report).to(contain("experts-words-preferred"))
             expect(report).to(contain("do-not-invent-requirements"))
             expect(report).to(contain("verb-noun-format"))
+
+    with context("with graph JSON paths"):
+        with it("should append a graph-rule report from summary JSON and still include AI rules"):
+            fixture = Path(__file__).with_name("fixtures") / "sample-graph-violations.json"
+            report = self.action.validate(
+                guidance=[self.guidance],
+                graph=str(fixture),
+            )
+            expect(report).to(contain("Graph rule validation"))
+            expect(report).to(contain("limit-operation-parameters"))
+            expect(report).to(contain("**[graph rule]**"))
+            expect(report).to(contain("sample-rule-one"))
+            expect(report).not_to(contain("vscode://"))
+            expect(report).not_to(contain("file://"))
+            expect(report).to(contain("#L10"))
+            expect(report).not_to(contain("src\\example.ts"))
