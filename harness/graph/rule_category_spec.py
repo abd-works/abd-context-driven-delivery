@@ -36,7 +36,7 @@ with description("rule categories"):
             self.account = Node(self.practice, "OoadClass", "clean_engineering:OoadClass:AccountCredentials", "AccountCredentials", Source(".", 1, 8))
             self.failure.rules.record_violation(
                 "limit-operation-parameters",
-                "Operation 'failure' takes more than two parameters.",
+                "Operation 'failure' takes 4 parameters (maximum 3, excluding self).",
             )
             self.practice.root_node.children = [self.failure, self.register, self.account]
             for node in (self.failure, self.register, self.account):
@@ -45,7 +45,9 @@ with description("rule categories"):
         with it("should attach the parameter rule to the operation that fails it"):
             rule = rule_on(self.failure.serialize(), "limit-operation-parameters")
             expect(rule["status"]).to(equal("violating"))
-            expect(rule["violations"][0]["message"]).to(contain("takes more than two parameters"))
+            expect(rule["violations"][0]["message"]).to(
+                contain("takes 4 parameters (maximum 3, excluding self)")
+            )
 
         with it("should attach the parameter rule to the operation that passes it"):
             expect(rule_on(self.register.serialize(), "limit-operation-parameters")["status"]).to(equal("passing"))

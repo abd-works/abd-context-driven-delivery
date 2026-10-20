@@ -171,9 +171,11 @@ export function App() {
     setError('');
     try {
       const bundle = normalizeInventoryBundle(await filters.applyOverlays(overlays));
-      adoptInventory(bundle, next);
-      setSelection(next);
-      await applyFilter(next, bundle.practices);
+      const scope = next.practices.length ? next.practices : Object.keys(bundle.practices);
+      const refreshed = overlayFilterRefresh(selection, { ...next, practices: scope }, bundle.practices);
+      adoptInventory(bundle, refreshed);
+      setSelection(refreshed);
+      await applyFilter(refreshed, bundle.practices);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -360,6 +362,33 @@ function listed(
   field: 'node_types' | 'edge_types' | 'rules',
 ): string[] {
   return unique(practices.flatMap((name) => catalog[name]?.[field] ?? []));
+}
+
+function overlayFilterRefresh(
+  previous: FilterSelection,
+  next: FilterSelection,
+  catalog: Record<string, PracticeInventory>,
+): FilterSelection {
+  const scope = next.practices.length ? next.practices : Object.keys(catalog);
+  const nodes = listed(scope, catalog, 'node_types');
+  const edges = visibleRelationships(listed(scope, catalog, 'edge_types'));
+  const rules = listed(scope, catalog, 'rules');
+  return {
+    ...next,
+    node_types: mergeNewCatalogItems(previous.node_types, nodes),
+    relationships: mergeNewCatalogItems(previous.relationships, edges),
+    rules: mergeNewCatalogItems(previous.rules, rules),
+  };
+}
+
+function mergeNewCatalogItems(current: string[], available: string[]): string[] {
+  const kept = current.filter((item) => available.includes(item));
+  for (const item of available) {
+    if (!kept.includes(item)) {
+      kept.push(item);
+    }
+  }
+  return kept;
 }
 
 function practiceSelection(

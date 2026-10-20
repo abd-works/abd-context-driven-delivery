@@ -173,7 +173,7 @@ const engineeringTree = {
                       status: 'violating',
                       violations: [
                         {
-                          message: "Operation 'failure' takes more than two parameters.",
+                          message: "Operation 'failure' takes 4 parameters (maximum 2).",
                           file: 'register.ts',
                           start: 1,
                           end: 2,
@@ -672,7 +672,7 @@ it('should expose the violation message when hovering a violating rule', async (
   await expand(user, 'failure');
   await user.click(screen.getByTestId('tree-expand-rules'));
   expect(screen.getByTestId('tree-violation-rule').getAttribute('title')).toBe(
-    "Operation 'failure' takes more than two parameters.",
+    "Operation 'failure' takes 4 parameters (maximum 2).",
   );
 });
 
@@ -689,7 +689,7 @@ it('should show the violation banner, highlight the source, and copy a Correct p
   await user.click(screen.getByTestId('tree-violation-rule'));
   const banner = await screen.findByTestId('violation-banner');
   expect(banner.textContent).toContain('limit-operation-parameters');
-  expect(banner.textContent).toContain('takes more than two parameters');
+  expect(banner.textContent).toContain('takes 4 parameters (maximum 2)');
   expect(calls.some((call) => call.operation === 'source' && call.body.node_id === 'op-failure')).toBe(true);
   const listed = await screen.findByTestId('source-rules');
   expect(listed.textContent).toContain('limit-operation-parameters');
@@ -701,7 +701,7 @@ it('should show the violation banner, highlight the source, and copy a Correct p
   expect(copied).toContain('Clean Engineering');
   expect(copied).toContain('test-driven');
   expect(copied).toContain(registerText);
-  expect(copied).toContain("Violation: Operation 'failure' takes more than two parameters.");
+  expect(copied).toContain("Violation: Operation 'failure' takes 4 parameters (maximum 2).");
 });
 
 it('should build a Correct prompt with the rule, excerpt, and violation message', () => {

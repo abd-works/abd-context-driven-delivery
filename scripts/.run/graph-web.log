@@ -28,3 +28,9 @@
 > server
 > tsx server.ts
 
+
+--- npm run server ---
+
+> server
+> tsx server.ts
+

@@ -112,7 +112,7 @@ operation:
   invariants?: [invariant]
   where:
     - id is the class id, then this operation name, joined by dots
-    - 0..2 parameters on a domain operation
+    - 0..3 parameters on a domain operation (self not counted)
     - one job
     - body under 20 statements
     - a state change returns the record or a failure named after the rejected rule

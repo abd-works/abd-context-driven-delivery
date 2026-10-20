@@ -6,7 +6,7 @@ session --> set when ever a session is opened, created etc
     new (workpath, repo path, opt session path)
         workpath -> primary folder location where work is generated and read ; set when the session is opened
         repo path -> path of repo being worked in
-        session-path -> where logging, and other session specific not permanant artifacts go - defaults to  repo-path/sessions/{session-name}/
+        session-path -> where logging and other session-specific non-permanent artifacts go (defaults to repo-path/.sessions/{session-name}/). Agents always write large/temporary outputs here when a session is open—graph JSON, MCP dumps, probes—not only under Cursor .cursor/projects/.../agent-tools; reference paths on session.append_log.
         self.repo = repo tool set to repo path
     select  -> sets all logging to session variables , same as new but to exiusting
     loops 

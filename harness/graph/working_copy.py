@@ -60,6 +60,7 @@ def fill_working_copy(graph: Graph) -> None:
         _offer(graph.practice("ux"), ["UxMap", "Screen"])
     if _overlay_selected(graph, "lern_domain_driven"):
         _record_lern(graph, source, classes)
+    _register_overlay_schema_catalog(graph)
     for practice in graph.practices.values():
         attach_rules(practice)
         practice.loaded = ["nodes", "edges", "rules"]
@@ -73,6 +74,18 @@ def _offer(practice, types: list[str]) -> None:
 
 def _overlay_selected(graph: Graph, pattern: str) -> bool:
     return any(pattern in item.replace("\\", "/").split("/") for item in graph.overlays)
+
+
+def _register_overlay_schema_catalog(graph: Graph) -> None:
+    """Expose overlay schema node types in the filter lists before rules run."""
+    from harness.graph.schema_rules import active_overlay_patterns, schema_semantic_types_for_practice
+
+    active = active_overlay_patterns(tuple(graph.overlays))
+    if not active:
+        return
+    for name, practice in graph.practices.items():
+        for node_type in schema_semantic_types_for_practice(name, active):
+            practice.node_types.add(node_type)
 
 
 def _record_clean(practice, root: Path) -> list[dict]:

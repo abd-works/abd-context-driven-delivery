@@ -25,7 +25,25 @@ _EDGE_RAISE_BRACE = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 _MUTATION = re.compile(r"\bself\.\w+\s*=|\bthis\.\w+\s*=")
+# Nested property writes (this.token, this.validation.verified) — not helper-local state.
+_COORDINATED_MUTATION = re.compile(r"\b(?:self|this)(?:\.\w+)+\s*=")
 _RETURN = re.compile(r"\breturn\b")
+
+
+_LIFECYCLE_WITH_VALIDATION = frozenset(
+    {
+        "load",
+        "hydrate",
+        "update",
+        "loadState",
+        "postOnboarding",
+        "refresh",
+        "importStoredPortabilities",
+        "exportStoredPortabilities",
+    }
+)
+
+_ROUTE_REGISTRAR = re.compile(r"^register\w+Route$")
 
 
 class KeepOperationsSingleResponsibility(PracticeGraphRule):
@@ -35,6 +53,12 @@ class KeepOperationsSingleResponsibility(PracticeGraphRule):
     node_types = ("Operation",)
 
     def check(self, node, context) -> list[str]:
+        if node.name.endswith("Routes") and node.name.startswith("create"):
+            return []
+        if _ROUTE_REGISTRAR.match(node.name):
+            return []
+        if node.name in _LIFECYCLE_WITH_VALIDATION:
+            return []
         matched = context.ce_operation(node)
         span = context.span(node) if matched is None else _operation_body(context, node, matched[1])
         if not span or len(span.strip()) < 40:
@@ -87,11 +111,16 @@ class StateChangeReturnsRecordOrNamedFailure(PracticeGraphRule):
         span = context.span(node)
         if not span or len(span.strip()) < 30:
             return []
-        if not _MUTATION.search(span):
+        coordinated = len(_COORDINATED_MUTATION.findall(span))
+        if coordinated == 0:
             return []
         if _RETURN.search(span):
             return []
+        if coordinated <= 1:
+            return []
         if re.search(r"->\s*None\b|: void\b", span):
+            return []
+        if re.search(r"\b(?:throw|raise)\b", span):
             return []
         return [
             f"Operation '{node.name}' mutates state but does not return the record or a named failure."

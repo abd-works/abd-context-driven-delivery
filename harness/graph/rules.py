@@ -7,7 +7,7 @@ from pathlib import Path
 from harness.graph.node_rules import attach_node_rules
 from harness.graph.practice_rules_registry import checks_for_node, checks_for_practice
 from harness.graph.rule_context import RuleCheckContext
-from harness.graph.schema_rules import bind_practice_rules, slugs_for_type
+from harness.graph.schema_rules import active_overlay_patterns, bind_practice_rules, slugs_for_type
 
 
 def attach_rules(practice) -> None:
@@ -23,7 +23,8 @@ def attach_rules(practice) -> None:
     def schema_slugs_for(node) -> frozenset[str]:
         if hasattr(node, "_rules") and node._rules is not None:
             return frozenset(node._rules.slugs())
-        return frozenset(slugs_for_type(node.practice.name, node.type))
+        overlays = tuple(node.practice.graph.overlays) if node.practice.graph else ()
+        return frozenset(slugs_for_type(node.practice.name, node.type, active_overlay_patterns(overlays)))
 
     def record(slug: str, node_id: str, message: str) -> None:
         node = practice.registered(node_id)

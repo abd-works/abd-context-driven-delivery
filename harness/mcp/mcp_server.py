@@ -518,19 +518,44 @@ def _coerce_mcp_arguments(
     return coerced
 
 
+def _active_mcp_repo() -> Path | None:
+    host = _SERVING_MCP_HOST
+    if host is not None:
+        return host._runtime.repo
+    return None
+
+
+def _log_mcp_operation_invocation(
+    op: McpOperationDefinition, arguments: dict[str, object]
+) -> None:
+    from harness.agent_tools.agent_tools import agent_tool_for_operation
+
+    agent_tool = agent_tool_for_operation(op.tool, op.operation)
+    if agent_tool is None:
+        return
+    agent_tool.log_session_invocation(dict(arguments), repo_path=_active_mcp_repo())
+
+
 def _invoke_mcp_callable(
     op: McpOperationDefinition, arguments: dict[str, object]
 ) -> object:
+    _log_mcp_operation_invocation(op, arguments)
     args = _coerce_mcp_arguments(op.member, arguments)
-    member = op.member
-    if inspect.ismethod(member):
-        return member(**args)
     toolset = op.tool
     operation = op.operation
     if toolset is not None and operation:
+        owner = toolset if inspect.isclass(toolset) else type(toolset)
+        descriptor = owner.__dict__.get(operation)
+        if isinstance(descriptor, classmethod):
+            return descriptor.__func__(owner, **args)
+        if isinstance(descriptor, staticmethod):
+            return descriptor.__func__(**args)
         target = getattr(toolset, operation, None)
         if callable(target):
             return target(**args)
+    member = op.member
+    if inspect.ismethod(member):
+        return member(**args)
     if callable(member):
         return member(**args)
     return member
@@ -568,6 +593,8 @@ class McpPrompt:
         self.prompt_text = op.description or _prompt_message(op)
 
     def invoke(self, arguments: dict[str, object] | None = None) -> object:
+        payload = dict(arguments or {})
+        _log_mcp_operation_invocation(self._op, payload)
         tool = self._op.tool
         name = self._op.operation
         if name == "instructions" and hasattr(tool, "instructions"):
@@ -993,7 +1020,6 @@ class McpHost:
         Session.refresh_current_from_repo(self._runtime.repo)
         resolved = self._runtime.resolve_call_name(name)
         args = pop_chat_fields(arguments)
-        self._log_agent_tool_invocation(resolved, args)
         try:
             if args.get("ping") is True:
                 if not self._enrolled(resolved):
@@ -1011,25 +1037,6 @@ class McpHost:
             raise
         finally:
             clear_chat_context()
-
-    def _log_agent_tool_invocation(self, resolved: str, args: dict[str, object]) -> None:
-        if resolved == BUILTIN_PING_TOOL or args.get("ping") is True:
-            return
-        if not self._enrolled(resolved):
-            return
-        from space.session import Session
-        from space.session.chat_context import apply_chat_context
-
-        session = Session.current()
-        if session is None or session.session_path is None:
-            return
-        apply_chat_context(session)
-        logged_args = {
-            key: value
-            for key, value in args.items()
-            if isinstance(value, (str, int, float, bool, list))
-        }
-        session.log_agent_tool(resolved, logged_args)
 
     def _enrolled(self, name: str) -> bool:
         return (

@@ -401,7 +401,13 @@ class Session:
 
         Omit ``loop`` to target the latest loop with log lines. Pass ``conversation_id``,
         ``transcript_path``, and ``transcript_lines`` when hook metadata is missing.
-        Do not edit ``session.log`` by hand."""
+        Do not edit ``session.log`` by hand.
+
+        **Session artifacts:** whenever an open session exists, write large or temporary
+        outputs (MCP ``graph_return_nodes`` JSON, diagnostics dumps, probe results) under
+        ``session_path`` on that repo (e.g. ``repo/.sessions/{name}/``). Do not leave the
+        only copy under Cursor ``.cursor/projects/.../agent-tools``. Reference those files
+        in ``paths`` on this call."""
         session = cls.current()
         if session is None or not session.name:
             raise ValueError("no current session; open one with session.new or session.switch")
@@ -870,15 +876,18 @@ class Session:
             "the --- N marker line records the same pointer when bound—both tie the loop to the transcript. "
             "After marking, log actions in that loop with the same thread id and growing line ranges so "
             "read_loop(number) expands every line in the loop with matching transcript slices. "
-            "WHERE LINES COME FROM: only @mcp @agent_tool / @agent_instructions invocations "
-            "(McpHost.dispatch log_agent_tool) and guidance runs (log_guidance_action, log_validation, "
-            "record_failure on MCP errors). Cursor hooks do not write session.log. "
-            "GuidanceAction.run → log_guidance_action (log_action lines) when an action name is set; "
-            "Failures: record_failure on MCP dispatch and GuidanceAction.run; log_error also re-raises. "
-            "Validate.validate → log_validation. Do not duplicate unless a line lacks detail. "
+            "WHERE LINES COME FROM: @agent_tool invocations (AgentOperation.invoke / MCP → "
+            "log_session_invocation; guidance kits use GuidanceAgentOperation override). run logs "
+            "via log_guidance_action (Validate overrides to log_validation). record_failure on run "
+            "and MCP dispatch errors. Cursor hooks do not write session.log. "
+            "Failures: record_failure and log_error also re-raises. "
+            "Do not duplicate unless a line lacks detail. "
             "session.new seeds --- 1 (chat on that marker when bound at open). "
             "When the user corrects ai behavior or output, session.append_log with note, optional loop, "
             "paths, and chat fields. "
+            "SESSION ARTIFACTS: with session_path set, write every large/temporary agent output "
+            "(graph JSON, MCP dumps, probes) under session_path—not only under Cursor agent-tools. "
+            "List artifact paths on append_log. "
             f"Log file: {log_file}. Errors: {err_file}."
         )
 

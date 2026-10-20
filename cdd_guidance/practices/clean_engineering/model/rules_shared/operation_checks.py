@@ -29,11 +29,41 @@ VAGUE_NAMES = {
     "payload",
 }
 
-_SNAKE_CASE = re.compile(r"^_*[a-z][a-z0-9]*(_[a-z0-9]+)*_*$")
+# snake_case requires at least one underscore between words; plain `register` is not snake_case.
+_SNAKE_CASE = re.compile(r"^_*[a-z][a-z0-9]*(_[a-z0-9]+)+_*$")
 _CAMEL_CASE = re.compile(r"^_*[a-z]+[A-Z][a-zA-Z0-9]*$")
 _DUNDER = re.compile(r"^__[a-z]+__$")
-_SKIP_OP_NAMES = frozenset({"setUp", "tearDown", "setUpClass", "tearDownClass", "setUpModule"})
+_SKIP_OP_NAMES = frozenset(
+    {
+        "constructor",
+        "setUp",
+        "tearDown",
+        "setUpClass",
+        "tearDownClass",
+        "setUpModule",
+    }
+)
 _STATIC_FACTORY_NAMES = frozenset({"instance", "create"})
+# Static factories beyond name patterns (creation / mapping helpers).
+_STATIC_FACTORY_EXTRA_NAMES = frozenset(
+    {
+        "fromRequest",
+    }
+)
+_CAMEL_FROM_FACTORY = re.compile(r"^from[A-Z]")
+_LOAD_FACTORY = re.compile(r"^load(?:[A-Z].*)?$")
+
+
+def _allows_static_factory_operation(name: str) -> bool:
+    if name in _STATIC_FACTORY_NAMES or name in _STATIC_FACTORY_EXTRA_NAMES:
+        return True
+    if name.startswith("from_"):
+        return True
+    if _CAMEL_FROM_FACTORY.match(name):
+        return True
+    return _LOAD_FACTORY.match(name) is not None
+
+_VAGUE_PARAMETER_NAMES = frozenset({"options", "opts", "config", "settings"})
 
 GENERIC_NAMES = {
     "info",
@@ -58,6 +88,62 @@ def _parsed_operation(context, node):
     return matched[1] if matched else None
 
 
+def _idiomatic_property_setter_parameter(operation, param_name: str) -> bool:
+    """TypeScript/JavaScript `set email(value)` — intent is in the property name."""
+    return (
+        param_name == "value"
+        and getattr(operation, "is_property", False)
+        and len(operation.parameters) == 1
+    )
+
+
+def _operation_for_parameter_node(context, node):
+    from harness.graph.rule_context import _operation_name_from_param_node, _owner_class_name
+
+    owner = _owner_class_name(node)
+    op_name = _operation_name_from_param_node(node)
+    model = context.clean_engineering_model(node)
+    if model is None:
+        return None
+    for module in model.modules:
+        for oclass in module.classes:
+            if owner and oclass.name != owner:
+                continue
+            for op in oclass.operations:
+                if op_name and op.name != op_name:
+                    continue
+                for param in op.parameters:
+                    if param.name == node.name:
+                        return op
+    return None
+
+
+def _entity_may_construct_peer_in_module(context, node, type_name: str) -> bool:
+    """<<Entity>> / <<Aggregate Root>> may compose sibling types from the same module."""
+    from cdd_guidance.practices.ddd.model.stereotypes import (
+        class_declaration_decorated_name,
+        is_aggregate_root,
+        is_entity,
+    )
+
+    if type_name == node.name:
+        return True
+    text = context.text(node)
+    decorated = class_declaration_decorated_name(text, node.name)
+    if not (is_entity(decorated) or is_aggregate_root(decorated)):
+        return False
+    peer_names = _class_names_in_same_source_file(context, node)
+    return type_name in peer_names
+
+
+def _class_names_in_same_source_file(context, node) -> set[str]:
+    model = context.clean_engineering_model(node)
+    if model is not None:
+        return {oclass.name for module in model.modules for oclass in module.classes}
+    text = context.text(node)
+    return set(re.findall(r"\bclass\s+(\w+)\b", text))
+
+
 class UseExplicitDependencies(PracticeGraphRule):
     slug = "use-explicit-dependencies"
     node_types = ("OoadClass",)
@@ -69,6 +155,8 @@ class UseExplicitDependencies(PracticeGraphRule):
                 if op.name not in {"__init__", "constructor"}:
                     continue
                 for type_name, _line in op.constructed_types:
+                    if _entity_may_construct_peer_in_module(context, node, type_name):
+                        continue
                     if type_name != node.name:
                         return [f"Class '{node.name}' constructs '{type_name}' inside its constructor."]
             return []
@@ -78,6 +166,8 @@ class UseExplicitDependencies(PracticeGraphRule):
         if not constructor:
             return []
         for created in re.findall(r"\bnew\s+([A-Z]\w*)", constructor):
+            if _entity_may_construct_peer_in_module(context, node, created):
+                continue
             if created != node.name:
                 return [f"Class '{node.name}' constructs '{created}' inside its constructor."]
         return []
@@ -105,6 +195,10 @@ class SimplifyControlFlow(PracticeGraphRule):
     limit = 3
 
     def check(self, node, context) -> list[str]:
+        if node.name.startswith("register") and node.name.endswith("Route"):
+            return []
+        if node.name.startswith("create") and node.name.endswith("Routes"):
+            return []
         operation = _parsed_operation(context, node)
         if operation is not None:
             depth = operation.max_control_flow_depth
@@ -173,7 +267,8 @@ class AvoidVagueParameterNames(PracticeGraphRule):
             return []
         _oclass, operation = matched
         for param in operation.parameters:
-            if param.name.lower() in VAGUE_NAMES:
+            lowered = param.name.lower()
+            if lowered in VAGUE_NAMES or lowered in _VAGUE_PARAMETER_NAMES:
                 return [f"Parameter '{param.name}' in '{operation.name}' is vague."]
         return []
 
@@ -184,6 +279,15 @@ class UseIntentionRevealingNames(PracticeGraphRule):
 
     def check(self, node, context) -> list[str]:
         if node.type == "Parameter":
+            if not re.match(r"^[\w$]+$", node.name):
+                return []
+            operation = _operation_for_parameter_node(context, node)
+            if operation and _idiomatic_property_setter_parameter(operation, node.name):
+                return []
+            if operation and operation.name == "text" and node.name in {"value", "rawField"}:
+                return []
+            if node.name == "value" and operation and operation.name == "asyncRoute":
+                return []
             if len(node.name) < 3 or node.name.lower() in GENERIC_NAMES:
                 return [f"Parameter '{node.name}' does not reveal intent."]
             return []
@@ -192,6 +296,8 @@ class UseIntentionRevealingNames(PracticeGraphRule):
             return []
         _oclass, operation = matched
         for param in operation.parameters:
+            if _idiomatic_property_setter_parameter(operation, param.name):
+                continue
             if len(param.name) < 3 or param.name.lower() in GENERIC_NAMES:
                 return [f"Parameter '{param.name}' in '{operation.name}' does not reveal intent."]
         return []
@@ -237,7 +343,7 @@ class PreferInstanceOperations(PracticeGraphRule):
         if not operation.is_static and not operation.is_classmethod:
             return []
         name = operation.name
-        if name in _STATIC_FACTORY_NAMES or name.startswith("from_"):
+        if _allows_static_factory_operation(name):
             return []
         kind = "classmethod" if operation.is_classmethod else "staticmethod"
         return [f"Operation '{name}' is a {kind}; prefer an instance operation."]

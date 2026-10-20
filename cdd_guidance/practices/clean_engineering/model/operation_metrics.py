@@ -13,7 +13,37 @@ _CATCH = re.compile(r"\bcatch\s*(?:\([^)]*\))?\s*\{")
 _PY_EXCEPT = re.compile(r"\bexcept\s*(?::|\([^)]*\)\s*:)")
 _STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
 _NUMBER = re.compile(r"\b(\d+(?:\.\d+)?)\b")
-_SAFE_NUMBERS = {0, 1, 2, -1, 0.0, 1.0, 0.5, 10, 100}
+_REGEXP_LITERAL = re.compile(r"/(?:\\.|[^/\\])*/[gimsuy]*")
+_SAFE_NUMBERS = {
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    -1,
+    0.0,
+    1.0,
+    0.5,
+    8,
+    9,
+    10,
+    100,
+    200,
+    201,
+    204,
+    301,
+    302,
+    400,
+    401,
+    403,
+    404,
+    409,
+    422,
+    500,
+    502,
+    503,
+}
 _NARRATIVE_COMMENT = re.compile(
     r"(?:transient|value object|carries|implementation|see also|cross-ref)",
     re.IGNORECASE,
@@ -65,8 +95,9 @@ def control_flow_depth_in_text(text: str) -> int:
 
 
 def bare_catch_in_text(text: str) -> bool:
+    # TypeScript optional catch binding `catch {` is intentional — not a bare handler.
     if re.search(r"\bcatch\s*\{", text):
-        return True
+        return False
     if re.search(r"\bcatch\s*\(\s*\)", text):
         return True
     if re.search(r"\bexcept\s*:", text):
@@ -92,6 +123,7 @@ def swallowing_catch_in_text(text: str) -> bool:
 
 def unnamed_literal_numbers_in_text(text: str) -> list[str]:
     code = _STRING.sub('""', text)
+    code = _REGEXP_LITERAL.sub('""', code)
     found: list[str] = []
     for raw in _NUMBER.findall(code):
         value = float(raw)

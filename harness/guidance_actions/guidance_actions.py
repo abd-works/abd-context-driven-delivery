@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any, NotRequired, TypedDict
 
-from harness.agent_tools import AgentToolSet, agent_instructions, agent_toolset, tools
+from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
 from prompt_notify.prompt_notify import PromptNotify, echo
 from harness.hooks.hooks import Hook
 
@@ -82,6 +82,27 @@ class GuidanceAction:
         super().__init__()
         self._guidance_text: str | None = None
         self._tool_items: list = []
+        self._logged_session_action: str | None = None
+
+    def clear_session_action_log(self) -> None:
+        self._logged_session_action = None
+
+    def session_action_for_operation(self, operation: str) -> str:
+        """MCP operation name → session action name (``run`` uses the same string)."""
+        return operation
+
+    def _discover_operations(self) -> dict[str, AgentOperation]:
+        from harness.agent_tools.agent_tools import GuidanceAgentOperation
+
+        discovered: dict[str, AgentOperation] = {}
+        for name, member in self._marked_members(type(self)):
+            if getattr(member, "_is_agent_tool", False):
+                discovered[name] = GuidanceAgentOperation(
+                    name=name,
+                    callable=self._bound_callable(name, member),
+                    toolset=self,
+                )
+        return discovered
 
     def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
         """Guidance ref or dict: iterate Guidance. Other strings: run once on that text."""
@@ -156,8 +177,12 @@ class GuidanceAction:
             raise
 
     def _log_running_action(self, action: str) -> None:
+        """Session trail for this run — override on actions such as Validate that log differently."""
         if not action:
             return
+        if self._logged_session_action == action:
+            return
+        self._logged_session_action = action
         from space.session import Session
 
         session = Session.current()

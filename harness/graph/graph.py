@@ -16,6 +16,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.agent_tools import agent_tool, agent_toolset
+from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 
 Display = str
@@ -930,13 +931,14 @@ class Graph:
                 "edge_count": practice.edge_count,
                 "node_types": sorted(practice.node_types),
                 "edge_types": list(practice.edge_type_kinds),
-                "rules": list(practice.rules_run),
+                "rules": sorted(practice.applicable.keys()),
                 "tree": practice.root_node.serialize(),
             }
         return report
 
     @mcp
     @agent_tool
+    @skill(name="read-graph")
     def return_nodes(self, filter: dict | None = None) -> str:
         """Return matching graph nodes as JSON, with ancestors, children, and relationships."""
         wanted = dict(filter or {})

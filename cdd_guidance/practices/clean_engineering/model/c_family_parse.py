@@ -169,9 +169,10 @@ class CFamilyParse:
             self._apply_method_end_line(op, class_body, match.end() - 1)
             filled = self._operation_from_body(op, method_body)
             prefix = class_body[max(0, match.start() - 24) : match.start()]
-            if re.search(r"\bget\s*$", prefix):
+            header = match.group(0)
+            if re.search(r"\bget\s+\w+\s*\(", header) or re.search(r"\bset\s+\w+\s*\(", header):
                 filled.is_property = True
-            filled.is_static = bool(re.search(r"\bstatic\b", prefix))
+            filled.is_static = bool(re.search(r"\bstatic\b", prefix) or re.search(r"\bstatic\b", header))
             ops.append(filled)
         return ops
 
@@ -229,18 +230,41 @@ class CFamilyParse:
         if not raw.strip():
             return []
         params: list[str] = []
-        for part in raw.split(","):
+        for part in self._split_param_parts(raw):
             part = part.strip()
             if not part:
                 continue
+            if "=" in part:
+                part = part.split("=", 1)[0].strip()
             part = re.sub(r"^\s*(public|private|protected|final|readonly)\s+", "", part)
-            name = re.split(r"\s*:\s*", part)[0].strip()
-            name = name.split()[-1] if name.split() else name
+            if ":" in part:
+                name_part, type_hint = part.split(":", 1)
+                name = name_part.strip().split()[-1]
+                type_hint = type_hint.strip()
+            else:
+                tokens = part.split()
+                name = tokens[-1] if tokens else part
+                type_hint = ""
             name = name.lstrip("@")
-            type_hint = part.split(":", 1)[1].strip() if ":" in part else ""
-            if name and name not in {"this", "self"}:
+            if name and name not in {"this", "self"} and re.match(r"^[\w$]+$", name):
                 params.append(f"{name}: {type_hint}" if type_hint else name)
         return params
+
+    def _split_param_parts(self, raw: str) -> list[str]:
+        """Split parameter list on commas outside generic brackets."""
+        parts: list[str] = []
+        depth = 0
+        start = 0
+        for index, ch in enumerate(raw):
+            if ch in "<([{":
+                depth += 1
+            elif ch in ">)]}":
+                depth = max(0, depth - 1)
+            elif ch == "," and depth == 0:
+                parts.append(raw[start:index])
+                start = index + 1
+        parts.append(raw[start:])
+        return parts
 
     def _fields_from_body(self, oclass: OoadClass, body: str) -> list:
         outside = self._outside_braces(body)

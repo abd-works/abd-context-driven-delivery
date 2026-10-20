@@ -53,9 +53,14 @@ class LimitComments(PracticeGraphRule):
         return []
 
 
+_INVALID_PARAM_NAME = re.compile(r"^[\w$]+$")
+
+
 def _param_violation(name: str, hint: str) -> list[str]:
     from cdd_guidance.practices.clean_engineering.model.type_refs import is_primitive_type
 
+    if not _INVALID_PARAM_NAME.match(name):
+        return []
     cleaned = (hint or "").strip()
     if not cleaned:
         return [f"Parameter '{name}' is missing a type annotation."]

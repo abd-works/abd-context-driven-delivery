@@ -942,6 +942,43 @@ class AgentTool(AgentToolDestination):
         )
 
     @property
+    def session_log_name(self) -> str:
+        if getattr(self.toolset, "practice_guidance", None) is not None and self.name == "instructions":
+            return self.slug
+        return f"{self.slug}.{self.name}"
+
+    def should_log_session_invocation(self, arguments: dict[str, Any] | None) -> bool:
+        if arguments and arguments.get("ping") is True:
+            return False
+        if getattr(self.callable, "_is_agent_tool", False):
+            return True
+        return self.install_to_mcp
+
+    def log_session_invocation(
+        self,
+        arguments: dict[str, Any] | None,
+        *,
+        repo_path: Path | str | None = None,
+    ) -> None:
+        if not self.should_log_session_invocation(arguments):
+            return
+        from space.session import Session
+        from space.session.chat_context import apply_chat_context
+
+        Session.refresh_current_from_repo(repo_path)
+        session = Session.current()
+        if session is None or session.session_path is None:
+            return
+        apply_chat_context(session)
+        payload = arguments or {}
+        logged_args = {
+            key: value
+            for key, value in payload.items()
+            if isinstance(value, (str, int, float, bool, list))
+        }
+        session.log_agent_tool(self.session_log_name, logged_args)
+
+    @property
     def kind(self) -> str:
         if getattr(self.callable, "_is_agent_tool", False):
             return "tool"
@@ -1062,7 +1099,53 @@ class AgentOperation(AgentTool):
         return "tool"
 
     def invoke(self, arguments: dict[str, Any]) -> Any:
+        self.log_session_invocation(arguments)
         return self.callable(**arguments)
+
+
+@dataclass
+class GuidanceAgentOperation(AgentOperation):
+    """@agent_tool on a GuidanceAction kit — session log via ``run``, not generic ``tool …``."""
+
+    def invoke(self, arguments: dict[str, Any]) -> Any:
+        toolset = self.toolset
+        if hasattr(toolset, "clear_session_action_log"):
+            toolset.clear_session_action_log()
+        return super().invoke(arguments)
+
+    def log_session_invocation(
+        self,
+        arguments: dict[str, Any] | None,
+        *,
+        repo_path: Path | str | None = None,
+    ) -> None:
+        if not self.should_log_session_invocation(arguments):
+            return
+        toolset = self.toolset
+        action = toolset.session_action_for_operation(self.name)
+        if not action:
+            return
+        from space.session import Session
+        from space.session.chat_context import apply_chat_context
+
+        Session.refresh_current_from_repo(repo_path)
+        session = Session.current()
+        if session is None or session.session_path is None:
+            return
+        apply_chat_context(session)
+        payload = dict(arguments or {})
+        if "guidance" in payload:
+            toolset._bind_guidance(payload.get("guidance"))
+        toolset._log_running_action(action)
+
+
+def agent_tool_for_operation(toolset: Any, operation: str) -> AgentTool | None:
+    if toolset is None or not operation:
+        return None
+    tools = toolset.tools
+    found = tools.get(operation)
+    return found if isinstance(found, AgentTool) else None
+
 
 @dataclass
 class AgentInstructions(AgentTool):
