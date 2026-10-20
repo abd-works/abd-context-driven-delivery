@@ -30,6 +30,14 @@ with description("peer private access in operation bodies"):
     with it("should ignore aggregate _repository wiring from a repository"):
         expect(peer_private_access_in_text("customerProfile._repository = this;")).to(equal(False))
 
+    with it("should ignore same-type field copy from a method parameter"):
+        body = "this._plan = source._plan;\nthis.simType = source.simType;"
+        expect(peer_private_access_in_text(body, frozenset({"source"}))).to(equal(False))
+
+    with it("should still flag reading a parameter private field without copying to this"):
+        body = "return source._plan;"
+        expect(peer_private_access_in_text(body, frozenset({"source"}))).to(equal(True))
+
     with it("should set peer_private_access on parsed operations"):
         own = Operation("constructor", 1)
         apply_brace_body_metrics(own, "this._email = email;\nthis._password = password;")

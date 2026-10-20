@@ -172,7 +172,7 @@ def apply_brace_body_metrics(operation: "Operation", body: str) -> None:
     operation.has_bare_catch = bare_catch_in_text(body)
     operation.swallows_exceptions = swallowing_catch_in_text(body)
     operation.unnamed_literal_numbers = unnamed_literal_numbers_in_text(body)
-    operation.peer_private_access = peer_private_access_in_text(body)
+    operation.peer_private_access = peer_private_access_in_text(body, _parameter_names(operation))
 
 
 def apply_python_function_metrics(operation: "Operation", node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
@@ -191,8 +191,35 @@ def _python_peer_private_access(node: ast.FunctionDef | ast.AsyncFunctionDef) ->
     params.update(a.arg for a in node.args.kwonlyargs)
     for child in ast.walk(node):
         if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name):
-            if child.value.id in params and child.attr.startswith("_") and child.attr != "_repository":
-                return True
+            if child.value.id not in params or not child.attr.startswith("_"):
+                continue
+            if child.attr.lstrip("_") in _WIRED_PEER_FIELDS or child.attr in _WIRED_PEER_FIELDS:
+                continue
+            if _python_same_type_field_copy(node, child.value.id, child.attr):
+                continue
+            return True
+    return False
+
+
+def _python_same_type_field_copy(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    param_name: str,
+    attr: str,
+) -> bool:
+    field = attr.lstrip("_")
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Assign) or len(child.targets) != 1:
+            continue
+        target = child.targets[0]
+        value = child.value
+        if not isinstance(target, ast.Attribute) or not isinstance(value, ast.Attribute):
+            continue
+        if not isinstance(target.value, ast.Name) or target.value.id != "self":
+            continue
+        if not isinstance(value.value, ast.Name) or value.value.id != param_name:
+            continue
+        if target.attr.lstrip("_") == field and value.attr.lstrip("_") == field:
+            return True
     return False
 
 
