@@ -19,10 +19,13 @@ class NamedSeamAndConstraint(PracticeGraphRule):
         folder = context.module_folder(node)
         if folder is None:
             return []
-        marker = folder / ".context" / "module-context.md"
-        if marker.is_file():
+        ctx = folder / ".context"
+        if (ctx / "module-context.md").is_file() or (ctx / "bounded-context.md").is_file():
             return []
-        return [f"Module '{node.name}' is missing .context/module-context.md."]
+        return [
+            f"Module '{node.name}' is missing .context/module-context.md "
+            "or .context/bounded-context.md."
+        ]
 
 
 class PublicSeamOnly(PracticeGraphRule):

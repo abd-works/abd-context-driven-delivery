@@ -251,6 +251,40 @@ def _is_given(node) -> bool:
     return _phase(node) == "given"
 
 
+_OVERLAY_REL_SKIP = frozenset({"is", "fidelity", "name", "path"})
+_OVERLAY_REL_LINE = re.compile(r"^\s+(?:-\s+)?([A-Za-z]\w*)\??:\s+")
+
+
+def _relationship_kinds_from_overlay_schema(text: str) -> set[str]:
+    """Field names from overlay schema list lines (``- route: route``)."""
+    kinds: set[str] = set()
+    for line in text.splitlines():
+        match = _OVERLAY_REL_LINE.match(line)
+        if match is None:
+            continue
+        kind = match.group(1)
+        if kind not in _OVERLAY_REL_SKIP:
+            kinds.add(kind)
+    return kinds
+
+
+def relationship_kinds_for_patterns(active_patterns: tuple[str, ...]) -> dict[str, frozenset[str]]:
+    """Relationship field names from active overlay schemas, grouped by practice."""
+    if not active_patterns:
+        return {}
+    patterns = _ROOT / "cdd_guidance" / "patterns"
+    by_practice: dict[str, set[str]] = {}
+    for pattern in active_patterns:
+        root = patterns / pattern / "practices"
+        if not root.is_dir():
+            continue
+        for schema in sorted(root.glob("*/model/schema.yaml")):
+            practice = schema.parent.parent.name
+            kinds = _relationship_kinds_from_overlay_schema(schema.read_text(encoding="utf-8"))
+            by_practice.setdefault(practice, set()).update(kinds)
+    return {name: frozenset(kinds) for name, kinds in by_practice.items()}
+
+
 @lru_cache(maxsize=1)
 def _fields() -> tuple[SchemaField, ...]:
     found: list[SchemaField] = []

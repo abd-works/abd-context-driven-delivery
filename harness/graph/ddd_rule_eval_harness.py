@@ -41,8 +41,10 @@ def violations_for_ddd_rule(
     *,
     class_name: str,
     node_type: str | None = None,
+    lang: str = "python",
+    filename: str | None = None,
 ) -> list[str]:
-    practice, root = practice_from_source(source, lang="python")
+    practice, root = practice_from_source(source, lang=lang, filename=filename)
     practice.name = "ddd"
     resolved_type = node_type or _node_type_for_class(source, class_name)
     node = None

@@ -75,3 +75,7 @@ with description("DDD schema extends clean engineering"):
 
         expect(ce_anchor_type("ddd", "ValueObject")).to(equal("OoadClass"))
         expect(ce_anchor_type("ddd", "BoundedContext")).to(equal("Module"))
+
+    with it("should not list flaccid-data-object on value objects"):
+        slugs = slugs_for_type("ddd", "ValueObject")
+        expect("flaccid-data-object-no-behavior" in slugs).to(equal(False))

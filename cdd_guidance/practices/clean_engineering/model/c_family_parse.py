@@ -113,14 +113,9 @@ class CFamilyParse:
         top_ops = self._top_level_functions()
         if not top_ops:
             return
-        if not module.classes:
-            holder = self._class_factory(name="_module", sequential_order=1)
-            holder.operations = [self._loaded_operation(holder, op) for op in top_ops]
-            module.classes.append(holder)
-            return
-        module.classes[0].operations.extend(
-            self._loaded_operation(module.classes[0], op) for op in top_ops
-        )
+        holder = self._class_factory(name="_module", sequential_order=len(module.classes) + 1)
+        holder.operations = [self._loaded_operation(holder, op) for op in top_ops]
+        module.classes.append(holder)
 
     def _top_level_functions(self) -> list[Operation]:
         ops: list[Operation] = []
@@ -154,6 +149,8 @@ class CFamilyParse:
         ops: list[Operation] = []
         for match in _METHOD_RE.finditer(class_body):
             name = match.group(1)
+            if match.start() > 0 and class_body[match.start() - 1] == ".":
+                continue
             if name in {"if", "for", "while", "switch", "catch", "class", "constructor"}:
                 continue
             op_name = "constructor" if class_name and name == class_name else name

@@ -13,6 +13,7 @@ import type { ViolationFocus } from './source/violation-prompt';
 
 const PRACTICES = ['clean_engineering', 'stories', 'ddd', 'bdd', 'ux'];
 const LAST_FOLDER = 'cdd-graph-folder';
+const LAST_OVERLAYS = 'cdd-graph-overlays';
 const EMPTY: FilterSelection = {
   practices: [],
   overlays: [],
@@ -37,6 +38,7 @@ export function App() {
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
   const [relationships, setRelationships] = useState<string[]>([]);
   const [rules, setRules] = useState<string[]>([]);
+  const [availableOverlays, setAvailableOverlays] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState('Loading the graph…');
   const [loadingLog, setLoadingLog] = useState<string[]>([]);
@@ -116,7 +118,7 @@ export function App() {
     setLoadingLog([]);
     setError('');
     try {
-      await graphs.load(trimmed, practiceRoots(trimmed));
+      await graphs.load(trimmed, practiceRoots(trimmed), readSavedOverlays());
       if (generation !== loadGeneration.current) {
         return;
       }
@@ -130,6 +132,7 @@ export function App() {
       await applyFilter(synced, bundle.practices);
       setLoadedFolder(trimmed);
       window.localStorage.setItem(LAST_FOLDER, trimmed);
+      window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
       setLoadingLog([]);
     } catch (cause) {
       if (generation !== loadGeneration.current) {
@@ -153,6 +156,7 @@ export function App() {
 
   function adoptInventory(bundle: InventoryBundle, filter: FilterSelection) {
     setCatalog(bundle.practices);
+    setAvailableOverlays(bundle.available_overlays ?? []);
     const shown = filter.practices.length ? filter.practices : Object.keys(bundle.practices);
     setTrees(shown.map((name) => bundle.practices[name]?.tree).filter((tree): tree is GraphTree => Boolean(tree)));
     setNodeTypes(unique(shown.flatMap((name) => bundle.practices[name]?.node_types ?? [])));
@@ -176,6 +180,7 @@ export function App() {
       adoptInventory(bundle, refreshed);
       setSelection(refreshed);
       await applyFilter(refreshed, bundle.practices);
+      window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -200,6 +205,13 @@ export function App() {
 
   function removeOverlay(overlay: string) {
     void applyOverlays(selection.overlays.filter((item) => item !== overlay));
+  }
+
+  function addNamedOverlay(name: string) {
+    if (overlayIsActive(selection.overlays, name)) {
+      return;
+    }
+    void applyOverlays([...selection.overlays, name]);
   }
 
   async function applyFilter(next: FilterSelection, practices = catalog) {
@@ -229,7 +241,7 @@ export function App() {
     const shown = resolved.practices.length ? resolved.practices : Object.keys(bundle.practices);
     setTrees(
       shown
-        .map((name) => keep(bundle.practices[name]?.tree, names, resolved.node_types))
+        .map((name) => keep(bundle.practices[name]?.tree, names, resolved.node_types, resolved.violations))
         .filter((tree): tree is GraphTree => Boolean(tree)),
     );
   }
@@ -308,9 +320,11 @@ export function App() {
             onChange={(next) => {
               void applyFilter(next);
             }}
+            availableOverlays={availableOverlays}
             onAddOverlay={() => {
               void addOverlayFolder();
             }}
+            onAddNamedOverlay={addNamedOverlay}
             onRemoveOverlay={removeOverlay}
           />
         </div>
@@ -381,6 +395,29 @@ function overlayFilterRefresh(
   };
 }
 
+function readSavedOverlays(): string[] {
+  try {
+    const raw = window.localStorage.getItem(LAST_OVERLAYS);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function overlayIsActive(overlays: string[], name: string): boolean {
+  return overlays.some((item) => overlayLabel(item) === name || item === name);
+}
+
+function overlayLabel(path: string): string {
+  const trimmed = path.replace(/[/\\]+$/, '');
+  const parts = trimmed.split(/[/\\]/);
+  return parts[parts.length - 1] || path;
+}
+
 function mergeNewCatalogItems(current: string[], available: string[]): string[] {
   const kept = current.filter((item) => available.includes(item));
   for (const item of available) {
@@ -426,14 +463,19 @@ function mergeKept(current: string[], available: string[], added: string[]): str
   return kept;
 }
 
-function keep(node: GraphTree | undefined, ids: Set<string>, types: string[]): GraphTree | null {
+function keep(
+  node: GraphTree | undefined,
+  ids: Set<string>,
+  types: string[],
+  violationsOnly = false,
+): GraphTree | null {
   if (!node) {
     return null;
   }
   const rules = node.children.filter((child) => child.type === 'rules');
   const children = node.children
     .filter((child) => child.type !== 'rules')
-    .map((child) => keep(child, ids, types))
+    .map((child) => keep(child, ids, types, violationsOnly))
     .filter((child): child is GraphTree => Boolean(child));
   const holder = node.type === node.name;
   if (holder) {
@@ -443,7 +485,7 @@ function keep(node: GraphTree | undefined, ids: Set<string>, types: string[]): G
   if (!selectedType) {
     return children.length > 0 ? { ...node, children } : null;
   }
-  const selectedId = ids.size === 0 || ids.has(node.node_id);
+  const selectedId = violationsOnly ? ids.has(node.node_id) : ids.size === 0 || ids.has(node.node_id);
   if (node.type !== 'Practice' && !selectedId && children.length === 0) {
     return null;
   }

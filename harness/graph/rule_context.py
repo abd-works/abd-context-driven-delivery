@@ -140,8 +140,17 @@ class RuleCheckContext:
     def module_folder(self, node) -> Path | None:
         if not self.source_root or not node.source.file:
             return None
-        folder = node.source.file.strip("./")
-        return self.source_root / folder if folder else self.source_root
+        rel = node.source.file.strip("./").replace("\\", "/")
+        path = Path(rel)
+        if path.name in ("bounded-context.md", "module-context.md") and path.parent.name == ".context":
+            folder_rel = path.parent.parent.as_posix()
+        elif path.suffix:
+            folder_rel = path.parent.as_posix()
+        else:
+            folder_rel = rel
+        if folder_rel in (".", ""):
+            return self.source_root
+        return self.source_root / folder_rel
 
     def story_model(self):
         if self._story_model_failed:

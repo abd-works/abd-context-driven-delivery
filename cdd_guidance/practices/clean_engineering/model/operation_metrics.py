@@ -133,13 +133,46 @@ def unnamed_literal_numbers_in_text(text: str) -> list[str]:
     return found
 
 
+_OWN_RECEIVERS = frozenset({"this", "self", "super"})
+_WIRED_PEER_FIELDS = frozenset({"repository", "repo"})
+
+
+def _parameter_names(operation: "Operation") -> frozenset[str]:
+    return frozenset(param.name for param in operation.parameters if param.name)
+
+
+def _same_type_field_copy(body: str, receiver: str, field: str) -> bool:
+    """``this._field = receiver._field`` (or public ``field``) — aggregate copies from a peer instance."""
+    return bool(
+        re.search(
+            rf"(?:this|self)\._?{re.escape(field)}\s*=\s*{re.escape(receiver)}\._?{re.escape(field)}\b",
+            body,
+        )
+    )
+
+
+def peer_private_access_in_text(body: str, parameter_names: frozenset[str] | None = None) -> bool:
+    """True when the body reads another object's ``._`` field (not ``this._`` / ``self._``)."""
+    params = parameter_names or frozenset()
+    for match in re.finditer(r"(\w+)\._(\w+)", body):
+        receiver, field = match.group(1), match.group(2)
+        if receiver in _OWN_RECEIVERS:
+            continue
+        if field in _WIRED_PEER_FIELDS:
+            continue
+        if receiver in params and _same_type_field_copy(body, receiver, field):
+            continue
+        return True
+    return False
+
+
 def apply_brace_body_metrics(operation: "Operation", body: str) -> None:
     """Fill rule fields from a C-family method body (inside `{` … `}`)."""
     operation.max_control_flow_depth = control_flow_depth_in_text(body)
     operation.has_bare_catch = bare_catch_in_text(body)
     operation.swallows_exceptions = swallowing_catch_in_text(body)
     operation.unnamed_literal_numbers = unnamed_literal_numbers_in_text(body)
-    operation.peer_private_access = bool(re.search(r"(?<![\w.])\w+\._\w+", body))
+    operation.peer_private_access = peer_private_access_in_text(body)
 
 
 def apply_python_function_metrics(operation: "Operation", node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
@@ -158,7 +191,7 @@ def _python_peer_private_access(node: ast.FunctionDef | ast.AsyncFunctionDef) ->
     params.update(a.arg for a in node.args.kwonlyargs)
     for child in ast.walk(node):
         if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name):
-            if child.value.id in params and child.attr.startswith("_"):
+            if child.value.id in params and child.attr.startswith("_") and child.attr != "_repository":
                 return True
     return False
 

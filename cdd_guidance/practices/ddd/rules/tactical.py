@@ -50,9 +50,11 @@ class PrivateMethodNaming(PracticeGraphRule):
 
 class FlaccidDataObject(PracticeGraphRule):
     slug = "flaccid-data-object-no-behavior"
-    node_types = ("EntityRoot", "Entity", "ValueObject")
+    node_types = ("EntityRoot", "Entity")
 
     def check(self, node, context) -> list[str]:
+        if node.type == "ValueObject":
+            return []
         oclass = context.ce_class(node)
         if oclass is not None:
             public_ops = [
