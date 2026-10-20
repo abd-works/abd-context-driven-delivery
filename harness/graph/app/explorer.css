@@ -448,6 +448,29 @@ html[data-theme="engineering"] .site-nav {
   min-width: 0;
 }
 
+.overlay-catalog {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  margin-bottom: var(--space-2xs);
+}
+
+.overlay-catalog-item {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding: 2px var(--space-xs);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.overlay-catalog-item:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .overlay-items {
   list-style: none;
   margin: 0;

@@ -104,7 +104,6 @@ valueObject:
     - building-blocks-fidelity-requires-tactical-stereotype
     - domain-concepts-not-technical-names
     - private-method-naming
-    - flaccid-data-object-no-behavior
     - no-orphaned-objects
     - screen-interface-not-a-domain-object
 repository:

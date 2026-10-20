@@ -77,15 +77,21 @@ def _overlay_selected(graph: Graph, pattern: str) -> bool:
 
 
 def _register_overlay_schema_catalog(graph: Graph) -> None:
-    """Expose overlay schema node types in the filter lists before rules run."""
+    """Expose overlay schema node and connector types in the filter lists before rules run."""
+    from harness.graph.graph import EdgeType
+    from harness.graph.schema_edges import relationship_kinds_for_patterns
     from harness.graph.schema_rules import active_overlay_patterns, schema_semantic_types_for_practice
 
     active = active_overlay_patterns(tuple(graph.overlays))
     if not active:
         return
+    edge_kinds = relationship_kinds_for_patterns(active)
     for name, practice in graph.practices.items():
         for node_type in schema_semantic_types_for_practice(name, active):
             practice.node_types.add(node_type)
+        for kind in edge_kinds.get(name, ()):
+            if kind not in practice.edge_types:
+                practice.edge_types[kind] = EdgeType(kind, 5, "relationship")
 
 
 def _record_clean(practice, root: Path) -> list[dict]:
@@ -382,7 +388,8 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
         edges.append([aggregate_id, context_id, "belongsTo", 3, "relationship"])
         for member in members[folder]:
             member_id = f"ddd:{member['kind']}:{member['file']}:{member['name']}"
-            nodes.append([member_id, member["name"], member["kind"], "ddd", member["file"], 1, 1])
+            start, end = _class_extent(member["text"], member["name"], 1)
+            nodes.append([member_id, member["name"], member["kind"], "ddd", member["file"], start, end])
             by_id[member["name"]] = member_id
             if member["kind"] == "EntityRoot":
                 edges.append([aggregate_id, member_id, "root", 1, "direct"])
@@ -432,6 +439,16 @@ def _record_stories(practice, source: Path) -> None:
     GraphStoryModel(model).record(practice, on_node=lambda detail: report("record", detail))
 
 
+def _gwt_phase(step) -> str:
+    if step.type in {"Given", "When", "Then"}:
+        return step.type.lower()
+    name = (step.name or "").strip().casefold()
+    for prefix in ("given", "when", "then"):
+        if name.startswith(prefix + " "):
+            return prefix
+    return ""
+
+
 def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
     stories = graph.practice("stories")
     clean = graph.practice("clean_engineering")
@@ -439,7 +456,7 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
     properties = [node for node in clean.by_id.values() if node.type == "Property"]
     classes_by_name = {node.name: node for node in clean.by_id.values() if node.type == "OoadClass"}
     modules = {node.name: node for node in clean.by_id.values() if node.type == "Module"}
-    steps = [node for node in stories.by_id.values() if node.type == "Step"]
+    steps = [node for node in stories.by_id.values() if node.type in {"Step", "Given", "When", "Then"}]
     examples = [node for node in stories.by_id.values() if node.type == "Example"]
     epics = [node for node in stories.by_id.values() if node.type in {"Epic", "SubEpic"}]
     total_steps = len(steps)
@@ -459,7 +476,10 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
                     _edge(clean, "usedBy", 14, "relationship", module, epic)
                     _edge(stories, "uses", 9, "relationship", epic, module)
         for example in examples:
-            if re.search(rf"\b{re.escape(example.name)}\b", body) and step.name.lower().startswith("then"):
+            if not re.search(rf"\b{re.escape(example.name)}\b", body):
+                continue
+            phase = _gwt_phase(step)
+            if phase in {"given", "when", "then"}:
                 _edge(stories, "observes", 8, "relationship", step, example)
     total_examples = len(examples)
     for index, example in enumerate(examples, start=1):
@@ -541,10 +561,23 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
             _lern_story(stories, relative, "PlaywrightSpec")
 
 
+def _file_line_span(root: Path, relative: str) -> tuple[int, int]:
+    path = root / relative
+    if not path.is_file():
+        return 1, 1
+    text = path.read_text(encoding="utf-8")
+    if not text:
+        return 1, 1
+    end = text.count("\n") + (0 if text.endswith("\n") else 1)
+    return 1, max(1, end)
+
+
 def _lern_type(practice, relative: str, semantic: str, entities: dict, kind: str) -> None:
     name = Path(relative).stem
     node_id = f"ddd:{semantic}:{relative}"
-    practice.apply_nodes([[node_id, name, semantic, "ddd", relative, 1, 1]])
+    root = Path(practice.source_root) if practice.source_root else None
+    start, end = _file_line_span(root, relative) if root is not None else (1, 1)
+    practice.apply_nodes([[node_id, name, semantic, "ddd", relative, start, end]])
     folder = Path(relative).parent.name
     for entity in entities.values():
         if folder and folder.replace("-", "").lower() in entity.source.file.replace("-", "").lower():
@@ -555,4 +588,6 @@ def _lern_type(practice, relative: str, semantic: str, entities: dict, kind: str
 def _lern_story(practice, relative: str, semantic: str) -> None:
     name = Path(relative).name
     node_id = f"stories:{semantic}:{relative}"
-    practice.apply_nodes([[node_id, name, semantic, "stories", relative, 1, 1]])
+    root = Path(practice.source_root) if practice.source_root else None
+    start, end = _file_line_span(root, relative) if root is not None else (1, 1)
+    practice.apply_nodes([[node_id, name, semantic, "stories", relative, start, end]])

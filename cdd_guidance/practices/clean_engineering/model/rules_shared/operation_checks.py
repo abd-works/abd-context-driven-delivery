@@ -36,6 +36,7 @@ _DUNDER = re.compile(r"^__[a-z]+__$")
 _SKIP_OP_NAMES = frozenset(
     {
         "constructor",
+        "__init__",
         "setUp",
         "tearDown",
         "setUpClass",
@@ -315,7 +316,9 @@ class UseConsistentNaming(PracticeGraphRule):
         camel_ops: list = []
         for op in oclass.operations:
             name = op.name
-            if name in _SKIP_OP_NAMES or _DUNDER.match(name):
+            if not name or name in _SKIP_OP_NAMES or _DUNDER.match(name):
+                continue
+            if name.startswith("_"):
                 continue
             if _CAMEL_CASE.match(name):
                 camel_ops.append(op)

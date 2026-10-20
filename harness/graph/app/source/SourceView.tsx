@@ -60,10 +60,10 @@ function SourceEditor({
     [source, text, members, owner],
   );
   const [openFor, setOpenFor] = useState(source.node_id);
-  const [openFolds, setOpenFolds] = useState<string[]>(() => openBlockFolds(prepared.folds));
+  const [openFolds, setOpenFolds] = useState<string[]>(() => openBlockFolds(prepared.folds, source.type));
   if (openFor !== source.node_id) {
     setOpenFor(source.node_id);
-    setOpenFolds(openBlockFolds(prepared.folds));
+    setOpenFolds(openBlockFolds(prepared.folds, source.type));
   }
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
   const decorations = useRef<{ set: (next: object[]) => void; clear: () => void } | null>(null);
@@ -212,7 +212,21 @@ function languageFor(file: string): string {
   return 'typescript';
 }
 
-function openBlockFolds(folds: InlineFold[]): string[] {
+const STORY_SOURCE_TYPES = new Set([
+  'Scenario',
+  'Story',
+  'Background',
+  'Step',
+  'Given',
+  'When',
+  'Then',
+  'Example',
+]);
+
+function openBlockFolds(folds: InlineFold[], nodeType?: string): string[] {
+  if (nodeType && STORY_SOURCE_TYPES.has(nodeType)) {
+    return folds.filter((fold) => fold.kind === 'block').map((fold) => foldKey(fold));
+  }
   return folds.filter((fold) => initialOpenFolds([fold]).length > 0).map((fold) => foldKey(fold));
 }
 

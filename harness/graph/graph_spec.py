@@ -913,3 +913,31 @@ with description("a step"):
 
         with it("should stop at the end of that call"):
             expect("then(" in self.source.text).to(equal(False))
+
+
+with description("a scenario row with only a start line"):
+    with before.each:
+        import tempfile
+
+        self.temp = tempfile.TemporaryDirectory()
+        relative = "story.story.shared.ts"
+        body = "\n".join(
+            [
+                "shareStory('Create Account', () => {",
+                "  scenario('Display Create Account', ({ when, then }) => {",
+                "    when('step', () => {});",
+                "    then('done', () => {});",
+                "  });",
+                "});",
+            ]
+        )
+        path = Path(self.temp.name) / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+        self.source = Source(relative, 2, 2, self.temp.name)
+        self.source.widen_to_call_close()
+
+    with it("should include the full scenario through its closing brace"):
+        expect(len(self.source.text.splitlines())).to(be_above(1))
+        expect(self.source.text).to(contain("when("))
+        expect(self.source.text).to(contain("then("))

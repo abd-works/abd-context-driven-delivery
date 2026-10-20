@@ -161,6 +161,35 @@ export class AccountCredentialsNode {
             )
             hits = violations_for_rule(rule, practice, root)
             expect(hits).to(equal([]))
+        with it(
+            "should not flag a TypeScript repository with single-word lifecycle verbs and camelCase bulk import/export"
+        ):
+            rule = ce_rule_by_slug("use-consistent-naming")
+            source = """
+export class AccountRepository {
+  new(): void {}
+  create(): void {}
+  load(): void {}
+  find(): void {}
+  update(): void {}
+  importStoredAccounts(): void {}
+  exportStoredAccounts(): void {}
+  protected _afterAccountSaved(): void {}
+  private saveSnapshot(): void {
+    this.accounts.set("x", { email: "a@b.c" });
+  }
+}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="account.ts",
+            )
+            repo = next(n for n in practice.nodes.get("OoadClass", []) if n.name == "AccountRepository")
+            from harness.graph.rule_context import RuleCheckContext
+
+            context = RuleCheckContext(practice, root)
+            expect(rule.check(repo, context)).to(equal([]))
     with context("state-change-returns-record-or-named-failure"):
         with it("should not flag signOut with one property assignment after a post helper"):
             rule = ce_rule_by_slug("state-change-returns-record-or-named-failure")
@@ -268,6 +297,67 @@ export class AccountCredentialsClient {
     with context("modules-not-model-blocks"):
         with it("should flag model dump blocks in module-context"):
             assert_module_example_pair("modules-not-model-blocks")
+
+    with context("named-seam-and-constraint"):
+        with it("should accept a bounded context that only has bounded-context.md"):
+            import tempfile
+
+            from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
+            from harness.graph.graph import Node, PracticeGraph, Source
+            from harness.graph.rule_context import RuleCheckContext
+
+            temp = tempfile.TemporaryDirectory()
+            root = Path(temp.name)
+            context_dir = root / "src" / "customer" / ".context"
+            context_dir.mkdir(parents=True)
+            (context_dir / "bounded-context.md").write_text(
+                "# Customer\n\nAccount, Customer Profile, Identity verification\n",
+                encoding="utf-8",
+            )
+            practice = PracticeGraph("ddd")
+            practice.source_root = str(root)
+            practice._temp_dir = temp  # type: ignore[attr-defined]
+            rel = "src/customer/.context/bounded-context.md"
+            node = Node(
+                practice,
+                "BoundedContext",
+                "ddd:BoundedContext:src/customer:Customer",
+                "Customer",
+                Source(rel, 1, 3),
+            )
+            rule = NamedSeamAndConstraint()
+            context = RuleCheckContext(practice, root)
+            expect(rule.check(node, context)).to(equal([]))
+
+        with it("should accept a DDD aggregate folder with module-context.md"):
+            import tempfile
+
+            from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
+            from harness.graph.graph import Node, PracticeGraph, Source
+            from harness.graph.rule_context import RuleCheckContext
+
+            temp = tempfile.TemporaryDirectory()
+            root = Path(temp.name)
+            context_dir = root / "src" / "inventory" / "numbers" / ".context"
+            context_dir.mkdir(parents=True)
+            (context_dir / "module-context.md").write_text(
+                "# numbers\n\n- **Seam (terms):** NumberInventory\n\n## Constraint\n\nUse search flows.\n",
+                encoding="utf-8",
+            )
+            practice = PracticeGraph("ddd")
+            practice.source_root = str(root)
+            practice._temp_dir = temp  # type: ignore[attr-defined]
+            rel = "src/inventory/numbers"
+            node = Node(
+                practice,
+                "Aggregate",
+                "ddd:Aggregate:src/inventory/numbers",
+                "numbers",
+                Source(rel, 1, 1),
+            )
+            rule = NamedSeamAndConstraint()
+            context = RuleCheckContext(practice, root)
+            expect(rule.check(node, context)).to(equal([]))
 
 
 with description("Clean Engineering graph rules (multi-language scanner fixtures)"):

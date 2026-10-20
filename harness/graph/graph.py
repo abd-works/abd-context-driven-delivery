@@ -46,6 +46,18 @@ def normalize_overlay(overlay: str) -> str:
     return str(resolve_overlay_root(overlay))
 
 
+def _normalize_overlay_list(overlays: list[str]) -> list[str]:
+    found: list[str] = []
+    for item in overlays:
+        text = str(item).strip()
+        if not text:
+            continue
+        resolved = normalize_overlay(text)
+        if resolved not in found:
+            found.append(resolved)
+    return found
+
+
 def available_pattern_overlays() -> list[str]:
     patterns = _REPO / "cdd_guidance" / "patterns"
     if not patterns.is_dir():
@@ -336,6 +348,40 @@ class Source:
         self.end_line = self._call_end(lines, chosen)
         self._text = None
 
+    def widen_to_call_close(self) -> None:
+        """Extend ``end_line`` through the call or block that starts on ``start_line``."""
+        lines = self._file_lines()
+        if not lines:
+            return
+        start_index = max(0, self.start_line - 1)
+        closed = self._call_end(lines, start_index)
+        if closed > self.end_line:
+            self.end_line = closed
+        self._text = None
+
+    def align_to_example_export(self, root: str, name: str) -> None:
+        """Point this slice at an exported fixture function by name under ``root``."""
+        if not root or not name:
+            return
+        root_path = Path(root)
+        if not root_path.is_dir():
+            return
+        pattern = re.compile(rf"(?:export\s+)?function\s+{re.escape(name)}\b")
+        for path in sorted(root_path.rglob("*.ts")):
+            if any(part in {"node_modules", "dist", "build"} for part in path.parts):
+                continue
+            text = path.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            for index, line in enumerate(lines, start=1):
+                if not pattern.search(line):
+                    continue
+                self.file = path.relative_to(root_path).as_posix()
+                self.root = root
+                self.start_line = index
+                self.end_line = self._call_end(lines, index - 1)
+                self._text = None
+                return
+
     def _file_lines(self) -> list[str]:
         full = self._full_path()
         if full is None:
@@ -600,6 +646,10 @@ class Node:
         node.data = dict(row.get("data") or {})
         if row["semantic_type"] in {"Step", "Given", "When", "Then"}:
             node.source.align_to_label(row["name"])
+        elif row["semantic_type"] in {"Scenario", "Story", "Background"}:
+            node.source.widen_to_call_close()
+        elif row["semantic_type"] == "Example":
+            node.source.align_to_example_export(practice.source_root, row["name"])
         return node
 
     @staticmethod
@@ -900,7 +950,7 @@ class Graph:
         """Open each practice on its source root and build the explorer tree."""
         self._folder = Path(database or folder).resolve()
         self._practice_roots = {name: Path(root).resolve() for name, root in practices.items()}
-        self.overlays = list(overlays or [])
+        self.overlays = _normalize_overlay_list(list(overlays or []))
         self.practices = {}
         for name, source in self._practice_roots.items():
             practice = self.practice(name)
@@ -915,7 +965,7 @@ class Graph:
 
     def set_overlays(self, overlays: list[str]) -> str:
         """Apply pattern overlays and rebuild the explorer tree from the open folder."""
-        self.overlays = [name for name in overlays if name]
+        self.overlays = _normalize_overlay_list(list(overlays or []))
         if self._folder is not None and self._practice_roots:
             roots = {name: str(path) for name, path in self._practice_roots.items()}
             self.load_working_copy(str(self._folder), roots, database=str(self._folder), overlays=self.overlays)

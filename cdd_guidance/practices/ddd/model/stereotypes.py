@@ -130,6 +130,7 @@ _NON_TACTICAL_SUFFIXES = (
     "Client",
     "Node",
     "View",
+    "Screen",
     "Routes",
     "Router",
 )

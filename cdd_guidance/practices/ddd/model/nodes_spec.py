@@ -18,6 +18,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.ddd.model import ddd_class_kind
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Entity
+from cdd_guidance.practices.ddd.model.stereotypes import inferred_tactical_kind
 
 
 with description("DDD model nodes"):
@@ -29,6 +30,9 @@ with description("DDD model nodes"):
         expect(ddd_class_kind("**ShoppingCartRepository** <<Repository>>")).to(
             equal("Repository")
         )
+
+    with it("should not infer tactical kinds for screen registry class names"):
+        expect(inferred_tactical_kind("OnboardingStepScreen", set())).to(equal(None))
 
     with it("should read @repository decorators from class declarations"):
         from cdd_guidance.practices.ddd.model.stereotypes import class_declaration_decorated_name

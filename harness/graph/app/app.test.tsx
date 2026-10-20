@@ -451,12 +451,11 @@ it('should fold a story, a scenario, and a step the way a class folds', async ()
   const line = (text: string) =>
     Array.from(editor.querySelectorAll<HTMLElement>('[data-line]')).find((row) => row.textContent?.includes(text));
   await waitFor(() => expect(line("scenario('Create account'")?.querySelector('.block-fold')).toBeTruthy());
-  expect(editor.textContent).not.toContain('accountCredentials.register');
 
   await expand(user, 'Create Account');
   await user.click(screen.getByText('Create account'));
-  await waitFor(() => expect(line("when('the User creates their account'")?.querySelector('.block-fold')).toBeTruthy());
-  expect(editor.textContent).not.toContain('accountCredentials.register');
+  await waitFor(() => expect(editor.textContent).toContain('accountCredentials.register'));
+  await waitFor(() => expect(editor.textContent).toContain("then('the account is unconfirmed'"));
 
   await expand(user, 'Create account');
   await user.click(screen.getByText('when the User creates their account'));
@@ -584,6 +583,13 @@ it('should reload the last folder when the app opens', async () => {
 it('should start with the source pane asking for a node', () => {
   render(<App />);
   expect(screen.getByText('Select a node')).toBeTruthy();
+});
+
+it('should offer built-in overlay names from the catalog', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  expect(screen.getByTestId('overlay-catalog')).toBeTruthy();
+  expect(screen.getByTestId('overlay-add-lern_domain_driven')).toBeTruthy();
 });
 
 it('should offer an overlay folder picker between practice and node filters', async () => {

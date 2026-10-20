@@ -181,16 +181,23 @@ class ScenarioNamesContinuation(PracticeGraphRule):
         return []
 
 def _and_chaining_from_graph(scenario_node, context) -> list[str]:
+    """Flag a second When before the previous When has a matching Then."""
     steps = context.children(scenario_node, "steps")
-    seen_then = False
+    pending_when = False
     for step in steps:
-        kw = context.step_keyword(step).casefold()
-        if kw == "then":
-            seen_then = True
-        if kw == "when" and not seen_then:
-            return [
-                f"Scenario {scenario_node.name!r} has When before any Then; add Given/Then or chain with And."
-            ]
+        kw = _step_keyword(step, context)
+        if kw == "when":
+            if pending_when:
+                return [
+                    f"Scenario {scenario_node.name!r} starts a new When before the previous interaction has a Then; chain with And."
+                ]
+            pending_when = True
+        elif kw == "then":
+            pending_when = False
+    if pending_when:
+        return [
+            f"Scenario {scenario_node.name!r} ends after When without a Then; add Then or chain with And."
+        ]
     return []
 
 class ScenariosShape(PracticeGraphRule):
@@ -201,10 +208,8 @@ class ScenariosShape(PracticeGraphRule):
         steps = context.children(node, "steps")
         if not steps:
             return [f"Scenario {node.name!r} has no steps."]
-        phases = {_phase(step, context) for step in steps}
+        phases = _scenario_phases(node, context, steps)
         missing = []
-        if "given" not in phases:
-            missing.append("Given")
         if "when" not in phases:
             missing.append("When")
         if "then" not in phases:
@@ -212,6 +217,42 @@ class ScenariosShape(PracticeGraphRule):
         if missing:
             return [f"Scenario {node.name!r} is missing required phase(s): {', '.join(missing)}."]
         return []
+
+
+def _scenario_phases(scenario_node, context, steps) -> set[str]:
+    phases = {_phase(step, context) for step in steps if _phase(step, context)}
+    if "given" in phases:
+        return phases
+    if _background_provides_given(scenario_node, context):
+        phases.add("given")
+    return phases
+
+
+def _background_provides_given(scenario_node, context) -> bool:
+    story = _parent_story(scenario_node, context)
+    if story is None:
+        return False
+    for background in context.children(story, "background"):
+        for step in context.children(background, "steps"):
+            if _phase(step, context) == "given":
+                return True
+    return False
+
+
+def _parent_story(node, context):
+    parent = getattr(node, "parent", None)
+    while parent is not None:
+        if parent.type == "Story":
+            return parent
+        parent = getattr(parent, "parent", None)
+    for edge in context.practice.edges.get("scenarios", []):
+        if edge.child is node:
+            return edge.parent
+    return None
+
+
+def _step_keyword(step, context) -> str:
+    return context.step_keyword(step).casefold() or _phase(step, context)
 
 def _phase(step, context) -> str:
     data = context.node_data(step)
