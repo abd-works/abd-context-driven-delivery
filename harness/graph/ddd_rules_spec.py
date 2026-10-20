@@ -233,6 +233,28 @@ export class AccountRepository {
             )
             expect(hits).to(equal([]))
 
+        with it("should not flag copyFieldsFrom that mirrors peer fields onto this"):
+            source = """
+export class Subscription {
+  private _plan = null;
+  simType = null;
+  copyFieldsFrom(source: Subscription): void {
+    this._plan = source._plan;
+    this.simType = source.simType;
+  }
+}
+"""
+            rule = ddd_rule_by_slug("private-method-naming")
+            hits = violations_for_ddd_rule(
+                rule,
+                source,
+                class_name="Subscription",
+                node_type="EntityRoot",
+                lang="typescript",
+                filename="subscription.ts",
+            )
+            expect(hits).to(equal([]))
+
         with it("should not flag repository attach that wires _repository on the aggregate"):
             source = """
 export class CustomerProfile {
