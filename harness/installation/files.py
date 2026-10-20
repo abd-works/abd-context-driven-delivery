@@ -257,6 +257,7 @@ class FileInstallation(Installation):
         return self._shell_python_c(tool)
 
     def _needs_shell_invoke(self, tool: Any, kind: str) -> bool:
+        """``@agent_tool`` on skill/command without ``@mcp`` gets a Shell/python tail."""
         if kind not in {"skill", "command"}:
             return False
         if tool.kind != "tool":

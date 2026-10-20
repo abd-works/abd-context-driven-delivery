@@ -26,11 +26,25 @@ from harness.installation.destination import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
+# Workspace diagnostics call ``serving_mcp_host().dispatch`` for many tools; that path
+# must not run on an anyio worker thread (deadlock / multi-minute stalls under stdio).
+_SYNC_DISPATCH_TOOLS = frozenset(
+    {
+        "agent-tools-diagnostics.agent_tools_diagnostics",
+        "guidance-diagnostics.guidance_diagnostics",
+    }
+)
 HOST_PID_NAME = "mcp-host.pid"
 NUDGE_NAME = "mcp-host-nudge"
 NUDGE_MIN_SECONDS = 5.0
 HOST_PROCESS_ENV = "CDD_MCP_HOST_PID"
+_SERVING_MCP_HOST: Any = None
 _UNION_ORIGINS = {Union, py_types.UnionType}
+
+
+def serving_mcp_host() -> Any:
+    """The stdio ``McpHost`` currently serving MCP requests in this process, if any."""
+    return _SERVING_MCP_HOST
 _ARRAY_ORIGINS = {list, tuple, Sequence}
 _OBJECT_ORIGINS = {dict, Mapping}
 
@@ -465,6 +479,63 @@ class McpInstallation(Installation):
         return "nudged"
 
 
+_LEGACY_MCP_ALIASES: dict[str, str] = {
+    "session.open_named": "session.session",
+    "session_open_named": "session.session",
+}
+
+
+def _annotation_uses_path(annotation: object) -> bool:
+    if annotation is Path:
+        return True
+    origin = get_origin(annotation)
+    if origin in _UNION_ORIGINS:
+        return any(_annotation_uses_path(arg) for arg in get_args(annotation))
+    return False
+
+
+def _coerce_mcp_arguments(
+    callable: Callable[..., object], arguments: dict[str, object]
+) -> dict[str, object]:
+    try:
+        hints = get_type_hints(callable)
+    except (NameError, TypeError, AttributeError):
+        hints = {}
+    coerced = dict(arguments)
+    try:
+        signature = inspect.signature(callable)
+    except (TypeError, ValueError):
+        return coerced
+    for name, param in signature.parameters.items():
+        if name not in coerced:
+            continue
+        value = coerced[name]
+        if value is None:
+            continue
+        annotation = hints.get(name, param.annotation)
+        if _annotation_uses_path(annotation) and isinstance(value, str):
+            coerced[name] = Path(value)
+    return coerced
+
+
+def _invoke_mcp_callable(
+    op: McpOperationDefinition, arguments: dict[str, object]
+) -> object:
+    args = _coerce_mcp_arguments(op.member, arguments)
+    member = op.member
+    if inspect.ismethod(member):
+        return member(**args)
+    toolset = op.tool
+    operation = op.operation
+    if toolset is not None and operation:
+        target = getattr(toolset, operation, None)
+        if callable(target):
+            return target(**args)
+    if callable(member):
+        return member(**args)
+    return member
+
+
 def _prompt_message(op: McpOperationDefinition) -> str:
     if op.operation == "instructions":
         overview = getattr(op.tool, "overview", None)
@@ -484,9 +555,7 @@ class McpTool:
         self.description = op.description or _prompt_message(op)
 
     def invoke(self, arguments: dict[str, object] | None = None) -> object:
-        if callable(self.callable):
-            return self.callable(**dict(arguments or {}))
-        return self.callable
+        return _invoke_mcp_callable(self._op, dict(arguments or {}))
 
 
 class McpPrompt:
@@ -650,6 +719,9 @@ class McpServer:
 
     def resolve_call_name(self, name: str) -> str:
         """Map Cursor's underscore tool id (`slug_op`) back to the enrolled `slug.op`."""
+        legacy = _LEGACY_MCP_ALIASES.get(name)
+        if legacy is not None:
+            name = legacy
         if name in self._tools or name in self._prompts:
             return name
         as_dots = name.replace("_", ".")
@@ -663,7 +735,10 @@ class McpServer:
         return name
 
     def invoke_tool(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
-        return self._tools[self.resolve_call_name(mcp_name)].invoke(arguments)
+        resolved = self.resolve_call_name(mcp_name)
+        if resolved not in self._tools:
+            raise KeyError(resolved)
+        return self._tools[resolved].invoke(arguments)
 
     def invoke_prompt(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
         return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
@@ -676,6 +751,15 @@ class McpHost:
         self._runtime = runtime
         self._server = Server("cdd")
         self._register_handlers()
+
+    def _bind_as_serving(self) -> None:
+        global _SERVING_MCP_HOST
+        _SERVING_MCP_HOST = self
+
+    def _unbind_as_serving(self) -> None:
+        global _SERVING_MCP_HOST
+        if _SERVING_MCP_HOST is self:
+            _SERVING_MCP_HOST = None
 
     def input_schema_for_callable(self, callable: Callable[..., object]) -> dict[str, Any]:
         hints = self._callable_hints(callable)
@@ -795,6 +879,8 @@ class McpHost:
             return {"type": "boolean"}
         if annotation is type(None):
             return {"type": "null"}
+        if annotation is Path:
+            return {"type": "string", "description": "Filesystem path"}
         return {"type": "string"}
 
     def _register_handlers(self) -> None:
@@ -829,9 +915,13 @@ class McpHost:
             name: str, arguments: dict[str, object] | None
         ) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
             try:
-                # Dispatch off the event loop. A synchronous tool call blocks
-                # stdin and stdout, and the client then waits until its timeout.
-                value = await anyio.to_thread.run_sync(self.dispatch, name, arguments)
+                resolved = self._runtime.resolve_call_name(name)
+                if resolved in _SYNC_DISPATCH_TOOLS:
+                    value = self.dispatch(name, arguments)
+                else:
+                    # Dispatch off the event loop. A synchronous tool call blocks
+                    # stdin and stdout, and the client then waits until its timeout.
+                    value = await anyio.to_thread.run_sync(self.dispatch, name, arguments)
                 return self._content_blocks(value)
             except Exception as error:
                 logger.exception("MCP tool %s failed", name)
@@ -929,13 +1019,17 @@ class McpHost:
                 experimental_capabilities={},
             ),
         )
-        async with stdio_server() as (read_stream, write_stream):
-            await self._server.run(
-                read_stream,
-                write_stream,
-                init_options,
-                raise_exceptions=False,
-            )
+        self._bind_as_serving()
+        try:
+            async with stdio_server() as (read_stream, write_stream):
+                await self._server.run(
+                    read_stream,
+                    write_stream,
+                    init_options,
+                    raise_exceptions=False,
+                )
+        finally:
+            self._unbind_as_serving()
 
     def run(self) -> None:
         while True:

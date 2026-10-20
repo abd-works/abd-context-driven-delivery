@@ -6,8 +6,9 @@ Install annotated toolsets into the IDE path — skills, commands, rules, MCP, a
 
 Use slash **`/install`** (command — not a skill, not MCP). Deployed **commands** and **skills**:
 
-- ``@agent_instructions`` (not ``@mcp``): ``FileInstallation`` evaluates the instructions on the toolset at install time and writes that text into the ``.md`` file. MCP-published ops keep the short docstring in the slash file and put the full text behind the MCP invoke tail.
-- ``@agent_tool`` (not ``@mcp``): automatic Shell invoke tail (mirror of the MCP tail). ``scripts/{command}.py`` is used when present (e.g. ``scripts/install.py``).
+- ``@agent_instructions`` with ``@mcp``: short docstring in the slash/skill file; MCP invoke tail (full instructions stay on the MCP prompt).
+- ``@agent_tool`` **without** ``@mcp``: Shell invoke tail — ``scripts/{deploy_name}.py`` when present, else ``python -c`` via ``AgentToolSet.instantiate`` (e.g. ``/install`` → ``scripts/install.py``).
+- ``@agent_tool`` **with** ``@mcp``: MCP invoke tail on the same skill/command file (no Shell tail).
 
 Every full install also re-deploys the Installer toolset last so the slash commands stay current.
 
@@ -38,6 +39,10 @@ When the result is red, do not treat the last install as wrong until you look:
 5. The next install appends another section — do not rewrite the trail.
 
 Guidance instruction and action probes live on `/guidance-diagnostics`, not on install.
+
+## Agent tools diagnostics
+
+Probe **space**, **harness**, and **tools**: ping on the live MCP host; light + heavy invoke in a child process ([`cdd-diagnostic`](https://github.com/abd-works/cdd-diagnostic) fixtures). Results in `diagnostics.json` → `agent_tools`. Slash **`/agent-tools-diagnostics`** → MCP `agent-tools-diagnostics.agent_tools_diagnostics`.
 
 ## Ensure Runtimes
 

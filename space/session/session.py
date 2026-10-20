@@ -170,6 +170,17 @@ class Session:
         return cls.open_or_switch(name, workpath=workpath, repo_path=repo_path)
 
     @classmethod
+    @mcp
+    def open_named(
+        cls,
+        name: str,
+        workpath: Path | None = None,
+        repo_path: Path | None = None,
+    ) -> str:
+        """MCP alias for :meth:`session` (older clients call ``session.open_named``)."""
+        return cls.session(name, workpath=workpath, repo_path=repo_path)
+
+    @classmethod
     def open_or_switch(
         cls,
         name: str,

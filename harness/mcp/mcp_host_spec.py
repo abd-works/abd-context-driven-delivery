@@ -339,6 +339,41 @@ with description("an MCP host") as self:
         with it("should resolve Cursor underscore aliases to enrolled names"):
             expect(self.host._runtime.resolve_call_name("repo_push")).to(equal("repo.push"))
 
+        with it("should run repo.new_branch through MCP dispatch"):
+            result = self.host.dispatch(
+                "repo.new_branch",
+                {"name": "mcp-host-spec-branch", "switch": False},
+            )
+            expect(str(result)).to(contain("mcp-host-spec-branch"))
+
+    with context("that has enrolled the session toolset"):
+        with before.each:
+            self.host = McpHost.from_refs(
+                ("space.session.session:Session",),
+                repo=str(_REPO_ROOT),
+                project=str(_REPO_ROOT),
+            )
+
+        with it("should expose session.session and the open_named alias"):
+            tools = self.host.diagnose()["tools"]
+            expect(tools).to(contain("session.session"))
+            expect(tools).to(contain("session.open_named"))
+
+        with it("should resolve session_open_named to session.session"):
+            expect(self.host._runtime.resolve_call_name("session_open_named")).to(
+                equal("session.session")
+            )
+
+        with it("should run session.session with string repo_path"):
+            result = self.host.dispatch(
+                "session.session",
+                {
+                    "name": "mcp-host-spec-session",
+                    "repo_path": str(_REPO_ROOT),
+                },
+            )
+            expect(str(result)).not_to(equal(""))
+
     with context("that has stood up with a published tool whose MCP name is illegitimate"):
         with before.each:
             self.host = McpHost.from_refs(

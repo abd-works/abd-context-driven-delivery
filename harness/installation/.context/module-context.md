@@ -6,7 +6,7 @@
 
 - Collects installable toolsets from the repo and writes each marked member to the current *Installation*.
 - `/install` is this kit. Point it at an IDE path that exists.
-- `diagnose_after_install` is the last install step: it runs `diagnose_install`, grades green / yellow / red, and appends an install section to `diagnostics.json` on the install path. Guidance probes are `/guidance-diagnostics` on *GuidanceDiagnostics*, not *Installer*.
+- `diagnose_after_install` is the last install step: it runs `diagnose_install`, grades green / yellow / red, and appends an install section to `diagnostics.json` on the install path. Guidance probes are `/guidance-diagnostics` on *GuidanceDiagnostics*; workspace MCP probes (space, harness, tools only) are `/agent-tools-diagnostics` on *AgentToolsDiagnostics* (`diagnostics.json` → `agent_tools`), not *Installer*.
 - Installer instructions live in `installer.md`. `@markdown` properties load each section. `diagnose_instructions` returns the Diagnose section.
 
 ### Destination

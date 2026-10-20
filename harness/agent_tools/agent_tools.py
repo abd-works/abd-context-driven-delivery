@@ -284,8 +284,8 @@ class AgentToolSetTools:
     @property
     def tools(self) -> dict[str, AgentTool]:
         merged: dict[str, AgentTool] = {}
-        merged.update(self.operations)
         merged.update(self._discover_instruction_members())
+        merged.update(self.operations)  # @agent_tool wins same name — MCP must invoke, not only expand
         for name, tool in self._discover_hook_members().items():
             merged.setdefault(name, tool)
         merged.update(self._discover_collection_tools())
@@ -1083,6 +1083,8 @@ class AgentInstructions(AgentTool):
 
     @property
     def kind(self) -> str:
+        if getattr(self.callable, "_is_agent_tool", False):
+            return "tool"
         return "instructions"
 
     @classmethod
