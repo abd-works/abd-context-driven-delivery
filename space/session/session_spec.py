@@ -343,6 +343,54 @@ with description("a session"):
             log = (Session.current().session_path / "session.log").read_text(encoding="utf-8")
             expect("session.err" in log).to(equal(True))
 
+    # (S) Session --> Record Host Tool
+    with context("that logs a host tool from preToolUse"):
+        with before.each:
+            Session._current = None
+            self.repo = Path(tempfile.mkdtemp())
+            self.work = self.repo / "work"
+            self.work.mkdir()
+            Session.new("alpha", self.work, self.repo)
+            self.session = Session.current()
+            _bind_mandatory_chat(self.session, self.work, "tool-chat")
+
+        with it("should append a tool line with the tool name and path from tool_input"):
+            target = self.work / "cart.py"
+            Session._slot().pre_tool_use_logging(
+                {
+                    "tool_name": "session.read_loop",
+                    "tool_input": {"number": 1, "path": str(target)},
+                    "conversation_id": "tool-chat",
+                    "agent_transcript_path": os.environ["CDD_TRANSCRIPT_PATH"],
+                }
+            )
+            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            expect(
+                "tool session.read_loop" in log
+                and str(target) in log
+                and "tool-chat" in log
+            ).to(equal(True))
+
+    with context("that records a loop correction note"):
+        with before.each:
+            Session._current = None
+            self.repo = Path(tempfile.mkdtemp())
+            self.work = self.repo / "work"
+            self.work.mkdir()
+            Session.new("alpha", self.work, self.repo)
+            self.session = Session.current()
+            _bind_mandatory_chat(self.session, self.work, "note-chat")
+
+        with it("should append a note line with message paths and chat pointer"):
+            touched = self.work / "repo.py"
+            self.session.log_note("close_branch must push merge checkout main", [touched])
+            log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
+            expect(
+                "note close_branch must push merge checkout main" in log
+                and str(touched) in log
+                and "note-chat" in log
+            ).to(equal(True))
+
     # (S) Session --> Record Session Action
     with context("that logs an action"):
         with before.each:
@@ -364,6 +412,9 @@ with description("a session"):
                 work.mkdir()
                 Session.new("alpha", work, bare)
                 session = Session.current()
+                from space.session.chat_context import clear_chat_context
+
+                clear_chat_context()
                 os.environ.pop("CDD_CONVERSATION_ID", None)
                 os.environ.pop("CDD_TRANSCRIPT_PATH", None)
                 session.log_action("sketch", [work / "x.py"])

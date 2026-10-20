@@ -36,6 +36,14 @@ _KNOWN_ACTIONS = (
     "iterate",
     "createRule",
 )
+_TOOL_INPUT_PATH_KEYS = (
+    "path",
+    "file_path",
+    "target_directory",
+    "working_directory",
+    "transcript_path",
+    "agent_transcript_path",
+)
 
 
 def _parse_chat_file(path: Path) -> tuple[str, str, str]:
@@ -213,7 +221,7 @@ class Session:
 
     @Hook("preToolUse")
     def pre_tool_use_logging(self, payload: dict | None = None) -> dict:
-        """Bind repo current session and chat metadata before MCP tools run."""
+        """Log each host tool call to session.log and bind chat metadata."""
         data = payload or {}
         Session.refresh_current_from_repo()
         session = Session.current()
@@ -229,6 +237,11 @@ class Session:
             ).strip()
             set_chat_context(conversation_id, transcript, lines)
             session.note_chat(conversation_id, Path(transcript), lines or "1")
+        tool_name = str(data.get("tool_name") or "").strip()
+        tool_input = data.get("tool_input")
+        if tool_name:
+            inputs = tool_input if isinstance(tool_input, dict) else {}
+            session.log_tool(tool_name, inputs)
         return {"permission": "allow"}
 
     def repo_from_session(self, repo_path: Path | str | None = None) -> Path | None:
@@ -603,6 +616,66 @@ class Session:
         self._injected.clear()
         self._chat = None
 
+    def log_tool(self, tool_name: str, tool_input: dict | None = None) -> None:
+        """Append a timestamped ``tool …`` line for a host or MCP tool invocation."""
+        if self.session_path is None:
+            return
+        name = (tool_name or "").strip()
+        if not name:
+            return
+        paths = self._paths_from_tool_input(tool_input or {})
+        self.require_chat_noted()
+        parts = ["tool", name]
+        if paths:
+            parts.append(", ".join(str(path) for path in paths))
+        rules = self._rule_text()
+        chat = self._noted_chat()
+        if rules:
+            parts.append(rules)
+        if chat:
+            parts.append(chat)
+        self._append_log(" ".join(parts))
+        self._injected.clear()
+        self._chat = None
+
+    def log_note(self, message: str, paths: list[Path] | None = None) -> None:
+        """Record a correction or decision in the current loop (use after user steers logging or close behavior)."""
+        if self.session_path is None:
+            return
+        text = (message or "").strip()
+        if not text:
+            return
+        self.require_chat_noted()
+        parts = ["note", text]
+        if paths:
+            parts.append(", ".join(str(path) for path in paths))
+        chat = self._noted_chat()
+        if chat:
+            parts.append(chat)
+        self._append_log(" ".join(parts))
+        self._chat = None
+
+    @staticmethod
+    def _paths_from_tool_input(tool_input: dict) -> list[Path]:
+        paths: list[Path] = []
+        seen: set[str] = set()
+        for key in _TOOL_INPUT_PATH_KEYS:
+            value = tool_input.get(key)
+            if not value:
+                continue
+            token = str(value).strip()
+            if token and token not in seen:
+                seen.add(token)
+                paths.append(Path(token))
+        raw_paths = tool_input.get("paths")
+        if isinstance(raw_paths, list):
+            for item in raw_paths:
+                token = str(item).strip()
+                if token and token not in seen:
+                    seen.add(token)
+                    paths.append(Path(token))
+        return paths
+
     def note_chat_from_hook(
         self,
         action: str,
@@ -701,7 +774,8 @@ class Session:
             err_file = str(self.session_path / "session.err")
         return (
             "Session owns logging for this host once session.new or session.switch has run. "
-            "log_action, log_validation, and log_error already run from guidance actions and the host; "
+            "preToolUse logs every host tool via log_tool; log_action, log_validation, and log_error "
+            "also run from guidance actions; "
             "do not duplicate them unless a line is missing detail. "
             "GuidanceAction.run calls log_guidance_action when an action name is set; "
             "a run with no action name leaves session.log unchanged. "
@@ -713,6 +787,10 @@ class Session:
             "append_chat attaches a transcript pointer to an existing line. "
             "loop() writes --- N markers in the same log; session.new seeds --- 1 on a fresh log. "
             "read_loop(number) returns log lines for one loop with chat transcript slices inlined. "
+            "When the user corrects session or repo behavior (logging, close-branch, hooks), append a "
+            "log_note in the active loop: short fact, paths touched, and the chat transcript slice "
+            "for this turn (note_chat or hook metadata). Do not edit session.log by hand. "
+            "Host tools are logged by preToolUse log_tool only; guidance actions use log_action. "
             f"Log file: {log_file}. Errors: {err_file}."
         )
 

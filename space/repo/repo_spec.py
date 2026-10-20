@@ -470,6 +470,15 @@ with description("the repo toolset"):
             text = self.repo_tool.close_branch(merge_to_main=True)
             expect("feature/done" in text).to(equal(True))
 
+        with it("should check out default after close when merge_to_main is true"):
+            self.repository.checkout_or_create("main")
+            self.repo_tool._bind(self.repository)
+            self.repo_tool.new_branch("feature/land", switch=True)
+            self.repo_tool.close_branch("feature/land", merge_to_main=True)
+            expect(self.repo_tool.current_branch).to(equal("main"))
+            expect("feature/land" in self.repository.pushes).to(equal(True))
+            expect("main" in self.repository.pushes).to(equal(True))
+
 
 def _init_repository(root: Path) -> None:
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)

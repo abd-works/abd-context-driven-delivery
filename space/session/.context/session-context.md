@@ -29,6 +29,7 @@ session --> set when ever a session is opened, created etc
             log f rules were injected if so what files matched what rules only log rule names, sort and sp[earat by practidce and fidelity ]
             errors - if tools fail for ANY reason, tool , code, etc log it but dont swallow i! write fullt rce to session.err and point the log entry to a session.err line 
             log time stamp 
+            loop corrections --> when the user fixes logging or repo close behavior, append log_note in the active loop (--- N): what changed, which files, chat id + transcript line range; reference earlier log lines in the same loop when relevant (see loop 4 in space-testing)
         
 
     guidance  (stories, bdd, etc)

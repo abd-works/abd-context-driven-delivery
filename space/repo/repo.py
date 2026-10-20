@@ -2140,47 +2140,38 @@ class Branch:
         return Commit.from_message(sha, message or f"merge {other.name} into {self.name}")
 
     def land_on_default(self) -> None:
-        """Merge default into this checkout, then land this branch onto default."""
+        """Push the feature branch, merge it into default on this clone, push default."""
         from space.repo.repo import Repo, RepoConnectError
 
         repository = self._repo
-        if getattr(repository, "_memory", False):
-            return
         default = repository.default_branch
-        Worktree(repository).push()
-        for candidate in (default, f"origin/{default}", "main", "origin/main"):
-            try:
-                repository.merge_from(
-                    candidate,
-                    message=f"merge {candidate} into {self.name}",
-                )
-                break
-            except RepoConnectError:
-                continue
-        try:
-            repository.push_to(default)
-        except RepoConnectError:
-            pass
+        feature = self.name
+        if getattr(repository, "_memory", False):
+            repository._pushes.append(feature)
+            if feature != default:
+                repository._branch = default
+                repository._pushes.append(default)
+            return
+        if not feature or feature == default:
+            repository.push_upstream()
+            return
+
+        repository.push_upstream()
+
         occupier = repository.worktree_for(default)
-        if occupier is None:
-            try:
-                repository._git("branch", "-f", default, "HEAD")
-            except RepoConnectError:
-                return
+        if occupier is not None and occupier.path.resolve() != Path(repository.root).resolve():
+            other = Repo(occupier.path)
+            other.clear_stash()
+            if other.is_dirty(untracked=False):
+                raise RepoConnectError(f"default worktree is dirty at {occupier.path}")
+            other.checkout_or_create(default)
+            other.merge_from(feature, message=f"merge {feature} into {default}")
+            other.push_upstream()
             return
-        if occupier.path.resolve() == Path(repository.root).resolve():
-            return
-        other = Repo(occupier.path)
-        other.clear_stash()
-        if other.is_dirty():
-            return
-        try:
-            other.merge_from(
-                self.name,
-                message=f"merge {self.name} into {default}",
-            )
-        except RepoConnectError:
-            return
+
+        repository.checkout_or_create(default)
+        repository.merge_from(feature, message=f"merge {feature} into {default}")
+        repository.push_upstream()
 
     def close(
         self,
