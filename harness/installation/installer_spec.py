@@ -671,7 +671,7 @@ with description("an agent toolset") as self:
                     refs = Installer(
                         ide="Cursor", path=self.repo / ".cursor", repo=self.repo
                     ).collect_toolsets()
-                    expect(refs).to(contain("harness.transformers.transformers:Transformers"))
+                    expect(refs).not_to(contain("_retired.transformers.transformers:Transformers"))
                     expect(refs).to(contain("cdd_guidance.patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
                     expect(refs).to(contain("cdd_guidance.patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
                     expect(refs).to(contain("harness.graph.graph:Graph"))

@@ -56,3 +56,37 @@ Traceback (most recent call last):
   [Previous line repeated 989 more times]
 RecursionError: maximum recursion depth exceeded
 2026-10-20T21:01:36Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-20T21:54:13Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-20T21:54:14Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-20T21:54:14Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-20T21:54:20Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-20T21:54:20Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-20T21:55:11Z session.switch NameError: name 'cls' is not defined
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1031, in dispatch
+    return self._runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 771, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 604, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 622, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1230, in expand
+    self._scan()
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1263, in _scan
+    self._walk_statements(function_def)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1940, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1902, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1893, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1726, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 12, in <module>
+NameError: name 'cls' is not defined
+2026-10-20T21:55:11Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
-from harness.installation.files import command
+from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 
 logger = logging.getLogger(__name__)
@@ -1699,12 +1699,12 @@ class Repo:
     @mcp
     @command(name="branch")
     def branch(self, name: str) -> str:
-        """Chaining: check out ``name`` in this clone when the branch exists; create it when missing."""
+        """Chaining: open a sibling worktree for ``name``; create the branch when missing."""
         cleaned = (name or "").strip()
         if not cleaned:
             raise ValueError("branch name is required")
-        self._bind(self._agent_worktree().checkout_in_place(cleaned))
-        return f"on branch {self.current_branch!r} at {self.checkout_path}"
+        self._bind(self._agent_worktree().checkout_linked(cleaned))
+        return f"worktree for {self.current_branch!r} at {self.checkout_path}"
 
     @agent_tool
     @mcp
@@ -1734,6 +1734,25 @@ class Repo:
         cleaned = (name or "").strip()
         if not cleaned:
             raise ValueError("branch name is required")
+        self._bind(self._agent_worktree().checkout_existing_in_place(cleaned))
+        return f"on branch {self.current_branch!r} at {self.checkout_path}"
+
+    @agent_tool
+    @mcp
+    @skill(name="branch-switch")
+    def branch_switch(self, name: str, work_tree: bool) -> str:
+        """Switch to ``name``. ``work_tree`` is required.
+
+        When ``work_tree`` is true, use a sibling worktree.
+        When ``work_tree`` is false, check out ``name`` in the current clone only.
+        Refuses when the tree is dirty (use commit or stash first).
+        """
+        cleaned = (name or "").strip()
+        if not cleaned:
+            raise ValueError("branch name is required")
+        if work_tree:
+            self._bind(self._agent_worktree().checkout_linked(cleaned))
+            return f"worktree for {self.current_branch!r} at {self.checkout_path}"
         self._bind(self._agent_worktree().checkout_existing_in_place(cleaned))
         return f"on branch {self.current_branch!r} at {self.checkout_path}"
 
