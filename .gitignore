@@ -70,6 +70,9 @@ conf/*
 !conf/.secrets.example
 *.secrets.txt
 
+# Graph app/web service logs (scripts/start.py)
+scripts/.run/
+
 # Temporary scratch files and scripts
 _*
 !**/__init__.py
