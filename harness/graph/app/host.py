@@ -29,8 +29,9 @@ class GraphHost:
         practices: dict[str, str],
         database: str | None = None,
         overlays: list[str] | None = None,
+        force: bool = False,
     ) -> str:
-        return self.graph.load_working_copy(folder, practices, database, overlays=overlays)
+        return self.graph.load_working_copy(folder, practices, database, overlays=overlays, force=force)
 
     @staticmethod
     def _overlay_list_from_request(request: dict) -> list[str] | None:
@@ -132,6 +133,7 @@ class GraphHost:
             dict(request.get("practices") or {}),
             request.get("database"),
             overlays=self._overlay_list_from_request(request),
+            force=request.get("force") is True,
         )
 
     def _apply_filter(self, selection: dict) -> None:

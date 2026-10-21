@@ -520,7 +520,9 @@ class Scenario(StoryNode):
         self.near_duplicate = False
         self.shared_verb = ""
         self.one_time_task = False
-        self.load_child_band(len(self.steps), "steps")
+        self.child_count = len(self.steps)
+        self.child_label = "steps"
+        self.child_band = ""
 
     def clone(self) -> "Scenario":
         cloned = type(self)(self.name, self.sequential_order, self.story_name)
@@ -758,10 +760,10 @@ class Story(StoryNode):
         self.generic_handler = bool(self._GENERIC_HANDLER.match((self.name or "").strip()))
         self.one_time_task = bool(self._ONE_OFF.search(self.name or ""))
         self.shared_verb = ""
-        backgrounds = len(self.backgrounds)
-        total = len(self.scenarios) + backgrounds
-        label = "scenarios" if backgrounds == 0 else "children"
-        self.load_child_band(total, label)
+        self.scenario_count = len(self.scenarios)
+        self.child_count = self.scenario_count
+        self.child_label = "scenarios"
+        self.child_band = ""
         self.near_duplicate = self._repeats_later_sibling()
 
     def _repeats_later_sibling(self) -> bool:

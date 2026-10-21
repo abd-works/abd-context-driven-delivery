@@ -463,7 +463,9 @@ Epic→Module.
 
 **kebab-case-paths.ql** — Epic, Story, Scenario, Step, Example. Node file path.
 
-**four-to-nine-children.ql** — Story, Scenario. `owns`. Scenario count under the story.
+**four-to-nine-children.ql** — Epic, SubEpic. `owns`. Direct children of an epic or sub-epic, not the scenarios under a story.
+
+**story-scenarios-one-to-four.ql** — Story. `scenarios`. A story holds 1–4 code scenarios. More than 4 and the story is huge.
 
 **right-size-story-nodes.ql** — Story, Epic. `owns`. Sibling story names under one epic.
 

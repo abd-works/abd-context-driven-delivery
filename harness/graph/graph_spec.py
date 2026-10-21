@@ -266,7 +266,7 @@ with description("a graph"):
                         expect(self.graph.filter.relationships).to(contain("invokes"))
 
                     with it("should offer the operation parameter rule"):
-                        expect(self.graph.filter.rules).to(contain("limit-operation-parameters"))
+                        expect(self.graph.filter.rules).to(contain("clean_engineering.Operation.limit-operation-parameters"))
 
                     with it("should leave the class dependency rule out of the rule filter"):
                         expect("use-explicit-dependencies" in self.graph.filter.rules).to(equal(False))
@@ -337,7 +337,7 @@ with description("a graph"):
                         self.graph.filter.select_node_types(["OoadClass"])
 
                     with it("should offer the class dependency rule"):
-                        expect(self.graph.filter.rules).to(contain("use-explicit-dependencies"))
+                        expect(self.graph.filter.rules).to(contain("clean_engineering.OoadClass.use-explicit-dependencies"))
 
                     with it("should attach the class dependency rule to the class"):
                         rule = rule_on(self.account, "use-explicit-dependencies")
@@ -418,7 +418,7 @@ with description("a graph"):
                             "story-name-captures-system-mechanic",
                             "right-size-story-nodes",
                             "behaviours-not-one-time-tasks",
-                            "four-to-nine-children",
+                            "story-scenarios-one-to-four",
                         }
                         <= set(_rule_names(self.handle_request))
                     ).to(equal(True))
@@ -544,10 +544,10 @@ with description("a graph"):
                     with it("should offer the story-node rules"):
                         expect(
                             {
-                                "vocabulary-traces-to-domain-source",
-                                "read-all-source-context-in-full",
-                                "do-not-invent-requirements",
-                                "evidence-distinguishes-observed-inferred-and-intended",
+                                "stories.Story.vocabulary-traces-to-domain-source",
+                                "stories.Story.read-all-source-context-in-full",
+                                "stories.Story.do-not-invent-requirements",
+                                "stories.Story.evidence-distinguishes-observed-inferred-and-intended",
                             }
                             <= set(self.graph.filter.rules)
                         ).to(equal(True))

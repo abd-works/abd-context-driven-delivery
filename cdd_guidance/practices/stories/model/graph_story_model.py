@@ -165,6 +165,9 @@ class GraphStoryModel:
             "camel_case_path": bool(getattr(node, "camel_case_path", False)),
             "evidence": list(getattr(node, "evidence", []) or []),
         }
+        scenario_count = getattr(node, "scenario_count", None)
+        if scenario_count is not None:
+            facts["scenario_count"] = scenario_count
         if extra:
             facts.update(extra)
         payload = encode_node_data(facts)

@@ -63,19 +63,19 @@ export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error
               <span style={{ width: `${fraction}%` }} />
             </div>
           ) : null}
-          {loadingLog.length > 0 ? (
-            <ol className="loading-log" data-testid="loading-log" ref={log}>
-              {progress.steps.map((step) => (
-                <li key={`${step.index}-${step.name}`}>
-                  {step.index}/{step.total} {step.name}
-                </li>
-              ))}
-              {progress.steps.length === 0
-                ? loadingLog.slice(-12).map((line, index) => <li key={`${index}-${line}`}>{line}</li>)
-                : null}
-              {active && progress.detail ? <li className="is-current">{progress.detail}</li> : null}
-            </ol>
-          ) : null}
+          <ol className="loading-log" data-testid="loading-log" ref={log}>
+            {progress.steps.map((step) => (
+              <li key={`${step.index}-${step.name}`}>
+                {step.index}/{step.total} {step.name}
+              </li>
+            ))}
+            {progress.steps.length === 0
+              ? (loadingLog.length > 0 ? loadingLog.slice(-12) : [shown]).map((line, index) => (
+                  <li key={`${index}-${line}`}>{line}</li>
+                ))
+              : null}
+            {active && progress.detail ? <li className="is-current">{progress.detail}</li> : null}
+          </ol>
         </div>
       ) : null}
       {error && !loading ? (

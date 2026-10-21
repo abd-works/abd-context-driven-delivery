@@ -22,9 +22,11 @@ class VerbNounFormat(PracticeGraphRule):
 
 class FourToNineChildren(PracticeGraphRule):
     slug = "four-to-nine-children"
-    node_types = ("Epic", "SubEpic", "Story", "Scenario")
+    node_types = ("Epic", "SubEpic")
 
     def check(self, node, context) -> list[str]:
+        if node.type in {"Story", "Scenario"}:
+            return []
         severity = node.data.get("child_band") or ""
         if severity not in {"warning", "error"}:
             return []
@@ -32,6 +34,26 @@ class FourToNineChildren(PracticeGraphRule):
         label = node.data.get("child_label") or "children"
         kind = node.type.lower().replace("subepic", "sub-epic")
         return [f"{kind} {node.name!r}: {count} {label} (target 4-9)"]
+
+
+class StoryScenariosOneToFour(PracticeGraphRule):
+    """Code scenarios on a story: 1 to 4. More than four and the story is huge."""
+
+    slug = "story-scenarios-one-to-four"
+    node_types = ("Story",)
+
+    def check(self, node, context) -> list[str]:
+        count = node.data.get("scenario_count")
+        if count is None and (node.data.get("child_label") or "") == "scenarios":
+            count = node.data.get("child_count", 0)
+        if count is None:
+            return []
+        count = int(count)
+        if 1 <= count <= 4:
+            return []
+        if count > 4:
+            return [f"story {node.name!r}: {count} scenarios — story is huge (target 1-4)"]
+        return [f"story {node.name!r}: {count} scenarios (target 1-4)"]
 
 
 class KebabCasePaths(PracticeGraphRule):

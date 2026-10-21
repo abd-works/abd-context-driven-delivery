@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -22,6 +23,25 @@ from harness.mcp.mcp_server import mcp
 Display = str
 Tuple = list[str]
 _GRAPH_PRACTICE_NAMES = frozenset({"clean_engineering", "stories", "ddd", "bdd", "ux"})
+_GRAPH_JSON_NAME = "graph.json"
+_CACHE_SKIP_DIRS = {
+    ".codeql",
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".sessions",
+    "retired",
+    ".context",
+    ".venv",
+    "dist",
+    "build",
+    "coverage",
+    ".next",
+    "out",
+    "playwright-report",
+    "test-results",
+}
+_RULE_FILE_NAMES = ("rules.py", "schema.yaml")
 
 def pattern_overlay_root(pattern: str) -> Path:
     return _REPO / "cdd_guidance" / "patterns" / pattern
@@ -552,24 +572,27 @@ class Filter:
         return found
 
     def _available_rules(self) -> list[str]:
+        from harness.graph.schema_rules import active_overlay_patterns, qualified_rule_label
+
         types = set(self.node_types or self._available_node_types())
-        found: list[str] = []
+        patterns = active_overlay_patterns(tuple(self.graph.overlays))
+        found: set[str] = set()
         for name in self._scope():
             practice = self.graph.practices.get(name)
             if practice is None:
                 continue
             for rule, bound in practice.applicable.items():
-                if any(node_type in types for node_type in bound):
-                    if rule not in found:
-                        found.append(rule)
+                for node_type in bound:
+                    if node_type not in types:
+                        continue
+                    found.add(qualified_rule_label(name, node_type, rule, patterns))
             for type_name, nodes in practice.nodes.items():
                 if type_name not in types:
                     continue
                 for node in nodes:
                     for slug in node.failed_rules:
-                        if slug not in found:
-                            found.append(slug)
-        return found
+                        found.add(qualified_rule_label(name, type_name, slug, patterns))
+        return sorted(found)
 
     def _fill_from_nodes(self) -> None:
         self.relationships = self._available_relationships()
@@ -946,11 +969,41 @@ class Graph:
         practices: dict[str, str],
         database: str | None = None,
         overlays: list[str] | None = None,
+        force: bool = False,
     ) -> str:
-        """Open each practice on its source root and build the explorer tree."""
+        """Open each practice on its source root and build the explorer tree.
+
+        A saved graph in the folder's ``.context`` is used when the folder, its
+        contents, and the rule files are not newer than that file. A forced load
+        always rebuilds. Every rebuild writes the serialized graph.
+        """
         self._folder = Path(database or folder).resolve()
         self._practice_roots = {name: Path(root).resolve() for name, root in practices.items()}
         self.overlays = _normalize_overlay_list(list(overlays or []))
+        self.report_progress("Checking the saved graph")
+        if not force and self._saved_graph_is_current():
+            self.report_progress("Loading the saved graph")
+            self._load_saved_json()
+            return "Loaded the saved graph."
+        self.report_progress("Scanning the folder")
+        self._build_working_copy()
+        self.report_progress("Saving the graph")
+        self.save_json()
+        return "Loaded the working copies."
+
+    @mcp
+    @agent_tool
+    def save_json(self) -> str:
+        """Write the serialized graph into the loaded folder's ``.context``."""
+        folder = self._folder
+        if folder is None:
+            return ""
+        path = self._graph_json_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(self._graph_document(), separators=(",", ":")), encoding="utf-8")
+        return str(path)
+
+    def _build_working_copy(self) -> None:
         self.practices = {}
         for name, source in self._practice_roots.items():
             practice = self.practice(name)
@@ -961,7 +1014,161 @@ class Graph:
         fill_working_copy(self)
         for practice in self.practices.values():
             practice.root_node.populate()
-        return "Loaded the working copies."
+
+    def _graph_json_path(self) -> Path:
+        folder = self._folder or Path()
+        return folder / ".context" / _GRAPH_JSON_NAME
+
+    def _graph_document(self) -> dict:
+        return {
+            "overlays": list(self.overlays),
+            "practices": {name: self._practice_document(practice) for name, practice in self.practices.items()},
+        }
+
+    def _practice_document(self, practice: PracticeGraph) -> dict:
+        nodes = [node for group in practice.nodes.values() for node in group]
+        edges = [edge for group in practice.edges.values() for edge in group]
+        return {
+            "source_root": practice.source_root,
+            "nodes": [self._node_row(node) for node in nodes],
+            "edges": [self._edge_row(edge) for edge in edges],
+            "rules": [[slug, node.node_id, message] for node in nodes for slug, message in node.rules.violations()],
+        }
+
+    def _node_row(self, node: Node) -> list:
+        from harness.graph.node_data import encode_node_data
+
+        return [
+            node.node_id,
+            node.name,
+            node.type,
+            node.practice.name,
+            node.source.file,
+            node.source.start_line,
+            node.source.end_line,
+            node.stage,
+            encode_node_data(node.data),
+        ]
+
+    def _edge_row(self, edge: Edge) -> list:
+        return [edge.parent.node_id, edge.child.node_id, edge.kind, edge.order, edge.display]
+
+    def _saved_graph_is_current(self) -> bool:
+        document = self._read_saved_graph()
+        if document is None or not self._saved_graph_matches_request(document):
+            return False
+        stamp = self._graph_json_path().stat().st_mtime
+        if self._rules_changed_since(stamp):
+            return False
+        return not self._folder_is_dirty(stamp)
+
+    def _saved_graph_matches_request(self, document: dict) -> bool:
+        saved = document.get("practices")
+        if not isinstance(saved, dict):
+            return False
+        if set(saved) != set(self._practice_roots):
+            return False
+        return list(document.get("overlays") or []) == list(self.overlays)
+
+    def _read_saved_graph(self) -> dict | None:
+        path = self._graph_json_path()
+        if not path.is_file():
+            return None
+        self.report_progress("Reading the saved graph")
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(document, dict):
+            return None
+        return document
+
+    def _rules_changed_since(self, stamp: float) -> bool:
+        practices = _REPO / "cdd_guidance" / "practices"
+        if practices.is_dir() and self._rule_file_newer_than(practices, stamp):
+            return True
+        graph_dir = Path(__file__).resolve().parent
+        names = (
+            "rules.py",
+            "schema_rules.py",
+            "node_rules.py",
+            "practice_rule.py",
+            "practice_rules_registry.py",
+            "rule_context.py",
+            "graph_rules_collection.py",
+        )
+        return any(self._file_newer_than(graph_dir / name, stamp) for name in names)
+
+    def _rule_file_newer_than(self, folder: Path, stamp: float) -> bool:
+        for dirpath, dirnames, filenames in os.walk(folder):
+            dirnames[:] = [name for name in dirnames if name not in _CACHE_SKIP_DIRS]
+            for filename in filenames:
+                if not self._is_rule_file(Path(dirpath, filename)):
+                    continue
+                if Path(dirpath, filename).stat().st_mtime > stamp:
+                    return True
+        return False
+
+    def _is_rule_file(self, path: Path) -> bool:
+        if path.name in _RULE_FILE_NAMES:
+            return True
+        return path.suffix == ".py" and "rules" in path.parts
+
+    def _folder_is_dirty(self, stamp: float) -> bool:
+        folder = self._folder
+        if folder is None or not folder.exists():
+            return True
+        if folder.is_file():
+            return folder.stat().st_mtime > stamp
+        return self._contents_newer_than(folder, stamp)
+
+    def _contents_newer_than(self, folder: Path, stamp: float) -> bool:
+        seen = 0
+        for dirpath, dirnames, filenames in os.walk(folder):
+            dirnames[:] = [name for name in dirnames if name not in _CACHE_SKIP_DIRS]
+            for filename in filenames:
+                seen += 1
+                if seen == 1 or seen % 400 == 0:
+                    self.report_progress(f"Checking folder dates · {seen}")
+                if Path(dirpath, filename).stat().st_mtime > stamp:
+                    return True
+        return False
+
+    def _file_newer_than(self, path: Path, stamp: float) -> bool:
+        return path.is_file() and path.stat().st_mtime > stamp
+
+    def _load_saved_json(self) -> None:
+        document = self._read_saved_graph() or {}
+        saved = document.get("practices") or {}
+        self.practices = {}
+        for name in self._practice_roots:
+            self._restore_practice_nodes(name, saved.get(name) or {})
+        for name in self._practice_roots:
+            self._restore_practice_links(name, saved.get(name) or {})
+        for practice in self.practices.values():
+            practice.root_node.populate()
+
+    def _restore_practice_nodes(self, name: str, saved: dict) -> None:
+        self.report_progress(f"Loading saved {name} nodes")
+        practice = self.practice(name)
+        practice.source_root = str(saved.get("source_root") or self._practice_roots[name])
+        practice.by_id[practice.root_node.node_id] = practice.root_node
+        practice.load_nodes(list(saved.get("nodes") or []))
+
+    def _restore_practice_links(self, name: str, saved: dict) -> None:
+        practice = self.practice(name)
+        practice.load_edges(list(saved.get("edges") or []))
+        self._restore_rule_hits(practice, list(saved.get("rules") or []))
+        practice.loaded = ["nodes", "edges", "rules"]
+
+    def _restore_rule_hits(self, practice: PracticeGraph, rows: list) -> None:
+        grouped: dict[str, list] = {}
+        for row in rows:
+            if len(row) < 3:
+                continue
+            grouped.setdefault(str(row[0]), []).append(row)
+        for slug, hits in grouped.items():
+            practice.apply_rules(slug, hits)
 
     def set_overlays(self, overlays: list[str]) -> str:
         """Apply pattern overlays and rebuild the explorer tree from the open folder."""
@@ -974,6 +1181,9 @@ class Graph:
 
     def inventory(self) -> dict[str, dict]:
         """Node and edge counts for each loaded practice, taken from the graph."""
+        from harness.graph.schema_rules import active_overlay_patterns, qualified_rule_labels
+
+        patterns = active_overlay_patterns(tuple(self.overlays))
         report: dict[str, dict] = {}
         for name, practice in self.practices.items():
             report[name] = {
@@ -981,7 +1191,7 @@ class Graph:
                 "edge_count": practice.edge_count,
                 "node_types": sorted(practice.node_types),
                 "edge_types": list(practice.edge_type_kinds),
-                "rules": sorted(practice.applicable.keys()),
+                "rules": qualified_rule_labels(name, practice.applicable, patterns),
                 "tree": practice.root_node.serialize(),
             }
         return report
@@ -1051,7 +1261,18 @@ class Graph:
             return False
         if not rules:
             return True
-        return any(rule in rules for rule in hits)
+        return any(self._label_hits(node, label, hits) for label in rules)
+
+    def _label_hits(self, node: Node, label: str, hits: list[str]) -> bool:
+        parts = label.split(".")
+        if len(parts) < 3:
+            return label in hits
+        slug = parts[-1]
+        node_type = parts[-2]
+        practice = parts[-3]
+        if slug not in hits or node.type != node_type:
+            return False
+        return node.practice.name == practice
 
     def _on_relationship(self, node: Node, kinds: list[str]) -> bool:
         for kind in kinds:

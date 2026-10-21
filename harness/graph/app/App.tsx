@@ -106,7 +106,7 @@ export function App() {
     await load(chosen);
   }
 
-  async function load(root: string, next = selection) {
+  async function load(root: string, next = selection, force = false) {
     const trimmed = root.trim();
     if (!trimmed) {
       return;
@@ -118,7 +118,7 @@ export function App() {
     setLoadingLog([]);
     setError('');
     try {
-      await graphs.load(trimmed, practiceRoots(trimmed), readSavedOverlays());
+      await graphs.load(trimmed, practiceRoots(trimmed), readSavedOverlays(), force);
       if (generation !== loadGeneration.current) {
         return;
       }
@@ -267,6 +267,16 @@ export function App() {
                 <span className="mode-icon" aria-hidden="true">☾</span>
               </button>
             </div>
+            <button
+              type="button"
+              className="btn-refresh"
+              data-testid="force-reload"
+              title="Force reload"
+              disabled={loading || !folder.trim()}
+              onClick={() => void load(folder, selection, true)}
+            >
+              Force reload
+            </button>
           </div>
         </header>
         <div className="toolbar">
