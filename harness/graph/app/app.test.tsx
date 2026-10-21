@@ -289,7 +289,11 @@ const inventory = {
     edge_count: 3,
     node_types: ['Module', 'OoadClass', 'Operation'],
     edge_types: ['contains', 'owns', 'invokes'],
-    rules: ['module-rule', 'class-rule', 'limit-operation-parameters'],
+    rules: [
+      'clean_engineering.Module.module-rule',
+      'clean_engineering.OoadClass.class-rule',
+      'clean_engineering.Operation.limit-operation-parameters',
+    ],
     tree: engineeringTree,
   },
   ddd: {
@@ -305,7 +309,7 @@ const inventory = {
     edge_count: 1,
     node_types: ['Epic'],
     edge_types: ['tells'],
-    rules: ['verb-noun'],
+    rules: ['stories.Epic.verb-noun'],
     tree: storiesTree,
   },
 };
@@ -471,7 +475,11 @@ it('should select every node, connector, and rule for the practice', async () =>
   expect(options('filter-node')).toEqual(['Module', 'OoadClass', 'Operation']);
   expect(chosen('filter-connector')).toEqual(['contains', 'owns', 'invokes']);
   expect(options('filter-connector')).toEqual(['contains', 'owns', 'invokes']);
-  expect(chosen('filter-rule')).toEqual(['module-rule', 'class-rule', 'limit-operation-parameters']);
+  expect(chosen('filter-rule')).toEqual([
+    'clean_engineering.Module.module-rule',
+    'clean_engineering.OoadClass.class-rule',
+    'clean_engineering.Operation.limit-operation-parameters',
+  ]);
 });
 
 it('should keep the first practice filters when another practice is added', async () => {
@@ -486,7 +494,7 @@ it('should keep the first practice filters when another practice is added', asyn
   expect(chosen('filter-node')).toEqual(['Module', 'Epic']);
   expect(options('filter-node')).toEqual(['Module', 'OoadClass', 'Operation', 'Epic']);
   expect(chosen('filter-connector')).toEqual(['contains', 'tells']);
-  expect(chosen('filter-rule')).toEqual(['module-rule', 'verb-noun']);
+  expect(chosen('filter-rule')).toEqual(['clean_engineering.Module.module-rule', 'stories.Epic.verb-noun']);
 });
 
 it('should show a module without its children and a class with its module', async () => {
@@ -570,6 +578,29 @@ it('should show the backend traceback instead of loading forever', async () => {
   expect(error.textContent).toContain('Traceback (most recent call last)');
   expect(screen.getByRole('button', { name: 'Copy for AI' })).toBeTruthy();
   expect(screen.queryByTestId('extraction-progress')).toBeNull();
+});
+
+it('should list rules as practice, node, then rule', async () => {
+  const user = userEvent.setup();
+  await openFolder(user);
+  expect(options('filter-rule')).toEqual([
+    'clean_engineering.Module.module-rule',
+    'clean_engineering.OoadClass.class-rule',
+    'clean_engineering.Operation.limit-operation-parameters',
+    'stories.Epic.verb-noun',
+  ]);
+});
+
+it('should force a reload from the top right of the page', async () => {
+  const user = userEvent.setup();
+  window.localStorage.setItem('cdd-graph-folder', folder);
+  render(<App />);
+  await screen.findByRole('button', { name: 'Expand clean_engineering' });
+  calls.length = 0;
+  await user.click(screen.getByRole('button', { name: 'Force reload' }));
+  await waitFor(() =>
+    expect(calls.some((call) => call.operation === 'load_working_copy' && call.body.force === true)).toBe(true),
+  );
 });
 
 it('should reload the last folder when the app opens', async () => {
@@ -965,15 +996,23 @@ function staleMaster() {
 
 function constrained(types: string[]) {
   if (types.length === 1 && types[0] === 'Module') {
-    return { node_types: types, relationships: ['contains'], rules: ['module-rule'] };
+    return { node_types: types, relationships: ['contains'], rules: ['clean_engineering.Module.module-rule'] };
   }
   if (types.length === 1 && types[0] === 'OoadClass') {
-    return { node_types: types, relationships: ['owns'], rules: ['class-rule'] };
+    return { node_types: types, relationships: ['owns'], rules: ['clean_engineering.OoadClass.class-rule'] };
   }
   if (types.length === 1 && types[0] === 'Operation') {
-    return { node_types: types, relationships: ['invokes'], rules: ['limit-operation-parameters'] };
+    return { node_types: types, relationships: ['invokes'], rules: ['clean_engineering.Operation.limit-operation-parameters'] };
   }
-  return { node_types: types, relationships: ['contains', 'owns', 'invokes'], rules: ['module-rule', 'class-rule', 'limit-operation-parameters'] };
+  return {
+    node_types: types,
+    relationships: ['contains', 'owns', 'invokes'],
+    rules: [
+      'clean_engineering.Module.module-rule',
+      'clean_engineering.OoadClass.class-rule',
+      'clean_engineering.Operation.limit-operation-parameters',
+    ],
+  };
 }
 
 function violationTree(node: (typeof engineeringTree)): (typeof engineeringTree) | null {

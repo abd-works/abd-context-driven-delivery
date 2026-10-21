@@ -28,10 +28,6 @@ with description("stories TypeScript .examples (faultyAsset.ts)"):
         with it("should flag near-duplicate story names"):
             assert_stories_example_pair("right-size-story-nodes")
 
-    with context("four-to-nine-children"):
-        with it("should flag too few scenario() calls"):
-            assert_stories_example_pair("four-to-nine-children")
-
     with context("verb-noun-format"):
         with it("should flag CartStuff"):
             assert_stories_example_pair("verb-noun-format")

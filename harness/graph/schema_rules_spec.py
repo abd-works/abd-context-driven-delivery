@@ -14,7 +14,7 @@ from mamba import before, description, it
 
 from graph import Graph, Node, Source
 from harness.graph.graph_rules_collection import GraphRulesCollection
-from harness.graph.schema_rules import slugs_for_type
+from harness.graph.schema_rules import qualified_rule_label, slugs_for_type
 
 
 with description("schema rules on a node"):
@@ -79,3 +79,15 @@ with description("DDD schema extends clean engineering"):
     with it("should not list flaccid-data-object on value objects"):
         slugs = slugs_for_type("ddd", "ValueObject")
         expect("flaccid-data-object-no-behavior" in slugs).to(equal(False))
+
+
+with description("a rule label"):
+    with it("should name the practice, the node, and the rule"):
+        expect(qualified_rule_label("clean_engineering", "Operation", "limit-operation-parameters")).to(
+            equal("clean_engineering.Operation.limit-operation-parameters")
+        )
+
+    with it("should prefix a pattern node"):
+        expect(qualified_rule_label("ddd", "Route", "keep-classes-single-responsibility", ("lern_domain_driven",))).to(
+            equal("lern.domain.driven.ddd.Route.keep-classes-single-responsibility")
+        )

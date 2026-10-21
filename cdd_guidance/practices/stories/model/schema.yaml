@@ -55,7 +55,7 @@ story:
   shownOn?: [screen]
   where:
     - id is the text slugs from the root to this node, joined by dots
-    - scenarios count 4..9 warn 3,10
+    - scenarios count 1..4; more than 4 and the story is huge
     - background only when scenarios share its given
     - one observable interaction at one system boundary
     - invokes is the union of invokes on the steps this story owns
@@ -64,7 +64,7 @@ story:
     - story-name-captures-system-mechanic
     - right-size-story-nodes
     - behaviours-not-one-time-tasks
-    - four-to-nine-children
+    - story-scenarios-one-to-four
 
 scenario:
   fidelity: scenarios

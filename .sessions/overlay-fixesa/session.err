@@ -90,3 +90,78 @@ Traceback (most recent call last):
   File "<agent_instructions>", line 12, in <module>
 NameError: name 'cls' is not defined
 2026-10-20T21:55:11Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-20T22:14:54Z repo.branch_switch RepoConnectError: Cannot connect git: git rev-parse --abbrev-ref HEAD failed in C:\dev\abd-cdd-overlay-fixesa: fatal: cannot change to 'C:\dev\abd-cdd-overlay-fixesa': No such file or directory.
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1032, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 768, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 583, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 555, in _invoke_mcp_callable
+    return target(**args)
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\agent.py", line 63, in branch_switch
+  File "C:\dev\abd-context-driven-delivery\space\repo\agent.py", line 31, in current_branch
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1019, in current_branch
+    return self._git("rev-parse", "--abbrev-ref", "HEAD")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 931, in _git
+    return type(self).git(self.root, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 883, in git
+    raise RepoConnectError(
+space.repo.repo.RepoConnectError: Cannot connect git: git rev-parse --abbrev-ref HEAD failed in C:\dev\abd-cdd-overlay-fixesa: fatal: cannot change to 'C:\dev\abd-cdd-overlay-fixesa': No such file or directory.
+2026-10-20T22:14:54Z repo.branch_switch DirtyBranchSwitchError: Working tree has uncommitted changes on 'overlay-fixesa'; not switching to 'overlay-fixesa'. Ask whether to bring this work onto the session branch, or create a continuation branch (e.g. overlay-fixesa-2).
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1032, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 768, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 583, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 555, in _invoke_mcp_callable
+    return target(**args)
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\agent.py", line 62, in branch_switch
+  File "C:\dev\abd-context-driven-delivery\space\repo\worktree.py", line 61, in checkout_in_place
+    repository.checkout_or_create(branch)
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1142, in checkout_or_create
+    raise DirtyBranchSwitchError(self.current_branch, name)
+space.repo.repo.DirtyBranchSwitchError: Working tree has uncommitted changes on 'overlay-fixesa'; not switching to 'overlay-fixesa'. Ask whether to bring this work onto the session branch, or create a continuation branch (e.g. overlay-fixesa-2).
+2026-10-20T22:14:54Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-20T22:14:54Z session.switch NameError: name 'cls' is not defined
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1031, in dispatch
+    return self._runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 771, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 604, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 622, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1230, in expand
+    self._scan()
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1263, in _scan
+    self._walk_statements(function_def)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1940, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1902, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1893, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1726, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 12, in <module>
+NameError: name 'cls' is not defined
+2026-10-20T22:14:54Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

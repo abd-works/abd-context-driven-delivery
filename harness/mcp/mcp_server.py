@@ -38,6 +38,7 @@ HOST_PID_NAME = "mcp-host.pid"
 NUDGE_NAME = "mcp-host-nudge"
 NUDGE_MIN_SECONDS = 5.0
 HOST_PROCESS_ENV = "CDD_MCP_HOST_PID"
+_CALL_TIMEOUT_SECONDS = 10
 _SERVING_MCP_HOST: Any = None
 _UNION_ORIGINS = {Union, py_types.UnionType}
 
@@ -356,7 +357,7 @@ class McpOperationDefinition:
         try:
             signature = inspect.signature(self.member)
             params = inspect.Signature(
-                [p for n, p in signature.parameters.items() if n != "self"]
+                [p for n, p in signature.parameters.items() if n not in {"self", "cls"}]
             )
             suffix = str(params)
         except (TypeError, ValueError):
@@ -811,7 +812,7 @@ class McpHost:
             return {}
 
     def _is_schema_parameter(self, name: str, param: inspect.Parameter) -> bool:
-        if name == "self":
+        if name in {"self", "cls"}:
             return False
         return param.kind in (
             inspect.Parameter.POSITIONAL_OR_KEYWORD,
@@ -948,7 +949,16 @@ class McpHost:
                 else:
                     # Dispatch off the event loop. A synchronous tool call blocks
                     # stdin and stdout, and the client then waits until its timeout.
-                    value = await anyio.to_thread.run_sync(self.dispatch, name, arguments)
+                    # A call that is still running after 10 seconds is a failed call.
+                    try:
+                        with anyio.fail_after(_CALL_TIMEOUT_SECONDS):
+                            value = await anyio.to_thread.run_sync(
+                                self.dispatch, name, arguments
+                            )
+                    except TimeoutError:
+                        return self._content_blocks(
+                            f"TimeoutError: {name} exceeded {_CALL_TIMEOUT_SECONDS} seconds"
+                        )
                 return self._content_blocks(value)
             except Exception as error:
                 logger.exception("MCP tool %s failed", name)

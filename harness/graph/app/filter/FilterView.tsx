@@ -100,7 +100,7 @@ export function FilterView({
       <FilterSelect
         label="Rule"
         testId="filter-rule"
-        options={rules}
+        options={[...rules].sort((left, right) => left.localeCompare(right))}
         selected={selection.rules}
         onChange={(rules) => onChange({ ...selection, rules })}
       />

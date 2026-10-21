@@ -219,9 +219,9 @@ class Session:
         return session if session.name else None
 
     def repo_from_session(self, repo_path: Path | str | None = None) -> Path | None:
-        """Git repo root for ``.sessions/session.json`` — not the workpath subfolder."""
+        """Repo that holds ``.sessions`` — the path already in hand, not a git lookup."""
         if repo_path is not None:
-            return self._git_root(Path(repo_path))
+            return Path(repo_path).resolve()
         if self.repo_path is not None:
             return Path(self.repo_path).resolve()
         named = os.environ.get("CDD_REPO")
@@ -229,8 +229,8 @@ class Session:
             return Path(named).resolve()
         project = os.environ.get("CDD_PROJECT")
         if project:
-            return self._git_root(Path(project))
-        return self._git_root(Path.cwd())
+            return Path(project).resolve()
+        return Path.cwd().resolve()
 
     @mcp
     @command(name="close-session")
@@ -246,7 +246,7 @@ class Session:
 
     @classmethod
     @mcp
-    @agent_instructions
+    @agent_tool
     def new(cls, name: str, workpath: Path, repo_path: Path) -> str:
         """Open a session. Returns keep_log."""
         session = cls._slot()
@@ -255,7 +255,7 @@ class Session:
 
     @classmethod
     @mcp
-    @agent_instructions
+    @agent_tool
     def switch(
         cls,
         name: str,
@@ -318,7 +318,7 @@ class Session:
         """Open a new CDD session folder under the repo.
 
         Ask the user for the session name when it is not already clear from the chat.
-        Resolve workpath from CDD_PROJECT or the current working directory and repo from CDD_REPO or git root.
+        Resolve workpath from CDD_PROJECT or the current working directory and repo from CDD_REPO or the current directory.
         Call MCP ``session.new`` with name, workpath, and repo_path. Do not call ``session.open_named``."""
         return ""
 
@@ -514,7 +514,10 @@ class Session:
                 self.workpath = Path(workpath).resolve()
             elif stored.get("workpath"):
                 self.workpath = Path(stored["workpath"])
-            self.repo_path = self._git_root(self.session_path)
+            if stored.get("repo_path"):
+                self.repo_path = Path(stored["repo_path"])
+            else:
+                self.repo_path = self._repo_holding(self.session_path)
         elif repo_path is not None:
             self.repo_path = Path(repo_path).resolve()
             self.session_path = self._session_folder(self.repo_path, name)
@@ -527,7 +530,7 @@ class Session:
                 self.workpath = self._env_workpath()
         elif workpath is not None:
             self.workpath = Path(workpath).resolve()
-            self.repo_path = self._git_root(self.workpath)
+            self.repo_path = self._env_repo()
             self.session_path = self._session_folder(self.repo_path, name)
         else:
             self.repo_path = self._env_repo()
@@ -955,17 +958,19 @@ class Session:
             return
         self._parent_folders = json.loads(path.read_text(encoding="utf-8"))
 
-    def _git_root(self, start: Path) -> Path:
-        from space.repo.repo import Repo
-
-        found = Repo(start).find_root()
-        return found if found is not None else Path(start).resolve()
+    def _repo_holding(self, session_path: Path) -> Path:
+        folder = Path(session_path).resolve().parent
+        if folder.name in {".sessions", "sessions"}:
+            return folder.parent
+        return folder
 
     def _env_repo(self) -> Path:
         named = os.environ.get("CDD_REPO")
         if named:
             return Path(named).resolve()
-        return self._git_root(Path.cwd())
+        if self.repo_path is not None:
+            return Path(self.repo_path).resolve()
+        return Path.cwd().resolve()
 
     def _env_workpath(self) -> Path:
         named = os.environ.get("CDD_PROJECT")

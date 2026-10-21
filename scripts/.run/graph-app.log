@@ -9,3 +9,434 @@
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  VITE v6.4.3  ready in 845 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+6:32:42 p.m. [vite] vite.config.ts changed, restarting server...
+6:32:42 p.m. [vite] vite.config.ts changed, restarting server...
+6:32:42 p.m. [vite] server restarted.
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.20.10.7:5173/
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.20.10.7:5173/
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  VITE v6.4.3  ready in 455 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.20.10.7:5173/
+6:37:05 p.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+6:37:05 p.m. [vite] http proxy error: /api/choose_overlay_folder
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+6:37:05 p.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+6:37:05 p.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+6:37:05 p.m. [vite] http proxy error: /api/choose_overlay_folder
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+6:37:05 p.m. [vite] http proxy error: /api/load_working_copy
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+6:37:05 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/load_working_copy
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_overlay_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_overlay_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_overlay_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_overlay_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_overlay_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_overlay_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/choose_overlay_folder
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:05 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:06 p.m. [vite] http proxy error: /api/load_working_copy
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:06 p.m. [vite] http proxy error: /api/load_working_copy
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:06 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:06 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:06 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:07 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:07 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:07 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:07 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+6:37:08 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:03:41 p.m. [vite] (client) hmr update /App.tsx
+7:03:42 p.m. [vite] (client) hmr update /App.tsx
+7:03:55 p.m. [vite] (client) hmr update /App.tsx
+7:04:08 p.m. [vite] (client) hmr update /App.tsx
+7:04:47 p.m. [vite] (client) hmr update /App.tsx
+7:13:13 p.m. [vite] (client) hmr update /filter/FilterView.tsx
+7:33:49 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:50 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:50 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:50 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:50 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:51 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:51 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:51 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:52 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:52 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:52 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:53 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:53 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:53 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:53 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:54 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:54 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:54 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:55 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:55 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:55 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:55 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:56 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:56 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:56 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:57 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:57 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:57 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:58 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:58 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:58 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:58 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:59 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:33:59 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:03 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:04 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:04 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:04 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:05 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:05 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:05 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:05 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:06 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:06 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:34:06 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:35:21 p.m. [vite] (client) hmr update /App.tsx
+7:36:41 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:36:42 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:36:42 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:36:42 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:36:43 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:36:43 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:36:43 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:36:44 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:36:44 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:36:44 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  VITE v6.4.3  ready in 644 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.20.10.7:5173/
+7:40:03 p.m. [vite] (client) hmr update /graph/GraphView.tsx
+7:40:56 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:40:57 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:40:57 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:40:57 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:40:58 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:40:58 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:40:58 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:40:58 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:40:59 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+7:40:59 p.m. [vite] http proxy error: /api/progress
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1714:7)
+
+--- npm run dev ---
+
+> dev
+> vite
+
+
+  VITE v6.4.3  ready in 633 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.20.10.7:5173/

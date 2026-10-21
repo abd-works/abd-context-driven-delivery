@@ -23,6 +23,9 @@ class RepoConnectError(RuntimeError):
     """Raised when the clone cannot be used as a repository."""
 
 
+_COMMAND_TIMEOUT_SECONDS = 10
+
+
 class GhConnectError(RuntimeError):
     """Raised when gh cannot be used."""
 
@@ -875,7 +878,13 @@ class Repo:
                 text=True,
                 encoding="utf-8",
                 check=False,
+                timeout=_COMMAND_TIMEOUT_SECONDS,
             )
+        except subprocess.TimeoutExpired as exc:
+            raise RepoConnectError(
+                f"Cannot connect git: git {' '.join(args)} exceeded "
+                f"{_COMMAND_TIMEOUT_SECONDS} seconds in {root}."
+            ) from exc
         except OSError as exc:
             raise RepoConnectError(f"Cannot connect git: {exc}.") from exc
         if completed.returncode != 0:
@@ -913,7 +922,13 @@ class Repo:
                 check=False,
                 cwd=str(cwd) if cwd is not None else None,
                 input=stdin,
+                timeout=_COMMAND_TIMEOUT_SECONDS,
             )
+        except subprocess.TimeoutExpired as exc:
+            shown = " ".join(a for a in args if a != stdin)
+            raise GhConnectError(
+                f"Cannot connect gh: gh {shown} exceeded {_COMMAND_TIMEOUT_SECONDS} seconds."
+            ) from exc
         except OSError as exc:
             raise GhConnectError(f"Cannot connect gh: {exc}.") from exc
         if completed.returncode != 0:

@@ -28,6 +28,7 @@ from cdd_guidance.practices.stories.rules.story_map import (
     EvidenceDistinguishesObservedInferredAndIntended,
     FourToNineChildren,
     KebabCasePaths,
+    StoryScenariosOneToFour,
     RightSizeStoryNodes,
     StoryNameCapturesSystemMechanic,
     VerbNounFormat,
@@ -35,6 +36,7 @@ from cdd_guidance.practices.stories.rules.story_map import (
 
 RULES: tuple = (
     FourToNineChildren(),
+    StoryScenariosOneToFour(),
     VerbNounFormat(),
     ScenariosShape(),
     KebabCasePaths(),

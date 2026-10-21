@@ -255,6 +255,50 @@ def bind_practice_rules(practice_graph) -> None:
             practice_graph.bind_rule(slug, [node_type])
 
 
+def qualified_rule_label(practice: str, node_type: str, slug: str, patterns: tuple[str, ...] = ()) -> str:
+    """``practice.node.rule``, or ``lern.domain.driven.practice.node.rule`` for a pattern rule."""
+    body = f"{practice}.{node_type}.{slug}"
+    owner = _pattern_owning_rule(practice, node_type, slug, patterns)
+    if owner is None:
+        return body
+    return f"{owner.replace('_', '.')}.{body}"
+
+
+def qualified_rule_labels(practice: str, bindings: dict[str, list[str]], patterns: tuple[str, ...] = ()) -> list[str]:
+    labels = [
+        qualified_rule_label(practice, node_type, slug, patterns)
+        for slug, types in bindings.items()
+        for node_type in types
+    ]
+    return sorted(set(labels))
+
+
+def _pattern_owning_rule(practice: str, node_type: str, slug: str, patterns: tuple[str, ...]) -> str | None:
+    base_types = _schema_types_for_practice(practice, ())
+    for pattern in patterns:
+        if slug in _overlay_declared_rules(practice, pattern).get(node_type, ()):
+            return pattern
+        if node_type in _overlay_types(practice, pattern) and node_type not in base_types:
+            return pattern
+    return None
+
+
+@lru_cache(maxsize=None)
+def _overlay_declared_rules(practice: str, pattern: str) -> dict[str, tuple[str, ...]]:
+    schema = _PATTERNS_ROOT / pattern / "practices" / practice / "model" / "schema.yaml"
+    if not schema.is_file():
+        return {}
+    return _parse_rules(schema.read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=None)
+def _overlay_types(practice: str, pattern: str) -> frozenset[str]:
+    schema = _PATTERNS_ROOT / pattern / "practices" / practice / "model" / "schema.yaml"
+    if not schema.is_file():
+        return frozenset()
+    return frozenset(_parse_type_headers(schema.read_text(encoding="utf-8")))
+
+
 _TOP_TYPE_HEADER = re.compile(r"^([A-Za-z]\w*):\s*$")
 _LIST_TYPE_HEADER = re.compile(r"^\s+-\s+([A-Za-z]\w*):\s*$")
 
