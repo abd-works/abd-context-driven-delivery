@@ -144,8 +144,9 @@ root's snapshot.
 
 Domain tiers, views, the node file, the client file, and one route file live
 under `src/<boundedContext>/<aggregate>/`. Epic packages under
-`packages/<epicSlug>/` hold process boot only — they import the aggregate
-through `@src`.
+`packages/<epicSlug>/` hold process boot and what is common across the epic
+(top-level router, shell layout, shared assets, epic-wide logic) — they import
+the aggregate through `@src`. Screens live in the domain they serve.
 
 ```
 src/
@@ -158,8 +159,9 @@ src/
       <aggregate>-routes.ts             ← one route file for this aggregate
       <aggregate>.json                  ← lowdb store for this aggregate
 
-packages/<epicSlug>/                    ← epic package — boot only
+packages/<epicSlug>/                    ← epic package — boot and epic-wide common pieces
   app.ts / serve.ts / main.tsx          ← Express + Vite process boot
+  <epicSlug>-router.tsx, shell, assets  ← common to every screen in the epic
   package.json / index.html / vite.config.ts
 ```
 
@@ -167,10 +169,11 @@ A view, the client file, and the node file are siblings in the aggregate
 folder. The view renders the client. The node selects the view. The aggregate
 has one route file. Views are domain files, the same as the client and the node.
 
-Rule `epic-package-screens-only` governs the split. Keep views in the aggregate
-folder. Do **not** put `<aggregate>.ts`, `<aggregate>-node.ts`,
-`<aggregate>-client.tsx`, views, `*-view.tsx`, `*-redirect.tsx`, or the route
-file under the epic package.
+Rule `screens-live-in-their-domain` governs the split. Keep each screen in the
+aggregate folder of the domain it serves. Do **not** put `<aggregate>.ts`,
+`<aggregate>-node.ts`, `<aggregate>-client.tsx`, a step screen, or an aggregate
+route file under the epic package. The epic package may hold the top-level
+router, the shell layout, shared assets, and epic-wide logic.
 
 Rule `domain-core-file-matches-folder-slug` governs filenames: kebab-case core
 files (`<aggregate>/<aggregate>.ts`), PascalCase exported types (`{Domain}`).
@@ -366,7 +369,7 @@ heading and skip the question.
    `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`,
    `<aggregate>-client.tsx`, the views, one `<aggregate>-routes.ts`,
    `<aggregate>.json`) and the epic shell under `packages/<epicSlug>/`
-   (boot only: `app.ts`, `serve.ts`, `main.tsx`). Import the aggregate
+   (boot — `app.ts`, `serve.ts`, `main.tsx` — plus epic-wide router, shell, and assets). Import the aggregate
    through `@src`.
 2. **`ask-cross-aggregate-sync`** — if more than one aggregate is in play,
    AskQuestion as specified above and persist the answer **before** calling
@@ -395,8 +398,8 @@ If this change will not stay here, follow `practices/clean_engineering/code.mdc`
 
 ### Layout and tiers
 
-- **`epic-package-screens-only`** — Views belong to the domain. Keep the aggregate under `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, one `<aggregate>-routes.ts`, and the json store). Limit `packages/<epicSlug>/` to epic boot (`app.ts`, `serve.ts`, `main.tsx`) — no `*-view.tsx`, `*-redirect.tsx`, `*-node.ts`, `*-client.tsx`, views, route file, `source/`, or `data/` tree under the epic package.
-- **`domain-core-file-matches-folder-slug`** — Name the domain core file after the aggregate folder slug in kebab-case (`src/<boundedContext>/<aggregate>/<aggregate>.ts`). Keep exported classes PascalCase (`{Domain}`). Place `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, and one route file in that same aggregate folder.
+- **`screens-live-in-their-domain`** — A screen lives in the aggregate folder of the domain it serves, beside that aggregate's client and node. Keep the aggregate under `src/<boundedContext>/<aggregate>/` (`<aggregate>.ts`, `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, one `<aggregate>-routes.ts`, and the json store). `packages/<epicSlug>/` holds epic boot (`app.ts`, `serve.ts`, `main.tsx`) and what is common across the epic — the top-level router, the shell layout, shared assets, and epic-wide logic such as a plan carried in from a marketing link. Never put a step screen, `<aggregate>.ts`, `<aggregate>-node.ts`, `<aggregate>-client.tsx`, or an aggregate route file under the epic package.
+- **`domain-core-file-matches-folder-slug`** — Name the domain core file after the aggregate folder slug in kebab-case (`src/<boundedContext>/<aggregate>/<aggregate>.ts`). Keep exported classes PascalCase (`{Domain}`). Place `<aggregate>-node.ts`, `<aggregate>-client.tsx`, the views, and one route file in that same aggregate folder. Exception: the epic-wide module `src/<epicSlug>/` (e.g. `src/my-paradise/`) holds global session and navigation objects that belong to no single aggregate; it needs no `<epicSlug>.ts` core, and its node and client need not extend one.
 - **`node-tier-uses-node-suffix`** — Name the Node.js LERN tier with the `Node` suffix and `<domain>-node.ts` filenames (`{Domain}Node`, `{Domain}RepositoryNode`). Type request-context fields as `*Node`, not `Server`. `{Domain}RepositoryNode` extends the in-memory `{Domain}Repository` and is the class that runs Zod `.parse()` and writes `<aggregate>.json`.
 - **`client-subtypes-domain-hosts-browser-logic`** — For each aggregate folder, derive `<aggregate>.ts`, `<aggregate>-client.tsx`, and `<aggregate>-node.ts` from the folder slug. The `*Client` and `*Node` classes extend the core domain class. The view renders the client. The node selects the view. Domain operations on the core are the operations the client hosts for the browser; field changes return a new client instance for React state.
 

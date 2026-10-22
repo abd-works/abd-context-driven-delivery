@@ -41,25 +41,46 @@ with description("pattern overlays"):
     with it("should add the lern nodes when that overlay is applied to the example"):
         from graph import Graph
 
-        sample = _HERE / "examples" / "input"
+        sample = _HERE / "_examples" / "input"
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
-        graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"])
+        graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True)
         names = {node.type for node in graph.practice("ddd").by_id.values()}
-        expect("DomainNode" in names).to(equal(True))
-        expect("DomainClient" in names).to(equal(True))
+        expect("NodeRoot" in names).to(equal(True))
+        expect("ClientRoot" in names).to(equal(True))
         story_types = {node.type for node in graph.practice("stories").by_id.values()}
         expect("StoryShared" in story_types).to(equal(True))
 
     with it("should load the full source file for a lern domain node"):
         from graph import Graph
 
-        sample = _HERE / "examples" / "input"
+        sample = _HERE / "_examples" / "input"
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
-        graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"])
-        domain_nodes = [node for node in graph.practice("ddd").by_id.values() if node.type == "DomainNode"]
+        graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True)
+        domain_nodes = [node for node in graph.practice("ddd").by_id.values() if node.type == "NodeRoot"]
         expect(len(domain_nodes) > 0).to(equal(True))
         node = domain_nodes[0]
         expect(node.source.end_line > 1).to(equal(True))
         expect(len(node.source.text.splitlines()) > 1).to(equal(True))
+
+    with it("should parent lern tier files on their aggregate in the explorer tree"):
+        from graph import Graph
+
+        sample = _HERE / "_examples" / "input"
+        graph = Graph()
+        roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
+        graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True)
+        ddd_tree = graph.practice("ddd").root_node.serialize()
+
+        def walk(node):
+            yield node
+            for child in node.get("children") or []:
+                yield from walk(child)
+
+        aggregate = next(
+            item for item in walk(ddd_tree) if item.get("type") == "Aggregate" and item.get("name") == "account-credentials"
+        )
+        child_names = [child.get("name") for child in aggregate.get("children") or []]
+        expect("account-credentials-node" in child_names).to(equal(True))
+        expect("account-credentials-client" in child_names).to(equal(True))

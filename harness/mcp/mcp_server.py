@@ -388,12 +388,22 @@ class McpInstallation(Installation):
             return
         self.mcp_operations.append(McpOperationDefinition.from_tool(tool))
 
+    @property
+    def manifest_path(self) -> Path:
+        """Cursor reads ``<ide>/mcp.json``; Claude Code reads ``.mcp.json`` at the project root."""
+        if self.ide == "Claude":
+            return self._project_root() / ".mcp.json"
+        return self.path / "mcp.json"
+
     def write_mcp_manifest(self) -> None:
         if not self.mcp_operations:
             return
-        dest = self.path / "mcp.json"
+        dest = self.manifest_path
         dest.parent.mkdir(parents=True, exist_ok=True)
-        text = json.dumps(self._stdio_manifest(), indent=2) + "\n"
+        manifest = self._stdio_manifest()
+        if self.ide == "Claude":
+            manifest = self._merged_with_other_servers(dest, manifest)
+        text = json.dumps(manifest, indent=2) + "\n"
         if dest.is_file() and dest.read_text(encoding="utf-8") == text:
             self.track_write(dest)
             return
@@ -406,26 +416,38 @@ class McpInstallation(Installation):
         repo = self.repo or Path(__file__).resolve().parents[2]
         project = self._project_root()
         host = repo / "harness" / "mcp" / "scripts" / "start_host.py"
-        return {
-            "mcpServers": {
-                "cdd": {
-                    "type": "stdio",
-                    "command": sys.executable,
-                    "args": ["-u", str(host)],
-                    "cwd": str(project),
-                    "env": {
-                        "PYTHONPATH": Installer(repo=repo).pythonpath(),
-                        "PYTHONPYCACHEPREFIX": Installer(repo=repo).pycache_prefix(),
-                        "PYTHONIOENCODING": "utf-8",
-                        "CDD_PROJECT": str(project),
-                    },
-                }
-            }
+        server: dict[str, Any] = {
+            "type": "stdio",
+            "command": sys.executable,
+            "args": ["-u", str(host)],
+            "cwd": str(project),
+            "env": {
+                "PYTHONPATH": Installer(repo=repo).pythonpath(),
+                "PYTHONPYCACHEPREFIX": Installer(repo=repo).pycache_prefix(),
+                "PYTHONIOENCODING": "utf-8",
+                "CDD_PROJECT": str(project),
+            },
         }
+        if self.ide == "Claude":
+            # Claude Code starts stdio servers from the project root and has no ``cwd`` field.
+            del server["cwd"]
+            server["env"]["CDD_IDE_PATH"] = str(Path(self.path).resolve())
+        return {"mcpServers": {"cdd": server}}
+
+    def _merged_with_other_servers(self, dest: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+        """``.mcp.json`` is shared with the project's own servers; replace only ``cdd``."""
+        try:
+            existing = json.loads(dest.read_text(encoding="utf-8")) if dest.is_file() else {}
+        except (OSError, json.JSONDecodeError):
+            existing = {}
+        merged = dict(existing) if isinstance(existing, dict) else {}
+        servers = merged.get("mcpServers")
+        merged["mcpServers"] = {**(servers if isinstance(servers, dict) else {}), **manifest["mcpServers"]}
+        return merged
 
     def _project_root(self) -> Path:
         path = Path(self.path)
-        return path.parent if path.name == ".cursor" else path
+        return path.parent if path.name in {".cursor", ".claude"} else path
 
     def bind(self, server: Any) -> None:
         self._bound = True
@@ -433,7 +455,7 @@ class McpInstallation(Installation):
             server.enroll(op)
 
     def standup(self) -> McpHost:
-        self.host = McpHost.standup(self.path / "mcp.json", repo=self.repo)
+        self.host = McpHost.standup(self.manifest_path, repo=self.repo)
         return self.host
 
     def diagnose(self) -> dict[str, Any]:
@@ -446,6 +468,9 @@ class McpInstallation(Installation):
         return host_pid.is_this_process or host_pid.is_running()
 
     def ensure_cursor_host(self) -> str:
+        if self.ide == "Claude":
+            # Claude Code launches the stdio host each session; touching .mcp.json would re-prompt approval.
+            return "managed by Claude Code" if self.manifest_path.is_file() else "missing"
         manifest = self.path / "mcp.json"
         spec = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo)).server_entry_from_manifest(
             manifest

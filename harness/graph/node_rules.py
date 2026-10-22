@@ -11,9 +11,10 @@ from harness.graph.schema_rules import active_overlay_patterns, slugs_for_type
 def attach_node_rules(node) -> GraphRulesCollection:
     """Schema slugs on this node → GraphRule entries (prose + optional check class)."""
     overlays = tuple(node.practice.graph.overlays) if node.practice.graph else ()
-    slugs = slugs_for_type(node.practice.name, node.type, active_overlay_patterns(overlays))
-    checks = checks_for_practice(node.practice.name)
-    prose = prose_by_slug(node.practice.name)
+    patterns = active_overlay_patterns(overlays)
+    slugs = slugs_for_type(node.practice.name, node.type, patterns)
+    checks = checks_for_practice(node.practice.name, patterns)
+    prose = prose_by_slug(node.practice.name, patterns)
     entries: dict[str, GraphRule] = {}
     for slug in slugs:
         body = prose.get(slug, "")

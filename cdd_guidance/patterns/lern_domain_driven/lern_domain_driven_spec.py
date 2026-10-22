@@ -47,7 +47,7 @@ from cdd_guidance.practices.stories.stories import Stories
 from harness.guidance.rule import RulesCollection
 
 _ALL_RULE_SLUGS = (
-    "epic-package-screens-only",
+    "screens-live-in-their-domain",
     "domain-core-file-matches-folder-slug",
     "node-tier-uses-node-suffix",
     "client-subtypes-domain-hosts-browser-logic",

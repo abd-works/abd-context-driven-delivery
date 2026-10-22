@@ -1215,3 +1215,57 @@ with description("an operation annotated as a Cursor hook"):
     with context("that omits the event"):
         with it("should raise ValueError"):
             expect(HookDecoration().omitted_event).to(raise_error(ValueError))
+
+# (S) Installer --> Install for Claude Code
+with description("toolsets installed for Claude Code") as self:
+    with before.each:
+        self._branch_tmp = tempfile.mkdtemp()
+        self.project = Path(self._branch_tmp)
+        self.tree = self.project / ".claude"
+        self.tree.mkdir()
+        (self.project / ".mcp.json").write_text(
+            json.dumps({"mcpServers": {"other": {"command": "other"}}}), encoding="utf-8"
+        )
+        (self.tree / "settings.json").write_text(
+            json.dumps({"permissions": {"allow": ["Bash(ls)"]}}), encoding="utf-8"
+        )
+        Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT).install(
+            [SamplePracticeWithFidelities(format="markdown"), SampleMcpOps(), SampleHookOps()]
+        )
+        self.settings = json.loads((self.tree / "settings.json").read_text(encoding="utf-8"))
+
+    with after.each:
+        shutil.rmtree(self._branch_tmp, ignore_errors=True)
+
+    with it("should place every skill one folder under skills, named by its whole path"):
+        for path in (self.tree / "skills").rglob("SKILL.md"):
+            expect(path.parent.parent).to(equal(self.tree / "skills"))
+            expect(path.read_text(encoding="utf-8")).to(contain(f"name: {path.parent.name}\n"))
+        expect(InstalledTree(self.tree).skill_path("harness-guidance-fixtures-sample-tool-sample-tool-sketch")).not_to(
+            equal(None)
+        )
+
+    with it("should write rules as markdown, not mdc"):
+        expect(InstalledTree(self.tree).rule_path("sample-tool-sketch.md")).not_to(equal(None))
+        expect(list((self.tree / "rules").rglob("*.mdc"))).to(equal([]))
+
+    with it("should add the cdd server to the project .mcp.json and keep the project's own servers"):
+        servers = json.loads((self.project / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]
+        expect(servers).to(have_key("other"))
+        expect(servers["cdd"]).not_to(have_key("cwd"))
+        expect(servers["cdd"]["env"]["CDD_IDE_PATH"]).to(equal(str(self.tree.resolve())))
+        expect((self.tree / "mcp.json").exists()).to(equal(False))
+
+    with it("should install no hooks and leave the project's settings.json alone"):
+        expect(self.settings).to(equal({"permissions": {"allow": ["Bash(ls)"]}}))
+        expect((self.tree / "hooks.json").exists()).to(equal(False))
+        expect((self.tree / "hook-handlers.json").exists()).to(equal(False))
+
+    with context("with rules scoped by globs"):
+        with it("should list each glob under paths"):
+            from harness.installation.files import FileInstallation
+
+            text = FileInstallation("Claude", Path("."), "rules")._claude_rules_front_matter(
+                "d", "**/*.py, **/*.ts"
+            )
+            expect(text).to(equal('---\ndescription: "d"\npaths:\n  - "**/*.py"\n  - "**/*.ts"\n---\n\n'))

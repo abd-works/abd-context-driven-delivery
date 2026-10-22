@@ -1,0 +1,52 @@
+# LERN rule slugs for graph nodes (see lern_domain_driven.md § Shared rules).
+aggregate:
+  rules:
+    - screens-live-in-their-domain
+    - domain-core-file-matches-folder-slug
+nodeRoot:
+  rules:
+    - node-tier-uses-node-suffix
+    - node-decides-next-page
+    - share-domain-logic
+    - maintain-layer-purity
+    - use-ubiquitous-language
+    - cross-layer-method-naming
+    - preserve-arg-names-across-layers
+    - implement-full-interfaces
+    - include-all-external-dependencies
+clientRoot:
+  rules:
+    - client-subtypes-domain-hosts-browser-logic
+    - share-domain-logic
+    - maintain-layer-purity
+    - one-repository-per-aggregate
+    - use-ubiquitous-language
+    - cross-layer-method-naming
+    - preserve-arg-names-across-layers
+    - property-casing-transform
+route:
+  rules:
+    - router-asks-the-node
+    - ensure-type-safe-routes
+    - standard-mutation-response
+    - cross-layer-method-naming
+    - preserve-arg-names-across-layers
+view:
+  rules:
+    - views-render-only
+    - consistent-view-naming
+jsonStore:
+  rules:
+    - one-json-store-per-aggregate
+    - property-casing-transform
+nodeRepository:
+  rules:
+    - repository-owns-aggregate-lifecycle
+    - one-repository-per-aggregate
+    - implement-domain-entities-correctly
+    - node-tier-uses-node-suffix
+entityRoot:
+  rules:
+    - share-domain-logic
+    - implement-domain-entities-correctly
+    - use-ubiquitous-language

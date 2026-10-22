@@ -627,7 +627,7 @@ it('should offer an overlay folder picker between practice and node filters', as
   const user = userEvent.setup();
   await openFolder(user);
   expect(screen.getByTestId('overlay-add')).toBeTruthy();
-  expect(screen.getByText('No overlays. Add a folder with a practices/ tree.')).toBeTruthy();
+  expect(screen.getByText(/No active overlay/i)).toBeTruthy();
 });
 
 it('should apply overlays through the api when a folder is chosen', async () => {
@@ -644,7 +644,7 @@ it('should apply overlays through the api when a folder is chosen', async () => 
       ),
     ).toBe(true),
   );
-  expect(screen.getByTestId('overlay-list').textContent).toContain('lern_domain_driven');
+  expect(screen.getByTestId('overlay-list').textContent).toMatch(/Lern domain driven|lern_domain_driven/i);
 });
 
 it('should remove an overlay when its remove control is clicked', async () => {

@@ -59,7 +59,10 @@ def channel_rules_for_practice(practice: str, channel: str) -> dict[str, Practic
     return _load_module_rules(path)
 
 
-def checks_for_practice(practice: str) -> dict[str, PracticeGraphRule]:
+def checks_for_practice(
+    practice: str,
+    active_patterns: tuple[str, ...] = (),
+) -> dict[str, PracticeGraphRule]:
     merged = dict(graph_rules_for_practice(practice))
     if practice == "clean_engineering":
         for channel in _CE_CHANNEL_RULES:
@@ -74,15 +77,17 @@ def checks_for_practice(practice: str) -> dict[str, PracticeGraphRule]:
 
 def checks_for_node(node) -> dict[str, PracticeGraphRule]:
     """Checks for this node type; code rules are language-agnostic (model shape)."""
-    from harness.graph.schema_rules import ce_anchor_type
+    from harness.graph.schema_rules import active_overlay_patterns, ce_anchor_type
 
     practice_name = node.practice.name
+    overlays = tuple(node.practice.graph.overlays) if node.practice.graph else ()
+    patterns = active_overlay_patterns(overlays)
     language = language_for_node(node)
-    merged = dict(checks_for_practice(practice_name))
+    merged = dict(checks_for_practice(practice_name, patterns))
     if language and language not in {"graph", "python", "typescript", "javascript"}:
         merged.update(channel_rules_for_practice(practice_name, language))
     type_targets = {node.type}
-    anchor = ce_anchor_type(practice_name, node.type)
+    anchor = ce_anchor_type(practice_name, node.type, patterns)
     if anchor:
         type_targets.add(anchor)
     applicable: dict[str, PracticeGraphRule] = {}

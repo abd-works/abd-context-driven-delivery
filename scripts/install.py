@@ -12,7 +12,11 @@ if str(_REPO) not in sys.path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install CDD toolsets into the IDE path.")
-    parser.add_argument("--ide", default=None, help="IDE name. Default is the saved install, or Cursor.")
+    parser.add_argument(
+        "--ide",
+        default=None,
+        help="IDE name: Cursor, VS Code, Kilo, or Claude. Default is the saved install, or Cursor.",
+    )
     parser.add_argument("--path", default=None, help="IDE config directory. Default is the saved install path.")
     parser.add_argument(
         "--no-replace",

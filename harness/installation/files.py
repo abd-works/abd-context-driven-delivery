@@ -106,19 +106,28 @@ class FileInstallation(Installation):
         folder = self.folder_for(toolset)
         op = self._op_slug(name)
         if destination == "skill":
-            return Path("skills") / self._skill_folder(toolset, op) / "SKILL.md"
+            skill_folder = self._skill_folder(toolset, op)
+            if self.ide == "Claude":
+                skill_folder = self._flat_skill_folder(skill_folder)
+            return Path("skills") / skill_folder / "SKILL.md"
         if destination == "command":
             base = Path("prompts") if self.ide == "VS Code" else Path("commands")
             return base / self._command_folder(toolset, folder) / f"{self._command_stem(toolset, op)}.md"
         if destination == "rules":
+            suffix = ".md" if self.ide == "Claude" else ".mdc"
             kebab = self._kebab_folder(folder)
             if getattr(toolset, "practice_guidance", None) is not None:
                 slug = getattr(toolset, "slug", None)
                 stem = self._op_slug(str(slug)) if slug else self._command_stem(toolset, kebab.name)
                 parent = kebab.parent if kebab.name else kebab
-                return Path("rules") / parent / f"{stem}.mdc"
-            return Path("rules") / kebab.with_suffix(".mdc")
+                return Path("rules") / parent / f"{stem}{suffix}"
+            return Path("rules") / kebab.with_suffix(suffix)
         return folder / str(name)
+
+    def _flat_skill_folder(self, folder: Path) -> Path:
+        """Claude Code only discovers ``skills/<name>/SKILL.md``, so nested folders join into one name."""
+        parts = [part for part in folder.parts if part not in {".", "/", "\\"}]
+        return Path("-".join(parts) or "toolset")
 
     def _op_slug(self, name: str) -> str:
         return re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", name).replace("_", "-").lower()
@@ -380,6 +389,8 @@ class FileInstallation(Installation):
             flagged = getattr(applies, "always_apply", None)
             if flagged is not None:
                 always_apply = bool(flagged)
+        if self.ide == "Claude":
+            return self._claude_rules_front_matter(description, globs)
         lines = [
             "---",
             f"alwaysApply: {'true' if always_apply else 'false'}",
@@ -387,5 +398,15 @@ class FileInstallation(Installation):
         ]
         if globs:
             lines.append(f"globs: {globs}")
+        lines.append("---")
+        return "\n".join(lines) + "\n\n"
+
+    def _claude_rules_front_matter(self, description: str, globs: str) -> str:
+        """Claude Code rules scope by ``paths``; a rule without paths loads in every session."""
+        lines = ["---", f'description: "{description}"']
+        patterns = [item.strip() for item in globs.split(",") if item.strip()]
+        if patterns:
+            lines.append("paths:")
+            lines.extend(f'  - "{pattern}"' for pattern in patterns)
         lines.append("---")
         return "\n".join(lines) + "\n\n"

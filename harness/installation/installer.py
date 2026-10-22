@@ -35,6 +35,7 @@ class Installer:
         "Cursor": ".cursor",
         "VS Code": ".github",
         "Kilo": ".kilo",
+        "Claude": ".claude",
     }
     _SKIP_DIRS = frozenset(
         {
@@ -311,7 +312,8 @@ class Installer:
                 )
                 self._bind_install_tracker(markdown)
                 installations.append(markdown)
-        if InstallDestination.HOOK in destinations:
+        # Claude Code hooks are not wired yet; its install carries no hook channel.
+        if InstallDestination.HOOK in destinations and self.ide != "Claude":
             self._bind_install_tracker(self._hook)
             installations.append(self._hook)
         return installations
@@ -386,7 +388,7 @@ class Installer:
         toolsets: Iterable[Any] | None = None,
         replace: bool = True,
     ) -> Any:
-        """Install CDD into ``.cursor`` — skills, commands, rules, MCP, and hooks. ``replace`` wipes the previous install first.
+        """Install CDD into ``.cursor`` (or ``.claude`` with ``--ide Claude``) — skills, commands, rules, MCP, and hooks. ``replace`` wipes the previous install first.
 
         Installer-only refresh (``/install`` and ``/clean`` without walking the catalog): ``python scripts/install.py --self`` from this repo — not MCP.
 
@@ -491,6 +493,8 @@ class Installer:
 
     def ensure_runtimes(self) -> dict[str, Any]:
         """Start the hook daemon and MCP host; fail if either stays down."""
+        if self.ide == "Claude":
+            return {"hook": "not installed", "mcp": self._ensure_mcp_runtime()}
         hook_pid = self._ensure_hook_runtime()
         mcp = self._ensure_mcp_runtime()
         print(
@@ -514,6 +518,8 @@ class Installer:
 
         installation = McpInstallation(self.ide, self.path, repo=self.repo)
         status = installation.ensure_cursor_host()
+        if self.ide == "Claude":
+            return status
         if installation.cursor_host_is_running():
             return "running"
         deadline = time.time() + 20
@@ -747,7 +753,8 @@ class Installer:
         folder = self.path / "rules"
         if not folder.is_dir():
             return []
-        return sorted(path.stem for path in folder.rglob("*.mdc"))
+        pattern = "*.md" if self.ide == "Claude" else "*.mdc"
+        return sorted(path.stem for path in folder.rglob(pattern))
 
     def _mcp_names(self) -> list[str]:
         operations = getattr(self._mcp, "mcp_operations", None) or []

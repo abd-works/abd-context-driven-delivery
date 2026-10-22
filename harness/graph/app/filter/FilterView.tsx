@@ -1,4 +1,5 @@
 import type { FilterSelection } from './FilterClient';
+import { overlayCatalogLabel, overlayPathLabel } from '../overlay-labels';
 
 type FilterViewProps = {
   open: boolean;
@@ -8,6 +9,8 @@ type FilterViewProps = {
   relationships: string[];
   rules: string[];
   availableOverlays?: string[];
+  overlayApplying?: boolean;
+  overlayHint?: string;
   onChange: (selection: FilterSelection) => void;
   onAddOverlay: () => void;
   onAddNamedOverlay?: (name: string) => void;
@@ -22,6 +25,8 @@ export function FilterView({
   relationships,
   rules,
   availableOverlays = [],
+  overlayApplying = false,
+  overlayHint = '',
   onChange,
   onAddOverlay,
   onAddNamedOverlay,
@@ -55,25 +60,31 @@ export function FilterView({
                   type="button"
                   className="overlay-catalog-item"
                   data-testid={`overlay-add-${name}`}
+                  disabled={overlayApplying}
                   onClick={() => onAddNamedOverlay?.(name)}
                 >
-                  {name}
+                  {overlayCatalogLabel(name)}
                 </button>
               ))}
           </div>
         ) : null}
+        {overlayApplying ? <p className="overlay-status" data-testid="overlay-applying">Applying overlay…</p> : null}
+        {overlayHint ? <p className="overlay-hint" data-testid="overlay-hint">{overlayHint}</p> : null}
         <ul className="overlay-items" data-testid="overlay-list">
           {selection.overlays.length === 0 ? (
-            <li className="overlay-empty">No overlays. Add a folder with a practices/ tree.</li>
+            <li className="overlay-empty">
+              No active overlay. Click <strong>Lern domain driven</strong> above (or Add folder…), then wait for the graph
+              to rebuild.
+            </li>
           ) : (
             selection.overlays.map((overlay) => (
               <li key={overlay} className="overlay-item">
-                <span className="overlay-path" title={overlay}>{overlayLabel(overlay)}</span>
+                <span className="overlay-path" title={overlay}>{overlayPathLabel(overlay)}</span>
                 <button
                   type="button"
                   className="overlay-remove"
-                  data-testid={`overlay-remove-${overlayLabel(overlay)}`}
-                  aria-label={`Remove overlay ${overlayLabel(overlay)}`}
+                  data-testid={`overlay-remove-${overlayId(overlay)}`}
+                  aria-label={`Remove overlay ${overlayPathLabel(overlay)}`}
                   onClick={() => onRemoveOverlay(overlay)}
                 >
                   ×
@@ -121,10 +132,14 @@ export function FilterView({
   );
 }
 
-function overlayLabel(path: string): string {
+function overlayId(path: string): string {
   const trimmed = path.replace(/[/\\]+$/, '');
   const parts = trimmed.split(/[/\\]/);
   return parts[parts.length - 1] || path;
+}
+
+function overlayLabel(path: string): string {
+  return overlayCatalogLabel(overlayId(path));
 }
 
 function FilterSelect({
