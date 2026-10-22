@@ -124,6 +124,13 @@ class Practice:
         self.graph = graph
         self.folder_sets = folder_sets
 
+    def to_mcp_result(self) -> dict:
+        """JSON-safe snapshot for MCP tool results."""
+        return {
+            "name": self.name,
+            "folder_sets": [[str(Path(item)) for item in group] for group in self.folder_sets],
+        }
+
 
 _PRACTICE_TYPES = {
     "stories": "cdd_guidance.practices.stories.stories:Stories",
@@ -159,6 +166,27 @@ class Session:
     @name.setter
     def name(self, value: str) -> None:
         self._session_name = (value or "").strip()
+
+    def to_mcp_result(self) -> dict:
+        """JSON-safe snapshot for MCP tool results — name, paths, practice roots."""
+        return {
+            "name": self.name,
+            "workpath": None if self.workpath is None else str(self.workpath),
+            "repo_path": None if self.repo_path is None else str(self.repo_path),
+            "session_path": None if self.session_path is None else str(self.session_path),
+            "practices": [entry.to_mcp_result() for entry in self._opened],
+            "parent_folders": self._stored_folders(),
+            "practice_roots": self._practice_roots_snapshot(),
+        }
+
+    def _practice_roots_snapshot(self) -> dict[str, list[list[str]]]:
+        stored = self._stored_folders()
+        roots: dict[str, list[list[str]]] = {}
+        for name in _PRACTICE_TYPES:
+            roots[name] = stored.get(name) or self._default_folder_sets(
+                self._guidance_for(name), name
+            )
+        return roots
 
     @classmethod
     def _slot(cls) -> Session:
@@ -201,6 +229,7 @@ class Session:
 
     @classmethod
     @mcp
+    @command(name="current-session")
     @agent_tool
     def current(cls, repo_path: Path | str | None = None) -> Session | None:
         """Named session already in memory, or the one saved on the repo."""
@@ -454,7 +483,7 @@ class Session:
         if found is not None:
             return found
         guidance = self._guidance_for(name)
-        sets = self._stored_folders().get(name) or self._default_folder_sets(guidance)
+        sets = self._stored_folders().get(name) or self._default_folder_sets(guidance, name)
         folders = [[Path(item) for item in group] for group in sets]
         opened = Practice(name, guidance, self._graph_for(name, folders), sets)
         self._opened.append(opened)
@@ -479,7 +508,7 @@ class Session:
     def remember_parent_folders(self, practice: str, folder_sets: list[list[Path]]) -> None:
         stored = self._stored_folders()
         normalized = self._normalize_sets(folder_sets)
-        if normalized == self._default_folder_sets(self._guidance_for(practice)):
+        if normalized == self._default_folder_sets(self._guidance_for(practice), practice):
             stored.pop(practice, None)
         else:
             stored[practice] = normalized
@@ -1038,9 +1067,10 @@ class Session:
         return True
 
     def _default_folder_sets(self, guidance: PracticeGuidance) -> list[list[str]]:
-        import inspect
-
-        folder = Path(inspect.getfile(type(guidance))).resolve().parent
+        """Content roots under the workpath — practice ``default_workspace_folder`` (tests, src, …)."""
+        base = self.workpath or self.repo_path or Path.cwd()
+        relative = getattr(guidance, "default_workspace_folder", None) or "."
+        folder = (Path(base) / relative).resolve()
         return [[str(folder)]]
 
     def _normalize_sets(self, folder_sets: list[list[Path]]) -> list[list[str]]:

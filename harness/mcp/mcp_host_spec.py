@@ -1,4 +1,5 @@
 """BDD spec for MCP host JSON Schema binding of Python parameter types."""
+import json
 import os
 import re
 import shutil
@@ -25,6 +26,7 @@ from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
+from space.session import Session
 
 
 class JsonSchemaAnyOf:
@@ -306,6 +308,31 @@ with description("an MCP host input schema"):
                 expect(schema["properties"]["tools"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )
+
+
+with description("an MCP host tool result") as self:
+    with context("that is a named session"):
+        with before.each:
+            Session._current = None
+            self.repo = Path(tempfile.mkdtemp())
+            self.work = self.repo / "work"
+            self.work.mkdir()
+            Session.new("alpha", self.work, self.repo)
+            self.host = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo))
+            self.blocks = self.host._content_blocks(Session.current())
+            self.payload = json.loads(self.blocks[0].text)
+
+        with after.each:
+            Session._current = None
+
+        with it("should expose the session name as JSON"):
+            expect(self.payload["name"]).to(equal("alpha"))
+
+        with it("should expose practice root folder paths"):
+            expect("stories" in self.payload["practice_roots"]).to(equal(True))
+            expect(self.payload["practice_roots"]["stories"][0][0]).to(
+                equal(str((self.work / "tests").resolve()))
+            )
 
 
 with description("an MCP host") as self:

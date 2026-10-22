@@ -18,7 +18,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 
 ## Seam
 
-`space.repo.repo:Repo` — chaining slash `/branch {name}` and `/worktree {name}` (MCP `repo.branch`, `repo.worktree`); primitive slash `/new-branch`, `/switch-branch`, `/close-branch`, `/new-worktree`, `/switch-worktree`, `/close-worktree` (instruction commands → MCP `repo.new_branch`, …). Branch primitives never add worktrees. `/push` (MCP `repo.push` → `push_commit`). Workflow board moves stay on `tools/workflow`. Seam terms: Repo, Branch, Commit, Project, Ticket, TicketState, ResearchTag.
+`space.repo.repo:Repo` — chaining slash `/branch {name}` and `/worktree {name}` (MCP `repo.branch`, `repo.worktree`); skill `/branch-create` and slash `/new-branch` (MCP `repo.new_branch`); `/switch-branch`, `/close-branch`, `/new-worktree`, `/switch-worktree`, `/close-worktree` (instruction commands → matching `repo.*` MCP tools); skill `/branch-switch` (MCP `repo.branch_switch`). Branch primitives never add worktrees. `/push` (MCP `repo.push` → `push_commit`). Workflow board moves stay on `tools/workflow`. Seam terms: Repo, Branch, Commit, Project, Ticket, TicketState, ResearchTag.
 
 ## Constraint
 

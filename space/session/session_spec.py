@@ -777,8 +777,10 @@ with description("a practice"):
             expect([item.name for item in self.session.practices]).to(equal(["bdd"]))
 
         with context("with the practice default folders"):
-            with it("should point that practice's graph root at the practice's own folder"):
-                expect(self.opened.graph.practices["bdd"].source_root.endswith("bdd")).to(equal(True))
+            with it("should point that practice's graph root at its default workspace folder under workpath"):
+                expect(self.opened.graph.practices["bdd"].source_root).to(
+                    equal(str((self.work / "src").resolve()))
+                )
 
             # (E) Open Named Session
             # (S) Session --> Remember Practice Folders
@@ -786,6 +788,23 @@ with description("a practice"):
                 path = self.repo / ".context" / "practices.json"
                 text = path.read_text(encoding="utf-8") if path.is_file() else ""
                 expect("bdd" in text).to(equal(False))
+
+        with context("with practice-folders.config pointing a practice at the workpath"):
+            with before.each:
+                context = self.repo / ".context"
+                context.mkdir(parents=True, exist_ok=True)
+                (context / "practice-folders.config").write_text(
+                    "bdd: .\n", encoding="utf-8"
+                )
+                Session._current = None
+                Session.switch("alpha", repo_path=self.repo)
+                self.session = Session.current()
+                self.opened = self.session.practice("bdd")
+
+            with it("should point that practice's graph root at the workpath"):
+                expect(self.opened.graph.practices["bdd"].source_root).to(
+                    equal(str(self.work.resolve()))
+                )
 
         with context("with parent folders that are not the default"):
             with before.each:

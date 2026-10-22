@@ -1734,8 +1734,12 @@ class Repo:
 
     @agent_tool
     @mcp
+    @skill(name="branch-create")
     def new_branch(self, name: str, switch: bool = True) -> str:
-        """Create branch ``name`` from HEAD in the current clone only."""
+        """Create branch ``name`` from HEAD in the current clone only.
+
+        Does not add a worktree. For a sibling worktree use ``repo.new_worktree`` or ``/branch``.
+        """
         cleaned = (name or "").strip()
         if not cleaned:
             raise ValueError("branch name is required")

@@ -1081,8 +1081,17 @@ class McpHost:
         )
 
     def _content_blocks(self, value: object) -> list[types.TextContent]:
-        text = value if isinstance(value, str) else json.dumps(value, default=str)
+        text = value if isinstance(value, str) else json.dumps(value, default=self._json_default)
         return [types.TextContent(type="text", text=text)]
+
+    @staticmethod
+    def _json_default(value: object) -> object:
+        converter = getattr(value, "to_mcp_result", None)
+        if callable(converter):
+            return converter()
+        if isinstance(value, Path):
+            return str(value)
+        raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
     async def run_stdio(self) -> None:
         init_options = InitializationOptions(

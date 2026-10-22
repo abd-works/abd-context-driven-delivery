@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import re
 import shutil
 import stat
 import sys
@@ -381,6 +382,42 @@ class Installer:
                 if twin.is_dir():
                     self._rmtree(twin)
 
+    _SKILL_MCP_NAME = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")
+
+    def _remove_skills_naming_missing_mcp(self) -> list[str]:
+        """Drop skill files that name an MCP tool this install did not enroll.
+
+        Orphan skills from a prior API (for example ``branch.create`` after the
+        tool became ``repo.new_branch``) survive ``clean`` when they were never
+        tracked. Agents then thrash searching for a tool that cannot exist.
+        Skills without an MCP invoke line are left alone (hand-authored orphans).
+        """
+        skills = self.path / "skills"
+        if not skills.is_dir():
+            return []
+        enrolled = set(self._mcp_names())
+        removed: list[str] = []
+        for path in skills.rglob("SKILL.md"):
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            names = self._SKILL_MCP_NAME.findall(text)
+            if not names:
+                continue
+            if all(name in enrolled for name in names):
+                continue
+            try:
+                rel = str(path.resolve().relative_to(self.path.resolve())).replace("\\", "/")
+            except ValueError:
+                continue
+            path.unlink()
+            removed.append(rel)
+            self._prune_empty_parents(path)
+            if rel in self._installed_paths:
+                self._installed_paths.remove(rel)
+        return removed
+
     @command(name="install")
     @agent_tool
     def install(
@@ -419,6 +456,10 @@ class Installer:
         self._install_installer_toolset()
         self._install_agents()
         self._remove_legacy_underscore_skills()
+        if replace:
+            # Only after a full wipe+republish is `_mcp_names()` the whole catalog.
+            # A partial install must not delete skills for toolsets not in this run.
+            self._remove_skills_naming_missing_mcp()
         self._prune_empty_skill_dirs()
         self._save_state()
         self._standup_channels()

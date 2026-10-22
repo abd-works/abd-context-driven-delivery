@@ -1068,6 +1068,12 @@ class Graph:
             return False
         if set(saved) != set(self._practice_roots):
             return False
+        for name, source in self._practice_roots.items():
+            row = saved.get(name)
+            if not isinstance(row, dict):
+                return False
+            if Path(str(row.get("source_root") or "")).resolve() != Path(source).resolve():
+                return False
         return list(document.get("overlays") or []) == list(self.overlays)
 
     def _read_saved_graph(self) -> dict | None:

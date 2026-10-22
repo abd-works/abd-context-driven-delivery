@@ -1,0 +1,49 @@
+2026-10-22T22:57:33Z repo.new_branch RepoConnectError: Cannot connect git: git rev-parse --abbrev-ref HEAD exceeded 10 seconds in C:\dev\abd-context-driven-delivery.
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 875, in git
+    completed = subprocess.run(
+                ^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Local\Programs\Python\Python312-arm64\Lib\subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Local\Programs\Python\Python312-arm64\Lib\subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Local\Programs\Python\Python312-arm64\Lib\subprocess.py", line 1630, in _communicate
+    raise TimeoutExpired(self.args, orig_timeout)
+subprocess.TimeoutExpired: Command '['C:\\Program Files\\Git\\cmd\\git.EXE', '-c', 'core.longpaths=true', '-C', 'C:\\dev\\abd-context-driven-delivery', 'rev-parse', '--abbrev-ref', 'HEAD']' timed out after 10 seconds
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1067, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 794, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 609, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 581, in _invoke_mcp_callable
+    return target(**args)
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1746, in new_branch
+    self._bind(self._agent_worktree().create_branch_in_place(cleaned, switch=switch))
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1707, in _agent_worktree
+    return Worktree(self._agent_repo())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1929, in __init__
+    self.branch = (path_or_repo.current_branch or "").strip()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1034, in current_branch
+    return self._git("rev-parse", "--abbrev-ref", "HEAD")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 946, in _git
+    return type(self).git(self.root, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 884, in git
+    raise RepoConnectError(
+space.repo.repo.RepoConnectError: Cannot connect git: git rev-parse --abbrev-ref HEAD exceeded 10 seconds in C:\dev\abd-context-driven-delivery.
+2026-10-22T22:57:33Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
