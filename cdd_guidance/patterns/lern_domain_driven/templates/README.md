@@ -17,7 +17,7 @@ templates/
 │       ├── {screenSlug}.tsx           ← views for this aggregate
 │       ├── {domainNames}-routes.ts    ← one route file for this aggregate
 │       └── {domainNames}.json         ← lowdb store for this aggregate
-├── {epicSlug}/                        ← epic package (boot only)
+├── {epicSlug}/                        ← epic package (boot + epic-wide router, shell, assets)
 │   ├── app.ts / serve.ts              ← Express factory + process listen
 │   ├── main.tsx / index.html / vite.config.ts
 │   └── package.json

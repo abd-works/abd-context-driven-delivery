@@ -165,3 +165,43 @@ Traceback (most recent call last):
   File "<agent_instructions>", line 12, in <module>
 NameError: name 'cls' is not defined
 2026-10-20T22:14:54Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-22T21:31:22Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-22T21:31:22Z render.render CodeStoryModelError: TypeScript story map parse expects a path->content dict
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1042, in dispatch
+    return None
+           ^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 769, in invoke_tool
+    installation.record_operation(tool)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 584, in invoke
+    return member(**args)
+           ^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 556, in _invoke_mcp_callable
+    ) -> None:
+               
+  File "C:\dev\abd-context-driven-delivery\cdd_guidance\actions\render\render.py", line 39, in render
+    converted = self.each(on)
+                ^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance_actions\guidance_actions.py", line 162, in each
+    return [operation(item) for item in self.listed()]
+            ^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\cdd_guidance\actions\render\render.py", line 37, in on
+    return item.render(format, payload, source=source)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 429, in render
+    model = self._to_object_model(content, source)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 447, in _to_object_model
+    return self._parse_content(source_format, content)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance\guidance.py", line 485, in _parse_content
+    return adapter.parse(self._incoming(source_format, content))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\cdd_guidance\practices\stories\model\code_story_model.py", line 409, in parse
+    return type(self)(self._tests_root).load(external)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\cdd_guidance\practices\stories\model\typescript\typescript_story_model.py", line 61, in load
+    raise CodeStoryModelError("TypeScript story map parse expects a path->content dict")
+cdd_guidance.practices.stories.model.code_story_model.CodeStoryModelError: TypeScript story map parse expects a path->content dict
+2026-10-22T21:31:22Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

@@ -1,7 +1,7 @@
 # LERN rule slugs for graph nodes (see lern_domain_driven.md § Shared rules).
 aggregate:
   rules:
-    - epic-package-screens-only
+    - screens-live-in-their-domain
     - domain-core-file-matches-folder-slug
 nodeRoot:
   rules:

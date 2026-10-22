@@ -9,6 +9,7 @@ import { ruleHits, selectionForRule, type GraphSelection } from './graph/graph-s
 import { SourceClient, type SourceText } from './source/SourceClient';
 import { SourceView, type SourceRule } from './source/SourceView';
 import { normalizeInventoryBundle } from './inventory-bundle';
+import { lernNodeTypesFromCatalog, lernOverlayActive, overlayPathLabel } from './overlay-labels';
 import type { ViolationFocus } from './source/violation-prompt';
 
 const PRACTICES = ['clean_engineering', 'stories', 'ddd', 'bdd', 'ux'];
@@ -39,6 +40,7 @@ export function App() {
   const [relationships, setRelationships] = useState<string[]>([]);
   const [rules, setRules] = useState<string[]>([]);
   const [availableOverlays, setAvailableOverlays] = useState<string[]>([]);
+  const [overlayApplying, setOverlayApplying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState('Loading the graph…');
   const [loadingLog, setLoadingLog] = useState<string[]>([]);
@@ -165,11 +167,14 @@ export function App() {
   function adoptInventory(bundle: InventoryBundle, filter: FilterSelection) {
     setCatalog(bundle.practices);
     setAvailableOverlays(bundle.available_overlays ?? []);
-    const shown = filter.practices.length ? filter.practices : Object.keys(bundle.practices);
+    const overlays = bundle.overlays?.length ? bundle.overlays : filter.overlays;
+    const merged = { ...filter, overlays };
+    const shown = merged.practices.length ? merged.practices : Object.keys(bundle.practices);
     setTrees(shown.map((name) => bundle.practices[name]?.tree).filter((tree): tree is GraphTree => Boolean(tree)));
     setNodeTypes(unique(shown.flatMap((name) => bundle.practices[name]?.node_types ?? [])));
     setRelationships(visibleRelationships(unique(shown.flatMap((name) => bundle.practices[name]?.edge_types ?? []))));
     setRules(unique(shown.flatMap((name) => bundle.practices[name]?.rules ?? [])));
+    setSelection(merged);
   }
 
   async function applyOverlays(overlays: string[]) {
@@ -178,20 +183,21 @@ export function App() {
       setSelection(next);
       return;
     }
+    setOverlayApplying(true);
     setLoading(true);
     setLoadingLabel('Applying pattern overlays…');
     setError('');
     try {
       const bundle = normalizeInventoryBundle(await filters.applyOverlays(overlays));
       const scope = next.practices.length ? next.practices : Object.keys(bundle.practices);
-      const refreshed = overlayFilterRefresh(selection, { ...next, practices: scope }, bundle.practices);
+      const refreshed = overlayFilterRefresh(selection, { ...next, practices: scope }, bundle.practices, bundle.overlays);
       adoptInventory(bundle, refreshed);
-      setSelection(refreshed);
       await applyFilter(refreshed, bundle.practices);
       window.localStorage.setItem(LAST_OVERLAYS, JSON.stringify(bundle.overlays));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
+      setOverlayApplying(false);
       setLoading(false);
     }
   }
@@ -220,6 +226,13 @@ export function App() {
       return;
     }
     void applyOverlays([...selection.overlays, name]);
+  }
+
+  function overlayHint(): string {
+    if (!lernOverlayActive(selection.overlays)) {
+      return '';
+    }
+    return 'LERN overlay is on. Under ddd, expand each aggregate for Node root / Client root / View / Route, or select those node types in the filter.';
   }
 
   async function applyFilter(next: FilterSelection, practices = catalog) {
@@ -339,6 +352,8 @@ export function App() {
               void applyFilter(next);
             }}
             availableOverlays={availableOverlays}
+            overlayApplying={overlayApplying}
+            overlayHint={overlayHint()}
             onAddOverlay={() => {
               void addOverlayFolder();
             }}
@@ -400,14 +415,21 @@ function overlayFilterRefresh(
   previous: FilterSelection,
   next: FilterSelection,
   catalog: Record<string, PracticeInventory>,
+  activeOverlays: string[] = next.overlays,
 ): FilterSelection {
   const scope = next.practices.length ? next.practices : Object.keys(catalog);
   const nodes = listed(scope, catalog, 'node_types');
   const edges = visibleRelationships(listed(scope, catalog, 'edge_types'));
   const rules = listed(scope, catalog, 'rules');
+  let node_types = mergeNewCatalogItems(previous.node_types, nodes);
+  if (lernOverlayActive(activeOverlays)) {
+    const lernTypes = lernNodeTypesFromCatalog(catalog.ddd?.node_types ?? []);
+    node_types = mergeNewCatalogItems(node_types, nodes, lernTypes);
+  }
   return {
     ...next,
-    node_types: mergeNewCatalogItems(previous.node_types, nodes),
+    overlays: activeOverlays.length ? activeOverlays : next.overlays,
+    node_types,
     relationships: mergeNewCatalogItems(previous.relationships, edges),
     rules: mergeNewCatalogItems(previous.rules, rules),
   };
@@ -431,9 +453,7 @@ function overlayIsActive(overlays: string[], name: string): boolean {
 }
 
 function overlayLabel(path: string): string {
-  const trimmed = path.replace(/[/\\]+$/, '');
-  const parts = trimmed.split(/[/\\]/);
-  return parts[parts.length - 1] || path;
+  return overlayPathLabel(path);
 }
 
 function mergeNewCatalogItems(current: string[], available: string[]): string[] {
