@@ -13,7 +13,9 @@ from harness.graph.schema_rules import active_overlay_patterns, bind_practice_ru
 def attach_rules(practice) -> None:
     """Run executable checks for this practice and attach violations to each node."""
     bind_practice_rules(practice)
-    registry = checks_for_practice(practice.name)
+    overlays = tuple(practice.graph.overlays) if practice.graph else ()
+    patterns = active_overlay_patterns(overlays)
+    registry = checks_for_practice(practice.name, patterns)
     if not registry:
         return
     root = Path(practice.source_root) if practice.source_root else None

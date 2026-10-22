@@ -22,6 +22,9 @@ _FIELD_INIT = re.compile(
 )
 _STATIC_LINE = re.compile(r"^\s*(?:(?:public|private|protected|readonly|declare|override)\s+)*static\b")
 _HEADING = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
+_VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
+_CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
+_VIEW_SKIP_SUFFIXES = ("-form", "-fields", "-banner", "-messages", "-footer", "-loaded", "-client")
 _CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
 _SKIP_DIRS = {".codeql", ".git", ".context", "node_modules", "__pycache__", ".sessions", "retired"}
 
@@ -79,7 +82,7 @@ def _overlay_selected(graph: Graph, pattern: str) -> bool:
 def _register_overlay_schema_catalog(graph: Graph) -> None:
     """Expose overlay schema node and connector types in the filter lists before rules run."""
     from harness.graph.graph import EdgeType
-    from harness.graph.schema_edges import relationship_kinds_for_patterns
+    from harness.graph.schema_edges import overlay_edge_display, relationship_kinds_for_patterns
     from harness.graph.schema_rules import active_overlay_patterns, schema_semantic_types_for_practice
 
     active = active_overlay_patterns(tuple(graph.overlays))
@@ -91,7 +94,7 @@ def _register_overlay_schema_catalog(graph: Graph) -> None:
             practice.node_types.add(node_type)
         for kind in edge_kinds.get(name, ()):
             if kind not in practice.edge_types:
-                practice.edge_types[kind] = EdgeType(kind, 5, "relationship")
+                practice.edge_types[kind] = EdgeType(kind, 5, overlay_edge_display(kind))
 
 
 def _record_clean(practice, root: Path) -> list[dict]:
@@ -194,6 +197,12 @@ def _context_for(folder: str, contexts: list[str]) -> str:
             if candidate == "." or len(candidate) > len(best):
                 best = candidate
     return best
+
+
+def _bounded_context_id(folder: str, context_ids: dict[str, str], root_id: str) -> str:
+    """Longest matching bounded context for a source folder, else root or default context."""
+    rel = _context_for(folder, list(context_ids))
+    return context_ids.get(rel) or context_ids.get(".") or root_id
 
 
 def _class_fact(practice, text: str, relative: str, module_id: str, cls, class_names: set[str], nodes: list, edges: list) -> dict:
@@ -380,8 +389,9 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
         if parent_rel:
             edges.append([context_id, parent_id, "belongsTo", 3, "relationship"])
     by_id = {}
+    ddd_root_id = practice.root_node.node_id
     for folder in sorted(members):
-        context_id = context_ids[_context_for(folder, list(context_ids))]
+        context_id = _bounded_context_id(folder, context_ids, ddd_root_id)
         aggregate_id = f"ddd:Aggregate:{folder}"
         nodes.append([aggregate_id, Path(folder).name, "Aggregate", "ddd", folder, 1, 1])
         edges.append([context_id, aggregate_id, "owns", 2, "direct"])
@@ -536,29 +546,78 @@ def _epic_for(step, epics: list):
 
 
 def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
-    """LERN overlay nodes. File shape selects the overlay type."""
+    """LERN overlay: schema tier nodes from repo files, wired with schema relationship kinds."""
     ddd = graph.practice("ddd") if "ddd" in graph.practices else None
     stories = graph.practice("stories") if "stories" in graph.practices else None
     if ddd is None or stories is None:
         return
-    roots = {cls["name"]: cls for cls in classes if cls["name"] in {item["name"] for item in classes}}
-    entity_ids = {node.name: node for node in ddd.by_id.values() if node.type == "EntityRoot"}
+    _record_lern_context_mappings(graph, root, ddd)
+    aggregates = {
+        node.source.file.replace("\\", "/"): node
+        for node in ddd.by_id.values()
+        if node.type == "Aggregate"
+    }
+    entity_roots = [node for node in ddd.by_id.values() if node.type == "EntityRoot"]
+    repositories = [node for node in ddd.by_id.values() if node.type == "Repository"]
+
+    for folder, aggregate in sorted(aggregates.items()):
+        slug = Path(folder).name
+        artifacts: dict[str, object] = {}
+        for filename, semantic in (
+            (f"{slug}-node.ts", "NodeRoot"),
+            (f"{slug}-client.tsx", "ClientRoot"),
+            (f"{slug}-routes.ts", "Route"),
+            (f"{slug}.json", "JsonStore"),
+        ):
+            relative = f"{folder}/{filename}"
+            if not (root / relative).is_file():
+                continue
+            artifacts[semantic] = _lern_ddd_file_node(ddd, relative, semantic)
+            _lern_schema_edge(ddd, "owns", aggregate, artifacts[semantic])
+
+        folder_entity_roots = [node for node in entity_roots if _aggregate_folder(node.source.file) == folder]
+        folder_repositories = [node for node in repositories if _aggregate_folder(node.source.file) == folder]
+
+        node_root = artifacts.get("NodeRoot")
+        client_root = artifacts.get("ClientRoot")
+        route = artifacts.get("Route")
+        json_store = artifacts.get("JsonStore")
+
+        for entity in folder_entity_roots:
+            if node_root is not None:
+                _lern_schema_edge(ddd, "nodeRoot", entity, node_root)
+                _lern_schema_edge(ddd, "hosts", entity, node_root)
+            if client_root is not None:
+                _lern_schema_edge(ddd, "interacts", entity, client_root)
+
+        if client_root is not None and route is not None:
+            _lern_schema_edge(ddd, "calls", client_root, route)
+        if route is not None and node_root is not None:
+            _lern_schema_edge(ddd, "nodeRoot", route, node_root)
+
+        for repo in folder_repositories:
+            if json_store is not None:
+                _lern_schema_edge(ddd, "writes", repo, json_store)
+            if node_root is not None:
+                _lern_schema_edge(ddd, "nodeRepository", node_root, repo)
+
+        views = _lern_views_in_aggregate(root, folder, slug, ddd, aggregate, artifacts, folder_repositories)
+        if node_root is not None:
+            for view in views:
+                _lern_schema_edge(ddd, "views", node_root, view)
+
     for file in sorted(root.rglob("*")):
         if not file.is_file():
             continue
         relative = file.relative_to(root).as_posix()
-        if file.name.endswith("-node.ts"):
-            _lern_type(ddd, relative, "DomainNode", entity_ids, "hosts")
-        elif file.name.endswith("-client.tsx"):
-            _lern_type(ddd, relative, "DomainClient", entity_ids, "interacts")
-        elif file.name.endswith(".story.shared.ts"):
-            _lern_story(stories, relative, "StoryShared")
+        if file.name.endswith(".story.shared.ts"):
+            _lern_story_file(stories, relative, "StoryShared")
         elif file.name.endswith(".story.server.spec.ts"):
-            _lern_story(stories, relative, "ServerSpec")
+            _lern_story_file(stories, relative, "ServerSpec")
         elif file.name.endswith(".story.domain.spec.ts"):
-            _lern_story(stories, relative, "DomainSpec")
+            _lern_story_file(stories, relative, "DomainSpec")
         elif "playwright" in file.name and file.suffix == ".ts":
-            _lern_story(stories, relative, "PlaywrightSpec")
+            _lern_story_file(stories, relative, "PlaywrightSpec")
 
 
 def _file_line_span(root: Path, relative: str) -> tuple[int, int]:
@@ -572,22 +631,128 @@ def _file_line_span(root: Path, relative: str) -> tuple[int, int]:
     return 1, max(1, end)
 
 
-def _lern_type(practice, relative: str, semantic: str, entities: dict, kind: str) -> None:
-    name = Path(relative).stem
+def _aggregate_folder(file_path: str) -> str:
+    return str(Path(file_path).parent).replace("\\", "/")
+
+
+def _is_lern_view_file(filename: str, slug: str) -> bool:
+    if filename == f"{slug}-client.tsx" or not filename.endswith(".tsx"):
+        return False
+    return not any(filename.endswith(f"{suffix}.tsx") for suffix in _VIEW_SKIP_SUFFIXES)
+
+
+def _lern_views_in_aggregate(root: Path, folder: str, slug: str, ddd, aggregate, artifacts, repositories) -> list:
+    views = []
+    folder_path = root / folder
+    if not folder_path.is_dir():
+        return views
+    client_root = artifacts.get("ClientRoot")
+    node_root = artifacts.get("NodeRoot")
+    repo = repositories[0] if repositories else None
+    for file in sorted(folder_path.glob("*.tsx")):
+        if not _is_lern_view_file(file.name, slug):
+            continue
+        text = file.read_text(encoding="utf-8")
+        match = _VIEW_EXPORT.search(text)
+        if match is None:
+            continue
+        relative = file.relative_to(root).as_posix()
+        view = _lern_ddd_file_node(ddd, relative, "View", display_name=match.group(1))
+        views.append(view)
+        _lern_schema_edge(ddd, "view", aggregate, view)
+        if client_root is not None:
+            _lern_schema_edge(ddd, "clientRoot", view, client_root)
+        if repo is not None:
+            _lern_schema_edge(ddd, "nodeRepository", view, repo)
+    return views
+
+
+def _record_lern_context_mappings(graph: Graph, root: Path, ddd) -> None:
+    bounded_contexts = [node for node in ddd.by_id.values() if node.type == "BoundedContext"]
+    aggregates = [node for node in ddd.by_id.values() if node.type == "Aggregate"]
+
+    def resolve_aggregate(label: str):
+        label = label.strip()
+        for node in aggregates:
+            if node.name == label or label.endswith(f"· {node.name}") or label.endswith(f"·{node.name}"):
+                return node
+        tail = label.split("·")[-1].strip() if "·" in label else label
+        for node in aggregates:
+            if node.name == tail:
+                return node
+        return None
+
+    for bc_node in bounded_contexts:
+        markdown = bc_node.source.file
+        if not markdown or markdown == ".":
+            continue
+        path = root / markdown
+        if not path.is_file():
+            continue
+        for index, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            match = _CONTEXT_ARROW.match(line.strip())
+            if match is None:
+                continue
+            left, right = match.group(1).strip(), match.group(2).strip()
+            map_id = f"ddd:ContextMapping:{markdown}:{index}"
+            if map_id in ddd.by_id:
+                continue
+            label = f"{left} → {right}"
+            ddd.apply_nodes([[map_id, label, "ContextMapping", "ddd", markdown, index, index]])
+            mapping = ddd.by_id[map_id]
+            _lern_schema_edge(ddd, "mappedTo", bc_node, mapping)
+            local = resolve_aggregate(left)
+            remote = resolve_aggregate(right)
+            if local is not None:
+                _lern_schema_edge(ddd, "local", mapping, local)
+            if remote is not None:
+                _lern_schema_edge(ddd, "remote", mapping, remote)
+
+
+def _lern_schema_edge(practice, kind: str, parent, child) -> None:
+    from harness.graph.schema_edges import overlay_edge_display
+
+    order = 2 if overlay_edge_display(kind) == "direct" else 5
+    _edge(practice, kind, order, overlay_edge_display(kind), parent, child)
+
+
+def _lern_ddd_file_node(practice, relative: str, semantic: str, display_name: str | None = None):
+    name = display_name or Path(relative).stem
     node_id = f"ddd:{semantic}:{relative}"
-    root = Path(practice.source_root) if practice.source_root else None
-    start, end = _file_line_span(root, relative) if root is not None else (1, 1)
+    if node_id in practice.by_id:
+        return practice.by_id[node_id]
+    source_root = Path(practice.source_root) if practice.source_root else None
+    start, end = _file_line_span(source_root, relative) if source_root is not None else (1, 1)
     practice.apply_nodes([[node_id, name, semantic, "ddd", relative, start, end]])
-    folder = Path(relative).parent.name
-    for entity in entities.values():
-        if folder and folder.replace("-", "").lower() in entity.source.file.replace("-", "").lower():
-            practice.record({"kind": kind, "order": 5, "display": "relationship"}, practice.by_id[node_id], entity)
-            return
+    return practice.by_id[node_id]
 
 
-def _lern_story(practice, relative: str, semantic: str) -> None:
+def _parent_story_scope(stories, relative: str):
+    rel = relative.replace("\\", "/")
+    candidates: list[tuple[int, object]] = []
+    for node in stories.by_id.values():
+        if node.type not in {"Epic", "SubEpic"}:
+            continue
+        epic_dir = _aggregate_folder(node.source.file) if node.source.file else ""
+        if epic_dir and (rel == epic_dir or rel.startswith(f"{epic_dir}/")):
+            candidates.append((len(epic_dir), node))
+    if candidates:
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        return candidates[0][1]
+    parent_name = Path(rel).parent.name.replace("_", "-")
+    for node in stories.by_id.values():
+        if node.type in {"Epic", "SubEpic"} and node.name.replace("_", "-") == parent_name:
+            return node
+    return None
+
+
+def _lern_story_file(practice, relative: str, semantic: str) -> None:
     name = Path(relative).name
     node_id = f"stories:{semantic}:{relative}"
-    root = Path(practice.source_root) if practice.source_root else None
-    start, end = _file_line_span(root, relative) if root is not None else (1, 1)
+    source_root = Path(practice.source_root) if practice.source_root else None
+    start, end = _file_line_span(source_root, relative) if source_root is not None else (1, 1)
     practice.apply_nodes([[node_id, name, semantic, "stories", relative, start, end]])
+    node = practice.by_id.get(node_id)
+    parent = _parent_story_scope(practice, relative)
+    if node is not None and parent is not None:
+        _lern_schema_edge(practice, "owns", parent, node)

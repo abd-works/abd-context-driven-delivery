@@ -41,7 +41,7 @@ _CACHE_SKIP_DIRS = {
     "playwright-report",
     "test-results",
 }
-_RULE_FILE_NAMES = ("rules.py", "schema.yaml")
+_RULE_FILE_NAMES = ("rules.py", "schema.yaml", "rules.yaml")
 
 def pattern_overlay_root(pattern: str) -> Path:
     return _REPO / "cdd_guidance" / "patterns" / pattern
@@ -1087,6 +1087,9 @@ class Graph:
         practices = _REPO / "cdd_guidance" / "practices"
         if practices.is_dir() and self._rule_file_newer_than(practices, stamp):
             return True
+        patterns = _REPO / "cdd_guidance" / "patterns"
+        if patterns.is_dir() and self._rule_file_newer_than(patterns, stamp):
+            return True
         graph_dir = Path(__file__).resolve().parent
         names = (
             "rules.py",
@@ -1147,6 +1150,11 @@ class Graph:
             self._restore_practice_links(name, saved.get(name) or {})
         for practice in self.practices.values():
             practice.root_node.populate()
+        from harness.graph.rules import attach_rules
+
+        for practice in self.practices.values():
+            attach_rules(practice)
+            practice.loaded = ["nodes", "edges", "rules"]
 
     def _restore_practice_nodes(self, name: str, saved: dict) -> None:
         self.report_progress(f"Loading saved {name} nodes")

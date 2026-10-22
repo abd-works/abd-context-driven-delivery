@@ -12,6 +12,10 @@ _PRACTICE_GUIDANCE = {
     "ux": ("cdd_guidance.practices.ux.ux", "Ux"),
 }
 
+_PATTERN_GUIDANCE = {
+    "lern_domain_driven": ("cdd_guidance.patterns.lern_domain_driven.lern_domain_driven", "LernDomainDriven"),
+}
+
 
 def _collect_rules(collection) -> dict[str, str]:
     found: dict[str, str] = {}
@@ -27,12 +31,7 @@ def _collect_rules(collection) -> dict[str, str]:
     return found
 
 
-@lru_cache(maxsize=None)
-def prose_by_slug(practice: str) -> dict[str, str]:
-    spec = _PRACTICE_GUIDANCE.get(practice)
-    if spec is None:
-        return {}
-    module_path, class_name = spec
+def _guidance_prose(module_path: str, class_name: str) -> dict[str, str]:
     try:
         import importlib
 
@@ -45,4 +44,19 @@ def prose_by_slug(practice: str) -> dict[str, str]:
     fidelities = getattr(guidance, "fidelities", None)
     for child in (getattr(fidelities, "entries", None) or {}).values():
         merged.update(_collect_rules(getattr(child, "rules", None)))
+    return merged
+
+
+@lru_cache(maxsize=None)
+def prose_by_slug(practice: str, active_patterns: tuple[str, ...] = ()) -> dict[str, str]:
+    spec = _PRACTICE_GUIDANCE.get(practice)
+    if spec is None:
+        merged: dict[str, str] = {}
+    else:
+        merged = dict(_guidance_prose(*spec))
+    for pattern in active_patterns:
+        pattern_spec = _PATTERN_GUIDANCE.get(pattern)
+        if pattern_spec is None:
+            continue
+        merged.update(_guidance_prose(*pattern_spec))
     return merged

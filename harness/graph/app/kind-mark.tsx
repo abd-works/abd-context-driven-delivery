@@ -26,6 +26,39 @@ export function kindLabel(kind: string, isFile: boolean): string {
   if (kind === 'DomainService') {
     return 'Domain service';
   }
+  if (kind === 'NodeRoot') {
+    return 'Node root';
+  }
+  if (kind === 'ClientRoot') {
+    return 'Client root';
+  }
+  if (kind === 'DomainView') {
+    return 'View';
+  }
+  if (kind === 'JsonStore') {
+    return 'JSON store';
+  }
+  if (kind === 'NodeRepository') {
+    return 'Node repository';
+  }
+  if (kind === 'Route') {
+    return 'Route';
+  }
+  if (kind === 'ContextMapping') {
+    return 'Context mapping';
+  }
+  if (kind === 'StoryShared') {
+    return 'Story shared';
+  }
+  if (kind === 'DomainSpec') {
+    return 'Domain spec';
+  }
+  if (kind === 'ServerSpec') {
+    return 'Server spec';
+  }
+  if (kind === 'PlaywrightSpec') {
+    return 'Playwright spec';
+  }
   return kind || 'Node';
 }
 
@@ -66,6 +99,17 @@ const KNOWN_MARKS = new Set([
   'Description',
   'Context',
   'Observation',
+  'Node root',
+  'Client root',
+  'View',
+  'JSON store',
+  'Node repository',
+  'Route',
+  'Context mapping',
+  'Story shared',
+  'Domain spec',
+  'Server spec',
+  'Playwright spec',
 ]);
 
 export function KindMark({ kind, isFile }: { kind: string; isFile: boolean }) {
@@ -348,6 +392,82 @@ export function KindMark({ kind, isFile }: { kind: string; isFile: boolean }) {
         <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="8" cy="8" r="5" />
           <path d="M5.4 8.2 7.2 10l3.4-4" />
+        </g>
+      )}
+      {label === 'Node root' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <rect x="3" y="3" width="10" height="10" rx="0.5" />
+          <path d="M3 6.5h10" />
+          <path d="M5 9h2.5M8.5 9h2.5" strokeLinecap="round" />
+        </g>
+      )}
+      {label === 'Client root' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <rect x="2.5" y="4" width="11" height="8" rx="1" />
+          <path d="M2.5 6.5h11" />
+          <circle cx="5" cy="5.25" r="0.55" fill="currentColor" stroke="none" />
+        </g>
+      )}
+      {label === 'View' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <rect x="3" y="3" width="10" height="10" rx="1" />
+          <path d="M5 7h6M5 9.5h4" strokeLinecap="round" />
+        </g>
+      )}
+      {label === 'JSON store' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <path d="M4 5.5c0-1.1 1.8-2 4-2s4 .9 4 2v5c0 1.1-1.8 2-4 2s-4-.9-4-2z" />
+          <path d="M4 5.5c0 1.1 1.8 2 4 2s4-.9 4-2" />
+          <path d="M6.5 11v1.5M9.5 11v1.5" strokeLinecap="round" />
+        </g>
+      )}
+      {label === 'Node repository' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <path d="M3 5.5c0-1.2 2.2-2 5-2s5 .8 5 2v5c0 1.2-2.2 2-5 2s-5-.8-5-2z" />
+          <path d="M3 5.5c0 1.2 2.2 2 5 2s5-.8 5-2" />
+          <path d="M8 3.5v1.2" strokeLinecap="round" />
+        </g>
+      )}
+      {label === 'Route' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="4" cy="12" r="1.4" />
+          <circle cx="12" cy="4" r="1.4" />
+          <path d="M5.2 10.8 10.8 5.2" />
+        </g>
+      )}
+      {label === 'Context mapping' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <rect x="2" y="5" width="4.5" height="6" rx="0.5" />
+          <rect x="9.5" y="5" width="4.5" height="6" rx="0.5" />
+          <path d="M6.5 8h3" />
+          <path d="M8.8 7.2 9.5 8 8.8 8.8" />
+        </g>
+      )}
+      {label === 'Story shared' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <rect x="3" y="3" width="10" height="10" rx="1" />
+          <path d="M5.5 6.5h5M5.5 9h5" />
+          <path d="M8 3v10" strokeDasharray="1.5 1.5" />
+        </g>
+      )}
+      {label === 'Domain spec' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <path d="M4 2.5h6l2 2V13.5H4z" />
+          <path d="M6 8h4M6 10.5h2.5" />
+          <circle cx="11" cy="11" r="2" />
+        </g>
+      )}
+      {label === 'Server spec' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <path d="M4 2.5h6l2 2V13.5H4z" />
+          <path d="M6 8h4M6 10.5h3" />
+          <rect x="10" y="9.5" width="3.5" height="3" rx="0.5" />
+        </g>
+      )}
+      {label === 'Playwright spec' && (
+        <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <path d="M4 2.5h6l2 2V13.5H4z" />
+          <path d="M6.5 7.5 9 10l2.5-5" strokeLinecap="round" />
         </g>
       )}
       {!KNOWN_MARKS.has(label) && (

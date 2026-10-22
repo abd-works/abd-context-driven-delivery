@@ -51,8 +51,17 @@ _SEMANTIC = {
     "valueObject": "ValueObject",
     "domainEvent": "DomainEvent",
     "domainService": "DomainService",
-    "node": "DomainNode",
-    "client": "DomainClient",
+    "node": "NodeRoot",
+    "nodeRoot": "NodeRoot",
+    "client": "ClientRoot",
+    "clientRoot": "ClientRoot",
+    "nodeRepository": "NodeRepository",
+    "jsonStore": "JsonStore",
+    "route": "Route",
+    "contextMapping": "ContextMapping",
+    # Legacy explorer labels (same tiers as nodeRoot / clientRoot)
+    "domainNode": "NodeRoot",
+    "domainClient": "ClientRoot",
     "share": "StoryShared",
     "server": "ServerSpec",
     "domain": "DomainSpec",
@@ -251,6 +260,33 @@ def _is_given(node) -> bool:
     return _phase(node) == "given"
 
 
+# Single-reference LERN / DDD schema fields that appear as children in the explorer tree.
+_OVERLAY_TREE_DIRECT_KINDS = frozenset(
+    {
+        "owns",
+        "root",
+        "entityRoot",
+        "nodeRoot",
+        "clientRoot",
+        "nodeRepository",
+        "repository",
+        "route",
+        "view",
+        "views",
+        "mappedTo",
+        "local",
+        "remote",
+        "jsonStore",
+        "hosts",
+        "interacts",
+        "calls",
+        "writes",
+        "stores",
+        "writtenBy",
+        "belongsTo",
+    }
+)
+
 _OVERLAY_REL_SKIP = frozenset({"is", "fidelity", "name", "path"})
 _OVERLAY_REL_LINE = re.compile(r"^\s+(?:-\s+)?([A-Za-z]\w*)\??:\s+")
 
@@ -266,6 +302,11 @@ def _relationship_kinds_from_overlay_schema(text: str) -> set[str]:
         if kind not in _OVERLAY_REL_SKIP:
             kinds.add(kind)
     return kinds
+
+
+def overlay_edge_display(kind: str) -> str:
+    """Schema-modeled composition uses direct tree edges; the rest stay grouped under the kind."""
+    return "direct" if kind in _OVERLAY_TREE_DIRECT_KINDS else "relationship"
 
 
 def relationship_kinds_for_patterns(active_patterns: tuple[str, ...]) -> dict[str, frozenset[str]]:

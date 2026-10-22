@@ -48,6 +48,8 @@ export function App() {
   const [violation, setViolation] = useState<ViolationFocus | null>(null);
   const [source, setSource] = useState<SourceText | null>(null);
   const loadGeneration = useRef(0);
+  const loadingRef = useRef(false);
+  loadingRef.current = loading;
   const engineering = theme === 'engineering';
 
   function applyTheme(next: '' | 'engineering') {
@@ -76,6 +78,12 @@ export function App() {
           const body = (await response.json()) as { messages?: string[] };
           if (Array.isArray(body.messages) && body.messages.length > 0) {
             setLoadingLog(body.messages);
+            if (loadingRef.current) {
+              const last = body.messages[body.messages.length - 1].replace(/^load:\s*/, '');
+              if (last) {
+                setLoadingLabel(last);
+              }
+            }
           }
         } catch (cause) {
           const message = cause instanceof Error ? cause.message : String(cause);

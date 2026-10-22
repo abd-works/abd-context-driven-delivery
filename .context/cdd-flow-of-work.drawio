@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="cdd-flow-of-work" name="Flow of Work">
-        <mxGraphModel dx="5308" dy="1309" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2100" math="0" shadow="0">
+        <mxGraphModel dx="6083" dy="4978" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -28,7 +28,7 @@
                 <mxCell id="ctx-note" value="Extract documentation. Interview experts. Parse code, instrument systems, and index the material so AI can consume it." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="col-context" vertex="1">
                     <mxGeometry x="12" y="244" width="456" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="6" value="&lt;b&gt;Outcomes and Initiatives&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Who uses it, and what they already do&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" vertex="1" parent="col-context">
+                <mxCell id="6" value="&lt;b&gt;Outcomes and Initiatives&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Who uses it, and what they already do&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="col-context" vertex="1">
                     <mxGeometry x="240" y="154" width="212" height="64" as="geometry"/>
                 </mxCell>
                 <mxCell id="col-discovery" value="1  ·  Discovery" style="swimlane;html=1;startSize=44;fillColor=#f8f4fa;strokeColor=#9673a6;fontStyle=1;fontSize=16;fontColor=#1a1a1a;rounded=1;arcSize=4;swimlaneFillColor=#fbf8fc;collapsible=0;" parent="1" vertex="1">
@@ -41,7 +41,7 @@
                     <mxGeometry x="14" y="83" width="242" height="57" as="geometry"/>
                 </mxCell>
                 <mxCell id="disc-ux" value="&lt;b&gt;UX Site Map &amp;amp; Information Architecture&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;How people move through and act on the solution&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="col-discovery" vertex="1">
-                    <mxGeometry x="14" y="150" width="242" height="60" as="geometry"/>
+                    <mxGeometry x="14" y="151" width="242" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="disc-slice" value="&lt;b&gt;Thin slice&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;One small slice of the journey, taken through the columns to the right&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a1a1a;strokeColor=#1a1a1a;fontColor=#ffffff;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="col-discovery" vertex="1">
                     <mxGeometry x="14" y="230" width="242" height="55" as="geometry"/>
@@ -82,7 +82,7 @@
                 <mxCell id="spec-behavior" value="&lt;b&gt;★  Generate behavioral prototype&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#4a2c82&quot;&gt;A prototype that passes the scenario tests&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#7c4dff;dashed=1;dashPattern=6 4;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="col-spec" vertex="1">
                     <mxGeometry x="406" y="230" width="332" height="56" as="geometry"/>
                 </mxCell>
-                <mxCell id="3" value="" style="triangle;whiteSpace=wrap;html=1;" vertex="1" parent="col-spec">
+                <mxCell id="3" value="" style="triangle;whiteSpace=wrap;html=1;" parent="col-spec" vertex="1">
                     <mxGeometry x="365" y="80" width="20" height="200" as="geometry"/>
                 </mxCell>
                 <mxCell id="col-solution" value="3  ·  Working Solution" style="swimlane;html=1;startSize=44;fillColor=#f4faf4;strokeColor=#82b366;fontStyle=1;fontSize=16;fontColor=#1a1a1a;rounded=1;arcSize=4;swimlaneFillColor=#f8fcf8;collapsible=0;" parent="1" vertex="1">
@@ -109,7 +109,7 @@
                 <mxCell id="2" value="&lt;b&gt;★  Generate Working Solution&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#4a2c82&quot;&gt;Real working solution that passes all tests&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#7c4dff;dashed=1;dashPattern=6 4;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="col-solution" vertex="1">
                     <mxGeometry x="12" y="250" width="678" height="40" as="geometry"/>
                 </mxCell>
-                <mxCell id="9" value="" style="triangle;whiteSpace=wrap;html=1;" vertex="1" parent="col-solution">
+                <mxCell id="9" value="" style="triangle;whiteSpace=wrap;html=1;" parent="col-solution" vertex="1">
                     <mxGeometry x="720" y="50" width="20" height="200" as="geometry"/>
                 </mxCell>
                 <mxCell id="col-validate" value="Validate" style="swimlane;html=1;startSize=44;fillColor=#fff8f2;strokeColor=#d79b00;fontStyle=1;fontSize=16;fontColor=#1a1a1a;rounded=1;arcSize=4;swimlaneFillColor=#fffbf7;collapsible=0;" parent="1" vertex="1">
@@ -276,17 +276,20 @@
                 <mxCell id="expose-instructions" value="&lt;b&gt;Agent instructions&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Operations that only instruct&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="1356" y="1478" width="300" height="88" as="geometry"/>
                 </mxCell>
-                <mxCell id="4" value="" style="triangle;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                <mxCell id="4" value="" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="610" y="140" width="20" height="200" as="geometry"/>
                 </mxCell>
                 <mxCell id="val-feas" value="&lt;b&gt;Feasibility&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Cost, risk, and operations meet expectation&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
                     <mxGeometry x="2691" y="170" width="222" height="62" as="geometry"/>
                 </mxCell>
-                <mxCell id="7" value="" style="triangle;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                <mxCell id="7" value="" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="1421" y="138" width="20" height="200" as="geometry"/>
                 </mxCell>
-                <mxCell id="8" value="" style="triangle;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                <mxCell id="8" value="" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="20" y="120" width="20" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="68" value="Text" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="1245" y="-235" width="50" height="30" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

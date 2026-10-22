@@ -58,6 +58,26 @@ def _overlay_schema_paths(practice: str, active_patterns: tuple[str, ...]) -> li
     return sorted(paths)
 
 
+def _overlay_rules_paths(practice: str, active_patterns: tuple[str, ...]) -> list[Path]:
+    if not active_patterns:
+        return []
+    paths: list[Path] = []
+    for pattern in active_patterns:
+        rules = _PATTERNS_ROOT / pattern / "practices" / practice / "model" / "rules.yaml"
+        if rules.is_file():
+            paths.append(rules)
+    return sorted(paths)
+
+
+def _merge_parsed_rules(found: dict[str, tuple[str, ...]], overlay: dict[str, tuple[str, ...]]) -> None:
+    for node_type, slugs in overlay.items():
+        merged = list(found.get(node_type, ()))
+        for slug in slugs:
+            if slug not in merged:
+                merged.append(slug)
+        found[node_type] = tuple(merged)
+
+
 def semantic_type(schema_key: str) -> str:
     if schema_key in _SEMANTIC:
         return _SEMANTIC[schema_key]
@@ -81,13 +101,9 @@ def _direct_rules_for_practice(practice: str, active_patterns: tuple[str, ...]) 
         return {}
     found = _parse_rules(path.read_text(encoding="utf-8"))
     for schema in _overlay_schema_paths(practice, active_patterns):
-        overlay = _parse_rules(schema.read_text(encoding="utf-8"))
-        for node_type, slugs in overlay.items():
-            merged = list(found.get(node_type, ()))
-            for slug in slugs:
-                if slug not in merged:
-                    merged.append(slug)
-            found[node_type] = tuple(merged)
+        _merge_parsed_rules(found, _parse_rules(schema.read_text(encoding="utf-8")))
+    for rules_path in _overlay_rules_paths(practice, active_patterns):
+        _merge_parsed_rules(found, _parse_rules(rules_path.read_text(encoding="utf-8")))
     return found
 
 
@@ -285,10 +301,15 @@ def _pattern_owning_rule(practice: str, node_type: str, slug: str, patterns: tup
 
 @lru_cache(maxsize=None)
 def _overlay_declared_rules(practice: str, pattern: str) -> dict[str, tuple[str, ...]]:
-    schema = _PATTERNS_ROOT / pattern / "practices" / practice / "model" / "schema.yaml"
-    if not schema.is_file():
-        return {}
-    return _parse_rules(schema.read_text(encoding="utf-8"))
+    model = _PATTERNS_ROOT / pattern / "practices" / practice / "model"
+    found: dict[str, tuple[str, ...]] = {}
+    schema = model / "schema.yaml"
+    if schema.is_file():
+        found = dict(_parse_rules(schema.read_text(encoding="utf-8")))
+    rules = model / "rules.yaml"
+    if rules.is_file():
+        _merge_parsed_rules(found, _parse_rules(rules.read_text(encoding="utf-8")))
+    return found
 
 
 @lru_cache(maxsize=None)

@@ -1,0 +1,16 @@
+share:
+  rules:
+    - reduce-story-overlap
+    - scaffold-test-scripts
+    - ask-cross-aggregate-sync
+domain:
+  rules:
+    - reduce-story-overlap
+server:
+  rules:
+    - reduce-story-overlap
+    - standard-mutation-response
+playwright:
+  rules:
+    - playwright-tests-browser-interaction
+    - reduce-story-overlap

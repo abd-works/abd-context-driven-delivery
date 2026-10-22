@@ -81,6 +81,18 @@ with description("DDD schema extends clean engineering"):
         expect("flaccid-data-object-no-behavior" in slugs).to(equal(False))
 
 
+with description("LERN overlay rules"):
+    with it("should bind tier rules on NodeRoot when the overlay is active"):
+        slugs = slugs_for_type("ddd", "NodeRoot", ("lern_domain_driven",))
+        expect(slugs).to(contain("node-decides-next-page"))
+        expect(slugs).to(contain("node-tier-uses-node-suffix"))
+
+    with it("should prefix overlay-declared tier rules in qualified labels"):
+        expect(
+            qualified_rule_label("ddd", "NodeRoot", "node-decides-next-page", ("lern_domain_driven",))
+        ).to(equal("lern.domain.driven.ddd.NodeRoot.node-decides-next-page"))
+
+
 with description("a rule label"):
     with it("should name the practice, the node, and the rule"):
         expect(qualified_rule_label("clean_engineering", "Operation", "limit-operation-parameters")).to(

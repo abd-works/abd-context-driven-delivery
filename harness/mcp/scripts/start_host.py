@@ -34,6 +34,9 @@ class StartHost:
         return Path(os.environ.get("CDD_PROJECT") or os.getcwd()).resolve()
 
     def ide_path_for(self, project: Path, repo: Path) -> Path:
+        named = os.environ.get("CDD_IDE_PATH")
+        if named:
+            return Path(named)
         cursor = project / ".cursor"
         if cursor.is_dir():
             return cursor
