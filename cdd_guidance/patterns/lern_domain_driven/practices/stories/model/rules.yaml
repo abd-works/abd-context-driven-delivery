@@ -1,6 +1,8 @@
 share:
   rules:
     - reduce-story-overlap
+    - tier-bound-repository-accessor
+    - no-expect-in-given
     - scaffold-test-scripts
     - ask-cross-aggregate-sync
 domain:

@@ -71,6 +71,7 @@ class:
   rules:
     - model-modules-follow-the-partition
     - class-not-property-instance-or-subtype
+    - no-prototype-swapping
     - keep-classes-single-responsibility
     - shape-classes-around-resources
     - put-logic-on-the-owning-resource
