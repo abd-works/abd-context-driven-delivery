@@ -113,3 +113,38 @@ with description("a graph"):
                 saved = json.loads((self.root / ".context" / "graph.json").read_text(encoding="utf-8"))
                 names = [row[1] for row in saved["practices"]["clean_engineering"]["nodes"]]
                 expect(names).to(contain("Cart"))
+
+        with context("with a saved graph that already holds extra practices"):
+            with before.each:
+                ahead = time.time() + 3600
+                cache = self.root / ".context" / "graph.json"
+                saved = json.loads(cache.read_text(encoding="utf-8"))
+                for row in saved["practices"]["clean_engineering"]["nodes"]:
+                    if row[1] == "Cart":
+                        row[1] = "SavedCart"
+                saved["practices"]["stories"] = {
+                    "source_root": str(self.root),
+                    "nodes": [["stories:Practice:.:stories", "stories", "Practice", "stories", ".", 1, 1, "", ""]],
+                    "edges": [],
+                    "rules": [],
+                }
+                cache.write_text(json.dumps(saved), encoding="utf-8")
+                os.utime(cache, (ahead, ahead))
+                os.utime(self.source_file, (ahead - 60, ahead - 60))
+                os.utime(self.root / "src", (ahead - 60, ahead - 60))
+                os.utime(self.root, (ahead - 60, ahead - 60))
+
+            with it("should load a subset of the saved practices"):
+                fresh = Graph()
+                message = fresh.load_working_copy(
+                    str(self.root),
+                    {"clean_engineering": str(self.root)},
+                )
+                expect(message).to(equal("Loaded the saved graph."))
+                expect(_names(fresh)).to(contain("SavedCart"))
+
+            with it("should keep other practices when saving a different load"):
+                other = Graph()
+                other.load_working_copy(str(self.root), {"bdd": str(self.root)}, force=True)
+                saved = json.loads((self.root / ".context" / "graph.json").read_text(encoding="utf-8"))
+                expect(sorted(saved["practices"])).to(equal(["bdd", "clean_engineering", "stories"]))

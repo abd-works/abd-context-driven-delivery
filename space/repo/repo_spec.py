@@ -532,3 +532,12 @@ with description("the repo push toolset"):
             commit = toolset.push_commit("push: checkpoint")
             expect(commit.sha).not_to(equal(""))
             expect(commit.subject).to(equal("push: checkpoint"))
+
+        with it("should publish push_commit on MCP and keep /push as instructions only"):
+            from harness.agent_tools.agent_tools import InstallDestination
+
+            toolset = AgentToolSet.instantiate("space.repo.repo:Repo")
+            mcp_names = [tool.name for tool in toolset.tools_for(InstallDestination.MCP)]
+            expect("push_commit" in mcp_names).to(equal(True))
+            expect("push" in mcp_names).to(equal(False))
+            expect("push_commit" in toolset.instructions["push"].description).to(equal(True))

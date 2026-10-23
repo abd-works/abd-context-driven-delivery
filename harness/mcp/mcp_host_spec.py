@@ -354,17 +354,20 @@ with description("an MCP host") as self:
                 project=str(_REPO_ROOT),
             )
 
-        with it("should expose branch lifecycle and push"):
+        with it("should expose branch lifecycle and push_commit"):
             tools = self.host.diagnose()["tools"]
             expect(tools).to(contain("repo.branch"))
             expect(tools).to(contain("repo.worktree"))
             expect(tools).to(contain("repo.switch_branch"))
             expect(tools).to(contain("repo.new_branch"))
             expect(tools).to(contain("repo.close_branch"))
-            expect(tools).to(contain("repo.push"))
+            expect(tools).to(contain("repo.push_commit"))
+            expect("repo.push" in tools).to(equal(False))
 
         with it("should resolve Cursor underscore aliases to enrolled names"):
-            expect(self.host._runtime.resolve_call_name("repo_push")).to(equal("repo.push"))
+            expect(self.host._runtime.resolve_call_name("repo_push_commit")).to(
+                equal("repo.push_commit")
+            )
 
         with it("should run repo.new_branch through MCP dispatch"):
             result = self.host.dispatch(

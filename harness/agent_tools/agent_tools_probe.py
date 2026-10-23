@@ -43,7 +43,7 @@ AGENT_TOOLS_TOOLSET_PREFIXES = ("space.", "harness.", "tools.")
 AGENT_TOOLS_TOOLSET_EXCLUDES = ("harness.guidance.", "harness.guidance_actions.")
 
 _SKIP_INVOKE: dict[str, str] = {
-    "repo.push": "ping only (git)",
+    "repo.push_commit": "ping only (git)",
     "repo.close_branch": "ping only (git)",
     "repo.close_worktree": "ping only (git)",
     "installer.install": "use /install shell",

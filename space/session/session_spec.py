@@ -789,13 +789,11 @@ with description("a practice"):
                 text = path.read_text(encoding="utf-8") if path.is_file() else ""
                 expect("bdd" in text).to(equal(False))
 
-        with context("with practice-folders.config pointing a practice at the workpath"):
+        with context("with config.json practice_folders pointing a practice at the workpath"):
             with before.each:
-                context = self.repo / ".context"
-                context.mkdir(parents=True, exist_ok=True)
-                (context / "practice-folders.config").write_text(
-                    "bdd: .\n", encoding="utf-8"
-                )
+                from space.context_config import ContextConfig
+
+                ContextConfig(self.repo).set_practice_folders({"bdd": "."})
                 Session._current = None
                 Session.switch("alpha", repo_path=self.repo)
                 self.session = Session.current()

@@ -92,11 +92,15 @@ class _CoreInject:
         return {"additional_context": "core rules"}
 
 
-def _guidelines_dispatch(root: Path, toolsets: list, config: str | None = None) -> dict:
+def _guidelines_dispatch(root: Path, toolsets: list, config: str | dict | None = None) -> dict:
     if config is not None:
-        folder = root / ".context"
-        folder.mkdir(parents=True, exist_ok=True)
-        (folder / "guidelines.config").write_text(config, encoding="utf-8")
+        from space.context_config import ContextConfig
+
+        cfg = ContextConfig(root)
+        if isinstance(config, dict):
+            cfg.save(config)
+        else:
+            cfg.set_guidelines(config)
     server = HookServer(root, HandlerCatalog(toolsets, root))
     return server.dispatch(
         HookPayload(
@@ -158,7 +162,7 @@ with description("hook dispatch"):
             expect(out["agent_message"]).to(equal("ran"))
             expect(_DispatchFixture.calls).to(equal(["after"]))
 
-    with context("that gates pattern hooks on guidelines.config"):
+    with context("that gates pattern hooks on config.json guidelines"):
 
         with it("should skip a pattern when the workspace leaves it disabled"):
             _PatternInject.calls = []
@@ -171,7 +175,7 @@ with description("hook dispatch"):
             expect(_PatternInject.calls).to(equal([]))
             expect(out).to(equal({"permission": "allow"}))
 
-        with it("should skip a pattern when the workspace has no guidelines.config"):
+        with it("should skip a pattern when the workspace has no config.json"):
             _PatternInject.calls = []
             with tempfile.TemporaryDirectory() as tmp:
                 out = _guidelines_dispatch(Path(tmp), [_PatternInject])

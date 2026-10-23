@@ -1066,12 +1066,32 @@ class Session:
                 return False
         return True
 
-    def _default_folder_sets(self, guidance: PracticeGuidance) -> list[list[str]]:
-        """Content roots under the workpath — practice ``default_workspace_folder`` (tests, src, …)."""
+    def _default_folder_sets(
+        self, guidance: PracticeGuidance, practice: str | None = None
+    ) -> list[list[str]]:
+        """Content roots under the workpath.
+
+        Project ``.context/config.json`` ``practice_folders`` overrides the practice's
+        ``default_workspace_folder`` (tests, src, …) with a workpath-relative path.
+        """
         base = self.workpath or self.repo_path or Path.cwd()
-        relative = getattr(guidance, "default_workspace_folder", None) or "."
+        key = (practice or self._practice_key_for_instance(guidance) or "").strip()
+        relative = self._project_default_folder(key)
+        if relative is None:
+            relative = getattr(guidance, "default_workspace_folder", None) or "."
         folder = (Path(base) / relative).resolve()
         return [[str(folder)]]
+
+    def _project_default_folder(self, practice: str) -> str | None:
+        """Workpath-relative folder from ``.context/config.json`` practice_folders."""
+        if not practice:
+            return None
+        from space.context_config import ContextConfig
+
+        root = self.repo_path or self.workpath
+        if root is None:
+            return None
+        return ContextConfig(root).practice_folder(practice)
 
     def _normalize_sets(self, folder_sets: list[list[Path]]) -> list[list[str]]:
         return [[str(Path(item).resolve()) for item in group] for group in folder_sets]

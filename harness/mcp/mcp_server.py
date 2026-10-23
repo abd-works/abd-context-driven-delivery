@@ -39,6 +39,10 @@ NUDGE_NAME = "mcp-host-nudge"
 NUDGE_MIN_SECONDS = 5.0
 HOST_PROCESS_ENV = "CDD_MCP_HOST_PID"
 _CALL_TIMEOUT_SECONDS = 10
+# First graph builds walk the repo; cache hits must still finish under the default.
+_LONG_CALL_TIMEOUT_SECONDS = {
+    "graph.load_working_copy": 600,
+}
 _SERVING_MCP_HOST: Any = None
 _UNION_ORIGINS = {Union, py_types.UnionType}
 
@@ -974,15 +978,18 @@ class McpHost:
                 else:
                     # Dispatch off the event loop. A synchronous tool call blocks
                     # stdin and stdout, and the client then waits until its timeout.
-                    # A call that is still running after 10 seconds is a failed call.
+                    # A call that is still running after the limit is a failed call.
+                    timeout = _LONG_CALL_TIMEOUT_SECONDS.get(
+                        resolved, _CALL_TIMEOUT_SECONDS
+                    )
                     try:
-                        with anyio.fail_after(_CALL_TIMEOUT_SECONDS):
+                        with anyio.fail_after(timeout):
                             value = await anyio.to_thread.run_sync(
                                 self.dispatch, name, arguments
                             )
                     except TimeoutError:
                         return self._content_blocks(
-                            f"TimeoutError: {name} exceeded {_CALL_TIMEOUT_SECONDS} seconds"
+                            f"TimeoutError: {name} exceeded {timeout} seconds"
                         )
                 return self._content_blocks(value)
             except Exception as error:

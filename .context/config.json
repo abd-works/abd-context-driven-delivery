@@ -1,0 +1,13 @@
+{
+  "guidelines": {
+    "lern_domain_driven": "disabled",
+    "mern_domain_driven": "disabled"
+  },
+  "practice_folders": {
+    "stories": ".",
+    "clean_engineering": ".",
+    "bdd": ".",
+    "ddd": ".",
+    "ux": "."
+  }
+}
