@@ -54,6 +54,7 @@ _ALL_RULE_SLUGS = (
     "node-decides-next-page",
     "router-asks-the-node",
     "views-render-only",
+    "compose-steps-from-the-owner",
     "share-domain-logic",
     "maintain-layer-purity",
     "use-ubiquitous-language",
@@ -74,6 +75,13 @@ _ALL_RULE_SLUGS = (
     "repository-owns-aggregate-lifecycle",
     "one-repository-per-aggregate",
     "ask-cross-aggregate-sync",
+    "node-repository-parses-on-read",
+    "one-home-for-web-paths",
+    "posted-body-parsed-in-node",
+    "throw-http-exceptions",
+    "tier-bound-repository-accessor",
+    "no-expect-in-given",
+    "reset-every-repository",
 )
 
 with description("a LernDomainDriven generator"):

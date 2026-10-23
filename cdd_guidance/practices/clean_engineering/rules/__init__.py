@@ -20,6 +20,7 @@ from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import (
     PublicSeamOnly,
 )
 from cdd_guidance.practices.clean_engineering.rules.module_naming_rules import DomainNounsOnly, NoModulePerClass
+from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
 from cdd_guidance.practices.clean_engineering.rules.write_interactions import WriteInteractions
 from cdd_guidance.practices.clean_engineering.rules.practice_wide_rules import (
     DeepModule,
@@ -51,6 +52,7 @@ RULES: tuple = (
     DomainNounsOnly(),
     NoModulePerClass(),
     WriteInteractions(),
+    NoPrototypeSwapping(),
 ) + CODE_RULES
 
 BY_SLUG = {rule.slug: rule for rule in RULES}

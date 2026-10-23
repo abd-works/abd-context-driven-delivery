@@ -2,11 +2,13 @@
 aggregate:
   rules:
     - screens-live-in-their-domain
+    - one-home-for-web-paths
     - domain-core-file-matches-folder-slug
 nodeRoot:
   rules:
     - node-tier-uses-node-suffix
     - node-decides-next-page
+    - throw-http-exceptions
     - share-domain-logic
     - maintain-layer-purity
     - use-ubiquitous-language
@@ -14,9 +16,12 @@ nodeRoot:
     - preserve-arg-names-across-layers
     - implement-full-interfaces
     - include-all-external-dependencies
+    - node-repository-parses-on-read
+    - reset-every-repository
 clientRoot:
   rules:
     - client-subtypes-domain-hosts-browser-logic
+    - compose-steps-from-the-owner
     - share-domain-logic
     - maintain-layer-purity
     - one-repository-per-aggregate
@@ -27,6 +32,9 @@ clientRoot:
 route:
   rules:
     - router-asks-the-node
+    - posted-body-parsed-in-node
+    - throw-http-exceptions
+    - compose-steps-from-the-owner
     - ensure-type-safe-routes
     - standard-mutation-response
     - cross-layer-method-naming
@@ -34,6 +42,7 @@ route:
 view:
   rules:
     - views-render-only
+    - compose-steps-from-the-owner
     - consistent-view-naming
 jsonStore:
   rules:
@@ -50,3 +59,6 @@ entityRoot:
     - share-domain-logic
     - implement-domain-entities-correctly
     - use-ubiquitous-language
+repository:
+  rules:
+    - reset-every-repository

@@ -59,6 +59,12 @@ def channel_rules_for_practice(practice: str, channel: str) -> dict[str, Practic
     return _load_module_rules(path)
 
 
+@lru_cache(maxsize=None)
+def pattern_rules_for_practice(pattern: str, practice: str) -> dict[str, PracticeGraphRule]:
+    """Rule classes a pattern adds to one practice: ``cdd_guidance/patterns/<pattern>/practices/<practice>/rules``."""
+    return _load_module_rules(f"cdd_guidance.patterns.{pattern}.practices.{practice}.rules")
+
+
 def checks_for_practice(
     practice: str,
     active_patterns: tuple[str, ...] = (),
@@ -72,6 +78,8 @@ def checks_for_practice(
             merged.update(channel_rules_for_practice(practice, channel))
     elif practice == "ddd":
         merged.update(graph_rules_for_practice("clean_engineering"))
+    for pattern in active_patterns:
+        merged.update(pattern_rules_for_practice(pattern, practice))
     return merged
 
 
