@@ -1,0 +1,194 @@
+---
+name: practices-stories-stories-story-map
+description: >-
+  #### Overview
+  
+  Scope the solution using a hierarchy of business goals, user interactions, and system behaviors.  
+  *a simple graph is easier to change, compare, and reorganize. Humans catch AI Order-of-Magnitude sizing errors.*
+---
+
+overview
+
+Guide this action so the output conforms to this schema.
+
+[epic]
+
+storyNode:
+  fidelity: story_map
+  text: string
+  order: number
+  belongsTo?: storyNode
+  id: dotPath
+  decomposedInto?: [storyNode]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+    - id is unique on the map
+    - evidence is observed | inferred | intended
+  rules:
+    - vocabulary-traces-to-domain-source
+    - read-all-source-context-in-full
+    - do-not-invent-requirements
+    - evidence-distinguishes-observed-inferred-and-intended
+
+epic:
+  fidelity: story_map
+  id: dotPath
+  uses?: [module]
+  decomposedInto: [subEpic | story]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+    - decomposedInto count 4..9 warn 3,10
+    - uses is the home module of a demonstrated class or an invoked member
+  rules:
+    - verb-noun-format
+    - branch-on-mechanical-uniqueness
+    - four-to-nine-children
+
+subEpic:
+  fidelity: story_map
+  id: dotPath
+  belongsTo: epic
+  decomposedInto: [subEpic | story]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+    - decomposedInto count 4..9 warn 3,10
+    - examples belong on this sub-epic, not on the epic
+  rules:
+    - verb-noun-format
+    - branch-on-mechanical-uniqueness
+    - four-to-nine-children
+
+story:
+  fidelity: story_map
+  id: dotPath
+  belongsTo: [subEpic | epic]
+  background?: background
+  scenarios: [scenario]
+  invokes?: [operation | property]
+  shownOn?: [screen]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+    - scenarios count 1..4; more than 4 and the story is huge
+    - background only when scenarios share its given
+    - one observable interaction at one system boundary
+    - invokes is the union of invokes on the steps this story owns
+  rules:
+    - verb-noun-format
+    - story-name-captures-system-mechanic
+    - right-size-story-nodes
+    - behaviours-not-one-time-tasks
+    - story-scenarios-one-to-four
+
+scenario:
+  fidelity: scenarios
+  id: dotPath
+  steps: [step]
+  examples?: [example]
+  invokes?: [operation | property]
+  specifiedBy?: [observation]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+    - steps match given+ (when then+)+
+    - outline when examples count > 2
+    - a later then names the next story
+    - examples cover every domain concept the steps name
+    - invokes is the union of invokes on these steps
+  rules:
+    - scenarios-shape
+    - scenario-names-continuation
+    - outline-requires-many-permutations
+    - explore-full-interaction-surface
+    - and-chaining
+    - examples-trace-domain-model
+    - reconcile-live-immediately
+    - flagged-writes-intended-gwt
+
+step:
+  fidelity: scenarios
+  id: dotPath
+  order: number
+  belongsTo: scenario
+  ands?: [step]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+    - ands continue the step they follow
+    - but marks a missing state
+  rules:
+    - plain-english-gwt-steps
+    - gwt-steps-trace-to-domain-operations
+    - but-marks-missing-state
+
+given:
+  fidelity: scenarios
+  is: step
+  id: dotPath
+  order: number
+  examples?: [example]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+  rules:
+    - given-only-what-the-system-checks
+    - given-names-complex-state-root-first
+    - seed-prior-story-as-given
+
+when:
+  fidelity: scenarios
+  is: step
+  id: dotPath
+  order: number
+  invokes: [operation | property]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+  rules:
+    - when-holds-the-operation
+    - when-names-intent-not-interface-gesture
+    - expressive-system-interactions
+
+then:
+  fidelity: scenarios
+  is: step
+  id: dotPath
+  order: number
+  observes: example
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+  rules:
+    - behavioral-and-system-observable-outcomes
+    - browser-then-asserts-screen-widgets
+    - assert-domain-behavior-not-seeded-state
+
+background:
+  fidelity: scenarios
+  is: given
+  id: dotPath
+  given: given
+  belongsTo: story
+  scopes?: [example]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+    - scopes the examples its given steps own
+    - present only when more than one scenario shares the state
+
+example:
+  fidelity: scenarios
+  id: dotPath
+  text: string
+  demonstrates: class
+  retrievedUsing: [operation | property]
+  where:
+    - id is the text slugs from the root to this node, joined by dots
+  rules:
+    - examples-declare-seed-vs-interaction
+    - examples-trace-domain-model
+    - example-role-names
+    - domain-fixture-example-files
+    - examples-export-data-not-repository
+    - shared-example-fixtures
+    - seed-state-at-its-real-owner
+    - separate-test-controls-from-production-contracts
+    - system-stubs-domain-real
+    - infrastructure-in-lifecycle-hooks
+    - inline-simple-gwt-bodies
+    - extract-assertion-helper
+
+Use MCP tool: `stories-story-map()`

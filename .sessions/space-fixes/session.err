@@ -96,3 +96,111 @@ Traceback (most recent call last):
     raise RepoConnectError(
 space.repo.repo.RepoConnectError: Cannot connect git: git rev-parse --abbrev-ref HEAD exceeded 10 seconds in C:\dev\abd-context-driven-delivery.
 2026-10-22T23:45:35Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-23T18:02:17Z generate.generate ValueError: expected <module>:<Class>, got 'stories-story-map'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1073, in dispatch
+    return self._runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 801, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 634, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 652, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1230, in expand
+    self._scan()
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1263, in _scan
+    self._walk_statements(function_def)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1940, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1902, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1893, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 1726, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 7, in <module>
+  File "C:\dev\abd-context-driven-delivery\cdd_guidance\actions\generate\generate.py", line 31, in _rules
+    return Validate().validate(guidance)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\cdd_guidance\actions\validate\validate.py", line 58, in validate
+    parts = [part for part in self.run(guidance, on, action="validate") if part]
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance_actions\guidance_actions.py", line 167, in run
+    self._log_running_action(action)
+  File "C:\dev\abd-context-driven-delivery\cdd_guidance\actions\validate\validate.py", line 213, in _log_running_action
+    self._log_validation_to_session()
+  File "C:\dev\abd-context-driven-delivery\cdd_guidance\actions\validate\validate.py", line 223, in _log_validation_to_session
+    for item in self.listed():
+                ^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance_actions\guidance_actions.py", line 155, in listed
+    return listed(self)
+           ^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\guidance_actions\guidance_actions.py", line 74, in listed
+    return AgentToolSet.instantiate_all(raw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 747, in instantiate_all
+    return [cls.instantiate(item) for item in items]
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 731, in instantiate
+    loaded = cls._load(str(item["toolset"]))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\agent_tools\agent_tools.py", line 787, in _load
+    raise ValueError(f"expected <module>:<Class>, got {path!r}")
+ValueError: expected <module>:<Class>, got 'stories-story-map'
+2026-10-23T18:02:17Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-23T18:02:19Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-23T18:02:24Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-23T18:05:20Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-23T18:05:55Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-23T18:08:31Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-23T18:10:47Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-23T18:36:00Z repo.close_branch RepoConnectError: Cannot connect git: git rev-parse --abbrev-ref HEAD exceeded 10 seconds in C:\dev\abd-context-driven-delivery.
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 875, in git
+    completed = subprocess.run(
+                ^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Local\Programs\Python\Python312-arm64\Lib\subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Local\Programs\Python\Python312-arm64\Lib\subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Local\Programs\Python\Python312-arm64\Lib\subprocess.py", line 1630, in _communicate
+    raise TimeoutExpired(self.args, orig_timeout)
+subprocess.TimeoutExpired: Command '['C:\\Program Files\\Git\\cmd\\git.EXE', '-c', 'core.longpaths=true', '-C', 'C:\\dev\\abd-context-driven-delivery', 'rev-parse', '--abbrev-ref', 'HEAD']' timed out after 10 seconds
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1074, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 798, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 613, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 585, in _invoke_mcp_callable
+    return target(**args)
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1788, in close_branch
+    result = Worktree(repository).close_branch(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1931, in __init__
+    self.branch = (path_or_repo.current_branch or "").strip()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1034, in current_branch
+    return self._git("rev-parse", "--abbrev-ref", "HEAD")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 946, in _git
+    return type(self).git(self.root, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 884, in git
+    raise RepoConnectError(
+space.repo.repo.RepoConnectError: Cannot connect git: git rev-parse --abbrev-ref HEAD exceeded 10 seconds in C:\dev\abd-context-driven-delivery.
+2026-10-23T18:36:00Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

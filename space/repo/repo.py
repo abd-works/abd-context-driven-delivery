@@ -874,6 +874,8 @@ class Repo:
         try:
             completed = subprocess.run(
                 [found, "-c", "core.longpaths=true", "-C", str(root), *args],
+                # Under the MCP stdio host, an inherited stdin pipe can hang git on Windows.
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
