@@ -39,5 +39,3 @@
 2026-10-23T18:10:47Z validate Stories scenarios no-chat C:\dev\abd-context-driven-delivery\.sessions\space-fixes\session.err 160
 2026-10-23T18:29:06Z tool repo.close_branch
 2026-10-23T18:36:00Z error repo.close_branch C:\dev\abd-context-driven-delivery\.sessions\space-fixes\session.err 161 no-chat C:\dev\abd-context-driven-delivery\.sessions\space-fixes\session.err 206
-2026-10-24T01:02:56Z tool session.current
-2026-10-24T01:03:56Z tool repo.close_branch
