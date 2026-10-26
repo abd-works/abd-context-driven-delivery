@@ -256,3 +256,4 @@ Traceback (most recent call last):
     raise DefaultBranchError("close", default)
 space.repo.repo.DefaultBranchError: cannot close the default branch 'main'
 2026-10-26T15:12:34Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-26T15:18:08Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
