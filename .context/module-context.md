@@ -501,7 +501,7 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Imp
 ---
 
 ## space/handoff
-*Handoff* writes a resume document a fresh agent can continue from, under the current session folder ``handoffs/``.
+*Handoff* writes a resume document a fresh agent can continue from, in the project's current session folder (``.sessions/{session}/``, else ``.sessions/default/``).
 
 - **Purpose:** Compact the current agent session into a handoff document a fresh agent can resume from.
 - **Seam (terms):** Handoff
