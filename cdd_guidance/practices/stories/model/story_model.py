@@ -58,7 +58,7 @@ class StoryNode(BoundNode, ABC):
         "database", "browser", "client", "server",
     })
     _VERBS = frozenset({
-        "add", "allow", "approve", "assign", "attach", "block", "build", "cancel",
+        "access", "add", "allow", "approve", "assign", "attach", "block", "build", "cancel",
         "capture", "check", "clear", "close", "collect", "compare", "complete",
         "compose", "confirm", "connect", "convert", "create", "delete", "deliver",
         "deny", "deploy", "detect", "disable", "display", "download", "draft",
@@ -71,7 +71,7 @@ class StoryNode(BoundNode, ABC):
         "refund", "register", "reject", "release", "remove", "rename", "render",
         "reply", "report", "reset", "resolve", "retry", "return", "revert",
         "review", "revoke", "route", "save", "scan", "schedule", "search",
-        "select", "send", "settle", "share", "show", "sign", "split", "start",
+        "select", "send", "set", "settle", "share", "show", "sign", "split", "start",
         "stop", "store", "submit", "subscribe", "sync", "toggle", "track",
         "translate", "trigger", "unlock", "update", "upload", "validate", "verify",
         "view", "vote", "wait", "browse", "request", "place",

@@ -7,12 +7,26 @@ step text/concepts/actor, scenario outline + evidence, example links.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from harness.graph.node_data import encode_node_data
 
 from cdd_guidance.practices.stories.model.source_location import SourceLocation
 from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepType, Story, StoryModel
+
+
+_EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
+
+
+def _opening_docblock(lines: list[str]) -> str:
+    """The file's first `/** … */` comment, when it comes before any story."""
+    text = "\n".join(lines)
+    start = text.find("/**")
+    end = text.find("*/", start)
+    if start == -1 or end == -1 or "Story:" in text[start:end]:
+        return ""
+    return text[start:end]
 
 
 class GraphStoryModel:
@@ -54,6 +68,7 @@ class GraphStoryModel:
         source_file, line, end = self._name_span(root, story_file, epic.name, folder)
         epic.source = SourceLocation(source_file, line, end)
         epic.load_map_facts()
+        epic.evidence = self._epic_evidence(root, story_file, epic, top)
         nodes.append(self._row(node_id, epic.name, semantic, source_file, line, end, epic))
         edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
         for child in epic.epics:
@@ -175,6 +190,21 @@ class GraphStoryModel:
         if payload:
             row.extend(["", payload])
         return row
+
+    def _epic_evidence(self, root: str, story_file: str, epic: Epic, top: bool) -> list[str]:
+        """What the epic declares, else the sub-epic file's opening docblock, else the labels its children carry."""
+        if epic.evidence:
+            return list(epic.evidence)
+        if not top and story_file:
+            declared = _EVIDENCE_LINE.search(_opening_docblock(self._file_lines(root, story_file)))
+            if declared:
+                return [part.strip() for part in declared.group(1).split(",") if part.strip()]
+        labels: list[str] = []
+        for child in epic.epics:
+            labels.extend(self._epic_evidence(root, self._file_under(child), child, False))
+        for story in epic.stories:
+            labels.extend(story.evidence)
+        return list(dict.fromkeys(labels))
 
     def _file_under(self, epic: Epic) -> str:
         for story in epic.stories:

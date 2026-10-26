@@ -3,6 +3,7 @@ aggregate:
   rules:
     - screens-live-in-their-domain
     - one-home-for-web-paths
+    - posted-body-parsed-in-node
     - domain-core-file-matches-folder-slug
 nodeRoot:
   rules:
@@ -17,6 +18,7 @@ nodeRoot:
     - implement-full-interfaces
     - include-all-external-dependencies
     - node-repository-parses-on-read
+    - posted-body-parsed-in-node
     - reset-every-repository
 clientRoot:
   rules:

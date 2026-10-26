@@ -574,6 +574,7 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
                 continue
             artifacts[semantic] = _lern_ddd_file_node(ddd, relative, semantic)
             _lern_schema_edge(ddd, "owns", aggregate, artifacts[semantic])
+        _lern_other_node_files(root, folder, slug, ddd, aggregate)
 
         folder_entity_roots = [node for node in entity_roots if _aggregate_folder(node.source.file) == folder]
         folder_repositories = [node for node in repositories if _aggregate_folder(node.source.file) == folder]
@@ -714,6 +715,18 @@ def _lern_schema_edge(practice, kind: str, parent, child) -> None:
 
     order = 2 if overlay_edge_display(kind) == "direct" else 5
     _edge(practice, kind, order, overlay_edge_display(kind), parent, child)
+
+
+def _lern_other_node_files(root: Path, folder: str, slug: str, ddd, aggregate) -> None:
+    """Every other `*-node.ts` in the aggregate folder is node-tier code too (e.g. `iccid-inventory-node.ts`)."""
+    folder_path = root / folder
+    if not folder_path.is_dir():
+        return
+    for file in sorted(folder_path.glob("*-node.ts")):
+        if file.name == f"{slug}-node.ts":
+            continue
+        node = _lern_ddd_file_node(ddd, file.relative_to(root).as_posix(), "NodeRoot")
+        _lern_schema_edge(ddd, "owns", aggregate, node)
 
 
 def _lern_ddd_file_node(practice, relative: str, semantic: str, display_name: str | None = None):

@@ -16,6 +16,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.ddd.rules.lern_tier_rule
     ThrowHttpExceptions,
 )
 from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_story_rules import (
+    DomainOperationsInlineInSteps,
     NoExpectInGiven,
     TierBoundRepositoryAccessor,
 )
@@ -35,6 +36,7 @@ with description("the lern_domain_driven pattern rules"):
     with it("should load into the ddd and stories practices only when the overlay is active"):
         expect(list(checks_for_practice("ddd", ("lern_domain_driven",)))).to(contain("node-repository-parses-on-read"))
         expect(list(checks_for_practice("stories", ("lern_domain_driven",)))).to(contain("no-expect-in-given"))
+        expect(list(checks_for_practice("stories", ("lern_domain_driven",)))).to(contain("domain-operations-inline-in-steps"))
         expect("node-repository-parses-on-read" in checks_for_practice("ddd")).to(equal(False))
         expect(sorted(BY_SLUG)).to(have_len(5))
 
@@ -48,6 +50,18 @@ with description("the lern_domain_driven pattern rules"):
             repaired = "export class XRepositoryNode extends XRepository { constructor() { const document = xDocumentSchema.parse(readLowDb(path, {})); } }"
             expect(NodeRepositoryParsesOnRead().check(node("x-node", "NodeRoot"), context(repaired))).to(equal([]))
 
+        with it("should follow a store read into a same-file helper the repository calls"):
+            faulty = (
+                "const storePath = join(here, 'numbers.json');\n"
+                "function readNumbers() { return JSON.parse(readFileSync(storePath, 'utf8')); }\n"
+                "export class NumberRepositoryNode extends NumberRepository { constructor() { this.rows = readNumbers(); } }"
+            )
+            expect(NodeRepositoryParsesOnRead().check(node("x-node", "NodeRoot"), context(faulty))).to(have_len(2))
+
+        with it("should leave a wrapper repository that never reads a store alone"):
+            wrapper = "export class OnboardingRepositoryNode extends XRepositoryNode { load(p) { return this._inner.load(p); } }"
+            expect(NodeRepositoryParsesOnRead().check(node("x-node", "NodeRoot"), context(wrapper))).to(equal([]))
+
         with it("should leave a node file without a node repository alone"):
             expect(NodeRepositoryParsesOnRead().check(node("x-node", "NodeRoot"), context("export class XNode extends X {}"))).to(equal([]))
 
@@ -55,6 +69,14 @@ with description("the lern_domain_driven pattern rules"):
         with it("should flag a route that reads a posted field directly"):
             faulty = "const code = req.body.code;\nconst email = text(req.body?.email);\nconst { plan } = req.body;"
             expect(PostedBodyParsedInNode().check(node("x-routes", "Route"), context(faulty))).to(have_len(3))
+
+        with it("should flag a node that reads the posted body without a schema"):
+            faulty = "static fromRequest(req) {\n  const posted = req.body ?? {};\n  return new XNode(String(req.body?.code ?? ''));\n}"
+            expect(PostedBodyParsedInNode().check(node("x-node", "NodeRoot"), context(faulty))).to(have_len(2))
+
+        with it("should pass a node that parses the posted body with its schema"):
+            repaired = "static fromRequest(req) {\n  const posted = postedSchema.parse(req.body ?? {});\n  const merged = postedSchema.parse({ ...(req.query ?? {}), ...(req.body ?? {}) });\n}"
+            expect(PostedBodyParsedInNode().check(node("x-node", "NodeRoot"), context(repaired))).to(equal([]))
 
         with it("should pass a route that hands the request to the node"):
             repaired = "router.post('/x', (req, res) => { const { posted } = XNode.fromRequest(req); });"
@@ -90,17 +112,24 @@ with description("the lern_domain_driven pattern rules"):
             expect(messages).to(have_len(1))
             expect(messages[0]).to(contain("/onboarding/done"))
 
+        with it("should flag the core reading the request"):
+            (self.root / "src/revenue/subscription/subscription.ts").write_text(
+                "export class Sim { static fromRequest(req) { const body = req.body ?? {}; } }\n", encoding="utf-8")
+            messages = PostedBodyParsedInNode().check(self.aggregate, context("", self.root))
+            expect(messages).to(have_len(1))
+            expect(messages[0]).to(contain("framework-free core"))
+
         with it("should flag a repository instance the test setup never resets"):
             (self.root / "tests" / "vitest.setup.ts").write_text("otherRepository._reset();\n", encoding="utf-8")
             text = (self.root / "src/revenue/subscription/subscription-node.ts").read_text(encoding="utf-8")
             node_file = node("subscription-node", "NodeRoot", file="src/revenue/subscription/subscription-node.ts")
-            expect(ResetEveryRepository().check(node_file, context(text + "class SubscriptionRepositoryNode {}", self.root))).to(have_len(1))
+            expect(ResetEveryRepository().check(node_file, context(text + "class SubscriptionRepositoryNode { constructor() { readLowDb(path, {}); } }", self.root))).to(have_len(1))
 
         with it("should pass once the repositories file lists it"):
             (self.root / "tests" / "repositories.ts").write_text("export const all = [subscriptionRepositoryNode];\n", encoding="utf-8")
             text = (self.root / "src/revenue/subscription/subscription-node.ts").read_text(encoding="utf-8")
             node_file = node("subscription-node", "NodeRoot", file="src/revenue/subscription/subscription-node.ts")
-            expect(ResetEveryRepository().check(node_file, context(text + "class SubscriptionRepositoryNode {}", self.root))).to(equal([]))
+            expect(ResetEveryRepository().check(node_file, context(text + "class SubscriptionRepositoryNode { constructor() { readLowDb(path, {}); } }", self.root))).to(equal([]))
 
     with description("shared story rules"):
         with it("should flag a context cast and pass the tier-bound accessor"):
@@ -114,6 +143,35 @@ with description("the lern_domain_driven pattern rules"):
             repaired = "given('the cart has no plan', () => {\n  cart = emptyCart();\n});\nthen('no plan', () => { expect(cart.plan).toBe(null); });"
             expect(NoExpectInGiven().check(story, context(faulty))).to(have_len(1))
             expect(NoExpectInGiven().check(story, context(repaired))).to(equal([]))
+
+        with it("should flag a story-file helper that wraps a repository call and pass the call inline"):
+            story = node("x.story.shared.ts", "StoryShared", file="tests/x/x.story.shared.ts")
+            faulty = (
+                "async function reloadAccount(): Promise<AccountCredentials> {\n"
+                "  const stored = await repositories.credentials.load(lookup);\n"
+                "  return stored;\n"
+                "}\n"
+                "then('the account holds a token', async () => {\n"
+                "  expect((await reloadAccount()).isLoggedIn).toBe(true);\n"
+                "});\n"
+            )
+            repaired = (
+                "then('the account holds a token', async () => {\n"
+                "  const stored = await repositories.credentials.load(accountCredentials);\n"
+                "  expect(stored?.isLoggedIn).toBe(true);\n"
+                "});\n"
+            )
+            expect(DomainOperationsInlineInSteps().check(story, context(faulty))).to(have_len(1))
+            expect(DomainOperationsInlineInSteps().check(story, context(repaired))).to(equal([]))
+
+        with it("should leave a screen gesture helper alone"):
+            spec = node("x.story.playwright.ts", "PlaywrightSpec", file="tests/x/x.story.playwright.ts")
+            gesture = (
+                "async function signInOnScreen(page: Page, email: string): Promise<void> {\n"
+                "  await page.getByLabel('Email').fill(email);\n"
+                "}\n"
+            )
+            expect(DomainOperationsInlineInSteps().check(spec, context(gesture))).to(equal([]))
 
     with description("no-prototype-swapping (Clean Engineering)"):
         with it("should flag a prototype swap and pass a factory"):
