@@ -73,10 +73,10 @@ class StoryNode(BoundNode, ABC):
         "refund", "register", "reject", "release", "remove", "rename", "render",
         "reply", "report", "request", "reset", "resolve", "retry", "return",
         "revert", "review", "revoke", "route", "save", "scan", "schedule", "search",
-        "select", "send", "set", "settle", "share", "show", "sign", "split",
-        "start", "stop", "store", "submit", "subscribe", "sync", "toggle", "track",
-        "translate", "trigger", "unlock", "update", "upload", "validate", "verify",
-        "view", "vote", "wait",
+        "select", "send", "serve", "set", "settle", "share", "show", "sign",
+        "split", "start", "stop", "store", "submit", "subscribe", "sync", "toggle",
+        "track", "translate", "trigger", "unlock", "update", "upload", "use",
+        "validate", "verify", "view", "vote", "wait",
     })
     _GERUND = re.compile(r"^[a-z]+ing$")
     _NOMINALISATION = re.compile(r"^[a-z]+(?:tion|sion|ment|ance|ence|ity|ness)$")
