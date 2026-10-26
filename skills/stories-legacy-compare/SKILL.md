@@ -77,7 +77,7 @@ Copy this checklist and tick it off for each sub-epic:
    - Run nothing until the user says yes.
 7. **Run.**
    - Watched (the config's default: headed, `slowMo`): `npx playwright test -c playwright.legacy-compare.config.ts`.
-   - By default only pml-web runs, compared against the saved pml-my baseline in `legacy-compare-results/baseline/`; setup copies it into the run folder. Set `LEGACY_COMPARE_REFRESH=1` to run pml-my as well when pml-my, its stub, or the examples change. A refreshed pml-my half with no failures becomes the new baseline.
+   - pml-my's recordings are saved per journey in `legacy-compare-results/baseline/pml-my/`. pml-my runs only journeys with no saved recording; each pml-my journey with no failing row is saved on its own, and setup copies the saved ones into every run. Set `LEGACY_COMPARE_REFRESH=1` (narrowed to a sub-epic with a file filter) to rerun saved journeys, and only when pml-my, its stubs, or the examples change. Never rerun pml-my for a harness change.
    - Keep the config's reporters (do not pass `--reporter`): they write the HTML report the trace step opens.
    - Fast: the same command with `LEGACY_COMPARE_FAST=1` set.
    - Load the examples once at the start, then never seed again. One page per system runs the stories in map order (`test.describe.serial`), and each scenario starts where the last one left the app.

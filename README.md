@@ -34,11 +34,11 @@ Iteratively sketch using multiple views
 
 Work moves through three stages. Stay on the current stage until that view agrees, then go deeper on one slice.
 
-- [Discovery](practices/cdd/cdd.md#discovery) — outcome, journey, and architecture, still cheap to change. 
+- [Discovery](harness/catalog_generator/markdown/cdd-approach.md#discovery) — outcome, journey, and architecture, still cheap to change. 
 *Use the [Discoverer](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/discovery.md) agent to run discovery.*
-- [Specification](practices/cdd/cdd.md#spec) — one increment: scenarios, domain behavior, and the experience. 
+- [Specification](harness/catalog_generator/markdown/cdd-approach.md#specification) — one increment: scenarios, domain behavior, and the experience. 
 *Use the [Specification](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/specification.md) agent to run specification.*
-- [Implementation](practices/cdd/cdd.md#engineer) — tests, touchpoints, and the solution on the target stack. 
+- [Implementation](harness/catalog_generator/markdown/cdd-approach.md#implement) — tests, touchpoints, and the solution on the target stack. 
 *Use the [Implementation](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/implementation.md) agent to run implementation.*
 
 

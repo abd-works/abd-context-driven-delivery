@@ -295,15 +295,6 @@ Do not put `/generate` on the practice. Pass the practice into the kit.
 
 ---
 
-## practices/cdd
-*Cdd* is the stage menu across Stories, DDD, UX, Clean Engineering, and BDD.
-
-- **Purpose:** Offer the stage menu across Stories, DDD, UX, Clean Engineering, and BDD.
-- **Seam (terms):** Cdd
-- **Dependencies (one-way):** `harness/guidance`, `practices/stories`, `practices/ddd`, `practices/ux`, `practices/clean_engineering`, `practices/bdd`
-
----
-
 ## practices/clean_engineering
 *CleanEngineering* partitions, types, and implements objects — modules, then model, then code — in the caller’s language.
 

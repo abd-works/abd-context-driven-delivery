@@ -14,6 +14,17 @@ class Ddd(PracticeGuidance):
     module load time).
     """
 
+    # How the catalog shows this practice; the generator discovers it like the installer does.
+    catalog_card = {
+        "name": "Domain-Driven Design",
+        "label": "domain-driven-design",
+        "family": "aad-fam-ddd",
+        "perspective": "ddd",
+        "order": 50,
+        "blurb": "Organize the code around domain state, domain logic, and domain rules.",
+        "spec_blurb": "An aggregate model of the core domain, then the building blocks that implement it",
+    }
+
     def __init__(
         self,
         fidelity: str = "bounded_context",

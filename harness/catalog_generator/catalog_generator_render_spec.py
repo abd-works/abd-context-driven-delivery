@@ -250,7 +250,7 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             workflow_html = (self.tmp / "workflow.html").read_text(encoding="utf-8")
             expect("CDD Workflow" in workflow_html).to(be_true)
             expect("Scenario 1" in workflow_html).to(be_true)
-            expect('href="cdd_guidance/actions/partition.html"' in workflow_html).to(be_true)
+            expect('href="actions/partition.html"' in workflow_html).to(be_true)
 
 
 with description("Render Flat Grid Pages"):
@@ -282,7 +282,7 @@ with description("Render Flat Grid Pages"):
 
         with it("lists every context tool, action, and utility card on its own grid page"):
             for page_name, expected in (
-                ("context-tools.html", "Context-driven delivery"),
+                ("context-tools.html", "Domain-Driven Design"),
                 ("actions.html", "createRule"),
             ):
                 content = (self.tmp / page_name).read_text(encoding="utf-8")

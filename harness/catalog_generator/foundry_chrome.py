@@ -142,41 +142,22 @@ def stage_example_href(
 def _board_stage(stages: dict[str, dict], stage_key: str) -> dict:
     return stages.get(stage_key) or {}
 
-# Board rows under the CDD header: Stories → CE → UX → BDD → DDD.
-FAMILY_ROW_ORDER: tuple[str, ...] = (
-    "stories",
-    "clean_engineering",
-    "ux",
-    "bdd",
-    "ddd",
-)
+# Board rows under the CDD header, in each discovered practice's catalog order.
+# register_practices fills these from the practices' own catalog cards; the
+# entries written here belong to the CDD header, not to any practice.
+FAMILY_ROW_ORDER: list[str] = []
 
 _FAM = {
     "cdd": "aad-fam-delivery",
-    "stories": "aad-fam-sdd",
-    "ddd": "aad-fam-ddd",
-    "ux": "aad-fam-uxd",
-    "clean_engineering": "aad-fam-arc",
-    "bdd": "aad-fam-sdd",
 }
 
 _FAM_LABEL = {
     "cdd": "cdd",
-    "stories": "sdd",
-    "ddd": "ddd",
-    "ux": "uxd",
-    "clean_engineering": "arc",
-    "bdd": "bdd",
 }
 
 # Kebab-case board labels (Foundry style).
 _DISPLAY_LABELS: dict[str, str] = {
     "cdd": "context-driven-delivery",
-    "stories": "stories",
-    "clean_engineering": "clean-engineering",
-    "ux": "user-experience",
-    "bdd": "behavior-driven-development",
-    "ddd": "domain-driven-design",
     "discovery": "discovery",
     "spec": "specification",
     "engineer": "implementation",
@@ -195,6 +176,21 @@ _DISPLAY_LABELS: dict[str, str] = {
     "development": "development",
 }
 
+_PRACTICE_BLURBS: dict[str, str] = {}
+
+_SPEC_BLURBS: dict[str, str] = {}
+
+
+def register_practices(cards: list[tuple[str, dict]]) -> None:
+    """Board order, labels, colour families, and blurbs from each discovered practice's card."""
+    FAMILY_ROW_ORDER[:] = [name for name, _card in cards]
+    for name, card in cards:
+        _DISPLAY_LABELS[name] = card["label"]
+        _FAM[name] = card["family"]
+        _FAM_LABEL[name] = card["perspective"]
+        _PRACTICE_BLURBS[name] = card["blurb"]
+        _SPEC_BLURBS[name] = card["spec_blurb"]
+
 
 def display_label(key: str) -> str:
     """Lowercase kebab-case for board tickets and practice rail chips."""
@@ -210,22 +206,6 @@ def family_class(toolset_name: str) -> str:
 def family_perspective(toolset_name: str) -> str:
     return _FAM_LABEL.get(toolset_name, "other")
 
-
-_PRACTICE_BLURBS: dict[str, str] = {
-    "stories": "Map user interactions to system behaviors, then define each through executable specifications.",
-    "clean_engineering": "Highest quality software through modularized architecture and clean code that is resilient to change.",
-    "ux": "Defining user impact from journey and information architecture to screen navigation.",
-    "bdd": "Specify domain logic through behavioural, automated tests.",
-    "ddd": "Organize the code around domain state, domain logic, and domain rules.",
-}
-
-_SPEC_BLURBS: dict[str, str] = {
-    "stories": "Executable scenario-specifications with real-world examples",
-    "clean_engineering": "Deep modules with explicit, narrow seams defined using code-level, type-safe contracts",
-    "ux": "Interface mockups that work according to story specs and design templates",
-    "bdd": "Nested describe/it behaviour tests that serve as both documentation and automated tests for domain logic",
-    "ddd": "Templates that generate domain building blocks for the target architecture",
-}
 
 def approach_principle_grid(
     practices: list[dict],
@@ -253,7 +233,7 @@ def approach_principle_grid(
         )
 
     cdd = by_name.get("cdd")
-    cdd_href = html.escape(practice_href(cdd) if cdd else "context-tools/cdd.html")
+    cdd_href = html.escape(practice_href(cdd) if cdd else "cdd-approach.html")
     cdd_head = (
         f'<a class="approach-grid__label approach-grid__label--cdd" href="{cdd_href}">'
         "context-driven-delivery</a>"
@@ -667,7 +647,7 @@ def render_hub_board(
             ordered.append(t)
 
     cdd_tool = by_name.get("cdd")
-    cdd_tool_href = path_prefix + (cdd_tool["href"] if cdd_tool else "context-tools/cdd.html")
+    cdd_tool_href = path_prefix + (cdd_tool["href"] if cdd_tool else "cdd-approach.html")
 
     practice_bits = [
         _family_toggle(

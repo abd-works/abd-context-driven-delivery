@@ -44,18 +44,48 @@ _NO_CATALOG = "noCatalog"
 
 # -- Registry ---------------------------------------------------------------
 #
-# Hardcoded per the plan's "Registry (context tools + utilities)" section -
-# verified against the real classes on disk. CDD is the header row; the
-# other five are the board's context-tool rows.
+# Context tools are discovered the way the installer discovers toolsets: every
+# installable PracticeGuidance with at least one staged fidelity, unless marked
+# @noCatalog. Each practice describes itself for the catalog in ``catalog_card``.
 
-CONTEXT_TOOL_REGISTRY: tuple[tuple[str, str, str], ...] = (
-    ("Context-driven delivery", "cdd_guidance.practices.cdd.cdd", "Cdd"),
-    ("Stories", "cdd_guidance.practices.stories.stories", "Stories"),
-    ("Clean Engineering", "cdd_guidance.practices.clean_engineering.clean_engineering", "CleanEngineering"),
-    ("User Experience", "cdd_guidance.practices.ux.ux", "Ux"),
-    ("Behavior-Driven Development", "cdd_guidance.practices.bdd.bdd", "Bdd"),
-    ("Domain-Driven Design", "cdd_guidance.practices.ddd.ddd", "Ddd"),
-)
+_PRACTICE_CARD_DEFAULTS: dict[str, Any] = {
+    "family": "aad-fam-other",
+    "perspective": "other",
+    "order": 100,
+    "blurb": "",
+    "spec_blurb": "",
+}
+
+
+def practice_card(cls: type) -> dict[str, Any]:
+    """The practice's own catalog card, with name and label derived when it gives none."""
+    card = {**_PRACTICE_CARD_DEFAULTS, **(getattr(cls, "catalog_card", None) or {})}
+    card.setdefault("name", re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", cls.__name__))
+    card.setdefault("label", card["name"].lower().replace(" ", "-"))
+    return card
+
+
+def discover_context_tools(repo: Path | None = None) -> list["RegistryEntry"]:
+    """Every installable practice with staged fidelities, in each card's order."""
+    from harness.guidance.guidance import PracticeGuidance
+    from harness.installation.installer import Installer
+
+    entries: list[RegistryEntry] = []
+    for ref in Installer(repo=repo or _REPO_ROOT).collect_toolsets():
+        module_path, _, class_name = ref.partition(":")
+        try:
+            cls = getattr(importlib.import_module(module_path), class_name)
+        except Exception as error:  # noqa: BLE001
+            logging.warning("Toolset %s is not importable for the catalog: %s", ref, error)
+            continue
+        if not (isinstance(cls, type) and issubclass(cls, PracticeGuidance)):
+            continue
+        if omitted_from_catalog(cls) or not fidelity_names_by_stage(cls):
+            continue
+        entries.append(RegistryEntry(practice_card(cls)["name"], module_path, class_name, cls))
+    entries.sort(key=lambda entry: (practice_card(entry.cls)["order"], entry.display_name))
+    return entries
+
 
 # Installer owns install. Diagnose, echo, handoff, and workspace are live utilities.
 UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
@@ -192,13 +222,16 @@ def owner_toolset_name(owner: object) -> str:
 
 
 def load_registry() -> tuple[list[RegistryEntry], list[RegistryEntry]]:
-    """Resolve every context-tool and utility registry row to a real class.
+    """Discover the context tools and resolve every utility registry row to a real class.
 
-    Returns ``(practices, utilities)``. Resolution failures raise
-    (``ImportError`` / ``AttributeError``) immediately - "nothing missing"
-    is a hard fail at discover time, not a silently dropped row.
+    Returns ``(practices, utilities)``. Utility resolution failures raise
+    (``ImportError`` / ``AttributeError``) immediately.
     """
-    return _registry_entries(CONTEXT_TOOL_REGISTRY), _registry_entries(UTILITY_REGISTRY)
+    from harness.catalog_generator.foundry_chrome import register_practices
+
+    practices = discover_context_tools()
+    register_practices([(entry.toolset_name(), practice_card(entry.cls)) for entry in practices])
+    return practices, _registry_entries(UTILITY_REGISTRY)
 
 
 def _registry_entries(rows: tuple[tuple[str, str, str], ...]) -> list[RegistryEntry]:
@@ -1831,14 +1864,8 @@ class Catalog:
 
     def _board_tool_entries(self) -> list[dict]:
         from harness.catalog_generator.foundry_chrome import STAGES
-        from cdd_guidance.practices.cdd.cdd import _CONTEXT_TOOLS_BY_STAGE
 
-        tools_on_stage: dict[str, set[str]] = {
-            stage: {RegistryEntry("", "", "", cls).toolset_name() for cls in classes}
-            for stage, classes in _CONTEXT_TOOLS_BY_STAGE.items()
-        }
         self._board_stages = STAGES
-        self._tools_on_stage = tools_on_stage
         return [self._board_row_for_entry(entry) for entry in self._context_tool_entries]
 
     def _board_row_for_entry(self, entry: RegistryEntry) -> dict:
@@ -1861,8 +1888,6 @@ class Catalog:
     def _fill_board_stage(self) -> None:
         tool_name = self._board_tool_name
         stage_key = self._board_stage_key
-        if tool_name != "cdd" and tool_name not in self._tools_on_stage.get(stage_key, set()):
-            return
         fid_name = self._board_fidelities.get(stage_key)
         if fid_name:
             self._board_stage_map[stage_key] = {

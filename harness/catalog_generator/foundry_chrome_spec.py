@@ -312,6 +312,12 @@ with description("information architecture viewport"):
 
 
 with description("product engineering grid"):
+    with before.all:
+        # Practice labels and colour families come from the discovered practices' catalog cards.
+        from harness.catalog_generator.catalog_generator import load_registry
+
+        load_registry()
+
     with it("renders one refine row per practice with rewind and play"):
         html = approach_principle_grid(
             [
