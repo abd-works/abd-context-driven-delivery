@@ -15,6 +15,7 @@ from typing import Any
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
+from space.work_state import WorkState
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +25,47 @@ class RepoConnectError(RuntimeError):
 
 
 _COMMAND_TIMEOUT_SECONDS = 10
+# Push, fetch, and pull wait on the network; local git commands should never need this long.
+_NETWORK_COMMAND_TIMEOUT_SECONDS = 180
+_NETWORK_COMMANDS = frozenset({"push", "fetch", "pull"})
 
 
 class GhConnectError(RuntimeError):
     """Raised when gh cannot be used."""
+
+
+class BranchNameRequiredError(ValueError):
+    """Raised when a branch command has no name and none is saved in ``.sessions/session.json``."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "branch name is required: pass name, or switch to a branch first so "
+            "it is saved in .sessions/session.json"
+        )
+
+
+class DefaultBranchError(ValueError):
+    """Raised when a branch or worktree command is aimed at the default branch."""
+
+    def __init__(self, operation: str, default: str) -> None:
+        super().__init__(f"cannot {operation} the default branch {default!r}")
+
+
+class BranchInWorktreeError(RuntimeError):
+    """Raised when the branch to close is still checked out in a linked worktree."""
+
+    def __init__(self, branch: str, path: Path) -> None:
+        super().__init__(
+            f"branch {branch!r} is checked out in the worktree at {path}; "
+            "close that worktree first"
+        )
+
+
+class NoOpenWorktreeError(RuntimeError):
+    """Raised when close-worktree runs with no worktree saved in ``.sessions/session.json``."""
+
+    def __init__(self) -> None:
+        super().__init__("no open worktree: .sessions/session.json has no worktree")
 
 
 class DirtyBranchSwitchError(RuntimeError):
@@ -871,31 +909,62 @@ class Repo:
                     break
         if not found:
             raise RepoConnectError("Cannot connect git: `git` is not available.")
+        timeout = (
+            _NETWORK_COMMAND_TIMEOUT_SECONDS
+            if args and args[0] in _NETWORK_COMMANDS
+            else _COMMAND_TIMEOUT_SECONDS
+        )
         try:
-            completed = subprocess.run(
-                [found, "-c", "core.longpaths=true", "-C", str(root), *args],
-                # Under the MCP stdio host, an inherited stdin pipe can hang git on Windows.
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                check=False,
-                timeout=_COMMAND_TIMEOUT_SECONDS,
+            returncode, stdout, stderr = cls._run_git_process(
+                [found, "-c", "core.longpaths=true", "-C", str(root), *args], timeout
             )
         except subprocess.TimeoutExpired as exc:
             raise RepoConnectError(
                 f"Cannot connect git: git {' '.join(args)} exceeded "
-                f"{_COMMAND_TIMEOUT_SECONDS} seconds in {root}."
+                f"{timeout} seconds in {root}."
             ) from exc
         except OSError as exc:
             raise RepoConnectError(f"Cannot connect git: {exc}.") from exc
-        if completed.returncode != 0:
-            err = (completed.stderr or completed.stdout or "").strip()
+        if returncode != 0:
+            err = (stderr or stdout or "").strip()
             raise RepoConnectError(
                 f"Cannot connect git: git {' '.join(args)} failed in {root}: "
                 f"{err}."
             )
-        return (completed.stdout or "").strip()
+        return (stdout or "").strip()
+
+    @classmethod
+    def _run_git_process(cls, argv: list[str], timeout: float) -> tuple[int, str, str]:
+        process = subprocess.Popen(
+            argv,
+            # Under the MCP stdio host, an inherited stdin pipe can hang git on Windows.
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        )
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            cls._kill_process_tree(process)
+            process.communicate()
+            raise
+        return process.returncode, stdout, stderr
+
+    @classmethod
+    def _kill_process_tree(cls, process: subprocess.Popen) -> None:
+        # Git for Windows' cmd\git.exe is a launcher; killing only the launcher leaves the real
+        # git holding the output pipes, so communicate() would block long past the timeout.
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill", "/T", "/F", "/PID", str(process.pid)],
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                check=False,
+            )
+            return
+        process.kill()
 
     @classmethod
     def gh(
@@ -956,6 +1025,7 @@ class Repo:
         self._commit = "sha-init"
         self._commits: list[tuple[list[str], str]] = []
         self._pushes: list[str] = []
+        self._deleted: list[str] = []
         self._dirty = False
         self._notes: dict[str, dict[str, str]] = {}
         self._project_links: list[tuple[str, int, str]] = []
@@ -1211,6 +1281,41 @@ class Repo:
         except RepoConnectError:
             return False
 
+    def needs_push(self) -> bool:
+        """True when the current branch has no upstream yet or is ahead of it."""
+        if self._memory:
+            return True
+        if not self._ref_exists(f"refs/remotes/origin/{self.current_branch}"):
+            return True
+        return self.has_unpushed_commits()
+
+    def checkout_from_default(self, name: str) -> str:
+        """Check out ``name``; a missing branch starts from origin's copy, else from the default branch."""
+        if self._memory:
+            self._branch_names.add(name)
+            self._branch = name
+            return name
+        if self._ref_exists(f"refs/heads/{name}"):
+            self._git("checkout", name)
+            return name
+        self._git("checkout", "-b", name, self._branch_start_point(name))
+        return name
+
+    def delete_branch(self, name: str) -> None:
+        """Delete merged branch ``name`` here and on origin."""
+        if self._memory:
+            self._branch_names.discard(name)
+            self._deleted.append(name)
+            return
+        self._git("branch", "-d", name)
+        if self._ref_exists(f"refs/remotes/origin/{name}"):
+            self._git("push", "origin", "--delete", name)
+
+    def _branch_start_point(self, name: str) -> str:
+        if self._ref_exists(f"refs/remotes/origin/{name}"):
+            return f"origin/{name}"
+        return self._worktree_start_point() or self.default_branch
+
     def list_worktrees(self) -> list[Worktree]:
         if self._memory:
             return list(self._worktrees)
@@ -1285,11 +1390,7 @@ class Repo:
         if self._ref_exists(f"refs/heads/{branch}"):
             self._git("worktree", "add", str(dest), branch)
         else:
-            start = self._worktree_start_point()
-            args = ["worktree", "add", "-b", branch, str(dest)]
-            if start:
-                args.append(start)
-            self._git(*args)
+            self._git("worktree", "add", "-b", branch, str(dest), self._branch_start_point(branch))
         return dest.resolve()
 
     def remove_worktree(self, path: str | Path) -> None:
@@ -1705,172 +1806,139 @@ class Repo:
             return self
         return Worktree.open(self.root).repository
 
-    def _agent_worktree(self) -> Worktree:
-        return Worktree(self._agent_repo())
-
     def _bind(self, repository: Repo) -> Repo:
         self._agent_active = repository
         return repository
 
-    @agent_tool
-    @mcp
-    @command(name="branch")
-    def branch(self, name: str) -> str:
-        """Chaining: open a sibling worktree for ``name``; create the branch when missing."""
-        cleaned = (name or "").strip()
-        if not cleaned:
-            raise ValueError("branch name is required")
-        self._bind(self._agent_worktree().checkout_linked(cleaned))
-        return f"worktree for {self.current_branch!r} at {self.checkout_path}"
-
-    @agent_tool
-    @mcp
-    @command(name="worktree")
-    def worktree(self, name: str) -> str:
-        """Chaining: open a sibling worktree for ``name``; pull when the folder exists, add worktree and pull when not."""
-        cleaned = (name or "").strip()
-        if not cleaned:
-            raise ValueError("branch name is required")
-        self._bind(self._agent_worktree().checkout_linked(cleaned))
-        return f"worktree for {self.current_branch!r} at {self.checkout_path}"
-
-    @agent_tool
-    @mcp
-    @skill(name="branch-create")
-    def new_branch(self, name: str, switch: bool = True) -> str:
-        """Create branch ``name`` from HEAD in the current clone only.
-
-        Does not add a worktree. For a sibling worktree use ``repo.new_worktree`` or ``/branch``.
-        """
-        cleaned = (name or "").strip()
-        if not cleaned:
-            raise ValueError("branch name is required")
-        self._bind(self._agent_worktree().create_branch_in_place(cleaned, switch=switch))
-        return f"branch {cleaned!r} ready at {self.checkout_path}"
-
-    @agent_tool
-    @mcp
-    def switch_branch(self, name: str) -> str:
-        """Check out existing branch ``name`` in the current clone only."""
-        cleaned = (name or "").strip()
-        if not cleaned:
-            raise ValueError("branch name is required")
-        self._bind(self._agent_worktree().checkout_existing_in_place(cleaned))
-        return f"on branch {self.current_branch!r} at {self.checkout_path}"
-
-    @agent_tool
-    @mcp
-    @skill(name="branch-switch")
-    def branch_switch(self, name: str, work_tree: bool) -> str:
-        """Switch to ``name``. ``work_tree`` is required.
-
-        When ``work_tree`` is true, use a sibling worktree.
-        When ``work_tree`` is false, check out ``name`` in the current clone only.
-        Refuses when the tree is dirty (use commit or stash first).
-        """
-        cleaned = (name or "").strip()
-        if not cleaned:
-            raise ValueError("branch name is required")
-        if work_tree:
-            self._bind(self._agent_worktree().checkout_linked(cleaned))
-            return f"worktree for {self.current_branch!r} at {self.checkout_path}"
-        self._bind(self._agent_worktree().checkout_existing_in_place(cleaned))
-        return f"on branch {self.current_branch!r} at {self.checkout_path}"
-
-    @agent_tool
-    @mcp
-    def close_branch(
-        self,
-        name: str = "",
-        commit_message: str = "branch: close",
-        merge_to_main: bool = True,
-    ) -> str:
-        """Close the branch in this clone. Does not remove worktrees."""
+    def _primary_repo(self) -> Repo:
+        """The main clone; branch commands never act inside a linked worktree."""
         repository = self._agent_repo()
-        result = Worktree(repository).close_branch(
-            (name or repository.current_branch or "").strip(),
-            commit_message=commit_message,
-            merge_to_main=merge_to_main,
-        )
-        self._agent_active = None
-        return result
+        if repository.in_memory or not repository.is_linked_worktree():
+            return repository
+        return Repo(repository.primary_root())
+
+    def _work_state(self) -> WorkState:
+        return WorkState(self._primary_repo().root)
+
+    def _branch_name(self, name: str) -> str:
+        cleaned = (name or "").strip() or self._work_state().branch
+        if not cleaned:
+            raise BranchNameRequiredError()
+        return cleaned
 
     @agent_tool
     @mcp
-    def new_worktree(self, name: str) -> str:
-        """Add or open a sibling worktree for branch ``name``."""
-        cleaned = (name or "").strip()
-        if not cleaned:
-            raise ValueError("branch name is required")
-        self._bind(self._agent_worktree().checkout_linked(cleaned))
-        return f"worktree for {self.current_branch!r} at {self.checkout_path}"
+    def switch_branch(self, name: str = "") -> str:
+        """Switch the main clone to branch ``name``, creating it when missing.
+
+        ``name`` defaults to ``branch`` in ``.sessions/session.json``. Commits the branch being
+        left and pushes it (the default branch is committed but not pushed), checks out
+        ``name`` (a new branch starts from origin's copy or the default branch), and saves
+        ``name`` as ``branch`` in ``.sessions/session.json``. Does not touch worktrees or sessions.
+        """
+        wanted = self._branch_name(name)
+        repository = self._primary_repo()
+        if repository.current_branch != wanted:
+            repository.branch_named(repository.current_branch).save(f"branch: switch to {wanted}")
+            repository.checkout_from_default(wanted)
+        self._work_state().branch = wanted
+        return f"on branch {wanted!r} at {repository.root}"
 
     @agent_tool
     @mcp
-    def switch_worktree(self, name: str) -> str:
-        """Open the sibling worktree for branch ``name``."""
-        cleaned = (name or "").strip()
-        if not cleaned:
-            raise ValueError("branch name is required")
-        self._bind(self._agent_worktree().checkout_linked(cleaned))
-        return f"worktree for {self.current_branch!r} at {self.checkout_path}"
+    def close_branch(self, name: str = "", commit_message: str = "branch: close") -> str:
+        """Close branch ``name``: commit, push, merge into the default branch, push it, delete ``name``.
+
+        ``name`` defaults to ``branch`` in ``.sessions/session.json``. Refuses the default branch and
+        a branch still open in a worktree. Deletes ``name`` locally and on origin, leaves the main
+        clone on the default branch, and saves the default branch as ``branch``. Does not touch sessions.
+        """
+        wanted = self._branch_name(name)
+        repository = self._primary_repo()
+        default = repository.default_branch
+        if wanted == default:
+            raise DefaultBranchError("close", default)
+        occupied = repository.worktree_for(wanted)
+        if occupied is not None and Path(occupied.path).resolve() != Path(repository.root).resolve():
+            raise BranchInWorktreeError(wanted, Path(occupied.path))
+        self.switch_branch(wanted)
+        repository.branch_named(wanted).close(commit_message)
+        self._work_state().branch = default
+        return f"closed branch {wanted!r}: merged into {default!r}, pushed, and deleted"
+
+    @agent_tool
+    @mcp
+    def switch_worktree(self, name: str = "") -> str:
+        """Open the sibling worktree for branch ``name``, creating the branch and folder when missing.
+
+        ``name`` defaults to ``branch`` in ``.sessions/session.json`` and must not be the default
+        branch. When the main clone has ``name`` checked out, it is committed, pushed, and the main
+        clone goes back to the default branch so the worktree can take it. Saves ``branch`` and the
+        worktree path as ``worktree`` in ``.sessions/session.json``; later repo tools act in it.
+        """
+        wanted = self._branch_name(name)
+        primary = self._primary_repo()
+        if wanted == primary.default_branch:
+            raise DefaultBranchError("open a worktree for", primary.default_branch)
+        if primary.current_branch == wanted:
+            primary.branch_named(wanted).save(f"worktree: move {wanted} to its worktree")
+            primary.checkout_from_default(primary.default_branch)
+        opened = self._bind(primary.branch_named(wanted).open_in_worktree())
+        state = WorkState(primary.root)
+        state.branch = wanted
+        state.worktree = str(opened.root)
+        return f"worktree for {wanted!r} at {opened.root}"
 
     @agent_tool
     @mcp
     def close_worktree(self, commit_message: str = "worktree: close") -> str:
-        """Commit, push, and remove this linked worktree when clean."""
-        result = self._agent_worktree().close(commit_message=commit_message)
+        """Close the worktree saved in ``.sessions/session.json``: commit, push its branch, remove the folder.
+
+        Does not merge; the branch stays open as ``branch``. Clears ``worktree`` in
+        ``.sessions/session.json`` and returns later repo tools to the main clone.
+        """
+        state = self._work_state()
+        if not state.worktree:
+            raise NoOpenWorktreeError()
+        tree = Repo(state.worktree)
+        branch = tree.current_branch
+        tree.branch_named(branch).save(commit_message)
+        Repo(tree.primary_root()).remove_worktree(tree.root)
+        state.worktree = ""
         self._agent_active = None
-        return result
-
-    @command(name="new-branch")
-    @agent_instructions
-    def new_branch_command(self) -> str:
-        """Create a git branch in the current clone only — never a worktree.
-
-        Ask the user for the branch name when it is not already clear from the chat.
-        Call MCP ``repo.new_branch`` with that name. Do not call worktree or branch chaining tools."""
-        return ""
+        return f"closed worktree for {branch!r}; branch pushed and kept open"
 
     @command(name="switch-branch")
     @agent_instructions
     def switch_branch_command(self) -> str:
-        """Check out an existing branch in the current clone only.
+        """Switch the main clone to a branch, creating it when missing.
 
-        Ask the user for the branch name when it is not already clear from the chat.
-        Call MCP ``repo.switch_branch`` with that name. Do not create branches or worktrees."""
+        Use the branch the user names; otherwise call without a name so the branch saved in
+        ``.sessions/session.json`` is used. Call MCP ``repo.switch_branch``."""
         return ""
 
     @command(name="close-branch")
     @agent_instructions
     def close_branch_command(self) -> str:
-        """Close the current git branch (commit, push, merge as implemented by ``repo.close_branch``).
+        """Close a branch: commit, push, merge into main, push main, delete the branch.
 
-        Use the current branch unless the user names another. Call MCP ``repo.close_branch``."""
-        return ""
-
-    @command(name="new-worktree")
-    @agent_instructions
-    def new_worktree_command(self) -> str:
-        """Add or open a sibling worktree for a branch.
-
-        Ask the user for the branch name when it is not already clear from the chat.
-        Call MCP ``repo.new_worktree`` with that name. Do not use branch-only tools."""
+        Use the branch the user names; otherwise call without a name so the branch saved in
+        ``.sessions/session.json`` is used. Call MCP ``repo.close_branch``."""
         return ""
 
     @command(name="switch-worktree")
     @agent_instructions
     def switch_worktree_command(self) -> str:
-        """Switch this toolset to the sibling worktree for a branch.
+        """Open the sibling worktree for a branch other than main, creating it when missing.
 
-        Ask the user for the branch name when it is not already clear from the chat.
-        Call MCP ``repo.switch_worktree`` with that name."""
+        Use the branch the user names; otherwise call without a name so the branch saved in
+        ``.sessions/session.json`` is used. Call MCP ``repo.switch_worktree``."""
         return ""
 
     @command(name="close-worktree")
     @agent_instructions
     def close_worktree_command(self) -> str:
-        """Close the current linked worktree (commit, push, remove). Does not close the branch.
+        """Close the open worktree: commit, push its branch, remove the folder. The branch stays open.
 
         Call MCP ``repo.close_worktree``."""
         return ""
@@ -1999,115 +2067,6 @@ class Worktree:
         except RepoConnectError:
             return
 
-    def push(self) -> None:
-        try:
-            self._repo().push_upstream()
-        except RepoConnectError:
-            return
-
-    def checkout_in_place(self, branch: str) -> Repo:
-        return self._repo().branch_named(branch).open_in_place()
-
-    def checkout_existing_in_place(self, branch: str) -> Repo:
-        """Check out an existing branch on this clone; refuse when the branch is missing."""
-        name = (branch or "").strip()
-        if not name:
-            raise ValueError("branch name is required")
-        repository = self._repo()
-        if getattr(repository, "_memory", False):
-            if name not in repository._branch_names:
-                raise ValueError(f"branch {name!r} does not exist")
-            repository._branch = name
-            self.fetch_pull()
-            return repository
-        listed = repository._git("branch", "--list", name)
-        if not listed.strip():
-            raise ValueError(f"branch {name!r} does not exist")
-        if repository.current_branch != name:
-            if repository.is_dirty():
-                raise DirtyBranchSwitchError(repository.current_branch, name)
-            repository._git("checkout", name)
-        self.fetch_pull()
-        return repository
-
-    def create_branch_in_place(self, branch: str, *, switch: bool = True) -> Repo:
-        """Create branch from HEAD on this clone; optionally check it out. Never adds a worktree."""
-        name = (branch or "").strip()
-        if not name:
-            raise ValueError("branch name is required")
-        repository = self._repo()
-        if getattr(repository, "_memory", False):
-            repository._branch_names.add(name)
-            if switch:
-                repository._branch = name
-            return repository
-        listed = repository._git("branch", "--list", name)
-        if listed.strip():
-            if switch:
-                return self.checkout_existing_in_place(name)
-            return repository
-        if switch:
-            repository._git("checkout", "-b", name)
-        else:
-            repository.create_branch(name)
-        return repository
-
-    def checkout_linked(self, branch: str) -> Repo:
-        return self._repo().branch_named(branch).open_in_worktree()
-
-    def remove_when_clean(self) -> bool:
-        repository = self._repo()
-        if getattr(repository, "_memory", False):
-            return True
-        self.push()
-        repository.clear_stash()
-        if repository.is_dirty(untracked=False) or repository.has_unpushed_commits():
-            return False
-        if not repository.is_linked_worktree():
-            return True
-        try:
-            Repo(repository.primary_root()).remove_worktree(repository.root)
-        except RepoConnectError:
-            return False
-        root = Path(repository.root)
-        if root.is_dir():
-            try:
-                if not any(root.iterdir()):
-                    root.rmdir()
-            except OSError:
-                pass
-        return True
-
-    def close(self, *, commit_message: str = "worktree: close") -> str:
-        """Commit, push, and remove this linked worktree when clean — does not close branch or session."""
-        repository = self._repo()
-        if repository.is_dirty(untracked=False):
-            repository.commit([str(repository.root)], commit_message, untracked=True)
-        self.push()
-        removed = self.remove_when_clean()
-        if removed:
-            return f"closed worktree at {repository.root!s}"
-        return (
-            f"worktree at {repository.root!s} kept — dirty tree or unpushed commits"
-        )
-
-    def close_branch(
-        self,
-        branch: str,
-        *,
-        commit_message: str = "branch: close",
-        merge_to_main: bool = True,
-        close_session: bool = True,
-    ) -> str:
-        """Close a branch on this checkout — prefer :meth:`Branch.close`."""
-        repository = self._repo()
-        name = (branch or repository.current_branch or "").strip()
-        return repository.branch_named(name).close(
-            commit_message=commit_message,
-            merge_to_main=merge_to_main,
-            close_session=close_session,
-        )
-
 
 class Branch:
     """Named branch on a *Repo* — checkout, commit, merge, and close."""
@@ -2125,12 +2084,6 @@ class Branch:
     def checkout(self) -> Branch:
         self._repo.checkout_or_create(self.name)
         return self
-
-    def open_in_place(self) -> Repo:
-        """Check out this branch on the bound clone and return that repo."""
-        self.checkout()
-        Worktree(self._repo).fetch_pull()
-        return self._repo
 
     def open_in_worktree(self) -> Repo:
         """Check out this branch in a sibling worktree and return that clone."""
@@ -2181,68 +2134,28 @@ class Branch:
         sha = self._repo.merge_branch(other.name, self.name, message=message)
         return Commit.from_message(sha, message or f"merge {other.name} into {self.name}")
 
-    def land_on_default(self) -> None:
-        """Push the feature branch, merge it into default on this clone, push default."""
-        from space.repo.repo import Repo, RepoConnectError
+    def save(self, commit_message: str) -> None:
+        """Commit every change on this checked-out branch, then push it when origin is behind.
 
+        The default branch is committed locally but never pushed here; closing a branch pushes it.
+        """
+        repository = self._repo
+        if repository.is_dirty():
+            repository.commit([str(repository.root)], commit_message, untracked=True)
+        if self.name != repository.default_branch and repository.needs_push():
+            repository.push_upstream()
+
+    def land_on_default(self) -> None:
+        """Merge this branch into the default branch on this clone and push the default branch."""
         repository = self._repo
         default = repository.default_branch
-        feature = self.name
-        if getattr(repository, "_memory", False):
-            repository._pushes.append(feature)
-            if feature != default:
-                repository._branch = default
-                repository._pushes.append(default)
-            return
-        if not feature or feature == default:
-            repository.push_upstream()
-            return
-
+        repository.checkout_from_default(default)
+        repository.pull()
+        repository.merge_from(self.name, message=f"merge {self.name} into {default}")
         repository.push_upstream()
 
-        occupier = repository.worktree_for(default)
-        if occupier is not None and occupier.path.resolve() != Path(repository.root).resolve():
-            other = Repo(occupier.path)
-            other.clear_stash()
-            if other.is_dirty(untracked=False):
-                raise RepoConnectError(f"default worktree is dirty at {occupier.path}")
-            other.checkout_or_create(default)
-            other.merge_from(feature, message=f"merge {feature} into {default}")
-            other.push_upstream()
-            return
-
-        repository.checkout_or_create(default)
-        repository.merge_from(feature, message=f"merge {feature} into {default}")
-        repository.push_upstream()
-
-    def close(
-        self,
-        *,
-        commit_message: str = "branch: close",
-        merge_to_main: bool = True,
-        close_session: bool = True,
-    ) -> str:
-        """Commit, push, merge to default, drop worktree when clean, finish matching session."""
-        if not self.name:
-            raise ValueError("branch name is required")
-        repository = self._repo
-        if repository.is_dirty(untracked=False):
-            repository.commit([str(repository.root)], commit_message, untracked=True)
-        if merge_to_main:
-            self.land_on_default()
-        removed = Worktree(repository).remove_when_clean()
-        if close_session:
-            from space.session import Session
-
-            session = Session.current(repository.root)
-            if session is not None and session.name == self.name:
-                session.close()
-        if removed:
-            return (
-                f"closed branch {self.name!r} — merged to default and "
-                "removed worktree when clean"
-            )
-        return (
-            f"closed branch {self.name!r} — merged when possible; "
-            "worktree kept (dirty or unpushed commits)"
-        )
+    def close(self, commit_message: str = "branch: close") -> None:
+        """Save this checked-out branch, land it on the default branch, then delete it here and on origin."""
+        self.save(commit_message)
+        self.land_on_default()
+        self._repo.delete_branch(self.name)

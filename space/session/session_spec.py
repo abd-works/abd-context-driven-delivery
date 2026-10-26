@@ -1,6 +1,7 @@
 """BDD development — a session opens each practice with its graph."""
 import json
 import os
+import shutil
 import sys
 import tempfile
 import threading
@@ -16,7 +17,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 
 import time
 
-from expects import be_a, contain, equal, expect
+from expects import be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.guidance.guidance import PracticeGuidance
@@ -24,6 +25,8 @@ from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
 from harness.mcp.mcp_server import McpServer
 from space.session import Session
+from space.session.session import SessionNameRequiredError
+from space.work_state import WorkState
 
 
 def _bind_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat") -> Path:
@@ -180,7 +183,7 @@ with description("a session"):
             expect("log_error" in self.instructions).to(equal(True))
             expect("append_chat" in self.instructions).to(equal(True))
             expect("log_guidance_action" in self.instructions).to(equal(True))
-            expect("session.new" in self.instructions).to(equal(True))
+            expect("session.switch" in self.instructions).to(equal(True))
             expect("CHAT POINTERS" in self.instructions).to(equal(True))
             expect("MARK-LOOP" in self.instructions).to(equal(True))
             expect("log_agent_tool" in self.instructions).to(equal(True))
@@ -201,7 +204,7 @@ with description("a session"):
 
         with it("should record the name in repo sessions session.json"):
             state = json.loads((self.repo / ".sessions" / "session.json").read_text(encoding="utf-8"))
-            expect(state.get("current")).to(equal("alpha"))
+            expect(state.get("session")).to(equal("alpha"))
 
     with context("that is closed"):
         with before.each:
@@ -212,9 +215,9 @@ with description("a session"):
             Session.new("alpha", self.work, self.repo)
             Session.current().close()
 
-        with it("should record the default session in repo sessions session.json"):
+        with it("should remove the session from repo sessions session.json"):
             state = json.loads((self.repo / ".sessions" / "session.json").read_text(encoding="utf-8"))
-            expect(state.get("current")).to(equal("default"))
+            expect("session" in state).to(equal(False))
 
         with it("should clear the in-process name"):
             expect(Session._slot().name).to(equal(""))
@@ -285,7 +288,7 @@ with description("a session"):
                 Session.new("beta", self.work, self.repo)
                 expect(Session.current().name).to(equal("beta"))
                 pointer = self.repo / ".sessions" / "session.json"
-                pointer.write_text('{"current": "alpha"}', encoding="utf-8")
+                pointer.write_text('{"session": "alpha"}', encoding="utf-8")
                 Session.refresh_current_from_repo(self.repo)
                 expect(Session.current().name).to(equal("alpha"))
 
@@ -870,3 +873,56 @@ with description("a practice"):
 
         with it("should finish that load within 5 seconds"):
             expect(self.elapsed < 5).to(equal(True))
+
+
+# (E) Open Work Session
+# (S) Session --> Switch Session
+with description("a session switched to without a name"):
+    with context("with a branch saved in .sessions/session.json"):
+        with before.each:
+            Session._current = None
+            self.repo = Path(tempfile.mkdtemp())
+            WorkState(self.repo).branch = "feature/space-battle"
+            Session.switch(repo_path=self.repo, workpath=self.repo)
+
+        with after.each:
+            Session._current = None
+            shutil.rmtree(self.repo, ignore_errors=True)
+
+        with it("should take its name from the branch"):
+            expect(Session.current(self.repo).name).to(equal("feature-space-battle"))
+
+        with it("should create the session folder"):
+            expect((self.repo / ".sessions" / "feature-space-battle" / "session.json").is_file()).to(equal(True))
+
+        with it("should save the session in .sessions/session.json"):
+            expect(WorkState(self.repo).session).to(equal("feature-space-battle"))
+
+        with it("should keep the saved branch"):
+            expect(WorkState(self.repo).branch).to(equal("feature/space-battle"))
+
+    with context("with nothing saved in .sessions/session.json"):
+        with before.each:
+            Session._current = None
+            self.repo = Path(tempfile.mkdtemp())
+
+        with after.each:
+            shutil.rmtree(self.repo, ignore_errors=True)
+
+        with it("should refuse to switch"):
+            expect(lambda: Session.switch(repo_path=self.repo)).to(raise_error(SessionNameRequiredError))
+
+
+# (E) Open Work Session
+# (S) Work State --> Read Saved Session
+with description("a .sessions/session.json written before branch and worktree were saved"):
+    with before.each:
+        self.repo = Path(tempfile.mkdtemp())
+        (self.repo / ".sessions").mkdir()
+        (self.repo / ".sessions" / "session.json").write_text('{"current": "alpha"}', encoding="utf-8")
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    with it("should read its current as the session"):
+        expect(WorkState(self.repo).session).to(equal("alpha"))

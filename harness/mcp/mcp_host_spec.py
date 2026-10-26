@@ -15,17 +15,18 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.installation.installer import Installer
-from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
+from harness.mcp.examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.mcp_server import HostPid, McpHost, McpInstallation
 from cdd_guidance.actions.iterate.iterate import Iterate
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
-from harness.mcp._examples.illegitimate_name.illegitimate_name import (
+from harness.mcp.examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
+from space.repo.repo import DefaultBranchError
 from space.session import Session
 
 
@@ -356,11 +357,10 @@ with description("an MCP host") as self:
 
         with it("should expose branch lifecycle and push_commit"):
             tools = self.host.diagnose()["tools"]
-            expect(tools).to(contain("repo.branch"))
-            expect(tools).to(contain("repo.worktree"))
             expect(tools).to(contain("repo.switch_branch"))
-            expect(tools).to(contain("repo.new_branch"))
             expect(tools).to(contain("repo.close_branch"))
+            expect(tools).to(contain("repo.switch_worktree"))
+            expect(tools).to(contain("repo.close_worktree"))
             expect(tools).to(contain("repo.push_commit"))
             expect("repo.push" in tools).to(equal(False))
 
@@ -369,12 +369,10 @@ with description("an MCP host") as self:
                 equal("repo.push_commit")
             )
 
-        with it("should run repo.new_branch through MCP dispatch"):
-            result = self.host.dispatch(
-                "repo.new_branch",
-                {"name": "mcp-host-spec-branch", "switch": False},
-            )
-            expect(str(result)).to(contain("mcp-host-spec-branch"))
+        with it("should refuse repo.close_branch on main through MCP dispatch"):
+            expect(
+                lambda: self.host.dispatch("repo.close_branch", {"name": "main"})
+            ).to(raise_error(DefaultBranchError))
 
     with context("that has enrolled the session toolset"):
         with before.each:
@@ -384,25 +382,20 @@ with description("an MCP host") as self:
                 project=str(_REPO_ROOT),
             )
 
-        with it("should expose session.session and the open_named alias"):
+        with it("should expose session.switch as the one way to open a session"):
             tools = self.host.diagnose()["tools"]
-            expect(tools).to(contain("session.session"))
-            expect(tools).to(contain("session.open_named"))
+            expect(tools).to(contain("session.switch"))
 
-        with it("should resolve session_open_named to session.session"):
-            expect(self.host._runtime.resolve_call_name("session_open_named")).to(
-                equal("session.session")
-            )
-
-        with it("should run session.session with string repo_path"):
-            result = self.host.dispatch(
-                "session.session",
-                {
-                    "name": "mcp-host-spec-session",
-                    "repo_path": str(_REPO_ROOT),
-                },
-            )
-            expect(str(result)).not_to(equal(""))
+        with it("should run session.switch with string repo_path"):
+            repo = Path(tempfile.mkdtemp())
+            try:
+                result = self.host.dispatch(
+                    "session.switch",
+                    {"name": "mcp-host-spec-session", "repo_path": str(repo)},
+                )
+                expect(str(result)).not_to(equal(""))
+            finally:
+                shutil.rmtree(repo, ignore_errors=True)
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):
         with before.each:
@@ -465,7 +458,7 @@ with description("an MCP host") as self:
 with description("an MCP host tool ping") as self:
     with before.each:
         self.host = McpHost.from_refs(
-            ("harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo",),
+            ("harness.mcp.examples.hosting_demo.hosting_demo:HostingDemo",),
             repo=str(_REPO_ROOT),
             project=str(_REPO_ROOT),
         )

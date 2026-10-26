@@ -660,5 +660,35 @@
         ]
       }
     }
-  ]
+  ],
+  "agent_tools": {
+    "ping": {
+      "color": "red",
+      "report": "ping: 0 returned instructions, 0 failed, filter ",
+      "items": []
+    },
+    "color": "red",
+    "scope": [
+      "space.",
+      "harness.",
+      "tools."
+    ],
+    "toolset_count": 18,
+    "invoke": {
+      "color": "red",
+      "report": "invoke: 0 returned instructions, 0 failed, filter ",
+      "items": []
+    },
+    "heavy_invoke": {
+      "color": "green",
+      "report": "heavy_invoke: 1 returned instructions, 0 failed, filter ",
+      "items": [
+        {
+          "mcp": "cdd-diagnostic",
+          "color": "yellow",
+          "skipped": "pip install -e ../cdd-diagnostic"
+        }
+      ]
+    }
+  }
 }

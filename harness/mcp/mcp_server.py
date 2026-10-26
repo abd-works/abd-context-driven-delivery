@@ -42,6 +42,12 @@ _CALL_TIMEOUT_SECONDS = 10
 # First graph builds walk the repo; cache hits must still finish under the default.
 _LONG_CALL_TIMEOUT_SECONDS = {
     "graph.load_working_copy": 600,
+    # Branch and worktree commands push and pull over the network.
+    "repo.switch_branch": 600,
+    "repo.close_branch": 600,
+    "repo.switch_worktree": 600,
+    "repo.close_worktree": 600,
+    "repo.push_commit": 600,
 }
 _SERVING_MCP_HOST: Any = None
 _UNION_ORIGINS = {Union, py_types.UnionType}
@@ -509,12 +515,6 @@ class McpInstallation(Installation):
         return "nudged"
 
 
-_LEGACY_MCP_ALIASES: dict[str, str] = {
-    "session.open_named": "session.session",
-    "session_open_named": "session.session",
-}
-
-
 def _annotation_uses_path(annotation: object) -> bool:
     if annotation is Path:
         return True
@@ -776,9 +776,6 @@ class McpServer:
 
     def resolve_call_name(self, name: str) -> str:
         """Map Cursor's underscore tool id (`slug_op`) back to the enrolled `slug.op`."""
-        legacy = _LEGACY_MCP_ALIASES.get(name)
-        if legacy is not None:
-            name = legacy
         if name in self._tools or name in self._prompts:
             return name
         as_dots = name.replace("_", ".")

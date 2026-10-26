@@ -46,6 +46,8 @@ _SKIP_INVOKE: dict[str, str] = {
     "repo.push_commit": "ping only (git)",
     "repo.close_branch": "ping only (git)",
     "repo.close_worktree": "ping only (git)",
+    "repo.switch_branch": "ping only (git)",
+    "repo.switch_worktree": "ping only (git)",
     "installer.install": "use /install shell",
     "installer.clean": "use /clean shell",
     "agent-tools-diagnostics.agent_tools_diagnostics": "nested diagnostics probe",
@@ -517,23 +519,8 @@ def _builtin_workspace_probe_arguments(
     repo_root: str,
     param_names: set[str],
 ) -> dict[str, Any]:
-    if mcp_name in {"session.session", "session.open_named"}:
-        return {"name": "_cdd_mcp_probe", "repo_path": repo_root}
-    if mcp_name == "session.new":
-        return {"name": "_cdd_mcp_probe", "workpath": repo_root, "repo_path": repo_root}
     if mcp_name == "session.switch":
         return {"name": "_cdd_mcp_probe", "repo_path": repo_root}
-    if mcp_name in {
-        "repo.branch",
-        "repo.worktree",
-        "repo.new_worktree",
-        "repo.switch_worktree",
-    }:
-        return {"name": "_cdd-diagnostic-probe"}
-    if mcp_name == "repo.new_branch":
-        return {"name": "_cdd-diagnostic-probe", "switch": False}
-    if mcp_name == "repo.switch_branch":
-        return {"name": "main"}
     if mcp_name.startswith("echo-instructions.") and "body" in param_names:
         return {"body": "agent-tools-diagnostics probe"}
     return {}

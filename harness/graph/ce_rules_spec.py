@@ -30,6 +30,7 @@ from harness.graph.ce_multi_language_fixtures import (
 )
 from harness.graph.ce_module_example_harness import assert_module_example_pair
 from harness.graph.ce_rule_eval_harness import (
+    assert_files_rule_pair,
     assert_python_example_pair,
     assert_rule_pair,
     ce_rule_by_slug,
@@ -438,4 +439,133 @@ export class CustomerProfile {
                 "never-swallow-exceptions",
                 _NEVER_SWALLOW_EXCEPTIONS_FAULT,
                 _NEVER_SWALLOW_EXCEPTIONS_CLEAN,
+            )
+
+
+def _module(name: str, relative: str | None = None) -> tuple[str, str, str, int, int]:
+    return ("Module", name, relative or name, 1, 1)
+
+
+def _sibling_modules(imported: int) -> dict[str, str]:
+    files = {f"pkg/part{index}/.context/module-context.md": "# part\n" for index in range(10)}
+    files["pkg/core/.context/module-context.md"] = "# core\n"
+    files["pkg/core/core.py"] = "".join(f"import part{index}\n" for index in range(imported))
+    return files
+
+
+def _classes_with_methods(method_count: int) -> str:
+    methods = "".join(f"    def act{index}(self):\n        return {index}\n" for index in range(method_count))
+    return "".join(f"class Part{index}:\n{methods}\n" for index in range(6))
+
+
+def _markdown_class(markdown: str) -> tuple[dict, list]:
+    lines = markdown.count("\n") + 1
+    return {"order.md": markdown}, [("OoadClass", "Order", "order.md", 1, lines)]
+
+
+with description("Clean Engineering graph rules (inline fault and clean fixtures)"):
+    with context("put-logic-on-the-owning-resource"):
+        with it("should flag reading another object's private field and accept asking it"):
+            assert_rule_pair(
+                "put-logic-on-the-owning-resource",
+                "class Invoice:\n    def total(self, order):\n        return sum(item.price for item in order._items)\n",
+                "class Invoice:\n    def total(self, order):\n        return order.total()\n",
+            )
+
+    with context("provide-meaningful-context"):
+        with it("should flag an unnamed number and accept a named constant"):
+            assert_rule_pair(
+                "provide-meaningful-context",
+                "class Lease:\n    def expiry(self, start):\n        return start + 86400\n",
+                "SECONDS_PER_DAY = 86400\n\n\nclass Lease:\n    def expiry(self, start):\n        return start + SECONDS_PER_DAY\n",
+            )
+
+    with context("keep-operations-single-responsibility"):
+        with it("should flag reading a file and calculating in one operation and accept calculation alone"):
+            assert_rule_pair(
+                "keep-operations-single-responsibility",
+                "class Report:\n    def publish(self, path):\n        rows = open(path).readlines()\n        return calculate_totals(rows)\n",
+                "class Report:\n    def publish(self, rows):\n        summary = calculate_totals(rows)\n        return summary.headline\n",
+            )
+
+    with context("errors-out-of-existence"):
+        with it("should flag raising on an empty input and accept returning a quiet result"):
+            assert_rule_pair(
+                "errors-out-of-existence",
+                "class Cart:\n    def total(self, items):\n        if not items:\n            raise ValueError('cart is empty')\n        return sum(items)\n",
+                "class Cart:\n    def total(self, items):\n        if not items:\n            return 0\n        return sum(items)\n",
+            )
+
+    with context("domain-exception-carries-context"):
+        with it("should flag a domain exception without a message and accept one that names the rule"):
+            assert_rule_pair(
+                "domain-exception-carries-context",
+                "class Cart:\n    def checkout(self):\n        if self.checked_out:\n            raise CartError()\n        self.checked_out = True\n",
+                "class Cart:\n    def checkout(self):\n        if self.checked_out:\n            raise CartError('cart already checked out')\n        self.checked_out = True\n",
+            )
+
+    with context("no-prototype-swapping"):
+        with it("should flag Object.setPrototypeOf on a TypeScript class and accept building the new class"):
+            assert_rule_pair(
+                "no-prototype-swapping",
+                "export class Draft {\n  publish(): void {\n    Object.setPrototypeOf(this, Published.prototype);\n  }\n}\n",
+                "export class Draft {\n  publish(): Published {\n    return new Published(this.title);\n  }\n}\n",
+                lang="typescript",
+            )
+
+    with context("extensions-live-with-the-domain"):
+        with it("should flag a Graph epic that stands alone and accept one that extends Epic"):
+            assert_rule_pair(
+                "extensions-live-with-the-domain",
+                "class GraphStoriesEpic:\n    def children(self):\n        return self.stories\n",
+                "class GraphStoriesEpic(Epic):\n    def children(self):\n        return self.stories\n",
+            )
+
+    with context("write-interactions"):
+        with it("should flag a bold Interaction bullet and accept arrow notation"):
+            assert_files_rule_pair(
+                "write-interactions",
+                _markdown_class("# Order\n\n- **Interaction:** Order asks Payment to charge\n"),
+                _markdown_class("# Order\n\n- checkout\n  -> payment.charge\n"),
+            )
+
+    with context("one-way-deps"):
+        with it("should flag two modules that import each other and accept a one-way import"):
+            modules = [_module("orders", "orders.py"), _module("billing", "billing.py")]
+            assert_files_rule_pair(
+                "one-way-deps",
+                ({"orders.py": "import billing\n", "billing.py": "import orders\n"}, modules),
+                ({"orders.py": "import billing\n", "billing.py": "TAX_RATE = 1\n"}, modules),
+            )
+
+    with context("low-coupling"):
+        with it("should flag a module importing more than eight siblings and accept a narrow fan-out"):
+            assert_files_rule_pair(
+                "low-coupling",
+                (_sibling_modules(9), [_module("core", "pkg/core")]),
+                (_sibling_modules(2), [_module("core", "pkg/core")]),
+            )
+
+    with context("deep-module"):
+        with it("should flag a module of many one-method classes and accept classes with real surface"):
+            assert_files_rule_pair(
+                "deep-module",
+                ({"shapes/shapes.py": _classes_with_methods(1)}, [_module("shapes")]),
+                ({"shapes/shapes.py": _classes_with_methods(2)}, [_module("shapes")]),
+            )
+
+    with context("domain-nouns-only"):
+        with it("should flag a verb-named module and accept a domain noun"):
+            assert_files_rule_pair(
+                "domain-nouns-only",
+                ({"process_orders/orders.py": ""}, [_module("process_orders")]),
+                ({"orders/orders.py": ""}, [_module("orders")]),
+            )
+
+    with context("no-module-per-class"):
+        with it("should flag a module holding one class in one file and accept a cohesive group"):
+            assert_files_rule_pair(
+                "no-module-per-class",
+                ({"orders/order.py": "class Order:\n    pass\n"}, [_module("orders")]),
+                ({"orders/order.py": "class Order:\n    pass\n\n\nclass OrderLine:\n    pass\n"}, [_module("orders")]),
             )

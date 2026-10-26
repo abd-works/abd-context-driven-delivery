@@ -1293,7 +1293,7 @@ with description("toolsets installed for Claude Code") as self:
             expect(text).to(equal('---\ndescription: "d"\npaths:\n  - "**/*.py"\n  - "**/*.ts"\n---\n\n'))
 
 
-with description("Repo branch skills installed into Cursor") as self:
+with description("Repo branch commands installed into Cursor") as self:
     with before.each:
         self._tmp = tempfile.mkdtemp()
         self.tree = Path(self._tmp)
@@ -1304,14 +1304,14 @@ with description("Repo branch skills installed into Cursor") as self:
     with after.each:
         shutil.rmtree(self._tmp, ignore_errors=True)
 
-    with it("should write branch-create naming repo.new_branch"):
-        path = self.tree / "skills" / "space" / "repo" / "branch-create" / "SKILL.md"
-        expect(path.is_file()).to(equal(True))
-        text = path.read_text(encoding="utf-8")
-        expect(text).to(contain("Use MCP tool: `repo.new_branch("))
-        expect(text).not_to(contain("branch.create"))
-        expect(text).not_to(contain("repo.branch_create"))
+    with it("should write switch-branch naming repo.switch_branch"):
+        path = self.tree / "commands" / "space" / "repo" / "switch-branch.md"
+        expect(path.read_text(encoding="utf-8")).to(contain("repo.switch_branch"))
 
-    with it("should enroll repo.new_branch on the MCP channel"):
+    with it("should not write the retired new-branch command"):
+        path = self.tree / "commands" / "space" / "repo" / "new-branch.md"
+        expect(path.is_file()).to(equal(False))
+
+    with it("should enroll repo.switch_branch on the MCP channel"):
         names = [op.mcp_name for op in self.mcp.mcp_operations]
-        expect(names).to(contain("repo.new_branch"))
+        expect(names).to(contain("repo.switch_branch"))
