@@ -41,8 +41,8 @@ with description("classify_example_path"):
         slot = classify_example_path("domain/bounded-context.drawio")
         expect(slot).to(equal(ApproachExampleSlot("ddd", "discovery")))
 
-    with it("should map building blocks markdown to ddd specification"):
-        slot = classify_example_path("domain/single-client-view/building-blocks.md")
+    with it("should map the domain model markdown to ddd specification"):
+        slot = classify_example_path("domain/single-client-view/domain-model.md")
         expect(slot).to(equal(ApproachExampleSlot("ddd", "specification")))
 
     with it("should map client model typescript to ddd implementation"):
@@ -71,7 +71,7 @@ with description("ProjectApproach.generate"):
                 "story('Qualify', () => {});\n", encoding="utf-8"
             )
             (root / "domain" / "bounded-context.drawio").write_text("<mxfile></mxfile>", encoding="utf-8")
-            (root / "domain" / "building-blocks.md").write_text("# Blocks\n", encoding="utf-8")
+            (root / "domain" / "domain-model.md").write_text("# Domain Model\n", encoding="utf-8")
             (root / "domain" / "client-model.ts").write_text("export class Client {}\n", encoding="utf-8")
             (root / "ux" / "information-architecture.drawio").write_text("<mxfile></mxfile>", encoding="utf-8")
             (root / "ux" / "mockup.html").write_text("<html></html>", encoding="utf-8")

@@ -39,3 +39,21 @@ with description("DddTransformer"):
             expect(ddd.contexts[0].aggregates[0]._child_folder()).to(equal("domain/customer/customer"))
             expect(ddd.contexts[0].aggregates[1]._child_folder()).to(equal("domain/customer/account-credentials"))
             expect(ddd.contexts[1].aggregates[0]._child_folder()).to(equal("domain/subscription/cart"))
+
+    with description("a model-fidelity sketch"):
+        with it("should write each aggregate's root, repository, and members into its context's file"):
+            roots = Transformers().transform_sketch(
+                "## domain driven design:\n\n"
+                "### Revenue | custom\n\n"
+                "#### billing/\n\n"
+                "##### BillingAccount <<Aggregate Root>> <<Entity>>\n\n"
+                "```\n"
+                "applyCredit amount\n"
+                "repo: BillingAccountRepository <<Repository>>\n"
+                "  create / load / update\n"
+                "```\n"
+            )
+            ddd = next(root for root in roots if isinstance(root, DddTransformer))
+            written = ddd.render("logical")["domain/revenue/.context/bounded-context.md"]
+            expect(written.startswith("# Revenue | custom\n\n## billing\n\n### BillingAccount <<Aggregate Root>> <<Entity>>")).to(equal(True))
+            expect("### BillingAccountRepository <<Repository>>" in written).to(equal(True))

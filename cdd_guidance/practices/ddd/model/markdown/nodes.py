@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard, read_card, split_cards
 from cdd_guidance.practices.ddd.model.nodes import (
     Aggregate,
     BoundedContext,
@@ -121,6 +122,7 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         super().__init__(name, sequential_order, **kwargs)
         self._body: list[str] = []
         self._body_index = 0
+        self.cards: list[ClassCard] = []
 
     def load_root(self) -> None:
         self._read_body()
@@ -133,6 +135,40 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         return MarkdownIntegration()
 
     def _read_body(self) -> None:
+        sections, body = split_cards(self._body)
+        self.cards = [read_card(section, self.building_block_type) for section in sections]
+        self._read_map_lines(body)
+        self._take_root_card()
+
+    def _take_root_card(self) -> None:
+        # At model fidelity the root is the <<Aggregate Root>> card; its members are the other non-repository cards.
+        root = next((card for card in self.cards if card.is_root), None)
+        if root is None:
+            return
+        events = [item for item in self.root.properties if isinstance(item, DomainEvent)] if self.root else []
+        self.root = root.node
+        for event in events:
+            self.root.properties.append(event)
+        members = [card for card in self.cards if card is not root and not card.is_repository]
+        self.root.invariant_objects = [
+            MarkdownInvariantObject(card.node.name, index) for index, card in enumerate(members)
+        ]
+        for card in self.cards:
+            if card.is_repository and hasattr(card.node, "accesses"):
+                card.node.accesses = self.root
+
+    @property
+    def repository(self) -> ClassCard | None:
+        return next((card for card in self.cards if card.is_repository), None)
+
+    def _read_map_lines(self, lines: list[str]) -> None:
+        self._body, kept = lines, self._body
+        try:
+            self._read_map_body()
+        finally:
+            self._body = kept
+
+    def _read_map_body(self) -> None:
         root_name = self.name
         members: list[str] = []
         operations: list[str] = []
@@ -213,6 +249,8 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         return index
 
     def lines(self) -> list[str]:
+        if self.cards:
+            return self._model_lines()
         written = [f"### {self.name}", ""]
         if self.root is not None:
             operations = getattr(self, "_operations", [])
@@ -244,6 +282,35 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         written.append("")
         return written
 
+
+    def _model_lines(self) -> list[str]:
+        # Root, then its repository, then members — the same order in every aggregate.
+        written = [f"### {self.name}", ""]
+        root = [card for card in self.cards if card.is_root]
+        repositories = [card for card in self.cards if card.is_repository]
+        members = [card for card in self.cards if card not in root and card not in repositories]
+        for card in root + repositories + members:
+            written.extend(card.lines())
+        written.extend(self._integration_lines())
+        return written
+
+    def _integration_lines(self) -> list[str]:
+        written: list[str] = []
+        if self.integrations:
+            written.append("Integrations:")
+            for item in self.integrations:
+                written.append(f"  - {item.target}")
+                for key in ("pattern", "direction", "crosses", "integration"):
+                    value = getattr(item, key)
+                    if value:
+                        written.append(f"    {key}: {value}")
+            written.append("")
+        events = [item for item in self.root.properties if isinstance(item, DomainEvent)] if self.root else []
+        if events:
+            written.append("emits events:")
+            written.extend(f"  - {event.name}" for event in events)
+            written.append("")
+        return written
 
 class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
     def lines(self) -> list[str]:
@@ -327,7 +394,8 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
         return body
 
     def save(self) -> str:
-        lines = ["# Bounded Context Map", ""]
+        has_cards = any(getattr(item, "cards", None) for item in _aggregates_in(self))
+        lines = ["# Domain Model" if has_cards else "# Bounded Context Map", ""]
         for context in self.contexts:
             if isinstance(context, MarkdownBoundedContext):
                 lines.extend(context.lines())

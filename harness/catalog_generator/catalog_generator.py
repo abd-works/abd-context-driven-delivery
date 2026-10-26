@@ -1946,7 +1946,7 @@ class Catalog:
         | Practice | Discovery | Specification | Implementation |
         | --- | --- | --- | --- |
         | stories | story map (``.drawio`` / image) | scenarios (``.md``) | acceptance / story tests (``.test.ts``) |
-        | ddd | bounded-context diagram | building-blocks model | domain model / tactics code |
+        | ddd | bounded-context diagram | aggregate model (``domain-model``) | tactics code |
         | ux | information architecture | mockup (``.html`` / image) | front-end code |
         | clean_engineering | module map / module-context | model diagram / doc | code sample |
         | bdd | — | behavior spec | development tests |
@@ -1965,7 +1965,7 @@ class Catalog:
         - ``scenarios``, ``story-scenarios`` → stories · specification
         - ``*_story.test.ts``, ``acceptance`` → stories · implementation
         - ``bounded-context`` → ddd · discovery
-        - ``building-blocks``, ``ce-domain-model`` → ddd · specification
+        - ``domain-model``, ``ce-domain-model``, ``building-blocks`` → ddd · specification
         - ``*-model.ts`` under ``domain/`` → ddd · implementation
         - ``information-architecture`` → ux · discovery
         - ``mockup/`` html → ux · specification

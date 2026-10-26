@@ -1,15 +1,15 @@
 ---
-fidelity: [building_blocks]
+fidelity: [tactics]
 artifact: [ce-domain-model]
 format: md
 extends: practices/clean_engineering/templates/class-model.md
 ---
 
-# Bounded Context Model — {{project_name}}
+# Building Blocks — {{project_name}}
 
-**Sources / context:** `bounded-context-map.md` (read in full); story map and sketch for the aggregates in scope.
+**Sources / context:** `bounded-context-map.md` and `domain-model.md` (read in full); story map and sketch for the aggregates in scope.
 
-**Extends:** `practices/clean_engineering/templates/class-model.md` — same class notation (`+` constructor · `------` properties · `----` operations). At **building_blocks** every class carries a DDD tactical stereotype and the operations that stereotype needs to do its job.
+**Extends:** `templates/model.md` — the aggregates, roots, members, repositories, and domain operations settled at **model**. At **tactics** every class carries its DDD stereotype, the building blocks the model needs are added (factories, specifications, domain services, domain events, interfaces to other systems), and each gets the operations that stereotype needs to do its job.
 
 ---
 

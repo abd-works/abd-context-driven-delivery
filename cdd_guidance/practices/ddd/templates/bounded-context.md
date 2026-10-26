@@ -87,14 +87,12 @@ emits events:
 
 ---
 
-## Building blocks fidelity
+## Model fidelity
 
-At **building_blocks**, keep this map as the strategic source of truth for context · aggregate · concept names, integrations, and event ownership. Flesh out each `###` aggregate into a full CE class model using `templates/building-blocks.md`, which **extends** `practices/clean_engineering/templates/class-model.md`.
+At **model**, keep this map as the strategic source of truth for context · aggregate · concept names, integrations, and event ownership. Draw each `###` aggregate as a class model using `templates/model.md`, which **extends** `practices/clean_engineering/templates/class-model.md`:
 
-Under each aggregate in the model artifact:
+- The root (`<<Aggregate Root>> <<Entity>>`) with its properties and domain operations, its `<<Repository>>` directly beneath it (drawn inside the root's card in the rendered view), and its members (`<<Entity>>`, `<<Value Object>>`) composed by it.
+- An arrow from each class that needs another aggregate to that aggregate's root, held by identity, with the call on the operation that uses it.
+- Nothing else — factories, specifications, domain services, and event classes wait for **tactics**.
 
-- Classify every concept with a tactical stereotype (`<<Aggregate Root>>`, `<<Entity>>`, `<<Value Object>>`, `<<Repository>>`, `<<Domain Event>>`, `<<Specification>>`, `<<Factory>>`, `<<Domain Service>>`).
-- Add the stereotype-appropriate operations from the **Stereotype operations** table in `building-blocks.md` — repositories `load` · `save` · `search` · `update` · `remove`; specifications `isSatisfiedBy`; aggregate roots own state change and `-> DomainEventPublisher.publish` when a past-tense event must cross the boundary.
-- Keep integrations and `emits events` / `consumes events` from this map aligned with the model **Event map** table.
-
-Produce `*-model.md` (artifact `ce-domain-model`) or a `building-blocks` section per context — not a parallel unnamed type list.
+Keep integrations and `emits events` / `consumes events` on this map aligned with the model's arrows.

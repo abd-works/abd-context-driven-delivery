@@ -347,8 +347,8 @@ with description("practice and fidelity template files"):
         with it("should return no template"):
             from cdd_guidance.practices.ddd.ddd import Ddd
 
-            expect(Ddd(fidelity="tactics", format="python").templates).to(equal(""))
-            expect(Ddd(fidelity="building_blocks", format="markdown").templates).to(
+            expect(Ddd(fidelity="bounded_context", format="python").templates).to(equal(""))
+            expect(Ddd(fidelity="model", format="drawio").templates).to(
                 equal("")
             )
 

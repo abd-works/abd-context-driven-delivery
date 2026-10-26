@@ -100,7 +100,7 @@ def _project_example_dest_name(practice: str, stage_id: str, source: Path) -> st
         ("stories", "specification"): "scenarios",
         ("stories", "implementation"): "acceptance-tests",
         ("ddd", "discovery"): "bounded-context",
-        ("ddd", "specification"): "building-blocks",
+        ("ddd", "specification"): "model",
         ("ddd", "implementation"): "tactics",
         ("ux", "discovery"): "information-architecture",
         ("ux", "specification"): "mockup",
@@ -184,7 +184,6 @@ _DISPLAY_LABELS: dict[str, str] = {
     "scenarios": "scenarios",
     "acceptance_tests": "acceptance-tests",
     "bounded_context": "bounded-context",
-    "building_blocks": "building-blocks",
     "tactics": "tactics",
     "ia": "information-architecture",
     "mockup": "mockup",
@@ -1711,7 +1710,7 @@ def _stage_example_inline(
         classes = ["catalog-example", "catalog-example--scroll"]
         if source.stem == "bounded-context":
             classes.append("catalog-example--fit")
-        if source.stem in {"building-blocks", "front-end-code"}:
+        if source.stem in {"model", "front-end-code"}:
             classes.append("catalog-example--zoom-2")
         if source.stem.replace("-", "_") == "story_map":
             classes.append("catalog-example--story-map")

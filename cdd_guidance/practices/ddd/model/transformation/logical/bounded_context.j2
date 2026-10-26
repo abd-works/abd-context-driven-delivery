@@ -1,1 +1,3 @@
-# {{ node.name }}{% if node.owner %} | {{ node.owner }}{% endif %}
+# {{ node.name }}{% if node.owner %} | {{ node.owner }}{% endif %}{% for aggregate in node.aggregates if aggregate.model_lines %}
+
+{{ aggregate.model_lines }}{% endfor %}

@@ -1,5 +1,5 @@
 # ---
-# fidelity: building_blocks
+# fidelity: tactics
 # format: py
 # ---
 #

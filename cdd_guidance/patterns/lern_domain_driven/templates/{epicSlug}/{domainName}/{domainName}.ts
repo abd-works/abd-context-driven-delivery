@@ -7,7 +7,7 @@
  *
  * DDD: {{DomainName}} is the aggregate root. {{DomainName}}Repository is the
  * collection seam that load / create / search / update that root
- * (practices/ddd/ddd.md building_blocks).
+ * (practices/ddd/ddd.md model).
  */
 import { z } from 'zod';
 

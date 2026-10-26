@@ -47,9 +47,9 @@ with description("a Ddd toolset"):
                 expect(tool.fidelities.current.fidelity).to(equal("bounded_context"))
                 expect(tool.format).to(equal("markdown"))
 
-        with context("with building_blocks fidelity"):
+        with context("with model fidelity"):
             with it("should default to markdown format"):
-                expect(Ddd(fidelity="building_blocks").format).to(equal("markdown"))
+                expect(Ddd(fidelity="model").format).to(equal("markdown"))
 
         with context("with tactics fidelity"):
             with it("should default to python format"):
@@ -75,9 +75,9 @@ with description("a Ddd toolset"):
                 companion = Ddd(fidelity="bounded_context").fidelities.current.clean_engineering
                 expect(companion.fidelity).to(equal("modules"))
 
-        with context("with building_blocks fidelity"):
+        with context("with model fidelity"):
             with it("should treat the model fidelity as the companion"):
-                companion = Ddd(fidelity="building_blocks").fidelities.current.clean_engineering
+                companion = Ddd(fidelity="model").fidelities.current.clean_engineering
                 expect(companion.fidelity).to(equal("model"))
 
         with context("with tactics fidelity"):

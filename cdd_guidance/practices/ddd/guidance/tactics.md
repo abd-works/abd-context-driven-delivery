@@ -1,5 +1,21 @@
 # DDD — Procedural Guidance (tactics fidelity)
 
+## Which building blocks to add
+
+The aggregates, roots, repositories, and domain operations are settled at **model**. Add a building block only where the model shows a need:
+
+1. **Does creating a valid instance need subtype choice, several rules, or outside collaborators?** Add a **Factory**. Otherwise the repository's `create` is the one way in.
+2. **Does one named rule have to mean the same thing in a query, a validation, and a creation?** Add a **Specification**.
+3. **Is there a homeless verb?** If an operation genuinely cannot sit on any single domain object, it's a **Domain Service**. These are rare.
+4. **Is there a significant moment other aggregates or contexts must hear about?** A past-tense **Domain Event** published by the root operation that records it.
+5. **Does the aggregate talk to another system?** A named **Service** or **Gateway** interface exposing that system's operations.
+
+## Thinking about Services — they are rare
+
+The test for a Service: take the verb and try to put it on every domain object involved. If it fits cleanly on one of them, it's not a service. `CheckoutService.placeOrder()` is really `Cart.checkout()`. `AuthenticationService.signIn()` is really `Customer.signIn()`.
+
+A legitimate Service example: `TransferService.transfer(fromAccount, toAccount, amount)` — the operation genuinely spans two aggregates and doesn't belong on either one.
+
 ## Architecture-first thinking
 
 Before writing any code at tactics, resolve the architecture:

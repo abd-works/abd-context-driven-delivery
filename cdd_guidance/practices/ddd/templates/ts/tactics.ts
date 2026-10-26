@@ -1,5 +1,5 @@
 /**
- * fidelity: building_blocks
+ * fidelity: tactics
  * format: ts
  *
  * One class per building block. Keep only the operations this type is allowed to have.

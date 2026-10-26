@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
+from cdd_guidance.practices.ddd.model.drawio.drawio_aggregate_model import DrawIOAggregateModel, has_class_cards
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownAggregate, MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap, Integration
 
@@ -66,6 +67,9 @@ class DrawIOBoundedContextMap(MarkdownBoundedContextMap):
         markdown = MarkdownBoundedContextMap()
         body = markdown.render(source, previous)
         parsed = markdown.parse(body)
+        if has_class_cards(parsed):
+            # Model fidelity: the aggregate view, not the context map.
+            return DrawIOAggregateModel().render(parsed)
         return self._write_diagram(parsed)
 
     def _write_diagram(self, model: BoundedContextMap) -> str:

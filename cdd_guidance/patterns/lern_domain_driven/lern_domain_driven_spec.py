@@ -133,7 +133,7 @@ with description("a LernDomainDriven generator"):
         with it("should specify lowdb as the persistence adapter"):
             expect("lowdb" in self.rendered.lower()).to(be_true)
 
-        with it("should cite the DDD building-blocks markdown"):
+        with it("should cite the DDD model markdown"):
             expect(self.rendered).to(contain("ddd.md"))
             expect(self.rendered).to(contain("Aggregate Root"))
             expect(self.rendered).to(contain("Repository"))

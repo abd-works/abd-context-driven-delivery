@@ -15,10 +15,10 @@ from mamba import context, description, it
 from harness.graph.ddd_rule_eval_harness import assert_ddd_example_pair, ddd_rule_by_slug, violations_for_ddd_rule
 
 with description("DDD tactical rules (python .examples)"):
-    with context("building-blocks-fidelity-requires-tactical-stereotype"):
+    with context("every-class-carries-ddd-stereotype"):
         with it("should flag Plan without stereotype and accept PlanEntity"):
             assert_ddd_example_pair(
-                "building-blocks-fidelity-requires-tactical-stereotype",
+                "every-class-carries-ddd-stereotype",
                 "Plan",
                 clean_class="PlanEntity",
             )
@@ -30,7 +30,7 @@ export class OnboardingStepScreen {
   constructor(readonly View: ComponentType) {}
 }
 """
-            rule = ddd_rule_by_slug("building-blocks-fidelity-requires-tactical-stereotype")
+            rule = ddd_rule_by_slug("every-class-carries-ddd-stereotype")
             hits = violations_for_ddd_rule(
                 rule,
                 source,
@@ -51,7 +51,7 @@ export class CardAuthorization {
   ) {}
 }
 """
-            rule = ddd_rule_by_slug("building-blocks-fidelity-requires-tactical-stereotype")
+            rule = ddd_rule_by_slug("every-class-carries-ddd-stereotype")
             hits = violations_for_ddd_rule(
                 rule,
                 source,
@@ -72,7 +72,7 @@ export class PaymentMethod {
   ) {}
 }
 """
-            rule = ddd_rule_by_slug("building-blocks-fidelity-requires-tactical-stereotype")
+            rule = ddd_rule_by_slug("every-class-carries-ddd-stereotype")
             hits = violations_for_ddd_rule(
                 rule,
                 source,

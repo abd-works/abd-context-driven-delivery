@@ -134,11 +134,13 @@ with description("Render Context Tool Page"):
         with it("links each fidelity page, in declared stage order"):
             section = self.page[self.page.find('aria-label="Fidelities"'):]
             bounded_at = section.find("bounded-context")
-            building_at = section.find("building-blocks")
+            model_at = section.find(">model<")
+            if model_at < 0:
+                model_at = section.find("model")
             tactics_at = section.find(">tactics<")
             if tactics_at < 0:
                 tactics_at = section.find("tactics")
-            expect(bounded_at < building_at < tactics_at).to(be_true)
+            expect(bounded_at < model_at < tactics_at).to(be_true)
             expect("cap-card" in section).to(equal(False))
             expect("Draw where language changes" in section).to(be_true)
 

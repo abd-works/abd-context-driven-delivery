@@ -20,7 +20,7 @@ If the user names the practice lenses to use, follow their choice unless it conf
 Load the umbrella skill for each selected lens to establish shared vocabulary and rules:
 
 - `stories-scenarios` for concrete Given-When-Then behavior scenarios and example data tables.
-- `ddd-building_blocks` for aggregate structures, invariants, tactical stereotypes, domain events, repositories, and synchronization rules.
+- `ddd-model` for the aggregate view: each root with its members, repository, and domain operations, how aggregates depend on one another across contexts, and synchronization rules.
 - `ux-mockup` for concrete UI controls, user interactions, data placement, transitions, and runnable greybox screens.
 - `clean_engineering-model` for typed class participants, operations, relationships, public module interfaces, and explicit constructor dependencies without production method bodies.
 - `bdd-behavior` for executable describe/it test hierarchies containing behavior signatures without test implementation code.

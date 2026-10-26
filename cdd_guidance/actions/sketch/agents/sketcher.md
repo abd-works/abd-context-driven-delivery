@@ -19,7 +19,7 @@ When determining scope, use this table to guide lens and agent selection:
 |---|---|---|---|---|---|---|
 | **Scaffold** | Names-only outlines; system structure | `stories-scaffold` | `ddd-bounded_context` | `ux-ia` | `clean_engineering-modules` | `bdd-behavior` |
 | **Discovery** | Validate journeys, boundaries, flows | `stories-story-map` | `ddd-bounded_context` | `ux-ia` | `clean_engineering-modules` | `bdd-behavior` (optional) |
-| **Specification** | Concrete scenarios, invariants, mockups, signatures | `stories-scenarios` | `ddd-building_blocks` | `ux-mockup` | `clean_engineering-model` | `bdd-behavior` |
+| **Specification** | Concrete scenarios, invariants, mockups, signatures | `stories-scenarios` | `ddd-model` | `ux-mockup` | `clean_engineering-model` | `bdd-behavior` |
 | **Implementation** | Production code, tests, integrations | `stories-acceptance_tests` | `ddd-tactics` | `ux-front_end_code` | `clean_engineering-code` | `bdd-development` |
 
 **Fidelity progression:** Each fidelity deepens in place. One `{slug}-sketch.md` holds every active practice and guidance for the engagement (clean-engineering-model and bdd-behavior live in the same file). Do not create `{slug}-bdd-sketch.md` or a new file per fidelity — update that one file and deepen lens blocks as you move.

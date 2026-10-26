@@ -278,17 +278,17 @@ with description("bounded context viewport"):
         expect('data-zoom-min=' in html).to(equal(False))
 
 
-with description("building blocks viewport"):
+with description("model viewport"):
     with it("embeds the original class diagram without rewriting cells"):
         source = (
-            _REPO_ROOT / "cdd_guidance" / "practices" / "ddd" / "catalog-examples" / "building-blocks.drawio"
+            _REPO_ROOT / "cdd_guidance" / "practices" / "ddd" / "agents" / "catalog-examples" / "model.drawio"
         )
         original = source.read_text(encoding="utf-8")
         html = _drawio_iframe(source)
-        expect('data-page-w="1654"' in html).to(equal(True))
-        expect('data-page-h="1169"' in html).to(equal(True))
+        expect('data-page-w="5240"' in html).to(equal(True))
+        expect('data-page-h="3270"' in html).to(equal(True))
         expect('data-zoom-min=' in html).to(equal(False))
-        expect("CustomerRepository" in original).to(equal(True))
+        expect("KycInquiryRepository" in original).to(equal(True))
 
 
 with description("information architecture viewport"):
