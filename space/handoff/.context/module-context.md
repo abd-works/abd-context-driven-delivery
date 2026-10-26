@@ -1,7 +1,7 @@
 # handoff — module context
 
 ## Purpose
-Compacts the current agent session into a structured handoff document so a fresh agent can resume without re-reading the full chat. `Handoff` (`space/handoff`) writes `handoffs/handoff-{timestamp}.md` under the current work folder (`Session.current().workpath`, else `CDD_PROJECT`, else cwd). It does not open a session.
+Compacts the current agent session into a structured handoff document so a fresh agent can resume without re-reading the full chat. `Handoff` (`space/handoff`) writes `handoff-{timestamp}.md` into the project's current session folder, `{CDD_PROJECT}/.sessions/{session}/` (the session saved in that project's `.sessions/session.json`), or `.sessions/default/` when the project has no named session; cwd stands in when `CDD_PROJECT` is unset. It does not open a session.
 
 ## Seam
 `Handoff`

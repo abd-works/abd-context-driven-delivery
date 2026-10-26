@@ -1,7 +1,10 @@
 """Handoff - write a compact session summary so the next agent can continue.
 
-Writes handoff-{timestamp}.md under ``handoffs/`` in the current work folder
-(``Session.current().workpath``, else ``CDD_PROJECT``, else the process cwd).
+Writes handoff-{timestamp}.md into the session folder of the project being worked on:
+``{work folder}/.sessions/{current session}/``, or ``{work folder}/.sessions/default/`` when the
+project has no named current session. The work folder is ``CDD_PROJECT`` (the project the MCP host
+serves), else the process cwd. The current session is the one saved in that project's
+``.sessions/session.json`` — not the host's own checkout (``CDD_REPO``), which holds other sessions.
 No archiving, no latest pointer — one timestamped file per call.
 """
 from __future__ import annotations
@@ -10,7 +13,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.guidance_actions import load_document
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.destination import noCatalog
@@ -24,16 +27,14 @@ class Handoff:
     """Write a compact session handoff for the next agent."""
 
     def _work_folder(self) -> Path:
-        session = Session.current()
-        if session is not None and session.workpath is not None:
-            return Path(session.workpath).resolve()
         named = os.environ.get("CDD_PROJECT")
         if named:
             return Path(named).resolve()
         return Path.cwd().resolve()
 
     def _handoffs_folder(self) -> Path:
-        folder = self._work_folder() / "handoffs"
+        work = self._work_folder()
+        folder = Session.sessions_dir(work) / Session._read_repo_current_name(work)
         folder.mkdir(parents=True, exist_ok=True)
         return folder
 
@@ -41,14 +42,17 @@ class Handoff:
     @skill
     @agent_tool
     def write_handoff(self, content: str = "", paths: list[str] | str | None = None) -> str:
-        """Write a handoff under the current session as handoffs/handoff-{timestamp}.md.
+        """Write a handoff into the current session folder, .sessions/{session}/handoff-{timestamp}.md (.sessions/default/ with no named session).
         Returns the absolute path of the written file.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the handoff body in content.
         content: in-process text. Leave this empty on an MCP call."""
+        document = load_document(content, paths)
+        if not document.strip():
+            return "Nothing written: draft the handoff to a file and pass its path in paths."
         folder = self._handoffs_folder()
         ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
         path = folder / f"handoff-{ts}.md"
-        path.write_text(load_document(content, paths), encoding="utf-8")
+        path.write_text(document, encoding="utf-8")
         return str(path.resolve())
 
     @mcp
@@ -103,6 +107,6 @@ class Handoff:
         ## Correction trend
         Include this section only if the corrections document was found. Compare this session's correction count (from the session block / conversation) to the previous session's count. State the trend in 1–2 sentences (e.g. "Session 2026-09-14 needed 5 corrections across 2 epics — roughly 2–3 per story. The previous session needed ~12. Trend is sharply down."). Optionally append the Corrections CLI cheat sheet (`list`, `add-correction`, `new-session`). If corrections cannot be found after the search order above, omit this section.
         """
-        self.write_handoff()
+        tools(self.write_handoff)
         """Write the handoff markdown to a file and call write_handoff with paths set to that file. Do not pass the handoff body. Report the returned path to the user."""
         return "Handoff written."
