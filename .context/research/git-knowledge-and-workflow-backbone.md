@@ -478,7 +478,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | `harness/agent_tools` | expand → SessionLog/SpanLog |
 | `harness/agent_tools` | manifest paths |
 | `tools/agent_skills` | deploy, `configure_git_notes`, team `.vscode` settings |
-| `tools/handoff` | handoff payload + span |
+| `space/handoff` | handoff payload + span |
 | `harness/catalog_generator` | HTML shells (catalog, kanban) |
 | `tools/trace_graph` *(new)* | `build_eval_graph`, `regen_*_index` |
 
@@ -521,7 +521,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | --- | --- | --- | --- | --- | --- |
 | G-11 | Causal graph | `SpanLog` + expand hooks | `spans.jsonl` | `build_eval_graph` Mermaid | **1** |
 | G-12 | Run identity | single `tools.ps1 run`/turn; `run_id` at open | run_id in index/spans | — | **1** |
-| G-13 | Handoff | extend `tools/handoff` | `handoff-payload.yaml` + span | — | **2** |
+| G-13 | Handoff | extend `space/handoff` | `handoff-payload.yaml` + span | — | **2** |
 | G-14 | Rationale/rejected | design-turn `Rationale:`/`Rejected:` in body | commit body | GitLens search | **3** |
 
 ### Runtime

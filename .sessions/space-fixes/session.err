@@ -204,3 +204,37 @@ Traceback (most recent call last):
     raise RepoConnectError(
 space.repo.repo.RepoConnectError: Cannot connect git: git rev-parse --abbrev-ref HEAD exceeded 10 seconds in C:\dev\abd-context-driven-delivery.
 2026-10-23T18:36:00Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-24T01:04:05Z repo.close_branch RepoConnectError: Cannot connect git: git merge feature -m merge feature into main failed in C:\dev\abd-context-driven-delivery: merge: feature - not something we can merge.
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1074, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 798, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 613, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 585, in _invoke_mcp_callable
+    return target(**args)
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1790, in close_branch
+    result = Worktree(repository).close_branch(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 2105, in close_branch
+    return repository.branch_named(name).close(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 2232, in close
+    self.land_on_default()
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 2215, in land_on_default
+    repository.merge_from(feature, message=f"merge {feature} into {default}")
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1393, in merge_from
+    self._git("merge", other, "-m", message)
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 948, in _git
+    return type(self).git(self.root, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 894, in git
+    raise RepoConnectError(
+space.repo.repo.RepoConnectError: Cannot connect git: git merge feature -m merge feature into main failed in C:\dev\abd-context-driven-delivery: merge: feature - not something we can merge.
+2026-10-24T01:04:05Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-26T15:11:35Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

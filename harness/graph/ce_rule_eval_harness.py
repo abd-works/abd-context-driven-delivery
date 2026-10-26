@@ -5,7 +5,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from harness.graph.graph import PracticeGraph
+from harness.graph.graph import Node, PracticeGraph, Source
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.working_copy import _class_fact
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import (
@@ -55,6 +55,34 @@ def practice_from_source(source: str, *, lang: str = "python", filename: str | N
     practice.apply_nodes(nodes)
     practice.apply_edges(edges)
     return practice, root
+
+
+def practice_from_files(files: dict[str, str], nodes: list[tuple[str, str, str, int, int]]) -> tuple[PracticeGraph, Path]:
+    """Write files under a temp root and register nodes as (type, name, relative path, start, end)."""
+    temp = tempfile.TemporaryDirectory()
+    root = Path(temp.name)
+    for relative, text in files.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    practice = PracticeGraph("clean_engineering")
+    practice.source_root = str(root)
+    practice._temp_dir = temp  # type: ignore[attr-defined]
+    for node_type, name, relative, start, end in nodes:
+        node_id = f"clean_engineering:{node_type}:{relative}:{name}"
+        node = Node(practice, node_type, node_id, name, Source(relative, start, end))
+        practice.nodes.setdefault(node_type, []).append(node)
+    return practice, root
+
+
+def assert_files_rule_pair(slug: str, fault: tuple[dict, list], clean: tuple[dict, list]) -> None:
+    rule = ce_rule_by_slug(slug)
+    fault_hits = violations_for_rule(rule, *practice_from_files(*fault))
+    clean_hits = violations_for_rule(rule, *practice_from_files(*clean))
+    if not fault_hits:
+        raise AssertionError(f"{slug}: expected violations on fault fixture, got none")
+    if clean_hits:
+        raise AssertionError(f"{slug}: expected no violations on clean fixture, got {clean_hits!r}")
 
 
 def violations_for_rule(rule, practice: PracticeGraph, root: Path) -> list[str]:

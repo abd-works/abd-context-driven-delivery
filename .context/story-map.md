@@ -264,16 +264,16 @@ section: body
                 NA — practices/stories
 ###     (S) User --> Request Session Handoff
 ####        Tests
-                NA — tools/handoff
+                NA — space/handoff
 ###     (S) Handoff --> Write Handoff Document
 ####        Tests
-                # tools/handoff/handoff_spec.py
+                # space/handoff/handoff_spec.py
                 with it("should expose write_handoff tool and handoff_session action")
 
-                # tools/handoff/handoff_spec.py
+                # space/handoff/handoff_spec.py
                 with it("should call write_handoff when running the handoff_session action")
 
-                # tools/handoff/handoff_spec.py
+                # space/handoff/handoff_spec.py
                 with description("write_handoff")
                     with context("given a workspace with an active session folder")
                         with it("should write a file named handoff-{timestamp}.md in the session folder")
