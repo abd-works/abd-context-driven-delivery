@@ -143,17 +143,36 @@ def _import_graph(modules: dict[str, Path]) -> dict[str, set[str]]:
 
 
 def _find_cycles(graph: dict[str, set[str]]) -> list[list[str]]:
+    # One DFS visit per module; enumerating every path is exponential on a repo-sized graph.
     cycles: list[list[str]] = []
+    visited: set[str] = set()
     for start in graph:
-        stack = [(start, [start])]
-        while stack:
-            node, path = stack.pop()
-            for nxt in graph.get(node, ()):
-                if nxt in path:
-                    idx = path.index(nxt)
-                    cycles.append(path[idx:] + [nxt])
-                    continue
-                stack.append((nxt, path + [nxt]))
+        if start not in visited:
+            cycles.extend(_cycles_reachable_from(graph, start, visited))
+    return cycles
+
+
+def _cycles_reachable_from(graph: dict[str, set[str]], start: str, visited: set[str]) -> list[list[str]]:
+    cycles: list[list[str]] = []
+    path = [start]
+    on_path = {start}
+    visited.add(start)
+    pending = [iter(sorted(graph.get(start, ())))]
+    while pending:
+        nxt = next(pending[-1], None)
+        if nxt is None:
+            pending.pop()
+            on_path.discard(path.pop())
+            continue
+        if nxt in on_path:
+            cycles.append(path[path.index(nxt):] + [nxt])
+            continue
+        if nxt in visited:
+            continue
+        visited.add(nxt)
+        on_path.add(nxt)
+        path.append(nxt)
+        pending.append(iter(sorted(graph.get(nxt, ()))))
     return cycles
 
 
