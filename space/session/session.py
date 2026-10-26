@@ -234,6 +234,15 @@ class Session:
         return WorkState(repo_path).session or _DEFAULT_SESSION_NAME
 
     @classmethod
+    def current_folder(cls, repo_path: Path | str | None = None) -> Path:
+        """``.sessions/{current}/`` on the project's checkout; ``.sessions/default/`` when none is named.
+
+        Reads the project (``repo_path``, else ``CDD_PROJECT``), not a session held in memory."""
+        slot = cls._slot()
+        repo = slot._repo_root_of(Path(repo_path)) if repo_path is not None else slot._env_repo()
+        return cls._session_folder(repo, cls._read_repo_current_name(repo))
+
+    @classmethod
     @mcp
     @command(name="current-session")
     @agent_tool
@@ -259,13 +268,7 @@ class Session:
             return self._repo_root_of(Path(repo_path))
         if self.repo_path is not None:
             return Path(self.repo_path).resolve()
-        named = os.environ.get("CDD_REPO")
-        if named:
-            return Path(named).resolve()
-        project = os.environ.get("CDD_PROJECT")
-        if project:
-            return Path(project).resolve()
-        return Path.cwd().resolve()
+        return self._env_repo()
 
     @mcp
     @command(name="close-session")
@@ -965,11 +968,13 @@ class Session:
         return folder
 
     def _env_repo(self) -> Path:
-        named = os.environ.get("CDD_REPO")
+        """Checkout of the project being worked on (``CDD_PROJECT``), else the cwd.
+
+        ``CDD_REPO`` names the CDD checkout that hosts the tools, not the project, so it never
+        picks the session."""
+        named = os.environ.get("CDD_PROJECT")
         if named:
-            return Path(named).resolve()
-        if self.repo_path is not None:
-            return Path(self.repo_path).resolve()
+            return self._repo_root_of(Path(named))
         return Path.cwd().resolve()
 
     def _env_workpath(self) -> Path:

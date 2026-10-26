@@ -548,10 +548,10 @@ def _coerce_mcp_arguments(
     return coerced
 
 
-def _active_mcp_repo() -> Path | None:
+def _active_mcp_project() -> Path | None:
     host = _SERVING_MCP_HOST
     if host is not None:
-        return host._runtime.repo
+        return host._runtime.project
     return None
 
 
@@ -563,7 +563,7 @@ def _log_mcp_operation_invocation(
     agent_tool = agent_tool_for_operation(op.tool, op.operation)
     if agent_tool is None:
         return
-    agent_tool.log_session_invocation(dict(arguments), repo_path=_active_mcp_repo())
+    agent_tool.log_session_invocation(dict(arguments), repo_path=_active_mcp_project())
 
 
 def _invoke_mcp_callable(
@@ -1056,7 +1056,7 @@ class McpHost:
         from space.session import Session
         from space.session.chat_context import apply_chat_context, clear_chat_context, pop_chat_fields
 
-        Session.refresh_current_from_repo(self._runtime.repo)
+        Session.refresh_current_from_repo(self._runtime.project)
         resolved = self._runtime.resolve_call_name(name)
         args = pop_chat_fields(arguments)
         try:

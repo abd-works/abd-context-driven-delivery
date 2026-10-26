@@ -2,14 +2,12 @@
 
 Writes handoff-{timestamp}.md into the session folder of the project being worked on:
 ``{work folder}/.sessions/{current session}/``, or ``{work folder}/.sessions/default/`` when the
-project has no named current session. The work folder is ``CDD_PROJECT`` (the project the MCP host
-serves), else the process cwd. The current session is the one saved in that project's
-``.sessions/session.json`` — not the host's own checkout (``CDD_REPO``), which holds other sessions.
+project has no named current session. The work folder is the checkout of ``CDD_PROJECT`` (the project
+the MCP host serves), else the process cwd, as :meth:`Session.current_folder` resolves it.
 No archiving, no latest pointer — one timestamped file per call.
 """
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,15 +24,8 @@ from space.session.session import Session
 class Handoff:
     """Write a compact session handoff for the next agent."""
 
-    def _work_folder(self) -> Path:
-        named = os.environ.get("CDD_PROJECT")
-        if named:
-            return Path(named).resolve()
-        return Path.cwd().resolve()
-
     def _handoffs_folder(self) -> Path:
-        work = self._work_folder()
-        folder = Session.sessions_dir(work) / Session._read_repo_current_name(work)
+        folder = Session.current_folder()
         folder.mkdir(parents=True, exist_ok=True)
         return folder
 
