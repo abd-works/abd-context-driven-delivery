@@ -12,7 +12,7 @@ from cdd_guidance.practices.stories.model.story_model import Background, StepTyp
 
 class TypeScriptScenario(CodeScenario):
     _CALL = re.compile(
-        r"(?P<kw>\.(?:and|but)|(?<![.\w])(?:given|when|then|but))\(\s*(?P<q>['\"])(?P<text>(?:\\.|(?!(?P=q)).)*)(?P=q)",
+        r"(?P<kw>\.(?:and|but)|(?<![.\w])(?:given|when|then|but))\(\s*(?P<q>['\"`])(?P<text>(?:\\.|(?!(?P=q)).)*)(?P=q)",
         re.IGNORECASE,
     )
     _SCENARIO = re.compile(r"scenario\(\s*(?P<q>['\"])(?P<name>(?:\\.|(?!(?P=q)).)*)(?P=q)")
@@ -67,6 +67,7 @@ class TypeScriptScenario(CodeScenario):
                 continue
             background = Background(match.group("scope") or "background", len(found) + 1)
             background.steps = [step for step in steps if step.keyword == "Given"]
+            background.body = body
             found.append(background)
         return found
 
@@ -183,7 +184,12 @@ class TypeScriptStory(CodeStory):
         comment_chunks = re.split(r"(?=/\*\*\s*\n \* Story:)", content)
         named = [chunk for chunk in comment_chunks if re.search(r"\*\s*Story:", chunk)]
         if named and len(re.findall(r"(?i)story\(", content)) <= len(named):
-            stories = [cls.load(chunk, "") for chunk in comment_chunks if "Story:" in chunk or re.search(r"(?i)story\(", chunk)]
+            imports = "\n".join(match.group(0) for match in cls.scenario_type._IMPORT.finditer(content))
+            stories = [
+                cls.load(f"{imports}\n{chunk}", "")
+                for chunk in comment_chunks
+                if "Story:" in chunk or re.search(r"(?i)story\(", chunk)
+            ]
             return stories or [cls.load(content, "")]
         calls = list(re.finditer(r"(?im)^[ \t]*(?:shareStory|story)\(", content))
         if len(calls) <= 1:

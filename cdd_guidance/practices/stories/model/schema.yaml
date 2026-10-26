@@ -176,4 +176,5 @@ example:
     - system-stubs-domain-real
     - infrastructure-in-lifecycle-hooks
     - inline-simple-gwt-bodies
+    - domain-operations-inline-in-steps
     - extract-assertion-helper

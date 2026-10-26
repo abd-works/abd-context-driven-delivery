@@ -99,7 +99,8 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
                 concepts.update(child.concepts)
         if not concepts:
             return []
-        if example_count(scenario) == 0 and context.child_count(node, ("examples",)) == 0:
+        background_examples = sum(example_count(background) for background in getattr(scenario, "backgrounds", []))
+        if example_count(scenario) == 0 and background_examples == 0 and context.child_count(node, ("examples",)) == 0:
             return [
                 f"Scenario {node.name!r} names domain concepts {sorted(concepts)} but has no examples table."
             ]

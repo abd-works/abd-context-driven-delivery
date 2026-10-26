@@ -3,16 +3,20 @@ share:
     - reduce-story-overlap
     - tier-bound-repository-accessor
     - no-expect-in-given
+    - domain-operations-inline-in-steps
     - scaffold-test-scripts
     - ask-cross-aggregate-sync
 domain:
   rules:
+    - domain-operations-inline-in-steps
     - reduce-story-overlap
 server:
   rules:
+    - domain-operations-inline-in-steps
     - reduce-story-overlap
     - standard-mutation-response
 playwright:
   rules:
+    - domain-operations-inline-in-steps
     - playwright-tests-browser-interaction
     - reduce-story-overlap

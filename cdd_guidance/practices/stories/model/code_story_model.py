@@ -244,9 +244,14 @@ class CodeStory(Story, CodeStoryNode):
 
     def fill(self, content: str) -> None:
         scenario_type = type(self).scenario_type
-        self.backgrounds = scenario_type.backgrounds_in(content)
-        self._take_background_examples(content)
         examples = scenario_type.example_names(content)
+        backgrounds = scenario_type.backgrounds_in(content)
+        for background in backgrounds:
+            for name in examples:
+                if re.search(rf"\b{re.escape(name)}\b", getattr(background, "body", "")):
+                    background.examples[name] = name
+        self.backgrounds = backgrounds
+        self._take_background_examples(content)
         for name, body in scenario_type.scenario_blocks(content):
             self.add_scenario(name, body, examples)
         if self.backgrounds and self.backgrounds[0].examples:

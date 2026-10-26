@@ -6,12 +6,24 @@ import re
 
 from harness.graph.practice_rule import PracticeGraphRule
 
+def _imported_module(text: str, name: str) -> str | None:
+    """The module a story file imports ``name`` from, when it imports it."""
+    for match in re.finditer(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*['\"](?P<module>[^'\"]+)['\"]", text):
+        names = [part.strip().split(" as ")[-1].removeprefix("type ").strip() for part in match.group("names").split(",")]
+        if name in names:
+            return match.group("module")
+    return None
+
+
 class DomainFixtureExampleFiles(PracticeGraphRule):
     slug = "domain-fixture-example-files"
     node_types = ("Example",)
 
     def check(self, node, context) -> list[str]:
         path = (node.source.file or "").lower()
+        module = _imported_module(context.text(node), node.name)
+        if module is not None:
+            path = module.lower() + ".ts"
         name = path.rsplit("/", 1)[-1]
         if not name.endswith(".examples.ts"):
             return [f"Example file {name!r} should end with .examples.ts under an examples/ folder."]
