@@ -620,6 +620,23 @@ class Node:
         self._rules = None
         self._populated = False
 
+    def set_fact(self, key: str, value) -> None:
+        """Record one fact on this node for rules to read; facts save with the graph."""
+        self.data[key] = value
+
+    def get_fact(self, key: str, default=None):
+        """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node."""
+        node = self
+        while node is not None:
+            if key in node.data:
+                return node.data[key]
+            node = node.parent or node.practice.direct_parent(node)
+        return default
+
+    def has_fact(self, key: str) -> bool:
+        """True when this node itself records the fact."""
+        return key in self.data
+
     @property
     def rules(self):
         """Schema rules for this node, with violations on each entry."""
@@ -710,7 +727,7 @@ class Node:
                     edge.child.populate(holder)
 
     def _edges_in_source_order(self, kind: str) -> list[Edge]:
-        matched = [edge for edge in self.practice.edges.get(kind, []) if edge.parent is self]
+        matched = self.practice.edges_from(kind, self)
         ordered = sorted((edge for edge in matched if self._follows_source(edge)), key=self._source_position)
         cursor = 0
         placed: list[Edge] = []
@@ -828,6 +845,10 @@ class PracticeGraph:
         self.source_root = ""
         self.graph: Graph | None = None
         self.root_node = Node(self, "Practice", f"{name}:Practice:.:{name}", name, Source(".", 0, 0))
+        # Lookup indexes over self.edges, rebuilt when a kind's list is replaced or grows elsewhere.
+        self._edge_pairs: dict[str, tuple[tuple[int, int], set[tuple[int, int]]]] = {}
+        self._edges_by_parent: dict[str, tuple[tuple[int, int], dict[int, list[Edge]]]] = {}
+        self._direct_parents: tuple[tuple, dict[int, Node]] = ((), {})
 
     def bind_rule(self, rule: str, types: list[str]) -> None:
         current = self.applicable.setdefault(rule, [])
@@ -894,12 +915,49 @@ class PracticeGraph:
                 child.practice.record(fact, child, parent)
 
     def record(self, fact: dict, parent: Node, child: Node) -> None:
-        list_ = self.edges.setdefault(fact["kind"], [])
-        if any(edge.parent is parent and edge.child is child for edge in list_):
+        kind = fact["kind"]
+        list_ = self.edges.setdefault(kind, [])
+        pairs = self._pairs_of(kind, list_)
+        if (id(parent), id(child)) in pairs:
             return
-        if fact["kind"] not in self.edge_types:
-            self.edge_types[fact["kind"]] = EdgeType(fact["kind"], fact["order"], fact["display"])
-        list_.append(Edge(fact["kind"], fact["order"], fact["display"], parent, child))
+        if kind not in self.edge_types:
+            self.edge_types[kind] = EdgeType(kind, fact["order"], fact["display"])
+        list_.append(Edge(kind, fact["order"], fact["display"], parent, child))
+        pairs.add((id(parent), id(child)))
+        self._edge_pairs[kind] = ((id(list_), len(list_)), pairs)
+
+    def edges_from(self, kind: str, parent: Node) -> list[Edge]:
+        """Edges of one kind leaving this parent, in recorded order."""
+        list_ = self.edges.get(kind, [])
+        state = (id(list_), len(list_))
+        cached = self._edges_by_parent.get(kind)
+        if cached is None or cached[0] != state:
+            by_parent: dict[int, list[Edge]] = {}
+            for edge in list_:
+                by_parent.setdefault(id(edge.parent), []).append(edge)
+            cached = (state, by_parent)
+            self._edges_by_parent[kind] = cached
+        return cached[1].get(id(parent), [])
+
+    def direct_parent(self, child: Node) -> Node | None:
+        """The node a direct edge hangs this child under; available before populate sets ``parent``."""
+        state = tuple((kind, id(list_), len(list_)) for kind, list_ in self.edges.items())
+        if self._direct_parents[0] != state:
+            parents: dict[int, Node] = {}
+            for list_ in self.edges.values():
+                for edge in list_:
+                    if edge.display == "direct":
+                        parents.setdefault(id(edge.child), edge.parent)
+            self._direct_parents = (state, parents)
+        return self._direct_parents[1].get(id(child))
+
+    def _pairs_of(self, kind: str, list_: list[Edge]) -> set[tuple[int, int]]:
+        state = (id(list_), len(list_))
+        cached = self._edge_pairs.get(kind)
+        if cached is None or cached[0] != state:
+            cached = (state, {(id(edge.parent), id(edge.child)) for edge in list_})
+            self._edge_pairs[kind] = cached
+        return cached[1]
 
     def node_count(self, type: str) -> int:
         return len(self.nodes.get(type, []))

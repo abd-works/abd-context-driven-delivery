@@ -32,6 +32,7 @@ from harness.graph.ce_module_example_harness import assert_module_example_pair
 from harness.graph.ce_rule_eval_harness import (
     assert_files_rule_pair,
     assert_python_example_pair,
+    practice_from_class_text,
     assert_rule_pair,
     ce_rule_by_slug,
     practice_from_source,
@@ -91,7 +92,7 @@ export class Api {
   }
 }
 """
-            for source, expect_hits in ((ok, []), (bad, 1)):
+            for source, expect_hits in ((ok, 0), (bad, 1)):
                 practice, root = practice_from_source(
                     source,
                     lang="typescript",
@@ -442,15 +443,21 @@ export class CustomerProfile {
             )
 
 
-def _module(name: str, relative: str | None = None) -> tuple[str, str, str, int, int]:
-    return ("Module", name, relative or name, 1, 1)
+_MODULE_CONTEXT = "# module\n"
+
+
+def _module(folder: str, files: dict[str, str]) -> dict[str, str]:
+    """A module folder: its own module-context.md plus the given source files."""
+    tree = {f"{folder}/.context/module-context.md": _MODULE_CONTEXT}
+    tree.update({f"{folder}/{name}": text for name, text in files.items()})
+    return tree
 
 
 def _sibling_modules(imported: int) -> dict[str, str]:
-    files = {f"pkg/part{index}/.context/module-context.md": "# part\n" for index in range(10)}
-    files["pkg/core/.context/module-context.md"] = "# core\n"
-    files["pkg/core/core.py"] = "".join(f"import part{index}\n" for index in range(imported))
-    return files
+    tree = _module("pkg/core", {"core.py": "".join(f"import pkg.part{index}\n" for index in range(imported))})
+    for index in range(10):
+        tree.update(_module(f"pkg/part{index}", {"part.py": "PART = 1\n"}))
+    return tree
 
 
 def _classes_with_methods(method_count: int) -> str:
@@ -458,9 +465,9 @@ def _classes_with_methods(method_count: int) -> str:
     return "".join(f"class Part{index}:\n{methods}\n" for index in range(6))
 
 
-def _markdown_class(markdown: str) -> tuple[dict, list]:
-    lines = markdown.count("\n") + 1
-    return {"order.md": markdown}, [("OoadClass", "Order", "order.md", 1, lines)]
+def _markdown_class_hits(markdown: str) -> list[str]:
+    rule = ce_rule_by_slug("write-interactions")
+    return violations_for_rule(rule, *practice_from_class_text("Order", markdown, "order.md"))
 
 
 with description("Clean Engineering graph rules (inline fault and clean fixtures)"):
@@ -522,50 +529,43 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
             )
 
     with context("write-interactions"):
-        with it("should flag a bold Interaction bullet and accept arrow notation"):
-            assert_files_rule_pair(
-                "write-interactions",
-                _markdown_class("# Order\n\n- **Interaction:** Order asks Payment to charge\n"),
-                _markdown_class("# Order\n\n- checkout\n  -> payment.charge\n"),
-            )
+        with it("should flag a bold Interaction bullet in a markdown class"):
+            expect(_markdown_class_hits("# Order\n\n- **Interaction:** Order asks Payment to charge\n")).not_to(equal([]))
+        with it("should accept arrow notation in a markdown class"):
+            expect(_markdown_class_hits("# Order\n\n- checkout\n  -> payment.charge\n")).to(equal([]))
 
     with context("one-way-deps"):
         with it("should flag two modules that import each other and accept a one-way import"):
-            modules = [_module("orders", "orders.py"), _module("billing", "billing.py")]
             assert_files_rule_pair(
                 "one-way-deps",
-                ({"orders.py": "import billing\n", "billing.py": "import orders\n"}, modules),
-                ({"orders.py": "import billing\n", "billing.py": "TAX_RATE = 1\n"}, modules),
+                {"orders/order.py": "import billing.invoice\n", "billing/invoice.py": "import orders.order\n"},
+                {"orders/order.py": "import billing.invoice\n", "billing/invoice.py": "TAX_RATE = 1\n"},
             )
 
     with context("low-coupling"):
         with it("should flag a module importing more than eight siblings and accept a narrow fan-out"):
-            assert_files_rule_pair(
-                "low-coupling",
-                (_sibling_modules(9), [_module("core", "pkg/core")]),
-                (_sibling_modules(2), [_module("core", "pkg/core")]),
-            )
+            assert_files_rule_pair("low-coupling", _sibling_modules(9), _sibling_modules(2))
 
     with context("deep-module"):
         with it("should flag a module of many one-method classes and accept classes with real surface"):
             assert_files_rule_pair(
                 "deep-module",
-                ({"shapes/shapes.py": _classes_with_methods(1)}, [_module("shapes")]),
-                ({"shapes/shapes.py": _classes_with_methods(2)}, [_module("shapes")]),
+                _module("shapes", {"shapes.py": _classes_with_methods(1)}),
+                _module("shapes", {"shapes.py": _classes_with_methods(2)}),
             )
 
     with context("domain-nouns-only"):
         with it("should flag a verb-named module and accept a domain noun"):
             assert_files_rule_pair(
                 "domain-nouns-only",
-                ({"process_orders/orders.py": ""}, [_module("process_orders")]),
-                ({"orders/orders.py": ""}, [_module("orders")]),
+                _module("process_orders", {"orders.py": "ORDERS = 1\n"}),
+                _module("orders", {"orders.py": "ORDERS = 1\n"}),
             )
 
     with context("no-module-per-class"):
         with it("should flag a module holding one class in one file and accept a cohesive group"):
             assert_files_rule_pair(
                 "no-module-per-class",
-                ({"orders/order.py": "class Order:\n    pass\n"}, [_module("orders")]),
-                ({"orders/order.py": "class Order:\n    pass\n\n\nclass OrderLine:\n    pass\n"}, [_module("orders")]),
+                _module("orders", {"order.py": "class Order:\n    pass\n"}),
+                _module("orders", {"order.py": "class Order:\n    pass\n\n\nclass OrderLine:\n    pass\n"}),
             )

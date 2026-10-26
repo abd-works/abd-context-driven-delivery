@@ -7,12 +7,17 @@ step text/concepts/actor, scenario outline + evidence, example links.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from harness.graph.node_data import encode_node_data
 
 from cdd_guidance.practices.stories.model.source_location import SourceLocation
 from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepType, Story, StoryModel
+
+_EXPORT_CONST = re.compile(r"export const (\w+)")
+_DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
+_ORCHESTRATION_EXPORT = re.compile(r"export function (?:activate|handle|process)\w*\s*\(")
 
 
 class GraphStoryModel:
@@ -69,7 +74,7 @@ class GraphStoryModel:
         node_id = f"stories:Story:{file}:{story.name}"
         line, end = self._source_span(story, root, file)
         story.load_map_facts()
-        nodes.append(self._row(node_id, story.name, "Story", file or ".", line, end, story))
+        nodes.append(self._row(node_id, story.name, "Story", file or ".", line, end, story, self._file_facts(root, file)))
         edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
         for background in story.backgrounds:
             self._background(root, file, node_id, background, nodes, edges)
@@ -218,6 +223,15 @@ class GraphStoryModel:
             if text in line:
                 return index
         return None
+
+    def _file_facts(self, root: str, file: str) -> dict:
+        """Facts the story file owns. They sit on the Story node; its scenarios, steps, and examples read them through get_fact."""
+        text = "\n".join(self._file_lines(root, file)) if file else ""
+        return {
+            "export_names": _EXPORT_CONST.findall(text),
+            "domain_class_names": _DOMAIN_CLASS.findall(text),
+            "exports_orchestration": bool(_ORCHESTRATION_EXPORT.search(text)),
+        }
 
     def _file_lines(self, root: str, file: str) -> list[str]:
         lines = self._lines.get(file)

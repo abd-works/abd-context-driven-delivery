@@ -1,17 +1,9 @@
-"""BDD spec rules ported from cdd_guidance.practices/bdd/scanners (repo history)."""
+"""BDD spec rules — read the facts each spec and describe-tree node recorded on its graph node."""
 
 from __future__ import annotations
 
-import re
-from pathlib import Path
-
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.bdd.rules.spec_helpers import (
-    has_signature_marker,
-    is_spec_file,
-    plain_english_violations,
-)
 from cdd_guidance.practices.bdd.rules.layer_isolation import LayerIsolation
 from cdd_guidance.practices.bdd.rules.observable_behavior import ObservableBehavior
 from cdd_guidance.practices.bdd.rules.shared_describe_subject import SharedDescribeSubject
@@ -22,18 +14,16 @@ from cdd_guidance.practices.bdd.rules.tree_rules import (
     StateNotWhen,
 )
 
-_EXPECT_PRIVATE = re.compile(r"(?:expect\s*\([^)]*\._\w+|expect\([^)]*\)\.to\([^)]*\._\w+)")
-_DIRECT_PRIVATE = re.compile(
-    r"(?:result|output|instance|obj|subject|sut|actual|entity|self\.\w+)\s*\.\s*_\w+"
-)
-
 
 class PlainEnglishOnly(PracticeGraphRule):
     slug = "describe-is-plain-english"
-    node_types = ("Description", "Context", "Spec")
+    node_types = ("Spec",)
 
     def check(self, node, context) -> list[str]:
-        return _spec_file_check(node, context, plain_english_violations)
+        return [
+            f"Line {line}: describe/it text looks like code, not plain English."
+            for line in node.get_fact("code_like_describe_lines", [])
+        ][:1]
 
 
 class SignatureMarkers(PracticeGraphRule):
@@ -41,31 +31,10 @@ class SignatureMarkers(PracticeGraphRule):
     node_types = ("Spec",)
 
     def check(self, node, context) -> list[str]:
-        text = _read_spec(node, context)
-        if not text:
-            return []
-        if has_signature_marker(text):
+        if node.get_fact("signature_marker", True):
             return []
         return ["Spec file is missing a BDD: SIGNATURE marker."]
 
-
-def _read_spec(node, context) -> str:
-    if not node.source.file or context.source_root is None:
-        return context.span(node)
-    path = context.source_root / node.source.file
-    if path.is_file() and is_spec_file(path):
-        return path.read_text(encoding="utf-8")
-    return context.span(node)
-
-
-def _spec_file_check(node, context, fn) -> list[str]:
-    text = _read_spec(node, context)
-    if not text.strip():
-        return []
-    return fn(text)
-
-
-# observable-behavior on Spec nodes uses ObservableBehavior from sibling module
 
 SPEC_RULES: tuple[PracticeGraphRule, ...] = (
     ObservableBehavior(),

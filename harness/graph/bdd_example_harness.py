@@ -1,11 +1,15 @@
-"""BDD rule checks on python spec fixtures."""
+"""BDD rule checks on spec fixtures, loaded through the real working-copy build.
+
+The spec file's language model parses its describe tree and every node loads its own facts;
+rules read only those facts.
+"""
 
 from __future__ import annotations
 
 import tempfile
 from pathlib import Path
 
-from graph import Node, PracticeGraph, Source
+from harness.graph.graph import Graph
 from harness.graph.rule_context import RuleCheckContext
 
 
@@ -18,22 +22,18 @@ def bdd_rule_by_slug(slug: str):
 def violations_for_spec_source(rule, source: str, *, filename: str = "widget_spec.py") -> list[str]:
     temp = tempfile.TemporaryDirectory()
     root = Path(temp.name)
-    path = root / filename
-    path.write_text(source.strip() + "\n", encoding="utf-8")
-    practice = PracticeGraph("bdd")
-    practice.source_root = str(root)
+    (root / filename).write_text(source.strip() + "\n", encoding="utf-8")
+    graph = Graph()
+    graph.load_working_copy(str(root), {"bdd": str(root)}, force=True)
+    practice = graph.practice("bdd")
     practice._temp_dir = temp  # type: ignore[attr-defined]
-    node = Node(
-        practice,
-        "Spec",
-        f"bdd:Spec:{filename}:widget",
-        "widget",
-        Source(filename, 1, max(1, source.count("\n"))),
-    )
-    practice.by_id[node.node_id] = node
-    practice.nodes.setdefault("Spec", []).append(node)
     context = RuleCheckContext(practice, root)
-    return list(rule.check(node, context))
+    return [
+        message
+        for node_type in rule.node_types
+        for node in practice.nodes.get(node_type, [])
+        for message in rule.check(node, context)
+    ]
 
 
 def assert_bdd_source_pair(slug: str, fault: str, clean: str, *, filename: str = "widget_spec.py") -> None:

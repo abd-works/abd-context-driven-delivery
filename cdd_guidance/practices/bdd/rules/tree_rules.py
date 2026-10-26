@@ -11,7 +11,6 @@ _INTERNAL_SUBJECT = re.compile(
     r"Factory|Builder|Impl|Internal)\b"
 )
 _WHEN_PREFIX = re.compile(r"^\s*when\b", re.I)
-_EXPECT = re.compile(r"\bexpect\s*\(")
 
 
 class DescribeSubjectNotInternal(PracticeGraphRule):
@@ -41,10 +40,7 @@ class OneAssertionPerTest(PracticeGraphRule):
     node_types = ("Observation",)
 
     def check(self, node, context) -> list[str]:
-        span = context.span(node)
-        if not span.strip():
-            return []
-        count = len(_EXPECT.findall(span))
+        count = node.get_fact("expect_count", 0)
         if count > 1:
             return [f"Observation {node.name!r} has {count} expects; use one outcome per it."]
         return []
@@ -55,9 +51,6 @@ class NoImplementation(PracticeGraphRule):
     node_types = ("Observation", "Context")
 
     def check(self, node, context) -> list[str]:
-        span = context.span(node)
-        if not span.strip():
-            return []
-        if _EXPECT.search(span) or re.search(r"\b(mock|import|require)\b", span):
+        if node.get_fact("has_implementation"):
             return [f"{node.type} {node.name!r} at behavior fidelity must not contain tests or imports."]
         return []

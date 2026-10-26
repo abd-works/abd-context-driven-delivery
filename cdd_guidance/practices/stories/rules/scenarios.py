@@ -11,8 +11,6 @@ _CAMEL_STEP = re.compile(r"^[a-z]+(?:[A-Z][a-z0-9]*)+$")
 
 _PLAIN_ENGLISH = re.compile(r"^[a-z].*(?:\s+[a-z].*)+$", re.IGNORECASE)
 
-_DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
-
 _INLINE_CONDITIONAL = re.compile(
     r"\bwhen\s+[<{]?\w+[>}]?\s+is\s+(?:true|false)\b", re.I
 )
@@ -295,9 +293,8 @@ class GwtStepsTraceToDomainOperations(PracticeGraphRule):
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node, context) -> list[str]:
-        text = context.text(node)
         name = (node.name or "").strip()
-        classes = _DOMAIN_CLASS.findall(text)
+        classes = node.get_fact("domain_class_names", [])
         if name.isidentifier() or (name.replace("_", "").isalnum() and " " not in name):
             return [f"Step {name!r} does not trace to a domain operation; use the domain type in the step phrase."]
         if not classes:
@@ -313,7 +310,6 @@ class DomainOperationInTheStep(PracticeGraphRule):
     node_types = ("Story", "Step", "Given", "When", "Then")
 
     def check(self, node, context) -> list[str]:
-        text = context.text(node)
-        if re.search(r"export function (?:activate|handle|process)\w*\s*\(", text):
+        if node.get_fact("exports_orchestration"):
             return ["Story shared file exports orchestration instead of calling domain methods in GWT steps."]
         return []

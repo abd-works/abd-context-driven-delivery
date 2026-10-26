@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import re
-
 from harness.graph.practice_rule import PracticeGraphRule
 
 class DomainFixtureExampleFiles(PracticeGraphRule):
@@ -24,12 +22,12 @@ class ExampleRoleNames(PracticeGraphRule):
     node_types = ("Example",)
 
     def check(self, node, context) -> list[str]:
-        text = context.text(node)
-        for export in re.findall(r"export const (\w+)", text):
+        exports = node.get_fact("export_names", [])
+        for export in exports:
             lowered = export.lower()
             if any(role in lowered for role in ("entered", "stored", "expected", "seed", "fixture")):
                 return []
-        if "export const" in text:
+        if exports:
             return [f"Example exports {node.name!r} without a role name (entered/stored/expected/…)."]
         return []
 

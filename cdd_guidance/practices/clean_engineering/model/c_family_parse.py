@@ -12,6 +12,7 @@ from cdd_guidance.practices.clean_engineering.model.property import Property, ap
 _CLASS_RE = re.compile(
     r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?class\s+(\w+)",
 )
+_EXTENDS_RE = re.compile(r"\bextends\s+([\w.]+)")
 _METHOD_RE = re.compile(
     r"(?:public|private|protected|static|async|override)?\s*"
     r"(?:public|private|protected|static|async|override)?\s*"
@@ -90,6 +91,8 @@ class CFamilyParse:
                 sequential_order=class_order,
                 line=self._line_at(self._text, match.start()),
             )
+            oclass.end_line = self._line_at(self._text, body_start + len(body))
+            oclass.bases = _EXTENDS_RE.findall(self._text[match.end() : body_start])
             oclass.operations = [
                 self._loaded_operation(oclass, filled) for filled in self._methods_from_body(body, match.group(1))
             ]

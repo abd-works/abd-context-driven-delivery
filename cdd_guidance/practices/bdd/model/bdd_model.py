@@ -1,6 +1,9 @@
-"""Canonical BDD describe tree — parse a sketch, render python or typescript."""
+"""Canonical BDD describe tree — parse a sketch or spec code, render python or typescript."""
 
 from __future__ import annotations
+
+import ast
+import re
 
 from harness.graph.bound_node import BoundChildren, BoundNode
 from harness.graph.graph import Graph
@@ -44,6 +47,32 @@ class BddModel(BoundNode):
         self.descriptions = _parse_sketch(text)
         return self
 
+    def parse_code(self, text: str) -> "BddModel":
+        """Read the describe tree out of spec code; each language model knows its own syntax."""
+        return self
+
+    def load_source_facts(self, text: str) -> None:
+        """Fill the facts the whole spec file owns."""
+        from cdd_guidance.practices.bdd.model.nodes import private_probe_in_text
+        from cdd_guidance.practices.bdd.model.spec_source import code_like_describe_lines, has_signature_marker
+
+        self.patches_infrastructure = bool(_PATCH_DECORATOR.search(text) or _MOCK_PATCH_IMPORT.search(text))
+        self.signature_marker = has_signature_marker(text)
+        self.top_level_describes = _MAMBA_DESCRIBE.findall(text)
+        self.code_like_describe_lines = code_like_describe_lines(text)
+        self.private_probe = private_probe_in_text(text, 1)
+
+    def behavior_nodes(self) -> list:
+        """Every description, context, and observation under this spec, parents first."""
+        found: list = []
+        pending = list(self.descriptions)
+        while pending:
+            node = pending.pop(0)
+            found.append(node)
+            pending.extend(getattr(node, "contexts", []))
+            pending.extend(getattr(node, "observations", []))
+        return found
+
     def render(self, canonical: "BddModel", previous: str | None = None) -> str:
         return "\n\n".join(_render_python(item) for item in canonical.descriptions)
 
@@ -52,10 +81,104 @@ class PythonBddModel(BddModel):
     def render(self, canonical: BddModel, previous: str | None = None) -> str:
         return "\n\n".join(_render_python(item) for item in canonical.descriptions)
 
+    def parse_code(self, text: str) -> "BddModel":
+        """Mamba specs: `with description(...)`, `with context(...)`, `with it(...)` blocks."""
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            return self
+        self.descriptions = [
+            node for node in (_mamba_node(item, None, order) for order, item in enumerate(tree.body, 1)) if node is not None
+        ]
+        return self
+
 
 class TypeScriptBddModel(BddModel):
     def render(self, canonical: BddModel, previous: str | None = None) -> str:
         return "\n\n".join(_render_typescript(item) for item in canonical.descriptions)
+
+    def parse_code(self, text: str) -> "BddModel":
+        """Vitest / Jest specs: `describe(...)`, `it(...)`, `test(...)` blocks found by bracket matching."""
+        blocks = sorted(_script_blocks(text), key=lambda block: block[1])
+        self.descriptions = _nest_script_blocks(blocks)
+        return self
+
+
+_PATCH_DECORATOR = re.compile(r"^\s*@patch\s*\(", re.MULTILINE)
+_MOCK_PATCH_IMPORT = re.compile(r"from unittest\.mock import patch")
+_MAMBA_DESCRIBE = re.compile(r'^with description\("([^"]+)"\)', re.MULTILINE)
+_MAMBA_BLOCKS = {"description": "description", "describe": "description", "context": "context", "it": "it", "_it": "it"}
+_SCRIPT_BLOCK = re.compile(r"\b(describe|context|it|test)\s*\(\s*(['\"`])((?:\\.|(?!\2).)*)\2")
+
+
+def _mamba_node(item: ast.stmt, parent, order: int):
+    """One `with <block>("name"):` statement as a Description, Context, or Observation (None otherwise)."""
+    if not isinstance(item, ast.With) or not item.items:
+        return None
+    call = item.items[0].context_expr
+    if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.args):
+        return None
+    kind = _MAMBA_BLOCKS.get(call.func.id)
+    name = call.args[0].value if isinstance(call.args[0], ast.Constant) else ""
+    if kind is None or not isinstance(name, str):
+        return None
+    node = _behavior_node(kind, parent, name, order, item.lineno, item.end_lineno or item.lineno)
+    for child_order, child in enumerate(item.body, 1):
+        _mamba_node(child, node, child_order)
+    return node
+
+
+def _behavior_node(kind: str, parent, name: str, order: int, line: int, end_line: int):
+    if kind == "description" and parent is None:
+        node = Description(name, order)
+    elif kind == "it":
+        node = Observation(name, order)
+    else:
+        node = Context(name, order)
+    node.line, node.end_line = line, end_line
+    if parent is not None:
+        (parent.observations if isinstance(node, Observation) else parent.contexts).append(node)
+    return node
+
+
+def _script_blocks(text: str) -> list[tuple[str, int, int, str]]:
+    """(kind, start line, end line, name) for every describe/it/test call whose body closes."""
+    blocks = []
+    for match in _SCRIPT_BLOCK.finditer(text):
+        close = _closing_paren(text, text.index("(", match.start()))
+        if close is None:
+            continue
+        start = text.count("\n", 0, match.start()) + 1
+        blocks.append((match.group(1), start, text.count("\n", 0, close) + 1, match.group(3)))
+    return blocks
+
+
+def _closing_paren(text: str, open_index: int) -> int | None:
+    depth = 0
+    for index in range(open_index, len(text)):
+        if text[index] == "(":
+            depth += 1
+        elif text[index] == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def _nest_script_blocks(blocks: list[tuple[str, int, int, str]]) -> list:
+    roots: list = []
+    open_nodes: list = []
+    for order, (kind, start, end, name) in enumerate(blocks, 1):
+        while open_nodes and open_nodes[-1].end_line < start:
+            open_nodes.pop()
+        parent = open_nodes[-1] if open_nodes else None
+        mapped = "it" if kind in {"it", "test"} else ("description" if kind == "describe" and parent is None else "context")
+        node = _behavior_node(mapped, parent, name, order, start, end)
+        if parent is None:
+            roots.append(node)
+        if not isinstance(node, Observation):
+            open_nodes.append(node)
+    return [node for node in roots if isinstance(node, Description)]
 
 
 class MarkdownBddModel(BddModel):

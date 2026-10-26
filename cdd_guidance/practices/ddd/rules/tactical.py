@@ -1,16 +1,13 @@
-"""DDD tactical rules — building blocks in code (ported from historical scanners)."""
+"""DDD tactical rules — read the facts each building block recorded on its graph node."""
 
 from __future__ import annotations
-
-import re
 
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.ddd.rules.tactical_helpers import (
-    has_tactical_stereotype,
     is_presentation_module_source,
     is_screen_driver_class,
-    other_classes_reference,
+    public_operation_names,
     repository_lifecycle_ops,
     technical_name_violation,
 )
@@ -24,6 +21,7 @@ _TACTICAL_CLASS = (
     "Factory",
     "Specification",
 )
+_CONSTRUCTORS = frozenset({"constructor", "__init__"})
 
 
 class PrivateMethodNaming(PracticeGraphRule):
@@ -33,20 +31,13 @@ class PrivateMethodNaming(PracticeGraphRule):
     def check(self, node, context) -> list[str]:
         if node.name.startswith("_"):
             return [f"Domain type name {node.name!r} should not start with '_'."]
-        oclass = context.ce_class(node)
-        if oclass is None:
-            return []
-        messages: list[str] = []
-        for op in oclass.operations:
-            if op.peer_private_access:
-                messages.append(
-                    f"Operation '{op.name}' on '{node.name}' reaches into another object's private API."
-                )
-            if op.name and re.match(r"^derive\w*", op.name) and not op.name.startswith("_"):
-                messages.append(
-                    f"Operation '{op.name}' on '{node.name}' should be private (prefix with '_')."
-                )
-        return messages
+        return [
+            f"Operation '{name}' on '{node.name}' reaches into another object's private API."
+            for name in node.get_fact("peer_private_operations", [])
+        ] + [
+            f"Operation '{name}' on '{node.name}' should be private (prefix with '_')."
+            for name in node.get_fact("public_derive_operations", [])
+        ]
 
 
 class FlaccidDataObject(PracticeGraphRule):
@@ -54,29 +45,12 @@ class FlaccidDataObject(PracticeGraphRule):
     node_types = ("EntityRoot", "Entity")
 
     def check(self, node, context) -> list[str]:
-        if node.type == "ValueObject":
+        if node.type == "ValueObject" or not node.has_fact("operation_shapes"):
             return []
-        oclass = context.ce_class(node)
-        if oclass is not None:
-            public_ops = [
-                op
-                for op in oclass.operations
-                if op.name and not str(op.name).startswith("_") and op.name not in {"constructor", "__init__"}
-            ]
-            props = len(getattr(oclass, "properties", []) or [])
-            if props == 0:
-                props = context.child_count(node, ("properties",))
-            if props and not public_ops:
-                return [f"{node.type} '{node.name}' has properties but no public operations."]
-            return []
-        props = context.child_count(node, ("properties",))
-        ops = sum(
-            1
-            for edge in node.practice.edges.get("owns", [])
-            if edge.parent is node and edge.child.type == "Operation"
-        )
-        if props and ops == 0:
-            return [f"{node.type} '{node.name}' has properties but no operations."]
+        public_ops = [name for name in public_operation_names(node) if name not in _CONSTRUCTORS]
+        props = len(node.get_fact("property_names", [])) or context.child_count(node, ("properties",))
+        if props and not public_ops:
+            return [f"{node.type} '{node.name}' has properties but no public operations."]
         return []
 
 
@@ -85,9 +59,7 @@ class BuildingBlocksFidelityRequiresTacticalStereotype(PracticeGraphRule):
     node_types = _TACTICAL_CLASS
 
     def check(self, node, context) -> list[str]:
-        if is_presentation_module_source(node):
-            return []
-        if has_tactical_stereotype(context, node):
+        if is_presentation_module_source(node) or node.get_fact("tactical_stereotype", True):
             return []
         return [
             f"Class '{node.name}' lacks a tactical stereotype "
@@ -111,20 +83,10 @@ class ServiceIsHomeless(PracticeGraphRule):
     def check(self, node, context) -> list[str]:
         if not node.name.endswith("Service"):
             return []
-        oclass = context.ce_class(node)
-        if oclass is None or not oclass.operations:
-            return []
-        from cdd_guidance.practices.clean_engineering.model.rules_shared.span_helpers import method_body
-
-        text = context.text(node)
-        for op in oclass.operations:
-            if not op.name or op.name.startswith("_"):
-                continue
-            body = method_body(text, op.name)
-            if re.search(r"return\s+\w+\.\w+\s*\(", body):
-                return [
-                    f"Domain service '{node.name}' only delegates '{op.name}' to another type; move it onto that aggregate."
-                ]
+        for name in node.get_fact("delegating_operations", []):
+            return [
+                f"Domain service '{node.name}' only delegates '{name}' to another type; move it onto that aggregate."
+            ]
         return []
 
 
@@ -133,15 +95,11 @@ class RepositoryIsCollectionLifecycle(PracticeGraphRule):
     node_types = ("Repository",)
 
     def check(self, node, context) -> list[str]:
-        if not node.name.endswith("Repository"):
+        if not node.name.endswith("Repository") or not node.has_fact("operation_shapes"):
             return []
-        lifecycle = repository_lifecycle_ops(context, node)
-        if lifecycle:
+        if repository_lifecycle_ops(node):
             return []
-        oclass = context.ce_class(node)
-        if oclass is None:
-            return []
-        public = [op.name for op in oclass.operations if op.name and not op.name.startswith("_")]
+        public = public_operation_names(node)
         if not public:
             return [f"Repository '{node.name}' exposes no collection lifecycle operations (add, find, remove, …)."]
         if len(public) == 1 and public[0].lower() in {"persist", "save", "store"}:
@@ -156,18 +114,10 @@ class LoadWithIdentityInHand(PracticeGraphRule):
     node_types = ("Repository",)
 
     def check(self, node, context) -> list[str]:
-        oclass = context.ce_class(node)
-        if oclass is None:
-            return []
-        messages: list[str] = []
-        for op in oclass.operations:
-            if op.name.lower() not in {"load", "get", "find", "fetch"}:
-                continue
-            if not op.parameters:
-                messages.append(
-                    f"Repository '{node.name}.{op.name}' must take the identity already in hand."
-                )
-        return messages
+        return [
+            f"Repository '{node.name}.{name}' must take the identity already in hand."
+            for name in node.get_fact("identity_free_loads", [])
+        ]
 
 
 class NoOrphanedObjects(PracticeGraphRule):
@@ -175,15 +125,11 @@ class NoOrphanedObjects(PracticeGraphRule):
     node_types = ("EntityRoot", "Entity", "ValueObject")
 
     def check(self, node, context) -> list[str]:
-        names = class_names_in_file(context, node)
-        if len(names) <= 1:
-            return [f"Domain type '{node.name}' has no relationship to other concepts in this module."]
-        if other_classes_reference(context, node, node.name):
+        if not node.has_fact("peer_names"):
             return []
-        for edge_kind in ("associates", "composition", "aggregation", "belongsTo", "accesses"):
-            if context.child_count(node, (edge_kind,)):
-                return []
-        return [f"Domain type '{node.name}' is orphaned — relate it to an aggregate or peer concept."]
+        if len(node.get_fact("peer_names")) <= 1:
+            return [f"Domain type '{node.name}' has no relationship to other concepts in this module."]
+        return []
 
 
 class ScreenInterfaceNotADomainObject(PracticeGraphRule):
@@ -191,15 +137,8 @@ class ScreenInterfaceNotADomainObject(PracticeGraphRule):
     node_types = ("EntityRoot", "Entity", "ValueObject", "DomainService")
 
     def check(self, node, context) -> list[str]:
-        if not is_screen_driver_class(context, node):
+        if not is_screen_driver_class(node):
             return []
         return [
             f"'{node.name}' behaves like a UI driver (open/isShowing); put the action on the owning aggregate."
         ]
-
-
-def class_names_in_file(context, node) -> set[str]:
-    model = context.clean_engineering_model(node)
-    if model is None:
-        return set()
-    return {cls.name for module in model.modules for cls in module.classes}

@@ -52,6 +52,66 @@ class PythonModule(Module):
     def load_class(self, source: OoadClass) -> PythonOoadClass:
         return PythonOoadClass(name=source.name, sequential_order=source.sequential_order)
 
+    def load_source_facts(self, text: str, file: Path, root: Path) -> None:
+        super().load_source_facts(text, file, root)
+        tree = _syntax_tree(text)
+        if tree is None:
+            return
+        helpers = _module_private_functions(tree)
+        for function, owner in _sole_calling_class(tree, set(helpers)).items():
+            for oclass in self.classes:
+                if oclass.name == owner:
+                    oclass.module_helpers.append([function, helpers[function]])
+
+    def import_targets(self, text: str, file: Path, root: Path) -> list[str]:
+        """Root-relative paths each `import` / `from … import` names, absolute or relative."""
+        tree = _syntax_tree(text)
+        if tree is None:
+            return []
+        package = file.parent.relative_to(root).parts
+        targets: list[str] = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                targets.extend(alias.name.replace(".", "/") for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                targets.extend(_from_import_targets(node, package))
+        return targets
+
+
+def _syntax_tree(text: str) -> ast.Module | None:
+    try:
+        return ast.parse(text)
+    except SyntaxError:
+        return None
+
+
+def _from_import_targets(node: ast.ImportFrom, package: tuple[str, ...]) -> list[str]:
+    base = list(package[: len(package) - node.level + 1]) if node.level else []
+    module = base + (node.module.split(".") if node.module else [])
+    if not module:
+        return []
+    joined = "/".join(module)
+    return [joined] + [f"{joined}/{alias.name}" for alias in node.names if alias.name != "*"]
+
+
+def _module_private_functions(tree: ast.Module) -> dict[str, int]:
+    return {
+        node.name: node.lineno
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("_")
+    }
+
+
+def _sole_calling_class(tree: ast.Module, function_names: set[str]) -> dict[str, str]:
+    callers: dict[str, set[str]] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for child in ast.walk(node):
+            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name) and child.func.id in function_names:
+                callers.setdefault(child.func.id, set()).add(node.name)
+    return {function: next(iter(classes)) for function, classes in callers.items() if len(classes) == 1}
+
 
 class PythonCleanEngineeringModel(CleanEngineeringModel):
 
@@ -153,6 +213,8 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             intent=intent.strip(),
             line=node.lineno,
         )
+        oclass.end_line = getattr(node, "end_lineno", None) or node.lineno
+        oclass.bases = [ast.unparse(base) for base in node.bases]
         oclass.operations = self._operations_from_class(node)
         oclass.properties = self._properties_from_class(node)
         return oclass

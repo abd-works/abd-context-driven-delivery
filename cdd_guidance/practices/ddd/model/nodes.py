@@ -7,6 +7,7 @@ subclass OoadClass; DomainEvent subclasses Property. Graph rule slugs inherit fr
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from harness.graph.bound_node import BoundChildren
@@ -70,7 +71,34 @@ class InvariantObject(Property):
         self.stereotype = "invariant"
 
 
-class Entity(OoadClass):
+_DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
+_ONLY_DELEGATES = re.compile(r"return\s+\w+\.\w+\s*\(")
+_LOAD_NAMES = frozenset({"load", "get", "find", "fetch"})
+
+
+class TacticalBuildingBlock(OoadClass):
+    """A class-shaped DDD building block. Loads the tactical facts DDD rules read from its graph node."""
+
+    def load_tactical_facts(self, parsed: OoadClass, file_text: str) -> None:
+        """Fill the facts this building block owns, from the class its language parser read and the file around it."""
+        from cdd_guidance.practices.clean_engineering.model.rules_shared.span_helpers import method_body
+        from cdd_guidance.practices.ddd.model.stereotypes import declares_tactical_stereotype
+
+        operations = parsed.own_operations()
+        public = [op for op in operations if op.name and not op.name.startswith("_")]
+        self.peer_private_operations = [op.name for op in operations if op.peer_private_access]
+        self.public_derive_operations = [op.name for op in public if _DERIVE_PREFIX.match(op.name)]
+        self.delegating_operations = [op.name for op in public if _ONLY_DELEGATES.search(method_body(file_text, op.name))]
+        self.identity_free_loads = [op.name for op in operations if op.name.lower() in _LOAD_NAMES and not op.parameters]
+        self.tactical_stereotype = declares_tactical_stereotype(
+            file_text, parsed.name, self.tactical_kind(), set(parsed.peer_names)
+        )
+
+    def tactical_kind(self) -> str:
+        return "EntityRoot" if getattr(self, "is_root", False) else self._semantic_type_name
+
+
+class Entity(TacticalBuildingBlock):
     """Identity that stays the same when its values change."""
 
     _semantic_type_name = "Entity"
@@ -109,7 +137,7 @@ class Entity(OoadClass):
         return self.invariant_object_type(sequential_order=len(self.invariant_objects))
 
 
-class ValueObject(OoadClass):
+class ValueObject(TacticalBuildingBlock):
     """No write operations and no setters. create, clone, and mix return a new instance."""
 
     _semantic_type_name = "ValueObject"
@@ -131,7 +159,7 @@ class ValueObject(OoadClass):
         return type(self)(self.name, self.sequential_order, intent=other.intent or self.intent)
 
 
-class Repository(OoadClass):
+class Repository(TacticalBuildingBlock):
     """A collection. Operations are any of create, read, update, delete, and search."""
 
     _semantic_type_name = "Repository"
@@ -151,7 +179,7 @@ class Repository(OoadClass):
             self.accesses = None
 
 
-class DomainService(OoadClass):
+class DomainService(TacticalBuildingBlock):
     """No state. An operation here is one no domain object can perform."""
 
     _semantic_type_name = "DomainService"
@@ -199,7 +227,7 @@ class DomainEvent(Property):
             self.subject = Property("subject", 0, description="the state of the event")
 
 
-class Specification(OoadClass):
+class Specification(TacticalBuildingBlock):
     _semantic_type_name = "Specification"
     _graph_practice = "ddd"
 
@@ -207,7 +235,7 @@ class Specification(OoadClass):
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
-class Factory(OoadClass):
+class Factory(TacticalBuildingBlock):
     _semantic_type_name = "Factory"
     _graph_practice = "ddd"
 

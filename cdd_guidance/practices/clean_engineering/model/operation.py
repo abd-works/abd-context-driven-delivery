@@ -30,6 +30,17 @@ def operation_source_span(operation: "Operation") -> tuple[int, int] | None:
 from harness.graph.bound_node import BoundChildren
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
+    exception_without_message_in_text,
+    generic_exception_message_in_text,
+    io_and_domain_callees,
+    io_and_domain_in_text,
+    markdown_bullet_lines,
+    mutates_without_record_in_text,
+    private_reach_in_text,
+    prose_comment_in_text,
+    raises_on_empty_in_text,
+)
 from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair
 
 
@@ -39,6 +50,8 @@ class Parameter(OoadNode):
     def __init__(self, name: str, sequential_order: int = 0, type_hint: str = "") -> None:
         super().__init__(name, sequential_order)
         self.type_hint = type_hint
+        self.operation_name = ""
+        self.property_setter = False
 
     def clone(self) -> "Parameter":
         return type(self)(self.name, self.sequential_order, self.type_hint)
@@ -62,6 +75,11 @@ class Parameter(OoadNode):
 
     def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
         return []
+
+    def load_operation_facts(self, operation: "Operation") -> None:
+        """Fill the facts this parameter owns about the operation that declares it."""
+        self.operation_name = operation.name
+        self.property_setter = operation.is_property and len(operation.parameters) == 1
 
 
 class Operation(OoadNode):
@@ -98,6 +116,16 @@ class Operation(OoadNode):
         self.unnamed_literal_numbers: list[str] = []
         self.narrative_comment_lines: int = 0
         self.peer_private_access: bool = False
+        self.private_reach = False
+        self.io_and_domain = False
+        self.io_and_domain_callees = False
+        self.raises_on_empty = False
+        self.exception_without_message = ""
+        self.generic_exception_message = False
+        self.mutates_without_record = False
+        self.prose_comment = False
+        self.bold_interaction_lines: list[int] = []
+        self.bold_invariant_lines: list[int] = []
         for key, value in fields.items():
             setattr(self, key, value)
         if parameters:
@@ -148,6 +176,22 @@ class Operation(OoadNode):
         cloned.narrative_comment_lines = self.narrative_comment_lines
         cloned.peer_private_access = self.peer_private_access
         return cloned
+
+    def load_span_facts(self, source_span: str) -> None:
+        """Fill the facts this operation's own source span carries, beyond what the parser measured."""
+        if not self.body_fingerprint:
+            self.body_fingerprint = _span_fingerprint(source_span)
+        self.io_and_domain_callees = io_and_domain_callees([c for c in self.callees if c], self.line_count or 0)
+        self.private_reach = private_reach_in_text(source_span)
+        self.io_and_domain = io_and_domain_in_text(source_span)
+        self.raises_on_empty = raises_on_empty_in_text(source_span)
+        self.exception_without_message = exception_without_message_in_text(source_span)
+        self.generic_exception_message = generic_exception_message_in_text(source_span)
+        self.mutates_without_record = mutates_without_record_in_text(source_span)
+        self.prose_comment = prose_comment_in_text(source_span)
+        bullets = markdown_bullet_lines(source_span)
+        self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
+        self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
 
     def save(self) -> str:
         params = ", ".join(parameter.save() for parameter in self.parameters)
@@ -237,3 +281,8 @@ class Operation(OoadNode):
         )
         node.invariants = [item.clone() for item in getattr(field, "invariants", [])]
         return node
+
+
+def _span_fingerprint(source_span: str) -> str:
+    normalized = re.sub(r"\s+", " ", source_span.strip())
+    return hashlib.sha256(normalized.encode()).hexdigest()[:24] if normalized else ""

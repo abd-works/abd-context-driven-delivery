@@ -1,10 +1,8 @@
-"""Module naming and shape rules backed by folder + module-context scans."""
+"""Module naming and shape rules — folder facts and the classes the graph places in each folder."""
 
 from __future__ import annotations
 
-import ast
 import re
-from pathlib import Path
 
 from harness.graph.practice_rule import PracticeGraphRule
 
@@ -13,8 +11,6 @@ _VERB_MODULE = re.compile(
     re.I,
 )
 _BAD_SUFFIX = re.compile(r"(Model|Runtime|Service|Manager|Helper|Util|Utils|Processor)$")
-_IS_A = re.compile(r"\*is a type of\*", re.I)
-_CHILD_PARENT = re.compile(r"^\s*#{1,6}\s+\S.+\s+:\s+\S", re.MULTILINE)
 
 
 class DomainNounsOnly(PracticeGraphRule):
@@ -38,51 +34,28 @@ class NoModulePerClass(PracticeGraphRule):
     node_types = ("Module",)
 
     def check(self, node, context) -> list[str]:
-        folder = context.module_folder(node)
-        if folder is None or not folder.is_dir():
-            return []
-        hits: list[str] = []
-        hits.extend(_context_subtype_violations(folder, node.name))
-        class_count = _count_top_level_classes(folder)
-        if class_count == 1:
-            py_files = [p for p in folder.glob("*.py") if not p.name.startswith("_")]
-            if len(py_files) <= 1:
-                hits.append(
-                    f"Module {node.name!r} exposes a single class in one file; "
-                    "group cohesive classes or merge into an existing module."
-                )
-        return hits[:1]
-
-
-def _context_subtype_violations(folder: Path, module_name: str) -> list[str]:
-    marker = folder / ".context" / "module-context.md"
-    if not marker.is_file():
+        if node.get_fact("is_a_in_context"):
+            return [
+                f"Module {node.name!r} module-context uses '*is a type of*'; "
+                "generalisation belongs in model, not modules fidelity."
+            ]
+        if node.get_fact("child_parent_in_context"):
+            return [
+                f"Module {node.name!r} module-context uses 'Child : Parent'; "
+                "use model fidelity for generalisation."
+            ]
+        if _public_classes_in(node, context) == 1 and node.get_fact("public_source_files", 0) <= 1:
+            return [
+                f"Module {node.name!r} exposes a single class in one file; "
+                "group cohesive classes or merge into an existing module."
+            ]
         return []
-    try:
-        content = marker.read_text(encoding="utf-8")
-    except OSError:
-        return []
-    if _IS_A.search(content):
-        return [
-            f"Module {module_name!r} module-context uses '*is a type of*'; "
-            "generalisation belongs in model, not modules fidelity."
-        ]
-    if _CHILD_PARENT.search(content):
-        return [
-            f"Module {module_name!r} module-context uses 'Child : Parent'; "
-            "use model fidelity for generalisation."
-        ]
-    return []
 
 
-def _count_top_level_classes(folder: Path) -> int:
-    total = 0
-    for path in folder.glob("*.py"):
-        if path.name.startswith("_") or path.name.startswith("test_"):
-            continue
-        try:
-            tree = ast.parse(path.read_text(encoding="utf-8"))
-        except (OSError, SyntaxError):
-            continue
-        total += sum(1 for n in ast.walk(tree) if isinstance(n, ast.ClassDef))
-    return total
+def _public_classes_in(folder_node, context) -> int:
+    count = 0
+    for class_node in context.practice.nodes.get("OoadClass", []):
+        file_name = (class_node.source.file or "").rsplit("/", 1)[-1]
+        if class_node.get_fact("folder") == folder_node.node_id and not file_name.startswith(("_", "test_")):
+            count += 1
+    return count

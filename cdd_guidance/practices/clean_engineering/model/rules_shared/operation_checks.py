@@ -1,4 +1,4 @@
-"""Code-channel graph rules — prefer Operation model fields from parsers."""
+"""Code-channel graph rules — read the facts each parsed Operation and OoadClass recorded on its graph node."""
 
 from __future__ import annotations
 
@@ -7,14 +7,6 @@ import re
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.clean_engineering.model.rules_shared.operation_semantics import SEMANTIC_RULES
-from cdd_guidance.practices.clean_engineering.model.rules_shared.span_helpers import (
-    bare_catch_in_span,
-    class_body,
-    constructor_body,
-    control_flow_depth,
-    swallowing_catch_in_span,
-    unnamed_numbers_in_span,
-)
 
 VAGUE_NAMES = {
     "thing",
@@ -84,65 +76,17 @@ GENERIC_NAMES = {
 }
 
 
-def _parsed_operation(context, node):
-    matched = context.ce_operation(node)
-    return matched[1] if matched else None
+def _parameter_names(node) -> list[str]:
+    return [name for name, _hint in node.get_fact("parameters", [])]
 
 
-def _idiomatic_property_setter_parameter(operation, param_name: str) -> bool:
+def _setter_parameter(name: str, property_setter: bool) -> bool:
     """TypeScript/JavaScript `set email(value)` — intent is in the property name."""
-    return (
-        param_name == "value"
-        and getattr(operation, "is_property", False)
-        and len(operation.parameters) == 1
-    )
+    return name == "value" and property_setter
 
 
-def _operation_for_parameter_node(context, node):
-    from harness.graph.rule_context import _operation_name_from_param_node, _owner_class_name
-
-    owner = _owner_class_name(node)
-    op_name = _operation_name_from_param_node(node)
-    model = context.clean_engineering_model(node)
-    if model is None:
-        return None
-    for module in model.modules:
-        for oclass in module.classes:
-            if owner and oclass.name != owner:
-                continue
-            for op in oclass.operations:
-                if op_name and op.name != op_name:
-                    continue
-                for param in op.parameters:
-                    if param.name == node.name:
-                        return op
-    return None
-
-
-def _entity_may_construct_peer_in_module(context, node, type_name: str) -> bool:
-    """<<Entity>> / <<Aggregate Root>> may compose sibling types from the same module."""
-    from cdd_guidance.practices.ddd.model.stereotypes import (
-        class_declaration_decorated_name,
-        is_aggregate_root,
-        is_entity,
-    )
-
-    if type_name == node.name:
-        return True
-    text = context.text(node)
-    decorated = class_declaration_decorated_name(text, node.name)
-    if not (is_entity(decorated) or is_aggregate_root(decorated)):
-        return False
-    peer_names = _class_names_in_same_source_file(context, node)
-    return type_name in peer_names
-
-
-def _class_names_in_same_source_file(context, node) -> set[str]:
-    model = context.clean_engineering_model(node)
-    if model is not None:
-        return {oclass.name for module in model.modules for oclass in module.classes}
-    text = context.text(node)
-    return set(re.findall(r"\bclass\s+(\w+)\b", text))
+def _operation_is_setter(node) -> bool:
+    return bool(node.get_fact("is_property")) and len(node.get_fact("parameters", [])) == 1
 
 
 class UseExplicitDependencies(PracticeGraphRule):
@@ -150,27 +94,13 @@ class UseExplicitDependencies(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check(self, node, context) -> list[str]:
-        oclass = context.ce_class(node)
-        if oclass is not None:
-            for op in oclass.operations:
-                if op.name not in {"__init__", "constructor"}:
-                    continue
-                for type_name, _line in op.constructed_types:
-                    if _entity_may_construct_peer_in_module(context, node, type_name):
-                        continue
-                    if type_name != node.name:
-                        return [f"Class '{node.name}' constructs '{type_name}' inside its constructor."]
-            return []
-        text = context.text(node)
-        body = class_body(text, node.name)
-        constructor = constructor_body(body)
-        if not constructor:
-            return []
-        for created in re.findall(r"\bnew\s+([A-Z]\w*)", constructor):
-            if _entity_may_construct_peer_in_module(context, node, created):
+        for type_name in node.get_fact("constructs", []):
+            if type_name == node.name:
                 continue
-            if created != node.name:
-                return [f"Class '{node.name}' constructs '{created}' inside its constructor."]
+            # <<Entity>> / <<Aggregate Root>> may compose sibling types from the same file.
+            if node.get_fact("composes_peers") and type_name in node.get_fact("peer_names", []):
+                continue
+            return [f"Class '{node.name}' constructs '{type_name}' inside its constructor."]
         return []
 
 
@@ -180,11 +110,7 @@ class KeepOperationsSmall(PracticeGraphRule):
     limit = 20
 
     def check(self, node, context) -> list[str]:
-        operation = _parsed_operation(context, node)
-        if operation is not None and operation.line_count is not None:
-            size = operation.line_count
-        else:
-            size = _line_span(node)
+        size = node.get_fact("line_count") or _line_span(node)
         if size <= self.limit:
             return []
         return [f"Operation '{node.name}' is {size} lines (max {self.limit})."]
@@ -200,11 +126,7 @@ class SimplifyControlFlow(PracticeGraphRule):
             return []
         if node.name.startswith("create") and node.name.endswith("Routes"):
             return []
-        operation = _parsed_operation(context, node)
-        if operation is not None:
-            depth = operation.max_control_flow_depth
-        else:
-            depth = control_flow_depth(context.span(node))
+        depth = node.get_fact("max_control_flow_depth", 0)
         if depth <= self.limit:
             return []
         return [f"Operation '{node.name}' nests control flow {depth} levels deep (max {self.limit})."]
@@ -215,9 +137,7 @@ class UseExceptionsProperly(PracticeGraphRule):
     node_types = ("Operation",)
 
     def check(self, node, context) -> list[str]:
-        operation = _parsed_operation(context, node)
-        bare = operation.has_bare_catch if operation is not None else bare_catch_in_span(context.span(node))
-        if not bare:
+        if not node.get_fact("has_bare_catch"):
             return []
         return [f"Operation '{node.name}' has a bare catch."]
 
@@ -227,13 +147,7 @@ class NeverSwallowExceptions(PracticeGraphRule):
     node_types = ("Operation",)
 
     def check(self, node, context) -> list[str]:
-        operation = _parsed_operation(context, node)
-        swallow = (
-            operation.swallows_exceptions
-            if operation is not None
-            else swallowing_catch_in_span(context.span(node))
-        )
-        if not swallow:
+        if not node.get_fact("swallows_exceptions"):
             return []
         return [f"Operation '{node.name}' swallows a caught failure."]
 
@@ -243,13 +157,7 @@ class ProvideMeaningfulContext(PracticeGraphRule):
     node_types = ("Operation",)
 
     def check(self, node, context) -> list[str]:
-        operation = _parsed_operation(context, node)
-        numbers = (
-            operation.unnamed_literal_numbers
-            if operation is not None
-            else unnamed_numbers_in_span(context.span(node))
-        )
-        for raw in numbers:
+        for raw in node.get_fact("unnamed_literal_numbers", []):
             return [f"Operation '{node.name}' uses the unnamed number {raw}."]
         return []
 
@@ -263,14 +171,10 @@ class AvoidVagueParameterNames(PracticeGraphRule):
             if node.name.lower() in VAGUE_NAMES:
                 return [f"Parameter '{node.name}' is vague. Use a domain-specific name."]
             return []
-        matched = context.ce_operation(node)
-        if matched is None:
-            return []
-        _oclass, operation = matched
-        for param in operation.parameters:
-            lowered = param.name.lower()
+        for name in _parameter_names(node):
+            lowered = name.lower()
             if lowered in VAGUE_NAMES or lowered in _VAGUE_PARAMETER_NAMES:
-                return [f"Parameter '{param.name}' in '{operation.name}' is vague."]
+                return [f"Parameter '{name}' in '{node.name}' is vague."]
         return []
 
 
@@ -280,27 +184,26 @@ class UseIntentionRevealingNames(PracticeGraphRule):
 
     def check(self, node, context) -> list[str]:
         if node.type == "Parameter":
-            if not re.match(r"^[\w$]+$", node.name):
-                return []
-            operation = _operation_for_parameter_node(context, node)
-            if operation and _idiomatic_property_setter_parameter(operation, node.name):
-                return []
-            if operation and operation.name == "text" and node.name in {"value", "rawField"}:
-                return []
-            if node.name == "value" and operation and operation.name == "asyncRoute":
-                return []
-            if len(node.name) < 3 or node.name.lower() in GENERIC_NAMES:
-                return [f"Parameter '{node.name}' does not reveal intent."]
-            return []
-        matched = context.ce_operation(node)
-        if matched is None:
-            return []
-        _oclass, operation = matched
-        for param in operation.parameters:
-            if _idiomatic_property_setter_parameter(operation, param.name):
+            return self._parameter_hits(node)
+        for name in _parameter_names(node):
+            if _setter_parameter(name, _operation_is_setter(node)):
                 continue
-            if len(param.name) < 3 or param.name.lower() in GENERIC_NAMES:
-                return [f"Parameter '{param.name}' in '{operation.name}' does not reveal intent."]
+            if len(name) < 3 or name.lower() in GENERIC_NAMES:
+                return [f"Parameter '{name}' in '{node.name}' does not reveal intent."]
+        return []
+
+    def _parameter_hits(self, node) -> list[str]:
+        if not re.match(r"^[\w$]+$", node.name):
+            return []
+        operation = node.get_fact("operation_name", "")
+        if _setter_parameter(node.name, bool(node.get_fact("property_setter"))):
+            return []
+        if operation == "text" and node.name in {"value", "rawField"}:
+            return []
+        if node.name == "value" and operation == "asyncRoute":
+            return []
+        if len(node.name) < 3 or node.name.lower() in GENERIC_NAMES:
+            return [f"Parameter '{node.name}' does not reveal intent."]
         return []
 
 
@@ -309,28 +212,22 @@ class UseConsistentNaming(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check(self, node, context) -> list[str]:
-        oclass = context.ce_class(node)
-        if oclass is None:
-            return []
-        snake_ops: list = []
-        camel_ops: list = []
-        for op in oclass.operations:
-            name = op.name
-            if not name or name in _SKIP_OP_NAMES or _DUNDER.match(name):
-                continue
-            if name.startswith("_"):
+        snake_names: list[str] = []
+        camel_names: list[str] = []
+        for shape in node.get_fact("operation_shapes", []):
+            name = shape["name"]
+            if not name or name in _SKIP_OP_NAMES or _DUNDER.match(name) or name.startswith("_"):
                 continue
             if _CAMEL_CASE.match(name):
-                camel_ops.append(op)
+                camel_names.append(name)
             elif _SNAKE_CASE.match(name):
-                snake_ops.append(op)
-        if not snake_ops or not camel_ops:
+                snake_names.append(name)
+        if not snake_names or not camel_names:
             return []
-        minority = camel_ops if len(camel_ops) <= len(snake_ops) else snake_ops
-        style = "camelCase" if minority is camel_ops else "snake_case"
-        op = minority[0]
+        minority = camel_names if len(camel_names) <= len(snake_names) else snake_names
+        style = "camelCase" if minority is camel_names else "snake_case"
         return [
-            f"Operation '{op.name}' uses {style} while other operations on '{node.name}' "
+            f"Operation '{minority[0]}' uses {style} while other operations on '{node.name}' "
             "use the other convention."
         ]
 
@@ -340,16 +237,14 @@ class PreferInstanceOperations(PracticeGraphRule):
     node_types = ("Operation",)
 
     def check(self, node, context) -> list[str]:
-        operation = _parsed_operation(context, node)
-        if operation is None:
+        is_static = bool(node.get_fact("is_static"))
+        is_classmethod = bool(node.get_fact("is_classmethod"))
+        if not is_static and not is_classmethod:
             return []
-        if not operation.is_static and not operation.is_classmethod:
+        if _allows_static_factory_operation(node.name):
             return []
-        name = operation.name
-        if _allows_static_factory_operation(name):
-            return []
-        kind = "classmethod" if operation.is_classmethod else "staticmethod"
-        return [f"Operation '{name}' is a {kind}; prefer an instance operation."]
+        kind = "classmethod" if is_classmethod else "staticmethod"
+        return [f"Operation '{node.name}' is a {kind}; prefer an instance operation."]
 
 
 class UsePropertyNotAccessor(PracticeGraphRule):
@@ -359,18 +254,14 @@ class UsePropertyNotAccessor(PracticeGraphRule):
     _PREFIXES = ("calculate_", "compute_", "get_")
 
     def check(self, node, context) -> list[str]:
-        matched = context.ce_operation(node)
-        if matched is None:
+        if node.get_fact("is_property") or not node.has_fact("parameters"):
             return []
-        oclass, operation = matched
-        if operation.is_property:
+        if not any(node.name.startswith(prefix) for prefix in self._PREFIXES):
             return []
-        if any(operation.name.startswith(prefix) for prefix in self._PREFIXES):
-            if len(operation.parameters) == 0:
-                return [
-                    f"Operation '{operation.name}' on '{oclass.name}' looks like a getter; use a property."
-                ]
-        return []
+        if _parameter_names(node):
+            return []
+        owner = node.get_fact("owner", "")
+        return [f"Operation '{node.name}' on '{owner}' looks like a getter; use a property."]
 
 
 class EliminateDuplication(PracticeGraphRule):
@@ -381,26 +272,16 @@ class EliminateDuplication(PracticeGraphRule):
         return []
 
     def check_practice(self, context) -> list[tuple[str, str]]:
-        seen: dict[str, tuple[str, str]] = {}
+        seen: dict[str, str] = {}
         hits: list[tuple[str, str]] = []
         for op_node in context.practice.nodes.get("Operation", []):
-            matched = context.ce_operation(op_node)
-            if matched is None:
+            fingerprint = op_node.get_fact("body_fingerprint", "")
+            if not fingerprint or op_node.get_fact("line_count", 0) < 3:
                 continue
-            _oclass, operation = matched
-            fp = operation.body_fingerprint or context.operation_fingerprint(op_node, operation)
-            if not fp or (operation.line_count or 0) < 3:
-                continue
-            if fp in seen:
-                orig_id, orig_name = seen[fp]
-                hits.append(
-                    (
-                        op_node.node_id,
-                        f"Operation '{op_node.name}' duplicates the body of '{orig_name}'.",
-                    )
-                )
+            if fingerprint in seen:
+                hits.append((op_node.node_id, f"Operation '{op_node.name}' duplicates the body of '{seen[fingerprint]}'."))
             else:
-                seen[fp] = (op_node.node_id, op_node.name)
+                seen[fingerprint] = op_node.name
         return hits
 
 
