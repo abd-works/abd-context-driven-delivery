@@ -1,6 +1,7 @@
 """BDD development — a session opens each practice with its graph."""
 import json
 import os
+import shutil
 import sys
 import tempfile
 import threading
@@ -16,7 +17,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 
 import time
 
-from expects import be_a, contain, equal, expect
+from expects import be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.guidance.guidance import PracticeGuidance
@@ -24,6 +25,8 @@ from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
 from harness.mcp.mcp_server import McpServer
 from space.session import Session
+from space.session.session import SessionNameRequiredError
+from space.work_state import WorkState
 
 
 def _bind_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat") -> Path:
@@ -180,7 +183,7 @@ with description("a session"):
             expect("log_error" in self.instructions).to(equal(True))
             expect("append_chat" in self.instructions).to(equal(True))
             expect("log_guidance_action" in self.instructions).to(equal(True))
-            expect("session.new" in self.instructions).to(equal(True))
+            expect("session.switch" in self.instructions).to(equal(True))
             expect("CHAT POINTERS" in self.instructions).to(equal(True))
             expect("MARK-LOOP" in self.instructions).to(equal(True))
             expect("log_agent_tool" in self.instructions).to(equal(True))
@@ -201,7 +204,7 @@ with description("a session"):
 
         with it("should record the name in repo sessions session.json"):
             state = json.loads((self.repo / ".sessions" / "session.json").read_text(encoding="utf-8"))
-            expect(state.get("current")).to(equal("alpha"))
+            expect(state.get("session")).to(equal("alpha"))
 
     with context("that is closed"):
         with before.each:
@@ -212,9 +215,9 @@ with description("a session"):
             Session.new("alpha", self.work, self.repo)
             Session.current().close()
 
-        with it("should record the default session in repo sessions session.json"):
+        with it("should remove the session from repo sessions session.json"):
             state = json.loads((self.repo / ".sessions" / "session.json").read_text(encoding="utf-8"))
-            expect(state.get("current")).to(equal("default"))
+            expect("session" in state).to(equal(False))
 
         with it("should clear the in-process name"):
             expect(Session._slot().name).to(equal(""))
@@ -236,7 +239,8 @@ with description("a session"):
             with before.each:
                 self._prior_repo = os.environ.get("CDD_REPO")
                 self._prior_project = os.environ.get("CDD_PROJECT")
-                os.environ["CDD_REPO"] = str(self.repo)
+                (self.repo / ".git").mkdir()
+                os.environ["CDD_REPO"] = str(Path(tempfile.mkdtemp()))
                 os.environ["CDD_PROJECT"] = str(self.repo / "other")
                 self.instructions = Session.switch("alpha")
 
@@ -285,7 +289,7 @@ with description("a session"):
                 Session.new("beta", self.work, self.repo)
                 expect(Session.current().name).to(equal("beta"))
                 pointer = self.repo / ".sessions" / "session.json"
-                pointer.write_text('{"current": "alpha"}', encoding="utf-8")
+                pointer.write_text('{"session": "alpha"}', encoding="utf-8")
                 Session.refresh_current_from_repo(self.repo)
                 expect(Session.current().name).to(equal("alpha"))
 
@@ -777,8 +781,10 @@ with description("a practice"):
             expect([item.name for item in self.session.practices]).to(equal(["bdd"]))
 
         with context("with the practice default folders"):
-            with it("should point that practice's graph root at the practice's own folder"):
-                expect(self.opened.graph.practices["bdd"].source_root.endswith("bdd")).to(equal(True))
+            with it("should point that practice's graph root at its default workspace folder under workpath"):
+                expect(self.opened.graph.practices["bdd"].source_root).to(
+                    equal(str((self.work / "src").resolve()))
+                )
 
             # (E) Open Named Session
             # (S) Session --> Remember Practice Folders
@@ -786,6 +792,21 @@ with description("a practice"):
                 path = self.repo / ".context" / "practices.json"
                 text = path.read_text(encoding="utf-8") if path.is_file() else ""
                 expect("bdd" in text).to(equal(False))
+
+        with context("with config.json practice_folders pointing a practice at the workpath"):
+            with before.each:
+                from space.context_config import ContextConfig
+
+                ContextConfig(self.repo).set_practice_folders({"bdd": "."})
+                Session._current = None
+                Session.switch("alpha", repo_path=self.repo)
+                self.session = Session.current()
+                self.opened = self.session.practice("bdd")
+
+            with it("should point that practice's graph root at the workpath"):
+                expect(self.opened.graph.practices["bdd"].source_root).to(
+                    equal(str(self.work.resolve()))
+                )
 
         with context("with parent folders that are not the default"):
             with before.each:
@@ -853,3 +874,140 @@ with description("a practice"):
 
         with it("should finish that load within 5 seconds"):
             expect(self.elapsed < 5).to(equal(True))
+
+
+# (E) Open Work Session
+# (S) Session --> Switch Session
+with description("a session on an MCP host whose CDD_REPO is the CDD checkout, not the project"):
+    with before.each:
+        Session._current = None
+        self._prior_repo = os.environ.get("CDD_REPO")
+        self._prior_project = os.environ.get("CDD_PROJECT")
+        self.cdd = Path(tempfile.mkdtemp(prefix="cdd-checkout-"))
+        (self.cdd / ".git").mkdir()
+        Session.new("overlay", Path.home(), self.cdd)
+        Session._current = None
+        self.project = Path(tempfile.mkdtemp(prefix="cdd-project-"))
+        (self.project / ".git").mkdir()
+        os.environ["CDD_REPO"] = str(self.cdd)
+        os.environ["CDD_PROJECT"] = str(self.project)
+
+    with after.each:
+        Session._current = None
+        for key, prior in (("CDD_REPO", self._prior_repo), ("CDD_PROJECT", self._prior_project)):
+            if prior is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = prior
+
+    with context("with a session named on the project"):
+        with before.each:
+            Session.new("beta", self.project, self.project)
+            Session._current = None
+
+        with it("should bind the project's session, not the CDD checkout's"):
+            session = Session.current()
+            expect(session.name).to(equal("beta"))
+            expect(session.session_path).to(equal(self.project.resolve() / ".sessions" / "beta"))
+            expect(session.workpath).to(equal(self.project.resolve()))
+
+        with it("should give the project's session folder"):
+            expect(Session.current_folder()).to(equal(self.project.resolve() / ".sessions" / "beta"))
+
+        with it("should append log notes to the project's session log"):
+            transcript = _bind_mandatory_chat(Session.current(), self.project, "project-chat")
+            Session.append_log(
+                "project note",
+                loop=1,
+                conversation_id="project-chat",
+                transcript_path=str(transcript),
+                transcript_lines="1",
+            )
+            log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")
+            cdd_log = self.cdd / ".sessions" / "overlay" / "session.log"
+            cdd_text = cdd_log.read_text(encoding="utf-8") if cdd_log.is_file() else ""
+            expect("project note" in log and "project note" not in cdd_text).to(equal(True))
+
+        with it("should mark loops on the project's session log"):
+            _bind_mandatory_chat(Session.current(), self.project, "project-loop-chat")
+            Session.mark_loop()
+            log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")
+            expect("--- " in log).to(equal(True))
+
+        with it("should close the project's session and leave the CDD checkout's current"):
+            Session.current().close()
+            expect(WorkState(self.project).session).to(equal(""))
+            expect(WorkState(self.cdd).session).to(equal("overlay"))
+
+        with it("should bind the project's session when the MCP host dispatches"):
+            from harness.mcp.mcp_server import McpHost
+
+            host = McpHost.from_refs(
+                ("space.session.session:Session",),
+                repo=str(self.cdd),
+                project=str(self.project),
+            )
+            Session._current = None
+            _bind_mandatory_chat(Session.current(), self.project, "project-dispatch-chat")
+            Session._current = None
+            host.dispatch("session.mark_loop", {})
+            log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")
+            expect("tool session.mark_loop" in log).to(equal(True))
+
+    with context("with no session named on the project"):
+        with it("should have no current session"):
+            expect(Session.current()).to(equal(None))
+
+        with it("should give the project's default session folder"):
+            expect(Session.current_folder()).to(equal(self.project.resolve() / ".sessions" / "default"))
+
+
+with description("a session switched to without a name"):
+    with context("with a branch saved in .sessions/session.json"):
+        with before.each:
+            Session._current = None
+            self.repo = Path(tempfile.mkdtemp())
+            WorkState(self.repo).branch = "feature/space-battle"
+            Session.switch(repo_path=self.repo, workpath=self.repo)
+
+        with after.each:
+            Session._current = None
+            shutil.rmtree(self.repo, ignore_errors=True)
+
+        with it("should take its name from the branch"):
+            expect(Session.current(self.repo).name).to(equal("feature-space-battle"))
+
+        with it("should create the session folder"):
+            expect((self.repo / ".sessions" / "feature-space-battle" / "session.json").is_file()).to(equal(True))
+
+        with it("should save the session in .sessions/session.json"):
+            expect(WorkState(self.repo).session).to(equal("feature-space-battle"))
+
+        with it("should keep the saved branch"):
+            expect(WorkState(self.repo).branch).to(equal("feature/space-battle"))
+
+    with context("with nothing saved in .sessions/session.json"):
+        with before.each:
+            Session._current = None
+            self.repo = Path(tempfile.mkdtemp())
+
+        with after.each:
+            shutil.rmtree(self.repo, ignore_errors=True)
+
+        with it("should refuse to switch"):
+            expect(lambda: Session.switch(repo_path=self.repo)).to(raise_error(SessionNameRequiredError))
+
+
+# (E) Open Work Session
+# (S) Work State --> Read Saved Session
+with description("a .sessions/session.json written before branch and worktree were saved"):
+    with before.each:
+        self.repo = Path(tempfile.mkdtemp())
+        (self.repo / ".sessions").mkdir()
+        (self.repo / ".sessions" / "session.json").write_text('{"current": "alpha"}', encoding="utf-8")
+
+    with after.each:
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    with it("should read its current as the session"):
+        expect(WorkState(self.repo).session).to(equal("alpha"))

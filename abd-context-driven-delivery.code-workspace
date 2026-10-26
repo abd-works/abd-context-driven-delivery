@@ -1,23 +1,12 @@
 {
 	"folders": [
 		{
-			"name": "pml-domainmodel",
-			"path": "../paradise-mobile/pml-domainmodel"
-		},
-		{
 			"name": "abd-context-driven-delivery",
 			"path": "."
 		},
 		{
-			"name": "abd-skills",
-			"path": "../abd-skills"
-		},
-		{
 			"name": "story-ui",
 			"path": "../story-ui"
-		},
-		{
-			"path": "../you-tube-scraper"
 		}
 	],
 	"settings": {}

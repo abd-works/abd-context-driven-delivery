@@ -1,14 +1,12 @@
-"""Practice-wide checks (imports, module depth) — not tied to one Operation field."""
+"""Practice-wide checks (imports, module depth) — read folder and class facts across the graph."""
 
 from __future__ import annotations
-
-import ast
-from pathlib import Path
 
 from harness.graph.practice_rule import PracticeGraphRule
 
 _MAX_SIBLING_IMPORTS = 8
 _MAX_SHALLOW_CLASSES = 5
+_FOLDER_TYPES = ("Module", "Package")
 
 
 class OneWayDeps(PracticeGraphRule):
@@ -19,25 +17,19 @@ class OneWayDeps(PracticeGraphRule):
         return []
 
     def check_practice(self, context) -> list[tuple[str, str]]:
-        if context.source_root is None:
-            return []
-        hits: list[tuple[str, str]] = []
-        modules = _python_modules(context.source_root)
-        graph = _import_graph(modules)
-        for cycle in _find_cycles(graph):
-            if len(cycle) < 2:
-                continue
-            a, b = cycle[0], cycle[1]
-            node_id = _module_node_id(context, a)
-            if node_id:
-                hits.append(
-                    (
-                        node_id,
-                        f"Circular import between '{a}' and '{b}' breaks one-way dependencies.",
-                    )
+        imports = {
+            folder.node_id: set(folder.get_fact("dependencies", []))
+            for folder in _folders(context)
+        }
+        for cycle in _find_cycles(imports):
+            first, second = context.practice.registered(cycle[0]), context.practice.registered(cycle[1])
+            return [
+                (
+                    first.node_id,
+                    f"Circular import between '{first.name}' and '{second.name}' breaks one-way dependencies.",
                 )
-            break
-        return hits
+            ]
+        return []
 
 
 class LowCoupling(PracticeGraphRule):
@@ -45,20 +37,15 @@ class LowCoupling(PracticeGraphRule):
     node_types = ("Module",)
 
     def check(self, node, context) -> list[str]:
-        folder = context.module_folder(node)
-        if folder is None or context.source_root is None:
+        siblings = _sibling_modules(node, context)
+        if not siblings:
             return []
-        sibling_names = _sibling_module_names(folder)
-        if not sibling_names:
-            return []
-        imported: set[str] = set()
-        for path in folder.rglob("*.py"):
-            try:
-                tree = ast.parse(path.read_text(encoding="utf-8"))
-            except (OSError, SyntaxError, UnicodeDecodeError):
-                continue
-            for item in ast.walk(tree):
-                imported.update(_imported_sibling_names(item, sibling_names))
+        imported = {
+            sibling
+            for target in _imports_under(node, context)
+            for sibling in siblings
+            if target == sibling or target.startswith(sibling + "/")
+        }
         if len(imported) <= _MAX_SIBLING_IMPORTS:
             return []
         return [
@@ -72,19 +59,20 @@ class DeepModule(PracticeGraphRule):
     node_types = ("Module",)
 
     def check(self, node, context) -> list[str]:
-        folder = context.module_folder(node)
-        if folder is None:
+        method_counts = [
+            class_node.get_fact("method_count", 0)
+            for class_node in context.practice.nodes.get("OoadClass", [])
+            if _is_under(class_node.source.file, node.source.file)
+        ]
+        if len(method_counts) <= _MAX_SHALLOW_CLASSES:
             return []
-        classes = _classes_in_folder(folder)
-        if len(classes) <= _MAX_SHALLOW_CLASSES:
+        tiny = sum(1 for count in method_counts if count <= 1)
+        if tiny < _MAX_SHALLOW_CLASSES:
             return []
-        tiny = sum(1 for _name, methods in classes if methods <= 1)
-        if tiny >= _MAX_SHALLOW_CLASSES:
-            return [
-                f"Module '{node.name}' splits into many tiny classes ({len(classes)}); "
-                "prefer a deep module with a small public surface."
-            ]
-        return []
+        return [
+            f"Module '{node.name}' splits into many tiny classes ({len(method_counts)}); "
+            "prefer a deep module with a small public surface."
+        ]
 
 
 class ExtensionsLiveWithTheDomain(PracticeGraphRule):
@@ -92,133 +80,85 @@ class ExtensionsLiveWithTheDomain(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check(self, node, context) -> list[str]:
-        if not node.name.startswith("Graph"):
+        if not node.name.startswith("Graph") or "Epic" not in node.name or not node.has_fact("bases"):
             return []
         relative = (node.source.file or "").replace("\\", "/")
         if "/framework/" in relative or relative.startswith("framework/"):
             return []
-        oclass = context.ce_class(node)
-        if oclass is None:
+        if any(base == "Epic" or base.endswith("Epic") for base in node.get_fact("bases")):
             return []
-        bases = _python_bases(context, node)
-        if bases and any(b.endswith("Epic") or b == "Epic" for b in bases):
-            return []
-        if node.name.startswith("Graph") and "Epic" in node.name:
-            return [
-                f"Class '{node.name}' should extend the framework Epic in the domain module, "
-                "not stand alone."
-            ]
-        return []
+        return [
+            f"Class '{node.name}' should extend the framework Epic in the domain module, "
+            "not stand alone."
+        ]
 
 
-def _python_modules(root: Path) -> dict[str, Path]:
-    out: dict[str, Path] = {}
-    for path in root.rglob("*.py"):
-        if path.name == "__init__.py":
-            stem = path.parent.name
-        else:
-            stem = path.stem
-        out[stem] = path
-    return out
+def _folders(context) -> list:
+    return [folder for kind in _FOLDER_TYPES for folder in context.practice.nodes.get(kind, [])]
 
 
-def _import_graph(modules: dict[str, Path]) -> dict[str, set[str]]:
-    graph: dict[str, set[str]] = {name: set() for name in modules}
-    for name, path in modules.items():
-        try:
-            tree = ast.parse(path.read_text(encoding="utf-8"))
-        except (OSError, SyntaxError, UnicodeDecodeError):
+def _is_under(path: str | None, folder: str | None) -> bool:
+    if not path or not folder:
+        return False
+    return path == folder or path.startswith(folder.rstrip("/") + "/")
+
+
+def _sibling_modules(node, context) -> list[str]:
+    """Folder paths of the other modules (folders with module-context.md) next to this one."""
+    parent = _parent_folder(node.source.file or "")
+    return [
+        other.source.file
+        for other in context.practice.nodes.get("Module", [])
+        if other is not node and other.source.file and _parent_folder(other.source.file) == parent
+    ]
+
+
+def _parent_folder(path: str) -> str:
+    return path.rsplit("/", 1)[0] if "/" in path else ""
+
+
+def _imports_under(node, context) -> set[str]:
+    """Folder paths imported by this module's folder and every folder beneath it."""
+    targets: set[str] = set()
+    for folder in _folders(context):
+        if not _is_under(folder.source.file, node.source.file):
             continue
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    base = alias.name.split(".")[0]
-                    if base in graph and base != name:
-                        graph[name].add(base)
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                base = node.module.split(".")[0]
-                if base in graph and base != name:
-                    graph[name].add(base)
-    return graph
+        for dependency in folder.get_fact("dependencies", []):
+            imported = context.practice.registered(dependency)
+            if imported is not None and imported.source.file:
+                targets.add(imported.source.file)
+    return targets
 
 
 def _find_cycles(graph: dict[str, set[str]]) -> list[list[str]]:
+    # One DFS visit per module; enumerating every path is exponential on a repo-sized graph.
     cycles: list[list[str]] = []
+    visited: set[str] = set()
     for start in graph:
-        stack = [(start, [start])]
-        while stack:
-            node, path = stack.pop()
-            for nxt in graph.get(node, ()):
-                if nxt in path:
-                    idx = path.index(nxt)
-                    cycles.append(path[idx:] + [nxt])
-                    continue
-                stack.append((nxt, path + [nxt]))
+        if start not in visited:
+            cycles.extend(_cycles_reachable_from(graph, start, visited))
     return cycles
 
 
-def _module_node_id(context, stem: str) -> str | None:
-    for module in context.practice.nodes.get("Module", []):
-        if module.name.lower() == stem.lower() or stem.lower() in (module.source.file or "").lower():
-            return module.node_id
-    for package in context.practice.nodes.get("Package", []):
-        if package.name.lower() == stem.lower():
-            return package.node_id
-    return None
-
-
-def _sibling_module_names(module_folder: Path) -> set[str]:
-    parent = module_folder.parent
-    if not parent.is_dir():
-        return set()
-    return {
-        child.name
-        for child in parent.iterdir()
-        if child.is_dir() and (child / ".context" / "module-context.md").is_file()
-    }
-
-
-def _imported_sibling_names(node: ast.AST, sibling_names: set[str]) -> set[str]:
-    found: set[str] = set()
-    if isinstance(node, ast.Import):
-        for alias in node.names:
-            base = alias.name.split(".")[0]
-            if base in sibling_names:
-                found.add(base)
-    elif isinstance(node, ast.ImportFrom) and node.module:
-        base = node.module.split(".")[0]
-        if base in sibling_names:
-            found.add(base)
-    return found
-
-
-def _classes_in_folder(folder: Path) -> list[tuple[str, int]]:
-    items: list[tuple[str, int]] = []
-    for path in folder.rglob("*.py"):
-        try:
-            tree = ast.parse(path.read_text(encoding="utf-8"))
-        except (OSError, SyntaxError, UnicodeDecodeError):
+def _cycles_reachable_from(graph: dict[str, set[str]], start: str, visited: set[str]) -> list[list[str]]:
+    cycles: list[list[str]] = []
+    path = [start]
+    on_path = {start}
+    visited.add(start)
+    pending = [iter(sorted(graph.get(start, ())))]
+    while pending:
+        nxt = next(pending[-1], None)
+        if nxt is None:
+            pending.pop()
+            on_path.discard(path.pop())
             continue
-        for node in tree.body:
-            if isinstance(node, ast.ClassDef):
-                method_count = sum(
-                    1 for child in node.body if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
-                )
-                items.append((node.name, method_count))
-    return items
-
-
-def _python_bases(context, node) -> list[str]:
-    if context.source_root is None or not node.source.file:
-        return []
-    path = context.source_root / node.source.file
-    if not path.is_file():
-        return []
-    try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-    except (OSError, SyntaxError, UnicodeDecodeError):
-        return []
-    for item in tree.body:
-        if isinstance(item, ast.ClassDef) and item.name == node.name:
-            return [ast.unparse(base) for base in item.bases]
-    return []
+        if nxt in on_path:
+            cycles.append(path[path.index(nxt):] + [nxt])
+            continue
+        if nxt in visited:
+            continue
+        visited.add(nxt)
+        on_path.add(nxt)
+        path.append(nxt)
+        pending.append(iter(sorted(graph.get(nxt, ()))))
+    return cycles

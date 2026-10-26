@@ -1,0 +1,23 @@
+---
+description: "Whenever you create, alter, or delete shipping UI or how it talks to the backend. Follow these rules."
+paths:
+  - "**/*View.tsx"
+  - "**/*View.ts"
+  - "**/*View.jsx"
+  - "**/*View.js"
+  - "**/*-sketch.md"
+---
+
+#### Rules
+
+
+
+Whenever you create, alter, or delete shipping UI or how it talks to the backend. Follow these rules.
+
+If this change will not stay here, follow `practices/ux/mockup.mdc`.
+
+- **`real-frontend-not-mockup`** — Shipping UI is production frontend code, not the greybox Story Demo frame.
+- **`real-backend-wired`** — Client talks to real services/persistence (CE **code**); no silent Fake path as the only path.
+- **`upstream-decisions-carried`** — Layout and domain terms from earlier fidelities stay authoritative.
+
+---

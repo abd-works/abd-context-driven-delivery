@@ -2,18 +2,7 @@
 
 from __future__ import annotations
 
-import re
-
 from harness.graph.practice_rule import PracticeGraphRule
-
-def _imported_module(text: str, name: str) -> str | None:
-    """The module a story file imports ``name`` from, when it imports it."""
-    for match in re.finditer(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*['\"](?P<module>[^'\"]+)['\"]", text):
-        names = [part.strip().split(" as ")[-1].removeprefix("type ").strip() for part in match.group("names").split(",")]
-        if name in names:
-            return match.group("module")
-    return None
-
 
 class DomainFixtureExampleFiles(PracticeGraphRule):
     slug = "domain-fixture-example-files"
@@ -21,7 +10,7 @@ class DomainFixtureExampleFiles(PracticeGraphRule):
 
     def check(self, node, context) -> list[str]:
         path = (node.source.file or "").lower()
-        module = _imported_module(context.text(node), node.name)
+        module = (node.get_fact("imported_modules") or {}).get(node.name)
         if module is not None:
             path = module.lower() + ".ts"
         name = path.rsplit("/", 1)[-1]
@@ -36,12 +25,12 @@ class ExampleRoleNames(PracticeGraphRule):
     node_types = ("Example",)
 
     def check(self, node, context) -> list[str]:
-        text = context.text(node)
-        for export in re.findall(r"export const (\w+)", text):
+        exports = node.get_fact("export_names", [])
+        for export in exports:
             lowered = export.lower()
             if any(role in lowered for role in ("entered", "stored", "expected", "seed", "fixture")):
                 return []
-        if "export const" in text:
+        if exports:
             return [f"Example exports {node.name!r} without a role name (entered/stored/expected/…)."]
         return []
 

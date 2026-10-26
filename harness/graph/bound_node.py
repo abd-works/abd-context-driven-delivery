@@ -236,6 +236,8 @@ class BoundNode(Node):
             self._sync_schema_edges()
 
     def _sync_schema_edges(self) -> None:
+        if _SCHEMA_SYNC_PAUSED[0]:
+            return
         graph = getattr(self, "practice", None)
         graph = getattr(graph, "graph", None)
         if graph is None or getattr(graph, "_syncing_schema", False):
@@ -257,6 +259,23 @@ class BoundNode(Node):
             for node in self.practice.nodes.get(semantic, [])
             if node is not self and isinstance(node, BoundNode)
         ]
+
+
+_SCHEMA_SYNC_PAUSED = [False]
+
+
+@contextmanager
+def schema_sync_paused() -> Iterator[None]:
+    """Skip schema-edge rebuilds on every graph while transient models are parsed.
+
+    A working-copy load parses each file into model nodes only to read their facts;
+    rebuilding schema edges on each append is quadratic per file and the edges are discarded.
+    """
+    _SCHEMA_SYNC_PAUSED[0] = True
+    try:
+        yield
+    finally:
+        _SCHEMA_SYNC_PAUSED[0] = False
 
 
 def _node_id(practice, semantic: str, name: str) -> str:

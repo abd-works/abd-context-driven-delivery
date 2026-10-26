@@ -1,9 +1,11 @@
 """BDD spec for space/repo — clone, branch, worktree, and push."""
 
 import os
+import shutil
 import sys
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -14,23 +16,28 @@ for _cat in ("tools", "cdd_guidance/practices"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_a, be_true, contain, equal, expect, raise_error
+from expects import be_a, be_below, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.repo import TicketNotFoundError
 from space.repo.repo import (
     Branch,
+    BranchInWorktreeError,
+    BranchNameRequiredError,
     CliAgentBinding,
     Commit,
+    DefaultBranchError,
     GH_PROJECT_SCOPES_HINT,
     GhConnectError,
+    NoOpenWorktreeError,
     Project,
     Repo,
     Ticket,
     TicketState,
     issue_theme_label,
 )
+from space.work_state import WorkState
 
 
 with description("a Ticket"):
@@ -444,40 +451,183 @@ with description("Repo stash"):
 
 # (E) Open Work Session
 # (E) Work With Repo Branch
-with description("the repo toolset"):
-    with context("on a memory repository"):
+with description("a branch opened through the repo toolset"):
+    with context("on a clone whose origin has a main branch"):
         with before.each:
-            self.repo_tool = Repo()
-            self.repository = Repo.memory("/tmp/repo-branch-spec")
-            self.repository.checkout_or_create("main")
-            self.repo_tool._bind(self.repository)
+            self.tmp = tempfile.TemporaryDirectory()
+            self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
+            self.toolset = Repo(self.clone)
+
+        with after.each:
+            _remove_tree(self.tmp)
 
         # (S) Repo --> Switch Branch
-        with it("should switch branch in place on the current clone"):
-            self.repository.checkout_or_create("feature/a")
-            self.repo_tool._bind(self.repository)
-            self.repo_tool.switch_branch("feature/a")
-            expect(self.repo_tool.current_branch).to(equal("feature/a"))
+        with it("should check out a new branch started from main"):
+            self.toolset.switch_branch("feature/a")
+            expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/a"))
 
-        # (S) Repo --> Create Branch
-        with it("should create and switch a new branch"):
-            self.repo_tool.new_branch("feature/new", switch=True)
-            expect(self.repo_tool.current_branch).to(equal("feature/new"))
+        with it("should save the branch in .sessions/session.json"):
+            self.toolset.switch_branch("feature/a")
+            expect(WorkState(self.clone).branch).to(equal("feature/a"))
 
-        # (S) Repo --> Close Branch
-        with it("should close without error on memory repo"):
-            self.repo_tool.new_branch("feature/done", switch=True)
-            text = self.repo_tool.close_branch(merge_to_main=True)
-            expect("feature/done" in text).to(equal(True))
+        with it("should switch to the saved branch when no name is given"):
+            WorkState(self.clone).branch = "feature/saved"
+            self.toolset.switch_branch()
+            expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/saved"))
 
-        with it("should check out default after close when merge_to_main is true"):
-            self.repository.checkout_or_create("main")
-            self.repo_tool._bind(self.repository)
-            self.repo_tool.new_branch("feature/land", switch=True)
-            self.repo_tool.close_branch("feature/land", merge_to_main=True)
-            expect(self.repo_tool.current_branch).to(equal("main"))
-            expect("feature/land" in self.repository.pushes).to(equal(True))
-            expect("main" in self.repository.pushes).to(equal(True))
+        with it("should refuse to switch with no name and no saved branch"):
+            expect(lambda: self.toolset.switch_branch()).to(raise_error(BranchNameRequiredError))
+
+        with context("with uncommitted work on main"):
+            with before.each:
+                (self.clone / "main-work.txt").write_text("main work\n", encoding="utf-8")
+                self.toolset.switch_branch("feature/a")
+
+            with it("should commit that work on main before switching away"):
+                expect(_git(self.clone, "ls-tree", "--name-only", "main")).to(contain("main-work.txt"))
+
+            with it("should not push main to origin"):
+                expect(_git(self.origin, "ls-tree", "--name-only", "main")).not_to(contain("main-work.txt"))
+
+        with context("with uncommitted work on a feature branch"):
+            with before.each:
+                self.toolset.switch_branch("feature/a")
+                (self.clone / "work.txt").write_text("feature work\n", encoding="utf-8")
+
+            with it("should push that work to origin before switching away"):
+                self.toolset.switch_branch("feature/b")
+                expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("work.txt"))
+
+            # (S) Repo --> Close Branch
+            with it("should merge the branch into main on origin when closed"):
+                self.toolset.close_branch()
+                expect(_git(self.origin, "ls-tree", "--name-only", "main")).to(contain("work.txt"))
+
+            with it("should delete the closed branch from origin"):
+                self.toolset.close_branch()
+                expect(_git(self.origin, "branch", "--list", "feature/a")).to(equal(""))
+
+            with it("should delete the closed branch from the clone"):
+                self.toolset.close_branch()
+                expect(_git(self.clone, "branch", "--list", "feature/a")).to(equal(""))
+
+            with it("should leave the clone on main after close"):
+                self.toolset.close_branch()
+                expect(_git(self.clone, "branch", "--show-current")).to(equal("main"))
+
+            with it("should save main as the branch after close"):
+                self.toolset.close_branch()
+                expect(WorkState(self.clone).branch).to(equal("main"))
+
+        with it("should refuse to close main"):
+            expect(lambda: self.toolset.close_branch("main")).to(raise_error(DefaultBranchError))
+
+
+# (E) Open Work Session
+# (E) Work With Repo Worktree
+with description("a worktree opened through the repo toolset"):
+    with context("on a clone whose origin has a main branch"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
+            self.toolset = Repo(self.clone)
+
+        with after.each:
+            _remove_tree(self.tmp)
+
+        with it("should refuse a worktree for main"):
+            expect(lambda: self.toolset.switch_worktree("main")).to(raise_error(DefaultBranchError))
+
+        with context("with a feature branch open in the clone"):
+            with before.each:
+                self.toolset.switch_branch("feature/a")
+
+            # (S) Repo --> Open Worktree
+            with it("should check the branch out in a sibling folder"):
+                self.toolset.switch_worktree()
+                tree = Path(WorkState(self.clone).worktree)
+                expect(_git(tree, "branch", "--show-current")).to(equal("feature/a"))
+
+            with it("should move the clone back to main"):
+                self.toolset.switch_worktree()
+                expect(_git(self.clone, "branch", "--show-current")).to(equal("main"))
+
+            with context("that has an open worktree with uncommitted work"):
+                with before.each:
+                    self.toolset.switch_worktree()
+                    self.tree = Path(WorkState(self.clone).worktree)
+                    (self.tree / "tree.txt").write_text("worktree work\n", encoding="utf-8")
+
+                # (S) Repo --> Close Worktree
+                with it("should push the work to the branch on origin when closed"):
+                    self.toolset.close_worktree()
+                    expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("tree.txt"))
+
+                with it("should remove the worktree folder when closed"):
+                    self.toolset.close_worktree()
+                    expect(self.tree.exists()).to(equal(False))
+
+                with it("should clear the worktree from .sessions/session.json when closed"):
+                    self.toolset.close_worktree()
+                    expect(WorkState(self.clone).worktree).to(equal(""))
+
+                with it("should keep the branch open when closed"):
+                    self.toolset.close_worktree()
+                    expect(WorkState(self.clone).branch).to(equal("feature/a"))
+
+                with it("should refuse to close the branch while its worktree is open"):
+                    expect(lambda: self.toolset.close_branch()).to(raise_error(BranchInWorktreeError))
+
+        with it("should refuse to close a worktree when none is open"):
+            expect(lambda: self.toolset.close_worktree()).to(raise_error(NoOpenWorktreeError))
+
+
+# (E) Open Work Session
+# (S) Repo --> Run Git
+with description("a git command that outlives its timeout"):
+    with context("run through a launcher that leaves a child holding the output pipes"):
+        with it("should give up within seconds of the timeout"):
+            launcher = [
+                sys.executable,
+                "-c",
+                "import subprocess, sys; subprocess.run([sys.executable, '-c', 'import time; time.sleep(60)'])",
+            ]
+            started = time.monotonic()
+            expect(lambda: Repo._run_git_process(launcher, 1)).to(raise_error(subprocess.TimeoutExpired))
+            expect(time.monotonic() - started).to(be_below(15))
+
+
+def _git(root: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(root), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def _clone_with_origin(root: Path) -> tuple[Path, Path]:
+    origin = root / "origin.git"
+    seed = root / "seed"
+    clone = root / "clone"
+    subprocess.run(["git", "init", "--bare", "-b", "main", str(origin)], check=True, capture_output=True)
+    subprocess.run(["git", "init", "-b", "main", str(seed)], check=True, capture_output=True)
+    _init_repository(seed)
+    (seed / "README.md").write_text("seed\n", encoding="utf-8")
+    _git(seed, "add", "README.md")
+    _git(seed, "commit", "-m", "seed")
+    _git(seed, "push", str(origin), "main")
+    subprocess.run(["git", "clone", str(origin), str(clone)], check=True, capture_output=True)
+    _init_repository(clone)
+    (clone / ".gitignore").write_text(".sessions/session.json\n", encoding="utf-8")
+    _git(clone, "add", ".gitignore")
+    _git(clone, "commit", "-m", "ignore session state")
+    _git(clone, "push", "origin", "main")
+    return origin, clone
+
+
+def _remove_tree(tmp: tempfile.TemporaryDirectory) -> None:
+    shutil.rmtree(tmp.name, ignore_errors=True)
 
 
 def _init_repository(root: Path) -> None:
@@ -532,3 +682,12 @@ with description("the repo push toolset"):
             commit = toolset.push_commit("push: checkpoint")
             expect(commit.sha).not_to(equal(""))
             expect(commit.subject).to(equal("push: checkpoint"))
+
+        with it("should publish push_commit on MCP and keep /push as instructions only"):
+            from harness.agent_tools.agent_tools import InstallDestination
+
+            toolset = AgentToolSet.instantiate("space.repo.repo:Repo")
+            mcp_names = [tool.name for tool in toolset.tools_for(InstallDestination.MCP)]
+            expect("push_commit" in mcp_names).to(equal(True))
+            expect("push" in mcp_names).to(equal(False))
+            expect("push_commit" in toolset.instructions["push"].description).to(equal(True))

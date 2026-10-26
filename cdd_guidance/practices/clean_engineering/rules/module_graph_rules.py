@@ -1,14 +1,8 @@
-"""Module / package graph rules — folder shape and public seam markdown."""
+"""Module / package graph rules — folder facts recorded on Module, Package, and class nodes."""
 
 from __future__ import annotations
 
-import re
-from pathlib import Path
-
 from harness.graph.practice_rule import PracticeGraphRule
-from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContextFiles
-
-_INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
 
 
 class NamedSeamAndConstraint(PracticeGraphRule):
@@ -16,11 +10,9 @@ class NamedSeamAndConstraint(PracticeGraphRule):
     node_types = ("Module",)
 
     def check(self, node, context) -> list[str]:
-        folder = context.module_folder(node)
-        if folder is None:
+        if not node.has_fact("has_module_context"):
             return []
-        ctx = folder / ".context"
-        if (ctx / "module-context.md").is_file() or (ctx / "bounded-context.md").is_file():
+        if node.get_fact("has_module_context") or node.get_fact("has_bounded_context"):
             return []
         return [
             f"Module '{node.name}' is missing .context/module-context.md "
@@ -33,43 +25,19 @@ class PublicSeamOnly(PracticeGraphRule):
     node_types = ("Module", "Package")
 
     def check(self, node, context) -> list[str]:
-        text = _module_source_text(context, node)
-        if not text:
-            return []
-        if _INTERNAL_MARKDOWN.search(text):
+        found = node.get_fact("public_source_internal", "")
+        if found == "heading":
             return [f"Module '{node.name}' exposes internal design in a public source file."]
-        if "## Internal" in text or "_ holds " in text:
+        if found == "mixed":
             return [f"Module '{node.name}' mixes internal design into the public seam."]
         return []
 
 
-def _module_source_text(context, node) -> str:
-    if context.source_root is None:
-        return ""
-    folder = context.module_folder(node)
-    if folder is None or not folder.is_dir():
-        return ""
-    chunks: list[str] = []
-    for path in sorted(folder.glob("*.py")):
-        if path.name.startswith("_"):
-            continue
-        try:
-            chunks.append(path.read_text(encoding="utf-8"))
-        except OSError:
-            continue
-    return "\n".join(chunks)
-
-
-def _class_py_path(context, node) -> Path | None:
-    if context.source_root is None or not node.source.file:
+def _python_class_folder(node, context):
+    """The folder node a Python class sits in; module-context rules only cover Python sources."""
+    if not (node.source.file or "").endswith(".py"):
         return None
-    path = context.source_root / node.source.file
-    return path if path.suffix.lower() == ".py" and path.is_file() else None
-
-
-def _context_row(node, context) -> dict:
-    path = _class_py_path(context, node)
-    return {"name": node.name, "message": str(path) if path else "", "contributor": node.name}
+    return context.practice.registered(node.get_fact("folder", ""))
 
 
 class MissingModuleContext(PracticeGraphRule):
@@ -77,10 +45,13 @@ class MissingModuleContext(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check(self, node, context) -> list[str]:
-        if _class_py_path(context, node) is None:
+        folder = _python_class_folder(node, context)
+        if folder is None or folder.get_fact("has_module_context", True):
             return []
-        hits = ModuleContextFiles().rows_for_missing_module_context([_context_row(node, context)])
-        return [hit["message"] for hit in hits]
+        return [
+            f"Module folder '{folder.name}' defines classes but has no .context/module-context.md. "
+            "Add one with at minimum: Purpose, Seam, Dependencies."
+        ]
 
 
 class LanguageModulesOneSection(PracticeGraphRule):
@@ -88,10 +59,13 @@ class LanguageModulesOneSection(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check(self, node, context) -> list[str]:
-        if _class_py_path(context, node) is None:
+        folder = _python_class_folder(node, context)
+        if folder is None or not folder.get_fact("modules_heading"):
             return []
-        hits = ModuleContextFiles().rows_for_language_modules_one_section([_context_row(node, context)])
-        return [hit["message"] for hit in hits]
+        return [
+            f"Module '{folder.name}' module-context has a 'Modules' heading. Language is the opening "
+            "lines of each # path card — drop ## Modules and do not add ## Language."
+        ]
 
 
 class ModulesNotModelBlocks(PracticeGraphRule):
@@ -99,7 +73,7 @@ class ModulesNotModelBlocks(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check(self, node, context) -> list[str]:
-        if _class_py_path(context, node) is None:
+        folder = _python_class_folder(node, context)
+        if folder is None:
             return []
-        hits = ModuleContextFiles().rows_for_modules_not_model_blocks([_context_row(node, context)])
-        return [hit["message"] for hit in hits]
+        return list(folder.get_fact("model_blocks", []))

@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "cdd": {
+      "type": "stdio",
+      "command": "C:\\dev\\abd-context-driven-delivery\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-u",
+        "C:\\dev\\abd-context-driven-delivery\\harness\\mcp\\scripts\\start_host.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:\\dev\\abd-context-driven-delivery;C:\\dev\\abd-context-driven-delivery\\tools;C:\\dev\\abd-context-driven-delivery\\cdd_guidance\\practices;C:\\dev\\abd-context-driven-delivery\\cdd_guidance\\actions;C:\\dev\\abd-context-driven-delivery\\cdd_guidance\\patterns;C:\\dev\\abd-context-driven-delivery\\cdd_guidance\\builders",
+        "PYTHONPYCACHEPREFIX": "C:\\dev\\abd-context-driven-delivery\\.pycache",
+        "PYTHONIOENCODING": "utf-8",
+        "CDD_PROJECT": "C:\\dev\\abd-context-driven-delivery",
+        "CDD_IDE_PATH": "C:\\dev\\abd-context-driven-delivery\\.claude"
+      }
+    }
+  }
+}

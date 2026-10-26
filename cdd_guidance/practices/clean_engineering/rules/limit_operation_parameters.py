@@ -36,10 +36,8 @@ class LimitOperationParameters(PracticeGraphRule):
         if _parameter_count_exempt(node.name):
             return []
 
-        matched = context.ce_operation(node)
-        if matched is not None:
-            _oclass, operation = matched
-            names = [param.name for param in operation.parameters]
+        if node.has_fact("parameters"):
+            names = [name for name, _hint in node.get_fact("parameters")]
         else:
             names = [
                 edge.child.name

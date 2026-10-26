@@ -1,0 +1,178 @@
+---
+name: practices-ux-ux-front-end-code
+description: >-
+  #### Overview
+  
+  Ship the product UI — production frontend talking to a real backend.
+---
+
+overview
+
+Guide this action so the output conforms to this schema.
+
+[map]
+
+map:
+  fidelity: ia
+  id: dotPath
+  name: string
+  storyReferences?: [string]
+  objectReferences?: [string]
+  contentTypes?: [contentType]
+  navComponents?: [navComponent]
+  screens: [screen]
+  transitions?: [transition]
+  context?: uxContext
+  where:
+    - id is this map name slug
+    - screens come from the in-scope epics
+    - storyReferences are paths to story JavaScript
+    - objectReferences are paths to object-model JavaScript
+  rules:
+    - in-scope-epics-only
+    - story-domain-js-imported
+
+screen:
+  fidelity: ia
+  id: dotPath
+  name: string
+  order: number
+  belongsTo: map
+  layout?: string
+  slug?: string
+  chromeOf?: screen
+  stories?: [story]
+  domainTerms?: [class]
+  regions?: [region]
+  where:
+    - id is the map id, then this screen name, joined by dots
+    - about 4 stories
+    - a tab or alternate state is its own screen
+    - chromeOf shares chrome with the named screen
+    - name uses a domain term
+    - at ia, regions are named slots
+    - stories are the user stories this screen shows
+    - domainTerms are the classes named on the screen
+  rules:
+    - tab-states-are-separate-screens
+    - screen-story-budget
+    - screen-names-use-domain-terms
+    - ia-named-regions-only
+    - system-stories-group-with-visible-trigger
+    - in-scope-epics-only
+    - upstream-decisions-carried
+    - real-frontend-not-mockup
+    - real-backend-wired
+
+region:
+  fidelity: ia
+  id: dotPath
+  name: string
+  order: number
+  belongsTo: screen
+  slot?: string
+  controls?: [control]
+  where:
+    - id is the screen id, then this region name, joined by dots
+    - slot is the layout slot this region fills
+    - controls appear from mockup onward
+
+control:
+  fidelity: mockup
+  id: dotPath
+  name: string
+  order: number
+  belongsTo: region
+  controlType: string
+  label?: string
+  states?: [string]
+  interactions?: [interaction]
+  where:
+    - id is the region id, then this control name, joined by dots
+    - controlType is the widget kind on the screen
+  rules:
+    - controls-match-interaction-decisions
+    - brand-is-opt-in
+    - stub-catalogue-honest
+
+storyDemoControl:
+  fidelity: mockup
+  is: control
+  id: dotPath
+  boundField: property
+  storySteps: [step]
+  setInput?: string
+  itemStorySteps?: [step]
+  where:
+    - id is the region id, then this control name, joined by dots
+    - storySteps labels match the story step text
+    - boundField is the property path this control displays
+    - a When in storySteps is the step Interactive runs
+  rules:
+    - story-demo-control-for-gwt
+    - key-interactions-wired
+    - shell-from-template
+    - story-domain-js-imported
+
+interaction:
+  fidelity: mockup
+  id: dotPath
+  name: string
+  order: number
+  belongsTo: control
+  trigger?: string
+  effect?: string
+  destination?: screen
+  where:
+    - id is the control id, then this interaction name, joined by dots
+  rules:
+    - key-interactions-wired
+    - controls-match-interaction-decisions
+
+transition:
+  fidelity: ia
+  id: dotPath
+  name: string
+  belongsTo: map
+  from: screen
+  to: screen
+  trigger?: string
+  navType?: string
+  where:
+    - id is the map id, then from, to, and trigger, joined by dots
+    - from and to are screens on this map
+    - navType is "Quick Action" | "top nav" | "drawer nav" | "secondary nav" | "action" | "system"
+
+contentType:
+  fidelity: ia
+  id: dotPath
+  name: string
+  belongsTo: map
+  hierarchy?: string
+  keyActions?: [string]
+  where:
+    - id is the map id, then this content type name, joined by dots
+
+navComponent:
+  fidelity: ia
+  id: dotPath
+  name: string
+  belongsTo: map
+  uxType?: string
+  destinations?: [screen]
+  where:
+    - id is the map id, then this nav component name, joined by dots
+
+uxContext:
+  fidelity: ia
+  id: dotPath
+  belongsTo: map
+  notes?: [string]
+  invariants?: [string]
+  where:
+    - id is the map id, then context, joined by dots
+    - a deferred epic stays here and off the screens
+  rules:
+    - in-scope-epics-only
+
+Use MCP tool: `ux-front-end-code()`

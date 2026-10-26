@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
 from harness.graph.bound_node import BoundChildren, BoundNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
+    markdown_bullet_lines,
+    prose_comment_in_text,
+    prototype_swap_in_text,
+)
 from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, TranslationError, UpdateReport
 
 if TYPE_CHECKING:
@@ -16,6 +23,28 @@ if TYPE_CHECKING:
 
 
 _EXAMPLE_EXTENSION_PREFIXES = ("Fake", "Isolated", "Production")
+_CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx")
+_SCRIPT_IMPORT = re.compile(r"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(?\s*)['"](\.{1,2}/[^'"]+)['"]""")
+_IS_A = re.compile(r"\*is a type of\*", re.I)
+_CHILD_PARENT = re.compile(r"^\s*#{1,6}\s+\S.+\s+:\s+\S", re.MULTILINE)
+_INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
+
+
+def _internal_design_in(paths: List[Path]) -> str:
+    """'heading' for an `## Internal` section, 'mixed' for internal notes inline, else ''."""
+    text = "\n".join(_readable_text(path) for path in sorted(paths))
+    if _INTERNAL_MARKDOWN.search(text):
+        return "heading"
+    if "## Internal" in text or "_ holds " in text:
+        return "mixed"
+    return ""
+
+
+def _readable_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
 
 
 def is_interface_name(name: str) -> bool:
@@ -160,6 +189,11 @@ class OoadClass(OoadNode):
         super().__init__(name, sequential_order, graph)
         self.intent = intent
         self.line = line
+        # Parser facts for the graph: last source line and declared base classes.
+        self.end_line: int | None = None
+        self.bases: List[str] = []
+        self.peer_names: List[str] = []
+        self.module_helpers: List[list] = []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
         self._properties = BoundChildren(self, "participants")
         self._operations = BoundChildren(self, "participants")
@@ -187,6 +221,29 @@ class OoadClass(OoadNode):
     @operations.setter
     def operations(self, operations: List["Operation"]) -> None:
         self._refill(self._operations, operations)
+
+    def own_operations(self) -> List["Operation"]:
+        """Operations declared inside this class; parsers may hang module-level functions on a class too."""
+        if not self.line or not self.end_line:
+            return list(self.operations)
+        return [op for op in self.operations if not op.line or self.line <= op.line <= self.end_line]
+
+    def load_source_facts(self, class_text: str) -> None:
+        """Fill the shape and source-span facts this class owns."""
+        operations = self.own_operations()
+        constructor = next((op for op in operations if op.name in {"__init__", "constructor"}), None)
+        self.method_count = len(operations)
+        self.operation_shapes = [
+            {"name": op.name, "is_property": op.is_property, "callees": [callee for callee in op.callees if callee]}
+            for op in operations
+        ]
+        self.property_names = sorted(prop.name for prop in self.properties)
+        self.constructs = [type_name for type_name, _line in constructor.constructed_types] if constructor else []
+        self.prose_comment = prose_comment_in_text(class_text, hash_only=True)
+        self.prototype_swap = prototype_swap_in_text(class_text, self.line or 1)
+        bullets = markdown_bullet_lines(class_text)
+        self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
+        self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
 
     def update_self(self, source: "OoadNode") -> None:
         assert isinstance(source, OoadClass)
@@ -524,6 +581,49 @@ class Module(OoadNode):
 
     def get_next_class_from_file(self) -> OoadClass:
         raise NotImplementedError(f"{type(self).__name__} must implement get_next_class_from_file")
+
+    def load_source_facts(self, text: str, file: Path, root: Path) -> None:
+        """Fill the facts one parsed source file owns: what it imports, which classes share it,
+        and which of them the file declares as <<Entity>> / <<Aggregate Root>>."""
+        from cdd_guidance.practices.ddd.model.stereotypes import (
+            class_declaration_decorated_name,
+            is_aggregate_root,
+            is_entity,
+        )
+
+        self.dependencies = self.import_targets(text, file, root)
+        peer_names = [oclass.name for oclass in self.classes]
+        for oclass in self.classes:
+            oclass.peer_names = peer_names
+            decorated = class_declaration_decorated_name(text, oclass.name)
+            oclass.composes_peers = is_entity(decorated) or is_aggregate_root(decorated)
+
+    def import_targets(self, text: str, file: Path, root: Path) -> List[str]:
+        """Root-relative paths named by relative script imports (`./x`, `../y`)."""
+        targets: List[str] = []
+        for specifier in _SCRIPT_IMPORT.findall(text):
+            resolved = (file.parent / specifier).resolve()
+            if resolved.is_relative_to(root.resolve()):
+                targets.append(resolved.relative_to(root.resolve()).as_posix())
+        return targets
+
+    def load_folder_facts(self, folder: Path) -> None:
+        """Fill the facts a code folder owns: its context files and its own source files."""
+        from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
+
+        module_context = ModuleContext(folder / "_.py")
+        content = module_context.read()
+        sources = [path for path in folder.iterdir() if path.is_file() and path.suffix.lower() in _CODE_SUFFIXES]
+        self.has_module_context = module_context.exists()
+        self.has_bounded_context = (folder / ".context" / "bounded-context.md").is_file()
+        self.modules_heading = module_context.modules_heading_hit({}) is not None
+        self.model_blocks = [hit["message"] for hit in module_context.model_block_hits({})]
+        self.is_a_in_context = bool(_IS_A.search(content))
+        self.child_parent_in_context = bool(_CHILD_PARENT.search(content))
+        self.public_source_internal = _internal_design_in(
+            [path for path in sources if path.suffix == ".py" and not path.name.startswith("_")]
+        )
+        self.public_source_files = len([path for path in sources if not path.name.startswith(("_", "test_"))])
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
         assert isinstance(source, Module)

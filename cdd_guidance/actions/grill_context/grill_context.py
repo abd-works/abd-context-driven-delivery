@@ -21,8 +21,11 @@ class GrillContext(GuidanceAction):
         ``root`` is the work path. The file is ``{root}/.context/grill-answers.md``.
         """
         folder = Path(root)
-        if folder.name == ".context":
-            return folder / "grill-answers.md"
+        for candidate in (folder, *folder.parents):
+            if candidate.name == ".context":
+                return candidate / "grill-answers.md"
+            if candidate.name == ".sessions":
+                return candidate.parent / ".context" / "grill-answers.md"
         return folder / ".context" / "grill-answers.md"
 
     def _appended_answers_content(self, existing: str | None, heading: str, body: str) -> str:

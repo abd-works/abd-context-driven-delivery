@@ -49,11 +49,11 @@ from mamba import description, it
 with description("GuidanceAction"):
     with it("should skip opening a work session when begin runs"):
         from harness.guidance_actions import GuidanceAction
+        from space.session import Session
 
-        tmp = Path(tempfile.mkdtemp(prefix="guidance-action-default-"))
-        kit = GuidanceAction(path=str(tmp))
-        warning = kit.begin(action="sketch")
-        expect(kit.workspace).to(equal(None))
+        Session._current = None
+        warning = GuidanceAction().begin(action="sketch")
+        expect(Session._current is None or not Session._current.name).to(equal(True))
         expect(warning).to(equal(""))
 
     with it("should tell the agent to pass files and stop a call that stalls"):
@@ -66,7 +66,7 @@ with description("GuidanceAction"):
     with it("should run the passed operation once when guidance is a string"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-run-"))))
+        kit = GuidanceAction()
         seen: list = []
         kit.run("just this text", seen.append, action="generate")
         expect(seen).to(equal(["just this text"]))
@@ -74,7 +74,7 @@ with description("GuidanceAction"):
     with it("should list a practice and a fidelity from their guidance slugs"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-slugs-"))))
+        kit = GuidanceAction()
         kit._bind_guidance(["stories", "clean-engineering-model"])
         listed = kit.listed()
         expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
@@ -84,7 +84,7 @@ with description("GuidanceAction"):
     with it("should list stories at the scenarios fidelity from the short fidelity slug"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-scenarios-"))))
+        kit = GuidanceAction()
         kit._bind_guidance(["scenarios"])
         listed = kit.listed()
         expect(len(listed)).to(equal(1))
@@ -94,7 +94,7 @@ with description("GuidanceAction"):
     with it("should keep prose that contains a colon as guidance text"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-prose-"))))
+        kit = GuidanceAction()
         prose = "Three client perspectives: prospect onboarding, subscription, and active account."
         kit._bind_guidance(prose)
         expect(kit.guidance_text()).to(equal(prose))
@@ -103,7 +103,7 @@ with description("GuidanceAction"):
     with it("should treat a module class ref as a listed Guidance"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-ref-"))))
+        kit = GuidanceAction()
         kit._bind_guidance(
             "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
         )
@@ -114,7 +114,7 @@ with description("GuidanceAction"):
     with it("should run the passed operation on each Guidance when guidance is a list"):
         from harness.guidance_actions import GuidanceAction
 
-        kit = GuidanceAction(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-run-"))))
+        kit = GuidanceAction()
         first, second = object(), object()
         seen: list = []
         kit.run([first, second], seen.append, action="generate")
@@ -155,7 +155,7 @@ with description("GuidanceAction"):
         from generate.generate import Generate
         from harness.guidance.fixtures.sample_tool.sample_tool_host import SampleGuidance
 
-        kit = Generate(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-inject-"))))
+        kit = Generate()
         result = kit.inject_rules(
             {
                 "tool_name": "generate.generate",
@@ -167,7 +167,7 @@ with description("GuidanceAction"):
     with it("should inject listed BDD rules after sketch returns without a matching path"):
         from sketch.sketch import Sketch
 
-        kit = Sketch(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-sketch-"))))
+        kit = Sketch()
         result = kit.inject_rules(
             {
                 "tool_name": "sketch.sketch",
@@ -180,7 +180,7 @@ with description("GuidanceAction"):
         from document.document import Document
         from harness.guidance.fixtures.sample_tool.sample_tool_host import SampleGuidance
 
-        kit = Document(path=str(Path(tempfile.mkdtemp(prefix="guidance-action-doc-"))))
+        kit = Document()
         result = kit.inject_rules(
             {
                 "tool_name": "document.document",

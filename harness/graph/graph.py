@@ -40,7 +40,13 @@ _CACHE_SKIP_DIRS = {
     "out",
     "playwright-report",
     "test-results",
+    ".cursor",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".tox",
+    "htmlcov",
 }
+_DIRTY_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py", ".md"}
 _RULE_FILE_NAMES = ("rules.py", "schema.yaml", "rules.yaml")
 
 def pattern_overlay_root(pattern: str) -> Path:
@@ -614,6 +620,23 @@ class Node:
         self._rules = None
         self._populated = False
 
+    def set_fact(self, key: str, value) -> None:
+        """Record one fact on this node for rules to read; facts save with the graph."""
+        self.data[key] = value
+
+    def get_fact(self, key: str, default=None):
+        """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node."""
+        node = self
+        while node is not None:
+            if key in node.data:
+                return node.data[key]
+            node = node.parent or node.practice.direct_parent(node)
+        return default
+
+    def has_fact(self, key: str) -> bool:
+        """True when this node itself records the fact."""
+        return key in self.data
+
     @property
     def rules(self):
         """Schema rules for this node, with violations on each entry."""
@@ -704,7 +727,7 @@ class Node:
                     edge.child.populate(holder)
 
     def _edges_in_source_order(self, kind: str) -> list[Edge]:
-        matched = [edge for edge in self.practice.edges.get(kind, []) if edge.parent is self]
+        matched = self.practice.edges_from(kind, self)
         ordered = sorted((edge for edge in matched if self._follows_source(edge)), key=self._source_position)
         cursor = 0
         placed: list[Edge] = []
@@ -822,6 +845,10 @@ class PracticeGraph:
         self.source_root = ""
         self.graph: Graph | None = None
         self.root_node = Node(self, "Practice", f"{name}:Practice:.:{name}", name, Source(".", 0, 0))
+        # Lookup indexes over self.edges, rebuilt when a kind's list is replaced or grows elsewhere.
+        self._edge_pairs: dict[str, tuple[tuple[int, int], set[tuple[int, int]]]] = {}
+        self._edges_by_parent: dict[str, tuple[tuple[int, int], dict[int, list[Edge]]]] = {}
+        self._direct_parents: tuple[tuple, dict[int, Node]] = ((), {})
 
     def bind_rule(self, rule: str, types: list[str]) -> None:
         current = self.applicable.setdefault(rule, [])
@@ -888,12 +915,49 @@ class PracticeGraph:
                 child.practice.record(fact, child, parent)
 
     def record(self, fact: dict, parent: Node, child: Node) -> None:
-        list_ = self.edges.setdefault(fact["kind"], [])
-        if any(edge.parent is parent and edge.child is child for edge in list_):
+        kind = fact["kind"]
+        list_ = self.edges.setdefault(kind, [])
+        pairs = self._pairs_of(kind, list_)
+        if (id(parent), id(child)) in pairs:
             return
-        if fact["kind"] not in self.edge_types:
-            self.edge_types[fact["kind"]] = EdgeType(fact["kind"], fact["order"], fact["display"])
-        list_.append(Edge(fact["kind"], fact["order"], fact["display"], parent, child))
+        if kind not in self.edge_types:
+            self.edge_types[kind] = EdgeType(kind, fact["order"], fact["display"])
+        list_.append(Edge(kind, fact["order"], fact["display"], parent, child))
+        pairs.add((id(parent), id(child)))
+        self._edge_pairs[kind] = ((id(list_), len(list_)), pairs)
+
+    def edges_from(self, kind: str, parent: Node) -> list[Edge]:
+        """Edges of one kind leaving this parent, in recorded order."""
+        list_ = self.edges.get(kind, [])
+        state = (id(list_), len(list_))
+        cached = self._edges_by_parent.get(kind)
+        if cached is None or cached[0] != state:
+            by_parent: dict[int, list[Edge]] = {}
+            for edge in list_:
+                by_parent.setdefault(id(edge.parent), []).append(edge)
+            cached = (state, by_parent)
+            self._edges_by_parent[kind] = cached
+        return cached[1].get(id(parent), [])
+
+    def direct_parent(self, child: Node) -> Node | None:
+        """The node a direct edge hangs this child under; available before populate sets ``parent``."""
+        state = tuple((kind, id(list_), len(list_)) for kind, list_ in self.edges.items())
+        if self._direct_parents[0] != state:
+            parents: dict[int, Node] = {}
+            for list_ in self.edges.values():
+                for edge in list_:
+                    if edge.display == "direct":
+                        parents.setdefault(id(edge.child), edge.parent)
+            self._direct_parents = (state, parents)
+        return self._direct_parents[1].get(id(child))
+
+    def _pairs_of(self, kind: str, list_: list[Edge]) -> set[tuple[int, int]]:
+        state = (id(list_), len(list_))
+        cached = self._edge_pairs.get(kind)
+        if cached is None or cached[0] != state:
+            cached = (state, {(id(edge.parent), id(edge.child)) for edge in list_})
+            self._edge_pairs[kind] = cached
+        return cached[1]
 
     def node_count(self, type: str) -> int:
         return len(self.nodes.get(type, []))
@@ -973,9 +1037,11 @@ class Graph:
     ) -> str:
         """Open each practice on its source root and build the explorer tree.
 
-        A saved graph in the folder's ``.context`` is used when the folder, its
-        contents, and the rule files are not newer than that file. A forced load
-        always rebuilds. Every rebuild writes the serialized graph.
+        A saved graph in the folder's ``.context`` is used when it already holds
+        every requested practice (extra cached practices are fine), the practice
+        source roots match, and those roots plus the rule files are not newer
+        than the cache. A forced load always rebuilds. Every rebuild merges into
+        the serialized graph so other practices already cached stay put.
         """
         self._folder = Path(database or folder).resolve()
         self._practice_roots = {name: Path(root).resolve() for name, root in practices.items()}
@@ -994,13 +1060,16 @@ class Graph:
     @mcp
     @agent_tool
     def save_json(self) -> str:
-        """Write the serialized graph into the loaded folder's ``.context``."""
+        """Write the serialized graph into the loaded folder's ``.context``.
+
+        Practices already on disk that are not part of this load stay in the file.
+        """
         folder = self._folder
         if folder is None:
             return ""
         path = self._graph_json_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self._graph_document(), separators=(",", ":")), encoding="utf-8")
+        path.write_text(json.dumps(self._merged_graph_document(), separators=(",", ":")), encoding="utf-8")
         return str(path)
 
     def _build_working_copy(self) -> None:
@@ -1024,6 +1093,16 @@ class Graph:
             "overlays": list(self.overlays),
             "practices": {name: self._practice_document(practice) for name, practice in self.practices.items()},
         }
+
+    def _merged_graph_document(self) -> dict:
+        document = self._graph_document()
+        existing = self._read_saved_graph() or {}
+        saved = existing.get("practices")
+        if not isinstance(saved, dict):
+            return document
+        practices = dict(saved)
+        practices.update(document["practices"])
+        return {"overlays": list(self.overlays), "practices": practices}
 
     def _practice_document(self, practice: PracticeGraph) -> dict:
         nodes = [node for group in practice.nodes.values() for node in group]
@@ -1060,14 +1139,20 @@ class Graph:
         stamp = self._graph_json_path().stat().st_mtime
         if self._rules_changed_since(stamp):
             return False
-        return not self._folder_is_dirty(stamp)
+        return not self._practice_roots_are_dirty(stamp)
 
     def _saved_graph_matches_request(self, document: dict) -> bool:
         saved = document.get("practices")
         if not isinstance(saved, dict):
             return False
-        if set(saved) != set(self._practice_roots):
+        if not set(self._practice_roots).issubset(set(saved)):
             return False
+        for name, source in self._practice_roots.items():
+            row = saved.get(name)
+            if not isinstance(row, dict):
+                return False
+            if Path(str(row.get("source_root") or "")).resolve() != Path(source).resolve():
+                return False
         return list(document.get("overlays") or []) == list(self.overlays)
 
     def _read_saved_graph(self) -> dict | None:
@@ -1117,23 +1202,38 @@ class Graph:
             return True
         return path.suffix == ".py" and "rules" in path.parts
 
-    def _folder_is_dirty(self, stamp: float) -> bool:
-        folder = self._folder
-        if folder is None or not folder.exists():
+    def _practice_roots_are_dirty(self, stamp: float) -> bool:
+        roots = list(self._practice_roots.values())
+        if not roots:
+            folder = self._folder
+            if folder is None or not folder.exists():
+                return True
+            return self._path_is_dirty(folder, stamp)
+        return any(self._path_is_dirty(root, stamp) for root in roots)
+
+    def _path_is_dirty(self, path: Path, stamp: float) -> bool:
+        if not path.exists():
             return True
-        if folder.is_file():
-            return folder.stat().st_mtime > stamp
-        return self._contents_newer_than(folder, stamp)
+        if path.is_file():
+            return path.stat().st_mtime > stamp
+        return self._contents_newer_than(path, stamp)
 
     def _contents_newer_than(self, folder: Path, stamp: float) -> bool:
         seen = 0
         for dirpath, dirnames, filenames in os.walk(folder):
-            dirnames[:] = [name for name in dirnames if name not in _CACHE_SKIP_DIRS]
+            dirnames[:] = [
+                name
+                for name in dirnames
+                if name not in _CACHE_SKIP_DIRS and not name.startswith(".")
+            ]
             for filename in filenames:
+                path = Path(dirpath, filename)
+                if path.suffix.lower() not in _DIRTY_SUFFIXES:
+                    continue
                 seen += 1
                 if seen == 1 or seen % 400 == 0:
                     self.report_progress(f"Checking folder dates · {seen}")
-                if Path(dirpath, filename).stat().st_mtime > stamp:
+                if path.stat().st_mtime > stamp:
                     return True
         return False
 

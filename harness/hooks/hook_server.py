@@ -285,28 +285,17 @@ class HookHandler:
         return True
 
     def _context_parents(self, edited: Path) -> list[Path]:
+        from space.context_config import has_context_config
+
         for parent in edited.resolve().parents:
-            if (parent / ".context" / "guidelines.config").is_file():
+            if has_context_config(parent):
                 return [parent]
         return []
 
     def _guideline_value(self, root: Path, pattern: str) -> str:
-        path = root / ".context" / "guidelines.config"
-        if not path.is_file():
-            return ""
-        wanted = pattern.replace("-", "_").casefold()
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except OSError:
-            return ""
-        for line in lines:
-            text = line.split("#", 1)[0].strip()
-            if ":" not in text:
-                continue
-            key, value = text.split(":", 1)
-            if key.strip().replace("-", "_").casefold() == wanted:
-                return value.strip().casefold()
-        return ""
+        from space.context_config import guideline_value
+
+        return guideline_value(root, pattern)
 
     def invoke(self, payload: HookPayload) -> HookResult:
         toolset = self.tool.toolset

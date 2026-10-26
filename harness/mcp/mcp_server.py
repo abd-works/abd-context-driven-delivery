@@ -39,6 +39,16 @@ NUDGE_NAME = "mcp-host-nudge"
 NUDGE_MIN_SECONDS = 5.0
 HOST_PROCESS_ENV = "CDD_MCP_HOST_PID"
 _CALL_TIMEOUT_SECONDS = 10
+# First graph builds walk the repo; cache hits must still finish under the default.
+_LONG_CALL_TIMEOUT_SECONDS = {
+    "graph.load_working_copy": 600,
+    # Branch and worktree commands push and pull over the network.
+    "repo.switch_branch": 600,
+    "repo.close_branch": 600,
+    "repo.switch_worktree": 600,
+    "repo.close_worktree": 600,
+    "repo.push_commit": 600,
+}
 _SERVING_MCP_HOST: Any = None
 _UNION_ORIGINS = {Union, py_types.UnionType}
 
@@ -505,12 +515,6 @@ class McpInstallation(Installation):
         return "nudged"
 
 
-_LEGACY_MCP_ALIASES: dict[str, str] = {
-    "session.open_named": "session.session",
-    "session_open_named": "session.session",
-}
-
-
 def _annotation_uses_path(annotation: object) -> bool:
     if annotation is Path:
         return True
@@ -544,10 +548,10 @@ def _coerce_mcp_arguments(
     return coerced
 
 
-def _active_mcp_repo() -> Path | None:
+def _active_mcp_project() -> Path | None:
     host = _SERVING_MCP_HOST
     if host is not None:
-        return host._runtime.repo
+        return host._runtime.project
     return None
 
 
@@ -559,7 +563,7 @@ def _log_mcp_operation_invocation(
     agent_tool = agent_tool_for_operation(op.tool, op.operation)
     if agent_tool is None:
         return
-    agent_tool.log_session_invocation(dict(arguments), repo_path=_active_mcp_repo())
+    agent_tool.log_session_invocation(dict(arguments), repo_path=_active_mcp_project())
 
 
 def _invoke_mcp_callable(
@@ -772,9 +776,6 @@ class McpServer:
 
     def resolve_call_name(self, name: str) -> str:
         """Map Cursor's underscore tool id (`slug_op`) back to the enrolled `slug.op`."""
-        legacy = _LEGACY_MCP_ALIASES.get(name)
-        if legacy is not None:
-            name = legacy
         if name in self._tools or name in self._prompts:
             return name
         as_dots = name.replace("_", ".")
@@ -974,15 +975,18 @@ class McpHost:
                 else:
                     # Dispatch off the event loop. A synchronous tool call blocks
                     # stdin and stdout, and the client then waits until its timeout.
-                    # A call that is still running after 10 seconds is a failed call.
+                    # A call that is still running after the limit is a failed call.
+                    timeout = _LONG_CALL_TIMEOUT_SECONDS.get(
+                        resolved, _CALL_TIMEOUT_SECONDS
+                    )
                     try:
-                        with anyio.fail_after(_CALL_TIMEOUT_SECONDS):
+                        with anyio.fail_after(timeout):
                             value = await anyio.to_thread.run_sync(
                                 self.dispatch, name, arguments
                             )
                     except TimeoutError:
                         return self._content_blocks(
-                            f"TimeoutError: {name} exceeded {_CALL_TIMEOUT_SECONDS} seconds"
+                            f"TimeoutError: {name} exceeded {timeout} seconds"
                         )
                 return self._content_blocks(value)
             except Exception as error:
@@ -1052,7 +1056,7 @@ class McpHost:
         from space.session import Session
         from space.session.chat_context import apply_chat_context, clear_chat_context, pop_chat_fields
 
-        Session.refresh_current_from_repo(self._runtime.repo)
+        Session.refresh_current_from_repo(self._runtime.project)
         resolved = self._runtime.resolve_call_name(name)
         args = pop_chat_fields(arguments)
         try:
@@ -1081,8 +1085,17 @@ class McpHost:
         )
 
     def _content_blocks(self, value: object) -> list[types.TextContent]:
-        text = value if isinstance(value, str) else json.dumps(value, default=str)
+        text = value if isinstance(value, str) else json.dumps(value, default=self._json_default)
         return [types.TextContent(type="text", text=text)]
+
+    @staticmethod
+    def _json_default(value: object) -> object:
+        converter = getattr(value, "to_mcp_result", None)
+        if callable(converter):
+            return converter()
+        if isinstance(value, Path):
+            return str(value)
+        raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
     async def run_stdio(self) -> None:
         init_options = InitializationOptions(

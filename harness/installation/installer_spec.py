@@ -161,7 +161,7 @@ with description("an agent toolset") as self:
 
                 with it("should write the operation's instructions on the command"):
                     command_text = InstalledTree(self.tree).command_path("sketch").read_text(encoding="utf-8")
-                    assembled = getattr(SampleAgenticOps(), "sketch")
+                    assembled = SampleAgenticOps().tools["sketch"].docstring
                     expect(command_text).to(contain(assembled))
                     expect(command_text).not_to(contain("Shell tool"))
 
@@ -420,6 +420,28 @@ with description("an agent toolset") as self:
                         expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
 
                     with it("should leave the file that was never published"):
+                        expect(self.orphan.is_file()).to(equal(True))
+
+                # (S) Installer --> Remove orphan skills that name missing MCP tools
+                with context("that has an orphan skill naming an MCP tool the install does not enroll"):
+                    with before.each:
+                        self.stale = (
+                            self.tree / "skills" / "space" / "branch" / "branch-create" / "SKILL.md"
+                        )
+                        self.stale.parent.mkdir(parents=True, exist_ok=True)
+                        self.stale.write_text(
+                            "Use MCP tool: `branch.create(name: 'str')`\n",
+                            encoding="utf-8",
+                        )
+                        self.installer.install(
+                            [SamplePracticeWithFidelities(format="markdown")],
+                            replace=True,
+                        )
+
+                    with it("should remove the skill that names the missing MCP tool"):
+                        expect(self.stale.is_file()).to(equal(False))
+
+                    with it("should leave the hand-authored orphan without an MCP invoke line"):
                         expect(self.orphan.is_file()).to(equal(True))
 
             with context("that has a prior publish of MCP tools on the IDE path"):
@@ -1269,3 +1291,27 @@ with description("toolsets installed for Claude Code") as self:
                 "d", "**/*.py, **/*.ts"
             )
             expect(text).to(equal('---\ndescription: "d"\npaths:\n  - "**/*.py"\n  - "**/*.ts"\n---\n\n'))
+
+
+with description("Repo branch commands installed into Cursor") as self:
+    with before.each:
+        self._tmp = tempfile.mkdtemp()
+        self.tree = Path(self._tmp)
+        self.mcp = Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
+            ["space.repo.repo:Repo"]
+        )
+
+    with after.each:
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    with it("should write switch-branch naming repo.switch_branch"):
+        path = self.tree / "commands" / "space" / "repo" / "switch-branch.md"
+        expect(path.read_text(encoding="utf-8")).to(contain("repo.switch_branch"))
+
+    with it("should not write the retired new-branch command"):
+        path = self.tree / "commands" / "space" / "repo" / "new-branch.md"
+        expect(path.is_file()).to(equal(False))
+
+    with it("should enroll repo.switch_branch on the MCP channel"):
+        names = [op.mcp_name for op in self.mcp.mcp_operations]
+        expect(names).to(contain("repo.switch_branch"))

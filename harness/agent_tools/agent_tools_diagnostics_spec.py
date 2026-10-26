@@ -35,7 +35,8 @@ from harness.agent_tools.agent_tools_probe import (
 _AGENT_TOOLS_DIAGNOSTICS_REF = (
     "harness.agent_tools.agent_tools_diagnostics:AgentToolsDiagnostics"
 )
-_PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+_VENV_PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+_PYTHON = _VENV_PYTHON if _VENV_PYTHON.is_file() else Path(sys.executable)
 
 
 def _stdio_params(toolsets: str) -> StdioServerParameters:
@@ -132,29 +133,29 @@ with description("mcp tools diagnostics"):
             installer = _installer(
                 tree,
                 [
-                    "repo.new_branch",
+                    "repo.switch_branch",
                     "agent-tools-diagnostics.agent_tools_diagnostics",
                     "guidance-diagnostics.guidance_diagnostics",
                 ],
                 toolset_items=["space.repo.repo:Repo"],
             )
             scoped = published_agent_tools_mcp(installer)
-            expect(scoped).to(contain("repo.new_branch"))
+            expect(scoped).to(contain("repo.switch_branch"))
             expect(scoped).not_to(contain("agent-tools-diagnostics.agent_tools_diagnostics"))
             expect(scoped).not_to(contain("guidance-diagnostics.guidance_diagnostics"))
         finally:
             shutil.rmtree(tree, ignore_errors=True)
 
-    with it("should list repo.new_branch in published workspace MCP names"):
+    with it("should list repo.switch_branch in published workspace MCP names"):
         tree = Path(tempfile.mkdtemp())
         try:
             installer = _installer(
                 tree,
-                ["repo.new_branch", "bdd-behavior", "cdd.ping"],
+                ["repo.switch_branch", "bdd-behavior", "cdd.ping"],
                 toolset_items=["space.repo.repo:Repo"],
             )
             scoped = published_agent_tools_mcp(installer)
-            expect(scoped).to(equal(["repo.new_branch"]))
+            expect(scoped).to(equal(["repo.switch_branch"]))
             expect(scoped).not_to(contain("bdd-behavior"))
         finally:
             shutil.rmtree(tree, ignore_errors=True)
@@ -164,7 +165,7 @@ with description("mcp tools diagnostics"):
         try:
             installer = _installer(
                 tree,
-                ["repo.new_branch", "bdd-behavior", "cdd.ping"],
+                ["repo.switch_branch", "bdd-behavior", "cdd.ping"],
                 toolset_items=["space.repo.repo:Repo"],
             )
             report = probe_agent_tools_standalone(installer)
@@ -174,7 +175,7 @@ with description("mcp tools diagnostics"):
             expect("ping" in section).to(equal(True))
             expect("invoke" in section).to(equal(True))
             names = [item["mcp"] for item in section["ping"]["items"]]
-            expect(names).to(contain("repo.new_branch"))
+            expect(names).to(contain("repo.switch_branch"))
         finally:
             shutil.rmtree(tree, ignore_errors=True)
 

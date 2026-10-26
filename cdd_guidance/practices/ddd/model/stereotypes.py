@@ -182,3 +182,32 @@ def is_identity_property(name: str, type_hint: str = "") -> bool:
     if name in ("id", "identity"):
         return True
     return "<< identifier >>" in type_hint or "<<identifier>>" in type_hint.lower()
+
+
+_TAGGED_KINDS = frozenset({"Entity", "EntityRoot", "ValueObject", "Repository", "DomainService", "Specification"})
+
+
+def name_reflects_tactical_kind(class_name: str, kind: str, names: set[str]) -> bool:
+    plain = plain_class_name(class_name)
+    if kind == "Repository":
+        return plain.endswith("Repository")
+    if kind == "DomainService":
+        return plain.endswith("Service")
+    if kind == "Specification":
+        return "Specification" in plain
+    if kind == "ValueObject":
+        return any(plain.endswith(suffix) for suffix in ("Token", "Code", "Message", "Value"))
+    if kind == "EntityRoot":
+        return plain.endswith("Root") or f"{plain}Repository" in names
+    if kind == "Entity":
+        return plain.endswith("Entity")
+    return False
+
+
+def declares_tactical_stereotype(file_text: str, class_name: str, graph_kind: str, peer_names: set[str]) -> bool:
+    """True when the declaration carries <<tags>> / @decorators, or the name itself says the tactical kind."""
+    decorated = class_declaration_decorated_name(file_text, class_name)
+    if class_stereotypes(decorated):
+        return True
+    kind = inferred_tactical_kind(decorated, peer_names) or graph_kind
+    return name_reflects_tactical_kind(class_name, kind if kind in _TAGGED_KINDS else graph_kind, peer_names)

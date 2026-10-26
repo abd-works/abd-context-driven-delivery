@@ -15,6 +15,22 @@ from harness.graph.node_data import encode_node_data
 from cdd_guidance.practices.stories.model.source_location import SourceLocation
 from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepType, Story, StoryModel
 
+_EXPORT_CONST = re.compile(r"export const (\w+)")
+_DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
+_ORCHESTRATION_EXPORT = re.compile(r"export function (?:activate|handle|process)\w*\s*\(")
+_NAMED_IMPORT = re.compile(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*['\"](?P<module>[^'\"]+)['\"]")
+
+
+def _imported_modules(text: str) -> dict[str, str]:
+    """Each name the story file imports, mapped to the module it comes from."""
+    imported: dict[str, str] = {}
+    for match in _NAMED_IMPORT.finditer(text):
+        for part in match.group("names").split(","):
+            name = part.strip().split(" as ")[-1].removeprefix("type ").strip()
+            if name:
+                imported.setdefault(name, match.group("module"))
+    return imported
+
 
 _EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
 
@@ -84,7 +100,7 @@ class GraphStoryModel:
         node_id = f"stories:Story:{file}:{story.name}"
         line, end = self._source_span(story, root, file)
         story.load_map_facts()
-        nodes.append(self._row(node_id, story.name, "Story", file or ".", line, end, story))
+        nodes.append(self._row(node_id, story.name, "Story", file or ".", line, end, story, self._file_facts(root, file)))
         edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
         for background in story.backgrounds:
             self._background(root, file, node_id, background, nodes, edges)
@@ -250,6 +266,16 @@ class GraphStoryModel:
             if text in line:
                 return index
         return None
+
+    def _file_facts(self, root: str, file: str) -> dict:
+        """Facts the story file owns. They sit on the Story node; its scenarios, steps, and examples read them through get_fact."""
+        text = "\n".join(self._file_lines(root, file)) if file else ""
+        return {
+            "export_names": _EXPORT_CONST.findall(text),
+            "domain_class_names": _DOMAIN_CLASS.findall(text),
+            "exports_orchestration": bool(_ORCHESTRATION_EXPORT.search(text)),
+            "imported_modules": _imported_modules(text),
+        }
 
     def _file_lines(self, root: str, file: str) -> list[str]:
         lines = self._lines.get(file)

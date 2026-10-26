@@ -6,7 +6,6 @@ import re
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-_DESCRIBE = re.compile(r'^with description\("([^"]+)"\)', re.MULTILINE)
 _MIN_SHARED_WORDS = 2
 _BRANCH_SUFFIX = re.compile(r"^(registered|with|that)\b", re.I)
 
@@ -33,8 +32,7 @@ def _longest_shared_word_prefix(left: str, right: str) -> tuple[str, str, str] |
     return (" ".join(shared), suffix_left, suffix_right)
 
 
-def branched_top_level_describes(text: str) -> list[str]:
-    names = _DESCRIBE.findall(text)
+def branched_top_level_describes(names: list[str]) -> list[str]:
     messages: list[str] = []
     for index, left in enumerate(names):
         for right in names[index + 1 :]:
@@ -56,8 +54,4 @@ class SharedDescribeSubject(PracticeGraphRule):
     node_types = ("Spec",)
 
     def check(self, node, context) -> list[str]:
-        text = context.text(node)
-        if not text.strip():
-            return []
-        hits = branched_top_level_describes(text)
-        return hits[:5]
+        return branched_top_level_describes(node.get_fact("top_level_describes", []))[:5]

@@ -14,17 +14,19 @@ from mamba import context, description, it
 
 from cdd_guidance.practices.stories.model.story_model import Scenario, Story
 from cdd_guidance.practices.stories.rules.story_map import FourToNineChildren, StoryScenariosOneToFour
+from harness.graph.graph import Node, PracticeGraph, Source
 from harness.graph.schema_rules import slugs_for_type
 
 
-class _Node:
-    def __init__(self, name: str, node_type: str, data: dict):
-        self.name = name
-        self.type = node_type
-        self.data = data
+def _Node(name: str, node_type: str, facts: dict) -> Node:
+    """A stories graph node carrying the given facts."""
+    node = Node(PracticeGraph("stories"), node_type, f"stories:{node_type}:{name}", name, Source(".", 1, 1))
+    for key, value in facts.items():
+        node.set_fact(key, value)
+    return node
 
 
-def _story_node(name: str, scenario_count: int, *, band: str = "") -> _Node:
+def _story_node(name: str, scenario_count: int, *, band: str = "") -> Node:
     return _Node(
         name,
         "Story",

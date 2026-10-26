@@ -20,7 +20,7 @@ class AgentToolsDiagnostics:
 
         guidance: optional slugs when a harness tool needs ``guidance`` probe arguments. Practices, patterns, builders, and ``harness.guidance`` / ``harness.guidance_actions`` base toolsets are out of scope — use ``/guidance-diagnostics`` for those.
 
-        All probes use the live CDD MCP host already loaded in Cursor. Diagnostics do not run git clean/switch on the repo (avoids lock hangs). Light invoke uses ``_cdd-diagnostic-probe`` args where needed; only ``repo.push`` and ``repo.close_*`` are skipped. Heavy session/graph uses ``cdd-diagnostic``. Progress on stderr: ``[agent-tools] phase tool: detail``. Slash or MCP ``agent-tools-diagnostics.agent_tools_diagnostics``. Read ``.cursor/diagnostics.json`` → ``agent_tools``."""
+        All probes use the live CDD MCP host already loaded in Cursor. Diagnostics do not run git clean/switch on the repo (avoids lock hangs). Light invoke uses ``_cdd-diagnostic-probe`` args where needed; only ``repo.push_commit`` and ``repo.close_*`` are skipped. Heavy session/graph uses ``cdd-diagnostic``. Progress on stderr: ``[agent-tools] phase tool: detail``. Slash or MCP ``agent-tools-diagnostics.agent_tools_diagnostics``. Read ``.cursor/diagnostics.json`` → ``agent_tools``."""
         from harness.agent_tools.agent_tools_probe import probe_agent_tools
         from harness.installation.installer import Installer
 

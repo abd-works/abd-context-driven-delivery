@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
+from space.work_state import WorkState
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -43,6 +44,16 @@ _TOOL_INPUT_PATH_KEYS = (
     "transcript_path",
     "agent_transcript_path",
 )
+
+
+class SessionNameRequiredError(ValueError):
+    """Raised when switch-session has no name and ``.sessions/session.json`` has no session or branch."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "session name is required: pass name, or switch to a branch first so "
+            "the session can take its name"
+        )
 
 
 def _parse_chat_file(path: Path) -> tuple[str, str, str]:
@@ -124,6 +135,13 @@ class Practice:
         self.graph = graph
         self.folder_sets = folder_sets
 
+    def to_mcp_result(self) -> dict:
+        """JSON-safe snapshot for MCP tool results."""
+        return {
+            "name": self.name,
+            "folder_sets": [[str(Path(item)) for item in group] for group in self.folder_sets],
+        }
+
 
 _PRACTICE_TYPES = {
     "stories": "cdd_guidance.practices.stories.stories:Stories",
@@ -160,6 +178,27 @@ class Session:
     def name(self, value: str) -> None:
         self._session_name = (value or "").strip()
 
+    def to_mcp_result(self) -> dict:
+        """JSON-safe snapshot for MCP tool results — name, paths, practice roots."""
+        return {
+            "name": self.name,
+            "workpath": None if self.workpath is None else str(self.workpath),
+            "repo_path": None if self.repo_path is None else str(self.repo_path),
+            "session_path": None if self.session_path is None else str(self.session_path),
+            "practices": [entry.to_mcp_result() for entry in self._opened],
+            "parent_folders": self._stored_folders(),
+            "practice_roots": self._practice_roots_snapshot(),
+        }
+
+    def _practice_roots_snapshot(self) -> dict[str, list[list[str]]]:
+        stored = self._stored_folders()
+        roots: dict[str, list[list[str]]] = {}
+        for name in _PRACTICE_TYPES:
+            roots[name] = stored.get(name) or self._default_folder_sets(
+                self._guidance_for(name), name
+            )
+        return roots
+
     @classmethod
     def _slot(cls) -> Session:
         if cls._current is None:
@@ -192,15 +231,20 @@ class Session:
 
     @classmethod
     def _read_repo_current_name(cls, repo_path: Path) -> str:
-        path = cls.sessions_dir(repo_path) / "session.json"
-        if not path.is_file():
-            return _DEFAULT_SESSION_NAME
-        state = json.loads(path.read_text(encoding="utf-8"))
-        cleaned = str(state.get("current") or _DEFAULT_SESSION_NAME).strip()
-        return cleaned or _DEFAULT_SESSION_NAME
+        return WorkState(repo_path).session or _DEFAULT_SESSION_NAME
+
+    @classmethod
+    def current_folder(cls, repo_path: Path | str | None = None) -> Path:
+        """``.sessions/{current}/`` on the project's checkout; ``.sessions/default/`` when none is named.
+
+        Reads the project (``repo_path``, else ``CDD_PROJECT``), not a session held in memory."""
+        slot = cls._slot()
+        repo = slot._repo_root_of(Path(repo_path)) if repo_path is not None else slot._env_repo()
+        return cls._session_folder(repo, cls._read_repo_current_name(repo))
 
     @classmethod
     @mcp
+    @command(name="current-session")
     @agent_tool
     def current(cls, repo_path: Path | str | None = None) -> Session | None:
         """Named session already in memory, or the one saved on the repo."""
@@ -219,119 +263,75 @@ class Session:
         return session if session.name else None
 
     def repo_from_session(self, repo_path: Path | str | None = None) -> Path | None:
-        """Repo that holds ``.sessions`` — the path already in hand, not a git lookup."""
+        """Repo that holds ``.sessions`` — the path already in hand, or the repo it sits in."""
         if repo_path is not None:
-            return Path(repo_path).resolve()
+            return self._repo_root_of(Path(repo_path))
         if self.repo_path is not None:
             return Path(self.repo_path).resolve()
-        named = os.environ.get("CDD_REPO")
-        if named:
-            return Path(named).resolve()
-        project = os.environ.get("CDD_PROJECT")
-        if project:
-            return Path(project).resolve()
-        return Path.cwd().resolve()
+        return self._env_repo()
 
     @mcp
     @command(name="close-session")
     @agent_tool
     def close(self) -> None:
-        """Close this work session and clear the saved current session on the repo."""
-        if self.repo_path is not None:
-            self.saved_current_session = _DEFAULT_SESSION_NAME
+        """Close this work session and remove ``session`` from ``.sessions/session.json``."""
+        self.repo_path = self.repo_from_session()
+        self.saved_current_session = _DEFAULT_SESSION_NAME
+        opened = type(self)._current
+        if opened is not None and opened is not self:
+            opened._forget()
+        self._forget()
+
+    def _forget(self) -> None:
         self.name = ""
         self.workpath = None
         self.session_path = None
         self.reset()
 
     @classmethod
-    @mcp
-    @agent_tool
     def new(cls, name: str, workpath: Path, repo_path: Path) -> str:
-        """Open a session. Returns keep_log."""
+        """Open a new session folder. Returns keep_log."""
         session = cls._slot()
         session._bind_new(name, Path(workpath), Path(repo_path))
         return session.keep_log()
 
     @classmethod
     @mcp
+    @command(name="switch-session")
     @agent_tool
     def switch(
         cls,
-        name: str,
+        name: str = "",
         workpath: Path | None = None,
         repo_path: Path | None = None,
         session_path: Path | None = None,
     ) -> str:
-        """Open an existing session. Returns keep_log."""
-        session = cls._slot()
-        session.resolve(name, workpath, repo_path, session_path)
-        return session.keep_log()
+        """Switch to session ``name``, creating its folder when missing. Returns keep_log.
 
-    @classmethod
-    @mcp
-    @command(name="session")
-    @agent_tool
-    def session(
-        cls,
-        name: str,
-        workpath: Path | None = None,
-        repo_path: Path | None = None,
-    ) -> str:
-        """Chaining: create session ``name`` when missing; switch and set repo current when it exists."""
-        return cls.open_or_switch(name, workpath=workpath, repo_path=repo_path)
-
-    @classmethod
-    @mcp
-    def open_named(
-        cls,
-        name: str,
-        workpath: Path | None = None,
-        repo_path: Path | None = None,
-    ) -> str:
-        """MCP alias for :meth:`session` (older clients call ``session.open_named``)."""
-        return cls.session(name, workpath=workpath, repo_path=repo_path)
-
-    @classmethod
-    def open_or_switch(
-        cls,
-        name: str,
-        workpath: Path | None = None,
-        repo_path: Path | None = None,
-    ) -> str:
-        """Select a session folder when it exists, otherwise create it."""
-        cleaned = (name or "").strip()
-        if not cleaned:
-            raise ValueError("session name is required")
+        ``name`` defaults to ``session`` in ``.sessions/session.json``, then to the saved ``branch``.
+        Saves ``name`` as ``session`` there. Does not touch branches or worktrees."""
         slot = cls._slot()
-        primary = Path(repo_path).resolve() if repo_path is not None else slot.repo_from_session() or slot._env_repo()
-        work = Path(workpath).resolve() if workpath is not None else slot._env_workpath()
-        session_json = cls._session_folder(primary, cleaned) / "session.json"
-        if session_json.is_file():
-            return cls.switch(cleaned, workpath=work, repo_path=primary)
-        return cls.new(cleaned, work, primary)
+        if repo_path is not None:
+            repo = slot._repo_root_of(Path(repo_path))
+        elif workpath is not None:
+            repo = slot._repo_root_of(Path(workpath))
+        else:
+            repo = slot._env_repo()
+        wanted = cls._session_name(name, repo)
+        folder = Path(session_path) if session_path is not None else cls._session_folder(repo, wanted)
+        if not (folder / "session.json").is_file():
+            work = Path(workpath) if workpath is not None else slot._env_workpath()
+            return cls.new(wanted, work, repo)
+        slot.resolve(wanted, workpath, repo_path, session_path)
+        return slot.keep_log()
 
     @classmethod
-    @command(name="new-session")
-    @agent_instructions
-    def new_session_command(cls) -> str:
-        """Open a new CDD session folder under the repo.
-
-        Ask the user for the session name when it is not already clear from the chat.
-        Resolve workpath from CDD_PROJECT or the current working directory and repo from CDD_REPO or the current directory.
-        Call MCP ``session.new`` with name, workpath, and repo_path. Do not call ``session.open_named``."""
-        return ""
-
-    @classmethod
-    @command(name="switch-session")
-    @agent_instructions
-    def switch_session_command(cls) -> str:
-        """Switch to an existing CDD session and set it current on disk.
-
-        Ask the user for the session name when it is not already clear from the chat.
-        Call MCP ``session.switch`` with that name (paths optional — loaded from the session folder).
-        Do not call ``session.open_named``."""
-        return ""
+    def _session_name(cls, name: str, repo: Path) -> str:
+        state = WorkState(repo)
+        cleaned = (name or "").strip() or state.session or state.branch.replace("/", "-")
+        if not cleaned:
+            raise SessionNameRequiredError()
+        return cleaned
 
     @classmethod
     @mcp
@@ -350,7 +350,7 @@ class Session:
         same pointer when chat is bound."""
         session = cls.current()
         if session is None or not session.name:
-            raise ValueError("no current session; open one with session.new or session.switch")
+            raise ValueError("no current session; open one with session.switch")
         session._bind_chat_for_append(conversation_id, transcript_path, transcript_lines)
         opened = session.loop()
         return str(opened.number)
@@ -366,7 +366,7 @@ class Session:
         Run via MCP ``session.read_loop`` or slash ``/read-loop``."""
         session = cls.current()
         if session is None or not session.name:
-            raise ValueError("no current session; open one with session.new or session.switch")
+            raise ValueError("no current session; open one with session.switch")
         if number is None:
             loop_number = session._latest_loop_with_entries()
         else:
@@ -410,7 +410,7 @@ class Session:
         in ``paths`` on this call."""
         session = cls.current()
         if session is None or not session.name:
-            raise ValueError("no current session; open one with session.new or session.switch")
+            raise ValueError("no current session; open one with session.switch")
         text = (note or "").strip()
         if not text:
             raise ValueError("note is required")
@@ -424,27 +424,20 @@ class Session:
 
     @property
     def saved_current_session(self) -> str:
-        """``current`` in repo/.sessions/session.json."""
+        """``session`` in repo/.sessions/session.json."""
         if self.repo_path is None:
             return _DEFAULT_SESSION_NAME
-        path = self.sessions_dir(self.repo_path) / "session.json"
-        if not path.is_file():
-            return _DEFAULT_SESSION_NAME
-        state = json.loads(path.read_text(encoding="utf-8"))
-        cleaned = str(state.get("current") or _DEFAULT_SESSION_NAME).strip()
-        return cleaned or _DEFAULT_SESSION_NAME
+        return WorkState(self.repo_path).session or _DEFAULT_SESSION_NAME
 
     @saved_current_session.setter
     def saved_current_session(self, name: str) -> None:
         if self.repo_path is None:
             return
-        path = self.sessions_dir(self.repo_path) / "session.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        state = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
-        cleaned = (name or "").strip() or _DEFAULT_SESSION_NAME
-        state["current"] = cleaned
-        path.write_text(json.dumps(state), encoding="utf-8")
-        if cleaned != _DEFAULT_SESSION_NAME:
+        cleaned = (name or "").strip()
+        if cleaned == _DEFAULT_SESSION_NAME:
+            cleaned = ""
+        WorkState(self.repo_path).session = cleaned
+        if cleaned:
             from harness.hooks.session_logs import SessionLogs
 
             SessionLogs(self.repo_path).write_active_session(cleaned)
@@ -454,7 +447,7 @@ class Session:
         if found is not None:
             return found
         guidance = self._guidance_for(name)
-        sets = self._stored_folders().get(name) or self._default_folder_sets(guidance)
+        sets = self._stored_folders().get(name) or self._default_folder_sets(guidance, name)
         folders = [[Path(item) for item in group] for group in sets]
         opened = Practice(name, guidance, self._graph_for(name, folders), sets)
         self._opened.append(opened)
@@ -479,7 +472,7 @@ class Session:
     def remember_parent_folders(self, practice: str, folder_sets: list[list[Path]]) -> None:
         stored = self._stored_folders()
         normalized = self._normalize_sets(folder_sets)
-        if normalized == self._default_folder_sets(self._guidance_for(practice)):
+        if normalized == self._default_folder_sets(self._guidance_for(practice), practice):
             stored.pop(practice, None)
         else:
             stored[practice] = normalized
@@ -530,7 +523,7 @@ class Session:
                 self.workpath = self._env_workpath()
         elif workpath is not None:
             self.workpath = Path(workpath).resolve()
-            self.repo_path = self._env_repo()
+            self.repo_path = self._repo_root_of(self.workpath)
             self.session_path = self._session_folder(self.repo_path, name)
         else:
             self.repo_path = self._env_repo()
@@ -760,7 +753,7 @@ class Session:
         self.note_chat(chat_id or path.stem, path, line_numbers or "1")
 
     def log_guidance_action(self, action: str, guidance_items: list) -> None:
-        """Open listed practices and log this guidance action (after session.new or session.switch)."""
+        """Open listed practices and log this guidance action (after session.switch)."""
         paths: list[Path] = []
         seen: set[str] = set()
         if self.workpath is not None:
@@ -865,7 +858,7 @@ class Session:
             log_file = str(self.session_path / "session.log")
             err_file = str(self.session_path / "session.err")
         return (
-            "Session owns logging once session.new or session.switch has run. "
+            "Session owns logging once session.switch has run. "
             "CHAT POINTERS — required for continued conversations: you must attach chat id, agent "
             "transcript JSONL path, and line range on every log line when metadata exists. "
             "Hooks: CDD_CONVERSATION_ID, CDD_TRANSCRIPT_PATH, CDD_TRANSCRIPT_LINES. "
@@ -883,9 +876,11 @@ class Session:
             "log_session_invocation; guidance kits use GuidanceAgentOperation override). run logs "
             "via log_guidance_action (Validate overrides to log_validation). record_failure on run "
             "and MCP dispatch errors. Cursor hooks do not write session.log. "
+            "log_action(action, paths) records an action with the paths it touched; "
+            "log_agent_tool(mcp_name, tool_input) records an @agent_tool call. "
             "Failures: record_failure and log_error also re-raises. "
             "Do not duplicate unless a line lacks detail. "
-            "session.new seeds --- 1 (chat on that marker when bound at open). "
+            "session.switch seeds --- 1 in a new session (chat on that marker when bound at open). "
             "When the user corrects ai behavior or output, session.append_log with note, optional loop, "
             "paths, and chat fields. "
             "SESSION ARTIFACTS: with session_path set, write every large/temporary agent output "
@@ -958,6 +953,14 @@ class Session:
             return
         self._parent_folders = json.loads(path.read_text(encoding="utf-8"))
 
+    def _repo_root_of(self, path: Path) -> Path:
+        """The git checkout containing ``path``; ``path`` itself when it is not inside one."""
+        resolved = Path(path).resolve()
+        for candidate in (resolved, *resolved.parents):
+            if (candidate / ".git").exists():
+                return candidate
+        return resolved
+
     def _repo_holding(self, session_path: Path) -> Path:
         folder = Path(session_path).resolve().parent
         if folder.name in {".sessions", "sessions"}:
@@ -965,11 +968,13 @@ class Session:
         return folder
 
     def _env_repo(self) -> Path:
-        named = os.environ.get("CDD_REPO")
+        """Checkout of the project being worked on (``CDD_PROJECT``), else the cwd.
+
+        ``CDD_REPO`` names the CDD checkout that hosts the tools, not the project, so it never
+        picks the session."""
+        named = os.environ.get("CDD_PROJECT")
         if named:
-            return Path(named).resolve()
-        if self.repo_path is not None:
-            return Path(self.repo_path).resolve()
+            return self._repo_root_of(Path(named))
         return Path.cwd().resolve()
 
     def _env_workpath(self) -> Path:
@@ -1037,11 +1042,32 @@ class Session:
                 return False
         return True
 
-    def _default_folder_sets(self, guidance: PracticeGuidance) -> list[list[str]]:
-        import inspect
+    def _default_folder_sets(
+        self, guidance: PracticeGuidance, practice: str | None = None
+    ) -> list[list[str]]:
+        """Content roots under the workpath.
 
-        folder = Path(inspect.getfile(type(guidance))).resolve().parent
+        Project ``.context/config.json`` ``practice_folders`` overrides the practice's
+        ``default_workspace_folder`` (tests, src, …) with a workpath-relative path.
+        """
+        base = self.workpath or self.repo_path or Path.cwd()
+        key = (practice or self._practice_key_for_instance(guidance) or "").strip()
+        relative = self._project_default_folder(key)
+        if relative is None:
+            relative = getattr(guidance, "default_workspace_folder", None) or "."
+        folder = (Path(base) / relative).resolve()
         return [[str(folder)]]
+
+    def _project_default_folder(self, practice: str) -> str | None:
+        """Workpath-relative folder from ``.context/config.json`` practice_folders."""
+        if not practice:
+            return None
+        from space.context_config import ContextConfig
+
+        root = self.repo_path or self.workpath
+        if root is None:
+            return None
+        return ContextConfig(root).practice_folder(practice)
 
     def _normalize_sets(self, folder_sets: list[list[Path]]) -> list[list[str]]:
         return [[str(Path(item).resolve()) for item in group] for group in folder_sets]

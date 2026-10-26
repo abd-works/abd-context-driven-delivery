@@ -1,4 +1,4 @@
-"""OoadClass rules — read parsed class shape."""
+"""OoadClass rules — read the class shape its parser recorded on the graph node."""
 
 from __future__ import annotations
 
@@ -23,34 +23,24 @@ def _accessor_property_key(name: str) -> str | None:
     return None
 
 
-def _public_operations_for_budget(operations) -> list:
+def _public_operations_for_budget(shapes: list[dict]) -> list[str]:
     """Count public behavior — not getters/setters (primitive accessors)."""
-    singles: list = []
-    accessor_groups: dict[str, list] = {}
-    for op in operations:
-        name = str(op.name)
+    singles: list[str] = []
+    accessor_groups: dict[str, list[str]] = {}
+    for shape in shapes:
+        name = str(shape["name"])
         if name.startswith("_") or name in {"constructor", "__init__", "get", "set"}:
             continue
-        if getattr(op, "is_property", False):
+        if shape.get("is_property"):
             continue
-        if name.startswith("get") and len(name) > 3 and name[3].isupper():
-            key = _accessor_property_key(name)
-            if key:
-                accessor_groups.setdefault(key, []).append(op)
+        key = _accessor_property_key(name)
+        if key:
+            accessor_groups.setdefault(key, []).append(name)
             continue
-        if name.startswith("set") and len(name) > 3 and name[3].isupper():
-            key = _accessor_property_key(name)
-            if key:
-                accessor_groups.setdefault(key, []).append(op)
+        if name.startswith("is") and len(name) > 2:
             continue
-        if name.startswith("is") and len(name) > 2 and name[2].isupper():
-            continue
-        if name.startswith("is") and len(name) > 2 and name[2].islower():
-            continue
-        singles.append(op)
-    meaningful = list(singles)
-    meaningful.extend(group[0] for group in accessor_groups.values())
-    return meaningful
+        singles.append(name)
+    return singles + [group[0] for group in accessor_groups.values()]
 
 
 class KeepClassesSingleResponsibility(PracticeGraphRule):
@@ -58,10 +48,9 @@ class KeepClassesSingleResponsibility(PracticeGraphRule):
     node_types = ("OoadClass",)
 
     def check(self, node, context) -> list[str]:
-        oclass = context.ce_class(node)
-        if oclass is None:
+        if not node.has_fact("operation_shapes"):
             return []
-        public_ops = _public_operations_for_budget(oclass.operations)
+        public_ops = _public_operations_for_budget(node.get_fact("operation_shapes"))
         budget = _public_op_budget(node.name)
         if len(public_ops) <= budget:
             return []

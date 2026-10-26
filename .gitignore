@@ -27,6 +27,9 @@ installation/.install-state.json
 # SessionLog append-only audit trails (runtime; not sprint artifacts)
 **/logs/events.log
 
+# Open branch, worktree, and session for this machine (space/work_state.py)
+.sessions/session.json
+
 # Hook runtime logs under active session folders (archived to .sessions/closed/ on close)
 .context/sessions/*/logs/
 .sessions/**/logs/dispatch.debug
@@ -76,7 +79,7 @@ scripts/.run/
 # Temporary scratch files and scripts
 _*
 !**/__init__.py
-!tools/mcp_server/__main__.py
+!**/__main__.py
 call_miro.py
 count_all.py
 extract_ids.py

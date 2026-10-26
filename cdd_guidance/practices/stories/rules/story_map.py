@@ -12,9 +12,9 @@ class VerbNounFormat(PracticeGraphRule):
     node_types = ("Epic", "SubEpic", "Story")
 
     def check(self, node, context) -> list[str]:
-        if "opening_class" not in node.data:
+        if not node.has_fact("opening_class"):
             return []
-        kind = node.data.get("opening_class") or ""
+        kind = node.get_fact("opening_class") or ""
         if kind == "verb":
             return []
         return [f"{node.type} {node.name!r}: name should start with a verb (got {kind})."]
@@ -27,11 +27,11 @@ class FourToNineChildren(PracticeGraphRule):
     def check(self, node, context) -> list[str]:
         if node.type in {"Story", "Scenario"}:
             return []
-        severity = node.data.get("child_band") or ""
+        severity = node.get_fact("child_band") or ""
         if severity not in {"warning", "error"}:
             return []
-        count = node.data.get("child_count", 0)
-        label = node.data.get("child_label") or "children"
+        count = node.get_fact("child_count", 0)
+        label = node.get_fact("child_label") or "children"
         kind = node.type.lower().replace("subepic", "sub-epic")
         return [f"{kind} {node.name!r}: {count} {label} (target 4-9)"]
 
@@ -43,9 +43,9 @@ class StoryScenariosOneToFour(PracticeGraphRule):
     node_types = ("Story",)
 
     def check(self, node, context) -> list[str]:
-        count = node.data.get("scenario_count")
-        if count is None and (node.data.get("child_label") or "") == "scenarios":
-            count = node.data.get("child_count", 0)
+        count = node.get_fact("scenario_count")
+        if count is None and (node.get_fact("child_label") or "") == "scenarios":
+            count = node.get_fact("child_count", 0)
         if count is None:
             return []
         count = int(count)
@@ -61,9 +61,9 @@ class KebabCasePaths(PracticeGraphRule):
     node_types = ("Story", "Scenario", "Epic", "SubEpic")
 
     def check(self, node, context) -> list[str]:
-        if not node.data.get("camel_case_path"):
+        if not node.get_fact("camel_case_path"):
             return []
-        name = node.data.get("artifact_name") or ""
+        name = node.get_fact("artifact_name") or ""
         return [f"Story artifact '{name}' should use kebab-case in the file name."]
 
 
@@ -72,7 +72,7 @@ class StoryNameCapturesSystemMechanic(PracticeGraphRule):
     node_types = ("Story",)
 
     def check(self, node, context) -> list[str]:
-        if not node.data.get("generic_handler"):
+        if not node.get_fact("generic_handler"):
             return []
         return [
             f"Story {node.name!r} names a generic handler; use the system mechanic (e.g. 'Submit Order')."
@@ -86,7 +86,7 @@ class RightSizeStoryNodes(PracticeGraphRule):
     node_types = ("Story",)
 
     def check(self, node, context) -> list[str]:
-        if not node.data.get("near_duplicate"):
+        if not node.get_fact("near_duplicate"):
             return []
         return [f"Story {node.name!r} is too similar to another story on the same map node."]
 
@@ -96,7 +96,7 @@ class BranchOnMechanicalUniqueness(PracticeGraphRule):
     node_types = ("Epic", "SubEpic", "Story")
 
     def check(self, node, context) -> list[str]:
-        verb = node.data.get("shared_verb") or ""
+        verb = node.get_fact("shared_verb") or ""
         if not verb:
             return []
         return [
@@ -109,7 +109,7 @@ class BehavioursNotOneTimeTasks(PracticeGraphRule):
     node_types = ("Story",)
 
     def check(self, node, context) -> list[str]:
-        if not node.data.get("one_time_task"):
+        if not node.get_fact("one_time_task"):
             return []
         return [f"Story {node.name!r} reads like a one-time task, not a repeatable behaviour."]
 
@@ -119,7 +119,7 @@ class EvidenceDistinguishesObservedInferredAndIntended(PracticeGraphRule):
     node_types = ("Epic", "SubEpic", "Story")
 
     def check(self, node, context) -> list[str]:
-        labels = node.data.get("evidence") or []
+        labels = node.get_fact("evidence") or []
         if isinstance(labels, str):
             labels = [labels]
         if any(str(item).strip().casefold() in _EVIDENCE for item in labels):

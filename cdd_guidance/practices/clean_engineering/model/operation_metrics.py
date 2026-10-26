@@ -268,3 +268,118 @@ def _python_unnamed_numbers(node: ast.AST) -> list[str]:
                 continue
             found.append(str(child.value))
     return found
+
+
+_IO_CALL = re.compile(
+    r"\b(?:open|read|write|save|fetch|load|store|send|post|put|delete|upload|download|print)\w*\s*\(",
+    re.IGNORECASE,
+)
+_DOMAIN_CALL = re.compile(
+    r"\b(?:calculate|compute|validate|parse|transform|convert|aggregate|total|sum|apply|build)\w*\s*\(",
+    re.IGNORECASE,
+)
+_EDGE_RAISE = re.compile(
+    r"if\s+(?:not\s+\w+|len\s*\([^)]+\)\s*(?:==|<=)\s*0|\w+\s+is\s+None)\s*:[^\n]*\n(?:[^\n]*\n){0,3}\s*raise\b",
+    re.MULTILINE,
+)
+_EDGE_RAISE_BRACE = re.compile(
+    r"if\s*\(\s*(?:!\s*\w+|len\s*\([^)]+\)\s*===?\s*0|\w+\s*===?\s*null)\s*\)[^{]*\{[^\}]*raise\b",
+    re.MULTILINE | re.DOTALL,
+)
+_EDGE_RAISE_MESSAGE = re.compile(r"raise\s+\w*(?:Error|Exception)\([^)]*(?:empty|not found|missing|none)", re.I)
+_EDGE_GUARD = re.compile(r"if\s+(?:not\s+|len\s*\([^)]*\)\s*==\s*0)")
+_EMPTY_EXCEPTION = re.compile(r"raise\s+(\w+(?:Error|Exception))\s*\(\s*([\"']?)\s*\2\s*\)")
+_GENERIC_EXCEPTION = re.compile(r"raise\s+\w+(?:Error|Exception)\s*\(\s*f?[\"'](?:error|failed|invalid)[\"']\s*\)", re.I)
+# Nested property writes (this.token, this.validation.verified) — not helper-local state.
+_COORDINATED_MUTATION = re.compile(r"\b(?:self|this)(?:\.\w+)+\s*=")
+_RETURN = re.compile(r"\breturn\b")
+_VOID_RETURN = re.compile(r"->\s*None\b|: void\b")
+_THROWS = re.compile(r"\b(?:throw|raise)\b")
+_PRIVATE_REACH = re.compile(r"(?<![\w.])\w+\._\w+")
+_PROTOTYPE_SWAP = re.compile(r"\bObject\.setPrototypeOf\s*\(|\.__proto__\s*=(?!=)|\.__class__\s*=(?!=)")
+_BOLD_INTERACTION = re.compile(r"\*\*Interaction:\*\*", re.I)
+_BOLD_INVARIANT_BULLET = re.compile(r"^\s*[-*]\s+\*\*Invariant:\*\*", re.I | re.M)
+_L_TAG = re.compile(r"<!--\s*L\s*-->", re.I)
+_LANGUAGE_HEADING = re.compile(r"^#{1,3}\s+Language\b", re.I)
+_ANY_HEADING = re.compile(r"^#{1,6}\s+")
+_META = re.compile(
+    r"do\s+\*\*not\*\*\s+invent|do not invent|never invent|parallel symbol|as collaboration markers",
+    re.I,
+)
+MIN_SIGNAL_BODY = 40
+MIN_MUTATION_BODY = 30
+MIN_DELEGATION_LINES = 12
+
+
+def io_and_domain_in_text(text: str) -> bool:
+    return len(text.strip()) >= MIN_SIGNAL_BODY and bool(_IO_CALL.search(text) and _DOMAIN_CALL.search(text))
+
+
+def io_and_domain_callees(callees: list[str], line_count: int) -> bool:
+    if line_count < MIN_DELEGATION_LINES:
+        return False
+    io_calls = any(_IO_CALL.search(f"{callee}(") for callee in callees)
+    domain_calls = any(_DOMAIN_CALL.search(f"{callee}(") for callee in callees)
+    return io_calls and domain_calls
+
+
+def raises_on_empty_in_text(text: str) -> bool:
+    if _EDGE_RAISE.search(text) or _EDGE_RAISE_BRACE.search(text):
+        return True
+    return bool(_EDGE_RAISE_MESSAGE.search(text) and _EDGE_GUARD.search(text))
+
+
+def exception_without_message_in_text(text: str) -> str:
+    found = _EMPTY_EXCEPTION.search(text)
+    return found.group(1) if found else ""
+
+
+def generic_exception_message_in_text(text: str) -> bool:
+    return bool(_GENERIC_EXCEPTION.search(text))
+
+
+def mutates_without_record_in_text(text: str) -> bool:
+    if len(text.strip()) < MIN_MUTATION_BODY:
+        return False
+    if len(_COORDINATED_MUTATION.findall(text)) <= 1:
+        return False
+    return not (_RETURN.search(text) or _VOID_RETURN.search(text) or _THROWS.search(text))
+
+
+def private_reach_in_text(text: str) -> bool:
+    return bool(_PRIVATE_REACH.search(text))
+
+
+def prose_comment_in_text(text: str, hash_only: bool = False) -> bool:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#") and _NARRATIVE_COMMENT.search(stripped):
+            return True
+        if not hash_only and "//" in stripped and _NARRATIVE_COMMENT.search(stripped):
+            return True
+    return False
+
+
+def prototype_swap_in_text(text: str, start_line: int) -> dict:
+    found = _PROTOTYPE_SWAP.search(text)
+    if found is None:
+        return {}
+    return {"code": found.group(0).strip(), "line": start_line + text.count("\n", 0, found.start())}
+
+
+def markdown_bullet_lines(text: str) -> dict:
+    """Bold Interaction / Invariant bullets when the span is markdown; empty for code."""
+    if not text.strip() or not text.lstrip().startswith("#"):
+        return {}
+    interactions: list[int] = []
+    invariants: list[int] = []
+    in_language = False
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        in_language = _LANGUAGE_HEADING.match(line) is not None or (in_language and not _ANY_HEADING.match(line))
+        if _META.search(line):
+            continue
+        if _BOLD_INTERACTION.search(line):
+            interactions.append(line_number)
+        if _BOLD_INVARIANT_BULLET.search(line) and not (in_language or _L_TAG.search(line)):
+            invariants.append(line_number)
+    return {"bold_interaction_lines": interactions, "bold_invariant_lines": invariants}
