@@ -88,8 +88,9 @@ class GraphStoryModel:
         edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
         for background in story.backgrounds:
             self._background(root, file, node_id, background, nodes, edges)
+        scoped = [name for background in story.backgrounds for name in background.examples]
         for scenario in story.scenarios:
-            self._scenario(root, file, node_id, scenario, nodes, edges)
+            self._scenario(root, file, node_id, scenario, nodes, edges, scoped)
 
     def _background(self, root: str, file: str, parent_id: str, background, nodes: list, edges: list) -> None:
         label = background.name or "background"
@@ -102,7 +103,8 @@ class GraphStoryModel:
         for step in background.steps:
             self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
 
-    def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list) -> None:
+    def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list, scoped: list[str] = ()) -> None:
+        """Record the scenario with its own examples and those its story's Background scopes."""
         node_id = f"stories:Scenario:{file}:{scenario.name}"
         line, end = self._source_span(scenario, root, file)
         self._ensure_source(scenario, file, line, end)
@@ -125,7 +127,7 @@ class GraphStoryModel:
         edges.append([parent_id, node_id, "scenarios", 3, "direct"])
         for step in scenario.steps:
             self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
-        for name in scenario.examples:
+        for name in dict.fromkeys([*scenario.examples, *scoped]):
             example_id = f"stories:Example:{file}:{name}"
             nodes.append([example_id, name, "Example", "stories", file or ".", line, end])
             edges.append([node_id, example_id, "examples", 5, "direct"])

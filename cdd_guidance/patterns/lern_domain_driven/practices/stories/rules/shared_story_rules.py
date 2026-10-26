@@ -12,6 +12,7 @@ _EXPECT = re.compile(r"\b(?:expect|assert)\s*\(")
 _TOP_LEVEL_HELPER = re.compile(r"^(?:export\s+)?(?:async\s+)?function\s+(\w+)|^(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s*)?\(", re.M)
 _TOP_LEVEL_END = re.compile(r"^\};?\s*$", re.M)
 _DOMAIN_CALL = re.compile(r"\brepositories\.\w+(?:\.\w+)?")
+_HAND_WRITTEN_ROW = re.compile(r"\bscenario\(\s*(['\"])(?P<outline>[^'\"]+?):\s+(?P<row>[^'\"]+)\1")
 
 
 def _line_of(text: str, index: int) -> int:
@@ -73,6 +74,21 @@ class DomainOperationsInlineInSteps(PracticeGraphRule):
                 f"state with a fixture in the examples file."
             )
         return messages
+
+
+class OutlineRowsLoopOverExamples(PracticeGraphRule):
+    """`scenario('Outline: row', …)` with a fixed string is one outline row written by hand."""
+
+    slug = "outline-rows-loop-over-examples"
+    node_types = ("StoryShared", "PlaywrightSpec")
+
+    def check(self, node, context) -> list[str]:
+        text = context.text(node)
+        return [
+            f"{node.source.file}:{_line_of(text, match.start())}: scenario {match.group('outline')!r} row "
+            f"{match.group('row')!r} is written by hand; loop over the outline's examples export instead."
+            for match in _HAND_WRITTEN_ROW.finditer(text)
+        ]
 
 
 def _callback_body(text: str, start: int) -> str | None:
