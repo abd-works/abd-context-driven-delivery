@@ -52,6 +52,7 @@ class Installer:
             ".git",
             "retired",
             "_retired",
+            ".retired",
         }
     )
     _CATALOG_DIRS = (
