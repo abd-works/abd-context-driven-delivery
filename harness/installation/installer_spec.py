@@ -161,7 +161,7 @@ with description("an agent toolset") as self:
 
                 with it("should write the operation's instructions on the command"):
                     command_text = InstalledTree(self.tree).command_path("sketch").read_text(encoding="utf-8")
-                    assembled = getattr(SampleAgenticOps(), "sketch")
+                    assembled = SampleAgenticOps().tools["sketch"].docstring
                     expect(command_text).to(contain(assembled))
                     expect(command_text).not_to(contain("Shell tool"))
 
