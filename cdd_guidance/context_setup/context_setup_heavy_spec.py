@@ -321,12 +321,15 @@ with description("a ContextSetup"):
             body = AgentInstructions.for_callable(func, cs)
             expect("convert" in body.tool_steps).to(be_true)
 
-        with it("should include partition for each context tool (5 total)"):
+        with it("should expand the partition action for the selected context tools"):
+            # Practices no longer carry partition; one Partition action takes them as guidance.
             from harness.agent_tools.agent_tools import AgentInstructions
             cs = ContextSetup.from_defaults()
             func = getattr(type(cs), "capture_from_documents")
             body = AgentInstructions.for_callable(func, cs)
-            expect(body.tool_steps.count("partition")).to(equal(5))
+            prompt = "\n".join(body.prompt)
+            expect(prompt).to(contain("Split the given context into an index plus verbatim segments"))
+            expect(prompt).to(contain("guidance set to the selected practices"))
 
         with it("should include embed from ContextIndex"):
             from harness.agent_tools.agent_tools import AgentInstructions

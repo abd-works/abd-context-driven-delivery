@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from harness.agent_tools import agent_instructions, agent_toolset
-from harness.agent_tools.agent_tools import agent_tool
+from harness.agent_tools.agent_tools import agent_tool, tools
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 from cdd_guidance.actions.partition.partition import Partition
@@ -360,7 +360,7 @@ class ContextSetup:
         self.smoke_test()
         self.scout_app()
         self.complete_capture()
-        self.context_index.embed()
+        tools(self.context_index.embed())
         return "Live app captured and indexed."
 
     @mcp
@@ -373,7 +373,7 @@ class ContextSetup:
     ) -> str:
         """Capture documents from folder_path, partition through selected context tools, embed into one FAISS index.
         folder_path={folder_path}, indexers={indexers}, first={first}.
-        Collaborators (compile-time references): Stories, CleanEngineering, Ddd, Ux, Partition."""
+        Collaborators (compile-time references): Partition, ContextIndex."""
         """Step 1 — call convert(folder_path) to convert every document to markdown.
         Inspect the returned structure_notes.  If any note shows heading_depth=0 and
         word_count > 200, note it for the user — the document may need a semantic re-pass
@@ -391,17 +391,15 @@ class ContextSetup:
         remaining selected tools. Each call writes segments to folder_path/.context/
         (out_root=folder_path) and accumulates views without wiping prior passes.
         'cdd' means call both stories and clean_engineering.
-        If the user selected nothing, call partition.partition() only."""
-        self.stories.partition()
-        self.clean_engineering.partition()
-        self.ddd.partition()
-        self.ux.partition()
-        self.partition.partition()
+        Call partition.partition once with guidance set to the selected practices, in that
+        order (stories, clean-engineering, ddd, ux). If the user selected nothing, call it
+        with no guidance."""
+        tools(self.partition.partition())
         """Step 4 — Embed:
         segments_paths = glob(folder_path/.context/**/*-segment.md).
         Pass them to context_index.embed with out_path=folder_path/rag.
         Report the resulting index_path to the user."""
-        self.context_index.embed()
+        tools(self.context_index.embed())
         return "Documents captured and indexed."
 
     def _analyse(self, file_path: str, content: str) -> StructureNote:
