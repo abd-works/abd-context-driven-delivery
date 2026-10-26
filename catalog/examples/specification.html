@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="engineering" data-abd-theme="engineering">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>Specification — ABD Context Driven Delivery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="../commons/foundry-catalog.css?v=cdd-133">
+<link rel="stylesheet" href="../commons/cdd-board.css?v=cdd-31">
+
+<script src="../commons/catalog-nav.js?v=foundry-13"></script>
+</head>
+<body data-nav-prefix="../" data-nav-current="" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+<div class="page-hero page-hero--foundry">
+  <div class="wrap">
+    <table class="page-hero__table" role="presentation">
+      <tr>
+        <td class="page-hero__cell page-hero__cell--title">
+          <h1 class="page-headline">Specification</h1>
+          <p class="body-lead">scenarios.md</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="catalog-body">
+<div class="wrap approach-wrap">
+<p class="approach-practice__back"><a href="../cdd-approach.html">← Back to the approach</a></p><div class="skill-md-preview"><h1>Story: Create Unconfirmed User</h1>
+<h4>Scenario: Display Create Account</h4>
+<p><em>When</em> the User proceeds to create an account from the Paradise Mobile website<br><em>Then</em> the User can enter account credentials<br><em>But</em> the email and password rules are unmet<br><em>But</em> the customer cannot save the customer account</p>
+<h4>Scenario: Enter Valid account credentials</h4>
+<p><em>When</em> the User enters valid account credentials<br><em>Then</em> account credentials are validated continuously<br><em>And</em> the customer can save the customer account</p>
+<h4>Scenario: Enter Invalid account credentials: ${example}</h4>
+<p><em>When</em> the User registers When the requirements have not been met<br><em>Then</em> the account cannot be registered<br><em>And</em> the ${unmet} requirement is unmet<br><em>And</em> the System displays the unmet requirements*</p>
+<h4>Scenario: Email already registered</h4>
+<p><em>Given</em> already-registered account credentials are already registered<br><em>When</em> the User registers already-registered account credentials<br><em>Then</em> the email is already registered<br><em>And</em> The system displays a message that the account is already registered</p>
+<h4>Scenario: Create Unconfirmed User</h4>
+<p><em>Given</em> the amplifyService.signUp spy is set up<br><em>When</em> the User creates their account<br><em>Then</em> the system creates an unconfirmed Cognito user and emails a validation code</p></div>
+</div>
+</div>
+</main>
+<script src="../commons/catalog-foundry-skill-nav.js?v=cdd-16"></script>
+
+</body>
+</html>
