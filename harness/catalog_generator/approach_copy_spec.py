@@ -159,11 +159,16 @@ with description("stage example links"):
             "<em>a simple graph is easier to change, compare, and reorganize. Humans catch AI Order-of-Magnitude sizing errors.</em>"
             in html
         ).to(equal(True))
-        expect("viewer.diagrams.net" in html).to(equal(True))
-        expect("approach-stage-drawio-zoom" in html).to(equal(True))
-        expect("approach-stage-drawio" in html).to(equal(True))
+        # Diagram examples with a PNG sibling render as the image, not a live drawio viewer.
+        expect(
+            '<img class="catalog-example__image" alt="story_map.png" src="examples/stories/story_map.png">'
+            in html
+        ).to(equal(True))
+        expect("catalog-example--story-map" in html).to(equal(True))
+        expect("viewer.diagrams.net" in html).to(equal(False))
         expect("approach-stage-column" in html).to(equal(True))
-        expect("toggleStageColumn" in html).to(equal(True))
+        # toggleStageColumn lives in the shared commons script, not inline.
+        expect('src="commons/catalog-refine-row.js' in html).to(equal(True))
         expect("openNextColumn" in html).to(equal(True))
         expect("Display Create Account" in html).to(equal(True))
         expect('id="catalog-monaco"' in html).to(equal(True))

@@ -33,7 +33,7 @@ class DddTransformer(Transformer):
         _take_model_cards(root, sketch)
         return root
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return list(self.contexts)
 
     def attach_environment(self, environment: Environment, root: Transformer | None = None) -> None:
@@ -47,7 +47,7 @@ class DddTransformer(Transformer):
 class BoundedContextTransformer(Transformer, BoundedContext):
     _logical_template = "bounded_context"
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return list(self.contexts) + list(self.aggregates)
 
     def _output_path(self) -> str:
@@ -60,7 +60,7 @@ class BoundedContextTransformer(Transformer, BoundedContext):
 class AggregateTransformer(Transformer, Aggregate):
     model_lines = ""
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return []
 
     def _child_folder(self) -> str:

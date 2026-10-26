@@ -165,7 +165,9 @@ class CFamilyParse:
                 parameters=self._split_params(match.group(2) or ""),
                 return_type=(match.group(3) or "").strip(),
             )
-            op.line = self._line_at(self._text, self._body_start + match.start())
+            header = match.group(0)
+            header_start = match.start() + len(header) - len(header.lstrip())
+            op.line = self._line_at(self._text, self._body_start + header_start)
             self._apply_method_end_line(op, class_body, match.end() - 1)
             filled = self._operation_from_body(op, method_body)
             prefix = class_body[max(0, match.start() - 24) : match.start()]

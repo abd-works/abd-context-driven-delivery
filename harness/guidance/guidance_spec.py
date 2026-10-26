@@ -348,7 +348,7 @@ with description("practice and fidelity template files"):
             from cdd_guidance.practices.ddd.ddd import Ddd
 
             expect(Ddd(fidelity="bounded_context", format="python").templates).to(equal(""))
-            expect(Ddd(fidelity="model", format="drawio").templates).to(
+            expect(Ddd(fidelity="model", format="python").templates).to(
                 equal("")
             )
 

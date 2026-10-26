@@ -94,7 +94,8 @@ class CleanEngineeringKit:
         return sorted(p.name for p in formats.iterdir() if p.is_dir())
 
     def assert_text_inlined(self, instructions: str, source: str) -> None:
-        expect(source in instructions).to(be_true)
+        """Expansion trims the trailing newline a markdown file ends with; the body must be there verbatim."""
+        expect(source.strip() in instructions).to(be_true)
 
     def assert_contexts_inlined(self, instructions: str, concepts_text: str) -> None:
         slugs = self.context_rule_slugs(concepts_text)

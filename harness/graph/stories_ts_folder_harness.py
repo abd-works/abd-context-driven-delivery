@@ -33,7 +33,17 @@ def _practice_from_folder(folder: Path, *, relative_file: str) -> tuple[Practice
     )
     practice.by_id[node.node_id] = node
     practice.nodes.setdefault("Example", []).append(node)
+    _load_file_facts(node, root, rel)
     return practice, root, node
+
+
+def _load_file_facts(node: Node, root: Path, relative: str) -> None:
+    """The facts the story model loads for a story file, set on the fixture node as a live build sets them."""
+    from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
+    from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+    for name, value in GraphStoryModel(StoryModel())._file_facts(str(root), relative).items():
+        node.set_fact(name, value)
 
 
 def assert_stories_folder_pair(

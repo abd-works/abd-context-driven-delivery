@@ -510,13 +510,23 @@ class SkillSlashName:
 
     def resolve(self, module_dir_name: str) -> str | None:
         for candidate in (module_dir_name, module_dir_name.replace("_", "-")):
-            skill_md = _SKILLS_DIR / candidate / "SKILL.md"
-            if not skill_md.is_file():
-                continue
-            match = _SKILL_NAME_RE.search(skill_md.read_text(encoding="utf-8"))
-            if match:
-                return match.group(1)
+            for skill_md in self._skill_files(candidate):
+                match = _SKILL_NAME_RE.search(skill_md.read_text(encoding="utf-8"))
+                if match:
+                    return match.group(1)
         return None
+
+    def _skill_files(self, candidate: str) -> list[Path]:
+        """``{candidate}/SKILL.md`` at the skills root, then under each category folder
+        (install deploys ``.cursor/skills/{category}/{skill}/SKILL.md``)."""
+        found = [_SKILLS_DIR / candidate / "SKILL.md"]
+        if _SKILLS_DIR.is_dir():
+            found.extend(
+                category / candidate / "SKILL.md"
+                for category in sorted(_SKILLS_DIR.iterdir())
+                if category.is_dir()
+            )
+        return [path for path in found if path.is_file()]
 
 
 def extract_tool_overview(markdown: str) -> str:
@@ -821,9 +831,42 @@ class ActionResolution:
     def _guidance_action_calls(self) -> list[str]:
         """``guidance.<method>()`` or ``Generate().generate(...)`` dispatch."""
         self._action_calls = []
-        for stmt in self.body:
+        helpers = self._private_helpers()
+        pending = list(self.body)
+        visited: set[str] = set()
+        while pending:
+            stmt = pending.pop(0)
             self._collect_guidance_from_stmt(stmt)
+            for node in ast.walk(stmt):
+                name = self._self_helper_name(node)
+                if name in helpers and name not in visited:
+                    visited.add(name)
+                    pending.extend(helpers[name].body)
         return self._action_calls
+
+    def _private_helpers(self) -> dict[str, ast.FunctionDef]:
+        """Private ``_method`` defs in the walked module — an action may dispatch
+        through one (``self.run(guidance, self._iterate_item)``)."""
+        helpers: dict[str, ast.FunctionDef] = {}
+        if self.tree is None:
+            return helpers
+        for node in self.tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for item in node.body:
+                if isinstance(item, ast.FunctionDef) and item.name.startswith("_") and not item.name.startswith("__"):
+                    helpers[item.name] = item
+        return helpers
+
+    @staticmethod
+    def _self_helper_name(node: ast.AST) -> str | None:
+        if (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == "self"
+        ):
+            return node.attr
+        return None
 
     def _collect_guidance_from_stmt(self, stmt: ast.stmt) -> None:
         for node in ast.walk(stmt):
@@ -968,62 +1011,90 @@ _LIFECYCLE_KITS = {
     "document": "document.document:Document",
 }
 
+def _declared_parameters(fn: object) -> dict[str, str]:
+    """Named parameters (minus ``self`` and ``*args`` / ``**kwargs``) with their annotation text.
+
+    The toolset manifest carries kind / instructions only, so parameters come
+    from the live Python signature. A property or other non-callable declares none.
+    """
+    if not callable(fn):
+        return {}
+    try:
+        params = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return {}
+    declared: dict[str, str] = {}
+    for name, param in params.items():
+        if name == "self" or param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
+            continue
+        annotation = param.annotation
+        if annotation is inspect.Parameter.empty:
+            declared[name] = ""
+        elif isinstance(annotation, str):
+            declared[name] = annotation
+        else:
+            declared[name] = getattr(annotation, "__name__", str(annotation))
+    return declared
+
+
+def _is_guidance_class(cls: type) -> bool:
+    from harness.guidance.guidance import Guidance
+
+    return isinstance(cls, type) and issubclass(cls, Guidance)
+
+
 def build_run_request(
     cls: type,
     *,
     action: str,
     fidelity: str | None = None,
 ) -> dict:
-    """Build a spec run-request dict from the live toolset manifest.
+    """Build a spec run-request dict from the live toolset.
 
     Constructor parameters become ``context``; the named action's parameters
     become ``arguments``. ``fidelity`` (when the constructor accepts it) is
     filled with the given fidelity key.
 
-    Context tools do not own generate / validate / satisfy / document — those
-    live on the kits. A request for one of those actions on a context tool
-    is rewritten to the kit with ``arguments.guidance`` carrying that Guidance.
+    Guidance (practices) do not own generate / validate / satisfy / document —
+    those live on the action kits. A request for one of those actions on a
+    Guidance class is rewritten to the kit with ``arguments.guidance`` carrying
+    that Guidance.
     """
     examples = ActionResolution()
-    if action in _LIFECYCLE_KITS and getattr(cls, "_is_context", False):
-        signature = cls.manifest.signature
-        ctor_params = (signature.get("new") or {}).get("parameters") or {}
-        guidance_context: dict[str, object] = {}
-        for name, type_str in ctor_params.items():
+
+    def _context() -> dict[str, object]:
+        context: dict[str, object] = {}
+        for name, type_str in _declared_parameters(cls.__init__).items():
             if name == "fidelity" and fidelity is not None:
-                guidance_context[name] = fidelity
+                context[name] = fidelity
             else:
-                guidance_context[name] = examples._example_value(name, str(type_str))
+                context[name] = examples._example_value(name, type_str)
+        return context
+
+    if action in _LIFECYCLE_KITS and _is_guidance_class(cls):
         return {
             "toolset": _LIFECYCLE_KITS[action],
             "action": action,
             "arguments": {
                 "guidance": [
-                    {"toolset": f"{cls.__module__}:{cls.__name__}", "context": guidance_context},
+                    {"toolset": f"{cls.__module__}:{cls.__name__}", "context": _context()},
                 ]
             },
         }
 
-    signature = cls.manifest.signature
-    ctor_params = (signature.get("new") or {}).get("parameters") or {}
-    action_entry = signature.get(action) or {}
-    action_params = action_entry.get("parameters") or {}
-
-    context: dict[str, object] = {}
-    for name, type_str in ctor_params.items():
-        if name == "fidelity" and fidelity is not None:
-            context[name] = fidelity
-        else:
-            context[name] = examples._example_value(name, str(type_str))
+    action_fn = inspect.getattr_static(cls, action, None)
+    if isinstance(action_fn, (staticmethod, classmethod)):
+        action_fn = action_fn.__func__
+    action_params = _declared_parameters(action_fn)
 
     request: dict[str, object] = {
         "toolset": f"{cls.__module__}:{cls.__name__}",
-        "context": context,
+        "context": _context(),
         "action": action,
     }
     if action_params:
         request["arguments"] = {
-            name: examples._example_value(name, str(type_str))
+            name: examples._example_value(name, type_str)
             for name, type_str in action_params.items()
         }
     return request

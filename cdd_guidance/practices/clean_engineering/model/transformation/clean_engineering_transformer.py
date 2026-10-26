@@ -39,7 +39,7 @@ class CleanEngineeringTransformer(Transformer, SourceModel):
         _parse_ce_sketch(root, sketch)
         return root
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return list(self.modules)
 
     def attach_environment(self, environment: Environment, root: Transformer | None = None) -> None:
@@ -55,7 +55,7 @@ class ModuleTransformer(Transformer, SourceModule):
         super().__init__(name, sequential_order, description=description)
         self.files: list[FileTransformer] = []
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return list(self.modules) + list(self.files) + list(self.classes)
 
     def _output_path(self) -> str:
@@ -98,7 +98,7 @@ class OoadClassTransformer(Transformer, SourceClass):
             module = f"{_to_snake(target.module_name)}.{file_module}"
         return [ImportBinding(module, base)]
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return list(self.property_nodes) + list(self.operation_nodes)
 
     def _output_path(self) -> str:
@@ -106,7 +106,7 @@ class OoadClassTransformer(Transformer, SourceClass):
 
 
 class OperationTransformer(Transformer, SourceOperation):
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return list(self.parameters)
 
 

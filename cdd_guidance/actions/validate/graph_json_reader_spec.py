@@ -27,7 +27,7 @@ with description("graph JSON reader"):
             source_dir.mkdir(parents=True)
             (source_dir / "widget.ts").write_text(
                 "export class Widget {\n"
-                "  private failure(a: string, b: string, c: string): void {\n"
+                "  private failure(a: string, b: string, c: string, d: string): void {\n"
                 "    return;\n"
                 "  }\n"
                 "}\n",
@@ -54,5 +54,5 @@ with description("graph JSON reader"):
                 self.root,
             )
             expect(refreshed[0]["violation_message"]).to(
-                contain("takes 3 parameters (maximum 3, excluding self)")
+                contain("takes 4 parameters (maximum 3, excluding self)")
             )

@@ -45,6 +45,12 @@ owner: str
 place_order(): Order
 """
 
+_BEHAVIOR_MARKDOWN = """\
+a cart
+  that holds line items
+    it should place an order
+"""
+
 _CLASS_PYTHON = """\
 class Cart:
     \"\"\"Cart holds line items and places orders.\"\"\"
@@ -315,9 +321,11 @@ with description("a behavior tree"):
             with context("that has been re-rendered in python"):
                 with it("should be python of that behavior tree"):
                     result = Bdd(fidelity="behavior").render(
-                        "python", _CLASS_MARKDOWN, source="markdown"
+                        "python", _BEHAVIOR_MARKDOWN, source="markdown"
                     )
-                    expect(result["content"]).to(contain("class Cart"))
+                    expect(result["content"]).to(contain('with description("a cart"):'))
+                    expect(result["content"]).to(contain('with context("that holds line items"):'))
+                    expect(result["content"]).to(contain('with it("should place an order"):'))
 
 
 with description("a render"):
@@ -329,6 +337,7 @@ with description("a render"):
                     CleanEngineering(fidelity="model"),
                 ],
                 format="markdown",
+                paths=[],
                 content=_CLASS_PYTHON,
             )
             expect(len(results)).to(equal(2))

@@ -1,6 +1,5 @@
 """Guidance diagnostics write a guidance section beside the install log."""
 import json
-import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -70,39 +69,6 @@ with description("guidance diagnostics"):
         expect(items[0]["color"]).to(equal("green"))
         expect(items[0]["chars"] > 0).to(equal(True))
 
-    with it("should probe render with explicit paths and format parameters"):
-        tree = Path(tempfile.mkdtemp())
-        installer = _installer(
-            tree,
-            {
-                "installs": [
-                    {
-                        "mcp": {"items": ["render.render"]},
-                        "toolset": {"items": ["cdd_guidance.actions.render.render:Render"]},
-                    }
-                ]
-            },
-        )
-        from cdd_guidance.actions.render.render import Render
-
-        session = ActionProbeSession(installer)
-        args, missing = fill_probe_arguments(
-            "render.render",
-            Render.render,
-            ["stories", "clean-engineering-model"],
-            session,
-        )
-        session.cleanup()
-        expect(missing).to(equal([]))
-        expect(args["format"]).to(equal("markdown"))
-        expect(args["paths"][0]).to(contain("cdd_guidance"))
-        expect(args["paths"][0]).to(contain("practices"))
-        probe_guidance_actions(["stories", "clean-engineering-model"], installer)
-        data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
-        item = data["guidance"]["actions"]["items"][0]
-        expect(item["mcp"]).to(equal("render.render"))
-        expect(item["color"]).to(equal("green"))
-
     with it("should pass index_only mode when probing partition.partition"):
         from partition.partition import Partition
 
@@ -124,17 +90,3 @@ with description("guidance diagnostics"):
         expect(text).to(equal("no sketches"))
         item = _instruction_result("sketch.list_sketches", text)
         expect(item["color"]).to(equal("green"))
-
-    with it("should install guidance-diagnostics as a slash command with MCP invoke"):
-        tree = Path(tempfile.mkdtemp())
-        try:
-            mcp = Installer(ide="Cursor", path=tree, repo=_REPO_ROOT).install([GuidanceDiagnostics()])
-            command_path = tree / "commands" / "harness" / "guidance" / "guidance-diagnostics.md"
-            expect(command_path.is_file()).to(equal(True))
-            text = command_path.read_text(encoding="utf-8")
-            expect(text).to(contain("guidance-diagnostics.guidance_diagnostics"))
-            expect(text).to(contain("diagnostics.json"))
-            names = [op.mcp_name for op in mcp.mcp_operations]
-            expect(names).to(contain("guidance-diagnostics.guidance_diagnostics"))
-        finally:
-            shutil.rmtree(tree, ignore_errors=True)

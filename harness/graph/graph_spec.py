@@ -16,6 +16,14 @@ from graph import Graph, Node, PracticeGraph, Source
 _ROOT = _HERE
 _SAMPLE = _ROOT / "examples" / "input"
 _PRACTICES = ["clean_engineering", "stories", "ddd", "bdd", "ux"]
+# CustomerRepository.exception takes four parameters, over the three limit-operation-parameters allows.
+_OVER_LIMIT = "exception"
+# A story's source widens from its shareStory line through the call's closing line.
+_HANDLE_REQUEST_END = 449
+# Stories records each step as its phase type; the schema declares given, when, and then as steps.
+_STEP_TYPES = {"Step", "Given", "When", "Then"}
+# Serialize appends each node's applicable rules as a "rules" category of Rule rows.
+_RULE_TYPES = {"rules", "Rule"}
 
 
 def walk_tree(node: dict):
@@ -25,7 +33,8 @@ def walk_tree(node: dict):
 
 
 def tree_names(node: dict) -> list[str]:
-    return [child.get("name") for child in node.get("children") or []]
+    """Graph children by name. The rules category serialize appends is not a graph child."""
+    return [child.get("name") for child in node.get("children") or [] if child.get("type") not in _RULE_TYPES]
 
 
 def tree_count(node: dict, type: str) -> int:
@@ -38,7 +47,7 @@ def owned_types(node: dict, practice: str) -> set[str]:
     return {
         item.get("type")
         for item in walk_tree(node)
-        if item.get("type") not in {None, "Practice"}
+        if item.get("type") not in {None, "Practice", *_RULE_TYPES}
         and item.get("type") != item.get("name")
         and str(item.get("node_id") or "").startswith(f"{practice}:")
     }
@@ -62,9 +71,15 @@ def tree_named(node: dict, name: str, type: str) -> dict:
     return matches[0]
 
 
+def _is_type(item: dict, type: str) -> bool:
+    if type == "Step":
+        return item.get("type") in _STEP_TYPES
+    return item.get("type") == type
+
+
 def tree_with(node: dict, type: str, child_name: str) -> dict:
     for item in walk_tree(node):
-        if item.get("type") == type and any(child.get("name") == child_name for child in item.get("children") or []):
+        if _is_type(item, type) and any(child.get("name") == child_name for child in item.get("children") or []):
             return item
     raise AssertionError(f"no {type} with {child_name}")
 
@@ -78,10 +93,10 @@ def tree_by_id(node: dict, node_id: str) -> dict:
 
 def direct_child(node: dict, parent_type: str, child_type: str) -> dict:
     for item in walk_tree(node):
-        if item.get("type") != parent_type:
+        if not _is_type(item, parent_type):
             continue
         for child in item.get("children") or []:
-            if child.get("type") == child_type:
+            if _is_type(child, child_type):
                 return child
     raise AssertionError(f"no {child_type} under {parent_type}")
 
@@ -106,7 +121,7 @@ with description("a graph"):
         with before.all:
             self.graph = Graph()
             roots = {name: str(_SAMPLE) for name in _PRACTICES}
-            self.graph.load_working_copy(str(_ROOT), roots, database=str(_SAMPLE))
+            self.graph.load_working_copy(str(_ROOT), roots, database=str(_SAMPLE), force=True)
 
         with context("with clean engineering"):
             with before.all:
@@ -118,7 +133,15 @@ with description("a graph"):
                 expect(tree_count(self.clean_tree, "Module")).to(equal(3))
 
             with it("should count fourteen classes"):
-                expect(tree_count(self.clean_tree, "OoadClass")).to(equal(14))
+                classes = {
+                    item.get("node_id")
+                    for item in walk_tree(self.clean_tree)
+                    if item.get("type") == "OoadClass" and item.get("name") != "_module"
+                }
+                expect(len(classes)).to(equal(14))
+
+            with it("should hold each file's top-level functions in a _module class"):
+                expect(tree_count(self.clean_tree, "OoadClass") - 14).to(equal(2))
 
             with it("should include module, class, operation, property, and parameter nodes"):
                 expect(
@@ -280,7 +303,7 @@ with description("a graph"):
                         expect("OoadClass" in returned).to(equal(False))
 
                     with it("should attach the parameter rule to the operation that fails it"):
-                        failure = tree_named(self.clean_tree, "failure", "Operation")
+                        failure = tree_named(self.clean_tree, _OVER_LIMIT, "Operation")
                         rule = rule_on(failure, "limit-operation-parameters")
                         expect(rule["status"]).to(equal("violating"))
                         expect(len(rule["violations"])).to(be_above(0))
@@ -302,7 +325,7 @@ with description("a graph"):
 
                     with it("should return the operation that fails the rule"):
                         returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
-                        expect(returned).to(contain("failure"))
+                        expect(returned).to(contain(_OVER_LIMIT))
 
                     with it("should leave the operation that passes the rule out"):
                         returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
@@ -310,14 +333,14 @@ with description("a graph"):
 
                     with it("should attach the violation on the returned operation"):
                         returned = json.loads(self.graph.return_nodes())
-                        failure = next(node for node in returned if node["name"] == "failure")
+                        failure = next(node for node in returned if node["name"] == _OVER_LIMIT)
                         attached = [rule for rule in failure["rules"] if rule["name"] == "limit-operation-parameters"]
                         expect(len(attached)).to(equal(1))
                         expect(attached[0]["status"]).to(equal("violating"))
                         expect(len(attached[0]["violations"])).to(be_above(0))
 
                     with it("should attach that violation on the serialized graph"):
-                        failure = tree_named(self.violation_tree, "failure", "Operation")
+                        failure = tree_named(self.violation_tree, _OVER_LIMIT, "Operation")
                         rule = rule_on(failure, "limit-operation-parameters")
                         expect(rule["status"]).to(equal("violating"))
                         expect(len(rule["violations"])).to(be_above(0))
@@ -372,7 +395,7 @@ with description("a graph"):
 
             with it("should include epic, sub-epic, story, scenario, background, step, and example nodes"):
                 expect(
-                    {"Epic", "SubEpic", "Story", "Scenario", "Background", "Step", "Example"}
+                    {"Epic", "SubEpic", "Story", "Scenario", "Background", "Given", "When", "Then", "Example"}
                     <= owned_types(self.stories_tree, "stories")
                 ).to(equal(True))
 
@@ -436,7 +459,7 @@ with description("a graph"):
                         equal("tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts")
                     )
                     expect(hit["start"]).to(equal(444))
-                    expect(hit["end"]).to(equal(444))
+                    expect(hit["end"]).to(equal(_HANDLE_REQUEST_END))
 
                 with it("should violate the system mechanic on Handle Request"):
                     hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")
@@ -450,7 +473,7 @@ with description("a graph"):
                 with it("should store the system-mechanic span on Handle Request"):
                     hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")["violations"][0]
                     expect(hit["start"]).to(equal(444))
-                    expect(hit["end"]).to(equal(444))
+                    expect(hit["end"]).to(equal(_HANDLE_REQUEST_END))
 
                 with it("should leave verb-noun format passing on Submit Order"):
                     expect(rule_on(self.submit_order, "verb-noun-format")["status"]).to(equal("passing"))
@@ -500,7 +523,7 @@ with description("a graph"):
                                 {
                                     "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
                                     "start": 444,
-                                    "end": 444,
+                                    "end": _HANDLE_REQUEST_END,
                                 }
                             )
                         )
@@ -527,7 +550,7 @@ with description("a graph"):
                                 {
                                     "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
                                     "start": 429,
-                                    "end": 429,
+                                    "end": 435,
                                 }
                             )
                         )
@@ -567,13 +590,13 @@ with description("a graph"):
                     expect(direct_child(self.stories_tree, "Story", "Scenario")["type"]).to(equal("Scenario"))
 
                 with it("should parent the step on its scenario"):
-                    expect(direct_child(self.stories_tree, "Scenario", "Step")["type"]).to(equal("Step"))
+                    expect(direct_child(self.stories_tree, "Scenario", "Step")["type"] in _STEP_TYPES).to(equal(True))
 
                 with it("should list Create account steps in source order"):
                     steps = [
                         child["name"]
                         for child in tree_named(self.stories_tree, "Create account", "Scenario")["children"]
-                        if child["type"] == "Step"
+                        if child["type"] in _STEP_TYPES
                     ]
                     expect(steps).to(
                         equal(
@@ -806,18 +829,21 @@ with description("a graph"):
                     with it("should leave entity roots out of the aggregate results"):
                         expect("EntityRoot" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
 
-        with context("with behavior-driven development that has no specs"):
+        with context("with behavior-driven development that has one story spec without describes"):
             with before.all:
                 self.bdd_tree = self.graph.practice("bdd").root_node.serialize()
 
-            with it("should count zero specs"):
-                expect(tree_count(self.bdd_tree, "Spec")).to(equal(0))
+            with it("should count one spec"):
+                expect(tree_count(self.bdd_tree, "Spec")).to(equal(1))
 
-            with it("should have no edges"):
-                expect(tree_names(self.bdd_tree)).to(equal([]))
+            with it("should own the server story spec"):
+                expect(tree_names(self.bdd_tree)).to(equal(["authenticate_user.story.server.spec"]))
 
-            with it("should have no edge types"):
-                expect(self.graph.practice("bdd").edge_type_kinds).to(equal([]))
+            with it("should count zero descriptions"):
+                expect(tree_count(self.bdd_tree, "Description")).to(equal(0))
+
+            with it("should have only the owns edge type"):
+                expect(self.graph.practice("bdd").edge_type_kinds).to(equal(["owns"]))
 
             with context("with the practice selected"):
                 with before.all:
@@ -842,8 +868,8 @@ with description("a graph"):
                     with it("should leave descriptions out of the node filter"):
                         expect("Description" in self.graph.filter.node_types).to(equal(False))
 
-                    with it("should offer no relationships"):
-                        expect(self.graph.filter.relationships).to(equal([]))
+                    with it("should offer only owns"):
+                        expect(self.graph.filter.relationships).to(equal(["owns"]))
 
                     with it("should leave descriptions out of the results"):
                         expect("Description" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
@@ -881,7 +907,7 @@ with description("a scenario"):
             self.scenario.populate()
 
         with it("should list the steps in source order"):
-            names = [child["name"] for child in self.scenario.serialize()["children"]]
+            names = tree_names(self.scenario.serialize())
             expect(names).to(equal([self.given.name, self.when.name, self.then.name]))
 
     with context("with an invoked operation recorded before an earlier definition"):

@@ -42,16 +42,19 @@ class SpecFixture:
 
 
 fixture = SpecFixture()
+_DISCOVERY_TITLE = "# Story Map — Product / Feature Name"
 
 
 with description("a Markdown document") as self:
     with before.each:
         self.markdown = MarkdownStoryModel()
 
-    with it("should contain no headings"):
+    with it("should contain only the story map title heading"):
+        # A map without scenarios renders as the discovery story-map document (title, sources, scope).
         empty_story_map = StoryModel()
         text = self.markdown.render(empty_story_map)
-        expect(text.count("#")).to(equal(0))
+        top_headings = [line for line in text.splitlines() if line.startswith("# ")]
+        expect(top_headings).to(equal([_DISCOVERY_TITLE]))
 
     with context(
         "that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic"
@@ -130,9 +133,12 @@ with description("a Markdown document") as self:
                 self.source.epics.pop(0)
                 self.new_text = self.markdown.render(self.source)
 
-            with it("should contain 3 top-level headings"):
+            with it("should contain 3 top-level epic headings"):
+                # No scenarios remain, so the map renders as the discovery document under its title.
                 top_headings = [
-                    l for l in self.new_text.splitlines() if l.startswith("# ")
+                    l
+                    for l in self.new_text.splitlines()
+                    if l.startswith("# ") and l != _DISCOVERY_TITLE
                 ]
                 expect(top_headings).to(have_len(3))
 

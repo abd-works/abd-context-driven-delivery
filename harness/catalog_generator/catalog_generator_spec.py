@@ -53,17 +53,17 @@ with description("Build Run Request From Live Toolset Manifest"):
             expect(req["action"]).to(equal("guidance"))
             expect("arguments" in req).to(equal(False))
 
-        with it("fills Generate kit generate with a tools argument"):
+        with it("fills Generate kit generate with a guidance argument"):
             req = build_run_request(Generate, action="generate")
             expect(req["toolset"]).to(equal("generate.generate:Generate"))
             expect(req["action"]).to(equal("generate"))
-            expect("tools" in req["arguments"]).to(be_true)
+            expect("guidance" in req["arguments"]).to(be_true)
 
         with it("routes Stories generate through the Generate kit so action generate is live"):
             req = build_run_request(Stories, action="generate", fidelity="story_map")
             expect(req["toolset"]).to(equal("generate.generate:Generate"))
             expect(req["action"]).to(equal("generate"))
-            host = req["arguments"]["tools"][0]
+            host = req["arguments"]["guidance"][0]
             expect(host["toolset"]).to(equal("cdd_guidance.practices.stories.stories:Stories"))
             expect(host["context"]["fidelity"]).to(equal("story_map"))
 

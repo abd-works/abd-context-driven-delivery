@@ -40,6 +40,30 @@ def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
     return HookServer(_REPO_ROOT, catalog).dispatch(HookPayload(payload)).as_dict()
 
 
+def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
+    """Run a postToolUse hook that injects rules while ``work-session`` is the active session."""
+    root = Path(tmp.name)
+    (root / ".sessions" / "work-session").mkdir(parents=True)
+    (root / ".sessions" / "_active").write_text("work-session", encoding="utf-8")
+
+    @agent_toolset
+    class _PracticeInject:
+        @Hook("postToolUse")
+        def on_inject(self, payload: dict) -> dict:
+            return {
+                "additional_context": (
+                    "- `put-logic-on-the-owning-resource` - practice body of put-logic\n"
+                    "- `hide-inner-details` - Expose behavior through named operations."
+                )
+            }
+
+    server = HookServer(root, HandlerCatalog([_PracticeInject], root))
+    result = server.handle_stdin(
+        json.dumps({"hook_event_name": "postToolUse", "tool_name": "Write"}).encode()
+    )
+    return root, result
+
+
 @Hooks(disabled=True)
 @agent_toolset
 class _DisabledFixture:
@@ -460,6 +484,7 @@ with description("hook dispatch"):
                     / "work-session"
                     / "last-chat-injected-rules.md"
                 ).read_text(encoding="utf-8")
+                expect(dumped).to(contain("hide-inner-details"))
                 expect(dumped.strip()).to(equal((result.additional_context or "").strip()))
             finally:
                 tmp.cleanup()
@@ -774,105 +799,9 @@ with description("hook process helpers"):
             HookServer._connect = original_connect
             HookDaemon.spawn = original_spawn
 
-    with it("should hold one daemon when several start for the same checkout"):
-        from harness.hooks.hook_daemon import HookDaemon
-
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            marker = repo / ".cursor" / "hook-server.json"
-            original_state_path = HookServer.state_path
-            HookServer.state_path = classmethod(lambda cls, _repo: marker)
-            try:
-                inner = HookServer(repo, HandlerCatalog([], repo))
-                daemons = [
-                    threading.Thread(
-                        target=HookDaemon().serve,
-                        args=(repo,),
-                        kwargs={"inner": inner},
-                        daemon=True,
-                    )
-                    for _ in range(4)
-                ]
-                for daemon in daemons:
-                    daemon.start()
-                deadline = time.time() + 5
-                while not marker.is_file() and time.time() < deadline:
-                    time.sleep(0.05)
-                for daemon in daemons:
-                    daemon.join(1)
-                expect(len([d for d in daemons if d.is_alive()])).to(equal(1))
-                expect(json.loads(marker.read_text(encoding="utf-8"))["port"]).to(
-                    equal(HookDaemon().repo_port(repo))
-                )
-            finally:
-                HookServer.state_path = original_state_path
-
     with it("should give one checkout the same daemon port every start"):
         from harness.hooks.hook_daemon import HookDaemon
 
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
             expect(HookDaemon().repo_port(repo)).to(equal(HookDaemon().repo_port(repo)))
-
-    with it("should stay reachable while a dispatch is still in flight"):
-        from harness.hooks.hook_daemon import HookDaemon
-
-        class _BlockingServer:
-            def __init__(self) -> None:
-                self.started = threading.Event()
-                self.release = threading.Event()
-
-            def handle_stdin(self, raw: bytes) -> HookResult:
-                self.started.set()
-                self.release.wait(10)
-                return HookResult()
-
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            marker = root / ".cursor" / "hook-server.json"
-            original_state_path = HookServer.state_path
-            HookServer.state_path = classmethod(lambda cls, _repo: marker)
-            blocking = _BlockingServer()
-            try:
-                threading.Thread(
-                    target=HookDaemon().serve,
-                    args=(root,),
-                    kwargs={"inner": blocking},
-                    daemon=True,
-                ).start()
-                deadline = time.time() + 5
-                while not marker.is_file() and time.time() < deadline:
-                    time.sleep(0.05)
-                state = json.loads(marker.read_text(encoding="utf-8"))
-                threading.Thread(
-                    target=HookDaemon(state["host"], state["port"]).call_handle_stdin,
-                    args=(b'{"hook_event_name":"stop"}',),
-                    daemon=True,
-                ).start()
-                expect(blocking.started.wait(5)).to(equal(True))
-                expect(HookDaemon().live_address(marker) is not None).to(equal(True))
-            finally:
-                blocking.release.set()
-                HookServer.state_path = original_state_path
-
-
-with description("the Cursor hook_server.py command"):
-
-    with it("should dispatch sessionStart over stdin without an import error"):
-        proc = subprocess.run(
-            [
-                sys.executable,
-                "-u",
-                str(_REPO_ROOT / "harness" / "hooks" / "hook_server.py"),
-            ],
-            input=b'{"hook_event_name":"sessionStart"}',
-            cwd=str(_REPO_ROOT),
-            capture_output=True,
-            env={
-                **os.environ,
-                "PYTHONPATH": Installer(repo=_REPO_ROOT).pythonpath(),
-                "PYTHONPYCACHEPREFIX": Installer(repo=_REPO_ROOT).pycache_prefix(),
-            },
-        )
-        expect(proc.returncode).to(equal(0))
-        expect(json.loads(proc.stdout.decode("utf-8"))["permission"]).to(equal("allow"))

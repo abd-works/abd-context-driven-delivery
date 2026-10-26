@@ -62,7 +62,7 @@ with description("PracticeGuidance operations for iterate"):
     with it("should not expose iterate on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
-                "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
+                "cdd_guidance.builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
         practice = cls()

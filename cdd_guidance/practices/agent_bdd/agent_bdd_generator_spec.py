@@ -55,14 +55,17 @@ def _expand_action(
     context: dict[str, Any] | None = None,
     arguments: dict[str, Any] | None = None,
 ) -> Any:
-    return instance.instructions[action_name].expand(
+    from harness.agent_tools.agent_tools import AgentInstructions
+
+    func = getattr(type(instance), action_name)
+    return AgentInstructions.for_callable(func, instance).expand(
         context or {},
         arguments or {},
     )
 
 
 def _assert_text_inlined(instructions: str, source: str) -> None:
-    expect(source in instructions).to(be_true)
+    expect(source.strip() in instructions).to(be_true)
 
 
 with description("AgentBdd action expansion"):

@@ -9,6 +9,7 @@ for path in (_HERE, _REPO):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
+from expects import contain, equal, expect
 from mamba import context, description, it
 
 from harness.graph.stories_example_harness import assert_stories_example_pair, assert_stories_ts_pair
@@ -37,12 +38,13 @@ with description("stories TypeScript .examples (faultyAsset.ts)"):
             assert_stories_example_pair("gwt-steps-trace-to-domain-operations")
 
     with context("vocabulary-traces-to-domain-source"):
-        with it("should flag technical story names"):
-            assert_stories_ts_pair(
-                "vocabulary-traces-to-domain-source",
-                'function story(n,f){f()}\nstory("Update DTO", () => {})\n',
-                'function story(n,f){f()}\nstory("Submit Order", () => {})\n',
-            )
+        # The executable name check was retired in 49bec82f; the rule is a prompt the agent judges.
+        with it("should apply to stories as a prompt rule with no executable check"):
+            from cdd_guidance.practices.stories.rules import BY_SLUG
+            from harness.graph.schema_rules import slugs_for_type
+
+            expect("vocabulary-traces-to-domain-source" in BY_SLUG).to(equal(False))
+            expect(slugs_for_type("stories", "Story")).to(contain("vocabulary-traces-to-domain-source"))
 
 
 with description("stories TypeScript .examples (folders)"):

@@ -63,6 +63,7 @@ with description("SketchStoryModel"):
         results = Render().render(
             "cdd_guidance.practices.stories.stories:Stories",
             format="markdown",
+            paths=[],
             content=_SKETCH,
             source="sketch",
         )

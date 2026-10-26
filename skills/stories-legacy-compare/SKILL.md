@@ -89,6 +89,13 @@ Copy this checklist and tick it off for each sub-epic:
 9. **Report.**
    - For each scenario and step, give: pml-my pass/fail, pml-web pass/fail, reading match, write match, structure match.
    - Say which side to fix for each failure. Publish the assert log, fix, then go back to step 6 for the rerun.
+   - **Every miss is a missing test on another layer.** Before fixing pml-web code for a failure, add the test that should have caught it, at the layer that owns the behaviour, then fix the code until that test and the compare both pass:
+     - Domain behaviour (rules, refusals, messages, stored values): the story markdown, then the shared story (run by the domain and server specs).
+     - HTTP-only results (status, cookies, redirects): the server spec.
+     - Screen-only interaction or display (a control, a label, a carried notice): a scenario in the sub-epic's existing Playwright screen story.
+     - Pure look (fonts, sizes, spacing): CSS only; the legacy-compare look and style checks are its spec.
+     - One miss can need more than one layer: when a screen shows data or a rule the domain owns, add the shared story test for the behaviour and the Playwright scenario for the screen.
+     - When pml-my contradicts a story, the story is wrong: change the markdown and every tier with it, and record the evidence ("observed: pml-my …").
    - To watch a single system live instead of replaying it, Playwright's UI mode works on this tier as is: `npx playwright test -c playwright.legacy-compare.config.ts --ui`.
 
 ## Run modes
