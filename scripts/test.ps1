@@ -3,8 +3,10 @@
 # description / context / it lines, then the failure list.
 # Story files are Mamba with a different loader, so they go through story_test.
 # Agentic BDD (*_agent_spec.py that drive agent_bdd) stays out of this pass.
+# Heavy specs (*_heavy_spec.py) drive a browser, start servers or subprocesses,
+# or build indexes; they run only with -Suite heavy so the default pass stays fast.
 param(
-    [ValidateSet("vanilla", "agent")]
+    [ValidateSet("vanilla", "heavy", "agent")]
     [string]$Suite = "vanilla"
 )
 
@@ -65,6 +67,11 @@ function Test-AgenticBdd {
     return $Name -match '(?<!sub_)agent_spec\.py$'
 }
 
+function Test-Heavy {
+    param([string]$Name)
+    return $Name -like "*_heavy_spec.py"
+}
+
 function Get-RelativePath {
     param([string]$FullName)
     return $FullName.Substring($repo.Length).TrimStart('\', '/').Replace('\', '/')
@@ -102,7 +109,8 @@ try {
     if ($Suite -eq "vanilla") {
         $stories = @(Get-RepoFiles { param($name) $name -like "*_story.test.py" })
         $specs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
-            -not (Test-AgenticBdd ([IO.Path]::GetFileName($_)))
+            $name = [IO.Path]::GetFileName($_)
+            -not (Test-AgenticBdd $name) -and -not (Test-Heavy $name)
         })
         $storyModule = Join-Path $repo "cdd_guidance\practices\stories\templates\py"
         $savedPath = $env:PYTHONPATH
@@ -120,6 +128,16 @@ try {
             if ($relative) { $failures.Add($relative) | Out-Null }
         }
         $total = @($stories).Count + @($specs).Count
+    } elseif ($Suite -eq "heavy") {
+        $heavySpecs = @(Get-RepoFiles { param($name) Test-Heavy $name })
+        $heavyFailures = Invoke-Reported "Heavy specs" $heavySpecs {
+            param($relative)
+            & $mamba --format documentation $relative
+        }
+        foreach ($relative in @($heavyFailures)) {
+            if ($relative) { $failures.Add($relative) | Out-Null }
+        }
+        $total = @($heavySpecs).Count
     } else {
         $agentSpecs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
             Test-AgenticBdd ([IO.Path]::GetFileName($_))
