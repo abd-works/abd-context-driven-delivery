@@ -80,6 +80,9 @@ scripts/.run/
 _*
 !**/__init__.py
 !**/__main__.py
+# Rule fixture folders are source, not scratch.
+!**/_examples/
+!**/_examples/**
 call_miro.py
 count_all.py
 extract_ids.py

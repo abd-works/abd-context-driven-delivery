@@ -4,43 +4,34 @@ from __future__ import annotations
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-_PUBLIC_OP_LIMIT = 7
 _REPOSITORY_CLIENT_BUDGET = 20
-_AGGREGATE_BUDGET = 18
+_CLASS_BUDGET = 9
 
 
 def _public_op_budget(class_name: str) -> int:
     if class_name.endswith("Repository") or class_name.endswith("Client"):
         return _REPOSITORY_CLIENT_BUDGET
-    return _AGGREGATE_BUDGET
+    return _CLASS_BUDGET
 
 
-def _accessor_property_key(name: str) -> str | None:
-    if name.startswith("get") and len(name) > 3 and name[3].isupper():
-        return name[3:]
-    if name.startswith("set") and len(name) > 3 and name[3].isupper():
-        return name[3:]
-    return None
+def _is_accessor(name: str) -> bool:
+    """getX / setX / isX — property access, not behavior."""
+    for prefix in ("get", "set", "is"):
+        if name.startswith(prefix) and len(name) > len(prefix) and name[len(prefix)].isupper():
+            return True
+    return False
 
 
 def _public_operations_for_budget(shapes: list[dict]) -> list[str]:
-    """Count public behavior — not getters/setters (primitive accessors)."""
-    singles: list[str] = []
-    accessor_groups: dict[str, list[str]] = {}
-    for shape in shapes:
-        name = str(shape["name"])
-        if name.startswith("_") or name in {"constructor", "__init__", "get", "set"}:
-            continue
-        if shape.get("is_property"):
-            continue
-        key = _accessor_property_key(name)
-        if key:
-            accessor_groups.setdefault(key, []).append(name)
-            continue
-        if name.startswith("is") and len(name) > 2:
-            continue
-        singles.append(name)
-    return singles + [group[0] for group in accessor_groups.values()]
+    """Public behavior only: property getters and setters do not count."""
+    return [
+        str(shape["name"])
+        for shape in shapes
+        if not str(shape["name"]).startswith("_")
+        and shape["name"] not in {"constructor", "__init__", "get", "set"}
+        and not shape.get("is_property")
+        and not _is_accessor(str(shape["name"]))
+    ]
 
 
 class KeepClassesSingleResponsibility(PracticeGraphRule):
