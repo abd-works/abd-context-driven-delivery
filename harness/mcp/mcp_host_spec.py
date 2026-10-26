@@ -481,6 +481,118 @@ with description("an MCP host tool ping") as self:
         expect(self.host.dispatch("hosting-demo.increment", {"step": 1})).to(equal(1))
 
 
+class UserHome:
+    """Points HOME, USERPROFILE and APPDATA at a temp folder so specs never touch the user's own config."""
+
+    _KEYS = ("HOME", "USERPROFILE", "APPDATA")
+
+    def __init__(self) -> None:
+        self.root = Path(tempfile.mkdtemp(prefix="cdd-user-home-"))
+        self._prior = {key: os.environ.get(key) for key in self._KEYS}
+
+    def enter(self) -> Path:
+        os.environ["HOME"] = str(self.root)
+        os.environ["USERPROFILE"] = str(self.root)
+        os.environ["APPDATA"] = str(self.root / "AppData" / "Roaming")
+        return self.root
+
+    def leave(self) -> None:
+        for key, value in self._prior.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        shutil.rmtree(self.root, ignore_errors=True)
+
+
+def _user_level_installation(ide: str) -> McpInstallation:
+    installation = McpInstallation(ide, _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+    installation._is_temp_path = lambda path: False
+    for tool in SampleMcpOps().tools.values():
+        installation.record_operation(tool)
+    return installation
+
+
+with description("an MCP install that deploys to the IDE's user-level config") as self:
+    with before.each:
+        self.home = UserHome()
+        self.root = self.home.enter()
+
+    with after.each:
+        self.home.leave()
+
+    with context("for Cursor"):
+        with before.each:
+            self.config = self.root / ".cursor" / "mcp.json"
+            self.config.parent.mkdir(parents=True)
+            self.config.write_text(json.dumps({"mcpServers": {"miro-mcp": {"url": "https://example"}}}), encoding="utf-8")
+            self.installation = _user_level_installation("Cursor")
+            self.installation.write_mcp_manifest()
+            self.servers = json.loads(self.config.read_text(encoding="utf-8"))["mcpServers"]
+
+        with it("should write the cdd server into ~/.cursor/mcp.json"):
+            expect(self.installation.manifest_path).to(equal(self.config))
+            expect("cdd" in self.servers).to(equal(True))
+
+        with it("should keep the user's other servers"):
+            expect("miro-mcp" in self.servers).to(equal(True))
+
+        with it("should name the open project rather than this checkout"):
+            expect(self.servers["cdd"]["cwd"]).to(equal("."))
+            expect(self.servers["cdd"]["env"]["CDD_PROJECT"]).to(equal("."))
+
+        with it("should keep the host pid beside the user config"):
+            expect(self.installation.pid_folder).to(equal(self.root / ".cursor"))
+            expect(self.servers["cdd"]["env"]["CDD_IDE_PATH"]).to(equal(str(self.root / ".cursor")))
+
+    with context("for Claude Code"):
+        with before.each:
+            self.config = self.root / ".claude.json"
+            self.config.write_text(json.dumps({"projects": {"x": {}}, "mcpServers": {}}), encoding="utf-8")
+            self.installation = _user_level_installation("Claude")
+            self.installation.write_mcp_manifest()
+            self.data = json.loads(self.config.read_text(encoding="utf-8"))
+
+        with it("should write the cdd server into ~/.claude.json at user scope"):
+            expect(self.installation.manifest_path).to(equal(self.config))
+            expect("cdd" in self.data["mcpServers"]).to(equal(True))
+
+        with it("should keep Claude Code's own state in that file"):
+            expect(self.data["projects"]).to(equal({"x": {}}))
+
+        with it("should leave out cwd, which Claude Code does not read"):
+            expect("cwd" in self.data["mcpServers"]["cdd"]).to(equal(False))
+            expect(self.data["mcpServers"]["cdd"]["env"]["CDD_PROJECT"]).to(equal("."))
+
+        with it("should keep the host pid in ~/.claude"):
+            expect(self.installation.pid_folder).to(equal(self.root / ".claude"))
+
+    with context("for VS Code"):
+        with before.each:
+            self.installation = _user_level_installation("VS Code")
+            self.installation.write_mcp_manifest()
+            self.config = self.root / "AppData" / "Roaming" / "Code" / "User" / "mcp.json"
+            if sys.platform == "darwin":
+                self.config = self.root / "Library" / "Application Support" / "Code" / "User" / "mcp.json"
+            elif sys.platform != "win32":
+                self.config = Path(os.environ.get("XDG_CONFIG_HOME") or self.root / ".config") / "Code" / "User" / "mcp.json"
+
+        with it("should write the cdd server under servers in the user mcp.json"):
+            expect(self.installation.manifest_path).to(equal(self.config))
+            servers = json.loads(self.config.read_text(encoding="utf-8"))["servers"]
+            expect(servers["cdd"]["env"]["CDD_PROJECT"]).to(equal("${workspaceFolder}"))
+
+    with context("into a temp install tree"):
+        with it("should keep mcp.json in that tree"):
+            tree = Path(tempfile.mkdtemp())
+            try:
+                installation = McpInstallation("Cursor", tree, repo=_REPO_ROOT)
+                expect(installation.manifest_path).to(equal(tree / "mcp.json"))
+                expect(installation.pid_folder).to(equal(tree))
+            finally:
+                shutil.rmtree(tree, ignore_errors=True)
+
+
 with description("an MCP host Cursor has stopped spawning") as self:
     with before.each:
         self._user_mcp = Path.home() / ".cursor" / "mcp.json"

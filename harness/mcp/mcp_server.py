@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import sys
+import tempfile
 import time
 import types as py_types
 from collections.abc import Callable, Mapping, Sequence
@@ -220,7 +221,7 @@ class CursorMcpJson:
         except json.JSONDecodeError:
             path.write_text(text, encoding="utf-8")
             return
-        servers = data.get("mcpServers") or {}
+        servers = data.get("mcpServers") or data.get("servers") or {}
         if not self._nudge_cdd_servers(servers):
             path.write_text(text, encoding="utf-8")
             return
@@ -375,6 +376,50 @@ class McpOperationDefinition:
         return f"Use MCP tool: `{self.mcp_name}{suffix}`"
 
 
+class UserMcpConfig:
+    """The IDE's own user-level MCP config — where CDD deploys its host for every project."""
+
+    def __init__(self, ide: str) -> None:
+        self.ide = ide
+
+    @property
+    def folder(self) -> Path | None:
+        """Holds the host pid and nudge; ``None`` for an IDE with no user-level MCP config."""
+        if self.ide == "Cursor":
+            return Path.home() / ".cursor"
+        if self.ide == "Claude":
+            return Path.home() / ".claude"
+        if self.ide == "VS Code":
+            return self._vscode_user_folder()
+        return None
+
+    @property
+    def path(self) -> Path | None:
+        if self.ide == "Claude":
+            return Path.home() / ".claude.json"
+        folder = self.folder
+        return folder / "mcp.json" if folder is not None else None
+
+    @property
+    def servers_key(self) -> str:
+        return "servers" if self.ide == "VS Code" else "mcpServers"
+
+    @property
+    def project_folder(self) -> str:
+        """The open project as the IDE spells it inside a user-level server entry."""
+        return "${workspaceFolder}" if self.ide == "VS Code" else "."
+
+    def _vscode_user_folder(self) -> Path:
+        if sys.platform == "win32":
+            appdata = os.environ.get("APPDATA")
+            base = Path(appdata) if appdata else Path.home() / "AppData" / "Roaming"
+        elif sys.platform == "darwin":
+            base = Path.home() / "Library" / "Application Support"
+        else:
+            base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+        return base / "Code" / "User"
+
+
 class McpInstallation(Installation):
     """Record ``@Mcp`` ops, write ``mcp.json``, enroll at server start."""
 
@@ -399,11 +444,37 @@ class McpInstallation(Installation):
         self.mcp_operations.append(McpOperationDefinition.from_tool(tool))
 
     @property
+    def user_config(self) -> UserMcpConfig | None:
+        """The IDE's user-level MCP config; ``None`` for a temp install tree or an IDE without one."""
+        config = UserMcpConfig(self.ide)
+        if config.path is None or self._is_temp_path(Path(self.path)):
+            return None
+        return config
+
+    def _is_temp_path(self, path: Path) -> bool:
+        try:
+            resolved = path.resolve()
+            temp = Path(tempfile.gettempdir()).resolve()
+            return resolved == temp or temp in resolved.parents
+        except OSError:
+            return False
+
+    @property
     def manifest_path(self) -> Path:
-        """Cursor reads ``<ide>/mcp.json``; Claude Code reads ``.mcp.json`` at the project root."""
+        """The IDE's user-level MCP config. A temp install tree keeps ``<ide>/mcp.json``
+        (Claude Code: ``.mcp.json`` at the project root) so specs never touch the user's own."""
+        user = self.user_config
+        if user is not None:
+            return user.path
         if self.ide == "Claude":
             return self._project_root() / ".mcp.json"
         return self.path / "mcp.json"
+
+    @property
+    def pid_folder(self) -> Path:
+        """Where the serving host leaves its pid: beside the MCP config it was started from."""
+        user = self.user_config
+        return user.folder if user is not None else Path(self.path)
 
     def write_mcp_manifest(self) -> None:
         if not self.mcp_operations:
@@ -411,7 +482,7 @@ class McpInstallation(Installation):
         dest = self.manifest_path
         dest.parent.mkdir(parents=True, exist_ok=True)
         manifest = self._stdio_manifest()
-        if self.ide == "Claude":
+        if self.ide == "Claude" or self.user_config is not None:
             manifest = self._merged_with_other_servers(dest, manifest)
         text = json.dumps(manifest, indent=2) + "\n"
         if dest.is_file() and dest.read_text(encoding="utf-8") == text:
@@ -438,21 +509,30 @@ class McpInstallation(Installation):
                 "CDD_PROJECT": str(project),
             },
         }
+        user = self.user_config
+        if user is not None:
+            # One user-level entry serves every project, so it names the open project, not this one.
+            server["cwd"] = user.project_folder
+            server["env"]["CDD_PROJECT"] = user.project_folder
+            server["env"]["CDD_IDE_PATH"] = str(user.folder)
         if self.ide == "Claude":
             # Claude Code starts stdio servers from the project root and has no ``cwd`` field.
             del server["cwd"]
-            server["env"]["CDD_IDE_PATH"] = str(Path(self.path).resolve())
-        return {"mcpServers": {"cdd": server}}
+            server["env"].setdefault("CDD_IDE_PATH", str(Path(self.path).resolve()))
+        key = user.servers_key if user is not None else "mcpServers"
+        return {key: {"cdd": server}}
 
     def _merged_with_other_servers(self, dest: Path, manifest: dict[str, Any]) -> dict[str, Any]:
-        """``.mcp.json`` is shared with the project's own servers; replace only ``cdd``."""
+        """The MCP config is shared with other servers (and, in ``~/.claude.json``, the IDE's own
+        state); replace only ``cdd``."""
         try:
             existing = json.loads(dest.read_text(encoding="utf-8")) if dest.is_file() else {}
         except (OSError, json.JSONDecodeError):
             existing = {}
         merged = dict(existing) if isinstance(existing, dict) else {}
-        servers = merged.get("mcpServers")
-        merged["mcpServers"] = {**(servers if isinstance(servers, dict) else {}), **manifest["mcpServers"]}
+        key = next(iter(manifest))
+        servers = merged.get(key)
+        merged[key] = {**(servers if isinstance(servers, dict) else {}), **manifest[key]}
         return merged
 
     def _project_root(self) -> Path:
@@ -474,27 +554,27 @@ class McpInstallation(Installation):
         return self.diagnosis
 
     def cursor_host_is_running(self) -> bool:
-        host_pid = HostPid.from_ide(self.path)
+        host_pid = HostPid.from_ide(self.pid_folder)
         return host_pid.is_this_process or host_pid.is_running()
 
     def ensure_cursor_host(self) -> str:
         if self.ide == "Claude":
             # Claude Code launches the stdio host each session; touching .mcp.json would re-prompt approval.
             return "managed by Claude Code" if self.manifest_path.is_file() else "missing"
-        manifest = self.path / "mcp.json"
+        manifest = self.manifest_path
         spec = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo)).server_entry_from_manifest(
             manifest
         )
         repo_cursor = (Path(self.repo) / ".cursor").resolve() if self.repo is not None else None
         canonical = repo_cursor is not None and Path(self.path).resolve() == repo_cursor
         cursor = CursorMcpJson()
-        if canonical and spec and cursor.sync_user_cursor_server(spec, canonical=True):
+        if self.user_config is None and canonical and spec and cursor.sync_user_cursor_server(spec, canonical=True):
             return self._restart_cursor_host(manifest, cursor)
         if self.cursor_host_is_running():
             return "running"
         if not manifest.is_file():
             return "missing"
-        nudge_file = self.path / NUDGE_NAME
+        nudge_file = self.pid_folder / NUDGE_NAME
         now = time.time()
         try:
             last = float(nudge_file.read_text(encoding="utf-8").strip())
@@ -509,7 +589,7 @@ class McpInstallation(Installation):
     def _restart_cursor_host(self, manifest: Path, cursor: CursorMcpJson) -> str:
         """Bumping the manifest relaunches the host, which drops any reply that host
         still owes a caller, so the host leaves its own restart to a later standup."""
-        if HostPid.from_ide(self.path).is_this_process:
+        if HostPid.from_ide(self.pid_folder).is_this_process:
             return "deferred"
         cursor.touch_mcp_manifest(manifest, bump_env=True)
         return "nudged"
@@ -1200,7 +1280,8 @@ class McpHost:
         path = Path(servers)
         if not path.is_file():
             return {}
-        return json.loads(path.read_text(encoding="utf-8")).get("mcpServers") or {}
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data.get("mcpServers") or data.get("servers") or {}
 
     def _named_cdd_server(self, raw: Mapping[str, Any]) -> dict[str, Any]:
         for name, spec in raw.items():
