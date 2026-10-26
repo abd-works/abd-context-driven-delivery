@@ -395,6 +395,7 @@ with description("an MCP host") as self:
                 )
                 expect(str(result)).not_to(equal(""))
             finally:
+                Session._current = None
                 shutil.rmtree(repo, ignore_errors=True)
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):

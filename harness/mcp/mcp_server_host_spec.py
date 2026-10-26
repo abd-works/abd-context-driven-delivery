@@ -42,7 +42,8 @@ _ECHO_ARGUMENTS = {
     "counted_fields": {"n": 3},
     "listed_fields": {"ns": [1, 2]},
 }
-_PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+_VENV_PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+_PYTHON = _VENV_PYTHON if _VENV_PYTHON.is_file() else Path(sys.executable)
 _PYTHONPATH = ";".join(
     [
         str(_REPO_ROOT),

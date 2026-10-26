@@ -35,7 +35,8 @@ from harness.agent_tools.agent_tools_probe import (
 _AGENT_TOOLS_DIAGNOSTICS_REF = (
     "harness.agent_tools.agent_tools_diagnostics:AgentToolsDiagnostics"
 )
-_PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+_VENV_PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+_PYTHON = _VENV_PYTHON if _VENV_PYTHON.is_file() else Path(sys.executable)
 
 
 def _stdio_params(toolsets: str) -> StdioServerParameters:
