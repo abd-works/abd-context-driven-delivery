@@ -10,6 +10,15 @@ import re
 from pathlib import Path
 
 _RAW_FILE_IO = re.compile(r"\b(?:readFileSync|writeFileSync)\s*\(")
+_STORE_READ = re.compile(r"\b(?:readLowDb|readFileSync|JSONFilePreset|JSONFileSyncPreset)\s*\(")
+_ANY_BODY_READ = re.compile(r"\breq\.body\b")
+_ANY_REQUEST_READ = re.compile(r"\breq\.(?:body|query|params|headers|cookies)\b")
+_JSON_PATH_CONSTANT = re.compile(r"\bconst\s+(\w+)\s*=[^;\n]*\.json['\"`]")
+_MODULE_FUNCTION = re.compile(r"^(?:export\s+)?function\s+(\w+)\s*\(", re.MULTILINE)
+_TOP_LEVEL_HELPER = re.compile(r"^(?:export\s+)?(?:async\s+)?function\s+(\w+)|^(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s*)?\(", re.M)
+_TOP_LEVEL_END = re.compile(r"^\};?\s*$", re.M)
+_DOMAIN_CALL = re.compile(r"\brepositories\.\w+(?:\.\w+)?")
+_HAND_WRITTEN_ROW = re.compile(r"\bscenario\(\s*(['\"])(?P<outline>[^'\"]+?):\s+(?P<row>[^'\"]+)\1")
 _SCHEMA_PARSE = re.compile(r"(?<!JSON)\.(?:safe)?[pP]arse\s*\(")
 _LOOSE_BODY_READ = re.compile(r"\breq\.body(?:\??\.\w+|\s*\[)|=\s*req\.body\b(?!\s*\?\?)")
 _AD_HOC_THROW = re.compile(r"\bthrow\s*(?:\{|['\"`])")
@@ -26,16 +35,33 @@ _TEST_SETUP_GLOBS = ("tests/**/vitest.setup.ts", "tests/**/repositories.ts", "te
 
 
 def node_root_facts(text: str, setup_text: str) -> dict:
-    """What a `-node.ts` file says about its node repositories and its errors."""
-    repositories = _node_repository_bodies(text)
+    """What a `-node.ts` file says about its store-reading repositories, posted-body reads, and errors."""
+    store_readers = [
+        (name, code)
+        for name, body in _node_repository_bodies(text)
+        if (code := _store_code(text, body)) is not None
+    ]
     return {
         "node_repositories": [
-            {"name": name, "raw_io": _hits(_RAW_FILE_IO, body), "parses_on_read": bool(_SCHEMA_PARSE.search(body))}
-            for name, body in repositories
+            {"name": name, "raw_io": _hits(_RAW_FILE_IO, code), "parses_on_read": bool(_SCHEMA_PARSE.search(code))}
+            for name, code in store_readers
         ],
-        "unreset_instances": unreset_instances(text, [name for name, _body in repositories], setup_text),
+        "unreset_instances": unreset_instances(text, [name for name, _code in store_readers], setup_text),
+        "unparsed_body_reads": [
+            _line_of(text, match.start()) for match in _ANY_BODY_READ.finditer(text) if not _inside_schema_parse(text, match.start())
+        ],
         **error_handling_facts(text),
     }
+
+
+def core_request_reads(root: Path, folder: str) -> list[list]:
+    """[file, line, code] for each request read in the framework-free core `<folder>/<aggregate>.ts`."""
+    core = root / folder / f"{Path(folder).name}.ts"
+    if not core.is_file():
+        return []
+    text = core.read_text(encoding="utf-8")
+    relative = core.relative_to(root).as_posix()
+    return [[relative, _line_of(text, match.start()), match.group(0)] for match in _ANY_REQUEST_READ.finditer(text)]
 
 
 def route_facts(text: str) -> dict:
@@ -83,8 +109,8 @@ def test_setup_text(root: Path) -> str:
     return "\n".join(parts)
 
 
-def story_shared_facts(text: str) -> dict:
-    """Context casts and asserting Givens in a `*.story.shared.ts` file."""
+def story_file_facts(text: str) -> dict:
+    """What a LERN story file (shared, server, domain, or playwright) says about its steps and helpers."""
     asserting = []
     for match in _GIVEN_START.finditer(text):
         body = _callback_body(text, match.end())
@@ -93,7 +119,51 @@ def story_shared_facts(text: str) -> dict:
     return {
         "context_casts": [[_line_of(text, match.start()), match.group(0)] for match in _CTX_CAST.finditer(text)],
         "asserting_givens": asserting,
+        "domain_wrapping_helpers": _domain_wrapping_helpers(text),
+        "hand_written_rows": [
+            [_line_of(text, match.start()), match.group("outline"), match.group("row")]
+            for match in _HAND_WRITTEN_ROW.finditer(text)
+        ],
     }
+
+
+def _domain_wrapping_helpers(text: str) -> list[list]:
+    """[line, helper, repository calls] for each top-level helper that reaches the repositories."""
+    found: list[list] = []
+    for match in _TOP_LEVEL_HELPER.finditer(text):
+        end = _TOP_LEVEL_END.search(text, match.end())
+        calls = sorted(set(_DOMAIN_CALL.findall(text[match.end():end.start() if end else len(text)])))
+        if calls:
+            found.append([_line_of(text, match.start()), match.group(1) or match.group(2), calls])
+    return found
+
+
+def _store_code(text: str, class_body: str) -> str | None:
+    """The code a node repository reads its store with: its body plus the same-file functions it calls.
+
+    None when the class never touches a store, as with a wrapper that delegates to another repository.
+    """
+    path_names = _JSON_PATH_CONSTANT.findall(text)
+    helpers = {
+        match.group(1): body
+        for match in _MODULE_FUNCTION.finditer(text)
+        if (body := _braced_body(text, text.find("{", match.end()))) is not None
+    }
+    called = [body for name, body in helpers.items() if re.search(rf"\b{re.escape(name)}\s*\(", class_body)]
+    code = "\n".join([class_body, *called])
+    touches_store = _STORE_READ.search(code) or any(re.search(rf"\b{re.escape(name)}\b", code) for name in path_names)
+    return code if touches_store else None
+
+
+def _inside_schema_parse(text: str, index: int) -> bool:
+    """True when this `req.body` is an argument of a `.parse(` / `.safeParse(` call that is still open."""
+    statement_start = max(text.rfind(";", 0, index), text.rfind("{\n", 0, index), text.rfind("=>", 0, index))
+    before = text[statement_start + 1:index]
+    call = _SCHEMA_PARSE.search(before)
+    if call is None:
+        return False
+    opened = before[call.end():]
+    return opened.count("(") + 1 > opened.count(")")
 
 
 def _line_of(text: str, index: int) -> int:
@@ -124,6 +194,8 @@ def _callback_body(text: str, start: int) -> str | None:
 
 
 def _braced_body(text: str, open_brace: int) -> str | None:
+    if open_brace < 0:
+        return None
     depth = 0
     for index in range(open_brace, len(text)):
         if text[index] == "{":

@@ -32,6 +32,14 @@ def scenario_for_graph_node(node, context) -> Scenario | None:
     return scenario_named(model, node.name)
 
 
+def story_of(model: StoryModel, scenario: Scenario):
+    """The story that owns ``scenario``; its Background state applies to the scenario too."""
+    for story, candidate in iter_scenarios(model):
+        if candidate is scenario:
+            return story
+    return None
+
+
 def step_from_model(scenario: Scenario, node, context) -> Step | None:
     text = context.step_text(node)
     keyword = context.step_keyword(node)

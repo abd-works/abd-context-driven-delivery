@@ -770,7 +770,7 @@ def _epic_for(step, epics: list):
 
 def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
     """LERN overlay: schema tier nodes from repo files, wired with schema relationship kinds, carrying tier facts."""
-    from cdd_guidance.patterns.lern_domain_driven.tier_facts import story_shared_facts, test_setup_text
+    from cdd_guidance.patterns.lern_domain_driven.tier_facts import story_file_facts, test_setup_text
 
     ddd = graph.practice("ddd") if "ddd" in graph.practices else None
     stories = graph.practice("stories") if "stories" in graph.practices else None
@@ -800,6 +800,7 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
                 continue
             artifacts[semantic] = _lern_ddd_file_node(ddd, relative, semantic)
             _lern_schema_edge(ddd, "owns", aggregate, artifacts[semantic])
+        _lern_other_node_files(root, folder, slug, ddd, aggregate)
 
         folder_entity_roots = [node for node in entity_roots if _aggregate_folder(node.source.file) == folder]
         folder_repositories = [node for node in repositories if _aggregate_folder(node.source.file) == folder]
@@ -837,24 +838,39 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
         if not file.is_file():
             continue
         relative = file.relative_to(root).as_posix()
-        if file.name.endswith(".story.shared.ts"):
-            _lern_story_file(stories, relative, "StoryShared")
-            shared = stories.by_id.get(f"stories:StoryShared:{relative}")
-            for key, value in story_shared_facts(file.read_text(encoding="utf-8")).items():
-                shared.set_fact(key, value)
-        elif file.name.endswith(".story.server.spec.ts"):
-            _lern_story_file(stories, relative, "ServerSpec")
-        elif file.name.endswith(".story.domain.spec.ts"):
-            _lern_story_file(stories, relative, "DomainSpec")
-        elif "playwright" in file.name and file.suffix == ".ts":
-            _lern_story_file(stories, relative, "PlaywrightSpec")
+        semantic = _lern_story_semantic(file)
+        if semantic is None:
+            continue
+        _lern_story_file(stories, relative, semantic)
+        story_file = stories.by_id[f"stories:{semantic}:{relative}"]
+        for key, value in story_file_facts(file.read_text(encoding="utf-8")).items():
+            story_file.set_fact(key, value)
+
+
+def _lern_story_semantic(file: Path) -> str | None:
+    if file.name.endswith(".story.shared.ts"):
+        return "StoryShared"
+    if file.name.endswith(".story.server.spec.ts"):
+        return "ServerSpec"
+    if file.name.endswith(".story.domain.spec.ts"):
+        return "DomainSpec"
+    if "playwright" in file.name and file.suffix == ".ts":
+        return "PlaywrightSpec"
+    return None
 
 
 def _set_tier_facts(root: Path, folder: str, aggregate, node_root, route, repositories, setup_text: str) -> None:
     """Read each LERN tier file once and record what its rules need on the node it became."""
-    from cdd_guidance.patterns.lern_domain_driven.tier_facts import node_root_facts, route_facts, unreset_instances, web_path_literals
+    from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
+        core_request_reads,
+        node_root_facts,
+        route_facts,
+        unreset_instances,
+        web_path_literals,
+    )
 
     aggregate.set_fact("web_path_literals", web_path_literals(root, folder))
+    aggregate.set_fact("core_request_reads", core_request_reads(root, folder))
     tiers = ((node_root, lambda text: node_root_facts(text, setup_text)), (route, route_facts))
     for tier_node, facts_of in tiers:
         if tier_node is None:
@@ -960,6 +976,18 @@ def _lern_schema_edge(practice, kind: str, parent, child) -> None:
 
     order = 2 if overlay_edge_display(kind) == "direct" else 5
     _edge(practice, kind, order, overlay_edge_display(kind), parent, child)
+
+
+def _lern_other_node_files(root: Path, folder: str, slug: str, ddd, aggregate) -> None:
+    """Every other `*-node.ts` in the aggregate folder is node-tier code too (e.g. `iccid-inventory-node.ts`)."""
+    folder_path = root / folder
+    if not folder_path.is_dir():
+        return
+    for file in sorted(folder_path.glob("*-node.ts")):
+        if file.name == f"{slug}-node.ts":
+            continue
+        node = _lern_ddd_file_node(ddd, file.relative_to(root).as_posix(), "NodeRoot")
+        _lern_schema_edge(ddd, "owns", aggregate, node)
 
 
 def _lern_ddd_file_node(practice, relative: str, semantic: str, display_name: str | None = None):

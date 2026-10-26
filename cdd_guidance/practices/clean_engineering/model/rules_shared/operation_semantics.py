@@ -19,7 +19,8 @@ _LIFECYCLE_WITH_VALIDATION = frozenset(
     }
 )
 
-_ROUTE_REGISTRAR = re.compile(r"^register\w+Route$")
+# A route registrar wires one route or a group of routes (`registerChoosePlanRoute`, `registerSelfCareRoutes`).
+_ROUTE_REGISTRAR = re.compile(r"^register\w+Routes?$")
 
 
 class KeepOperationsSingleResponsibility(PracticeGraphRule):

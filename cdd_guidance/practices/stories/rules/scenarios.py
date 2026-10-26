@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 from harness.graph.practice_rule import PracticeGraphRule
-from harness.graph.story_model_lookup import example_count, scenario_for_graph_node
+from harness.graph.story_model_lookup import example_count, scenario_for_graph_node, story_of
 
 _CAMEL_STEP = re.compile(r"^[a-z]+(?:[A-Z][a-z0-9]*)+$")
 
@@ -97,7 +97,10 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
                 concepts.update(child.concepts)
         if not concepts:
             return []
-        if example_count(scenario) == 0 and context.child_count(node, ("examples",)) == 0:
+        story = story_of(context.story_model(), scenario)
+        backgrounds = [*getattr(scenario, "backgrounds", []), *getattr(story, "backgrounds", [])]
+        background_examples = sum(example_count(background) for background in backgrounds)
+        if example_count(scenario) == 0 and background_examples == 0 and context.child_count(node, ("examples",)) == 0:
             return [
                 f"Scenario {node.name!r} names domain concepts {sorted(concepts)} but has no examples table."
             ]

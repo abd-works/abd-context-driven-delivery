@@ -18,6 +18,31 @@ from cdd_guidance.practices.stories.model.story_model import Epic, Step, StepTyp
 _EXPORT_CONST = re.compile(r"export const (\w+)")
 _DOMAIN_CLASS = re.compile(r"\bclass\s+([A-Z]\w*)\b")
 _ORCHESTRATION_EXPORT = re.compile(r"export function (?:activate|handle|process)\w*\s*\(")
+_NAMED_IMPORT = re.compile(r"import\s*(?:type\s*)?\{(?P<names>[^}]+)\}\s*from\s*['\"](?P<module>[^'\"]+)['\"]")
+
+
+def _imported_modules(text: str) -> dict[str, str]:
+    """Each name the story file imports, mapped to the module it comes from."""
+    imported: dict[str, str] = {}
+    for match in _NAMED_IMPORT.finditer(text):
+        for part in match.group("names").split(","):
+            name = part.strip().split(" as ")[-1].removeprefix("type ").strip()
+            if name:
+                imported.setdefault(name, match.group("module"))
+    return imported
+
+
+_EVIDENCE_LINE = re.compile(r"\*\s*Evidence:\s*([A-Za-z][A-Za-z ,-]*)")
+
+
+def _opening_docblock(lines: list[str]) -> str:
+    """The file's first `/** … */` comment, when it comes before any story."""
+    text = "\n".join(lines)
+    start = text.find("/**")
+    end = text.find("*/", start)
+    if start == -1 or end == -1 or "Story:" in text[start:end]:
+        return ""
+    return text[start:end]
 
 
 class GraphStoryModel:
@@ -59,6 +84,7 @@ class GraphStoryModel:
         source_file, line, end = self._name_span(root, story_file, epic.name, folder)
         epic.source = SourceLocation(source_file, line, end)
         epic.load_map_facts()
+        epic.evidence = self._epic_evidence(root, story_file, epic, top)
         nodes.append(self._row(node_id, epic.name, semantic, source_file, line, end, epic))
         edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
         for child in epic.epics:
@@ -78,8 +104,9 @@ class GraphStoryModel:
         edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
         for background in story.backgrounds:
             self._background(root, file, node_id, background, nodes, edges)
+        scoped = [name for background in story.backgrounds for name in background.examples]
         for scenario in story.scenarios:
-            self._scenario(root, file, node_id, scenario, nodes, edges)
+            self._scenario(root, file, node_id, scenario, nodes, edges, scoped)
 
     def _background(self, root: str, file: str, parent_id: str, background, nodes: list, edges: list) -> None:
         label = background.name or "background"
@@ -92,7 +119,8 @@ class GraphStoryModel:
         for step in background.steps:
             self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
 
-    def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list) -> None:
+    def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list, scoped: list[str] = ()) -> None:
+        """Record the scenario with its own examples and those its story's Background scopes."""
         node_id = f"stories:Scenario:{file}:{scenario.name}"
         line, end = self._source_span(scenario, root, file)
         self._ensure_source(scenario, file, line, end)
@@ -115,7 +143,7 @@ class GraphStoryModel:
         edges.append([parent_id, node_id, "scenarios", 3, "direct"])
         for step in scenario.steps:
             self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
-        for name in scenario.examples:
+        for name in dict.fromkeys([*scenario.examples, *scoped]):
             example_id = f"stories:Example:{file}:{name}"
             nodes.append([example_id, name, "Example", "stories", file or ".", line, end])
             edges.append([node_id, example_id, "examples", 5, "direct"])
@@ -181,6 +209,21 @@ class GraphStoryModel:
             row.extend(["", payload])
         return row
 
+    def _epic_evidence(self, root: str, story_file: str, epic: Epic, top: bool) -> list[str]:
+        """What the epic declares, else the sub-epic file's opening docblock, else the labels its children carry."""
+        if epic.evidence:
+            return list(epic.evidence)
+        if not top and story_file:
+            declared = _EVIDENCE_LINE.search(_opening_docblock(self._file_lines(root, story_file)))
+            if declared:
+                return [part.strip() for part in declared.group(1).split(",") if part.strip()]
+        labels: list[str] = []
+        for child in epic.epics:
+            labels.extend(self._epic_evidence(root, self._file_under(child), child, False))
+        for story in epic.stories:
+            labels.extend(story.evidence)
+        return list(dict.fromkeys(labels))
+
     def _file_under(self, epic: Epic) -> str:
         for story in epic.stories:
             file = self._file(story)
@@ -231,6 +274,7 @@ class GraphStoryModel:
             "export_names": _EXPORT_CONST.findall(text),
             "domain_class_names": _DOMAIN_CLASS.findall(text),
             "exports_orchestration": bool(_ORCHESTRATION_EXPORT.search(text)),
+            "imported_modules": _imported_modules(text),
         }
 
     def _file_lines(self, root: str, file: str) -> list[str]:

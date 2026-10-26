@@ -28,12 +28,26 @@ class NodeRepositoryParsesOnRead(PracticeGraphRule):
 
 
 class PostedBodyParsedInNode(PracticeGraphRule):
-    """A route hands `req` to `{Domain}Node.fromRequest`, which parses the posted body with a Zod schema."""
+    """The posted body is read once, in the node, through a Zod schema.
+
+    A route hands `req` to `{Domain}Node.fromRequest`. A node passes `req.body` straight into a schema
+    `.parse(` / `.safeParse(`. The framework-free core (`<aggregate>.ts`) never touches the request.
+    """
 
     slug = "posted-body-parsed-in-node"
-    node_types = ("Route",)
+    node_types = ("Route", "NodeRoot", "Aggregate")
 
     def check(self, node, context) -> list[str]:
+        if node.type == "Aggregate":
+            return [
+                f"{relative}:{line}: `{code}` in the framework-free core; the node reads the request and hands the core plain values."
+                for relative, line, code in node.get_fact("core_request_reads", [])
+            ]
+        if node.type == "NodeRoot":
+            return [
+                f"{node.source.file}:{line}: `req.body` is read without a schema; pass it straight into the posted schema's `.parse(`."
+                for line in node.get_fact("unparsed_body_reads", [])
+            ]
         return [
             f"{node.source.file}:{line}: `{found}` reads the posted body loosely; pass `req` to the node's `fromRequest`, which parses it."
             for line, found in node.get_fact("loose_body_reads", [])

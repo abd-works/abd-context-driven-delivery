@@ -10,6 +10,9 @@ class DomainFixtureExampleFiles(PracticeGraphRule):
 
     def check(self, node, context) -> list[str]:
         path = (node.source.file or "").lower()
+        module = (node.get_fact("imported_modules") or {}).get(node.name)
+        if module is not None:
+            path = module.lower() + ".ts"
         name = path.rsplit("/", 1)[-1]
         if not name.endswith(".examples.ts"):
             return [f"Example file {name!r} should end with .examples.ts under an examples/ folder."]
