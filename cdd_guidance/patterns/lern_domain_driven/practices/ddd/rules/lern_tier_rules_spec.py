@@ -18,6 +18,7 @@ from cdd_guidance.patterns.lern_domain_driven.practices.ddd.rules.lern_tier_rule
 from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_story_rules import (
     DomainOperationsInlineInSteps,
     NoExpectInGiven,
+    OutlineRowsLoopOverExamples,
     TierBoundRepositoryAccessor,
 )
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
@@ -163,6 +164,13 @@ with description("the lern_domain_driven pattern rules"):
             )
             expect(DomainOperationsInlineInSteps().check(story, context(faulty))).to(have_len(1))
             expect(DomainOperationsInlineInSteps().check(story, context(repaired))).to(equal([]))
+
+        with it("should flag an outline row written by hand and pass the examples loop"):
+            spec = node("x.story.playwright.ts", "PlaywrightSpec", file="tests/x/x.story.playwright.ts")
+            faulty = "scenario('Address requirement is unmet: parish', ({ when }) => {});\n"
+            repaired = "expectedUnmetAddressOutlines.forEach(({ field }) => {\n  scenario(`Address requirement is unmet: ${field}`, ({ when }) => {});\n});\n"
+            expect(OutlineRowsLoopOverExamples().check(spec, context(faulty))).to(have_len(1))
+            expect(OutlineRowsLoopOverExamples().check(spec, context(repaired))).to(equal([]))
 
         with it("should leave a screen gesture helper alone"):
             spec = node("x.story.playwright.ts", "PlaywrightSpec", file="tests/x/x.story.playwright.ts")
