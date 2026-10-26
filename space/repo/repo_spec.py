@@ -480,8 +480,7 @@ with description("a branch opened through the repo toolset"):
 
         with context("with uncommitted work on main"):
             with before.each:
-                (self.clone / "main-work.txt").write_text("main work
-", encoding="utf-8")
+                (self.clone / "main-work.txt").write_text("main work\n", encoding="utf-8")
                 self.toolset.switch_branch("feature/a")
 
             with it("should commit that work on main before switching away"):

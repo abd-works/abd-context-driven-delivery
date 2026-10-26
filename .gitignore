@@ -80,7 +80,6 @@ scripts/.run/
 _*
 !**/__init__.py
 !**/__main__.py
-!tools/mcp_server/__main__.py
 call_miro.py
 count_all.py
 extract_ids.py

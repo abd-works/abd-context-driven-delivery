@@ -238,3 +238,21 @@ Traceback (most recent call last):
 space.repo.repo.RepoConnectError: Cannot connect git: git merge feature -m merge feature into main failed in C:\dev\abd-context-driven-delivery: merge: feature - not something we can merge.
 2026-10-24T01:04:05Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
 2026-10-26T15:11:35Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-26T15:12:34Z repo.close_branch DefaultBranchError: cannot close the default branch 'main'
+Traceback (most recent call last):
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 1071, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 795, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 613, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\harness\mcp\mcp_server.py", line 585, in _invoke_mcp_callable
+    return target(**args)
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-context-driven-delivery\space\repo\repo.py", line 1860, in close_branch
+    raise DefaultBranchError("close", default)
+space.repo.repo.DefaultBranchError: cannot close the default branch 'main'
+2026-10-26T15:12:34Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
