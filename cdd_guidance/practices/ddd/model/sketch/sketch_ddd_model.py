@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.practices.ddd.model.markdown.class_cards import card_from_sketch, plain_class_name, stereotypes_in
 from cdd_guidance.practices.ddd.model.markdown.nodes import (
     MarkdownAggregate,
     MarkdownBoundedContext,
@@ -70,6 +71,7 @@ class SketchDddModel(MarkdownBoundedContextMap):
         in_events = False
         skip_section = False
         in_meta = True
+        used_holders: set[str] = set()
         for raw in body.splitlines():
             stripped = raw.strip()
             if not stripped or stripped.startswith(("#", "---")):
@@ -136,11 +138,26 @@ class SketchDddModel(MarkdownBoundedContextMap):
                 continue
             if level == 2 and _is_entity_heading(stripped):
                 name = stripped.split("//", 1)[0].strip().rstrip(":")
-                aggregate = MarkdownAggregate(name, len(context.aggregates) + 1)
+                marks = [item.lower() for item in stereotypes_in(name)]
+                if marks and "aggregate root" not in marks and aggregate is not None and aggregate._sketch_cards:
+                    # A member card at model fidelity joins the aggregate its root opened.
+                    aggregate._sketch_cards.append((name, []))
+                    continue
+                if marks:
+                    holder = current_group or context._module_name
+                    aggregate_name = holder if holder and holder not in used_holders else plain_class_name(name)
+                    used_holders.add(holder)
+                    aggregate = MarkdownAggregate(aggregate_name, len(context.aggregates) + 1)
+                    aggregate._sketch_cards = [(name, [])]
+                else:
+                    aggregate = MarkdownAggregate(name, len(context.aggregates) + 1)
+                    aggregate._sketch_cards = []
                 aggregate._group = current_group
                 context.append_aggregate(aggregate)
                 continue
             if aggregate is not None:
+                if aggregate._sketch_cards:
+                    aggregate._sketch_cards[-1][1].append(raw)
                 aggregate._body.append(raw)
                 continue
             if current_group:
@@ -153,6 +170,7 @@ class SketchDddModel(MarkdownBoundedContextMap):
         for item in model.contexts:
             for child in item.aggregates:
                 if isinstance(child, MarkdownAggregate):
+                    _take_sketch_cards(child)
                     child.load_root()
         aggregates = {row.name: row for row in _aggregates_in(model)}
         services = {row.name: row for row in _services_in(model)}
@@ -163,6 +181,18 @@ class SketchDddModel(MarkdownBoundedContextMap):
     def render(self, canonical=None, previous: str | None = None) -> str:
         del previous
         return _as_sketch(canonical or self)
+
+
+def _take_sketch_cards(aggregate: MarkdownAggregate) -> None:
+    # Model-fidelity entity fences become `####` class cards after the aggregate's map lines.
+    found = getattr(aggregate, "_sketch_cards", [])
+    if not found:
+        return
+    written: list[str] = []
+    for heading, lines in found:
+        for card in card_from_sketch(heading, lines, aggregate.building_block_type):
+            written.extend(card.lines())
+    aggregate._body = list(aggregate._body) + written
 
 
 def _as_sketch(model: MarkdownBoundedContextMap) -> str:

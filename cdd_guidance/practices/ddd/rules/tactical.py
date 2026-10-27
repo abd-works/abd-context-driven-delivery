@@ -54,15 +54,15 @@ class FlaccidDataObject(PracticeGraphRule):
         return []
 
 
-class BuildingBlocksFidelityRequiresTacticalStereotype(PracticeGraphRule):
-    slug = "building-blocks-fidelity-requires-tactical-stereotype"
+class EveryClassCarriesDddStereotype(PracticeGraphRule):
+    slug = "every-class-carries-ddd-stereotype"
     node_types = _TACTICAL_CLASS
 
     def check(self, node, context) -> list[str]:
         if is_presentation_module_source(node) or node.get_fact("tactical_stereotype", True):
             return []
         return [
-            f"Class '{node.name}' lacks a tactical stereotype "
+            f"Class '{node.name}' lacks a DDD stereotype "
             f"(<<Entity>>, <<Repository>>, or code @entity / @repository on the class)."
         ]
 

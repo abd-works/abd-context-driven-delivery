@@ -1,7 +1,7 @@
 """DDD graph rule classes."""
 
 from cdd_guidance.practices.ddd.rules.tactical import (
-    BuildingBlocksFidelityRequiresTacticalStereotype,
+    EveryClassCarriesDddStereotype,
     DomainConceptsNotTechnicalNames,
     FlaccidDataObject,
     LoadWithIdentityInHand,
@@ -15,7 +15,7 @@ from cdd_guidance.practices.ddd.rules.tactical import (
 RULES: tuple = (
     PrivateMethodNaming(),
     FlaccidDataObject(),
-    BuildingBlocksFidelityRequiresTacticalStereotype(),
+    EveryClassCarriesDddStereotype(),
     DomainConceptsNotTechnicalNames(),
     ServiceIsHomeless(),
     RepositoryIsCollectionLifecycle(),

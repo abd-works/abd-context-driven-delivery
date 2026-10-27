@@ -356,6 +356,10 @@ class DrawIOStoryModel(DiagramStoryModel):
         body = ET.tostring(mxfile, encoding="unicode")
         return "<?xml version='1.0' encoding='utf-8'?>\n" + body
 
+    def parse(self, text: str) -> "DrawIOStoryModel":
+        """Format-adapter entry point used by PracticeGuidance.render; same as load."""
+        return self.load(text)
+
     def load(self, text: str) -> "DrawIOStoryModel":
         try:
             root_el = ET.fromstring(text)

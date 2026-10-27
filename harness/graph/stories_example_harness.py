@@ -19,16 +19,30 @@ def stories_rule_by_slug(slug: str):
     return rule
 
 
+def _record_stories(practice: PracticeGraph, names: list[str], relative: str) -> list[Node]:
+    """Record the stories through the story model, so each Story node carries the facts a live build loads."""
+    from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
+    from cdd_guidance.practices.stories.model.source_location import SourceLocation
+    from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel
+
+    if not names:
+        return []
+    model = StoryModel()
+    epic = Epic("Submit Fixture Stories", 1)
+    for index, name in enumerate(names, start=1):
+        story = Story(name, index)
+        story.source = SourceLocation(relative, 1, 1)
+        epic.append_story(story)
+    model.append_epic(epic)
+    GraphStoryModel(model).record(practice)
+    return list(practice.nodes.get("Story", []))
+
+
 def _story_nodes_from_ts(
     practice: PracticeGraph, source: str, relative: str, *, node_type: str | None = None
 ) -> list[Node]:
-    nodes: list[Node] = []
-    for index, name in enumerate(re.findall(r"""story\s*\(\s*['"]([^'"]+)['"]""", source)):
-        node_id = f"stories:Story:map.{index}.{name.replace(' ', '_')}"
-        node = Node(practice, "Story", node_id, name, Source(relative, 1, 1))
-        practice.by_id[node_id] = node
-        practice.nodes.setdefault("Story", []).append(node)
-        nodes.append(node)
+    names = re.findall(r"""story\s*\(\s*['"]([^'"]+)['"]""", source)
+    nodes: list[Node] = _record_stories(practice, names, relative)
     for index, name in enumerate(re.findall(r"""given\s*\(\s*['"]([^'"]+)['"]""", source)):
         node_id = f"stories:Step:map.given.{index}"
         node = Node(practice, "Given", node_id, name, Source(relative, 1, 1))

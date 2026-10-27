@@ -290,10 +290,15 @@ class PromptNotify:
         self, haystacks: list[str], action_names: set[str]
     ) -> tuple[str, str] | None:
         for hay in haystacks:
+            in_skills = "/.cursor/skills/" in hay.replace("\\", "/").lower()
             for token, kind in self.catalog:
                 if not self._token_in(hay, token):
                     continue
                 if kind == "action" and hay not in action_names:
+                    continue
+                if kind == "guideline" and in_skills:
+                    # Rule tokens join folder and file (bdd-bdd-behavior); a skill path's
+                    # nested folders can spell the same token without being a rule.
                     continue
                 if "/rules/" in hay.replace("\\", "/").lower():
                     return "guideline", token

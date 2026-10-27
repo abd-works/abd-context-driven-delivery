@@ -34,11 +34,11 @@ Iteratively sketch using multiple views
 
 Work moves through three stages. Stay on the current stage until that view agrees, then go deeper on one slice.
 
-- [Discovery](practices/cdd/cdd.md#discovery) — outcome, journey, and architecture, still cheap to change. 
+- [Discovery](harness/catalog_generator/markdown/cdd-approach.md#discovery) — outcome, journey, and architecture, still cheap to change. 
 *Use the [Discoverer](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/discovery.md) agent to run discovery.*
-- [Specification](practices/cdd/cdd.md#spec) — one increment: scenarios, domain behavior, and the experience. 
+- [Specification](harness/catalog_generator/markdown/cdd-approach.md#specification) — one increment: scenarios, domain behavior, and the experience. 
 *Use the [Specification](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/specification.md) agent to run specification.*
-- [Implementation](practices/cdd/cdd.md#engineer) — tests, touchpoints, and the solution on the target stack. 
+- [Implementation](harness/catalog_generator/markdown/cdd-approach.md#implement) — tests, touchpoints, and the solution on the target stack. 
 *Use the [Implementation](https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/implementation.md) agent to run implementation.*
 
 
@@ -50,7 +50,7 @@ Tools that refine context in stages, according to a particular perspective.
 - [Stories](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md) — actors, systems, and the interactions that deliver the solution.
   *Use [story-map](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md#story_map), [scenarios](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md#scenarios), [acceptance-tests](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md#acceptance_tests).*
 - [Domain-driven design](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md) — the business concepts and the boundaries that protect them.
-  *Use [bounded-context](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#bounded_context), [building-blocks](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#building_blocks), [tactics](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#tactics).*
+  *Use [bounded-context](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#bounded_context), [model](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#model), [tactics](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#tactics).*
 - [Clean engineering](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md) — modules, contracts, and the code that can be generated and checked.
   *Use [modules](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md#modules), [model](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md#model), [code](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md#code).*
 - [Behavior-driven development](https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/bdd/bdd.md) — behavior tests written in the language of the domain.

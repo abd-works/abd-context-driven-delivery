@@ -12,7 +12,7 @@ def _example_files(folder: Path) -> dict[str, str]:
     """The example's asset plus its `.context` files, placed in one fixture folder."""
     files: dict[str, str] = {}
     for path in folder.rglob("*"):
-        if path.is_file():
+        if path.is_file() and "__pycache__" not in path.parts:
             relative = path.relative_to(folder).as_posix()
             files[f"{FIXTURE_FOLDER}/{relative}"] = path.read_text(encoding="utf-8")
     return files

@@ -14,6 +14,17 @@ class Bdd(PracticeGuidance):
     module load time).
     """
 
+    # How the catalog shows this practice; the generator discovers it like the installer does.
+    catalog_card = {
+        "name": "Behavior-Driven Development",
+        "label": "behavior-driven-development",
+        "family": "aad-fam-sdd",
+        "perspective": "bdd",
+        "order": 40,
+        "blurb": "Specify domain logic through behavioural, automated tests.",
+        "spec_blurb": "Nested describe/it behaviour tests that serve as both documentation and automated tests for domain logic",
+    }
+
     def __init__(
         self,
         fidelity: str = "behavior",

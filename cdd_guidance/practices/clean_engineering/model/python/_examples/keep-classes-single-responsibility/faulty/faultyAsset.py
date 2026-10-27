@@ -31,3 +31,27 @@ class CartManager:
 
     def load(self):
         return None
+
+    def refund(self):
+        return None
+
+    def ship(self):
+        return None
+
+    def track_shipment(self):
+        return None
+
+    def export_csv(self):
+        return None
+
+    def import_csv(self):
+        return None
+
+    def log_metrics(self):
+        return None
+
+    def schedule_reminder(self):
+        return None
+
+    def validate_address(self):
+        return None

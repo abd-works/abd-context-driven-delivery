@@ -152,7 +152,8 @@ with description("an asset locator"):
                 module_dir = _CLEAN_ENGINEERING_DIR
                 format = "python"
 
-            self.location = AssetLocator(_YamlSubject(), "scanners").locate()
+            # clean_engineering/scanners was retired for rules/; rules is the practice's code folder now.
+            self.location = AssetLocator(_YamlSubject(), "rules").locate()
 
         with it("should resolve to kind folder"):
             expect(self.location.kind).to(equal("folder"))

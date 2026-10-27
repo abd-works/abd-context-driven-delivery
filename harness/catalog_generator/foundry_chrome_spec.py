@@ -205,11 +205,11 @@ with description("step fold ranges"):
         ).read_text(encoding="utf-8")
         ranges = step_fold_ranges(source)
         lines = source.splitlines()
-        expect(len(ranges)).to(equal(3))
-        expect("Display Create Account" in source).to(equal(False))
+        expect(len(ranges)).to(equal(4))
+        expect("Display Create Account" in source).to(equal(True))
         expect("Create Unconfirmed User" in source).to(equal(True))
         start, end = ranges[0]
-        expect("given(" in lines[start - 1]).to(equal(True))
+        expect("when(" in lines[start - 1]).to(equal(True))
         expect(end > start).to(equal(True))
 
     with it("also folds scenario scaffolding in the acceptance test example"):
@@ -217,11 +217,11 @@ with description("step fold ranges"):
             _REPO_ROOT / "cdd_guidance" / "practices" / "stories" / "catalog-examples" / "acceptance_tests.ts"
         ).read_text(encoding="utf-8")
         ranges = scenario_step_fold_ranges(source)
-        expect(len(ranges)).to(equal(4))
-        expect(step_fold_ranges(source)).to(equal([(6, 8), (9, 12), (13, 26)]))
-        expect((2, 5) in ranges).to(equal(True))
-        expect((3, 5) in ranges).to(equal(False))
-        expect((33, 34) in ranges).to(equal(False))
+        expect(len(ranges)).to(equal(5))
+        expect(step_fold_ranges(source)).to(equal([(5, 7), (8, 10), (11, 16), (17, 19)]))
+        expect((3, 4) in ranges).to(equal(True))
+        expect((4, 4) in ranges).to(equal(False))
+        expect(max(end for _start, end in ranges)).to(equal(19))
 
 
 with description("ddd class folds"):
@@ -260,10 +260,11 @@ with description("story map viewport"):
         ).read_text(encoding="utf-8")
         framed = _drawio_frame_viewport(source)
         expect("create-unconfirmed-user" in framed).to(equal(True))
+        # Cells span y 120..443 in the source; parked at the 20px margin the page is 323 + 2*20 high.
         page_h = int(framed.split('pageHeight="', 1)[1].split('"', 1)[0])
-        expect(page_h >= 450).to(equal(True))
+        expect(page_h).to(equal(363))
         expect('x="20"' in framed).to(equal(True))
-        expect(int(framed.split('pageHeight="', 1)[1].split('"', 1)[0]) < 500).to(equal(True))
+        expect('y="20"' in framed).to(equal(True))
 
 
 with description("bounded context viewport"):
@@ -273,41 +274,50 @@ with description("bounded context viewport"):
         )
         html = _drawio_iframe(source)
         expect('approach-stage-drawio--framed' in html).to(equal(True))
-        expect('data-page-w="1080"' in html).to(equal(True))
-        expect('data-page-h="920"' in html).to(equal(True))
+        # 1080x920 page plus the 20px frame margin on each side.
+        expect('data-page-w="1120"' in html).to(equal(True))
+        expect('data-page-h="960"' in html).to(equal(True))
         expect('data-zoom-min=' in html).to(equal(False))
 
 
-with description("building blocks viewport"):
+with description("model viewport"):
     with it("embeds the original class diagram without rewriting cells"):
         source = (
-            _REPO_ROOT / "cdd_guidance" / "practices" / "ddd" / "catalog-examples" / "building-blocks.drawio"
+            _REPO_ROOT / "cdd_guidance" / "practices" / "ddd" / "catalog-examples" / "model.drawio"
         )
         original = source.read_text(encoding="utf-8")
         html = _drawio_iframe(source)
-        expect('data-page-w="1654"' in html).to(equal(True))
-        expect('data-page-h="1169"' in html).to(equal(True))
+        expect('data-page-w="5240"' in html).to(equal(True))
+        expect('data-page-h="3270"' in html).to(equal(True))
         expect('data-zoom-min=' in html).to(equal(False))
-        expect("CustomerRepository" in original).to(equal(True))
+        expect("KycInquiryRepository" in original).to(equal(True))
 
 
 with description("information architecture viewport"):
     with it("embeds the original journey diagram without rewriting cells"):
         source = (
             _REPO_ROOT
+            / "cdd_guidance"
             / "practices"
             / "ux"
             / "catalog-examples"
             / "information-architecture.drawio"
         )
         html = _drawio_iframe(source)
-        expect('data-page-w="2400"' in html).to(equal(True))
-        expect('data-page-h="680"' in html).to(equal(True))
+        # 2400x680 page plus the 20px frame margin on each side.
+        expect('data-page-w="2440"' in html).to(equal(True))
+        expect('data-page-h="720"' in html).to(equal(True))
         expect('data-zoom-min=' in html).to(equal(False))
         expect("Create Account" in source.read_text(encoding="utf-8")).to(equal(True))
 
 
 with description("product engineering grid"):
+    with before.all:
+        # Practice labels and colour families come from the discovered practices' catalog cards.
+        from harness.catalog_generator.catalog_generator import load_registry
+
+        load_registry()
+
     with it("renders one refine row per practice with rewind and play"):
         html = approach_principle_grid(
             [
@@ -341,7 +351,9 @@ with description("product engineering grid"):
         expect("approach-grid__label--arc" in html).to(equal(True))
         expect("approach-grid__label--bdd" in html).to(equal(True))
         expect("a simple graph is easier to change, compare, and reorganize" in html).to(equal(True))
-        expect("catalog-drawio-frame" in html).to(equal(True))
+        expect("catalog-drawio-frame" in html).to(equal(False))
+        expect('src="examples/ddd/bounded-context.png"' in html).to(equal(True))
+        expect('src="examples/stories/story_map.png"' in html).to(equal(True))
         expect("monaco-ddd-tactics-ts" in html).to(equal(True))
         expect("information-architecture" in html).to(equal(True))
         expect("examples/ux/mockup.png" in html).to(equal(True))

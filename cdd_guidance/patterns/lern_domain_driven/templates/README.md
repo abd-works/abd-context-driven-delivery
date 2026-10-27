@@ -3,7 +3,7 @@
 Parameterized scaffold for the lowdb domain-driven architecture specification
 ([lowdb](https://github.com/typicode/lowdb) JSON files / Express / React / Node,
 TypeScript everywhere). Each aggregate root owns its JSON store beside the domain
-module under `src/`. DDD stereotypes: `practices/ddd/ddd.md` building_blocks.
+module under `src/`. DDD stereotypes: `practices/ddd/ddd.md` model.
 
 ## Structure
 

@@ -1,0 +1,297 @@
+{
+  "node_types": [
+    "Aggregate",
+    "BoundedContext",
+    "EntityRoot",
+    "Repository",
+    "ValueObject"
+  ],
+  "edge_types": [
+    "root",
+    "owns",
+    "belongsTo",
+    "accesses",
+    "associates"
+  ],
+  "node_counts": {
+    "Aggregate": 2,
+    "BoundedContext": 1,
+    "EntityRoot": 2,
+    "Repository": 2,
+    "ValueObject": 5
+  },
+  "edge_count": 26,
+  "tree": {
+    "type": "Practice",
+    "name": "ddd",
+    "node_id": "ddd:Practice:.:ddd",
+    "children": [
+      {
+        "type": "BoundedContext",
+        "name": "bounded context",
+        "node_id": "ddd:BoundedContext:.:bounded context",
+        "children": [
+          {
+            "type": "Aggregate",
+            "name": "account-credentials",
+            "node_id": "ddd:Aggregate:src/account-credentials:account-credentials",
+            "children": [
+              {
+                "type": "EntityRoot",
+                "name": "AccountCredentials",
+                "node_id": "ddd:EntityRoot:src/account-credentials/account-credentials.ts:AccountCredentials",
+                "children": [
+                  {
+                    "type": "belongsTo",
+                    "name": "belongsTo",
+                    "node_id": "ddd:belongsTo:ddd:EntityRoot:src/account-credentials/account-credentials.ts:AccountCredentials",
+                    "children": [
+                      {
+                        "type": "Aggregate",
+                        "name": "account-credentials",
+                        "node_id": "ddd:Aggregate:src/account-credentials:account-credentials",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "type": "associates",
+                    "name": "associates",
+                    "node_id": "ddd:associates:ddd:EntityRoot:src/account-credentials/account-credentials.ts:AccountCredentials",
+                    "children": [
+                      {
+                        "type": "EntityRoot",
+                        "name": "Customer",
+                        "node_id": "ddd:EntityRoot:src/customer/customer.ts:Customer",
+                        "children": [
+                          {
+                            "type": "belongsTo",
+                            "name": "belongsTo",
+                            "node_id": "ddd:belongsTo:ddd:EntityRoot:src/customer/customer.ts:Customer",
+                            "children": [
+                              {
+                                "type": "Aggregate",
+                                "name": "customer",
+                                "node_id": "ddd:Aggregate:src/customer:customer",
+                                "children": [
+                                  {
+                                    "type": "EntityRoot",
+                                    "name": "Customer",
+                                    "node_id": "ddd:EntityRoot:src/customer/customer.ts:Customer",
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "Repository",
+                                    "name": "CustomerRepository",
+                                    "node_id": "ddd:Repository:src/customer/customer.ts:CustomerRepository",
+                                    "children": [
+                                      {
+                                        "type": "belongsTo",
+                                        "name": "belongsTo",
+                                        "node_id": "ddd:belongsTo:ddd:Repository:src/customer/customer.ts:CustomerRepository",
+                                        "children": [
+                                          {
+                                            "type": "Aggregate",
+                                            "name": "customer",
+                                            "node_id": "ddd:Aggregate:src/customer:customer",
+                                            "children": []
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "accesses",
+                                        "name": "accesses",
+                                        "node_id": "ddd:accesses:ddd:Repository:src/customer/customer.ts:CustomerRepository",
+                                        "children": [
+                                          {
+                                            "type": "EntityRoot",
+                                            "name": "Customer",
+                                            "node_id": "ddd:EntityRoot:src/customer/customer.ts:Customer",
+                                            "children": []
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "ValueObject",
+                                    "name": "Address",
+                                    "node_id": "ddd:ValueObject:src/customer/customer.ts:Address",
+                                    "children": [
+                                      {
+                                        "type": "belongsTo",
+                                        "name": "belongsTo",
+                                        "node_id": "ddd:belongsTo:ddd:ValueObject:src/customer/customer.ts:Address",
+                                        "children": [
+                                          {
+                                            "type": "Aggregate",
+                                            "name": "customer",
+                                            "node_id": "ddd:Aggregate:src/customer:customer",
+                                            "children": []
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "ValueObject",
+                                    "name": "Identity",
+                                    "node_id": "ddd:ValueObject:src/customer/customer.ts:Identity",
+                                    "children": [
+                                      {
+                                        "type": "belongsTo",
+                                        "name": "belongsTo",
+                                        "node_id": "ddd:belongsTo:ddd:ValueObject:src/customer/customer.ts:Identity",
+                                        "children": [
+                                          {
+                                            "type": "Aggregate",
+                                            "name": "customer",
+                                            "node_id": "ddd:Aggregate:src/customer:customer",
+                                            "children": []
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "belongsTo",
+                                    "name": "belongsTo",
+                                    "node_id": "ddd:belongsTo:ddd:Aggregate:src/customer:customer",
+                                    "children": [
+                                      {
+                                        "type": "BoundedContext",
+                                        "name": "bounded context",
+                                        "node_id": "ddd:BoundedContext:.:bounded context",
+                                        "children": []
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Repository",
+                "name": "AccountCredentialsRepository",
+                "node_id": "ddd:Repository:src/account-credentials/account-credentials.ts:AccountCredentialsRepository",
+                "children": [
+                  {
+                    "type": "belongsTo",
+                    "name": "belongsTo",
+                    "node_id": "ddd:belongsTo:ddd:Repository:src/account-credentials/account-credentials.ts:AccountCredentialsRepository",
+                    "children": [
+                      {
+                        "type": "Aggregate",
+                        "name": "account-credentials",
+                        "node_id": "ddd:Aggregate:src/account-credentials:account-credentials",
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "type": "accesses",
+                    "name": "accesses",
+                    "node_id": "ddd:accesses:ddd:Repository:src/account-credentials/account-credentials.ts:AccountCredentialsRepository",
+                    "children": [
+                      {
+                        "type": "EntityRoot",
+                        "name": "AccountCredentials",
+                        "node_id": "ddd:EntityRoot:src/account-credentials/account-credentials.ts:AccountCredentials",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "ValueObject",
+                "name": "AccountToken",
+                "node_id": "ddd:ValueObject:src/account-credentials/account-credentials.ts:AccountToken",
+                "children": [
+                  {
+                    "type": "belongsTo",
+                    "name": "belongsTo",
+                    "node_id": "ddd:belongsTo:ddd:ValueObject:src/account-credentials/account-credentials.ts:AccountToken",
+                    "children": [
+                      {
+                        "type": "Aggregate",
+                        "name": "account-credentials",
+                        "node_id": "ddd:Aggregate:src/account-credentials:account-credentials",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "ValueObject",
+                "name": "ValidationCode",
+                "node_id": "ddd:ValueObject:src/account-credentials/account-credentials.ts:ValidationCode",
+                "children": [
+                  {
+                    "type": "belongsTo",
+                    "name": "belongsTo",
+                    "node_id": "ddd:belongsTo:ddd:ValueObject:src/account-credentials/account-credentials.ts:ValidationCode",
+                    "children": [
+                      {
+                        "type": "Aggregate",
+                        "name": "account-credentials",
+                        "node_id": "ddd:Aggregate:src/account-credentials:account-credentials",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "ValueObject",
+                "name": "ValidationCodeMessage",
+                "node_id": "ddd:ValueObject:src/account-credentials/account-credentials.ts:ValidationCodeMessage",
+                "children": [
+                  {
+                    "type": "belongsTo",
+                    "name": "belongsTo",
+                    "node_id": "ddd:belongsTo:ddd:ValueObject:src/account-credentials/account-credentials.ts:ValidationCodeMessage",
+                    "children": [
+                      {
+                        "type": "Aggregate",
+                        "name": "account-credentials",
+                        "node_id": "ddd:Aggregate:src/account-credentials:account-credentials",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "belongsTo",
+                "name": "belongsTo",
+                "node_id": "ddd:belongsTo:ddd:Aggregate:src/account-credentials:account-credentials",
+                "children": [
+                  {
+                    "type": "BoundedContext",
+                    "name": "bounded context",
+                    "node_id": "ddd:BoundedContext:.:bounded context",
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Aggregate",
+            "name": "customer",
+            "node_id": "ddd:Aggregate:src/customer:customer",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

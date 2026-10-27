@@ -427,12 +427,19 @@ export class CustomerProfile {
             expect(hits).to(equal([]))
 
     with context("use-exceptions-properly"):
-        with it("should flag bare catch in python, typescript, and javascript"):
-            _assert_multilang(
+        with it("should flag a bare except in python"):
+            assert_rule_pair(
                 "use-exceptions-properly",
-                _USE_EXCEPTIONS_PROPERLY_FAULT,
-                _USE_EXCEPTIONS_PROPERLY_CLEAN,
+                _USE_EXCEPTIONS_PROPERLY_FAULT["python"],
+                _USE_EXCEPTIONS_PROPERLY_CLEAN["python"],
+                lang="python",
             )
+
+        with it("should accept the optional catch binding in typescript and javascript"):
+            rule = ce_rule_by_slug("use-exceptions-properly")
+            for lang in ("typescript", "javascript"):
+                source = _USE_EXCEPTIONS_PROPERLY_FAULT[lang]
+                expect(violations_for_rule(rule, *practice_from_source(source, lang=lang))).to(equal([]))
 
     with context("never-swallow-exceptions"):
         with it("should flag empty catch in python, typescript, and javascript"):

@@ -12,6 +12,17 @@ from harness.guidance.guidance import PracticeGuidance
 class Ux(PracticeGuidance):
     """# Instructions"""
 
+    # How the catalog shows this practice; the generator discovers it like the installer does.
+    catalog_card = {
+        "name": "User Experience",
+        "label": "user-experience",
+        "family": "aad-fam-uxd",
+        "perspective": "uxd",
+        "order": 30,
+        "blurb": "Defining user impact from journey and information architecture to screen navigation.",
+        "spec_blurb": "Interface mockups that work according to story specs and design templates",
+    }
+
     def __init__(
         self,
         fidelity: str = "ia",

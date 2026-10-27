@@ -134,11 +134,13 @@ with description("Render Context Tool Page"):
         with it("links each fidelity page, in declared stage order"):
             section = self.page[self.page.find('aria-label="Fidelities"'):]
             bounded_at = section.find("bounded-context")
-            building_at = section.find("building-blocks")
+            model_at = section.find(">model<")
+            if model_at < 0:
+                model_at = section.find("model")
             tactics_at = section.find(">tactics<")
             if tactics_at < 0:
                 tactics_at = section.find("tactics")
-            expect(bounded_at < building_at < tactics_at).to(be_true)
+            expect(bounded_at < model_at < tactics_at).to(be_true)
             expect("cap-card" in section).to(equal(False))
             expect("Draw where language changes" in section).to(be_true)
 
@@ -248,7 +250,7 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             workflow_html = (self.tmp / "workflow.html").read_text(encoding="utf-8")
             expect("CDD Workflow" in workflow_html).to(be_true)
             expect("Scenario 1" in workflow_html).to(be_true)
-            expect('href="cdd_guidance/actions/partition.html"' in workflow_html).to(be_true)
+            expect('href="actions/partition.html"' in workflow_html).to(be_true)
 
 
 with description("Render Flat Grid Pages"):
@@ -280,7 +282,7 @@ with description("Render Flat Grid Pages"):
 
         with it("lists every context tool, action, and utility card on its own grid page"):
             for page_name, expected in (
-                ("context-tools.html", "Context-driven delivery"),
+                ("context-tools.html", "Domain-Driven Design"),
                 ("actions.html", "createRule"),
             ):
                 content = (self.tmp / page_name).read_text(encoding="utf-8")

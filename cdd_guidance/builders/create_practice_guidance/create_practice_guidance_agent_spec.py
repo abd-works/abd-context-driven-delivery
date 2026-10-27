@@ -22,11 +22,11 @@ from agent_bdd import (
 
 _REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
-_CAR_ROOT = "cdd_guidance/builders/create_practice_guidance/_examples/car_chronicle"
+_CAR_ROOT = "cdd_guidance/builders/create_context_tool/examples/car_chronicle"
 _OUTPUT_DIR = _REPO_ROOT / _CAR_ROOT / "output"
 _CAR_CHRONICLE_PY = f"{_CAR_ROOT}/car_chronicle.py"
 _CAR_TOOLSET = (
-    "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
+    "cdd_guidance.builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 
 with description("a CarChronicle generator"):

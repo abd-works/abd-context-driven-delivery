@@ -1,7 +1,7 @@
 """LernDomainDriven generator - implementation fidelity for a domain-module-organized
 LERN stack (lowdb JSON files / Express / React / Node) on an already-designed vertical slice.
 Each aggregate owns its own JSON store; repositories load, create, search, and update
-the aggregate root. See practices/ddd/ddd.md building_blocks."""
+the aggregate root. See practices/ddd/ddd.md model and tactics."""
 
 from __future__ import annotations
 

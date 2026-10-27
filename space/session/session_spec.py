@@ -239,7 +239,8 @@ with description("a session"):
             with before.each:
                 self._prior_repo = os.environ.get("CDD_REPO")
                 self._prior_project = os.environ.get("CDD_PROJECT")
-                os.environ["CDD_REPO"] = str(self.repo)
+                (self.repo / ".git").mkdir()
+                os.environ["CDD_REPO"] = str(Path(tempfile.mkdtemp()))
                 os.environ["CDD_PROJECT"] = str(self.repo / "other")
                 self.instructions = Session.switch("alpha")
 
@@ -877,6 +878,90 @@ with description("a practice"):
 
 # (E) Open Work Session
 # (S) Session --> Switch Session
+with description("a session on an MCP host whose CDD_REPO is the CDD checkout, not the project"):
+    with before.each:
+        Session._current = None
+        self._prior_repo = os.environ.get("CDD_REPO")
+        self._prior_project = os.environ.get("CDD_PROJECT")
+        self.cdd = Path(tempfile.mkdtemp(prefix="cdd-checkout-"))
+        (self.cdd / ".git").mkdir()
+        Session.new("overlay", Path.home(), self.cdd)
+        Session._current = None
+        self.project = Path(tempfile.mkdtemp(prefix="cdd-project-"))
+        (self.project / ".git").mkdir()
+        os.environ["CDD_REPO"] = str(self.cdd)
+        os.environ["CDD_PROJECT"] = str(self.project)
+
+    with after.each:
+        Session._current = None
+        for key, prior in (("CDD_REPO", self._prior_repo), ("CDD_PROJECT", self._prior_project)):
+            if prior is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = prior
+
+    with context("with a session named on the project"):
+        with before.each:
+            Session.new("beta", self.project, self.project)
+            Session._current = None
+
+        with it("should bind the project's session, not the CDD checkout's"):
+            session = Session.current()
+            expect(session.name).to(equal("beta"))
+            expect(session.session_path).to(equal(self.project.resolve() / ".sessions" / "beta"))
+            expect(session.workpath).to(equal(self.project.resolve()))
+
+        with it("should give the project's session folder"):
+            expect(Session.current_folder()).to(equal(self.project.resolve() / ".sessions" / "beta"))
+
+        with it("should append log notes to the project's session log"):
+            transcript = _bind_mandatory_chat(Session.current(), self.project, "project-chat")
+            Session.append_log(
+                "project note",
+                loop=1,
+                conversation_id="project-chat",
+                transcript_path=str(transcript),
+                transcript_lines="1",
+            )
+            log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")
+            cdd_log = self.cdd / ".sessions" / "overlay" / "session.log"
+            cdd_text = cdd_log.read_text(encoding="utf-8") if cdd_log.is_file() else ""
+            expect("project note" in log and "project note" not in cdd_text).to(equal(True))
+
+        with it("should mark loops on the project's session log"):
+            _bind_mandatory_chat(Session.current(), self.project, "project-loop-chat")
+            Session.mark_loop()
+            log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")
+            expect("--- " in log).to(equal(True))
+
+        with it("should close the project's session and leave the CDD checkout's current"):
+            Session.current().close()
+            expect(WorkState(self.project).session).to(equal(""))
+            expect(WorkState(self.cdd).session).to(equal("overlay"))
+
+        with it("should bind the project's session when the MCP host dispatches"):
+            from harness.mcp.mcp_server import McpHost
+
+            host = McpHost.from_refs(
+                ("space.session.session:Session",),
+                repo=str(self.cdd),
+                project=str(self.project),
+            )
+            Session._current = None
+            _bind_mandatory_chat(Session.current(), self.project, "project-dispatch-chat")
+            Session._current = None
+            host.dispatch("session.mark_loop", {})
+            log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")
+            expect("tool session.mark_loop" in log).to(equal(True))
+
+    with context("with no session named on the project"):
+        with it("should have no current session"):
+            expect(Session.current()).to(equal(None))
+
+        with it("should give the project's default session folder"):
+            expect(Session.current_folder()).to(equal(self.project.resolve() / ".sessions" / "default"))
+
+
 with description("a session switched to without a name"):
     with context("with a branch saved in .sessions/session.json"):
         with before.each:

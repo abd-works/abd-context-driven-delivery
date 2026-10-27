@@ -10,6 +10,17 @@ from harness.guidance.guidance import PracticeGuidance
 class Stories(PracticeGuidance):
     """# Instructions"""
 
+    # How the catalog shows this practice; the generator discovers it like the installer does.
+    catalog_card = {
+        "name": "Stories",
+        "label": "stories",
+        "family": "aad-fam-sdd",
+        "perspective": "sdd",
+        "order": 10,
+        "blurb": "Map user interactions to system behaviors, then define each through executable specifications.",
+        "spec_blurb": "Executable scenario-specifications with real-world examples",
+    }
+
     def __init__(
         self,
         fidelity: str = "story_map",

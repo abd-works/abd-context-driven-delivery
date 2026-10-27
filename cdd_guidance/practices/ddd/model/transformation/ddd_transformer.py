@@ -9,6 +9,7 @@ from jinja2 import Environment
 
 from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
 from harness.transformers.transformer import Transformer
+from cdd_guidance.practices.ddd.model.markdown.class_cards import plain_class_name
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext
 
 _NESTING_INDENT = 2
@@ -29,9 +30,10 @@ class DddTransformer(Transformer):
     def load(cls, sketch: str) -> "DddTransformer":
         root = cls()
         _parse_ddd_sketch(root, sketch)
+        _take_model_cards(root, sketch)
         return root
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return list(self.contexts)
 
     def attach_environment(self, environment: Environment, root: Transformer | None = None) -> None:
@@ -45,7 +47,7 @@ class DddTransformer(Transformer):
 class BoundedContextTransformer(Transformer, BoundedContext):
     _logical_template = "bounded_context"
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return list(self.contexts) + list(self.aggregates)
 
     def _output_path(self) -> str:
@@ -56,7 +58,9 @@ class BoundedContextTransformer(Transformer, BoundedContext):
 
 
 class AggregateTransformer(Transformer, Aggregate):
-    def children(self) -> list:
+    model_lines = ""
+
+    def transformed_children(self) -> list:
         return []
 
     def _child_folder(self) -> str:
@@ -72,7 +76,7 @@ def _parse_ddd_sketch(root: DddTransformer, sketch: str) -> None:
         indent = len(raw) - len(raw.lstrip(" "))
         level = indent // _NESTING_INDENT
         name, _, owner = raw.strip().partition("|")
-        name = name.strip().rstrip("/").rstrip(":")
+        name = plain_class_name(name).rstrip("/").rstrip(":")
         owner = owner.strip()
         if name.lower() in _EVENT_MAP:
             context = None
@@ -85,6 +89,22 @@ def _parse_ddd_sketch(root: DddTransformer, sketch: str) -> None:
         if context is None or level != 1:
             continue
         context.aggregates.append(AggregateTransformer(name, len(context.aggregates) + 1))
+
+
+def _take_model_cards(root: DddTransformer, sketch: str) -> None:
+    # At model fidelity each aggregate's root, repository, and members are written into its context's file.
+    from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
+
+    parsed = SketchDddModel().parse(sketch)
+    written = {}
+    for context in parsed.contexts:
+        for aggregate in context.aggregates:
+            if getattr(aggregate, "cards", None):
+                lines = [line[1:] if line.startswith("##") else line for line in aggregate.lines()]
+                written[(_to_kebab(context.name), _to_kebab(aggregate.name))] = "\n".join(lines).rstrip()
+    for context in root.contexts:
+        for aggregate in context.aggregates:
+            aggregate.model_lines = written.get((_to_kebab(context.name), _to_kebab(aggregate.name)), "")
 
 
 def _to_kebab(name: str) -> str:

@@ -18,6 +18,17 @@ from harness.guidance.guidance import PracticeGuidance
 class CleanEngineering(PracticeGuidance):
     """# Instructions"""
 
+    # How the catalog shows this practice; the generator discovers it like the installer does.
+    catalog_card = {
+        "name": "Clean Engineering",
+        "label": "clean-engineering",
+        "family": "aad-fam-arc",
+        "perspective": "arc",
+        "order": 20,
+        "blurb": "Highest quality software through modularized architecture and clean code that is resilient to change.",
+        "spec_blurb": "Deep modules with explicit, narrow seams defined using code-level, type-safe contracts",
+    }
+
     def __init__(
         self,
         fidelity: str = "modules",

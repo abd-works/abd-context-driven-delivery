@@ -1,0 +1,19 @@
+{% macro constructor_parameters(node) %}
+{%- for rel in node.relationships if rel.kind != 'inheritance' -%}
+{%- if loop.first %}
+    def __init__(self{% for item in node.relationships if item.kind != 'inheritance' %}, {{ item.target | snake }}: {{ item.target }}{% endfor %}) -> None:
+{%- endif %}
+        self._{{ rel.target | snake }} = {{ rel.target | snake }}
+{%- endfor %}
+{% endmacro %}
+
+{% macro property(node) %}
+    @property
+    def {{ node.name | snake }}(self) -> {{ node.type_hint | default('object', true) }}:
+        ...
+{% endmacro %}
+
+{% macro instance_method(node) %}
+    def {{ node.name | snake }}(self{% for param in node.parameters %}, {{ param.name | snake }}{% endfor %}) -> {{ node.return_type | default('None', true) }}:
+        ...
+{% endmacro %}

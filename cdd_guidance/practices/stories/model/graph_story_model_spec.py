@@ -11,9 +11,9 @@ _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from graph import Graph  # noqa: E402
+from harness.graph.graph import Graph  # noqa: E402
 from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel  # noqa: E402
-from cdd_guidance.practices.stories.model.story_model import Scenario, Step, StepType, Story, StoryModel  # noqa: E402
+from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
 
 
 with description("GraphStoryModel rule data"):
@@ -39,8 +39,10 @@ with description("GraphStoryModel rule data"):
             ),
         ]
         story.scenarios = [scenario]
-        model = StoryModel("map")
-        model.epics[0].stories = [story]
+        model = StoryModel()
+        epic = Epic("Place Orders", 1)
+        epic.append_story(story)
+        model.append_epic(epic)
         graph = Graph()
         practice = graph.practice("stories")
         practice.source_root = str(self.root)

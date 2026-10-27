@@ -29,7 +29,7 @@ class BddTransformer(Transformer):
         _parse_bdd_sketch(root, sketch)
         return root
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return list(self.descriptions)
 
     def attach_environment(self, environment: Environment, root: Transformer | None = None) -> None:
@@ -41,7 +41,7 @@ class DescriptionTransformer(Transformer, Description):
     _logical_template = "description"
     _tests_folder = "tests"
 
-    def children(self) -> list:
+    def transformed_children(self) -> list:
         return []
 
     def _output_path(self) -> str:

@@ -86,4 +86,5 @@ with description("a validate action on practice guidance") as self:
             expect(report).not_to(contain("vscode://"))
             expect(report).not_to(contain("file://"))
             expect(report).to(contain("#L10"))
-            expect(report).not_to(contain("src\\example.ts"))
+            expect(report).to(contain("[src/example.ts]("))
+            expect(report).not_to(contain("[src\\example.ts]"))

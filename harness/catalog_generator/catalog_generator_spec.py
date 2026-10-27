@@ -14,17 +14,17 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_none, be_true, contain, equal, expect
+from expects import be_false, be_none, be_true, contain, equal, expect
 from mamba import before, description, it
 
 from harness.catalog_generator.catalog_generator import (
-    CONTEXT_TOOL_REGISTRY,
     UTILITY_REGISTRY,
     ActionResolution,
     CatalogFidelityGuidance,
     RegistryEntry,
     SkillSlashName,
     build_run_request,
+    fidelity_names_by_stage,
     keep_in_catalog,
     load_registry,
     noCatalog,
@@ -53,17 +53,17 @@ with description("Build Run Request From Live Toolset Manifest"):
             expect(req["action"]).to(equal("guidance"))
             expect("arguments" in req).to(equal(False))
 
-        with it("fills Generate kit generate with a tools argument"):
+        with it("fills Generate kit generate with a guidance argument"):
             req = build_run_request(Generate, action="generate")
             expect(req["toolset"]).to(equal("generate.generate:Generate"))
             expect(req["action"]).to(equal("generate"))
-            expect("tools" in req["arguments"]).to(be_true)
+            expect("guidance" in req["arguments"]).to(be_true)
 
         with it("routes Stories generate through the Generate kit so action generate is live"):
             req = build_run_request(Stories, action="generate", fidelity="story_map")
             expect(req["toolset"]).to(equal("generate.generate:Generate"))
             expect(req["action"]).to(equal("generate"))
-            host = req["arguments"]["tools"][0]
+            host = req["arguments"]["guidance"][0]
             expect(host["toolset"]).to(equal("cdd_guidance.practices.stories.stories:Stories"))
             expect(host["context"]["fidelity"]).to(equal("story_map"))
 
@@ -128,18 +128,36 @@ with description("Load Context Tool And Utility Registry"):
         with before.all:
             self.practices, self.utilities = load_registry()
 
-        with it("resolves every context tool to a real class with nothing missing"):
-            expect(len(self.practices)).to(equal(len(CONTEXT_TOOL_REGISTRY)))
+        with it("discovers each practice with staged fidelities as a context tool"):
+            from harness.guidance.guidance import PracticeGuidance
+
             for entry in self.practices:
-                expect(isinstance(entry.cls, type)).to(be_true)
+                expect(issubclass(entry.cls, PracticeGuidance)).to(be_true)
+                expect(bool(fidelity_names_by_stage(entry.cls))).to(be_true)
+            expect([entry.class_name for entry in self.practices]).to(
+                equal(["Stories", "CleanEngineering", "Ux", "Bdd", "Ddd"])
+            )
+
+        with it("leaves out practices, patterns, and builders with no staged fidelities"):
+            names = {entry.class_name for entry in self.practices}
+            expect("AgentBdd" in names).to(be_false)
+            expect("LernDomainDriven" in names).to(be_false)
+            expect("CreatePracticeGuidance" in names).to(be_false)
 
         with it("omits utilities marked noCatalog"):
             expect(len(UTILITY_REGISTRY) > 0).to(be_true)
             expect([entry.class_name for entry in self.utilities]).to(equal(["Repo"]))
 
-        with it("resolves CDD as the header-row entry, first in the list"):
-            expect(self.practices[0].display_name).to(equal("Context-driven delivery"))
-            expect(self.practices[0].class_name).to(equal("Cdd"))
+        with it("names and orders each context tool from its own catalog card"):
+            expect([entry.display_name for entry in self.practices]).to(
+                equal([
+                    "Stories",
+                    "Clean Engineering",
+                    "User Experience",
+                    "Behavior-Driven Development",
+                    "Domain-Driven Design",
+                ])
+            )
 
 
 with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections"):
@@ -150,7 +168,7 @@ with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections")
         with it("resolves each fidelity to its key and default format"):
             keys = [g.key for g in self.guidances]
             expect(keys).to(
-                equal(["bounded_context", "building_blocks", "tactics"])
+                equal(["bounded_context", "model", "tactics"])
             )
             formats = {g.key: g.default_format for g in self.guidances}
             expect(formats["bounded_context"]).to(equal("markdown"))
@@ -227,8 +245,8 @@ with description("Collect Skill Slash-Command Map From SKILL Frontmatter"):
         with it("resolves clean_engineering to the hyphenated clean-engineering skill name"):
             expect(SkillSlashName().resolve("clean_engineering")).to(equal("clean-engineering"))
 
-        with it("resolves cdd to its own skill name"):
-            expect(SkillSlashName().resolve("cdd")).to(equal("cdd"))
+        with it("resolves ddd to its own skill name"):
+            expect(SkillSlashName().resolve("ddd")).to(equal("ddd"))
 
         with it("resolves an unknown module dir to nothing rather than guessing"):
             expect(SkillSlashName().resolve("not_a_real_skill")).to(be_none)

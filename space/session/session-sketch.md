@@ -180,7 +180,7 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 
 Handoff, Sketch, and GrillContext take their paths from the host Session. They do not open a workspace of their own.
 
-- Handoff writes `handoff-{timestamp}.md` in `session.session_path / handoffs`.
+- Handoff writes `handoff-{timestamp}.md` in the project's current session folder (`{CDD_PROJECT}/.sessions/{session}/`, else `.sessions/default/`).
 - RecordDecisions writes `{NNNN}-{slug}.md` under `session.workpath / .context / cdr`.
 - Sketch writes `{slug}-sketch.md` under the session work path, in that path's `.context` folder.
 - GrillContext writes `grill-answers.md` in that same `.context` folder.

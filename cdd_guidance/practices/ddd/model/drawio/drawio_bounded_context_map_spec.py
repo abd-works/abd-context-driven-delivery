@@ -55,3 +55,32 @@ with description("DrawIOBoundedContextMap"):
             catalog_bottom = catalog_y + _context_height(catalog)
             expect(sales_y >= catalog_y).to(be_true)
             expect(sales_y <= catalog_bottom).to(be_true)
+
+
+_MODEL = Path(__file__).resolve().parent.parent / "_examples" / "expected" / "domain-model.md"
+
+
+with description("DrawIOBoundedContextMap at model fidelity"):
+    with context("render"):
+        with it("should draw each root card with its repository below the domain operations"):
+            model = MarkdownBoundedContextMap().parse(_MODEL.read_text(encoding="utf-8"))
+            xml = DrawIOBoundedContextMap().render(model)
+            card = xml.split('id="card-customerprofile"', 1)[1].split("/>", 1)[0]
+            expect(card.find("enterProfileDetails") < card.find("Repository")).to(be_true)
+            expect(card.find("CustomerProfileRepository") < card.find("create(accountCredentials)")).to(be_true)
+            expect('id="card-customerprofilerepository"' in xml).to(be_false)
+
+        with it("should nest aggregates in their contexts and compose members under the root"):
+            model = MarkdownBoundedContextMap().parse(_MODEL.read_text(encoding="utf-8"))
+            xml = DrawIOBoundedContextMap().render(model)
+            expect('id="ctx-customer"' in xml).to(be_true)
+            expect('id="agg-customer-profile"' in xml).to(be_true)
+            expect('source="card-customerprofile" target="card-customer-profile-identity"' in xml).to(be_true)
+            expect("startArrow=diamondThin" in xml).to(be_true)
+
+        with it("should draw an arrow only where one aggregate needs another"):
+            model = MarkdownBoundedContextMap().parse(_MODEL.read_text(encoding="utf-8"))
+            xml = DrawIOBoundedContextMap().render(model)
+            expect('source="card-customerprofile" target="card-kycinquiry"' in xml).to(be_true)
+            expect('source="card-subscription" target="card-customerprofile"' in xml).to(be_true)
+            expect('source="card-kycinquiry" target=' in xml).to(be_false)

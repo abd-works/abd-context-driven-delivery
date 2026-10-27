@@ -593,7 +593,7 @@ parent_id, child_id, kind=aggregation, order=8, display=relationship
 
 ## Rule queries
 
-**building-blocks-fidelity-requires-tactical-stereotype.ql** — OoadClass. No DDD stereotype node for that class.
+**every-class-carries-ddd-stereotype.ql** — OoadClass. No DDD stereotype node for that class.
 
 **domain-concepts-not-technical-names.ql** — Aggregate, Entity, EntityRoot, ValueObject, Repository, DomainService. Node name.
 

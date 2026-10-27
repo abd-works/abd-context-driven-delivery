@@ -295,15 +295,6 @@ Do not put `/generate` on the practice. Pass the practice into the kit.
 
 ---
 
-## practices/cdd
-*Cdd* is the stage menu across Stories, DDD, UX, Clean Engineering, and BDD.
-
-- **Purpose:** Offer the stage menu across Stories, DDD, UX, Clean Engineering, and BDD.
-- **Seam (terms):** Cdd
-- **Dependencies (one-way):** `harness/guidance`, `practices/stories`, `practices/ddd`, `practices/ux`, `practices/clean_engineering`, `practices/bdd`
-
----
-
 ## practices/clean_engineering
 *CleanEngineering* partitions, types, and implements objects — modules, then model, then code — in the caller’s language.
 
@@ -501,7 +492,7 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Imp
 ---
 
 ## space/handoff
-*Handoff* writes a resume document a fresh agent can continue from, under the current session folder ``handoffs/``.
+*Handoff* writes a resume document a fresh agent can continue from, in the project's current session folder (``.sessions/{session}/``, else ``.sessions/default/``).
 
 - **Purpose:** Compact the current agent session into a handoff document a fresh agent can resume from.
 - **Seam (terms):** Handoff

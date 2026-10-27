@@ -118,6 +118,8 @@ class Sketch(GuidanceAction):
     def sketch(self, guidance: GuidanceArg) -> str:
         """Confirm views only when the user did not already name them. Write a high-level shell in one integrated sketch file, one section per practice. The shell's level of detail is that fidelity's Scaffold section; the notation is the practice sketch template. Then ask which theme to start. Ask three or four questions from that fidelity's Sketch section, then sketch those answers into the existing sections. Practice Rules apply after those answers, not to the shell. The reply includes these sketch instructions, each practice's sketch template, and each practice's rules."""
         self.begin(guidance, action="sketch")
+        "save_sketch the shell in the same turn it is written. After three or four grill answers, sketch the theme into that same file, save_sketch again, then review_sketch. Do not ask the next theme until that review confirms the sketch."
+        "Carry forward every mistake named in review. Correct the sketch. Do not regenerate as if those mistakes never happened."
         for item in self.listed():
             instructions(item.rules.markdown_block)
             instructions(item.sketch_template)

@@ -216,31 +216,22 @@ build order:
 
 
 
-## building_blocks
+## model
 
+Draw each aggregate under its context, root first. On the root: its stereotypes, the properties it holds, the domain operations the stories perform on it, then `repo:` with the collection operations — one below the other, the same way in every aggregate. Members it owns get their own `#####` with their stereotype. For each operation that needs another aggregate, name the call with `->` and hold that aggregate by identity under `refs:`. Leave out constructors, ports, publishers, DTOs, factories, specifications, domain services, and event classes — those are **tactics**. Then read every aggregate back and merge what can be merged.
 
+In the fence, a single word is a property; a line with parameters, a `()`, or an `->` under it is an operation — write `payNow()` for an operation that takes nothing. `{Member} <<Value Object>>` is an owned member. `refs:` lists other aggregates held by identity. `repo:` names the repository; the line under it lists its operations (`create / load / update`).
 
-Flesh out each aggregate under its context. Give each entity its stereotype; deepen operations into signatures and add `->` interactions per clean-engineering **model** fidelity. Keep aggregate-level module seam and constraint. At generate time use `templates/building-blocks.md` (extends `practices/clean_engineering/templates/class-model.md`) for stereotype operations — repositories load/save/search/update/remove; aggregate roots submit `-> DomainEventPublisher.publish` on state-changing operations that emit past-tense events.
-
-
-
-- **`building-blocks-fidelity-requires-tactical-stereotype`** — Every class name carries a tag (`<<Aggregate Root>>`, `<<Entity>>`, `<<Value Object>>`, …). Bare names are incomplete.
-
-- **`flaccid-data-object-no-behavior`** — A type is not a field bag; give it *its* operations. Not a repository dump, not someone else's verbs on a value.
-
-- **`service-is-homeless`** — Domain Service = rare **doer**, only when the operation will not sit cleanly on one domain object. Not SOA `FooService`. `CheckoutService.placeOrder` is `Cart.checkout`.
-
-- **`repository-is-collection-lifecycle`** — Repository only when the business finds/stores/retires that aggregate. Collection members: `add` / `remove` / `update` / `find_by_*`. No repo for a checkout-born Cart or a Subscription that is an invariant of Subscriber.
-
-- **`shared-identity-is-generalisation`** — Shared identity over time (Prospect and Subscriber *are* a Customer) → base type + generalisation arrows.
-
+- **`aggregate-view-only`** — Roots, member entities, values, repositories, domain operations, and arrows between aggregates. Nothing technical.
+- **`every-class-carries-ddd-stereotype`** — `<<Aggregate Root>> <<Entity>>`, `<<Entity>>`, `<<Value Object>>`, `<<Repository>>`. Bare names are incomplete.
+- **`root-card-carries-repository`** — `repo:` sits on the root, below its operations; the drawn view puts it inside the root's card.
+- **`repository-is-crud`** — `create` / `load` / `update`, plus `search` / `retire` only when the business does them. Rules are domain operations.
+- **`core-operations-on-the-model`** — Every verb the stories perform on the aggregate is an operation on the class that owns the state.
+- **`cross-aggregate-dependency-drawn`** — `-> {OtherRoot}…` on the operation that needs it; `refs:` holds the other root by identity.
+- **`simplest-model-that-holds-the-rules`** — Merge operations, members, and aggregates until one more merge would lose a rule.
+- **`flaccid-data-object-no-behavior`** — A type is not a field bag; give it *its* operations.
 - **`screen-interface-not-a-domain-object`** — `open()` / `isShowing()` screens are not domain types.
-
-- **`private-method-naming`** — Public `+name`; private `- _name`.
-
 - **`no-orphaned-objects`** — Every type has at least one relationship.
-
-
 
 ~~~markdown
 
@@ -254,7 +245,7 @@ Flesh out each aggregate under its context. Give each entity its stereotype; dee
 
 ```
 
-// seam: {job a caller hires this module for}
+// seam: {job a caller hires this aggregate for}
 
 // constraint: {caller obligation}
 
@@ -268,13 +259,19 @@ Flesh out each aggregate under its context. Give each entity its stereotype; dee
 
 ```
 
-{operationName} {param}
-
-   -> {Collaborator}.{operation}
+{identity}
 
 {propertyName}
 
-{ownedEntity} <<Entity|Value Object>>
+{ownedMember} <<Entity|Value Object>>
+
+{operationName} {param}
+
+   -> {Member}.{operation}
+
+{operationNeedingAnotherAggregate} {param}
+
+   -> {OtherRoot}Repository.load({otherRootId})
 
 Invariant: {what this root must keep true}
 
@@ -282,21 +279,23 @@ refs:
 
   - {OtherRoot} (by {IdType})
 
-depends:
-
-  → {UpstreamContext}:
-
-      pattern: {catalogue pattern}
-
-      crosses: {SyncObject}, …
-
-      integrate: {concrete call site}
-
 repo: {Root}Repository <<Repository>>
 
-  load / save / search / update / remove
+  create / load / update
 
-events: {SomethingHappened} — emitted by {operationOnRoot} -> DomainEventPublisher.publish — consumers: {who}
+```
+
+
+
+##### {OwnedMember} <<Entity>>
+
+
+
+```
+
+{propertyName}
+
+{operationName}
 
 ```
 
@@ -312,11 +311,43 @@ events: {SomethingHappened} — emitted by {operationOnRoot} -> DomainEventPubli
 
 
 
-Architecture + which seams get real adapters.
+Add the building blocks the model needs — `<<Factory>>`, `<<Specification>>`, `<<Domain Service>>`, `<<Domain Event>>`, interfaces to other systems — then the architecture and which seams get real adapters.
+
+
+
+- **`factory-is-complex-creation`** — Factory only when valid creation needs subtype choice, several rules, or outside collaborators.
+
+- **`service-is-homeless`** — Domain Service = rare **doer**, only when the operation will not sit cleanly on one domain object. `CheckoutService.placeOrder` is `Cart.checkout`.
+
+- **`domain-events-past-tense`** — Past-tense name; publishing root, trigger, consumers, payload.
+
+- **`specification-is-reusable-rule`** — One named predicate reused across query, validation, and creation.
+
+- **`private-method-naming`** — Public `+name`; private `- _name`.
 
 
 
 ~~~markdown
+
+##### {Root} <<Aggregate Root>> <<Entity>>
+
+
+
+```
+
+{stateChange} {param}
+
+   -> eventPublisher.publish({SomethingHappened})
+
+events: {SomethingHappened} — emitted by {stateChange} — consumers: {who}
+
+factory: {Root}Factory <<Factory>> — {why creation needs it}
+
+spec: {RuleName} <<Specification>> — used by {operation}, {operation}
+
+```
+
+
 
 ### architecture:
 
@@ -335,5 +366,3 @@ sync across BC: {SyncObject} via {mechanism}
 ```
 
 ~~~
-
-

@@ -1,0 +1,22 @@
+"""
+Story: Apply Surprise Round Rules (scenario fidelity - tier-neutral).
+Actor: GM
+Calls helper-protocol methods only - no assertions, no tier mechanism here.
+Tiers: apply_surprise_round_rules_test_helper.{tier}.py implements ApplySurpriseRoundRulesHelper.
+"""
+
+from __future__ import annotations
+
+from typing import Protocol
+
+
+class ApplySurpriseRoundRulesHelper(Protocol):
+    ...
+
+
+def create_apply_surprise_round_rules_story(h: "ApplySurpriseRoundRulesHelper") -> dict:
+    """Build one pytest test function per scenario. Returns {test_name: fn} for the tier file to bind at module scope.
+    """
+    tests = {}
+    # TODO: add main-flow scenario
+    return tests

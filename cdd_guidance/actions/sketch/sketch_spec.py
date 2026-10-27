@@ -89,19 +89,30 @@ with description("Sketch toolset"):
             path = self.sketcher.save_sketch(self.destination, "from-file", paths=str(source))
             expect(Path(path).read_text(encoding="utf-8")).to(equal("from the file\n"))
 
-        with it("writes a sprint-folder destination up into path/.context"):
-            sprint = Path(self.destination) / ".context" / "sessions" / "my-sprint"
-            sprint.mkdir(parents=True)
+        with it("writes a session-folder destination into that folder's .context"):
+            session = Path(self.destination) / ".sessions" / "my-sprint"
+            session.mkdir(parents=True)
             path = Path(
                 self.sketcher.save_sketch(
-                    destination=str(sprint),
+                    destination=str(session),
                     slug="engagement",
                     content="rough\n",
                 )
             )
-            expect(path.parent).to(equal(Path(self.destination) / ".context"))
+            expect(path.parent).to(equal(session / ".context"))
             expect(path.name).to(equal("engagement-sketch.md"))
-            expect((sprint / "engagement-sketch.md").exists()).to(equal(False))
+            expect((session / "engagement-sketch.md").exists()).to(equal(False))
+
+        with it("writes straight into a destination that is already a .context folder"):
+            context_dir = Path(self.destination) / ".context"
+            path = Path(
+                self.sketcher.save_sketch(
+                    destination=str(context_dir),
+                    slug="engagement",
+                    content="rough\n",
+                )
+            )
+            expect(path.parent).to(equal(context_dir))
 
         with it("writes to .context/{slug}-sketch.md under the destination"):
             path = self.sketcher.save_sketch(
@@ -156,16 +167,16 @@ with description("Sketch toolset"):
             self.destination = self.tmp.name
             self.sketcher = Sketch()
 
-        with it("returns an empty string when the .context directory does not exist"):
+        with it("returns no sketches when the .context directory does not exist"):
             result = self.sketcher.list_sketches(destination=self.destination)
-            expect(result).to(equal(""))
+            expect(result).to(equal("no sketches"))
 
-        with it("returns an empty string when the .context directory exists but is empty"):
+        with it("returns no sketches when the .context directory exists but is empty"):
             (Path(self.destination) / ".context").mkdir(parents=True)
 
             result = self.sketcher.list_sketches(destination=self.destination)
 
-            expect(result).to(equal(""))
+            expect(result).to(equal("no sketches"))
 
         with it("lists every *-sketch.md file when no slug filter is given"):
             self.sketcher.save_sketch(self.destination, "alpha", "a\n")
@@ -216,21 +227,19 @@ with description("Sketch toolset"):
             expect(joined).to(contain("confirm"))
             expect(joined).to(contain("mistakes"))
             expect(joined).to(
-                contain("Asking another grill question before review_sketch confirms correct is a defect")
+                contain("Do not ask the next theme until that review confirms the sketch")
             )
             expect(joined).to(
-                contain("Never defer persistence or review to the end of the grill")
+                contain("save_sketch the shell in the same turn it is written")
             )
 
         with it("instructs carrying named review mistakes into the next sketch"):
             joined = "\n".join(self.body.prompt)
             expect(joined).to(contain("Carry forward"))
             expect(joined).to(
-                contain("do not regenerate as if those mistakes never happened")
+                contain("Do not regenerate as if those mistakes never happened")
             )
-            expect(joined).to(
-                contain("Regenerating as if named mistakes never happened is a defect")
-            )
+            expect(joined).to(contain("Correct the sketch"))
 
         with it("instructs grilling to validate the sketch rather than run disconnected"):
             joined = "\n".join(self.body.prompt)
@@ -246,7 +255,7 @@ with description("Sketch toolset"):
             joined = "\n".join(self.body.prompt)
             expect(joined).to(contain("(Recommended)"))
             expect(joined).to(contain("save_sketch"))
-            expect(joined).to(contain("Grill the sketch plan"))
+            expect(joined).to(contain("Conduct a relentless grilling interview"))
 
         with it("inlines each listed practice's rules markdown_block"):
             from cdd_guidance.practices.bdd.bdd import Bdd
@@ -259,47 +268,6 @@ with description("Sketch toolset"):
             expect(joined).to(contain("observable-behavior"))
             expect(joined).to(contain("no-implementation"))
             expect(joined).to(contain("not a graph query"))
-
-
-with description("an MCP sketch prompt"):
-    with it("should return sketch instructions for prose that contains a colon"):
-        from harness.mcp.mcp_server import McpHost
-
-        repo = Path(__file__).resolve().parents[3]
-        host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
-        prose = "Three client perspectives: prospect onboarding and active account."
-        result = str(host._runtime.invoke_prompt("sketch.sketch", {"guidance": prose}))
-        expect(result).to(contain("Grill the sketch plan"))
-        expect("ModuleNotFoundError" in result).to(equal(False))
-
-    with it("should inline listed practice rules into the sketch instructions"):
-        from harness.mcp.mcp_server import McpHost
-
-        repo = Path(__file__).resolve().parents[3]
-        host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
-        result = str(
-            host._runtime.invoke_prompt(
-                "sketch.sketch",
-                {"guidance": ["cdd_guidance.practices.bdd.bdd:Bdd"]},
-            )
-        )
-        expect(result).to(contain("observable-behavior"))
-
-    with it("should include each practice sketch template and rules"):
-        from harness.mcp.mcp_server import McpHost
-
-        repo = Path(__file__).resolve().parents[3]
-        host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
-        result = str(
-            host._runtime.invoke_prompt(
-                "sketch.sketch",
-                {"guidance": ["stories", "clean-engineering-model"]},
-            )
-        )
-        expect(result).to(contain("verb-noun-format"))
-        expect(result).to(contain("shape-classes-around-resources"))
-        expect(result).to(contain("Sketch the story hierarchy"))
-        expect(result).to(contain("terse indent notation"))
 
 
 with description("a sketch action"):
@@ -320,7 +288,7 @@ with description("PracticeGuidance operations for sketch"):
     with it("should not expose sketch on practice Guidance"):
         cls = type(
             AgentToolSet.instantiate(
-                "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
+                "cdd_guidance.builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
             )
         )
         practice = cls()

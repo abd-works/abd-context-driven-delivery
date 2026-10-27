@@ -11,15 +11,6 @@ _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-_PRACTICES = (
-    "cdd_guidance.practices.agent_bdd.agent_bdd:AgentBdd",
-    "cdd_guidance.practices.bdd.bdd:Bdd",
-    "cdd_guidance.practices.cdd.cdd:Cdd",
-    "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering",
-    "cdd_guidance.practices.ddd.ddd:Ddd",
-    "cdd_guidance.practices.stories.stories:Stories",
-    "cdd_guidance.practices.ux.ux:Ux",
-)
 _SKIP = {
     ".git",
     ".venv",
@@ -121,11 +112,19 @@ class HookExercise:
         }
 
     def _practices(self) -> list[Any]:
+        """Every installed practice with fidelities, found the way the installer finds toolsets."""
         from harness.agent_tools.agent_tools import AgentToolSet
+        from harness.guidance.guidance import PracticeGuidance
+        from harness.installation.installer import Installer
 
         loaded = []
-        for ref in _PRACTICES:
-            practice = AgentToolSet.instantiate(ref)
+        for ref in Installer(repo=self.repo).collect_toolsets():
+            try:
+                practice = AgentToolSet.instantiate(ref)
+            except Exception:  # noqa: BLE001
+                continue
+            if not isinstance(practice, PracticeGuidance):
+                continue
             entries = getattr(getattr(practice, "fidelities", None), "entries", None) or {}
             if entries:
                 loaded.append(practice)

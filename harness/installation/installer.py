@@ -53,6 +53,7 @@ class Installer:
             ".git",
             "retired",
             "_retired",
+            ".retired",
         }
     )
     _CATALOG_DIRS = (
@@ -822,7 +823,7 @@ class Installer:
     def _mcp_host_is_this_process(self) -> bool:
         from harness.mcp.mcp_server import HostPid
 
-        return HostPid.from_ide(self.path).is_this_process
+        return HostPid.from_ide(self._mcp.pid_folder).is_this_process
 
     def _mcp_host_is_running(self) -> bool:
         from harness.mcp.mcp_server import McpInstallation

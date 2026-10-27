@@ -38,7 +38,7 @@ Sketches start at **discovery**. Load the **Rules** for each active practice at 
 | Stage | Stories | Clean Engineering | Domain Driven Design | User Experience | Behavior Driven Development |
 |---|---|---|---|---|---|
 | Discovery | `story_map` | `modules` | `bounded_context` | `ia` | `behavior` |
-| Specification | `scenarios` | `model` | `building_blocks` | `mockup` | `behavior` |
+| Specification | `scenarios` | `model` | `model` | `mockup` | `behavior` |
 | Implementation | `acceptance_tests` | `code` | `tactics` | `front_end_code` | `development` |
 
 You may dip into the next fidelity's **Sketch** section and **Rules** when a question needs it. Then return. The goal is to finish the fidelity you are on. Often that means exploring at the next level but that does not mean you're at the next fidelity — load the fidelity and its rules as needed, then go back to the previous.
