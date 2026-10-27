@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="cdd-flow-of-work" name="Flow of Work">
-        <mxGraphModel dx="6083" dy="4978" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2100" math="0" shadow="0">
+        <mxGraphModel dx="5150" dy="4018" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -175,34 +175,34 @@
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="arch-title" value="Practices" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;fontColor=#1a1a1a;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="720" width="280" height="32" as="geometry"/>
+                    <mxGeometry x="70" y="720" width="280" height="32" as="geometry"/>
                 </mxCell>
                 <mxCell id="arch-lead" value="Each practice has the same shape. Markdown holds the guidance a person and AI follow. The knowledge graph holds the model, and validators, builders, and transformers work from that graph." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="752" width="1500" height="22" as="geometry"/>
+                    <mxGeometry x="74" y="760" width="1500" height="22" as="geometry"/>
                 </mxCell>
                 <mxCell id="arch-frame" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#dddddd;arcSize=4;" parent="1" vertex="1">
-                    <mxGeometry x="420" y="840" width="1260" height="530" as="geometry"/>
+                    <mxGeometry x="430" y="800" width="1260" height="450" as="geometry"/>
                 </mxCell>
                 <mxCell id="arch-frame-label" value="Architecture of a practice" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=13;fontColor=#666666;" parent="1" vertex="1">
-                    <mxGeometry x="436" y="848" width="280" height="24" as="geometry"/>
+                    <mxGeometry x="446" y="808" width="280" height="24" as="geometry"/>
                 </mxCell>
                 <mxCell id="prac-stories" value="&lt;b&gt;Stories&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Actors and the interactions that deliver the solution&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="896" width="280" height="64" as="geometry"/>
+                    <mxGeometry x="70" y="856" width="280" height="64" as="geometry"/>
                 </mxCell>
                 <mxCell id="prac-ddd" value="&lt;b&gt;Domain-driven design&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Business concepts and the boundaries that protect them&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="972" width="280" height="64" as="geometry"/>
+                    <mxGeometry x="70" y="932" width="280" height="64" as="geometry"/>
                 </mxCell>
                 <mxCell id="prac-ce" value="&lt;b&gt;Clean engineering&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Modules, contracts, and code that can be generated and checked&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="1048" width="280" height="64" as="geometry"/>
+                    <mxGeometry x="70" y="1008" width="280" height="64" as="geometry"/>
                 </mxCell>
                 <mxCell id="prac-bdd" value="&lt;b&gt;Behavior-driven development&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Behavior tests written in the language of the domain&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="1124" width="280" height="64" as="geometry"/>
+                    <mxGeometry x="70" y="1084" width="280" height="64" as="geometry"/>
                 </mxCell>
                 <mxCell id="prac-ux" value="&lt;b&gt;User experience&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;How people move through and act on the solution&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="1200" width="280" height="64" as="geometry"/>
+                    <mxGeometry x="70" y="1160" width="280" height="64" as="geometry"/>
                 </mxCell>
                 <mxCell id="md-box" value="Markdown" style="swimlane;html=1;startSize=36;fillColor=#fffdf6;strokeColor=#d6b656;fontStyle=1;fontSize=14;fontColor=#1a1a1a;rounded=1;arcSize=6;swimlaneFillColor=#fffef9;collapsible=0;" parent="1" vertex="1">
-                    <mxGeometry x="460" y="890" width="300" height="380" as="geometry"/>
+                    <mxGeometry x="470" y="850" width="300" height="380" as="geometry"/>
                 </mxCell>
                 <mxCell id="md-guidance" value="&lt;b&gt;Guidance&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;How to think and sketch at each fidelity&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="md-box" vertex="1">
                     <mxGeometry x="16" y="52" width="268" height="70" as="geometry"/>
@@ -217,16 +217,16 @@
                     <mxGeometry x="16" y="298" width="268" height="70" as="geometry"/>
                 </mxCell>
                 <mxCell id="kg-box" value="&lt;b&gt;Code based Knowledge Graph&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px;font-weight:normal;color:#333333&quot;&gt;The practice models and the relationships between them. read out of the code.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=16;align=left;spacingLeft=16;spacingRight=12;verticalAlign=middle;arcSize=6;" parent="1" vertex="1">
-                    <mxGeometry x="800" y="890" width="340" height="380" as="geometry"/>
+                    <mxGeometry x="810" y="850" width="340" height="380" as="geometry"/>
                 </mxCell>
                 <mxCell id="kg-validators" value="&lt;b&gt;Validators&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Check the rules against the graph&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1360" y="880" width="300" height="60" as="geometry"/>
+                    <mxGeometry x="1370" y="840" width="300" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="kg-builders" value="&lt;b&gt;Builders&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Produce the practice artifacts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1360" y="960" width="300" height="112" as="geometry"/>
+                    <mxGeometry x="1370" y="920" width="300" height="112" as="geometry"/>
                 </mxCell>
                 <mxCell id="kg-transformers" value="&lt;b&gt;Transformers&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Carry the model to the next fidelity and the tech stack&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1360" y="1088" width="300" height="112" as="geometry"/>
+                    <mxGeometry x="1370" y="1048" width="300" height="112" as="geometry"/>
                 </mxCell>
                 <mxCell id="arch-to-md" value="same shape" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#9673a6;strokeWidth=2;fontSize=11;fontColor=#666666;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" source="prac-ce" target="md-box" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -234,47 +234,47 @@
                 <mxCell id="kg-to-val" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;entryX=0;entryY=0.5;" parent="1" source="kg-box" target="kg-validators" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="1180" y="910"/>
-                            <mxPoint x="1180" y="910"/>
+                            <mxPoint x="1190" y="870"/>
+                            <mxPoint x="1190" y="870"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="kg-to-build" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;entryX=0;entryY=0.5;" parent="1" source="kg-box" target="kg-builders" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="1190" y="1016"/>
-                            <mxPoint x="1190" y="1016"/>
+                            <mxPoint x="1200" y="976"/>
+                            <mxPoint x="1200" y="976"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="kg-to-xform" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;strokeWidth=2;entryX=0;entryY=0.5;" parent="1" source="kg-box" target="kg-transformers" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="1210" y="1144"/>
-                            <mxPoint x="1210" y="1144"/>
+                            <mxPoint x="1220" y="1104"/>
+                            <mxPoint x="1220" y="1104"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="expose-title" value="Exposed as" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=18;fontColor=#1a1a1a;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="1410" width="280" height="32" as="geometry"/>
+                    <mxGeometry x="74" y="1250" width="280" height="32" as="geometry"/>
                 </mxCell>
                 <mxCell id="expose-lead" value="Cross-cutting. Install writes these from the same marks, and they are how a practice reaches the agent." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="1440" width="900" height="22" as="geometry"/>
+                    <mxGeometry x="74" y="1280" width="900" height="22" as="geometry"/>
                 </mxCell>
                 <mxCell id="expose-skill" value="&lt;b&gt;Skills&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The practice the agent follows&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="60" y="1478" width="300" height="88" as="geometry"/>
+                    <mxGeometry x="74" y="1318" width="300" height="88" as="geometry"/>
                 </mxCell>
                 <mxCell id="expose-mcp" value="&lt;b&gt;MCP&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Tools the host can call&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="384" y="1478" width="300" height="88" as="geometry"/>
+                    <mxGeometry x="398" y="1318" width="300" height="88" as="geometry"/>
                 </mxCell>
                 <mxCell id="expose-hooks" value="&lt;b&gt;Hooks&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Editor events that run the practice&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="708" y="1478" width="300" height="88" as="geometry"/>
+                    <mxGeometry x="722" y="1318" width="300" height="88" as="geometry"/>
                 </mxCell>
                 <mxCell id="expose-tools" value="&lt;b&gt;Agent tools&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Operations that run&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1032" y="1478" width="300" height="88" as="geometry"/>
+                    <mxGeometry x="1046" y="1318" width="300" height="88" as="geometry"/>
                 </mxCell>
                 <mxCell id="expose-instructions" value="&lt;b&gt;Agent instructions&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Operations that only instruct&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=14;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
-                    <mxGeometry x="1356" y="1478" width="300" height="88" as="geometry"/>
+                    <mxGeometry x="1370" y="1318" width="300" height="88" as="geometry"/>
                 </mxCell>
                 <mxCell id="4" value="" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="610" y="140" width="20" height="200" as="geometry"/>
@@ -288,8 +288,133 @@
                 <mxCell id="8" value="" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="20" y="120" width="20" height="200" as="geometry"/>
                 </mxCell>
-                <mxCell id="68" value="Text" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                <mxCell id="68" value="Text" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
                     <mxGeometry x="1245" y="-235" width="50" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-title" value="Feature Workflow" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=22;fontColor=#1a1a1a;" parent="1" vertex="1">
+                    <mxGeometry x="-470" y="1680" width="900" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-subtitle" value="One new feature moves left to right through our skills and Claude Design. Skills and tools for each step are listed under ⚙." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" parent="1" vertex="1">
+                    <mxGeometry x="-470" y="1714" width="1400" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-col-ctx" value="1  ·  Context" style="swimlane;html=1;startSize=44;fillColor=#f4f7fb;strokeColor=#6c8ebf;fontStyle=1;fontSize=16;fontColor=#1a1a1a;rounded=1;arcSize=4;swimlaneFillColor=#f8fafc;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="-470" y="1754" width="600" height="496" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-ctx-lead" value="Ground the feature in what stakeholders said and what already exists." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=11;fontColor=#555555;whiteSpace=wrap;" parent="wf-col-ctx" vertex="1">
+                    <mxGeometry x="14" y="49" width="572" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-ctx-1" value="&lt;b&gt;Interview stakeholders and transcribe&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Record each conversation and file the transcript as context&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ granola_context · granola_write_note_context · context-setup convert&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-ctx" vertex="1">
+                    <mxGeometry x="12" y="82" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-ctx-2" value="&lt;b&gt;Review and comment on existing artifacts&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Story map, domain model, and screens already in place&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ Miro comments · read_graph&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-ctx" vertex="1">
+                    <mxGeometry x="12" y="166" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-ctx-3" value="&lt;b&gt;Walk the existing screens in the sandbox&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Open the sandbox and navigate the app to see what is there&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ context-setup scout_app · capture_from_live_app&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-ctx" vertex="1">
+                    <mxGeometry x="12" y="250" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-ctx-note" value="Partition and index the material so every later step works from verbatim source.&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ partition · context-index embed&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#1a1a1a;fontSize=11;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="wf-col-ctx" vertex="1">
+                    <mxGeometry x="12" y="416" width="576" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-arrow-ctx" value="" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="155" y="1810" width="20" height="430" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-col-dsc" value="2  ·  Define" style="swimlane;html=1;startSize=44;fillColor=#f8f4fa;strokeColor=#9673a6;fontStyle=1;fontSize=16;fontColor=#1a1a1a;rounded=1;arcSize=4;swimlaneFillColor=#fbf8fc;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="190" y="1754" width="600" height="496" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-dsc-lead" value="Stories, DDD, and UX at discovery fidelity, then carried to spec." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=11;fontColor=#555555;whiteSpace=wrap;" parent="wf-col-dsc" vertex="1">
+                    <mxGeometry x="14" y="45" width="572" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-dsc-1" value="&lt;b&gt;Stories → story map and scenarios&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Actors, journeys, and example-driven scenarios&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ sketch · stories-story-map · stories-scenarios&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-dsc" vertex="1">
+                    <mxGeometry x="12" y="82" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-dsc-2" value="&lt;b&gt;DDD → bounded context and domain model&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Where language changes, and the concepts inside&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ sketch · ddd-bounded-context · ddd-model&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-dsc" vertex="1">
+                    <mxGeometry x="12" y="166" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-dsc-3" value="&lt;b&gt;UX in Claude Design&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;If it cannot run inside the sketch, leave UX out and design it after&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ Claude Design · ux-mockup&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-dsc" vertex="1">
+                    <mxGeometry x="12" y="250" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-dsc-5" value="&lt;b&gt;Discovery to spec&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Lift the sketch to specification fidelity&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;render&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-dsc" vertex="1">
+                    <mxGeometry x="10" y="336" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-dsc-note" value="Review, refine, and adjust all artifacts." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#1a1a1a;fontSize=11;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="wf-col-dsc" vertex="1">
+                    <mxGeometry x="10" y="416" width="576" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-arrow-dsc" value="" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="813" y="1810" width="20" height="420" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-col-pro" value="3  ·  Prototype" style="swimlane;html=1;startSize=44;fillColor=#faf6ff;strokeColor=#7c4dff;fontStyle=1;fontSize=16;fontColor=#1a1a1a;rounded=1;arcSize=4;swimlaneFillColor=#fcfaff;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="1754" width="600" height="496" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-pro-lead" value="A thin slice that behaves: business logic and client only." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=11;fontColor=#555555;whiteSpace=wrap;" parent="wf-col-pro" vertex="1">
+                    <mxGeometry x="14" y="49" width="572" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-pro-1" value="&lt;b&gt;Business logic layer&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Domain code the screens call&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ ddd-tactics · clean-engineering-code&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7c4dff;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-pro" vertex="1">
+                    <mxGeometry x="12" y="82" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-pro-2" value="&lt;b&gt;Client-side layer&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;The domain client and the views that paint it&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ lern-domain-driven · ux-front-end-code&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7c4dff;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-pro" vertex="1">
+                    <mxGeometry x="12" y="166" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-pro-3" value="&lt;b&gt;★  Stubbed server&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#4a2c82&quot;&gt;Hard-coded map of routes to the next page, no persistence&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#7c4dff;dashed=1;dashPattern=6 4;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-pro" vertex="1">
+                    <mxGeometry x="12" y="250" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-pro-note" value="Review, refine, and adjust all artifacts. Complete the spec level when done.&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ validate · satisfy&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#7c4dff;fontColor=#1a1a1a;fontSize=11;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="wf-col-pro" vertex="1">
+                    <mxGeometry x="10" y="416" width="576" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-arrow-pro" value="" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="1470" y="1820" width="20" height="450" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-col-spc" value="4  ·  Specification" style="swimlane;html=1;startSize=44;fillColor=#fffdf6;strokeColor=#d6b656;fontStyle=1;fontSize=16;fontColor=#1a1a1a;rounded=1;arcSize=4;swimlaneFillColor=#fffef9;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="1510" y="1754" width="600" height="496" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-spc-lead" value="Lock the slice into executable specs before the real stack." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=11;fontColor=#555555;whiteSpace=wrap;" parent="wf-col-spc" vertex="1">
+                    <mxGeometry x="14" y="49" width="572" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-spc-1" value="&lt;b&gt;Spec tests&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Scenarios as tests in the language of the domain&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ stories-acceptance-tests · bdd-behavior&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-spc" vertex="1">
+                    <mxGeometry x="12" y="82" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-spc-2" value="&lt;b&gt;Domain code for the client&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Business logic that makes the spec tests pass&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ ddd-tactics · clean-engineering-code&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-spc" vertex="1">
+                    <mxGeometry x="12" y="166" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-spc-3" value="&lt;b&gt;Complete domain model diagrams (tactics)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Aggregates, entities, and operations drawn out&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ clean-engineering-model · render → drawio&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-spc" vertex="1">
+                    <mxGeometry x="12" y="250" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-spc-4" value="&lt;b&gt;★  Wire stories into a clickable mockup&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#4a2c82&quot;&gt;Like the UX mockup, but running on the prototype&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ ux-mockup · Claude Design&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#7c4dff;dashed=1;dashPattern=6 4;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-spc" vertex="1">
+                    <mxGeometry x="12" y="334" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-arrow-spc" value="" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="2130" y="1874" width="20" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-col-imp" value="5  ·  Implement" style="swimlane;html=1;startSize=44;fillColor=#f4faf4;strokeColor=#82b366;fontStyle=1;fontSize=16;fontColor=#1a1a1a;rounded=1;arcSize=4;swimlaneFillColor=#f8fcf8;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="2170" y="1754" width="600" height="496" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-imp-lead" value="Build it on the LERN stack and prove it end to end." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;fontSize=11;fontColor=#555555;whiteSpace=wrap;" parent="wf-col-imp" vertex="1">
+                    <mxGeometry x="14" y="49" width="572" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-imp-1" value="&lt;b&gt;Acceptance tests&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Specs first, then the production code behind them&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ stories-acceptance-tests · implementation agent&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-imp" vertex="1">
+                    <mxGeometry x="12" y="82" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-imp-2" value="&lt;b&gt;Domain tactics&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Aggregates and invariants in production code&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ ddd-tactics&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-imp" vertex="1">
+                    <mxGeometry x="12" y="166" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-imp-3" value="&lt;b&gt;Inject Architecture&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;lowdb, Express, React, and Node behind the domain API&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ lern-domain-driven&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-imp" vertex="1">
+                    <mxGeometry x="12" y="250" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-imp-4" value="&lt;b&gt;End-to-end tests in Playwright&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#555555&quot;&gt;Run the existing suite and add new specs&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ bdd-realization · Playwright&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="wf-col-imp" vertex="1">
+                    <mxGeometry x="12" y="334" width="576" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-imp-note" value="Working feature: passes acceptance and end-to-end tests. Feed what you learn back into context." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#1a1a1a;fontSize=11;align=left;spacingLeft=10;spacingRight=8;arcSize=10;" parent="wf-col-imp" vertex="1">
+                    <mxGeometry x="10" y="436" width="576" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="wf-loop" value="Feedback from each feature returns to context" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;dashed=1;dashPattern=8 4;strokeColor=#d79b00;strokeWidth=2;fontSize=12;fontColor=#8a5a00;exitX=0.5;exitY=1;entryX=0.5;entryY=1;" parent="1" source="wf-col-imp" target="wf-col-ctx" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2470" y="2380"/>
+                            <mxPoint x="-170" y="2380"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="wf-dsc-4" value="&lt;b&gt;★  Option: iterate with Miro&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#4a2c82&quot;&gt;Stories and DDD worked on the board in short cycles&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;color:#7c4dff&quot;&gt;⚙ iterate · Miro canvas&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8ff;strokeColor=#7c4dff;dashed=1;dashPattern=6 4;fontColor=#1a1a1a;fontSize=13;align=left;spacingLeft=12;spacingRight=8;arcSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="2270" width="576" height="72" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
