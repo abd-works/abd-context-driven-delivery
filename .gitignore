@@ -83,6 +83,7 @@ _*
 # Rule fixture folders are source, not scratch.
 !**/_examples/
 !**/_examples/**
+**/_examples/**/.context/graph.json
 call_miro.py
 count_all.py
 extract_ids.py
