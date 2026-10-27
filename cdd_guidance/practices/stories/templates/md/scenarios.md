@@ -18,10 +18,11 @@ section: body
 
 ### Domain terms
 
-- ++`<ConceptA>`++ — `<plain-language gloss>`
-- ++`<ConceptB>`++ — `<plain-language gloss>`
+- ++[`<ConceptA>`](<path>/domain-model.md#<concepta-heading-anchor>)++ — `<plain-language gloss>`
+- ++[`<ConceptB>`](<path>/domain-model.md#<conceptb-heading-anchor>)++ — `<plain-language gloss>`
 
 > In steps: underline examples and domain terms (`++<Concept>++`, `++<example>++`). Italic concrete values (`*<value>*`).
+> Link each domain term to its heading in the domain model markdown — `domain-model.md` (DDD) or `class-model.md` (Clean Engineering) — when that file exists (`domain-terms-link-to-model`). The anchor is the heading's own: `#### SimCard <<Entity>>` is `#simcard-entity`. With no model file, leave the term unlinked.
 
 ### Evidence
 
@@ -42,8 +43,8 @@ section: body
 
 #### Scenario Outline: `<outcome-oriented name>`
 
-*Given* a ++`<ConceptA>`++ with {`<field_1>`}  
-  *And* the ++`<ConceptB>`++ for that ++`<ConceptA>`++ is {`<field_2>`}  
+*Given* a ++[`<ConceptA>`](<path>/domain-model.md#<concepta-heading-anchor>)++ with {`<field_1>`}  
+  *And* the ++[`<ConceptB>`](<path>/domain-model.md#<conceptb-heading-anchor>)++ for that ++`<ConceptA>`++ is {`<field_2>`}  
 *When* the **`<Actor>`** `<action>`  
 
 ```realization
@@ -59,7 +60,7 @@ section: body
 
 | scenario   | `<field_1>` | `<field_2>` | `<field_3>` |
 |------------|-------------|-------------|-------------|
-| ++Scenario 1++ | `<value>`   | `<value>`   | `<value>`   |
+| ++Scenario 1++ | `<value>`   | [`<ConceptB value>`](<path>/domain-model.md#<conceptb-heading-anchor>)   | `<value>`   |
 | ++Scenario 2++ | `<value>`   | `<value>`   | `<value>`   |
 
 > Markdown keeps examples tables for documentation. Code wires values via `{Type}ExampleFactory` (AI fills helper/story method bodies). Do not copy inventable `examples: [{ … }]` literals into code story files.

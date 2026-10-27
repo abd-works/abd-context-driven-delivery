@@ -23,6 +23,7 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import (
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario, Step
 from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.markdown.links import DomainModelLinks, StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.story_model import Increment
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
@@ -411,7 +412,7 @@ class MarkdownScenario(Scenario):
         return s
 
     def _strip_markup(self, text: str) -> str:
-        s = self.strip_backticks(text)
+        s = self.strip_backticks(unlink(text))
         while s.startswith("*") and s.endswith("*") and len(s) >= 2:
             s = self.strip_backticks(s[1:-1].strip())
         return self.strip_backticks(s)
@@ -420,7 +421,7 @@ class MarkdownScenario(Scenario):
         match = _ITALIC_STEP.match(raw) or _BULLET_STEP.match(raw)
         if match is None:
             return None
-        return (match.group(1), match.group(2).strip())
+        return (match.group(1), unlink(match.group(2)).strip())
 
     def make_step(self, text: str, phase: StepType, sequential_order: int) -> MarkdownStep:
         match = _BOLD_TERM.search(text)
@@ -471,8 +472,49 @@ class MarkdownScenario(Scenario):
         self._current.steps = steps
 
     @classmethod
-    def render_scenarios(cls, scenarios: List["MarkdownScenario"], *, story_name: str = "", story_backgrounds=None) -> str:
-        """Emit markdown matching scenario templates (GWT + examples tables)."""
+    def render_scenarios(
+        cls,
+        scenarios: List["MarkdownScenario"],
+        *,
+        story_name: str = "",
+        story_backgrounds=None,
+        domain_links: Optional[DomainModelLinks] = None,
+    ) -> str:
+        """Emit markdown matching scenario templates (GWT + examples tables).
+
+        With *domain_links*, each domain term in a step or example cell links to the
+        model heading that defines it; with no model file, the text stays plain.
+        """
+        text = cls._render_scenario_lines(scenarios, story_name, story_backgrounds)
+        if domain_links is None:
+            return text
+        lines = text.splitlines()
+        linked = [
+            cls._link_terms(line, lines[i + 1] if i + 1 < len(lines) else "", domain_links)
+            for i, line in enumerate(lines)
+        ]
+        return "\n".join(linked) + "\n"
+
+    @classmethod
+    def _link_terms(cls, line: str, following: str, domain_links: DomainModelLinks) -> str:
+        """Link terms in a step or an example row. Headers and separators stay as written."""
+        step = _ITALIC_STEP.match(line)
+        if step is not None:
+            keyword = line[: line.index(step.group(2))]
+            return keyword + domain_links.link(step.group(2))
+        row = _TABLE_ROW.match(line)
+        if row is None or cls._is_separator(line) or cls._is_separator(following):
+            return line
+        cells = row.group(1).split("|")
+        return "|" + "|".join(domain_links.link(cell) for cell in cells) + "|"
+
+    @staticmethod
+    def _is_separator(line: str) -> bool:
+        row = _TABLE_ROW.match(line)
+        return row is not None and set(row.group(1).replace("|", "")) <= {"-", " ", ":"}
+
+    @classmethod
+    def _render_scenario_lines(cls, scenarios, story_name, story_backgrounds) -> str:
         lines: List[str] = []
         if story_name:
             lines.append(f"## Story: {story_name}")
@@ -736,7 +778,18 @@ class MarkdownStoryModel(StoryModel):
     def save(self) -> str:
         return self.render(self)
 
-    def render(self, story_map: "MarkdownStoryModel", previous: Optional[str] = None) -> str:
+    def render(
+        self,
+        story_map: "MarkdownStoryModel",
+        previous: Optional[str] = None,
+        links: Optional[StoryMapLinks] = None,
+        workspace: Optional[str] = None,
+    ) -> str:
+        """Write the story map. With *links* (or a *workspace* folder to find them in), each
+        story that has its own markdown file links to it; a story with no file stays plain text."""
+        if links is None and workspace:
+            links = StoryMapLinks.from_workspace(workspace)
+        self._links = links
         if self._should_render_outline(story_map, previous) or self._is_discovery_story_map(
             story_map
         ):
@@ -855,7 +908,7 @@ class MarkdownStoryModel(StoryModel):
     def _render_outline_stories(self, sub: MarkdownEpic, story_pad: str) -> None:
         for story in sub.stories:
             actor = story.actors[0] if story.actors else ""
-            name = self.strip_backticks(story.name)
+            name = self._story_label(story)
             marks = "#" * (len(story_pad) // 4 + 1)
             if actor:
                 actor_name = self.strip_backticks(actor)
@@ -863,9 +916,17 @@ class MarkdownStoryModel(StoryModel):
                 continue
             self._outline_lines.append(f"{story_pad}{marks} (S) --> {name}")
 
+    def _story_label(self, story) -> str:
+        name = self.strip_backticks(story.name)
+        links = getattr(self, "_links", None)
+        target = links.story_file(story) if links is not None else ""
+        return f"[{name}]({target})" if target else name
+
     def parse(self, text: str) -> "MarkdownStoryModel":
         if not isinstance(text, str) or text.strip() == "":
             return MarkdownStoryModel()
+        if not self._looks_like_scenario_document(text.splitlines()):
+            text = unlink(text)
         lines = text.splitlines()
         if self._looks_like_scenario_document(lines):
             return self._parse_scenario_document(text)
@@ -909,7 +970,7 @@ class MarkdownStoryModel(StoryModel):
 
     def attach_source_locations(self, text: str, rel_file: str) -> None:
         """Stamp SourceLocation onto each Epic/Epic/Story from the markdown text."""
-        lines = text.splitlines()
+        lines = unlink(text).splitlines()
         is_outline = any(
             _OUTLINE_EPIC_RE.match(l) or _OUTLINE_STORY_RE.match(l) for l in lines
         )
@@ -974,7 +1035,7 @@ class MarkdownStoryModel(StoryModel):
         for nested in sub.epics:
             self._render_sub_epic(nested, lines, depth + 1)
         for story in sub.stories:
-            lines.append(f"- {story.name}")
+            lines.append(f"- {self._story_label(story)}")
             for scenario in story.scenarios:
                 lines.append(f"  - {scenario.name}")
 

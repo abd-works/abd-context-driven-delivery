@@ -11,7 +11,7 @@ format: md
         (S) Customer --> Open Plan Deep Link
         (S) Customer --> Apply Catalog Voucher
     (E) Create Customer
-        (S) My Paradise --> Create Unconfirmed User
+        (S) My Paradise --> [Create Unconfirmed User](onboard-a-customer/create-customer/create-unconfirmed-user/create_unconfirmed_user_story.test.md)
         (S) My Paradise --> Enter Validation Code
         (S) My Paradise --> Create Customer
         (S) My Paradise --> Load Customer
