@@ -31,7 +31,7 @@ Write this tier the way `practices-stories-stories-acceptance-tests` and `patter
 The tier sits beside the existing tiers. There is no new folder.
 
 ```
-playwright.legacy-compare.config.ts        testMatch **/*.story.legacy-compare.ts; projects pml-my, then pml-web (no dependency, so pml-web runs even when pml-my fails); outputDir legacy-compare-results
+playwright.legacy-compare.config.ts        testMatch **/*.story.legacy-compare.ts; projects pml-my, then pml-web (no dependency, so pml-web runs even when pml-my fails); output test-results/end-to-end/<epic> (one folder per epic; the screen-story config writes test-results/playwright so it never empties it)
 tests/story-legacy-compare.ts              host: binds system and one live page per system; records readings, writes, ARIA, screenshots; writes the assert log
 tests/pml-my.ts                            starts pml-my under the overlay; loads examples into its edge stub through the overlay's sandbox-only seed hook
 tests/legacy-compare-setup.ts              keeps pml-web's committed lowdb stores out of the run; writes the assert log after it
@@ -76,19 +76,28 @@ Copy this checklist and tick it off for each sub-epic:
    - Tell the user the sub-epic, its stories and scenarios, both systems, the examples loaded, and whether the run is watched or fast.
    - Run nothing until the user says yes.
 7. **Run.**
-   - Watched (the config's default: headed, `slowMo`): `npx playwright test -c playwright.legacy-compare.config.ts`.
-   - pml-my's recordings are saved per journey in `legacy-compare-results/baseline/pml-my/`. pml-my runs only journeys with no saved recording; each pml-my journey with no failing row is saved on its own, and setup copies the saved ones into every run. Set `LEGACY_COMPARE_REFRESH=1` (narrowed to a sub-epic with a file filter) to rerun saved journeys, and only when pml-my, its stubs, or the examples change. Never rerun pml-my for a harness change.
+   - One folder per epic: `npm run e2e` runs every epic (pml-web against the saved recordings), each into `test-results/end-to-end/<epic>`, replacing that epic's last result; `npm run e2e -- <epic>` runs one epic; `npm run e2e -- <epic>/<sub-epic>` reruns one sub-epic into its epic's folder (each rerun journey replaces its rows). `npm run e2e -- --refresh-pml-my <epic>/<sub-epic>` re-records pml-my for those journeys only. Watched by default (headed, `slowMo`).
+   - pml-my's recordings are saved per journey in `test-results/end-to-end/baseline/pml-my/`. pml-my runs only journeys with no saved recording; each pml-my journey with no failing row is saved on its own, and setup copies the saved ones into every run. Set `LEGACY_COMPARE_REFRESH=1` (narrowed to a sub-epic with a file filter) to rerun saved journeys, and only when pml-my, its stubs, or the examples change. Never rerun pml-my for a harness change.
    - Keep the config's reporters (do not pass `--reporter`): they write the HTML report the trace step opens.
    - Fast: the same command with `LEGACY_COMPARE_FAST=1` set.
    - Load the examples once at the start, then never seed again. One page per system runs the stories in map order (`test.describe.serial`), and each scenario starts where the last one left the app.
    - Alternate flows run inside the journey. A flow gets its own short journey, with its own example load, only when it would leave the app stuck.
 8. **Open the trace.** Every journey records a Playwright trace (`trace: 'on'`). After the run, open the trace viewer on the journeys so the user can replay each one: a tree of journey › story › scenario › step marked green or red, with the page as it was at every step.
-   - One journey: `npx playwright show-trace legacy-compare-results/<run-id>/playwright/<journey-folder>/trace.zip` (one trace per viewer; open the pml-my and pml-web folders of a journey as two viewers).
-   - The whole run, with every journey's trace one click away: `npx playwright show-report legacy-compare-results/<run-id>/report`.
+   - One journey: `npx playwright show-trace test-results/end-to-end/<epic>/playwright/<journey-folder>/trace.zip` (one trace per viewer; open the pml-my and pml-web folders of a journey as two viewers).
+   - The whole run, with every journey's trace one click away: `npx playwright show-report test-results/end-to-end/<epic>/report`.
    - Start it in the background so the session is not blocked, and tell the user which journeys failed so they know where to look.
 9. **Report.**
+   - Every run writes `test-results/end-to-end/<epic>/compare.html` when it ends, beside `assert-log.md`, and `test-results/end-to-end/story-map.html`: every epic's sub-epics and stories with their counts, each linked to its epic's report.
+     - What it shows:
+       - pass/fail counts per sub-epic and story, broken down by kind (reading, write, page text, fonts/colours/sizes, look, journey state);
+       - each Story › Scenario with its Given/When/Then steps, and pml-my's and pml-web's checks side by side;
+       - each step's pml-my and pml-web screenshots side by side (the look check's diff image stays in the run folder, not the report);
+       - a **Failures only** filter and filters for each kind of check.
+     - It is styled with the abd.works brand (tokens from `abd-works-brand/css/brand.css`, wordmarks in `tests/legacy-compare-assets/`), with the Executive/Engineering mode switch.
+     - The screenshots are embedded (each distinct one once, at half size), so the page works on its own, including in Claude's file pane. Clicking one opens the full-size file when the page is opened from the run folder.
+     - To rebuild it for an existing run: `bun tests/legacy-compare-report.ts test-results/end-to-end/<epic>`.
    - For each scenario and step, give: pml-my pass/fail, pml-web pass/fail, reading match, write match, structure match.
-   - Say which side to fix for each failure. Publish the assert log, fix, then go back to step 6 for the rerun.
+   - Say which side to fix for each failure. Point the user to the run's `compare.html` (publish it when they want to share it), fix, then go back to step 6 for the rerun.
    - **Every miss is a missing test on another layer.** Before fixing pml-web code for a failure, add the test that should have caught it, at the layer that owns the behaviour, then fix the code until that test and the compare both pass:
      - Domain behaviour (rules, refusals, messages, stored values): the story markdown, then the shared story (run by the domain and server specs).
      - HTTP-only results (status, cookies, redirects): the server spec.
@@ -119,7 +128,7 @@ Copy this checklist and tick it off for each sub-epic:
 
 ## Assert log
 
-Write `legacy-compare-results/<run-id>/assert-log.md` with exactly these columns, one row per assertion:
+Write `test-results/end-to-end/<epic>/assert-log.md` with exactly these columns, one row per assertion:
 
 ```
 | story › scenario › step | system | checked (reader field, mapping, or locator + expected) | seen | result | screenshots |
