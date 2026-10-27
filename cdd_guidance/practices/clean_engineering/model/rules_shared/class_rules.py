@@ -4,14 +4,7 @@ from __future__ import annotations
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-_REPOSITORY_CLIENT_BUDGET = 20
 _CLASS_BUDGET = 9
-
-
-def _public_op_budget(class_name: str) -> int:
-    if class_name.endswith("Repository") or class_name.endswith("Client"):
-        return _REPOSITORY_CLIENT_BUDGET
-    return _CLASS_BUDGET
 
 
 def _is_accessor(name: str) -> bool:
@@ -42,10 +35,9 @@ class KeepClassesSingleResponsibility(PracticeGraphRule):
         if not node.has_fact("operation_shapes"):
             return []
         public_ops = _public_operations_for_budget(node.get_fact("operation_shapes"))
-        budget = _public_op_budget(node.name)
-        if len(public_ops) <= budget:
+        if len(public_ops) <= _CLASS_BUDGET:
             return []
         return [
             f"Class '{node.name}' exposes {len(public_ops)} public operations "
-            f"(budget ~{budget}). Split responsibilities."
+            f"(budget ~{_CLASS_BUDGET}). Split responsibilities."
         ]
