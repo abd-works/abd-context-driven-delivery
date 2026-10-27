@@ -253,6 +253,70 @@ _Scope: mixed markdown content should be tolerated._
             expect(epic.epics[0].stories[0].name).to(equal("Make Trait Check"))
             expect(epic.epics[0].stories[1].name).to(equal("Oppose Check"))
 
+    with context("that writes outline headings at column 0"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+### (E) Port Number
+#### (S) Customer --> Enter Porting Number
+### (S) Customer --> Activate Sim
+## (E) Place Order
+### (S) My Paradise --> Create Product Order
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should read each node's depth from its # count"):
+            epic = self.reconstructed.epics[0]
+            expect([sub.name for sub in epic.epics]).to(equal(["Get Sim", "Place Order"]))
+            get_sim = epic.epics[0]
+            expect([sub.name for sub in get_sim.epics]).to(equal(["Port Number"]))
+            expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
+
+        with it("should return a story after a nested sub-epic to the sub-epic its # count names"):
+            get_sim = self.reconstructed.epics[0].epics[0]
+            expect([story.name for story in get_sim.stories]).to(equal(["Select Sim", "Activate Sim"]))
+
+    with context("that is rendered as an outline"):
+        with before.each:
+            source = self.markdown.parse("""(E) Onboard A Customer
+    (E) Get Sim
+        (S) Customer --> Select Sim
+        (E) Port Number
+            (S) Customer --> Enter Porting Number
+""")
+            self.text = self.markdown.render(source)
+            self.outline = [
+                line for line in self.text.splitlines() if "(E)" in line or "(S)" in line
+            ]
+
+        with it("should write every heading at column 0 with one more # per level"):
+            expect(self.outline).to(equal([
+                "# (E) Onboard A Customer",
+                "## (E) Get Sim",
+                "### (S) Customer --> Select Sim",
+                "### (E) Port Number",
+                "#### (S) Customer --> Enter Porting Number",
+            ]))
+
+        with it("should read its own output back into the same hierarchy"):
+            parsed = self.markdown.parse(self.text)
+            get_sim = parsed.epics[0].epics[0]
+            expect(get_sim.stories[0].name).to(equal("Select Sim"))
+            expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
+
+    with context("that uses the old indented heading form"):
+        with it("should still load nested sub-epics and stories"):
+            parsed = self.markdown.parse("""# (E) Onboard A Customer
+    ## (E) Get Sim
+        ### (S) Customer --> Select Sim
+        ### (E) Port Number
+            #### (S) Customer --> Enter Porting Number
+""")
+            get_sim = parsed.epics[0].epics[0]
+            expect(get_sim.stories[0].name).to(equal("Select Sim"))
+            expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
+
     with context("that uses outline estimate lines"):
         with before.each:
             self.document = """# Story Map - Treasury
@@ -338,9 +402,9 @@ cart.checkout()
 
 
 _LINKED_MAP = """# (E) Onboard A Customer
-    ## (E) Get Sim
-        ### (S) Customer --> Select Sim
-        ### (S) Customer --> Activate Sim
+## (E) Get Sim
+### (S) Customer --> Select Sim
+### (S) Customer --> Activate Sim
 """
 
 _DOMAIN_MODEL = """# Domain Model — Telco
@@ -392,11 +456,11 @@ with description("a Markdown story map rendered in a workspace") as self:
 
         with it("should link that story to its file"):
             expect(
-                "(S) Customer --> [Select Sim](onboard/get-sim/select_sim_story.test.md)" in self.text
+                "\n### (S) Customer --> [Select Sim](onboard/get-sim/select_sim_story.test.md)\n" in self.text
             ).to(be_true)
 
         with it("should leave a story with no file as plain text"):
-            expect("(S) Customer --> Activate Sim" in self.text).to(be_true)
+            expect("\n### (S) Customer --> Activate Sim\n" in self.text).to(be_true)
             expect("[Activate Sim]" in self.text).to(be_false)
 
         with it("should read the linked story back by its name"):

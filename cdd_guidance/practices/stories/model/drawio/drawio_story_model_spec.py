@@ -328,9 +328,9 @@ with description("a DrawIO Story Map") as self:
 
 
 _LINKED_MAP = """# (E) Onboard A Customer
-    ## (E) Get Sim
-        ### (S) Customer --> Select Sim
-        ### (S) Customer --> Activate Sim
+## (E) Get Sim
+### (S) Customer --> Select Sim
+### (S) Customer --> Activate Sim
 """
 
 

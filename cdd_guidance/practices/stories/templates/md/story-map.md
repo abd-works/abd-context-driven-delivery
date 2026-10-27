@@ -16,7 +16,11 @@ section: body
      Links (`story-map-links-to-markdown`): a Story with its own markdown file links to it
      — [Story Verb–Noun]({epic}/{sub-epic}/{story_snake}_story.test.md). A Story with no file
      stays plain text. In story-map.drawio, each epic, sub-epic, and story cell carries a `link`
-     to its entry here (story-map.md#e-sub-epic-verbnoun), or to the story file when one exists. -->
+     to its entry here (story-map.md#e-sub-epic-verbnoun), or to the story file when one exists.
+
+     Headings start at column 0; the # count is the depth (epic #, sub-epic ##, its stories ###,
+     a nested sub-epic ###, its stories ####). Never indent a heading: markdown reads an indented
+     line as code, so it gets no anchor and links to it do not land. -->
 
 # Story Map — Product / Feature Name
 
@@ -25,11 +29,11 @@ section: body
 ---
 
 # (E) Epic Verb–Noun
-    ## (E) Sub-Epic Verb–Noun
-        ### (S) Actor --> [Story Verb–Noun]({epic}/{sub-epic}/{story_snake}_story.test.md)
-        ### (S) Actor --> Story Verb–Noun
-    ## (E) Sub-Epic Verb–Noun
-        ### (S) Actor --> Story Verb–Noun
+## (E) Sub-Epic Verb–Noun
+### (S) Actor --> [Story Verb–Noun]({epic}/{sub-epic}/{story_snake}_story.test.md)
+### (S) Actor --> Story Verb–Noun
+## (E) Sub-Epic Verb–Noun
+### (S) Actor --> Story Verb–Noun
 
 ---
 

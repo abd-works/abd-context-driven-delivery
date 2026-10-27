@@ -29,8 +29,17 @@ from cdd_guidance.practices.stories.model.story_model import Increment
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
 _BULLET_PATTERN = re.compile(r"^(\s*)-\s+(.+)$")
 _NUMBERED_PATTERN = re.compile(r"^(\s*)\d+\.\s+(.+)$")
-_OUTLINE_EPIC_PATTERN = re.compile(r"^(\s*)(?:#{1,6}\s+)?\(E\)\s+(.+)$")
-_OUTLINE_STORY_PATTERN = re.compile(r"^(\s*)(?:#{1,6}\s+)?\(S\)\s+(.+)$")
+_OUTLINE_EPIC_PATTERN = re.compile(r"^(?P<indent>\s*)(?:(?P<marks>#{1,6})\s+)?\(E\)\s+(?P<name>.+)$")
+_OUTLINE_STORY_PATTERN = re.compile(r"^(?P<indent>\s*)(?:(?P<marks>#{1,6})\s+)?\(S\)\s+(?P<name>.+)$")
+
+
+def _outline_depth(match: "re.Match") -> int:
+    """Depth of an (E) or (S) outline line: one less than its ``#`` count, top-level epic 0.
+    A line with no ``#`` takes its depth from the old four-space indent."""
+    marks = match.group("marks")
+    if marks:
+        return len(marks) - 1
+    return len(match.group("indent")) // 4
 _OUTLINE_ESTIMATE_PATTERN = re.compile(r"^(\s*)\*\s+(\S.+)$")
 
 
@@ -882,39 +891,35 @@ class MarkdownStoryModel(StoryModel):
         return title, sources
 
     def _render_outline(self, story_map: "MarkdownStoryModel") -> str:
+        """Every heading at column 0; the ``#`` count carries the depth. An indented heading
+        is a code block in markdown, so it has no anchor to link to."""
         self._outline_lines: List[str] = []
-        self._outline_indent = 4
         for epic in story_map.epics:
             self._outline_lines.append(f"# (E) {self.strip_backticks(epic.name)}")
             if getattr(epic, "estimate", ""):
-                self._outline_lines.append(f"    * {epic.estimate}")
-            self._render_outline_stories(epic, "    ")
-            self._render_outline_epics(epic.epics)
+                self._outline_lines.append(f"* {epic.estimate}")
+            self._render_outline_stories(epic, 2)
+            self._render_outline_epics(epic.epics, 2)
         return "\n".join(self._outline_lines)
 
-    def _render_outline_epics(self, subs: List[MarkdownEpic]) -> None:
-        pad = " " * self._outline_indent
-        story_pad = " " * (self._outline_indent + 4)
+    def _render_outline_epics(self, subs: List[MarkdownEpic], level: int) -> None:
         for sub in subs:
-            marks = "#" * (self._outline_indent // 4 + 1)
-            self._outline_lines.append(f"{pad}{marks} (E) {self.strip_backticks(sub.name)}")
-            self._render_outline_stories(sub, story_pad)
+            self._outline_lines.append(f"{'#' * min(level, 6)} (E) {self.strip_backticks(sub.name)}")
+            self._render_outline_stories(sub, level + 1)
             if getattr(sub, "estimate", ""):
-                self._outline_lines.append(f"{story_pad}* {sub.estimate}")
-            self._outline_indent += 4
-            self._render_outline_epics(sub.epics)
-            self._outline_indent -= 4
+                self._outline_lines.append(f"* {sub.estimate}")
+            self._render_outline_epics(sub.epics, level + 1)
 
-    def _render_outline_stories(self, sub: MarkdownEpic, story_pad: str) -> None:
+    def _render_outline_stories(self, sub: MarkdownEpic, level: int) -> None:
+        marks = "#" * min(level, 6)
         for story in sub.stories:
             actor = story.actors[0] if story.actors else ""
             name = self._story_label(story)
-            marks = "#" * (len(story_pad) // 4 + 1)
             if actor:
                 actor_name = self.strip_backticks(actor)
-                self._outline_lines.append(f"{story_pad}{marks} (S) {actor_name} --> {name}")
+                self._outline_lines.append(f"{marks} (S) {actor_name} --> {name}")
                 continue
-            self._outline_lines.append(f"{story_pad}{marks} (S) --> {name}")
+            self._outline_lines.append(f"{marks} (S) --> {name}")
 
     def _story_label(self, story) -> str:
         name = self.strip_backticks(story.name)
@@ -984,8 +989,8 @@ class MarkdownStoryModel(StoryModel):
             m_bullet = _BULLET_RE.match(raw)
 
             if m_epic_out:
-                indent = len(m_epic_out.group(1)) // 4
-                name = self.strip_backticks(m_epic_out.group(2))
+                indent = _outline_depth(m_epic_out)
+                name = self.strip_backticks(m_epic_out.group("name"))
                 if indent == 0:
                     if epic_index < len(self.epics):
                         self.epics[epic_index].source = SourceLocation(rel_file, i)
@@ -994,7 +999,8 @@ class MarkdownStoryModel(StoryModel):
                     self._stamp_sub_epic(name, SourceLocation(rel_file, i))
                 continue
             if m_story_out:
-                name = self.strip_backticks(m_story_out.group(2).split("-->", 1)[-1] if "-->" in m_story_out.group(2) else m_story_out.group(2))
+                story_text = m_story_out.group("name")
+                name = self.strip_backticks(story_text.split("-->", 1)[-1] if "-->" in story_text else story_text)
                 self._stamp_story(name, SourceLocation(rel_file, i))
                 continue
             if is_outline:
@@ -1215,8 +1221,8 @@ class MarkdownStoryModel(StoryModel):
         match = _OUTLINE_EPIC_PATTERN.match(self._raw_line)
         if match is None:
             return False
-        indent = len(match.group(1)) // 4
-        name = self.strip_backticks(match.group(2))
+        indent = _outline_depth(match)
+        name = self.strip_backticks(match.group("name"))
         if indent <= 0:
             self._current_epic = MarkdownEpic(name, len(self._story_map.epics) + 1)
             self._story_map.epics.append(self._current_epic)
@@ -1240,9 +1246,13 @@ class MarkdownStoryModel(StoryModel):
         match = _OUTLINE_STORY_PATTERN.match(self._raw_line)
         if match is None or self._current_epic is None:
             return False
+        parent_depth = _outline_depth(match) - 1
+        if match.group("marks") and parent_depth >= 1:
+            while len(self._sub_epic_stack) > parent_depth:
+                self._sub_epic_stack.pop()
         if not self._sub_epic_stack:
             self._ensure_sub_epic()
-        actor, story_name = self._split_outline_story(match.group(2))
+        actor, story_name = self._split_outline_story(match.group("name"))
         story = MarkdownStory(story_name, len(self._sub_epic_stack[-1].stories) + 1, StoryType.USER)
         if actor:
             story.actors = [actor]
