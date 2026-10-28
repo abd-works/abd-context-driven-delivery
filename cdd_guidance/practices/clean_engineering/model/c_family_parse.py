@@ -241,11 +241,13 @@ class CFamilyParse:
             part = part.strip()
             if not part:
                 continue
-            if "=" in part:
-                part = part.split("=", 1)[0].strip()
+            default_at = self._top_level_index(part, "=")
+            if default_at >= 0:
+                part = part[:default_at].strip()
             part = re.sub(r"^\s*(public|private|protected|final|readonly)\s+", "", part)
-            if ":" in part:
-                name_part, type_hint = part.split(":", 1)
+            hint_at = self._top_level_index(part, ":")
+            if hint_at >= 0:
+                name_part, type_hint = part[:hint_at], part[hint_at + 1 :]
                 name = name_part.strip().split()[-1]
                 type_hint = type_hint.strip()
             else:
@@ -256,6 +258,18 @@ class CFamilyParse:
             if name and name not in {"this", "self"} and re.match(r"^[\w$]+$", name):
                 params.append(f"{name}: {type_hint}" if type_hint else name)
         return params
+
+    def _top_level_index(self, part: str, mark: str) -> int:
+        """Where `mark` sits outside a destructuring pattern or type literal (`{ a = 1 }: T` defaults at neither); an arrow's `=>` is not a default."""
+        depth = 0
+        for index, ch in enumerate(part):
+            if ch in "<([{":
+                depth += 1
+            elif ch in ")]}" or (ch == ">" and part[index - 1 : index] != "="):
+                depth = max(0, depth - 1)
+            elif ch == mark and depth == 0 and part[index + 1 : index + 2] != ">":
+                return index
+        return -1
 
     def _split_param_parts(self, raw: str) -> list[str]:
         """Split parameter list on commas outside generic brackets."""

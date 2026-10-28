@@ -5,6 +5,8 @@ from __future__ import annotations
 from harness.graph.practice_rule import PracticeGraphRule
 
 _EVIDENCE = {"observed", "inferred", "intended"}
+_VERB_OPENINGS = {"verb", "unlisted"}
+_MOST_SCENARIOS = 7
 
 
 class VerbNounFormat(PracticeGraphRule):
@@ -15,7 +17,7 @@ class VerbNounFormat(PracticeGraphRule):
         if not node.has_fact("opening_class"):
             return []
         kind = node.get_fact("opening_class") or ""
-        if kind == "verb":
+        if kind in _VERB_OPENINGS:
             return []
         return [f"{node.type} {node.name!r}: name should start with a verb (got {kind})."]
 
@@ -37,7 +39,7 @@ class FourToNineChildren(PracticeGraphRule):
 
 
 class StoryScenariosOneToFour(PracticeGraphRule):
-    """Code scenarios on a story: 1 to 4. More than four and the story is huge."""
+    """Code scenarios on a story: 1 to 7. More than seven and the story is huge."""
 
     slug = "story-scenarios-one-to-four"
     node_types = ("Story",)
@@ -49,11 +51,11 @@ class StoryScenariosOneToFour(PracticeGraphRule):
         if count is None:
             return []
         count = int(count)
-        if 1 <= count <= 4:
+        if 1 <= count <= _MOST_SCENARIOS:
             return []
-        if count > 4:
-            return [f"story {node.name!r}: {count} scenarios — story is huge (target 1-4)"]
-        return [f"story {node.name!r}: {count} scenarios (target 1-4)"]
+        if count > _MOST_SCENARIOS:
+            return [f"story {node.name!r}: {count} scenarios — story is huge (target 1-{_MOST_SCENARIOS})"]
+        return [f"story {node.name!r}: {count} scenarios (target 1-{_MOST_SCENARIOS})"]
 
 
 class KebabCasePaths(PracticeGraphRule):

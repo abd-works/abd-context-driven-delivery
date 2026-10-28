@@ -14,6 +14,8 @@ _PY_EXCEPT = re.compile(r"\bexcept\s*(?::|\([^)]*\)\s*:)")
 _STRING = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
 _NUMBER = re.compile(r"\b(\d+(?:\.\d+)?)\b")
 _REGEXP_LITERAL = re.compile(r"/(?:\\.|[^/\\])*/[gimsuy]*")
+_CONTROL_KEYWORD = re.compile(r"\b(?:else|try|do|finally|catch)\s*$")
+_CONTROL_CONDITION = re.compile(r"\b(?:if|for|while|switch|catch)\s*$")
 _SAFE_NUMBERS = {
     0,
     1,
@@ -65,15 +67,39 @@ def _brace_body(text: str, open_index: int) -> str | None:
 
 
 def _brace_depth(text: str) -> int:
-    depth = 0
+    """Count only the blocks control flow opens: JSX containers, object literals and arrow bodies nest no logic."""
+    code = _STRING.sub('""', text)
+    opens_control: list[bool] = []
     deepest = 0
-    for character in text:
+    for index, character in enumerate(code):
         if character == "{":
-            depth += 1
-            deepest = max(deepest, depth)
-        elif character == "}":
-            depth = max(0, depth - 1)
+            opens_control.append(_opens_control_block(code[:index]))
+            deepest = max(deepest, opens_control.count(True))
+        elif character == "}" and opens_control:
+            opens_control.pop()
     return deepest
+
+
+def _opens_control_block(before: str) -> bool:
+    head = before.rstrip()
+    if _CONTROL_KEYWORD.search(head):
+        return True
+    if not head.endswith(")"):
+        return False
+    opening = _matching_open_paren(head)
+    return opening >= 0 and _CONTROL_CONDITION.search(head[:opening]) is not None
+
+
+def _matching_open_paren(head: str) -> int:
+    depth = 0
+    for index in range(len(head) - 1, -1, -1):
+        if head[index] == ")":
+            depth += 1
+        elif head[index] == "(":
+            depth -= 1
+            if depth == 0:
+                return index
+    return -1
 
 
 def control_flow_depth_in_text(text: str) -> int:

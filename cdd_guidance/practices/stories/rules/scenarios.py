@@ -82,6 +82,18 @@ class OutlineRequiresManyPermutations(PracticeGraphRule):
             ]
         return []
 
+def scenario_domain_concepts(steps) -> set[str]:
+    """The bold terms a scenario names, less its actors: who acts (Customer, My Paradise) is not a concept to give an example of."""
+    concepts: set[str] = set()
+    actors: set[str] = set()
+    for step in steps:
+        for each in (step, *step.ands):
+            concepts.update(each.concepts)
+            if each.actor:
+                actors.add(each.actor)
+    return concepts - actors
+
+
 class ExamplesTraceDomainModel(PracticeGraphRule):
     slug = "examples-trace-domain-model"
     node_types = ("Scenario",)
@@ -90,11 +102,7 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
         scenario = scenario_for_graph_node(node, context)
         if scenario is None:
             return []
-        concepts: set[str] = set()
-        for step in scenario.steps:
-            concepts.update(step.concepts)
-            for child in step.ands:
-                concepts.update(child.concepts)
+        concepts = scenario_domain_concepts(scenario.steps)
         if not concepts:
             return []
         story = story_of(context.story_model(), scenario)

@@ -167,6 +167,25 @@ export class Sim {
     with context("load-with-identity-in-hand"):
         with it("should flag load without identity parameter"):
             assert_ddd_example_pair("load-with-identity-in-hand", "CustomerRepository", node_type="Repository")
+        with it("should accept a repository that loads the one record it holds"):
+            source = """
+export class DeviceWalletMerchantCredentialRepository {
+  protected credential: DeviceWalletMerchantCredential | null = null;
+
+  load(): DeviceWalletMerchantCredential | null {
+    return this.credential;
+  }
+}
+"""
+            hits = violations_for_ddd_rule(
+                ddd_rule_by_slug("load-with-identity-in-hand"),
+                source,
+                class_name="DeviceWalletMerchantCredentialRepository",
+                node_type="Repository",
+                lang="typescript",
+                filename="payment.ts",
+            )
+            expect(hits).to(equal([]))
 
     with context("no-orphaned-objects"):
         with it("should flag LonelyType and accept related Cart"):

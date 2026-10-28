@@ -81,7 +81,7 @@ def web_path_literals(root: Path, folder: str) -> list[list]:
         text = file.read_text(encoding="utf-8")
         relative = file.relative_to(root).as_posix()
         for match in _WEB_PATH.finditer(text):
-            if _in_import(text, match.start()) or _ROUTE_REGISTRATION.search(text[max(0, match.start() - 40):match.start()]):
+            if _in_import(text, match.start()) or _in_comment(text, match.start()) or _ROUTE_REGISTRATION.search(text[max(0, match.start() - 40):match.start()]):
                 continue
             found.append([relative, _line_of(text, match.start()), match.group(2)])
     return found
@@ -214,6 +214,15 @@ def _in_import(text: str, index: int) -> bool:
     line_end = text.find("\n", index)
     line = text[line_start:line_end if line_end != -1 else len(text)]
     return line.lstrip().startswith(("import ", "export ")) and " from " in line
+
+
+def _in_comment(text: str, index: int) -> bool:
+    """A path a doc or line comment names is prose, not a literal the code uses."""
+    line_start = text.rfind("\n", 0, index) + 1
+    if re.search(r"(?:^|\s)//", text[line_start:index]):
+        return True
+    opened = text.rfind("/*", 0, index)
+    return opened != -1 and text.find("*/", opened, index) == -1
 
 
 def _exported_instance(text: str, class_name: str) -> str | None:

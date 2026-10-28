@@ -957,3 +957,44 @@ with description("a story map on a graph") as self:
         expect(uses).to(contain(("Onboard A Customer", "account-credentials")))
         expect(shown).to(contain(("Create Account", "Create Account")))
         expect(specified).to(contain(("Create account", "Create account")))
+
+
+
+with description("Story name opening") as self:
+    with it("should not call an opening word a noun just because the verb list lacks it"):
+        story = Story("Carry Plan From Marketing Link", 1)
+        story.load_map_facts()
+        expect(story.opening_class).to(equal("unlisted"))
+
+    with it("should still name the openings that are not verbs"):
+        kinds = {}
+        for name in ("Handle Request", "Customer Login", "Selecting Plan", "Selection Of Plan", "Submit Order"):
+            story = Story(name, 1)
+            story.load_map_facts()
+            kinds[name] = story.opening_class
+        expect(kinds).to(equal({
+            "Handle Request": "generic-verb",
+            "Customer Login": "actor-noun",
+            "Selecting Plan": "gerund",
+            "Selection Of Plan": "nominalisation",
+            "Submit Order": "verb",
+        }))
+
+    with it("should pass verb-noun-format on an unlisted opening and flag a known non-verb"):
+        from cdd_guidance.practices.stories.rules.story_map import VerbNounFormat
+
+        class _Node:
+            type = "Story"
+
+            def __init__(self, name, kind):
+                self.name, self._kind = name, kind
+
+            def has_fact(self, key):
+                return key == "opening_class"
+
+            def get_fact(self, key, default=None):
+                return self._kind
+
+        rule = VerbNounFormat()
+        expect(rule.check(_Node("Carry Plan From Marketing Link", "unlisted"), None)).to(equal([]))
+        expect(rule.check(_Node("Customer Login", "actor-noun"), None)).to(have_len(1))

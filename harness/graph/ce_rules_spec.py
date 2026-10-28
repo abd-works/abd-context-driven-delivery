@@ -33,6 +33,7 @@ from harness.graph.ce_rule_eval_harness import (
     assert_files_rule_pair,
     assert_python_example_pair,
     practice_from_class_text,
+    practice_from_files,
     assert_rule_pair,
     ce_rule_by_slug,
     practice_from_source,
@@ -272,6 +273,63 @@ export class AccountCredentialsClient {
     with context("use-typed-signatures"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("use-typed-signatures")
+        with it("should not flag defaults inside a typed destructured parameter"):
+            rule = ce_rule_by_slug("use-typed-signatures")
+            source = """
+type FieldProps = { label: string; invalid?: boolean };
+
+export function CredentialField({ label, invalid = false }: FieldProps) {
+  return invalid ? label : '';
+}
+
+export class SubscriptionNode {
+  load(id: string, { allowVisitor = false }: { allowVisitor?: boolean } = {}): boolean {
+    return Boolean(id) && allowVisitor;
+  }
+}
+"""
+            practice, root = practice_from_source(source, lang="typescript", filename="credentials.tsx")
+            expect(violations_for_rule(rule, practice, root)).to(equal([]))
+        with it("should still flag an untyped parameter with a default"):
+            rule = ce_rule_by_slug("use-typed-signatures")
+            source = """
+export class Billing {
+  enterCardAuthorization(maxAttempts = 1, retry: Record<string, number> = {}): number {
+    return maxAttempts + Object.keys(retry).length;
+  }
+}
+"""
+            practice, root = practice_from_source(source, lang="typescript", filename="billing.ts")
+            hits = violations_for_rule(rule, practice, root)
+            expect(hits).to(contain("Parameter 'maxAttempts' is missing a type annotation."))
+            expect(" ".join(hits)).not_to(contain("retry"))
+        with it("should treat withXxx client field changes as properties"):
+            rule = ce_rule_by_slug("use-typed-signatures")
+            source = """
+export class SimClient {
+  iccid = '';
+  withIccid(iccid = ''): SimClient {
+    const next = new SimClient();
+    next.iccid = iccid;
+    return next;
+  }
+}
+"""
+            practice, root = practice_from_source(source, lang="typescript", filename="sim-client.tsx")
+            expect(violations_for_rule(rule, practice, root)).to(equal([]))
+        with it("should not check test code"):
+            rule = ce_rule_by_slug("use-typed-signatures")
+            source = """
+export class NumberExamples {
+  availableMsisdnPool(length = 30): string[] {
+    return Array.from({ length }, () => '');
+  }
+}
+"""
+            for test_file in ("tests/get-number/number.examples.ts", "src/number.spec.ts", "harness/number_spec.py"):
+                text = source if test_file.endswith(".ts") else "class NumberExamples:\n    def pool(self, length=30):\n        return length\n"
+                practice, root = practice_from_files({test_file: text})
+                expect(violations_for_rule(rule, practice, root)).to(equal([]))
     with context("limit-comments"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("limit-comments")
@@ -378,6 +436,44 @@ with description("Clean Engineering graph rules (multi-language scanner fixtures
                 _SIMPLIFY_CONTROL_FLOW_FAULT,
                 _SIMPLIFY_CONTROL_FLOW_CLEAN,
             )
+        with it("should not count JSX, object literal or arrow-body braces as control flow"):
+            rule = ce_rule_by_slug("simplify-control-flow")
+            source = """
+export function SelectField({ open, options, locked }: { open: boolean; options: string[]; locked: boolean }) {
+  const style = { menu: { width: 10 } };
+  return (
+    <div className="field">
+      <div onClick={() => { if (!locked) { choose(style); } }}>{options[0]}</div>
+      {open && (
+        <ul>
+          {options.map(option => (
+            <li key={option} onClick={() => { choose({ option }); }}>{`${option}`}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+"""
+            practice, root = practice_from_source(source, lang="typescript", filename="select-field.tsx")
+            expect(violations_for_rule(rule, practice, root)).to(equal([]))
+        with it("should still count control flow nested inside a callback"):
+            rule = ce_rule_by_slug("simplify-control-flow")
+            source = """
+export class Gate {
+  decide(items: number[]): void {
+    items.forEach(item => {
+      for (const step of [item]) {
+        while (step > 0) {
+          try { if (step > 1) { record(step); } } catch (error) { throw error; }
+        }
+      }
+    });
+  }
+}
+"""
+            practice, root = practice_from_source(source, lang="typescript", filename="gate.ts")
+            expect(violations_for_rule(rule, practice, root)).to(equal(["Operation 'decide' nests control flow 4 levels deep (max 3)."]))
 
     with context("eliminate-duplication"):
         with it("should flag fault snippets in python, typescript, and javascript"):

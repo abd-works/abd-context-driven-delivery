@@ -56,18 +56,18 @@ with description("story scenario count"):
             )
 
     with context("story-scenarios-one-to-four"):
-        with it("should accept one to four scenarios"):
+        with it("should accept one to seven scenarios"):
             rule = StoryScenariosOneToFour()
-            for count in (1, 2, 4):
+            for count in (1, 4, 7):
                 expect(rule.check(_story_node("Enter Validation Code", count), None)).to(equal([]))
 
-        with it("should call a story with more than four scenarios huge"):
-            hits = StoryScenariosOneToFour().check(_story_node("Create Account", 5), None)
-            expect(hits).to(equal(["story 'Create Account': 5 scenarios — story is huge (target 1-4)"]))
+        with it("should call a story with more than seven scenarios huge"):
+            hits = StoryScenariosOneToFour().check(_story_node("Pick Number", 8), None)
+            expect(hits).to(equal(["story 'Pick Number': 8 scenarios — story is huge (target 1-7)"]))
 
         with it("should flag a story with no scenarios"):
             hits = StoryScenariosOneToFour().check(_story_node("Enter Validation Code", 0), None)
-            expect(hits).to(equal(["story 'Enter Validation Code': 0 scenarios (target 1-4)"]))
+            expect(hits).to(equal(["story 'Enter Validation Code': 0 scenarios (target 1-7)"]))
 
     with context("a story that records its scenario count"):
         with it("should not mark two scenarios as a 4-9 child-band error"):
@@ -78,7 +78,7 @@ with description("story scenario count"):
             expect(story.child_band).to(equal(""))
 
     with context("schema"):
-        with it("should size story scenarios with the 1-4 rule"):
+        with it("should size story scenarios with the 1-7 rule"):
             expect(slugs_for_type("stories", "Story")).to(contain("story-scenarios-one-to-four"))
             expect("four-to-nine-children" in slugs_for_type("stories", "Story")).to(equal(False))
 

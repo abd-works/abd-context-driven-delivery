@@ -156,7 +156,8 @@ class StoryNode(BoundNode, ABC):
             return "gerund"
         if self._NOMINALISATION.match(token):
             return "nominalisation"
-        return "unknown-noun"
+        # A word the verb list lacks is not evidence of a noun ("Carry Plan ..."); only the classes above are flagged.
+        return "unlisted"
 
     def load_child_band(self, count: int, label: str) -> None:
         self.child_count = count

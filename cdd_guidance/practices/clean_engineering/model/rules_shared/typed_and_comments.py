@@ -7,6 +7,10 @@ import re
 from harness.graph.practice_rule import PracticeGraphRule
 
 _VAGUE_TYPES = frozenset({"any", "object", "dict", "Dict", "Any", "Mapping", "mapping"})
+# A client's `withEmail(email)` answers a copy with one field changed: a property setter, not an operation.
+_FIELD_CHANGE = re.compile(r"^with[A-Z]")
+_TEST_FOLDERS = frozenset({"tests", "test", "__tests__"})
+_TEST_FILE = re.compile(r"(\.(spec|test)\.[jt]sx?$)|(_spec\.py$)|(^test_.*\.py$)")
 
 
 class UseTypedSignatures(PracticeGraphRule):
@@ -14,6 +18,8 @@ class UseTypedSignatures(PracticeGraphRule):
     node_types = ("Operation", "Parameter")
 
     def check(self, node, context) -> list[str]:
+        if _is_test_code(node.source.file) or _FIELD_CHANGE.match(_operation_name(node)):
+            return []
         if node.type == "Parameter":
             if not node.has_fact("type_hint"):
                 return []
@@ -38,6 +44,19 @@ class LimitComments(PracticeGraphRule):
 
 
 _INVALID_PARAM_NAME = re.compile(r"^[\w$]+$")
+
+
+def _is_test_code(file: str) -> bool:
+    parts = str(file or "").replace("\\", "/").split("/")
+    return bool(_TEST_FOLDERS.intersection(parts[:-1])) or _TEST_FILE.search(parts[-1]) is not None
+
+
+def _operation_name(node) -> str:
+    if node.type == "Operation":
+        return node.name
+    from harness.graph.rule_context import _operation_name_from_param_node
+
+    return _operation_name_from_param_node(node)
 
 
 def _param_violation(name: str, hint: str) -> list[str]:

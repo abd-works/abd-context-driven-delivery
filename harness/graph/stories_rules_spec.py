@@ -85,3 +85,17 @@ with description("ScenariosShape"):
 
         with it("should allow a second interaction after Then"):
             expect(AndChaining().check(self.scenario, self.context)).to(equal([]))
+
+
+with description("ExamplesTraceDomainModel concepts"):
+    with it("should not count the actor a step names as a domain concept"):
+        from cdd_guidance.practices.stories.model.story_model import Step, StepType
+        from cdd_guidance.practices.stories.rules.scenarios import scenario_domain_concepts
+
+        steps = [
+            Step("**My Paradise** provides the device wallet merchant certificate", StepType.WHEN, 1,
+                 concepts=["My Paradise"], actor="My Paradise"),
+            Step("**Customer** sees the **certificate** My Paradise returned", StepType.THEN, 2,
+                 concepts=["Customer", "certificate"], actor="Customer"),
+        ]
+        expect(scenario_domain_concepts(steps)).to(equal({"certificate"}))

@@ -298,7 +298,7 @@ If this change will not stay here, follow `practices/ddd/model.mdc`.
 - **`one-pattern-per-building-block`** — Each building block in play gets one named implementation pattern — technology, extension mechanism, test approach — used by every instance of that block. Divergent implementations of the same block make the solution unreadable and untestable as a whole.
 - **`architectural-granularity-decided`** — State what a bounded context, an aggregate, and a repository are at runtime (in-process module, container, service with its own store). Left undecided, the first adapter written silently sets it for everything after.
 - **`preserve-upstream-names`** — Public API names match the **model**. Renaming here breaks traceability back to the map and the stories.
-- **`load-with-identity-in-hand`** — A live `load` takes the identity already in hand. Do not assume ambient session state. Reach owned aggregates through their owner.
+- **`load-with-identity-in-hand`** — A live `load` takes the identity already in hand. Do not find it in ambient state (session, request, cookie, signed-in user). A repository that holds one record may load it with no identity. Reach owned aggregates through their owner.
 - **`ports-behind-adapters`** — Persistence, messaging, and external systems integrate through ports — not direct imports from the domain core.
 - **`private-method-naming`** — Public `+name`; private `- _name`. `derive*` helpers are private.
 

@@ -74,6 +74,12 @@ class InvariantObject(Property):
 _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
 _ONLY_DELEGATES = re.compile(r"return\s+\w+\.\w+\s*\(")
 _LOAD_NAMES = frozenset({"load", "get", "find", "fetch"})
+# A load with no identity is fine when it returns the one record its store holds; it is wrong when it finds the
+# identity in ambient state (the session, the request, a cookie, the signed-in user, the browser).
+_AMBIENT_STATE = re.compile(
+    r"(?<![A-Za-z])(?:[Ss]ession|[Cc]urrent|[Rr]eq(?:uest)?|[Cc]ookies?|[Aa]uth|[Ll]ogged|[Cc]tx|[Cc]ontext"
+    r"|localStorage|sessionStorage|window|process\.env)(?![a-z])"
+)
 
 
 class TacticalBuildingBlock(OoadClass):
@@ -89,7 +95,11 @@ class TacticalBuildingBlock(OoadClass):
         self.peer_private_operations = [op.name for op in operations if op.peer_private_access]
         self.public_derive_operations = [op.name for op in public if _DERIVE_PREFIX.match(op.name)]
         self.delegating_operations = [op.name for op in public if _ONLY_DELEGATES.search(method_body(file_text, op.name))]
-        self.identity_free_loads = [op.name for op in operations if op.name.lower() in _LOAD_NAMES and not op.parameters]
+        self.identity_free_loads = [
+            op.name
+            for op in operations
+            if op.name.lower() in _LOAD_NAMES and not op.parameters and _AMBIENT_STATE.search(method_body(file_text, op.name))
+        ]
         self.tactical_stereotype = declares_tactical_stereotype(
             file_text, parsed.name, self.tactical_kind(), set(parsed.peer_names)
         )

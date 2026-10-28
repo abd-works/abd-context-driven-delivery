@@ -135,6 +135,14 @@ with description("the lern_domain_driven pattern rules"):
             expect(messages).to(have_len(1))
             expect(messages[0]).to(contain("/onboarding/done"))
 
+        with it("should not read a path named in a comment"):
+            (self.root / self.folder / "subscription-node.ts").write_text(
+                "/**\n * Sign-up opens on the plan catalog (pml-my `/sign-up/`).\n */\n"
+                "const step = SIGN_UP_PATH; // pml-my redirects to '/sign-up/'\n",
+                encoding="utf-8",
+            )
+            expect(web_path_literals(self.root, self.folder)).to(equal([]))
+
         with it("should flag the core reading the request"):
             (self.root / self.folder / "subscription.ts").write_text(
                 "export class Sim { static fromRequest(req) { const body = req.body ?? {}; } }\n", encoding="utf-8")
