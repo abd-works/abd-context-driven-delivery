@@ -9,15 +9,15 @@ format: md
 #### Scenario: Display Create Account
 
 *When* the User proceeds to create an account from the Paradise Mobile website  
-*Then* the User can enter account credentials  
+*Then* the User can enter [account credentials](../../../../domain/domain-model.md#accountcredentials-value-object)  
   *But* the email and password rules are unmet  
-  *But* the customer cannot save the customer account
+  *But* the customer cannot save the [customer account](../../../../domain/domain-model.md#customeraccount-aggregate-root-entity)
 
 #### Scenario: Enter Valid account credentials
 
-*When* the User enters valid account credentials  
-*Then* account credentials are validated continuously  
-  *And* the customer can save the customer account
+*When* the User enters valid [account credentials](../../../../domain/domain-model.md#accountcredentials-value-object)  
+*Then* [account credentials](../../../../domain/domain-model.md#accountcredentials-value-object) are validated continuously  
+  *And* the customer can save the [customer account](../../../../domain/domain-model.md#customeraccount-aggregate-root-entity)
 
 #### Scenario: Enter Invalid account credentials: ${example}
 
@@ -28,8 +28,8 @@ format: md
 
 #### Scenario: Email already registered
 
-*Given* already-registered account credentials are already registered  
-*When* the User registers already-registered account credentials  
+*Given* already-registered [account credentials](../../../../domain/domain-model.md#accountcredentials-value-object) are already registered  
+*When* the User registers already-registered [account credentials](../../../../domain/domain-model.md#accountcredentials-value-object)  
 *Then* the email is already registered  
 *And* The system displays a message that the account is already registered
 

@@ -245,13 +245,104 @@ _Scope: mixed markdown content should be tolerated._
 """
             self.reconstructed = self.markdown.parse(self.document)
 
-        with it("should synthesize a Epic so stories are not dropped"):
+        with it("should keep the stories on the Epic so they are not dropped"):
             epic = self.reconstructed.epics[0]
             expect(epic.name).to(equal("Resolve Check"))
-            expect(epic.epics).to(have_len(1))
-            expect(epic.epics[0].stories).to(have_len(2))
-            expect(epic.epics[0].stories[0].name).to(equal("Make Trait Check"))
-            expect(epic.epics[0].stories[1].name).to(equal("Oppose Check"))
+            expect(epic.epics).to(have_len(0))
+            expect(epic.stories).to(have_len(2))
+            expect(epic.stories[0].name).to(equal("Make Trait Check"))
+            expect(epic.stories[1].name).to(equal("Oppose Check"))
+
+    with context("that writes outline headings at column 0"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+### (E) Port Number
+#### (S) Customer --> Enter Porting Number
+### (S) Customer --> Activate Sim
+## (E) Place Order
+### (S) My Paradise --> Create Product Order
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should read each node's depth from its # count"):
+            epic = self.reconstructed.epics[0]
+            expect([sub.name for sub in epic.epics]).to(equal(["Get Sim", "Place Order"]))
+            get_sim = epic.epics[0]
+            expect([sub.name for sub in get_sim.epics]).to(equal(["Port Number"]))
+            expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
+
+        with it("should return a story after a nested sub-epic to the sub-epic its # count names"):
+            get_sim = self.reconstructed.epics[0].epics[0]
+            expect([story.name for story in get_sim.stories]).to(equal(["Select Sim", "Activate Sim"]))
+
+    with context("that is rendered as an outline"):
+        with before.each:
+            source = self.markdown.parse("""(E) Onboard A Customer
+    (E) Get Sim
+        (S) Customer --> Select Sim
+        (E) Port Number
+            (S) Customer --> Enter Porting Number
+""")
+            self.text = self.markdown.render(source)
+            self.outline = [
+                line for line in self.text.splitlines() if "(E)" in line or "(S)" in line
+            ]
+
+        with it("should write every heading at column 0 with one more # per level"):
+            expect(self.outline).to(equal([
+                "# (E) Onboard A Customer",
+                "## (E) Get Sim",
+                "### (S) Customer --> Select Sim",
+                "### (E) Port Number",
+                "#### (S) Customer --> Enter Porting Number",
+            ]))
+
+        with it("should read its own output back into the same hierarchy"):
+            parsed = self.markdown.parse(self.text)
+            get_sim = parsed.epics[0].epics[0]
+            expect(get_sim.stories[0].name).to(equal("Select Sim"))
+            expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
+
+    with context("that has stories directly under an Epic with no sub-epic"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (S) Customer --> Select Sim
+## (S) Customer --> Activate Sim
+## (E) Place Order
+### (S) My Paradise --> Create Product Order
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+            self.text = self.markdown.render(self.reconstructed)
+
+        with it("should keep those stories on the Epic instead of inventing a sub-epic"):
+            epic = self.reconstructed.epics[0]
+            expect([story.name for story in epic.stories]).to(equal(["Select Sim", "Activate Sim"]))
+            expect([sub.name for sub in epic.epics]).to(equal(["Place Order"]))
+
+        with it("should render each such story as ## (S) under # (E)"):
+            outline = [line for line in self.text.splitlines() if "(E)" in line or "(S)" in line]
+            expect(outline).to(equal(self.document.strip().splitlines()))
+
+        with it("should read its own output back into the same tree"):
+            parsed = self.markdown.parse(self.text)
+            epic = parsed.epics[0]
+            expect([story.name for story in epic.stories]).to(equal(["Select Sim", "Activate Sim"]))
+            expect([sub.name for sub in epic.epics]).to(equal(["Place Order"]))
+            expect([story.name for story in epic.epics[0].stories]).to(equal(["Create Product Order"]))
+
+    with context("that uses the old indented heading form"):
+        with it("should still load nested sub-epics and stories"):
+            parsed = self.markdown.parse("""# (E) Onboard A Customer
+    ## (E) Get Sim
+        ### (S) Customer --> Select Sim
+        ### (E) Port Number
+            #### (S) Customer --> Enter Porting Number
+""")
+            get_sim = parsed.epics[0].epics[0]
+            expect(get_sim.stories[0].name).to(equal("Select Sim"))
+            expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
 
     with context("that uses outline estimate lines"):
         with before.each:
@@ -335,3 +426,109 @@ cart.checkout()
         rendered = MarkdownScenario.render_scenarios(scenarios)
         expect("```realization" in rendered).to(equal(True))
         expect("paymentGateway.charge(amount)" in rendered).to(equal(True))
+
+
+_LINKED_MAP = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+### (S) Customer --> Activate Sim
+"""
+
+_DOMAIN_MODEL = """# Domain Model — Telco
+
+## Inventory | Operations
+
+### Sim
+
+#### Sim <<Aggregate Root>> <<Entity>>
+
+#### SimCard <<Entity>>
+"""
+
+_SIM_SCENARIO = """## Story: Select Sim
+
+### Scenario: picks a card
+
+*Given* a customer with no sim card
+*When* the customer selects a sim card
+*Then* the sim card shows as reserved
+
+### Examples
+
+| example | sim card |
+| --- | --- |
+| reserved | SimCard 1 |
+"""
+
+
+def _workspace(files: dict) -> Path:
+    import tempfile
+
+    root = Path(tempfile.mkdtemp())
+    for rel, text in files.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text, encoding="utf-8")
+    return root
+
+
+with description("a Markdown story map rendered in a workspace") as self:
+    with context("where one story has its own markdown file"):
+        with before.each:
+            self.root = _workspace({
+                "story-map.md": _LINKED_MAP,
+                "onboard/get-sim/select_sim_story.test.md": "## Story: Select Sim\n",
+            })
+            source = MarkdownStoryModel().parse(_LINKED_MAP)
+            self.text = MarkdownStoryModel().render(source, workspace=str(self.root))
+
+        with it("should link that story to its file"):
+            expect(
+                "\n### (S) Customer --> [Select Sim](onboard/get-sim/select_sim_story.test.md)\n" in self.text
+            ).to(be_true)
+
+        with it("should leave a story with no file as plain text"):
+            expect("\n### (S) Customer --> Activate Sim\n" in self.text).to(be_true)
+            expect("[Activate Sim]" in self.text).to(be_false)
+
+        with it("should read the linked story back by its name"):
+            parsed = MarkdownStoryModel().parse(self.text)
+            names = [story.name for story in parsed.epics[0].epics[0].stories]
+            expect(names).to(equal(["Select Sim", "Activate Sim"]))
+
+
+with description("a scenario markdown file rendered with domain links") as self:
+    with context("when the domain model markdown defines the terms"):
+        with before.each:
+            from cdd_guidance.practices.stories.model.markdown.links import DomainModelLinks
+
+            root = _workspace({"domain/domain-model.md": _DOMAIN_MODEL})
+            links = DomainModelLinks.from_workspace(root, base=root / "onboard" / "get-sim")
+            scenarios = MarkdownScenario.from_text(_SIM_SCENARIO, "select_sim_story.test.md")
+            self.text = MarkdownScenario.render_scenarios(
+                scenarios, story_name="Select Sim", domain_links=links,
+            )
+
+        with it("should link a term in a step to its class heading"):
+            expect(
+                "selects a [sim card](../../domain/domain-model.md#simcard-entity)" in self.text
+            ).to(be_true)
+
+        with it("should link a term in an example cell"):
+            expect("[SimCard](../../domain/domain-model.md#simcard-entity) 1" in self.text).to(be_true)
+
+        with it("should keep the example table header plain"):
+            expect("| example | sim card |" in self.text).to(be_true)
+
+        with it("should read the linked steps back as plain text"):
+            scenario = MarkdownScenario.from_text(self.text, "select_sim_story.test.md")[0]
+            when = scenario.steps_in(StepType.WHEN)[0]
+            expect(when.text).to(equal("the customer selects a sim card"))
+
+    with context("when there is no domain model markdown"):
+        with it("should leave every term as plain text"):
+            from cdd_guidance.practices.stories.model.markdown.links import DomainModelLinks
+
+            links = DomainModelLinks.from_workspace(_workspace({"notes.md": "# Notes\n"}))
+            scenarios = MarkdownScenario.from_text(_SIM_SCENARIO, "select_sim_story.test.md")
+            text = MarkdownScenario.render_scenarios(scenarios, domain_links=links)
+            expect("](" in text).to(be_false)

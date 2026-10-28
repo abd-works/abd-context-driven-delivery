@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Iterable, List, Optional
 from harness.graph.bound_node import BoundChildren, BoundNode
 from harness.graph.graph import Graph
 
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     markdown_bullet_lines,
@@ -326,6 +327,7 @@ class OoadClass(OoadNode):
             parameters=[parameter.clone() for parameter in source.parameters],
         )
         node.invariants = [item.clone() for item in getattr(source, "invariants", [])]
+        node.body = source.body
         return node
 
     def child_collections(self, source: "OoadNode") -> List[ChildCollectionPair]:
@@ -470,6 +472,7 @@ class Module(OoadNode):
         self.constraint = constraint
         self.seam_terms: List[str] = list(seam_terms) if seam_terms is not None else []
         self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
+        self.preamble = CodeBody()
         self._modules = BoundChildren(self, "participants")
         self._classes = BoundChildren(self, "participants")
         self._class_blocks: List[str] = []
@@ -519,6 +522,7 @@ class Module(OoadNode):
         self.constraint = source.constraint
         self.seam_terms = list(source.seam_terms)
         self.dependencies = list(source.dependencies)
+        self.preamble = source.preamble
 
     def clone(self) -> "Module":
         cloned = type(self)(
@@ -530,6 +534,7 @@ class Module(OoadNode):
             seam_terms=list(self.seam_terms),
             dependencies=list(self.dependencies),
         )
+        cloned.preamble = self.preamble
         cloned.modules = [module.clone() for module in self.modules]
         cloned.classes = [oclass.clone() for oclass in self.classes]
         return cloned

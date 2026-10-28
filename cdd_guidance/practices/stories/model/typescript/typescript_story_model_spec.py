@@ -129,3 +129,62 @@ with description("a TypeScript runnable-story Story Map") as self:
     with context("invalid parse input"):
         with it("should reject"):
             expect(lambda: self.ts.parse("not a tree")).to(raise_error(CodeStoryModelError))
+
+    with context("a story file that sits directly in its epic folder"):
+        with before.each:
+            content = (
+                "/**\n * Epic: Access My Paradise\n * Evidence: observed\n */\n\n"
+                "import { scenario, shareStory } from 'tests/story-test';\n\n"
+                "/**\n * Story: Create Account\n * Actor: Customer\n */\n"
+                "shareStory('Create Account', () => {\n"
+                "  scenario('Display Create Account', ({ when, then }) => {\n"
+                "    when('the User proceeds to create an account', () => {});\n"
+                "    then('the User can enter credentials', () => {});\n"
+                "  });\n"
+                "});\n\n"
+                "/**\n * Story: Sign In\n * Actor: Customer\n */\n"
+                "shareStory('Sign In', () => {\n"
+                "  scenario('Sign in with credentials', ({ when, then }) => {\n"
+                "    when('the Customer signs in', () => {});\n"
+                "    then('My Paradise opens', () => {});\n"
+                "  });\n"
+                "});\n"
+            )
+            path = "tests/access-my-paradise/access_my_paradise.story.shared.ts"
+            self.model = TypeScriptStoryModel("tests").load({path: content})
+
+        with it("should keep the epic with its name"):
+            expect([epic.name for epic in self.model.epics]).to(equal(["Access My Paradise"]))
+
+        with it("should hold its stories on the epic, not on an invented sub-epic"):
+            epic = self.model.epics[0]
+            expect([story.name for story in epic.stories]).to(equal(["Create Account", "Sign In"]))
+            expect(epic.epics).to(have_len(0))
+
+    with context("a story whose scenarios repeat inside a forEach outline"):
+        with it("should count each templated scenario in the outline"):
+            content = (
+                "/**\n * Sub-epic: Get Sim\n */\n\n"
+                "import { scenario, shareStory } from 'tests/story-test';\n"
+                "import { simChoiceOutlines } from './examples/sim-choice.examples';\n\n"
+                "/**\n * Story: Select Sim\n * Actor: Customer\n */\n"
+                "shareStory('Select Sim', () => {\n"
+                "  simChoiceOutlines.forEach(({ example, label }) => {\n"
+                "    scenario(`Choose ${example}`, ({ when, then }) => {\n"
+                "      when(`the Customer selects ${example}`, () => {});\n"
+                "      then(`the stored cart holds SIM type ${label}`, () => {});\n"
+                "    });\n\n"
+                "    scenario(`Choose ${example} — already on the cart`, ({ when, then }) => {\n"
+                "      when(`the Customer selects ${example}`, () => {});\n"
+                "      then(`the stored cart still holds ${label}`, () => {});\n"
+                "    });\n"
+                "  });\n"
+                "});\n"
+            )
+            path = "tests/onboard-a-customer/get-sim/get_sim.story.shared.ts"
+            model = TypeScriptStoryModel("tests").load({path: content})
+            story = model.epics[0].epics[0].stories[0]
+            expect([scenario.name for scenario in story.scenarios]).to(
+                equal(["Choose ${example}", "Choose ${example} — already on the cart"])
+            )
+            expect(story.scenarios[0].steps).to(have_len(2))

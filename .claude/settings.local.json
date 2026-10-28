@@ -1,5 +1,17 @@
 {
   "permissions": {
-    "allow": ["mcp__cdd"]
+    "allow": [
+      "mcp__cdd",
+      "Bash",
+      "PowerShell",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch"
+    ]
   }
 }

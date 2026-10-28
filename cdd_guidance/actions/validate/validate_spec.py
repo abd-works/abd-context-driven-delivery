@@ -88,3 +88,33 @@ with description("a validate action on practice guidance") as self:
             expect(report).to(contain("#L10"))
             expect(report).to(contain("[src/example.ts]("))
             expect(report).not_to(contain("[src\\example.ts]"))
+
+        with it("should return the graph-rule report when the MCP prompt expands validate"):
+            fixture = Path(__file__).with_name("fixtures") / "sample-graph-violations.json"
+            prose = _expanded_validate(
+                self.action,
+                {"guidance": [self.guidance], "graph": str(fixture)},
+            )
+            expect(prose).to(contain("limit-operation-parameters"))
+            expect(prose).to(contain("[src/example.ts]("))
+            expect(prose).to(contain("sample-rule-one"))
+
+    with context("with the saved graph"):
+        with before.each:
+            self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
+            self.action._validate_workspace = lambda: self.folder
+            self.action._session_path = lambda: None
+
+        with it("should report the guidance practice's graph hits from graph.json when graph is true"):
+            prose = _expanded_validate(self.action, {"guidance": ["ddd-tactics"], "graph": True})
+            expect(prose).to(contain("load-with-identity-in-hand"))
+            expect(prose).to(contain("[src/orders/order.ts]("))
+            expect(prose).not_to(contain("sampleOp"))
+
+        with it("should read a saved graph document passed as the graph path"):
+            report = self.action.validate(
+                guidance=["clean-engineering-code"],
+                graph=str(self.folder / ".context" / "graph.json"),
+            )
+            expect(report).to(contain("sampleOp"))
+            expect(report).not_to(contain("OrderRepository"))

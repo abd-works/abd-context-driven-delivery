@@ -55,7 +55,15 @@ from cdd_guidance.practices.clean_engineering.model.property import append_invar
 from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair, UpdateReport
 
 
+_HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+_CARD_HEADING = re.compile(r"^(#{2,6})\s+\*\*([^*]+)\*\*(.*?)\s*$")
+_FENCE = re.compile(r"^\s*(```|~~~)")
+
+
 def _class_heading_name(raw: str) -> str:
+    bold = re.match(r"^\*\*([^*]+)\*\*", raw.strip())
+    if bold:
+        return bold.group(1).strip()
     name = re.sub(r"<<[^>]+>>", "", raw)
     name = name.replace("**", "").strip()
     if " : " in name:
@@ -132,6 +140,21 @@ class MarkdownOoadClass(OoadClass):
                     lines.append(f"\t// {note}")
         lines.append("")
         return "\n".join(lines)
+
+    def keep_card(self, card: str, heading: "re.Match") -> None:
+        """Remember the card this class was read from, so an unchanged class writes it back as is."""
+        self._card = card
+        self._card_name = self.name
+        self._card_suffix = heading.group(3)
+        self._card_model = self.render()
+
+    def render_card(self, level: int) -> str:
+        """The card as it was read while the class is unchanged; otherwise the card written from the model."""
+        if getattr(self, "_card", None) is not None and self.render() == self._card_model:
+            return self._card
+        suffix = getattr(self, "_card_suffix", "")
+        body = self.render().split("\n", 1)[1]
+        return f"{'#' * level} **{self.name}**{suffix}\n{body}\n"
 
     def _constructor_signature(self, operation: Operation) -> str:
         """Markdown names the constructor after the class. Code channels keep the word constructor."""
@@ -220,6 +243,29 @@ class MarkdownModule(Module):
             lines.append(loaded.render(known_names=known))
         return "\n".join(lines)
 
+    def render_cards(self, module_level: int, card_level: int) -> str:
+        """The module as it was read: its own text in place, each class card where it stood,
+        and a class the document did not have after the last card."""
+        parts = getattr(self, "_card_parts", None)
+        if parts is None:
+            parts = [f"{'#' * module_level} {self.name}\n", "\n"]
+            if self.description:
+                parts.extend([self.description.rstrip("\n") + "\n", "\n"])
+        elif self.name != self._card_name:
+            parts = [f"{'#' * module_level} {self.name}\n", *parts[1:]]
+        written = []
+        out: List[str] = []
+        for part in parts:
+            if isinstance(part, str):
+                out.append(part)
+            elif any(loaded is part for loaded in self.classes):
+                out.append(part.render_card(card_level))
+                written.append(part)
+        for loaded in self.classes:
+            if not any(loaded is done for done in written):
+                out.append(loaded.render_card(card_level))
+        return "".join(out)
+
 
 class MarkdownCleanEngineeringModel(CleanEngineeringModel):
 
@@ -264,6 +310,10 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         return module
 
     def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
+        headings = self._headings(text)
+        card_levels = [level for _index, level, raw in headings if _CARD_HEADING.match(raw)]
+        if card_levels and min(card_levels) - 2 >= 2:
+            return self._parse_card_document(text, headings, min(card_levels))
         model = type(self)(name="", sequential_order=1)
         self._module_order = 1
         for block in re.split(r"(?m)^(?=#\s)", text):
@@ -340,9 +390,107 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             )
             class_order += 1
 
+    def _headings(self, text: str) -> List[tuple]:
+        """(line index, level, line) for each heading outside a fenced block."""
+        found = []
+        fenced = False
+        for index, line in enumerate(text.splitlines()):
+            if _FENCE.match(line):
+                fenced = not fenced
+                continue
+            heading = _HEADING.match(line)
+            if heading and not fenced:
+                found.append((index, len(heading.group(1)), line))
+        return found
+
+    def _parse_card_document(self, text: str, headings: List[tuple], card_level: int) -> "MarkdownCleanEngineeringModel":
+        """A document title over modules, resource groups, and bold class cards, each one level
+        deeper (`#` title, `##` module, `###` group, `####` card). A module is a heading at the
+        module level with a card under it; every other line stays where it was written."""
+        module_level = card_level - 2
+        model = type(self)(name="", sequential_order=1)
+        model._card_levels = (module_level, card_level)
+        model._card_parts = []
+        heading_at = {index: level for index, level, _raw in headings}
+        module_starts = self._module_starts(headings, module_level, card_level)
+        lines = text.splitlines(keepends=True)
+        module: Optional[MarkdownModule] = None
+        card: List[str] = []
+
+        def close_card() -> None:
+            if card and module is not None:
+                self._append_card(module, "".join(card))
+            card.clear()
+
+        for index, line in enumerate(lines):
+            level = heading_at.get(index)
+            if level is not None and level <= module_level:
+                close_card()
+                module = None
+                if index in module_starts:
+                    module = MarkdownModule(name=_HEADING.match(line).group(2), sequential_order=len(model.modules) + 1)
+                    module._card_name = module.name
+                    module._card_parts = [line]
+                    model.modules.append(module)
+                    model._card_parts.append(module)
+                    self._apply_module_preamble(module, self._preamble_after(lines, index, heading_at))
+                    continue
+            elif level is not None and level <= card_level and module is not None:
+                close_card()
+                if level == card_level and _CARD_HEADING.match(line):
+                    card.append(line)
+                    continue
+            elif card:
+                card.append(line)
+                continue
+            (module._card_parts if module is not None else model._card_parts).append(line)
+        close_card()
+        return model
+
+    def _module_starts(self, headings: List[tuple], module_level: int, card_level: int) -> set:
+        starts = set()
+        current = None
+        for index, level, raw in headings:
+            if level <= module_level:
+                current = index if level == module_level else None
+            elif current is not None and level == card_level and _CARD_HEADING.match(raw):
+                starts.add(current)
+        return starts
+
+    def _preamble_after(self, lines: List[str], start: int, heading_at: dict) -> str:
+        end = next((index for index in sorted(heading_at) if index > start), len(lines))
+        return "".join(lines[start + 1:end]).strip()
+
+    def _append_card(self, module: MarkdownModule, card: str) -> None:
+        heading = _CARD_HEADING.match(card.split("\n", 1)[0])
+        body = card.split("\n", 1)[1] if "\n" in card else ""
+        loaded = MarkdownOoadClass.parse_body(heading.group(2).strip(), body, len(module.classes) + 1)
+        loaded.keep_card(card, heading)
+        module.classes.append(loaded)
+        module._card_parts.append(loaded)
+
+    def _render_cards(self) -> str:
+        module_level, card_level = self._card_levels
+        out: List[str] = []
+        written = []
+        for part in self._card_parts:
+            if isinstance(part, str):
+                out.append(part)
+            elif any(module is part for module in self.modules):
+                out.append(part.render_cards(module_level, card_level))
+                written.append(part)
+        for module in self.modules:
+            if not any(module is done for done in written):
+                out.append(module.render_cards(module_level, card_level))
+        return "".join(out)
+
     def render(self, canonical: Optional[CleanEngineeringModel] = None, previous: Optional[str] = None) -> str:
+        if getattr(canonical, "_card_parts", None) is not None:
+            return canonical._render_cards()
         if canonical is not None:
             self.translate_from(canonical)
+        if getattr(self, "_card_parts", None) is not None:
+            return self._render_cards()
         return "\n".join(module.render() for module in self.modules)
 
     def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:

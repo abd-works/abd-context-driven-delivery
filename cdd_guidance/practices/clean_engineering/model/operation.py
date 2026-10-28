@@ -27,6 +27,7 @@ def operation_source_span(operation: "Operation") -> tuple[int, int] | None:
         return start, start + operation.line_count - 1
     return None
 
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from harness.graph.bound_node import BoundChildren
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
@@ -106,6 +107,7 @@ class Operation(OoadNode):
         self.end_line: int | None = None
         self.line_count: int | None = None
         self.body_fingerprint: str = ""
+        self.body = CodeBody()
         self.constructed_types: list[tuple[str, int]] = []
         self.is_property = False
         self.is_static = False
@@ -165,6 +167,7 @@ class Operation(OoadNode):
         cloned.end_line = self.end_line
         cloned.line_count = self.line_count
         cloned.body_fingerprint = self.body_fingerprint
+        cloned.body = self.body
         cloned.constructed_types = list(self.constructed_types)
         cloned.is_property = self.is_property
         cloned.is_static = self.is_static
@@ -228,6 +231,7 @@ class Operation(OoadNode):
         self.end_line = copied.end_line
         self.line_count = copied.line_count
         self.body_fingerprint = copied.body_fingerprint
+        self.body = copied.body
         self.constructed_types = list(copied.constructed_types)
         self.is_property = copied.is_property
         self.is_static = copied.is_static
@@ -280,6 +284,7 @@ class Operation(OoadNode):
             parameters=list(getattr(field, "parameters", []) or []),
         )
         node.invariants = [item.clone() for item in getattr(field, "invariants", [])]
+        node.body = getattr(field, "body", node.body)
         return node
 
 

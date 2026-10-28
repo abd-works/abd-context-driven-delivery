@@ -25,6 +25,8 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     companion_interface_name,
     is_interface_name,
 )
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import apply_python_function_metrics
 from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
@@ -32,6 +34,8 @@ from cdd_guidance.practices.clean_engineering.model.update_report import UpdateR
 _MODULE_MARKER = re.compile(r"^#\s*===\s*(.+?)\s*===$", re.MULTILINE)
 _CLASS_PATTERN = re.compile(r'class\s+(\w+)[^:]*:\s*\n\s+"""([^"]*?)"""', re.DOTALL)
 _CLASS_NAME_ONLY = re.compile(r"class\s+(\w+)")
+_FUTURE_IMPORT = "from __future__ import annotations"
+_ABC_IMPORT = "from abc import ABC, abstractmethod"
 
 
 @dataclass
@@ -113,7 +117,8 @@ def _sole_calling_class(tree: ast.Module, function_names: set[str]) -> dict[str,
     return {function: next(iter(classes)) for function, classes in callers.items() if len(classes) == 1}
 
 
-class PythonCleanEngineeringModel(CleanEngineeringModel):
+class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
+    language = CodeLanguage.named("python")
 
     def load_module(self, source: Module) -> PythonModule:
         return PythonModule(name=source.name, sequential_order=source.sequential_order)
@@ -144,29 +149,6 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             return self.parse_detailed(content)
         except SyntaxError:
             return None
-
-    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
-        known = [loaded.name for module in canonical.modules for loaded in module.classes]
-        needs_abc = any(
-            is_interface_name(oclass.name) or companion_interface_name(oclass.name, known)
-            for module in canonical.modules
-            for oclass in module.classes
-        )
-        header = "from __future__ import annotations\n"
-        if needs_abc:
-            header += "from abc import ABC, abstractmethod\n"
-        parts = [header]
-        for module in canonical.modules:
-            if module.name:
-                parts.append(f"# === {module.name} ===")
-                if module.description:
-                    for line in module.description.splitlines():
-                        parts.append(f"# {line}" if line.strip() else "#")
-                parts.append("")
-            names = [c.name for c in module.classes]
-            for oclass in module.classes:
-                parts.append(self._render_class(oclass, known_names=names))
-        return "\n\n".join(parts) + "\n"
 
     def sync(self, text: str, canonical: CleanEngineeringModel) -> UpdateReport:
         return canonical.translate_from(self.parse(text))
@@ -201,6 +183,7 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             module.classes.append(self._class_from_ast(node, class_order))
             class_order += 1
         self._attach_top_level_ops(module, tree)
+        module.preamble = self._preamble_of(tree)
         if module.classes:
             model.modules.append(module)
         return model
@@ -267,6 +250,7 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
             callees=self._collect_callees(node),
             is_property=self._is_property(node),
             body_fingerprint=operation_body_fingerprint(body_text),
+            body=self._body_of(node),
         )
         operation.is_static = any(
             isinstance(dec, ast.Name) and dec.id == "staticmethod" for dec in node.decorator_list
@@ -276,6 +260,30 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
         )
         apply_python_function_metrics(operation, node)
         return operation
+
+    def _body_of(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> CodeBody:
+        """The statements as written, with the comments above them; the docstring stays the description."""
+        statements = node.body[1:] if ast.get_docstring(node) is not None else node.body
+        if not statements:
+            return CodeBody()
+        source = getattr(self, "_text", "")
+        if statements[0].lineno == node.lineno:
+            return CodeBody("\n".join(ast.get_source_segment(source, stmt) or "" for stmt in statements), self.language)
+        lines = source.split("\n")
+        boundary = node.body[0].end_lineno if statements is not node.body else node.lineno
+        start = statements[0].lineno
+        while start - 1 > boundary and lines[start - 2].strip().startswith("#"):
+            start -= 1
+        return CodeBody("\n".join(lines[start - 1 : node.end_lineno]), self.language)
+
+    def _preamble_of(self, tree: ast.Module) -> CodeBody:
+        """Imports and constants above the first class, as written."""
+        first = next((node for node in tree.body if isinstance(node, ast.ClassDef)), None)
+        if first is None:
+            return CodeBody()
+        start = min([first.lineno] + [decorator.lineno for decorator in first.decorator_list])
+        above = getattr(self, "_text", "").split("\n")[: start - 1]
+        return CodeBody("\n".join(above).rstrip(), self.language)
 
     def _parameter_strings(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
         items: list[str] = []
@@ -337,33 +345,76 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
                 order += 1
 
 
-    def _render_class(self, oclass: OoadClass, known_names: List[str] | None = None) -> str:
-        self._known_names = known_names or []
-        contract = is_interface_name(oclass.name)
+    def file_header(self, canonical: CleanEngineeringModel, preamble: CodeBody) -> List[str]:
+        lines = preamble.lines_in(self.language, "", "") or [_FUTURE_IMPORT]
+        if lines[0] != _FUTURE_IMPORT:
+            lines = [_FUTURE_IMPORT, ""] + lines
+        if self._needs_abc(canonical) and _ABC_IMPORT not in lines:
+            lines.insert(1, _ABC_IMPORT)
+        return lines
+
+    def class_open(self, oclass: OoadClass, known_names: List[str]) -> List[str]:
+        self._known_names = known_names
         bases = self._bases(oclass)
         heading = f"class {oclass.name}({bases}):" if bases else f"class {oclass.name}:"
-        lines: List[str] = [heading]
+        lines = ["", "", heading]
         if oclass.intent:
-            lines.append(f'    """{oclass.intent}"""')
-            lines.append("")
-        self._render_properties(lines, oclass, contract)
-        self._render_init(lines, oclass, contract)
-        for op in oclass.operations:
-            if op.name == oclass.name:
-                continue
-            params = ", ".join(parameter.save() for parameter in op.parameters)
-            ret = op.return_type or "None"
-            if contract:
-                lines.append("    @abstractmethod")
-            head = f"self, {params}" if params else "self"
-            signature = f"    def {op.name}({head}) -> {ret}: ..."
-            lines.append(signature)
-            lines.append("")
-        while lines and lines[-1] == "":
-            lines.pop()
-        if not [ln for ln in lines[1:] if ln.strip()]:
-            lines.append("    pass")
-        return "\n".join(lines)
+            lines.extend([f'    """{oclass.intent}"""', ""])
+        return lines
+
+    def class_close(self, has_members: bool) -> List[str]:
+        return [] if has_members else ["    pass"]
+
+    def property_line(self, prop: Property, contract: bool) -> List[str]:
+        hint = prop.type_hint or "object"
+        if contract:
+            return ["    @property", "    @abstractmethod", f"    def {prop.name}(self) -> {hint}: ..."]
+        return [f"    {prop.name}: {hint}"]
+
+    def constructor_lines(self, oclass: OoadClass, constructor: Optional[Operation], body: List[str]) -> List[str]:
+        parameters = ", ".join(
+            f"{name}: {hint}" if hint else name for name, hint in self.constructor_parameters(oclass, constructor)
+        )
+        receiver = f"self, {parameters}" if parameters else "self"
+        return [f"    def __init__({receiver}) -> None:"] + (body or ["        pass"])
+
+    def signature(self, operation: Operation, contract: bool) -> List[str]:
+        lines = [f"    @{decorator}" for decorator in self._decorators(operation, contract)]
+        parameters = ", ".join(parameter.save() for parameter in operation.parameters)
+        receiver = self._receiver(operation)
+        head = ", ".join(part for part in (receiver, parameters) if part)
+        definition = f"    def {operation.name}({head}) -> {operation.return_type or 'None'}:"
+        if contract:
+            return lines + [f"{definition} ..."]
+        lines.append(definition)
+        doc = self.doc_text(operation)
+        if doc:
+            lines.append(f'        """{doc}"""')
+        return lines
+
+    def block_close(self) -> List[str]:
+        return []
+
+    def _decorators(self, operation: Operation, contract: bool) -> List[str]:
+        marks = (
+            ("property", operation.is_property),
+            ("staticmethod", operation.is_static),
+            ("classmethod", operation.is_classmethod),
+            ("abstractmethod", contract),
+        )
+        return [name for name, applies in marks if applies]
+
+    def _receiver(self, operation: Operation) -> str:
+        if operation.is_static:
+            return ""
+        return "cls" if operation.is_classmethod else "self"
+
+    def _needs_abc(self, canonical: CleanEngineeringModel) -> bool:
+        known = [oclass.name for oclass in canonical.classes]
+        return any(
+            is_interface_name(oclass.name) or companion_interface_name(oclass.name, known)
+            for oclass in canonical.classes
+        )
 
     def _bases(self, oclass: OoadClass) -> str:
         if oclass.collaborators:
@@ -374,32 +425,3 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
         if iface:
             return iface
         return ""
-
-    def _render_properties(self, lines: List[str], oclass: OoadClass, contract: bool) -> None:
-        for prop in oclass.properties:
-            hint = prop.type_hint or "object"
-            if contract:
-                lines.append("    @property")
-                lines.append("    @abstractmethod")
-                lines.append(f"    def {prop.name}(self) -> {hint}: ...")
-                lines.append("")
-            else:
-                lines.append(f"    {prop.name}: {hint}")
-        if oclass.properties and not contract:
-            lines.append("")
-
-    def _render_init(self, lines: List[str], oclass: OoadClass, contract: bool) -> None:
-        constructors = [op for op in oclass.operations if op.name == oclass.name]
-        if constructors:
-            params = constructors[0].parameters
-            param_sig = ", ".join(parameter.save() for parameter in params)
-        elif oclass.properties:
-            param_sig = ", ".join(
-                f"{p.name}: {p.type_hint}" if p.type_hint else p.name for p in oclass.properties
-            )
-        else:
-            return
-        if contract:
-            lines.append("    @abstractmethod")
-        lines.append(f"    def __init__(self, {param_sig}) -> None: ...")
-        lines.append("")

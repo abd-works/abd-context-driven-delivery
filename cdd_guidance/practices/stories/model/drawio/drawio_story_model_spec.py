@@ -325,3 +325,72 @@ with description("a DrawIO Story Map") as self:
                 expect(self.parsed.epics[0].epics[1].estimate).to(
                     equal("approx 4-6 more stories (review)")
                 )
+
+
+_LINKED_MAP = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+### (S) Customer --> Activate Sim
+"""
+
+
+def _workspace(files: dict) -> Path:
+    import tempfile
+
+    root = Path(tempfile.mkdtemp())
+    for rel, text in files.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text, encoding="utf-8")
+    return root
+
+
+def _links_by_label(text: str) -> dict:
+    tree = ET.fromstring(text)
+    return {
+        holder.attrib["label"]: (holder.attrib.get("link", ""), holder.attrib.get("entry", ""))
+        for holder in tree.iter("UserObject")
+    }
+
+
+with description("a DrawIO Story Map rendered in a workspace") as self:
+    with context("beside a story-map.md and one story's own markdown file"):
+        with before.each:
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+
+            self.root = _workspace({
+                "story-map.md": _LINKED_MAP,
+                "onboard/get-sim/select_sim_story.test.md": "## Story: Select Sim\n",
+            })
+            self.source = MarkdownStoryModel().parse(_LINKED_MAP)
+            self.text = DrawIOStoryModel().render(self.source, workspace=str(self.root))
+            self.links = _links_by_label(self.text)
+
+        with it("should link an epic cell to its story-map.md entry"):
+            expect(self.links["Onboard A Customer"][0]).to(equal("story-map.md#e-onboard-a-customer"))
+
+        with it("should link a sub-epic cell to its story-map.md entry"):
+            expect(self.links["Get Sim"][0]).to(equal("story-map.md#e-get-sim"))
+
+        with it("should link a story cell to its own file and keep its story-map.md entry"):
+            expect(self.links["Select Sim"]).to(equal((
+                "onboard/get-sim/select_sim_story.test.md",
+                "story-map.md#s-customer----select-sim",
+            )))
+
+        with it("should link a story with no file to its story-map.md entry"):
+            expect(self.links["Activate Sim"][0]).to(equal("story-map.md#s-customer----activate-sim"))
+
+        with it("should read linked cells back into the same hierarchy"):
+            parsed = DrawIOStoryModel().load(self.text)
+            stories = parsed.epics[0].epics[0].stories
+            expect([story.name for story in stories]).to(equal(["Select Sim", "Activate Sim"]))
+            expect(stories[0].actors).to(equal(["Customer"]))
+
+    with context("with no story-map.md and no story files"):
+        with it("should draw every cell without a link"):
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+
+            source = MarkdownStoryModel().parse(_LINKED_MAP)
+            text = DrawIOStoryModel().render(source, workspace=str(_workspace({"notes.md": "x\n"})))
+            expect(_links_by_label(text)).to(equal({}))
+            expect("link=" in text).to(be_false)

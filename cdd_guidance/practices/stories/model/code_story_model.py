@@ -433,6 +433,7 @@ class CodeStoryModel(StoryModel):
         """One file is one sub-epic. Every story in the file belongs to it.
 
         A parent folder with the same slug is that sub-epic, so the file is not a second level.
+        A file in its own top folder is the epic itself, and its stories sit on the epic.
         """
         if len(parts) < 2:
             return False
@@ -447,21 +448,22 @@ class CodeStoryModel(StoryModel):
         if folders[-1] == stem_slug:
             folders = folders[:-1]
         if not folders:
-            return False
-        epic = self.epic_for(folders[0])
-        nested = folders[1:]
-        if not nested or nested[-1] != leaf_slug:
-            nested = [*nested, leaf_slug]
-        sub = self.sub_epic_for(epic, nested)
+            holder = self.epic_for(stem_slug)
+        else:
+            epic = self.epic_for(folders[0])
+            nested = folders[1:]
+            if not nested or nested[-1] != leaf_slug:
+                nested = [*nested, leaf_slug]
+            holder = self.sub_epic_for(epic, nested)
         if epic_name:
-            sub.name = epic_name
+            holder.name = epic_name
         from cdd_guidance.practices.stories.model.source_location import SourceLocation
 
         for story in self.story_type.load_all(content):
             if source_file:
                 line = self._quoted_name_line(content, story.name)
                 story.source = SourceLocation(source_file.replace("\\", "/"), line, line)
-            sub.append_story(story)
+            holder.append_story(story)
         return True
 
     def _quoted_name_line(self, content: str, name: str) -> int:

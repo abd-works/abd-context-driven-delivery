@@ -1846,9 +1846,13 @@ class AgentInstructions(AgentTool):
             provider = self.self_member_name(value.func.value)
             if provider:
                 target = self._resolve_provider(self.toolset, provider)
-        self._expand_target_member(member, target)
-        if member in self.toolset.marked_tool_names(type(target)):
-            self._run_expr(value)
+        target_cls = type(target)
+        if target is None or member in self.toolset.instruction_names(target_cls):
+            self._expand_target_member(member, target)
+            return
+        if member in self.toolset.marked_tool_names(target_cls):
+            self._expand_target_member(member, target)
+        self._run_expr(value)
 
     def _dispatch_if_statement(self, statement: ast.If) -> None:
         try:

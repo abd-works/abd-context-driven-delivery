@@ -412,8 +412,10 @@ class PracticeGuidance(Guidance):
         source: str | None = None,
         previous: str = "",
         keep_positioning: bool = False,
+        workspace: str = "",
     ) -> dict:
-        """Turn content into the practice object model, then render the target format."""
+        """Turn content into the practice object model, then render the target format.
+        workspace: the folder the rendered file sits in; a renderer that links to files finds them there."""
         if not self.formats:
             companion = self.clean_engineering_companion
             owner = companion.practice_guidance if companion is not None else None
@@ -425,13 +427,14 @@ class PracticeGuidance(Guidance):
                 source=source,
                 previous=previous,
                 keep_positioning=keep_positioning,
+                workspace=workspace,
             )
         model = self._to_object_model(content, source)
         target = self._live_adapter(format)
         sketch_previous = previous
         if (source or "").lower() == "sketch" and isinstance(content, str) and content.strip():
             sketch_previous = previous or content
-        rendered = self._call_render(target, model, sketch_previous, keep_positioning)
+        rendered = self._call_render(target, model, sketch_previous, keep_positioning, workspace)
         return {"format": format, "content": rendered}
 
     def _to_object_model(self, content: Any, source: str | None) -> Any:
@@ -484,7 +487,9 @@ class PracticeGuidance(Guidance):
         adapter = self._live_adapter(source_format)
         return adapter.parse(self._incoming(source_format, content))
 
-    def _call_render(self, target: Any, parsed: Any, previous: str, keep_positioning: bool) -> Any:
+    def _call_render(
+        self, target: Any, parsed: Any, previous: str, keep_positioning: bool, workspace: str = ""
+    ) -> Any:
         try:
             parameters = inspect.signature(target.render).parameters
         except (TypeError, ValueError):
@@ -494,6 +499,8 @@ class PracticeGuidance(Guidance):
             kwargs["previous"] = previous or None
         if "keep_positioning" in parameters:
             kwargs["keep_positioning"] = keep_positioning
+        if workspace and "workspace" in parameters:
+            kwargs["workspace"] = workspace
         return target.render(parsed, **kwargs)
 
     def _live_adapter(self, format_name: str) -> Any:

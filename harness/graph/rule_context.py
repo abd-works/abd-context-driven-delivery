@@ -142,7 +142,7 @@ class RuleCheckContext:
             return None
         rel = node.source.file.strip("./").replace("\\", "/")
         path = Path(rel)
-        if path.name in ("bounded-context.md", "module-context.md") and path.parent.name == ".context":
+        if path.name in ("bounded-context.md", "module-context.md", "modules.md") and path.parent.name == ".context":
             folder_rel = path.parent.parent.as_posix()
         elif path.suffix:
             folder_rel = path.parent.as_posix()

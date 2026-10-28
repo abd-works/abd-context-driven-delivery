@@ -1,0 +1,25 @@
+{
+  "overlays": [],
+  "practices": {
+    "clean_engineering": {
+      "source_root": ".",
+      "nodes": [
+        ["clean_engineering:Operation:src/example.ts:sampleOp", "sampleOp", "Operation", "clean_engineering", "src/example.ts", 10, 12, "", "{}"]
+      ],
+      "edges": [],
+      "rules": [
+        ["limit-operation-parameters", "clean_engineering:Operation:src/example.ts:sampleOp", "Operation 'sampleOp' takes 5 parameters."]
+      ]
+    },
+    "ddd": {
+      "source_root": ".",
+      "nodes": [
+        ["ddd:Repository:src/orders/order.ts:OrderRepository", "OrderRepository", "Repository", "ddd", "src/orders/order.ts", 4, 9, "", "{}"]
+      ],
+      "edges": [],
+      "rules": [
+        ["load-with-identity-in-hand", "ddd:Repository:src/orders/order.ts:OrderRepository", "Repository 'OrderRepository.load' must take the identity already in hand."]
+      ]
+    }
+  }
+}

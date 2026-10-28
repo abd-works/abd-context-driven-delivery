@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 STATE_NAME = "session.json"
@@ -58,11 +59,18 @@ class WorkState:
         return self.load().get(key, "").strip()
 
     def _store(self, key: str, value: str) -> None:
+        # WHY: every MCP host saves the session when it starts, and sessions start together.
+        # An unchanged value is not written, and a changed one is swapped in whole, so hosts
+        # starting at once neither collide on the file nor read it half written.
         data = self.load()
         cleaned = str(value or "").strip()
+        if data.get(key, "") == cleaned:
+            return
         if cleaned:
             data[key] = cleaned
         else:
             data.pop(key, None)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(data), encoding="utf-8")
+        staged = self.path.with_name(f"{self.path.name}.{os.getpid()}.tmp")
+        staged.write_text(json.dumps(data), encoding="utf-8")
+        os.replace(staged, self.path)

@@ -13,6 +13,7 @@ from pathlib import Path
 from harness.graph.bound_node import schema_sync_paused
 from harness.graph.graph import Graph
 from harness.graph.rules import attach_rules
+from harness.graph.skipped_folders import scanned_files, skips_folder
 
 _GETTER = re.compile(r"\bget\s+(\w+)\s*\(")
 _FOREIGN = re.compile(r"//\s*foreign\s+(\w+)")
@@ -25,9 +26,10 @@ _STATIC_LINE = re.compile(r"^\s*(?:(?:public|private|protected|readonly|declare|
 _HEADING = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
 _CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
+_MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
+_FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
 _VIEW_SKIP_SUFFIXES = ("-form", "-fields", "-banner", "-messages", "-footer", "-loaded", "-client")
 _CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
-_SKIP_DIRS = {".codeql", ".git", ".context", "node_modules", "__pycache__", ".sessions", "retired"}
 
 
 def _report(graph: Graph, message: str) -> None:
@@ -35,13 +37,7 @@ def _report(graph: Graph, message: str) -> None:
 
 
 def _typescript_files(folder: Path) -> list[Path]:
-    if not folder.is_dir():
-        return []
-    return [
-        file
-        for file in folder.rglob("*")
-        if file.is_file() and file.suffix.lower() in {".ts", ".tsx"}
-    ]
+    return scanned_files(folder, {".ts", ".tsx"})
 
 
 def fill_working_copy(graph: Graph) -> None:
@@ -189,11 +185,7 @@ def _record_clean(practice, root: Path) -> list[dict]:
 
 
 def _code_files(root: Path) -> list[Path]:
-    found: list[Path] = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [name for name in dirnames if name not in _SKIP_DIRS and not name.startswith(".")]
-        found.extend(Path(dirpath) / name for name in filenames if Path(name).suffix.lower() in _CODE_SUFFIXES)
-    return sorted(found)
+    return scanned_files(root, _CODE_SUFFIXES)
 
 
 def _folder_module(folder: Path):
@@ -269,7 +261,7 @@ def _record_bdd(practice, root: Path) -> None:
 
 
 def _record_spec(practice, file: Path, relative: str, nodes: list, edges: list) -> None:
-    from cdd_guidance.practices.bdd.model.bdd_model import PythonBddModel, TypeScriptBddModel
+    from cdd_guidance.practices.bdd.model.code_spec_model import PythonBddModel, TypeScriptBddModel
 
     try:
         text = file.read_text(encoding="utf-8")
@@ -339,16 +331,18 @@ def _fact_row(row: list, facts: dict) -> list:
 
 
 def _code_folders(root: Path) -> dict[str, str]:
-    """A module owns `.context/module-context.md`. Any other folder with source is a package."""
+    """A module owns a module card (`.context/module-context.md` or `modules.md`). Any other folder with source is a package."""
+    from cdd_guidance.practices.clean_engineering.model.module_context_files import module_card
+
     roles: dict[str, str] = {}
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [name for name in dirnames if name not in _SKIP_DIRS and not name.startswith(".")]
+        dirnames[:] = [name for name in dirnames if not skips_folder(name)]
         folder = Path(dirpath)
         rel = folder.relative_to(root)
         if rel == Path("."):
             continue
         key = rel.as_posix()
-        if (folder / ".context" / "module-context.md").is_file():
+        if module_card(folder).is_file():
             roles[key] = "Module"
         elif any(Path(name).suffix.lower() in _CODE_SUFFIXES for name in filenames):
             roles[key] = "Package"
@@ -377,7 +371,7 @@ def _bounded_contexts(root: Path) -> list[tuple[str, str, str]]:
     """Each folder that contains `.context/bounded-context.md` is a bounded context."""
     found = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [name for name in dirnames if name not in _SKIP_DIRS and not name.startswith(".")]
+        dirnames[:] = [name for name in dirnames if not skips_folder(name)]
         marker = Path(dirpath) / ".context" / "bounded-context.md"
         if not marker.is_file():
             continue
@@ -692,32 +686,36 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
     steps = [node for node in stories.by_id.values() if node.type in {"Step", "Given", "When", "Then"}]
     examples = [node for node in stories.by_id.values() if node.type == "Example"]
     epics = [node for node in stories.by_id.values() if node.type in {"Epic", "SubEpic"}]
+    operations_by_name: dict[str, list] = {}
+    for operation in operations:
+        operations_by_name.setdefault(operation.name, []).append(operation)
+    example_patterns = [(example, re.compile(rf"\b{re.escape(example.name)}\b")) for example in examples]
+    lines_by_file: dict[str, list[str]] = {}
     total_steps = len(steps)
     for index, step in enumerate(steps, start=1):
         _report(graph, f"stories · steps · {index}/{total_steps} · {step.name}")
-        body = _step_body(graph._folder, step)
-        callees = list(getattr(step, "data", {}).get("callees") or [])
-        for operation in operations:
-            if operation.name in callees or re.search(rf"\.{re.escape(operation.name)}\s*\(", body):
-                _edge(stories, "invokes", 12, "relationship", step, operation)
-                _edge(clean, "invokes", 12, "relationship", operation, step)
-                _edge(clean, "invokedBy", 9, "relationship", operation, step)
-                module_name = Path(operation.source.file).parent.name
-                module = modules.get(module_name)
-                epic = _epic_for(step, epics)
-                if module is not None and epic is not None:
-                    _edge(clean, "usedBy", 14, "relationship", module, epic)
-                    _edge(stories, "uses", 9, "relationship", epic, module)
-        for example in examples:
-            if not re.search(rf"\b{re.escape(example.name)}\b", body):
-                continue
-            phase = _gwt_phase(step)
-            if phase in {"given", "when", "then"}:
+        body = _step_body(graph._folder, step, lines_by_file)
+        called = set(getattr(step, "data", {}).get("callees") or []) | set(_MEMBER_CALL.findall(body))
+        matched = [operation for name in called for operation in operations_by_name.get(name, ())]
+        epic = _epic_for(step, epics) if matched else None
+        for operation in matched:
+            _edge(stories, "invokes", 12, "relationship", step, operation)
+            _edge(clean, "invokes", 12, "relationship", operation, step)
+            _edge(clean, "invokedBy", 9, "relationship", operation, step)
+            module = modules.get(Path(operation.source.file).parent.name)
+            if module is not None and epic is not None:
+                _edge(clean, "usedBy", 14, "relationship", module, epic)
+                _edge(stories, "uses", 9, "relationship", epic, module)
+        if _gwt_phase(step) not in {"given", "when", "then"}:
+            continue
+        for example, pattern in example_patterns:
+            if pattern.search(body):
                 _edge(stories, "observes", 8, "relationship", step, example)
+    sources = _function_sources(graph._folder, graph)
     total_examples = len(examples)
     for index, example in enumerate(examples, start=1):
         _report(graph, f"stories · examples · {index}/{total_examples} · {example.name}")
-        text = _example_source(graph._folder, example.name, graph)
+        text = sources.get(example.name, "")
         for name, class_node in classes_by_name.items():
             if re.search(rf"\b{re.escape(name)}\b", text):
                 _edge(stories, "demonstrates", 4, "grouped", example, class_node)
@@ -733,31 +731,32 @@ def _edge(practice, kind: str, order: int, display: str, parent, child) -> None:
     practice.record({"kind": kind, "order": order, "display": display}, parent, child)
 
 
-def _step_body(root: Path | None, step) -> str:
+def _step_body(root: Path | None, step, lines_by_file: dict[str, list[str]]) -> str:
+    """The 40 source lines from the step on; each file is read once per load."""
     if root is None or not step.source.file:
         return ""
-    path = root / step.source.file
-    if not path.is_file():
-        return ""
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines = lines_by_file.get(step.source.file)
+    if lines is None:
+        path = root / step.source.file
+        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+        lines_by_file[step.source.file] = lines
     start = max(0, step.source.start_line - 1)
-    chunk = lines[start : start + 40]
-    return "\n".join(chunk)
+    return "\n".join(lines[start : start + 40])
 
 
-def _example_source(root: Path | None, name: str, graph: Graph | None = None) -> str:
+def _function_sources(root: Path | None, graph: Graph | None = None) -> dict[str, str]:
+    """Each declared `function name` in the .ts files, mapped to the first file that declares it."""
     if root is None:
-        return ""
-    files = [file for file in root.rglob("*.ts") if file.is_file()]
-    total = len(files)
+        return {}
+    files = scanned_files(root, {".ts"})
+    sources: dict[str, str] = {}
     for index, file in enumerate(files, start=1):
         if graph is not None:
-            relative = file.relative_to(root).as_posix()
-            _report(graph, f"stories · example {name} · {index}/{total} · {relative}")
+            _report(graph, f"stories · example sources · {index}/{len(files)} · {file.relative_to(root).as_posix()}")
         text = file.read_text(encoding="utf-8")
-        if re.search(rf"function\s+{re.escape(name)}\b", text):
-            return text
-    return ""
+        for name in _FUNCTION_DECLARATION.findall(text):
+            sources.setdefault(name, text)
+    return sources
 
 
 def _epic_for(step, epics: list):
@@ -834,9 +833,7 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
             for view in views:
                 _lern_schema_edge(ddd, "views", node_root, view)
 
-    for file in sorted(root.rglob("*")):
-        if not file.is_file():
-            continue
+    for file in scanned_files(root):
         relative = file.relative_to(root).as_posix()
         semantic = _lern_story_semantic(file)
         if semantic is None:

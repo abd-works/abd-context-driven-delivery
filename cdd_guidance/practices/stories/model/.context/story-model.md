@@ -245,6 +245,9 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 + ands: list[Step]
 + example: Example
 	// given. The example this step names
++ body: CodeBody
+	// the step's test code as read, in the language it was written in. Empty outside code
+	// a code story writes it with CodeBody.lines_in: the body in the same language, otherwise the step placeholder
 ----
 - load_ands(): None
 	// while has_more_and: append the next and

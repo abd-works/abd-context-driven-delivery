@@ -3,12 +3,12 @@
 # Refer to cdd_guidance/rules/language-tools.md for tool recommendations.
 # =============================================================================
 # BEHAVIOR (SIGNATURE) — `signature-markers`
-# Every `it` body is exactly `# BDD: SIGNATURE` — nothing else.
+# Every `it` body is exactly `pass  # BDD: SIGNATURE` — nothing else. A bare comment is not a Python body.
 #
 # with description('{DomainEntity}'):
 #     with context('that has been created'):
 #         with it('should have {initial property} assigned'):
-#             # BDD: SIGNATURE
+#             pass  # BDD: SIGNATURE
 # =============================================================================
 # REALIZATION — call graph per `it` (default after behavior unless user opts out)
 # Replace `# BDD: SIGNATURE` with `# ->` / `# <-` lines only — same notation as CE model.
@@ -17,7 +17,7 @@
 #             # cart.checkout()
 #             #   -> paymentGateway.charge(amount)
 #             #   <- receipt
-#             # BDD: SIGNATURE
+#             pass  # BDD: SIGNATURE
 # =============================================================================
 # DEVELOPMENT — `no-remaining-signatures`
 # Replace each `# BDD: SIGNATURE` with Arrange / Act / Assert. Zero markers when done.

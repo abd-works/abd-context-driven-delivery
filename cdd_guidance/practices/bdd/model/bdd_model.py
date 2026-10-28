@@ -1,8 +1,7 @@
-"""Canonical BDD describe tree — parse a sketch or spec code, render python or typescript."""
+"""Canonical BDD describe tree — parse and render a sketch. Code channels live in code_spec_model."""
 
 from __future__ import annotations
 
-import ast
 import re
 
 from harness.graph.bound_node import BoundChildren, BoundNode
@@ -15,6 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import (
     render_call_graph_block,
 )
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 
 
 class BddModel(BoundNode):
@@ -24,6 +24,8 @@ class BddModel(BoundNode):
 
     def __init__(self, graph: Graph | None = None) -> None:
         super().__init__("spec", 0, graph)
+        self.preamble = CodeBody()
+        self.written = None
         self._descriptions = BoundChildren(self, "descriptions")
         if graph is not None:
             self._copy_descriptions_on_graph()
@@ -74,116 +76,65 @@ class BddModel(BoundNode):
         return found
 
     def render(self, canonical: "BddModel", previous: str | None = None) -> str:
-        return "\n\n".join(_render_python(item) for item in canonical.descriptions)
+        return "\n\n".join(self._sketch_lines(item) for item in canonical.descriptions)
 
+    def _sketch_lines(self, description: Description) -> str:
+        lines = [description.name]
+        for child in description.contexts:
+            lines.extend(self._sketch_context(child, 1))
+        return "\n".join(lines) + "\n"
 
-class PythonBddModel(BddModel):
-    def render(self, canonical: BddModel, previous: str | None = None) -> str:
-        return "\n\n".join(_render_python(item) for item in canonical.descriptions)
+    def _sketch_context(self, node: Context, depth: int) -> list[str]:
+        pad = "  " * depth
+        lines = [f"{pad}{node.name}"]
+        for observation in node.observations:
+            if observation.surface_lines or observation.call_graph:
+                lines.append(f"{pad}  ```")
+                for surface in observation.surface_lines:
+                    lines.append(f"{pad}  -> {surface}")
+                if observation.call_graph:
+                    for graph_line in render_call_graph_block(observation.call_graph).splitlines():
+                        lines.append(f"{pad}  {graph_line}")
+                lines.append(f"{pad}  it {observation.name}")
+                lines.append(f"{pad}  ```")
+            else:
+                lines.append(f"{pad}  it {observation.name}")
+        for child in node.contexts:
+            lines.extend(self._sketch_context(child, depth + 1))
+        return lines
 
-    def parse_code(self, text: str) -> "BddModel":
-        """Mamba specs: `with description(...)`, `with context(...)`, `with it(...)` blocks."""
-        try:
-            tree = ast.parse(text)
-        except SyntaxError:
-            return self
-        self.descriptions = [
-            node for node in (_mamba_node(item, None, order) for order, item in enumerate(tree.body, 1)) if node is not None
-        ]
-        return self
+    def setup_at(self, path: tuple) -> CodeBody:
+        """The setup read for the describe at this path of names; empty when this spec has none."""
+        node = self._node_at(path)
+        return getattr(node, "setup", CodeBody()) if node is not None else CodeBody()
 
+    def body_at(self, path: tuple) -> CodeBody:
+        """The test body read for the it at this path of names; empty when this spec has none."""
+        node = self._node_at(path)
+        return getattr(node, "body", CodeBody()) if node is not None else CodeBody()
 
-class TypeScriptBddModel(BddModel):
-    def render(self, canonical: BddModel, previous: str | None = None) -> str:
-        return "\n\n".join(_render_typescript(item) for item in canonical.descriptions)
+    def written_at(self, path: tuple):
+        """How the block at this path of names was written; None when this spec has no such block."""
+        node = self._node_at(path)
+        return node.written if node is not None else None
 
-    def parse_code(self, text: str) -> "BddModel":
-        """Vitest / Jest specs: `describe(...)`, `it(...)`, `test(...)` blocks found by bracket matching."""
-        blocks = sorted(_script_blocks(text), key=lambda block: block[1])
-        self.descriptions = _nest_script_blocks(blocks)
-        return self
+    def _node_at(self, path: tuple):
+        found, children = None, list(self.descriptions)
+        for name in path:
+            found = next((child for child in children if child.name == name), None)
+            if found is None:
+                return None
+            children = list(getattr(found, "contexts", [])) + list(getattr(found, "observations", []))
+        return found
 
 
 _PATCH_DECORATOR = re.compile(r"^\s*@patch\s*\(", re.MULTILINE)
 _MOCK_PATCH_IMPORT = re.compile(r"from unittest\.mock import patch")
 _MAMBA_DESCRIBE = re.compile(r'^with description\("([^"]+)"\)', re.MULTILINE)
-_MAMBA_BLOCKS = {"description": "description", "describe": "description", "context": "context", "it": "it", "_it": "it"}
-_SCRIPT_BLOCK = re.compile(r"\b(describe|context|it|test)\s*\(\s*(['\"`])((?:\\.|(?!\2).)*)\2")
-
-
-def _mamba_node(item: ast.stmt, parent, order: int):
-    """One `with <block>("name"):` statement as a Description, Context, or Observation (None otherwise)."""
-    if not isinstance(item, ast.With) or not item.items:
-        return None
-    call = item.items[0].context_expr
-    if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.args):
-        return None
-    kind = _MAMBA_BLOCKS.get(call.func.id)
-    name = call.args[0].value if isinstance(call.args[0], ast.Constant) else ""
-    if kind is None or not isinstance(name, str):
-        return None
-    node = _behavior_node(kind, parent, name, order, item.lineno, item.end_lineno or item.lineno)
-    for child_order, child in enumerate(item.body, 1):
-        _mamba_node(child, node, child_order)
-    return node
-
-
-def _behavior_node(kind: str, parent, name: str, order: int, line: int, end_line: int):
-    if kind == "description" and parent is None:
-        node = Description(name, order)
-    elif kind == "it":
-        node = Observation(name, order)
-    else:
-        node = Context(name, order)
-    node.line, node.end_line = line, end_line
-    if parent is not None:
-        (parent.observations if isinstance(node, Observation) else parent.contexts).append(node)
-    return node
-
-
-def _script_blocks(text: str) -> list[tuple[str, int, int, str]]:
-    """(kind, start line, end line, name) for every describe/it/test call whose body closes."""
-    blocks = []
-    for match in _SCRIPT_BLOCK.finditer(text):
-        close = _closing_paren(text, text.index("(", match.start()))
-        if close is None:
-            continue
-        start = text.count("\n", 0, match.start()) + 1
-        blocks.append((match.group(1), start, text.count("\n", 0, close) + 1, match.group(3)))
-    return blocks
-
-
-def _closing_paren(text: str, open_index: int) -> int | None:
-    depth = 0
-    for index in range(open_index, len(text)):
-        if text[index] == "(":
-            depth += 1
-        elif text[index] == ")":
-            depth -= 1
-            if depth == 0:
-                return index
-    return None
-
-
-def _nest_script_blocks(blocks: list[tuple[str, int, int, str]]) -> list:
-    roots: list = []
-    open_nodes: list = []
-    for order, (kind, start, end, name) in enumerate(blocks, 1):
-        while open_nodes and open_nodes[-1].end_line < start:
-            open_nodes.pop()
-        parent = open_nodes[-1] if open_nodes else None
-        mapped = "it" if kind in {"it", "test"} else ("description" if kind == "describe" and parent is None else "context")
-        node = _behavior_node(mapped, parent, name, order, start, end)
-        if parent is None:
-            roots.append(node)
-        if not isinstance(node, Observation):
-            open_nodes.append(node)
-    return [node for node in roots if isinstance(node, Description)]
 
 
 class MarkdownBddModel(BddModel):
-    def render(self, canonical: BddModel, previous: str | None = None) -> str:
-        return "\n\n".join(_render_sketch(item) for item in canonical.descriptions)
+    pass
 
 
 def _parse_sketch(text: str) -> list[Description]:
@@ -285,93 +236,3 @@ def _apply_fence_block(lines: list[str], stack: list[tuple[int, Context]]) -> No
             continue
         depth = (len(raw) - len(raw.lstrip(" "))) // 2
         pending_graph.append(CallGraphEntry(depth=depth, kind="call", text=stripped))
-
-
-def _render_python(description: Description) -> str:
-    lines = [
-        "from mamba import description, context, it",
-        "from expects import expect",
-        "",
-        f'with description("{_escape(description.name)}"):',
-    ]
-    if not description.contexts:
-        lines.append("    pass")
-    for child in description.contexts:
-        lines.extend(_python_context(child, 1))
-    return "\n".join(lines) + "\n"
-
-
-def _python_context(node: Context, depth: int) -> list[str]:
-    pad = "    " * depth
-    lines = [f'{pad}with context("{_escape(node.name)}"):']
-    body = False
-    for observation in node.observations:
-        body = True
-        lines.append(f'{pad}    with it("{_escape(observation.name)}"):')
-        lines.append(f"{pad}        # BDD: SIGNATURE")
-    for child in node.contexts:
-        body = True
-        lines.extend(_python_context(child, depth + 1))
-    if not body:
-        lines.append(f"{pad}    pass")
-    return lines
-
-
-def _render_typescript(description: Description) -> str:
-    lines = [
-        'import { describe, it } from "vitest";',
-        "",
-        f'describe("{_escape(description.name)}", () => {{',
-    ]
-    if not description.contexts:
-        lines.append("  // BDD: SIGNATURE")
-    for child in description.contexts:
-        lines.extend(_typescript_context(child, 1))
-    lines.append("});")
-    return "\n".join(lines) + "\n"
-
-
-def _typescript_context(node: Context, depth: int) -> list[str]:
-    pad = "  " * depth
-    lines = [f'{pad}describe("{_escape(node.name)}", () => {{']
-    for observation in node.observations:
-        lines.append(f'{pad}  it("{_escape(observation.name)}", () => {{')
-        lines.append(f"{pad}    // BDD: SIGNATURE")
-        lines.append(f"{pad}  }});")
-    for child in node.contexts:
-        lines.extend(_typescript_context(child, depth + 1))
-    if not node.observations and not node.contexts:
-        lines.append(f"{pad}  // BDD: SIGNATURE")
-    lines.append(f"{pad}}});")
-    return lines
-
-
-def _render_sketch(description: Description) -> str:
-    lines = [description.name]
-    for child in description.contexts:
-        lines.extend(_sketch_context(child, 1))
-    return "\n".join(lines) + "\n"
-
-
-def _sketch_context(node: Context, depth: int) -> list[str]:
-    pad = "  " * depth
-    lines = [f"{pad}{node.name}"]
-    for observation in node.observations:
-        if observation.surface_lines or observation.call_graph:
-            lines.append(f"{pad}  ```")
-            for surface in observation.surface_lines:
-                lines.append(f"{pad}  -> {surface}")
-            if observation.call_graph:
-                for graph_line in render_call_graph_block(observation.call_graph).splitlines():
-                    lines.append(f"{pad}  {graph_line}")
-            lines.append(f"{pad}  it {observation.name}")
-            lines.append(f"{pad}  ```")
-        else:
-            lines.append(f"{pad}  it {observation.name}")
-    for child in node.contexts:
-        lines.extend(_sketch_context(child, depth + 1))
-    return lines
-
-
-def _escape(name: str) -> str:
-    return name.replace("\\", "\\\\").replace('"', '\\"')

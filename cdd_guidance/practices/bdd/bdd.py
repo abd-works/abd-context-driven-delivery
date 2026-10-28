@@ -39,8 +39,8 @@ class Bdd(PracticeGuidance):
             formats={
                 "sketch": ("cdd_guidance.practices.bdd.model.sketch.sketch_bdd_model", "SketchBddModel"),
                 "markdown": ("cdd_guidance.practices.bdd.model.bdd_model", "MarkdownBddModel"),
-                "python": ("cdd_guidance.practices.bdd.model.bdd_model", "PythonBddModel"),
-                "typescript": ("cdd_guidance.practices.bdd.model.bdd_model", "TypeScriptBddModel"),
+                "python": ("cdd_guidance.practices.bdd.model.code_spec_model", "PythonBddModel"),
+                "typescript": ("cdd_guidance.practices.bdd.model.code_spec_model", "TypeScriptBddModel"),
             },
         )
         if path is not None or session is not None:

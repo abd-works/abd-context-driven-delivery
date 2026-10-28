@@ -5,6 +5,7 @@ import re
 from typing import Callable
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, Operation
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import apply_brace_body_metrics
 from cdd_guidance.practices.clean_engineering.model.property import Property, append_invariant, take_property_note
@@ -45,9 +46,11 @@ class CFamilyParse:
         self,
         model_factory: Callable[[], CleanEngineeringModel],
         class_factory: Callable[..., OoadClass],
+        language: CodeLanguage,
     ) -> None:
         self._model_factory = model_factory
         self._class_factory = class_factory
+        self._language = language
 
     @staticmethod
     def method_span_in_text(text: str, name: str, fallback_line: int = 1) -> tuple[int, int]:
@@ -73,11 +76,20 @@ class CFamilyParse:
         self._text = text
         model = self._model_factory()
         module = model.load_module(Module(name="", sequential_order=1))
+        module.preamble = self._preamble()
         self._append_classes(module)
         self._attach_top_level(module)
         if module.classes:
             model.modules.append(module)
         return model
+
+    def _preamble(self) -> CodeBody:
+        """Imports and constants above the first class, as written."""
+        first = _CLASS_RE.search(self._text)
+        if first is None:
+            return CodeBody()
+        line_start = self._text.rfind("\n", 0, first.start()) + 1
+        return CodeBody(self._text[:line_start].rstrip(), self._language)
 
     def _append_classes(self, module: Module) -> None:
         class_order = 1
@@ -93,9 +105,7 @@ class CFamilyParse:
             )
             oclass.end_line = self._line_at(self._text, body_start + len(body))
             oclass.bases = _EXTENDS_RE.findall(self._text[match.end() : body_start])
-            oclass.operations = [
-                self._loaded_operation(oclass, filled) for filled in self._methods_from_body(body, match.group(1))
-            ]
+            oclass.operations = self._methods_from_body(body, match.group(1))
             self._prepend_constructors(oclass, body)
             oclass.properties = self._fields_from_body(oclass, body)
             self._bind_member_relationships(oclass)
@@ -110,14 +120,14 @@ class CFamilyParse:
             op = Operation(name="constructor", parameters=self._split_params(ctor.group(1)))
             op.line = self._line_at(self._text, self._body_start + ctor.start())
             self._apply_method_end_line(op, body, ctor.end() - 1)
-            oclass.operations.insert(0, self._loaded_operation(oclass, self._operation_from_body(op, ctor_body)))
+            oclass.operations.insert(0, self._operation_from_body(op, ctor_body))
 
     def _attach_top_level(self, module: Module) -> None:
         top_ops = self._top_level_functions()
         if not top_ops:
             return
         holder = self._class_factory(name="_module", sequential_order=len(module.classes) + 1)
-        holder.operations = [self._loaded_operation(holder, op) for op in top_ops]
+        holder.operations = top_ops
         module.classes.append(holder)
 
     def _top_level_functions(self) -> list[Operation]:
@@ -133,12 +143,6 @@ class CFamilyParse:
             op.line = self._line_at(self._text, match.start())
             ops.append(self._operation_from_body(op, body))
         return ops
-
-    def _loaded_operation(self, oclass: OoadClass, operation: Operation) -> Operation:
-        load = getattr(oclass, "load_operation_field", None)
-        if load is None:
-            return operation
-        return load(operation)
 
     def _class_spans(self) -> list[tuple[int, int]]:
         spans: list[tuple[int, int]] = []
@@ -197,6 +201,7 @@ class CFamilyParse:
         op.callees = callees
         op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
         op.body_fingerprint = operation_body_fingerprint(body)
+        op.body = CodeBody(body, self._language)
         apply_brace_body_metrics(op, body)
         if op.name in {"constructor", "__init__"}:
             op.constructed_types = self._constructed_types(body, op.line or 1)
