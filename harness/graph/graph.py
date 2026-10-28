@@ -19,35 +19,24 @@ if str(_REPO) not in sys.path:
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
+from harness.graph.skipped_folders import SKIPPED_FOLDERS, skips_folder
 
 Display = str
 Tuple = list[str]
 _GRAPH_PRACTICE_NAMES = frozenset({"clean_engineering", "stories", "ddd", "bdd", "ux"})
 _GRAPH_JSON_NAME = "graph.json"
-_CACHE_SKIP_DIRS = {
-    ".codeql",
-    ".git",
-    "node_modules",
-    "__pycache__",
-    ".sessions",
-    "retired",
-    ".context",
-    ".venv",
-    "dist",
-    "build",
-    "coverage",
-    ".next",
-    "out",
-    "playwright-report",
-    "test-results",
-    ".cursor",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".tox",
-    "htmlcov",
-}
 _DIRTY_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py", ".md"}
 _RULE_FILE_NAMES = ("rules.py", "schema.yaml", "rules.yaml")
+
+def _under_any(file: str | None, prefixes: list[str]) -> bool:
+    """True when ``file`` is one of the prefixes or sits under one."""
+    location = (file or "").replace("\\", "/").strip("/")
+    for prefix in prefixes:
+        folder = str(prefix).replace("\\", "/").strip("/")
+        if folder and (location == folder or location.startswith(folder + "/")):
+            return True
+    return False
+
 
 def pattern_overlay_root(pattern: str) -> Path:
     return _REPO / "cdd_guidance" / "patterns" / pattern
@@ -796,11 +785,17 @@ class Node:
             "children": rows,
         }
 
-    def rule_rows(self) -> list[dict]:
-        """One rule child: status violating, passing, or prompt, and every stored hit."""
+    def rule_rows(self, violations_only: bool | None = None, selected: list[str] | None = None) -> list[dict]:
+        """One rule child: status violating, passing, or prompt, and every stored hit.
+
+        Only violating rows (of the selected rules) come back when ``violations_only`` is set;
+        left out, both follow the graph filter.
+        """
         graph = self.practice.graph
-        violations_only = bool(graph and graph.filter.violations)
-        selected = list(graph.filter.rules) if graph else []
+        if violations_only is None:
+            violations_only = bool(graph and graph.filter.violations)
+        if selected is None:
+            selected = list(graph.filter.rules) if graph else []
         rows: list[dict] = []
         for slug in self.rules.slugs():
             entry = self.rules.entries.get(slug)
@@ -1044,7 +1039,7 @@ class Graph:
         the serialized graph so other practices already cached stay put.
         """
         self._folder = Path(database or folder).resolve()
-        self._practice_roots = {name: Path(root).resolve() for name, root in practices.items()}
+        self._practice_roots = {name: (Path(folder) / root).resolve() for name, root in practices.items()}
         self.overlays = _normalize_overlay_list(list(overlays or []))
         self.report_progress("Checking the saved graph")
         if not force and self._saved_graph_is_current():
@@ -1189,7 +1184,7 @@ class Graph:
 
     def _rule_file_newer_than(self, folder: Path, stamp: float) -> bool:
         for dirpath, dirnames, filenames in os.walk(folder):
-            dirnames[:] = [name for name in dirnames if name not in _CACHE_SKIP_DIRS]
+            dirnames[:] = [name for name in dirnames if name not in SKIPPED_FOLDERS]
             for filename in filenames:
                 if not self._is_rule_file(Path(dirpath, filename)):
                     continue
@@ -1221,11 +1216,7 @@ class Graph:
     def _contents_newer_than(self, folder: Path, stamp: float) -> bool:
         seen = 0
         for dirpath, dirnames, filenames in os.walk(folder):
-            dirnames[:] = [
-                name
-                for name in dirnames
-                if name not in _CACHE_SKIP_DIRS and not name.startswith(".")
-            ]
+            dirnames[:] = [name for name in dirnames if not skips_folder(name)]
             for filename in filenames:
                 path = Path(dirpath, filename)
                 if path.suffix.lower() not in _DIRTY_SUFFIXES:
@@ -1308,7 +1299,12 @@ class Graph:
     @agent_tool
     @skill(name="read-graph")
     def return_nodes(self, filter: dict | None = None) -> str:
-        """Return matching graph nodes as JSON, with ancestors, children, and relationships."""
+        """Return matching graph nodes as JSON, with ancestors, children, and relationships.
+
+        filter keys: practice(s), type(s), name, rules, relationships;
+        violations: true returns only failing nodes with only their failing rule rows;
+        paths: source path prefixes (relative to the folder, e.g. src/orders) a node must sit under.
+        """
         wanted = dict(filter or {})
         if "practice" not in wanted and "practices" not in wanted and self.filter.practices:
             wanted["practices"] = self.filter._scope()
@@ -1339,7 +1335,10 @@ class Graph:
                     "node_id": node.node_id,
                     "ancestors": ancestors,
                     "children": [child.name for child in node.children],
-                    "rules": node.rule_rows(),
+                    "rules": node.rule_rows(
+                        bool(wanted.get("violations")) or None,
+                        list(wanted.get("rules") or []) or None,
+                    ),
                 }
             )
         for child in node.children:
@@ -1360,6 +1359,9 @@ class Graph:
             return False
         relationships = wanted.get("relationships") or []
         if relationships and not self._on_relationship(node, relationships):
+            return False
+        paths = wanted.get("paths") or ([wanted["path"]] if wanted.get("path") else [])
+        if paths and not _under_any(node.source.file, paths):
             return False
         return True
 

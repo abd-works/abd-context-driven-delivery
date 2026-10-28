@@ -13,6 +13,7 @@ from pathlib import Path
 from harness.graph.bound_node import schema_sync_paused
 from harness.graph.graph import Graph
 from harness.graph.rules import attach_rules
+from harness.graph.skipped_folders import scanned_files, skips_folder
 
 _GETTER = re.compile(r"\bget\s+(\w+)\s*\(")
 _FOREIGN = re.compile(r"//\s*foreign\s+(\w+)")
@@ -29,7 +30,6 @@ _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
 _FUNCTION_DECLARATION = re.compile(r"\bfunction\s+([\w$]+)\b")
 _VIEW_SKIP_SUFFIXES = ("-form", "-fields", "-banner", "-messages", "-footer", "-loaded", "-client")
 _CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py"}
-_SKIP_DIRS = {".codeql", ".git", ".context", "node_modules", "__pycache__", ".sessions", "retired"}
 
 
 def _report(graph: Graph, message: str) -> None:
@@ -37,13 +37,7 @@ def _report(graph: Graph, message: str) -> None:
 
 
 def _typescript_files(folder: Path) -> list[Path]:
-    if not folder.is_dir():
-        return []
-    return [
-        file
-        for file in folder.rglob("*")
-        if file.is_file() and file.suffix.lower() in {".ts", ".tsx"}
-    ]
+    return scanned_files(folder, {".ts", ".tsx"})
 
 
 def fill_working_copy(graph: Graph) -> None:
@@ -191,11 +185,7 @@ def _record_clean(practice, root: Path) -> list[dict]:
 
 
 def _code_files(root: Path) -> list[Path]:
-    found: list[Path] = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [name for name in dirnames if name not in _SKIP_DIRS and not name.startswith(".")]
-        found.extend(Path(dirpath) / name for name in filenames if Path(name).suffix.lower() in _CODE_SUFFIXES)
-    return sorted(found)
+    return scanned_files(root, _CODE_SUFFIXES)
 
 
 def _folder_module(folder: Path):
@@ -341,16 +331,18 @@ def _fact_row(row: list, facts: dict) -> list:
 
 
 def _code_folders(root: Path) -> dict[str, str]:
-    """A module owns `.context/module-context.md`. Any other folder with source is a package."""
+    """A module owns a module card (`.context/module-context.md` or `modules.md`). Any other folder with source is a package."""
+    from cdd_guidance.practices.clean_engineering.model.module_context_files import module_card
+
     roles: dict[str, str] = {}
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [name for name in dirnames if name not in _SKIP_DIRS and not name.startswith(".")]
+        dirnames[:] = [name for name in dirnames if not skips_folder(name)]
         folder = Path(dirpath)
         rel = folder.relative_to(root)
         if rel == Path("."):
             continue
         key = rel.as_posix()
-        if (folder / ".context" / "module-context.md").is_file():
+        if module_card(folder).is_file():
             roles[key] = "Module"
         elif any(Path(name).suffix.lower() in _CODE_SUFFIXES for name in filenames):
             roles[key] = "Package"
@@ -379,7 +371,7 @@ def _bounded_contexts(root: Path) -> list[tuple[str, str, str]]:
     """Each folder that contains `.context/bounded-context.md` is a bounded context."""
     found = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [name for name in dirnames if name not in _SKIP_DIRS and not name.startswith(".")]
+        dirnames[:] = [name for name in dirnames if not skips_folder(name)]
         marker = Path(dirpath) / ".context" / "bounded-context.md"
         if not marker.is_file():
             continue
@@ -756,7 +748,7 @@ def _function_sources(root: Path | None, graph: Graph | None = None) -> dict[str
     """Each declared `function name` in the .ts files, mapped to the first file that declares it."""
     if root is None:
         return {}
-    files = [file for file in root.rglob("*.ts") if file.is_file()]
+    files = scanned_files(root, {".ts"})
     sources: dict[str, str] = {}
     for index, file in enumerate(files, start=1):
         if graph is not None:
@@ -841,9 +833,7 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
             for view in views:
                 _lern_schema_edge(ddd, "views", node_root, view)
 
-    for file in sorted(root.rglob("*")):
-        if not file.is_file():
-            continue
+    for file in scanned_files(root):
         relative = file.relative_to(root).as_posix()
         semantic = _lern_story_semantic(file)
         if semantic is None:

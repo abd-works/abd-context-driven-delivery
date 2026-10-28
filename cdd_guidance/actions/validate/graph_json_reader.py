@@ -18,21 +18,49 @@ def load_graph_json_paths(graph: bool | str | list[str] | None) -> list[Path]:
     return [Path(item) for item in graph if str(item).strip()]
 
 
-def violations_from_graph_json_file(path: Path) -> list[dict[str, Any]]:
+def violations_from_graph_json_file(path: Path, practices: list[str] | None = None) -> list[dict[str, Any]]:
+    """Violations in graph_return_nodes JSON (a node list) or a saved graph document (``.context/graph.json``).
+
+    With ``practices``, only nodes of those graph practices count.
+    """
     raw = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(raw, dict) and isinstance(raw.get("practices"), dict):
+        return _violations_from_saved_graph(raw["practices"], practices)
     if not isinstance(raw, list):
-        raise ValueError(f"graph JSON must be a list of nodes: {path}")
+        raise ValueError(f"graph JSON must be a list of nodes or a saved graph document: {path}")
     violations: list[dict[str, Any]] = []
     for node in raw:
+        if practices and node.get("practice") and node.get("practice") not in practices:
+            continue
         violations.extend(_violations_from_node(node))
     return violations
 
 
-def violations_from_graph_json_files(paths: list[Path]) -> list[dict[str, Any]]:
+def violations_from_graph_json_files(
+    paths: list[Path], practices: list[str] | None = None
+) -> list[dict[str, Any]]:
     merged: list[dict[str, Any]] = []
     for path in paths:
-        merged.extend(violations_from_graph_json_file(path))
+        merged.extend(violations_from_graph_json_file(path, practices))
     return merged
+
+
+def _violations_from_saved_graph(
+    documents: dict[str, Any], practices: list[str] | None
+) -> list[dict[str, Any]]:
+    """A saved practice keeps node rows ``[id, name, type, practice, file, start, end, ...]`` and
+    rule hits ``[slug, node_id, message]``; each hit sits at its node's source."""
+    violations: list[dict[str, Any]] = []
+    for name, document in documents.items():
+        if practices and name not in practices:
+            continue
+        rows = {row[0]: row for row in (document or {}).get("nodes") or [] if row}
+        for slug, node_id, message in (document or {}).get("rules") or []:
+            row = rows.get(node_id) or [node_id, "", "", name, "", None, None]
+            node = {"practice": name, "type": row[2], "name": row[1]}
+            hit = {"message": str(message), "file": row[4], "start": row[5], "end": row[6]}
+            violations.append(_record(node, row[2], row[1], str(slug), hit))
+    return violations
 
 
 def refresh_stale_limit_operation_parameter_messages(

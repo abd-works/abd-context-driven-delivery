@@ -5,13 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.agent_tools import agent_instructions, agent_toolset, instructions
+from harness.agent_tools import agent_instructions, agent_toolset
 from harness.installation.destination import noDeploy
 from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 from harness.guidance import Rule
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
+_GRAPH_PRACTICES = frozenset({"clean_engineering", "ddd", "stories", "bdd", "ux"})
 
 @agent_toolset
 class Validate(GuidanceAction):
@@ -29,10 +30,9 @@ class Validate(GuidanceAction):
     ) -> str:
         """Check artifacts against rules.
         rule: one Rule to check. Omit it to walk each guidance's rules.
-        graph: path(s) to graph_return_nodes JSON (violations-only or full nodes).
-        When set, append a graph-rule report from that JSON and still run AI validation.
+        graph: true for the workspace's saved graph (.context/graph.json), or path(s) to graph_return_nodes JSON
+        or a saved graph.json. When set, append a graph-rule report for each guidance's practice and still run AI validation.
         paths: optional path prefixes (e.g. src/my-paradise) to scope graph violations."""
-        instructions(_VALIDATE_MARKDOWN)
         self._bind_guidance(guidance)
         sections: list[str] = [_VALIDATE_MARKDOWN]
         graph_paths = self._resolve_graph_json_paths(graph)
@@ -42,8 +42,8 @@ class Validate(GuidanceAction):
             )
         elif graph:
             sections.append(
-                "No graph JSON file found. Pass graph as a path to graph_return_nodes JSON "
-                "(or set session_path/clean-engineering-violations.json when graph is true)."
+                "No graph JSON file found. Load the graph (graph_load_working_copy) so the workspace has "
+                ".context/graph.json, or pass graph as a path to graph_return_nodes JSON."
             )
 
         def on(item) -> str:
@@ -70,7 +70,19 @@ class Validate(GuidanceAction):
                 default = session_path / "clean-engineering-violations.json"
                 if default.is_file():
                     return [default]
+            saved = self._validate_workspace() / ".context" / "graph.json"
+            if saved.is_file():
+                return [saved]
         return paths
+
+    def _graph_practices(self) -> list[str]:
+        """Graph practices of the listed guidance (clean-engineering is clean_engineering); none for other guidance."""
+        names = [
+            str(getattr(item, "slug", "") or "").replace("-", "_")
+            for item in self.listed()
+            if not isinstance(item, str)
+        ]
+        return [name for name in names if name in _GRAPH_PRACTICES]
 
     def _session_path(self) -> Path | None:
         from space.session import Session
@@ -133,7 +145,7 @@ class Validate(GuidanceAction):
         from validate.validation_report import build_graph_and_ai_rule_report
 
         workspace = self._validate_workspace()
-        violations = violations_from_graph_json_files(paths)
+        violations = violations_from_graph_json_files(paths, self._graph_practices() or None)
         violations = refresh_stale_limit_operation_parameter_messages(violations, workspace)
         violations = filter_violations_by_path_prefix(violations, path_prefixes)
         self._log_graph_validation(violations)
