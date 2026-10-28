@@ -114,6 +114,13 @@ with description("an operation body"):
             with it("should end with the line that fails until the body is written"):
                 expect(self.lines[-1]).to(equal(f"    {CodeLanguage.named('typescript').unfinished}"))
 
+    with context("that holds a multi-line string starting at the left margin"):
+        with it("should move the code lines and leave the string's lines as written"):
+            body = CodeBody('    text = """\nfirst\n  second\n"""\n    return text', CodeLanguage.named("python"))
+            expect(body.lines_in(CodeLanguage.named("python"), "        ", "")).to(
+                equal(['        text = """', "first", "  second", '"""', "        return text"])
+            )
+
     with context("that is only a placeholder"):
         with it("should be empty"):
             expect(CodeBody("...", CodeLanguage.named("python")).is_empty).to(be_true)

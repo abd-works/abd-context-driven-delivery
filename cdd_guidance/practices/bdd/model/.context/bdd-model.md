@@ -19,16 +19,41 @@ spec = BddModelFactory.load(path)
 Every spec, description, context, and observation is a BddNode. A channel node extends the same base, so a MarkdownDescription and a PythonDescription share name, order, and parent.
 
 + BddNode(source: BddNode)
-	// copies name and sequential order
+	// copies name, sequential order, and written
 ------
 + name: str
 + sequential_order: int
 + parent: BddNode
++ written: WrittenBlock | None
+	// how this block was written in code. None when it came from a sketch or markdown
 ----
 + semantic_type(): str
 	// Spec, Description, Context, or Observation
 + clone(): BddNode
 	// a copy of this node, including its children
+
+## WrittenBlock
+
+The source text around one describe, context, or it that the model has no node for, kept exactly as read so the same language writes it back unchanged.
+
++ WrittenBlock(language: CodeLanguage, name: str)
+------
++ language: CodeLanguage
++ name: str
+	// the block's name when read. A renamed block is written with the generic opening
++ lead: str
+	// the text between the previous sibling and this block: blank lines, comments, and code such as helpers
++ heading: str
+	// the opening as written, every line of it, for example with description("x") as self:
++ closing: str
+	// the text after the last child, inside the block
++ close: str
+	// the closing line as written, for example }); in TypeScript. Empty in Python
+----
++ is_in(language: CodeLanguage, name: str): bool
+	// written in this language under this name, so the raw text still holds
++ lead_body(): CodeBody
+	// the lead as a CodeBody, for writing it commented out in another language
 
 ## BddModelFactory
 
@@ -46,6 +71,10 @@ Every spec, description, context, and observation is a BddNode. A channel node e
 	// the new spec does not keep the source's channel types
 ------
 + file: str
++ preamble: CodeBody
+	// the code above the first description as read: imports and helpers. Empty outside code
++ closing: str
+	// the code after the last description, as read. Empty outside code
 + descriptions: list[Description]
 	// composition — a description has no spec outside this spec
 	// a nested description is a description whose parent is a description
@@ -80,8 +109,12 @@ Every spec, description, context, and observation is a BddNode. A channel node e
 	// each source child description becomes this channel's description
 	// each source context becomes this channel's context
 ------
++ setup: CodeBody
+	// everything in the block that is not a child: before blocks, shared fields, helpers. Empty outside code
 + descriptions: list[Description]
 + contexts: list[Context]
++ observations: list[Observation]
+	// spec code often puts it straight under the outermost describe
 + description_type: type
 + context_type: type
 ----
@@ -115,8 +148,8 @@ Every spec, description, context, and observation is a BddNode. A channel node e
 	// each source child context becomes this channel's context
 	// each source observation becomes this channel's observation
 ------
-+ setup: str
-	// the before block that establishes the state named in this context. Empty when the file has none
++ setup: CodeBody
+	// everything in the block that is not a child, as read: the before block that establishes the state named in this context, shared fields, helpers. Empty when the file has none
 + contexts: list[Context]
 + observations: list[Observation]
 + context_type: type
@@ -215,6 +248,30 @@ Every spec, description, context, and observation is a BddNode. A channel node e
 - get_next_description_from_file(): CodeDescription
 + save(): str
 	// one spec file per top-level description. A nested description stays in that file
++ language: CodeLanguage
+	// each language spec sets its instance, shared with the clean engineering code channels
++ render(canonical: Spec, previous: str | None): str
+	// the one spec render. Every language writes through this walk and changes only how a line is spelled
+	// previous set: each block keeps the previous file's setup or body when the canonical one is not in this language
+	// preamble, else default_imports, then each description
+- render_block(node: BddNode, parents: tuple, first: bool): list[str]
+	// parents is the path of names above this block; its length is the depth
+	// written in this language under the same name: lead, heading, setup, children, closing, close exactly as read
+	// otherwise: one blank line, the lead commented out, block_open, setup, children in file order (sequential_order), block_close
+- render_body(observation: Observation, path: tuple, written: WrittenBlock | None): list[str]
+	// a body in this language: body.lines_in
+	// an empty body: the realization call graph as comments, then marker_line
+	// a body from another language: its text commented out, then marker_line
+	// so the development fidelity still counts every it that is not written in this language
+- default_imports(): list[str]
+- block_open(kind: str, name: str): str
+	// kind is description, context, or it
+- block_close(): list[str]
+- empty_block(): list[str]
+	// what an empty description or context needs to stay valid code
+- marker_line(): str
+	// a line that holds language.comment("BDD: SIGNATURE") and is valid as the whole body of an it
+	// each language overrides the spelling operations above. None of them decides what a body holds
 
 ## CodeDescription : Description, CodeBddNode
 
@@ -254,8 +311,12 @@ Every spec, description, context, and observation is a BddNode. A channel node e
 + PythonSpec(source: Spec)
 ------
 + description_type: PythonDescription
++ language: CodeLanguage
+	// CodeLanguage.named("python")
 ----
 + save(): str
+- default_imports, top_level_gap, block_open, block_close, empty_block, marker_line
+	// Python spelling only. The marker is `pass  # BDD: SIGNATURE`
 
 ## PythonDescription : CodeDescription, PythonBddNode
 
@@ -299,8 +360,12 @@ Every spec, description, context, and observation is a BddNode. A channel node e
 + TypeScriptSpec(source: Spec)
 ------
 + description_type: TypeScriptDescription
++ language: CodeLanguage
+	// CodeLanguage.named("typescript")
 ----
 + save(): str
+- default_imports, top_level_gap, block_open, block_close, empty_block, marker_line
+	// TypeScript spelling only. The marker is `// BDD: SIGNATURE`
 
 ## TypeScriptDescription : CodeDescription, TypeScriptBddNode
 

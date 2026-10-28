@@ -271,7 +271,7 @@ def _record_bdd(practice, root: Path) -> None:
 
 
 def _record_spec(practice, file: Path, relative: str, nodes: list, edges: list) -> None:
-    from cdd_guidance.practices.bdd.model.bdd_model import PythonBddModel, TypeScriptBddModel
+    from cdd_guidance.practices.bdd.model.code_spec_model import PythonBddModel, TypeScriptBddModel
 
     try:
         text = file.read_text(encoding="utf-8")

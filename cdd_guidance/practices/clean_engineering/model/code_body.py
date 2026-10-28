@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import textwrap
 from typing import Dict, List, Optional
 
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -104,10 +103,20 @@ class CodeBody:
     """The statements inside one operation, test, or step, kept with the language they were read in."""
 
     def __init__(self, text: str = "", language: Optional[CodeLanguage] = None) -> None:
-        dedented = textwrap.dedent(text).strip("\n")
-        finished = language is not None and not language.is_unfinished(dedented)
-        self.text = dedented if finished else ""
+        lines = [line if line.strip() else "" for line in text.split("\n")]
+        while lines and not lines[0]:
+            lines.pop(0)
+        while lines and not lines[-1]:
+            lines.pop()
+        base = next((line[: len(line) - len(line.lstrip())] for line in lines if line.strip()), "")
+        # WHY: a line without the first code line's indentation is inside a multi-line string, so it never moves.
+        self._lines = [(line.startswith(base), line[len(base) :] if line.startswith(base) else line) for line in lines]
+        relative = "\n".join(line for _moves, line in self._lines)
+        finished = language is not None and not language.is_unfinished(relative)
+        self.text = relative if finished else ""
         self.language = language if finished else None
+        if not finished:
+            self._lines = []
 
     @property
     def is_empty(self) -> bool:
@@ -115,7 +124,7 @@ class CodeBody:
 
     def lines_in(self, language: CodeLanguage, indent: str, unfinished: str) -> List[str]:
         if self.language is language:
-            return [f"{indent}{line}" if line.strip() else "" for line in self.text.splitlines()]
+            return [f"{indent}{line}" if moves and line.strip() else line for moves, line in self._lines]
         marker = [f"{indent}{unfinished}"] if unfinished else []
         if self.is_empty:
             return marker

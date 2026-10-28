@@ -26,7 +26,7 @@ See `examples.py` — **Behavior fidelity — signatures** section.
 
 - Behavior hierarchy has 9 `should` lines → signature has 9 `it` blocks. Count matches exactly.
 - 4 nesting levels in scaffold → 4 levels in code.
-- Every body contains `// BDD: SIGNATURE` (Jest) or `# BDD: SIGNATURE` (Mamba) and nothing else.
+- Every body contains `// BDD: SIGNATURE` (Jest) or `pass  # BDD: SIGNATURE` (Mamba) and nothing else.
 - No imports, no assertions, no mocks, no `beforeEach`.
 - `it('should …')` matches the behavior hierarchy text verbatim — no paraphrasing.
 
