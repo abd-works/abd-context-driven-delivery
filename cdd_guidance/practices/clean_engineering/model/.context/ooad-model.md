@@ -72,12 +72,14 @@ model = CleanEngineeringModelFactory.load(path)
 ## Module : OoadNode
 
 + Module(source: Module)
-	// copies name, order, description, seam, seam terms, dependencies, and constraint
+	// copies name, order, description, seam, seam terms, dependencies, constraint, and preamble
 	// a nested module is a module whose parent is a module
 	// each source child module becomes this channel's module
 	// each source class becomes this channel's class
 ------
 + description: str
++ preamble: CodeBody
+	// the code above the first class as read: imports and constants. Empty outside code
 + seam: str
 + seam_terms: list[str]
 + dependencies: list[str]
@@ -178,11 +180,14 @@ model = CleanEngineeringModelFactory.load(path)
 ## Operation : OoadNode
 
 + Operation(source: Operation)
-	// copies name, order, return type, description, and invariants
+	// copies name, order, return type, description, invariants, and body
 	// each source parameter becomes this channel's parameter
 ------
 + return_type: str
 + description: str
++ body: CodeBody
+	// the statements as read from code, in the language they were written in
+	// empty when the operation came from markdown, JSON, or a diagram
 + invariants: list[Invariant]
 	// composition. Each // line under the operation, in file order
 + parameters: list[Parameter]
@@ -444,6 +449,50 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 
 ## MiroClass : DiagramClass, MiroNode
 
+## CodeLanguage
+
+How one programming language spells what every code channel writes the same way. Python, TypeScript, JavaScript, and Java are instances, not subtypes: they differ only in data. Stories and BDD code channels use the same instances.
+
++ named(name: str): CodeLanguage
+	// the instance for python, typescript, javascript, or java
+------
++ name: str
++ line_comment: str
++ indent: str
++ unfinished: str
+	// the statement that fails loudly when a body is not written. Never a silent no-op
+----
++ comment(text: str): str
++ is_unfinished(text: str): bool
+	// the body is empty, a placeholder (... or pass), or this language's unfinished statement
++ identifier(name: str): str
+	// snake case for python, camel case otherwise
++ assignment(name: str): str
+	// the constructor line that stores a parameter on the new object
++ interaction(callee: str): str
+	// one -> collaborator.operation note as a call in this language. Empty for a prose note
+
+## CodeBody
+
+The statements inside one operation, test, or step, kept with the language they were read in. The one rule every code channel uses to write a body lives here.
+
++ CodeBody(text: str, language: CodeLanguage | None)
+	// text is dedented. A body that is_unfinished in its language is empty
+------
++ text: str
++ language: CodeLanguage | None
++ is_empty: bool
+----
++ lines_in(language: CodeLanguage, indent: str, unfinished: str): list[str]
+	// same language: the text as read, under indent
+	// another language: the text commented out under a note naming its language, then unfinished
+	// empty: unfinished
+	// unfinished is the line that marks a body still to write: language.unfinished for production code, the BDD signature marker for a spec, the step placeholder for a story
+	// an empty unfinished writes no line: a constructor whose assignments complete it
++ in_language_of(other: CodeBody, language: CodeLanguage): CodeBody
+	// whichever of self and other is written in language, self first. Neither: self
+	// render uses this to keep a body from the previous file when the model's body is not in the target language
+
 ## CodeOoadNode
 
 + slug(): str
@@ -457,6 +506,8 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 	// path for load is the path-to-content map of the source tree
 ------
 + module_type: CodeModule
++ language: CodeLanguage
+	// each language model sets its instance
 ----
 - load_content(): None
 	// cursor is module folders, then nested module folders, then one class file per class
@@ -464,6 +515,35 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 - get_next_module_from_file(): CodeModule
 + save(): str
 	// one class file per class, under the module folders
++ render(canonical: CleanEngineeringModel, previous: str | None): str
+	// the one code render. Every language writes through this walk and changes only how a line is spelled
+	// previous set: each operation keeps the previous file's body when the canonical body is not in this language
+	// -> parse(previous)
+	// -> body.in_language_of(previous_body, language)
+	// file header with the preamble, then per module: a === name === banner comment, then each class
++ operation_body(class_name: str, operation_name: str): CodeBody
+	// the body this model read. "constructor" finds the constructor in any language
+- render_class(oclass: OoadClass, known_names: list[str], kept: CodeCleanEngineeringModel): list[str]
+	// interface: signatures only. Otherwise class open, properties with their notes, constructor, operations, class close
+	// one blank line between member groups
+- render_operation(operation: Operation, contract: bool, previous: CodeBody): list[str]
+	// signature, then render_body unless contract
+- render_body(operation: Operation, previous: CodeBody): list[str]
+	// a body in this language: body.lines_in
+	// an empty body: invariant comments, then language.interaction for each callee, then language.unfinished
+	// a body from another language: its text commented out, then language.unfinished
+	// so a body from another language stays visible and the operation fails loudly until it is written
+	// the constructor ends with a field assignment per parameter instead of language.unfinished
++ doc_text(operation: Operation): str
+	// the description when it is the operation's own text, not one joined from its comments
+- file_header(canonical: CleanEngineeringModel, preamble: CodeBody): list[str]
+- class_open(oclass: OoadClass, known_names: list[str]): list[str]
+- class_close(has_members: bool): list[str]
+- property_line(property: Property, contract: bool): list[str]
+- constructor_lines(oclass: OoadClass, constructor: Operation | None, body: list[str]): list[str]
+- signature(operation: Operation, contract: bool): list[str]
+- block_close(): list[str]
+	// each language overrides the spelling operations above. None of them decides what a body holds
 
 ## CodeModule : Module, CodeOoadNode
 
@@ -493,8 +573,12 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 + PythonCleanEngineeringModel(source: CleanEngineeringModel)
 ------
 + module_type: PythonModule
++ language: CodeLanguage
+	// CodeLanguage.named("python")
 ----
 + save(): str
+- file_header, class_open, class_close, property_line, constructor_lines, signature, block_close
+	// Python spelling only. render, render_class, render_operation, and render_body stay on CodeCleanEngineeringModel
 
 ## PythonModule : CodeModule
 
@@ -511,8 +595,12 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 + TypeScriptCleanEngineeringModel(source: CleanEngineeringModel)
 ------
 + module_type: TypeScriptModule
++ language: CodeLanguage
+	// CodeLanguage.named("typescript")
 ----
 + save(): str
+- file_header, class_open, class_close, property_line, constructor_lines, signature, block_close
+	// TypeScript spelling only. render, render_class, render_operation, and render_body stay on CodeCleanEngineeringModel
 
 ## TypeScriptModule : CodeModule
 
@@ -529,8 +617,12 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 + JavaScriptCleanEngineeringModel(source: CleanEngineeringModel)
 ------
 + module_type: JavaScriptModule
++ language: CodeLanguage
+	// CodeLanguage.named("javascript")
 ----
 + save(): str
+- file_header, class_open, class_close, property_line, constructor_lines, signature, block_close
+	// JavaScript spelling only. render, render_class, render_operation, and render_body stay on CodeCleanEngineeringModel
 
 ## JavaScriptModule : CodeModule
 
@@ -547,8 +639,12 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 + JavaCleanEngineeringModel(source: CleanEngineeringModel)
 ------
 + module_type: JavaModule
++ language: CodeLanguage
+	// CodeLanguage.named("java")
 ----
 + save(): str
+- file_header, class_open, class_close, property_line, constructor_lines, signature, block_close
+	// Java spelling only. render, render_class, render_operation, and render_body stay on CodeCleanEngineeringModel
 
 ## JavaModule : CodeModule
 

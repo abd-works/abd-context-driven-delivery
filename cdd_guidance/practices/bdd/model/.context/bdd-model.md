@@ -148,8 +148,9 @@ Every spec, description, context, and observation is a BddNode. A channel node e
 + Observation(source: Observation)
 	// copies name, order, and body
 ------
-+ body: str
-	// behavior fidelity: the signature marker. Development fidelity: the test body
++ body: CodeBody
+	// the test body as read, in the language it was written in. Empty at behavior fidelity
+	// a code spec writes it with CodeBody.lines_in: the body in the same language, otherwise the signature marker
 
 ## MarkdownBddNode
 

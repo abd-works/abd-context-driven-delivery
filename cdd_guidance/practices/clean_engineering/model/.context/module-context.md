@@ -8,6 +8,8 @@ Canonical OOAD model (`OoadNode` / `OoadClass` / `Module` / `CleanEngineeringMod
 
 Each channel class exposes `parse(text) -> CleanEngineeringModel` and `render(model) -> str`. DrawIO auto-selects modules view vs UML class view from model content.
 
+Every code channel (Python, TypeScript, JavaScript, Java) renders through `CodeCleanEngineeringModel.render(canonical, previous)`. An operation keeps the body it was read with (`Operation.body`, a `CodeBody`). Rendered in the same language, the body comes back as written. Rendered in another language, it comes back commented out above a statement that fails until someone writes it. Pass the previous file as `previous` to keep its bodies when the canonical model came from markdown or a diagram. Stories and BDD code channels use the same `CodeBody` and `CodeLanguage`.
+
 The walk is `practices/clean_engineering/.context/ooad-model.md`, written to `practices/stories/model/.context/practice-model.md`. Channel subclasses load and save. The code in this folder still exposes `parse` and `render`.
 
 ## Public API
