@@ -401,7 +401,6 @@ story('Customer Complete Persona Kyc', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -427,5 +426,4 @@ story('Collect Identity With Brand Amassador', () => {
         // TODO: implement step
       });
   });
-
 });

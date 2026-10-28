@@ -136,5 +136,4 @@ story('Redeem Voucher and Apply Credit', () => {
         // TODO: implement step
       });
   });
-
 });

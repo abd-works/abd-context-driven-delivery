@@ -62,7 +62,6 @@ story('Open Plan Deep Link', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -197,5 +196,4 @@ story('Apply Catalog Voucher', () => {
       // TODO: implement step
     });
   });
-
 });

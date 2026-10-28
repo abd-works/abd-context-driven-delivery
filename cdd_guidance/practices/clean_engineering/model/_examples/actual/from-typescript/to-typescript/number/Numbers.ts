@@ -1,3 +1,5 @@
+// === Numbers and SIMs ===
+
 class MsisdnInventoryRepository {
   // << aggregation >>
   availableNumbers: Collection<AvailableNumber>;
@@ -17,11 +19,13 @@ class MsisdnInventoryRepository {
     // always available to locked
     InventoryGateway.list();
   }
+
   search(searchTerm: SearchTerm): AvailableNumber[] {
     // when SearchTerm.converted is the pattern
     // always available to locked
     InventoryGateway.search();
   }
+
   reserve(id: string, previousId: string | null, portin: boolean): void | Error {
     // always locked to reserved
     // premium selected id: always locked to reserved
@@ -57,7 +61,6 @@ class AvailableNumber {
   constructor(id: string) {
     this.id = id;
   }
-
 }
 
 class AvailableSim {
@@ -66,7 +69,6 @@ class AvailableSim {
   constructor(id: string) {
     this.id = id;
   }
-
 }
 
 class SearchTerm {
@@ -92,11 +94,9 @@ class MavenirMsisdnResource {
     this.id = id;
     this.resourceStatus = resourceStatus;
   }
-
 }
 
 class InventoryGateway {
-
   constructor() {
   }
 
@@ -107,9 +107,11 @@ class InventoryGateway {
     // listing premium inventory category always premium
     // always available to locked
   }
+
   search(pattern: string): MavenirMsisdnResource[] {
     // always available to locked
   }
+
   reserve(id: string, previousId: string | null, portin: boolean): void | Error {
     // always locked to reserved
     // premium selected id: always locked to reserved
@@ -118,6 +120,7 @@ class InventoryGateway {
     // when previousId is present, previousId must go reserved to available
     // when portin: kv_tempNumber
   }
+
   read(id: string): MavenirSimResource | Error {
     // GET sim resource
     // when none: none
@@ -134,5 +137,4 @@ class MavenirSimResource {
     this.id = id;
     this.resourceStatus = resourceStatus;
   }
-
 }

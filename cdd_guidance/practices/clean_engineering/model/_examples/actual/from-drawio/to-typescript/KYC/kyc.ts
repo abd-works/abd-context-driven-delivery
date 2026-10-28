@@ -1,3 +1,5 @@
+// === KYC ===
+
 class ProfileRequirement {
   field: string;
   requirement: string;
@@ -6,7 +8,6 @@ class ProfileRequirement {
     this.field = field;
     this.requirement = requirement;
   }
-
 }
 
 class ProfileRequirements {
@@ -45,11 +46,18 @@ class ProfileRequirements {
   }
 
   missing(identity: Identity, address: Address): ProfileRequirement[] {
+    throw new Error("not implemented");
   }
+
   validateInquiry(identity: Identity): string {
+    throw new Error("not implemented");
   }
+
   mapInquiry(customer: Customer, personaInquiry: PersonaInquiry): Customer {
+    throw new Error("not implemented");
   }
+
   storeFailedInquiry(customer: Customer, personaInquiry: PersonaInquiry): Customer {
+    throw new Error("not implemented");
   }
 }

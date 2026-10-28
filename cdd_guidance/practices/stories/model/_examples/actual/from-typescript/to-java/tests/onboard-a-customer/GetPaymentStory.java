@@ -3,6 +3,7 @@
 
 /** Story: Enter Payment
  * SCENARIO: Enter Payment
+ * EXAMPLES: customerReadyForPayment, maxPaymentAttempts, stubAuth
  * GIVEN: the Customer is at Checkout with Essentials
  * AND: Mavenir CCS authorizes stub auth
  * WHEN: the Customer proceeds to adding their payment
@@ -10,6 +11,7 @@
  * WHEN: Mavenir authorizes the card and returns the hosted payment page
  * THEN: the payment has stub auth transaction id, amount $1, and sales channel ON-BOARDING
  * SCENARIO: Payment authorization fails to load
+ * EXAMPLES: customerReadyForPayment, maxPaymentAttempts
  * GIVEN: the Customer is at Checkout with Essentials
  * BUT: Mavenir CCS does not return a payment authorization
  * WHEN: the Customer proceeds to adding their payment
@@ -17,6 +19,7 @@
  * WHEN: Mavenir does not return a payment authorization
  * THEN: the payment authorization cannot be loaded
  * SCENARIO: FAC authorization timeout
+ * EXAMPLES: customerReadyForPayment, maxPaymentAttempts
  * GIVEN: the Customer is at Checkout with Essentials
  * BUT: Mavenir does not return a transaction id
  * WHEN: the Customer proceeds to adding their payment
@@ -27,6 +30,7 @@
 
 /** Story: Authorize Card
  * SCENARIO: Payment completed
+ * EXAMPLES: reloadCart, customerReadyForPayment, paymentWithAuthorization, stubAuth, completedAuth
  * GIVEN: the Customer has stub auth
  * AND: Mavenir CCS has completed auth
  * WHEN: the Customer authorizes their card
@@ -35,6 +39,7 @@
  * THEN: the payment is authorized
  * AND: the payment step does not place the order
  * SCENARIO: Card not verified
+ * EXAMPLES: customerReadyForPayment, maxPaymentAttempts, paymentWithAuthorization, stubAuth, failedAuth
  * GIVEN: the Customer has stub auth
  * AND: Mavenir CCS has failed auth
  * AND: payment attempts are under the maximum
@@ -44,6 +49,7 @@
  * THEN: the card is not verified
  * AND: My Paradise requests a fresh payment authorization from Mavenir
  * SCENARIO: Maximum payment attempts
+ * EXAMPLES: reloadCart, customerReadyForPayment, maxPaymentAttempts, paymentWithAuthorization, stubAuth, failedAuth
  * GIVEN: the Customer has stub auth
  * AND: Mavenir CCS has failed auth
  * AND: payment attempts equal the maximum
@@ -56,6 +62,7 @@
 
 /** Story: Provide Apple Pay Certificate
  * SCENARIO: Provide Apple Pay certificate
+ * EXAMPLES: bermudaApplePayCert, bermudaApplePayCertificate
  * GIVEN: the Apple Pay merchant certificate is available
  * WHEN: My Paradise provides the Apple Pay certificate
  * THEN: My Paradise sends the certificate request to Apple

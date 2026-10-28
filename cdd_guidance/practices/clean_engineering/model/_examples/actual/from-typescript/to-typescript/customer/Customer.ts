@@ -1,3 +1,5 @@
+// === Customer ===
+
 class Customer {
   // derived from accountCredentials.customerId when not passed
   // empty string when credentials have no customer id
@@ -86,6 +88,7 @@ class CustomerRepository {
     AccountCredentials.verified();
     MidtierCustomerService.create();
   }
+
   load(accountCredentials: AccountCredentials): Customer {
     // failure throws CustomerException with operation load, AccountCredentials and cause
     // terminated billing or load failure signs out
@@ -95,16 +98,19 @@ class CustomerRepository {
 }
 
 class MidtierCustomerService {
-
   constructor() {
   }
 
   validate(accountToken: AccountToken): string | Error {
     // Midtier validates the JWT and returns its Cognito email claim
   }
+
   create(accountToken: AccountToken): string | Error {
+    throw new Error("not implemented");
   }
+
   read(accountToken: AccountToken): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -122,7 +128,6 @@ class CustomerException {
     this.message = message;
     this.cause = cause;
   }
-
 }
 
 class Identity {
@@ -151,7 +156,6 @@ class Identity {
     this.idType = idType;
     this.otherPhoneNumber = otherPhoneNumber;
   }
-
 }
 
 class Address {
@@ -170,7 +174,6 @@ class Address {
     this.postalCode = postalCode;
     this.country = country;
   }
-
 }
 
 class AccountCredentials {
@@ -223,12 +226,14 @@ class AccountCredentials {
     // empty: credentials meet all requirements
     // otherwise the unmet AccountCredentialRequirement rows
   }
+
   register(): void {
     // missingRequirements must be empty
     // already-registered email fails
     // writes CognitoUser onto these credentials; verified stays false until activate
     AccountRepository.persistNewAccount();
   }
+
   activate(validationCode: ValidationCode): void {
     // requires validationCodeWasSent
     // unusable ValidationCode fails
@@ -237,6 +242,7 @@ class AccountCredentials {
     AccountRepository.confirmAccount();
     AccountRepository.authenticateAccount();
   }
+
   authenticateAccount(): void {
     // email required, email format, and password required must be met — otherwise no Cognito call
     // existing account holder signs in
@@ -245,13 +251,16 @@ class AccountCredentials {
     // unconfirmed account returns CONFIRM_SIGN_UP
     AccountRepository.authenticateAccount();
   }
+
   resendValidationCode(): void {
     // throws ValidationCodeResendWaitException when 60 seconds have not elapsed
     AccountRepository.resendAccountCode();
   }
+
   signOut(): void {
     AmplifyService.signOut();
   }
+
   storeCustomerId(customerId: string): CognitoUser {
     // failure throws CustomerException with operation storeCustomerId, these AccountCredentials and cause
     AmplifyService.updateUserAttributes();
@@ -273,20 +282,24 @@ class AccountRepository {
     // constructs AccountCredentials('') when none given
     // wires the repository onto the returned aggregate
   }
+
   persistNewAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors {
     // called by AccountCredentials.register
     AmplifyService.signUp();
   }
+
   confirmAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors {
     // called by AccountCredentials.activate
     AmplifyService.confirmSignUp();
   }
+
   authenticateAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors {
     // called by AccountCredentials.authenticateAccount and by activate after confirm
     // unverified: no AccountToken
     // wrong password or unknown email fails
     AmplifyService.signIn();
   }
+
   resendAccountCode(accountCredentials: AccountCredentials): CognitoUser | null {
     // called by AccountCredentials.resendValidationCode
     AmplifyService.resendSignUpCode();
@@ -303,7 +316,6 @@ class AccountCredentialsErrors {
     this.signIn = signIn;
     this.validationCode = validationCode;
   }
-
 }
 
 class ValidationCodeResendWaitException {
@@ -312,7 +324,6 @@ class ValidationCodeResendWaitException {
   constructor(availableAt: Date) {
     this.availableAt = availableAt;
   }
-
 }
 
 class AccountCredentialRequirement {
@@ -323,7 +334,6 @@ class AccountCredentialRequirement {
     this.field = field;
     this.requirement = requirement;
   }
-
 }
 
 class AccountCredentialRequirements {
@@ -357,28 +367,38 @@ class AccountCredentialRequirements {
     this.confirmRequired = confirmRequired;
     this.confirmMismatch = confirmMismatch;
   }
-
 }
 
 class AmplifyService {
-
   constructor() {
   }
 
   signUp(email: string, password: string): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   signIn(email: string, password: string): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   confirmSignUp(email: string, validationCode: ValidationCode): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   resendSignUp(email: string): ValidationCodeSend | Error {
+    throw new Error("not implemented");
   }
+
   signOut(): void {
+    throw new Error("not implemented");
   }
+
   fetchUserAttributes(email: string): CognitoUser | Error {
     // My Paradise reads the Mavenir customer id from Cognito user attributes through Amplify
   }
+
   getUser(email: string): CognitoUser | null {
+    throw new Error("not implemented");
   }
 }
 
@@ -397,7 +417,6 @@ class CognitoUser {
     this.validationCodeSentAt = validationCodeSentAt;
     this.accountToken = accountToken;
   }
-
 }
 
 class AccountToken {
@@ -408,7 +427,6 @@ class AccountToken {
     this.email = email;
     this.customerId = customerId;
   }
-
 }
 
 class ValidationCode {
@@ -417,7 +435,6 @@ class ValidationCode {
   constructor(code: string) {
     this.code = code;
   }
-
 }
 
 class ValidationCodeSend {
@@ -430,7 +447,6 @@ class ValidationCodeSend {
     this.sentAt = sentAt;
     this.kind = kind;
   }
-
 }
 
 class MavenirCustomer {
@@ -476,28 +492,30 @@ class MavenirCustomer {
     this.contactMedium = contactMedium;
     this.engagedParty = engagedParty;
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 
   create(email: string): MavenirCustomer | Error {
     // email already in Mavenir fails
   }
+
   read(id: string): MavenirCustomer | Error {
     // deliverPsim validates waitingPsim from this read
   }
+
   patchPhoneVerified(mavenirCustomerId: string): MavenirCustomer | Error {
     // always writes phone_verified true
     // when Twilio approved
   }
+
   patchWaitingPsim(mavenirCustomerId: string, waitingPsim: boolean): MavenirCustomer | Error {
     // true when pSIM no iccid (createOrder)
     // false after deliverPsim
   }
+
   patchProfile(mavenirCustomer: MavenirCustomer, engagedParty: EngagedParty, contactMedium: ContactMedium): MavenirCustomer | Error {
     // EngagedParty names + birthDate + individualIdentification.validated
     // ContactMedium street + city + stateOrProvince + postCode + phoneNumber
@@ -506,12 +524,15 @@ class PortalGateway {
     // individualIdentification.identificationId already on another MavenirCustomer: conflict
     // invalid AccountToken fails
   }
+
   patchVoucher(mavenirCustomer: MavenirCustomer, voucher: Voucher): MavenirCustomer | Error {
     // JSON-encoded Voucher as voucher characteristic
   }
+
   removeVoucher(mavenirCustomer: MavenirCustomer): MavenirCustomer | Error {
     // removes voucher characteristic
   }
+
   patchDone(mavenirCustomerId: string): MavenirCustomer | Error {
     // always writes done 'true'
     // Billing.createBilling / applyCredit live in # Billing
@@ -540,7 +561,6 @@ class ContactMedium {
     this.postCode = postCode;
     this.country = country;
   }
-
 }
 
 class EngagedParty {
@@ -559,7 +579,6 @@ class EngagedParty {
     this.birthDate = birthDate;
     this.individualIdentification = individualIdentification;
   }
-
 }
 
 class IndividualIdentification {
@@ -581,5 +600,4 @@ class IndividualIdentification {
     this.validated = validated;
     this.endDateTime = endDateTime;
   }
-
 }

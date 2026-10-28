@@ -9,6 +9,14 @@
 *Then* the order succeeded with pay-up-front
 *And* the Customer onboarding is done
 
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyToPlaceOrder |
+| expectedProductOrderRequest |
+
 ### Scenario: Pay-up-front charge fails
 
 *Given* the pay-up-front charge fails
@@ -16,6 +24,13 @@
 *Then* My Paradise does not send a product order to Mavenir
 *When* My Paradise reloads the cart
 *Then* the order succeeded without pay-up-front
+
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyToPlaceOrder |
 
 ### Scenario: Product order fails
 
@@ -25,12 +40,25 @@
 *When* My Paradise reloads the cart
 *Then* the order did not succeed
 
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyToPlaceOrder |
+
 ### Scenario: Onboarding is already done
 
 *Given* the Customer onboarding is already done
 *When* the Customer places the product order
 *Then* the product order is rejected
 *And* Mavenir does not receive a product order request
+
+### Examples
+
+| example |
+| --- |
+| customerReadyToPlaceOrder |
 
 ### Scenario: Unverified with no bypass and no portability
 
@@ -40,3 +68,10 @@
 *And* the cart is marked to submit the order later
 *When* My Paradise reloads the cart
 *Then* the Customer onboarding is done
+
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyToPlaceOrder |

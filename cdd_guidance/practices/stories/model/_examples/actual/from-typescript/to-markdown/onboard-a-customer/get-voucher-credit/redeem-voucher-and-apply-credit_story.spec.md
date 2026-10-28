@@ -1,5 +1,26 @@
 ## Story: Redeem Voucher and Apply Credit
 
+### Scenario: Redeem a plan-restricted voucher that matches the cart bundle: ${example}
+
+*Given* the Customer is in Order Creation with ${example} applied
+*When* the Customer redeems the voucher
+*Then* My Paradise sends the redeem request to Vouchera with ${example} orderAmount ${orderAmount}
+*When* Vouchera records the voucher redemption
+*Then* My Paradise stores the ${example} redemption
+*When* the Customer applies the voucher credit
+*Then* My Paradise sends the ${creditExample} to Mavenir
+*When* Mavenir records the credit adjustment on the billing account
+*Then* My Paradise stores the credit on the Customer billing account
+
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| billingAccountId |
+| cartWithBilling |
+| essentials |
+
 ### Scenario: Redeem an any-plan voucher
 
 *Given* the Customer is in Order Creation with any-plan voucher applied

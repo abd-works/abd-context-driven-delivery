@@ -11,138 +11,396 @@ import { background, scenario, story } from "../story-test.js";
  */
 
 story('Customer Complete Persona Kyc', () => {
-    scenario('Persona verification required', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      but('no idNumber on ++identity++', () => {});
-      when('the Customer validates whether a Persona inquiry is required', () => {});
-      then('a Persona inquiry is required', () => {}).and('the Customer is on the Profile KYC step', () => {});
+  scenario('Persona verification required', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
     });
-    scenario('Persona verification already complete', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the Customer has ++identity++ with an idNumber', () => {});
-      when('the Customer validates whether a Persona inquiry is required', () => {});
-      then('the Persona inquiry is already complete', () => {}).and('the Customer is forwarded to Checkout', () => {});
+    but('no idNumber on ++identity++', () => {
+      // TODO: implement step
     });
-    scenario('Create a completed Persona inquiry', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the Customer has no idNumber on ++identity++', () => {});
-      when('the Customer creates a Persona inquiry', () => {});
-      then('My Paradise sends the inquiry request to Persona with the Customer email', () => {}).and('My Paradise retrieves the Persona document', () => {});
-      when('Persona returns ++Persona inquiry++ ++completed Persona inquiry++', () => {});
-      then('the Customer has a verified ++Persona inquiry++', () => {}).and('My Paradise maps the inquiry onto ++identity++ ++valid identity++ and ++address++ ++valid address++', () => {}).and('Customer verified stays false until the Customer confirms their identity', () => {});
-      when('Persona returns ++Persona document++ ++valid Persona document++', () => {});
-      then('++identity++ expiry date is the ++Persona document++ expiration date', () => {});
+    when('the Customer validates whether a Persona inquiry is required', () => {
+      // TODO: implement step
     });
-    scenario('Persona inquiry not completed', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      when('the Customer creates a Persona inquiry', () => {});
-      then('My Paradise sends the inquiry request to Persona with the Customer email', () => {});
-      when('Persona returns ++Persona inquiry++ ++failed Persona inquiry++', () => {});
-      then('the Customer has an unverified ++Persona inquiry++', () => {}).and('++identity++ and ++address++ stay empty', () => {});
+    then('a Persona inquiry is required', () => {
+      // TODO: implement step
+    })
+      .and('the Customer is on the Profile KYC step', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Persona verification already complete', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
     });
-    scenario('No government ID document on inquiry', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the completed ++Persona inquiry++ has no government ID document', () => {});
-      when('the Customer creates a Persona inquiry', () => {});
-      then('My Paradise sends the inquiry request to Persona', () => {}).and('My Paradise does not retrieve a Persona document', () => {});
-      when('Persona returns the completed inquiry without a government ID', () => {});
-      then('++identity++ expiry date is empty', () => {});
+    given('the Customer has ++identity++ with an idNumber', () => {
+      // TODO: implement step
     });
-    scenario('Persona errors on inquiry load', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      when('the Customer creates a Persona inquiry', () => {});
-      then('My Paradise sends the inquiry request to Persona', () => {});
-      when('Persona returns an error', () => {});
-      then('the Customer has an unverified ++Persona inquiry++', () => {}).and('++identity++ stays empty', () => {});
+    when('the Customer validates whether a Persona inquiry is required', () => {
+      // TODO: implement step
     });
-    scenario('Document not found', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('Persona has no ++Persona document++ for that document ID', () => {});
-      when('the Customer creates a Persona inquiry', () => {});
-      then('My Paradise retrieves the Persona document', () => {});
-      when('Persona returns that the document is not found', () => {});
-      then('++identity++ expiry date is empty', () => {});
+    then('the Persona inquiry is already complete', () => {
+      // TODO: implement step
+    })
+      .and('the Customer is forwarded to Checkout', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Create a completed Persona inquiry', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
     });
-    scenario('Document email mismatch', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the ++Persona document++ email does not match the Customer email', () => {});
-      when('the Customer creates a Persona inquiry', () => {});
-      then('My Paradise retrieves the Persona document', () => {});
-      when('Persona returns unauthorized', () => {});
-      then('++identity++ expiry date is empty', () => {});
+    given('the Customer has no idNumber on ++identity++', () => {
+      // TODO: implement step
     });
-    scenario('Verify later', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the Customer has a ++My Paradise customer++ with no idNumber on ++identity++', () => {});
-      when('the Customer proceeds without a Persona inquiry', () => {});
-      then('My Paradise does not send an inquiry request to Persona', () => {}).and('no ++Persona inquiry++ is stored', () => {}).and('the Customer is still on the Profile KYC step', () => {});
+    when('the Customer creates a Persona inquiry', () => {
+      // TODO: implement step
     });
-    scenario('Enter valid identity and address', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the Customer has a ++My Paradise customer++ in session', () => {});
-      when('the Customer enters ++identity++ ++valid identity++ and ++address++ ++valid address++', () => {});
-      then('all profile requirements are met', () => {}).and('the Customer can confirm their identity', () => {});
+    then('My Paradise sends the inquiry request to Persona with the Customer email', () => {
+      // TODO: implement step
+    })
+      .and('My Paradise retrieves the Persona document', () => {
+        // TODO: implement step
+      });
+    when('Persona returns ++Persona inquiry++ ++completed Persona inquiry++', () => {
+      // TODO: implement step
     });
-    scenario('Enter identity after a verified Persona inquiry', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the Customer has a verified ++Persona inquiry++ mapped onto ++identity++ ++valid identity++', () => {});
-      when('the Customer enters the mapped ++identity++ and ++address++', () => {});
-      then('all profile requirements are met', () => {}).and('the ID fields are present on ++identity++', () => {});
+    then('the Customer has a verified ++Persona inquiry++', () => {
+      // TODO: implement step
+    })
+      .and('My Paradise maps the inquiry onto ++identity++ ++valid identity++ and ++address++ ++valid address++', () => {
+        // TODO: implement step
+      })
+      .and('Customer verified stays false until the Customer confirms their identity', () => {
+        // TODO: implement step
+      });
+    when('Persona returns ++Persona document++ ++valid Persona document++', () => {
+      // TODO: implement step
     });
-    scenario('Re-enter a verified identity', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the Customer has ++identity++ ++valid identity++ already verified', () => {});
-      when('the Customer re-enters ++identity++ ++valid identity++', () => {});
-      then('the identity is no longer verified', () => {}).and('the Customer can confirm their identity again', () => {});
+    then('++identity++ expiry date is the ++Persona document++ expiration date', () => {
+      // TODO: implement step
     });
-    scenario('Enter incomplete identity or address', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      when('the Customer enters ++identity++ and ++address++ with {field} empty', () => {});
-      then('{field} is missing', () => {}).and('the Customer cannot confirm their identity', () => {});
+  });
+
+  scenario('Persona inquiry not completed', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
     });
-    scenario('Confirm identity with a verified Persona inquiry', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the Customer has entered ++identity++ ++valid identity++ and ++address++ ++valid address++', () => {}).and('the Customer has a verified ++Persona inquiry++', () => {});
-      when('the Customer confirms their identity', () => {});
-      then('My Paradise maps ++identity++ and ++address++ onto the Mavenir engaged party and contact medium', () => {}).and('My Paradise sends the profile patch to Mavenir', () => {});
-      when('Mavenir patches the customer', () => {});
-      then('the Customer identity is persisted', () => {}).and('the Customer is verified', () => {}).and('the ++Persona inquiry++ is cleared', () => {});
+    when('the Customer creates a Persona inquiry', () => {
+      // TODO: implement step
     });
-    scenario('Profile requirements unmet', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('the Customer has not entered ++identity++ or ++address++', () => {});
-      when('the Customer confirms their identity', () => {});
-      then('the identity cannot be confirmed', () => {}).and('My Paradise does not send a profile patch to Mavenir', () => {});
+    then('My Paradise sends the inquiry request to Persona with the Customer email', () => {
+      // TODO: implement step
     });
-    scenario('Customer already exists', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('another Mavenir customer already has ++identity++ idNumber I1234562', () => {});
-      when('the Customer confirms their identity', () => {});
-      then('My Paradise sends the profile patch to Mavenir', () => {}).and('the identity cannot be confirmed because a customer with that information already exists', () => {});
+    when('Persona returns ++Persona inquiry++ ++failed Persona inquiry++', () => {
+      // TODO: implement step
     });
-    scenario('Mavenir profile patch error', ({ given, when, then }) => {
-      // background: background
-      // background-step: Given | the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM
-      given('Mavenir returns a profile patch error', () => {});
-      when('the Customer confirms their identity', () => {});
-      then('My Paradise sends the profile patch to Mavenir', () => {}).and('the identity cannot be confirmed', () => {});
+    then('the Customer has an unverified ++Persona inquiry++', () => {
+      // TODO: implement step
+    })
+      .and('++identity++ and ++address++ stay empty', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('No government ID document on inquiry', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
     });
+    given('the completed ++Persona inquiry++ has no government ID document', () => {
+      // TODO: implement step
+    });
+    when('the Customer creates a Persona inquiry', () => {
+      // TODO: implement step
+    });
+    then('My Paradise sends the inquiry request to Persona', () => {
+      // TODO: implement step
+    })
+      .and('My Paradise does not retrieve a Persona document', () => {
+        // TODO: implement step
+      });
+    when('Persona returns the completed inquiry without a government ID', () => {
+      // TODO: implement step
+    });
+    then('++identity++ expiry date is empty', () => {
+      // TODO: implement step
+    });
+  });
+
+  scenario('Persona errors on inquiry load', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    when('the Customer creates a Persona inquiry', () => {
+      // TODO: implement step
+    });
+    then('My Paradise sends the inquiry request to Persona', () => {
+      // TODO: implement step
+    });
+    when('Persona returns an error', () => {
+      // TODO: implement step
+    });
+    then('the Customer has an unverified ++Persona inquiry++', () => {
+      // TODO: implement step
+    })
+      .and('++identity++ stays empty', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Document not found', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('Persona has no ++Persona document++ for that document ID', () => {
+      // TODO: implement step
+    });
+    when('the Customer creates a Persona inquiry', () => {
+      // TODO: implement step
+    });
+    then('My Paradise retrieves the Persona document', () => {
+      // TODO: implement step
+    });
+    when('Persona returns that the document is not found', () => {
+      // TODO: implement step
+    });
+    then('++identity++ expiry date is empty', () => {
+      // TODO: implement step
+    });
+  });
+
+  scenario('Document email mismatch', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('the ++Persona document++ email does not match the Customer email', () => {
+      // TODO: implement step
+    });
+    when('the Customer creates a Persona inquiry', () => {
+      // TODO: implement step
+    });
+    then('My Paradise retrieves the Persona document', () => {
+      // TODO: implement step
+    });
+    when('Persona returns unauthorized', () => {
+      // TODO: implement step
+    });
+    then('++identity++ expiry date is empty', () => {
+      // TODO: implement step
+    });
+  });
+
+  scenario('Verify later', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('the Customer has a ++My Paradise customer++ with no idNumber on ++identity++', () => {
+      // TODO: implement step
+    });
+    when('the Customer proceeds without a Persona inquiry', () => {
+      // TODO: implement step
+    });
+    then('My Paradise does not send an inquiry request to Persona', () => {
+      // TODO: implement step
+    })
+      .and('no ++Persona inquiry++ is stored', () => {
+        // TODO: implement step
+      })
+      .and('the Customer is still on the Profile KYC step', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Enter valid identity and address', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('the Customer has a ++My Paradise customer++ in session', () => {
+      // TODO: implement step
+    });
+    when('the Customer enters ++identity++ ++valid identity++ and ++address++ ++valid address++', () => {
+      // TODO: implement step
+    });
+    then('all profile requirements are met', () => {
+      // TODO: implement step
+    })
+      .and('the Customer can confirm their identity', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Enter identity after a verified Persona inquiry', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('the Customer has a verified ++Persona inquiry++ mapped onto ++identity++ ++valid identity++', () => {
+      // TODO: implement step
+    });
+    when('the Customer enters the mapped ++identity++ and ++address++', () => {
+      // TODO: implement step
+    });
+    then('all profile requirements are met', () => {
+      // TODO: implement step
+    })
+      .and('the ID fields are present on ++identity++', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Re-enter a verified identity', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('the Customer has ++identity++ ++valid identity++ already verified', () => {
+      // TODO: implement step
+    });
+    when('the Customer re-enters ++identity++ ++valid identity++', () => {
+      // TODO: implement step
+    });
+    then('the identity is no longer verified', () => {
+      // TODO: implement step
+    })
+      .and('the Customer can confirm their identity again', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Enter incomplete identity or address', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    when('the Customer enters ++identity++ and ++address++ with {field} empty', () => {
+      // TODO: implement step
+    });
+    then('{field} is missing', () => {
+      // TODO: implement step
+    })
+      .and('the Customer cannot confirm their identity', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Confirm identity with a verified Persona inquiry', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('the Customer has entered ++identity++ ++valid identity++ and ++address++ ++valid address++', () => {
+      // TODO: implement step
+    })
+      .and('the Customer has a verified ++Persona inquiry++', () => {
+        // TODO: implement step
+      });
+    when('the Customer confirms their identity', () => {
+      // TODO: implement step
+    });
+    then('My Paradise maps ++identity++ and ++address++ onto the Mavenir engaged party and contact medium', () => {
+      // TODO: implement step
+    })
+      .and('My Paradise sends the profile patch to Mavenir', () => {
+        // TODO: implement step
+      });
+    when('Mavenir patches the customer', () => {
+      // TODO: implement step
+    });
+    then('the Customer identity is persisted', () => {
+      // TODO: implement step
+    })
+      .and('the Customer is verified', () => {
+        // TODO: implement step
+      })
+      .and('the ++Persona inquiry++ is cleared', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Profile requirements unmet', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('the Customer has not entered ++identity++ or ++address++', () => {
+      // TODO: implement step
+    });
+    when('the Customer confirms their identity', () => {
+      // TODO: implement step
+    });
+    then('the identity cannot be confirmed', () => {
+      // TODO: implement step
+    })
+      .and('My Paradise does not send a profile patch to Mavenir', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Customer already exists', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('another Mavenir customer already has ++identity++ idNumber I1234562', () => {
+      // TODO: implement step
+    });
+    when('the Customer confirms their identity', () => {
+      // TODO: implement step
+    });
+    then('My Paradise sends the profile patch to Mavenir', () => {
+      // TODO: implement step
+    })
+      .and('the identity cannot be confirmed because a customer with that information already exists', () => {
+        // TODO: implement step
+      });
+  });
+
+  scenario('Mavenir profile patch error', ({ given, when, then }) => {
+    background('background', ({ given }) => {
+      given('the Customer has a ++My Paradise customer++ with a ++Mavenir shopping cart++ that already has a plan, number, and SIM', () => {
+        // TODO: implement step
+      });
+    });
+    given('Mavenir returns a profile patch error', () => {
+      // TODO: implement step
+    });
+    when('the Customer confirms their identity', () => {
+      // TODO: implement step
+    });
+    then('My Paradise sends the profile patch to Mavenir', () => {
+      // TODO: implement step
+    })
+      .and('the identity cannot be confirmed', () => {
+        // TODO: implement step
+      });
+  });
 });
 
 /**
@@ -151,9 +409,21 @@ story('Customer Complete Persona Kyc', () => {
  */
 
 story('Collect Identity With Brand Amassador', () => {
-    scenario('Collect identity with Brand Ambassador', ({ given, when, then }) => {
-      given('the Customer is choosing how to verify their ID', () => {});
-      when('the Customer asks a Brand Ambassador to verify their ID', () => {});
-      then('the Ambassador will be in touch to proceed with verification', () => {}).and('the Ambassador collects the Customer\'s ++identity++ documents over WhatsApp', () => {}).and('the Customer proceeds to enter identity in My Paradise', () => {});
+  scenario('Collect identity with Brand Ambassador', ({ given, when, then }) => {
+    given('the Customer is choosing how to verify their ID', () => {
+      // TODO: implement step
     });
+    when('the Customer asks a Brand Ambassador to verify their ID', () => {
+      // TODO: implement step
+    });
+    then('the Ambassador will be in touch to proceed with verification', () => {
+      // TODO: implement step
+    })
+      .and('the Ambassador collects the Customer\'s ++identity++ documents over WhatsApp', () => {
+        // TODO: implement step
+      })
+      .and('the Customer proceeds to enter identity in My Paradise', () => {
+        // TODO: implement step
+      });
+  });
 });

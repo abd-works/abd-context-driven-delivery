@@ -1,3 +1,5 @@
+// === Cart ===
+
 class Cart {
   // << association >>
   customer: Customer;
@@ -30,22 +32,39 @@ class Cart {
   }
 
   setupAccount(): Customer | null {
+    throw new Error("not implemented");
   }
+
   pickPlan(plan: Plan): Cart | CartErrors    //applyPlan {
+    throw new Error("not implemented");
   }
+
   pickNumber(availableNumber: AvailableNumber): Cart | CartErrors {
+    throw new Error("not implemented");
   }
+
   bringNumber(portability: Portability): Cart | CartErrors {
+    throw new Error("not implemented");
   }
+
   applyVoucher(code: string): Cart | VoucherErrors {
+    throw new Error("not implemented");
   }
+
   removeVoucher(): Cart | VoucherErrors {
+    throw new Error("not implemented");
   }
+
   checkout(payment: Payment): Cart | PaymentErrors {
+    throw new Error("not implemented");
   }
+
   createOrder(customer: Customer): Cart {
+    throw new Error("not implemented");
   }
+
   storeOrderResult(customer: Customer, success: boolean, payUpFront: boolean | null, verified: boolean): Cart {
+    throw new Error("not implemented");
   }
 }
 
@@ -73,27 +92,29 @@ class Bundle {
     this.features = features;
     this.plan = plan;
   }
-
 }
 
 class GrowthBook {
-  DISABLEEsim: string;
-  DISABLEPsim: string;
-  PAYUpFront: string;
-  PAYMENTAttempts: string;
-  ROAMINGPlanTicket: string;
+  DISABLEESIM: string;
+  DISABLEPSIM: string;
+  PAYUPFRONT: string;
+  PAYMENTATTEMPTS: string;
+  ROAMINGPLANTICKET: string;
 
-  constructor(DISABLEEsim: string, DISABLEPsim: string, PAYUpFront: string, PAYMENTAttempts: string, ROAMINGPlanTicket: string) {
-    this.DISABLEEsim = DISABLEEsim;
-    this.DISABLEPsim = DISABLEPsim;
-    this.PAYUpFront = PAYUpFront;
-    this.PAYMENTAttempts = PAYMENTAttempts;
-    this.ROAMINGPlanTicket = ROAMINGPlanTicket;
+  constructor(DISABLEESIM: string, DISABLEPSIM: string, PAYUPFRONT: string, PAYMENTATTEMPTS: string, ROAMINGPLANTICKET: string) {
+    this.DISABLEESIM = DISABLEESIM;
+    this.DISABLEPSIM = DISABLEPSIM;
+    this.PAYUPFRONT = PAYUPFRONT;
+    this.PAYMENTATTEMPTS = PAYMENTATTEMPTS;
+    this.ROAMINGPLANTICKET = ROAMINGPLANTICKET;
   }
 
   evaluate(key: string): boolean {
+    throw new Error("not implemented");
   }
+
   value(key: string): number {
+    throw new Error("not implemented");
   }
 }
 
@@ -112,8 +133,11 @@ class CartRepository {
   }
 
   load(customer: Customer): Cart | null {
+    throw new Error("not implemented");
   }
+
   create(customer: Customer): Cart {
+    throw new Error("not implemented");
   }
 }
 
@@ -131,7 +155,6 @@ class CartException {
     this.message = message;
     this.cause = cause;
   }
-
 }
 
 class Voucher {
@@ -146,17 +169,18 @@ class Voucher {
     this.expired = expired;
     this.redeemed = redeemed;
   }
-
 }
 
 class Vouchera {
-
   constructor() {
   }
 
   read(code: string): Voucher | Error {
+    throw new Error("not implemented");
   }
+
   redeem(code: string, redeemerIdentifier: string, orderAmount: number): VoucherRedemption {
+    throw new Error("not implemented");
   }
 }
 
@@ -180,31 +204,46 @@ class MavenirShoppingCart {
     this.productCharacteristic = productCharacteristic;
     this.channel = channel;
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 
   read(mavenirCustomerId: string): MavenirShoppingCart | Error {
+    throw new Error("not implemented");
   }
+
   create(mavenirCustomerId: string): MavenirShoppingCart | Error {
+    throw new Error("not implemented");
   }
+
   patchBundle(mavenirCustomerId: string, bundleId: string): MavenirShoppingCart | Error {
+    throw new Error("not implemented");
   }
+
   patchMsisdn(mavenirCustomerId: string, msisdn: string): MavenirShoppingCart | Error {
+    throw new Error("not implemented");
   }
+
   patchPortability(mavenirCustomerId: string, msisdn: string, characteristics: ProductCharacteristic[]): MavenirShoppingCart | Error {
+    throw new Error("not implemented");
   }
+
   patchSimType(mavenirCustomerId: string, simType: string): MavenirShoppingCart | Error {
+    throw new Error("not implemented");
   }
+
   patchIccid(mavenirCustomerId: string, iccid: string): MavenirShoppingCart | Error {
+    throw new Error("not implemented");
   }
+
   createProductOrder(mavenirCustomerId: string): MavenirProductOrder | Error {
+    throw new Error("not implemented");
   }
+
   patchSubmitOrder(mavenirCustomerId: string): MavenirShoppingCart | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -216,7 +255,6 @@ class ProductCharacteristic {
     this.name = name;
     this.value = value;
   }
-
 }
 
 class Channel {
@@ -229,5 +267,4 @@ class Channel {
     this.name = name;
     this.role = role;
   }
-
 }

@@ -1,3 +1,5 @@
+// === Porting ===
+
 class Portability {
   donorOperator: string;
   portNumber: string;
@@ -30,6 +32,7 @@ class Portability {
     TwilioService.check();
     PortalGateway.patchPhoneVerified();
   }
+
   resendSms(): void {
     // always Twilio send to portNumber
     // waits 30 seconds before another resend
@@ -39,13 +42,15 @@ class Portability {
 }
 
 class TwilioService {
-
   constructor() {
   }
 
   start(portNumber: string): void {
+    throw new Error("not implemented");
   }
+
   check(portNumber: string, portingSmsCode: PortingSmsCode): void | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -55,7 +60,6 @@ class PortingSmsCode {
   constructor(code: string) {
     this.code = code;
   }
-
 }
 
 class PortingErrors {
@@ -64,5 +68,4 @@ class PortingErrors {
   constructor(portingSmsCode: string | null) {
     this.portingSmsCode = portingSmsCode;
   }
-
 }

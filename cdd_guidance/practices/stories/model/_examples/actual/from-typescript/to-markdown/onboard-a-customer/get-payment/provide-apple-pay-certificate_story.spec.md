@@ -7,3 +7,10 @@
 *Then* My Paradise sends the certificate request to Apple
 *When* Apple returns Bermuda Apple Pay cert
 *Then* My Paradise returns Bermuda Apple Pay cert
+
+### Examples
+
+| example |
+| --- |
+| bermudaApplePayCert |
+| bermudaApplePayCertificate |

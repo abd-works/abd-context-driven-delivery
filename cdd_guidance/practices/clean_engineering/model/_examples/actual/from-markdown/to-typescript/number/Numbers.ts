@@ -1,3 +1,5 @@
+// === Numbers and SIMs ===
+
 /**
  * Paradise collection of ++AvailableNumber++. Mavenir builds the wrap target. List locks five resources when picking a new number (category always `standard`), or one when bringing a number; listing premium inventory category is always `premium`. Reserve moves locked to reserved and may release a previous reserved id. Premium selected id uses the same locked-to-reserved hop; `portin` is false (same as `pickNumber`). Category is on list. When `portin`, Mavenir marks the reserved resource `kv_tempNumber`.
  */
@@ -19,12 +21,16 @@ class MsisdnInventoryRepository {
     // listing premium inventory category always premium
     // always available to locked
     InventoryGateway.list();
+    throw new Error("not implemented");
   }
+
   search(searchTerm: SearchTerm): AvailableNumber[] {
     // when SearchTerm.converted is the pattern
     // always available to locked
     InventoryGateway.search();
+    throw new Error("not implemented");
   }
+
   reserve(id: string, previousId: string | null, portin: boolean): void | Error {
     // always locked to reserved
     // premium selected id: always locked to reserved
@@ -33,6 +39,7 @@ class MsisdnInventoryRepository {
     // when previousId is present, previousId must go reserved to available
     // when portin: kv_tempNumber
     InventoryGateway.reserve();
+    throw new Error("not implemented");
   }
 }
 
@@ -54,6 +61,7 @@ class IccidInventoryRepository {
     // available only
     // empty or not-available is miss
     InventoryGateway.read();
+    throw new Error("not implemented");
   }
 }
 
@@ -66,7 +74,6 @@ class AvailableNumber {
   constructor(id: string) {
     this.id = id;
   }
-
 }
 
 /**
@@ -78,7 +85,6 @@ class AvailableSim {
   constructor(id: string) {
     this.id = id;
   }
-
 }
 
 class SearchTerm {
@@ -92,6 +98,7 @@ class SearchTerm {
 
   convert(): string {
     // when input is letters, converted is always keypad digits
+    throw new Error("not implemented");
   }
 }
 
@@ -107,14 +114,12 @@ class MavenirMsisdnResource {
     this.id = id;
     this.resourceStatus = resourceStatus;
   }
-
 }
 
 /**
  * Mavenir `inventoryGateway` (`.../msisdn/resource`, `.../sim/resource`).
  */
 class InventoryGateway {
-
   constructor() {
   }
 
@@ -124,10 +129,14 @@ class InventoryGateway {
     // new-number category always standard
     // listing premium inventory category always premium
     // always available to locked
+    throw new Error("not implemented");
   }
+
   search(pattern: string): MavenirMsisdnResource[] {
     // always available to locked
+    throw new Error("not implemented");
   }
+
   reserve(id: string, previousId: string | null, portin: boolean): void | Error {
     // always locked to reserved
     // premium selected id: always locked to reserved
@@ -135,11 +144,14 @@ class InventoryGateway {
     // category is always on list
     // when previousId is present, previousId must go reserved to available
     // when portin: kv_tempNumber
+    throw new Error("not implemented");
   }
+
   read(id: string): MavenirSimResource | Error {
     // GET sim resource
     // when none: none
     // when not-available: none
+    throw new Error("not implemented");
   }
 }
 
@@ -152,5 +164,4 @@ class MavenirSimResource {
     this.id = id;
     this.resourceStatus = resourceStatus;
   }
-
 }

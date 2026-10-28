@@ -25,6 +25,8 @@ _TOP_FN_RE = re.compile(
     r"(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*[^{]+)?\s*\{",
 )
 _CALL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
+# A name after ``new`` is constructed, not called.
+_CONSTRUCTION_RE = re.compile(r"\bnew\s+$")
 _STRING_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
 _FIELD_RE = re.compile(
     r"^\s*(?:(?:public|private|protected|readonly|static)\s+)*(\w+)\s*:\s*([^;=]+);",
@@ -188,7 +190,10 @@ class CFamilyParse:
         )
         stripped = _STRING_RE.sub('""', code_only)
         qualified = re.findall(r"(?<![\w.])([A-Z]\w*(?:\.[A-Za-z_]\w*)+)\s*\(", stripped)
-        bare = [m.group(1) for m in _CALL_RE.finditer(stripped) if m.group(1) != op.name]
+        bare = [
+            m.group(1) for m in _CALL_RE.finditer(stripped)
+            if m.group(1) != op.name and not _CONSTRUCTION_RE.search(stripped[: m.start()])
+        ]
         suffixes = {item.split(".")[-1] for item in qualified}
         callees = qualified + [name for name in bare if name not in suffixes]
         notes = [
@@ -255,7 +260,7 @@ class CFamilyParse:
                 name = tokens[-1] if tokens else part
                 type_hint = ""
             name = name.lstrip("@")
-            if name and name not in {"this", "self"} and re.match(r"^[\w$]+$", name):
+            if name and name not in {"this", "self"} and re.match(r"^[\w$]+\??$", name):
                 params.append(f"{name}: {type_hint}" if type_hint else name)
         return params
 

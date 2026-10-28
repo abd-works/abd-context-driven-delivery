@@ -9,6 +9,14 @@
 *When* Mavenir confirms the cart is patched with Essentials
 *Then* the cart bundle is a snapshot of Essentials loaded from the gateway
 
+### Examples
+
+| example |
+| --- |
+| essentials |
+| customerWithCart |
+| reloadCart |
+
 ### Scenario: Change an existing plan
 
 *Given* Essentials is in the Mavenir shopping cart
@@ -17,6 +25,14 @@
 *When* Mavenir confirms the cart is patched with Data Freedom
 *Then* the cart bundle is updated to a snapshot of Data Freedom loaded from the gateway
 
+### Examples
+
+| example |
+| --- |
+| essentials |
+| customerWithCart |
+| reloadCart |
+
 ### Scenario: Failed to update plan
 
 *Given* the Mavenir cart patch returns an error
@@ -24,3 +40,11 @@
 *Then* the plan selection fails
 *When* My Paradise reloads the shopping cart
 *Then* the cart bundle remains empty
+
+### Examples
+
+| example |
+| --- |
+| essentials |
+| customerWithCart |
+| reloadCart |

@@ -1,3 +1,5 @@
+// === Billing ===
+
 class Billing {
   id: string;
   // active | suspended | terminated
@@ -29,6 +31,7 @@ class Billing {
     // 201 empty body
     PortalGateway.createBilling();
   }
+
   applyCredit(): Billing {
     // posts onto this account; uses Customer, Cart voucher, and VoucherRedemption already on the graph
     // cook after Vouchera.redeem, before productOrderFromCart
@@ -54,6 +57,7 @@ class BillingRepository {
     // assembles invoices, transactions, defaultPayment, balance
     PortalGateway.read();
   }
+
   create(customer: Customer): Billing | Error {
     PortalGateway.createBilling();
   }
@@ -73,7 +77,6 @@ class Invoice {
     this.dueAmount = dueAmount;
     this.status = status;
   }
-
 }
 
 class Transaction {
@@ -86,7 +89,6 @@ class Transaction {
     this.paymentDate = paymentDate;
     this.totalAmount = totalAmount;
   }
-
 }
 
 class MavenirBillingAccount {
@@ -121,7 +123,6 @@ class MavenirBillingAccount {
     this.accountBalance = accountBalance;
     this.creditAdjustments = creditAdjustments;
   }
-
 }
 
 class MavenirInvoice {
@@ -138,7 +139,6 @@ class MavenirInvoice {
     this.dueAmount = dueAmount;
     this.status = status;
   }
-
 }
 
 class ArTransaction {
@@ -153,7 +153,6 @@ class ArTransaction {
     this.totalAmount = totalAmount;
     this.paymentDate = paymentDate;
   }
-
 }
 
 class MavenirCreditAdjustment {
@@ -180,11 +179,9 @@ class MavenirCreditAdjustment {
     this.serviceProviderId = serviceProviderId;
     this.reason = reason;
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 
@@ -193,18 +190,23 @@ class PortalGateway {
     // 409 when account already present
     // 201 no body
   }
+
   read(mavenirCustomer: MavenirCustomer): MavenirBillingAccount | Error {
     // GET v1/billingAccount/{accountId}
   }
+
   readInvoices(mavenirCustomer: MavenirCustomer): MavenirInvoice[] {
     // GET v1/invoice/history
   }
+
   readTransactions(mavenirCustomer: MavenirCustomer): ArTransaction[] {
     // GET allARTransaction
   }
+
   readInvoicePdf(billingAccountId: string, invoiceId: string): void {
     // GET v1/invoice/invoicePDF
   }
+
   applyCredit(mavenirCustomer: MavenirCustomer, creditAdjustment: MavenirCreditAdjustment): MavenirCreditAdjustment {
     // POST allARTransaction
     // cook after Vouchera.redeem, before productOrderFromCart

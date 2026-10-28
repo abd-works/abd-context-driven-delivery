@@ -36,7 +36,6 @@ story('Query Product Offerings And Map To Catalog', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -55,7 +54,6 @@ story('List Product Offerings', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -197,7 +195,6 @@ story('Choose Onboarding Plan', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -243,7 +240,6 @@ story('Patch Cart With Plan', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -298,7 +294,6 @@ story('Patch Shopping Cart', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -325,5 +320,4 @@ story('Keep Current Plan', () => {
       // TODO: implement step
     });
   });
-
 });

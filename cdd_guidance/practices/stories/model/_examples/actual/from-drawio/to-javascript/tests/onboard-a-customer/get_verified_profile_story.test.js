@@ -1,0 +1,24 @@
+/**
+ * Epic: Get Verified Profile
+ * Orders: 0.0.5
+ */
+
+import { background, scenario, story } from "../story-test.js";
+
+/**
+ * Story: Customer Complete Persona Kyc
+ * Actor: Customer
+ */
+
+story('Customer Complete Persona Kyc', () => {
+  // TODO: add main-flow scenario
+});
+
+/**
+ * Story: Collect Identity With Brand Amassador
+ * Actor: Ambassador
+ */
+
+story('Collect Identity With Brand Amassador', () => {
+  // TODO: add main-flow scenario
+});

@@ -19,6 +19,16 @@
  * THEN: My Paradise does not send a sign-in request to Cognito
  * AND: the authentication is rejected
  * AND: Cognito does not issue an account token
+ * SCENARIO: Authenticate with incorrect account credentials: ${example}
+ * EXAMPLES: enteredAlreadyRegisteredAccountCredentials, storedAlreadyRegisteredCognitoUser
+ * GIVEN: Cognito has an already-registered Cognito user
+ * AND: the Customer is not signed in
+ * AND: the Customer has ${example}
+ * WHEN: the Customer authenticates ${example}
+ * THEN: My Paradise sends the sign-in request to Cognito
+ * WHEN: Cognito returns NotAuthorizedException
+ * THEN: the authentication is rejected
+ * AND: Cognito does not issue an account token
  * SCENARIO: Authenticate with unconfirmed account
  * EXAMPLES: enteredValidAccountCredentials, storedUnconfirmedCognitoUser
  * GIVEN: Cognito has an unconfirmed Cognito user

@@ -12,6 +12,10 @@
  * WHEN: the User enters valid account credentials
  * THEN: account credentials are validated continuously
  * AND: the customer can save the customer account
+ * SCENARIO: Enter Invalid account credentials: ${example}
+ * WHEN: the User validates ${example}
+ * THEN: the ${unmet} requirement is unmet
+ * AND: the customer cannot save the customer account
  * SCENARIO: Email already registered
  * EXAMPLES: enteredAlreadyRegisteredAccountCredentials, storedAlreadyRegisteredUnconfirmedCognitoUser
  * GIVEN: already-registered account credentials are already registered

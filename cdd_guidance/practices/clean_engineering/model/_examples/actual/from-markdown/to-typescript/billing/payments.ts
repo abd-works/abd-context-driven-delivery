@@ -1,3 +1,5 @@
+// === Payments ===
+
 class Payment {
   // always compared to GrowthBook PAYMENT_ATTEMPTS
   // always null until enter
@@ -27,10 +29,13 @@ class Payment {
     GrowthBook.evaluate();
     GrowthBook.value();
     FAC.create();
+    throw new Error("not implemented");
   }
+
   recordFailed(): Payment | PaymentErrors {
     // always POST /customer/payment/failed with transactionId
     // always Then Cart.createOrder
+    throw new Error("not implemented");
   }
 }
 
@@ -48,7 +53,6 @@ class PaymentErrors {
     this.load = load;
     this.unverified = unverified;
   }
-
 }
 
 /**
@@ -71,7 +75,6 @@ class PaymentCharge {
     this.submit = submit;
     this.chargedValue = chargedValue;
   }
-
 }
 
 /**
@@ -85,14 +88,12 @@ class PaymentIframe {
     this.html = html;
     this.transactionId = transactionId;
   }
-
 }
 
 /**
  * FAC CCS builds the ++PaymentIframe++. Midtier maps; it is not a type. POST `fac/cards/spi/auth`; GET `getTokenizedCard`.
  */
 class FAC {
-
   constructor() {
   }
 
@@ -104,7 +105,9 @@ class FAC {
     // stubAuth fixture: transactionId, TotalAmount 1, ON-BOARDING
     // returns html + transactionId
     // FAC timeout 3s no TransactionId: Error 504
+    throw new Error("not implemented");
   }
+
   read(customer: Customer, transactionId: string): PaymentStatus | Error {
     // Read Tokenized Card Midtier + Mavenir
     // always GET /customer/payment/status/:transactionId
@@ -112,6 +115,7 @@ class FAC {
     // completed: status completed, reason APPROVED
     // failed: status failed, reason DECLINED; Midtier 504
     // optional 15s poll is Midtier retry, not a type
+    throw new Error("not implemented");
   }
 }
 
@@ -128,7 +132,6 @@ class PaymentStatus {
     this.status = status;
     this.reason = reason;
   }
-
 }
 
 /**
@@ -145,14 +148,12 @@ class ApplePayCertificate {
     this.keyIdentifier = keyIdentifier;
     this.certificate = certificate;
   }
-
 }
 
 /**
  * Midtier serves the ++ApplePayCertificate++. Apple / DigiCert builds it; Midtier is not a type. POST `/apple/cert` `getCert`.
  */
 class Apple {
-
   constructor() {
   }
 
@@ -161,5 +162,6 @@ class Apple {
     // always POST /apple/cert getCert
     // always certificates.bm
     // Given CognitoUser vs live unauthenticated /apple
+    throw new Error("not implemented");
   }
 }

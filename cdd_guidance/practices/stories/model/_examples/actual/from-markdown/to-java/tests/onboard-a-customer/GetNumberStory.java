@@ -478,6 +478,10 @@
  * AND: Twilio returns a non-approved status to Midtier
  */
 
+/** Story: Keep Current Number
+ * Actor: Customer
+ */
+
 /** Story: Sweep Stale Number Reservations
  * Actor: Care
  * SCENARIO: Sweep stale number reservations

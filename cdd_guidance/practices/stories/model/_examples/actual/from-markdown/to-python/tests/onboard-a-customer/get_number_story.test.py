@@ -736,6 +736,11 @@ with story("Check Verification"):
             with and_("Twilio returns a non-approved status to Midtier"):
                 pass
 
+# Story: Keep Current Number
+# Actor: Customer
+with story("Keep Current Number"):
+        pass
+
 # Story: Sweep Stale Number Reservations
 # Actor: Care
 with story("Sweep Stale Number Reservations"):

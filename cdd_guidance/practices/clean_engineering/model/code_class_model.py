@@ -15,7 +15,6 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property, property_notes
 
 _CONSTRUCTOR_NAMES = frozenset({"constructor", "__init__"})
-_DEFAULT_STEREOTYPES = frozenset({"", "association"})
 
 
 class CodeCleanEngineeringModel(CleanEngineeringModel):
@@ -106,12 +105,14 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         return [f"{self.language.indent}}}"]
 
     def constructor_parameters(self, oclass: OoadClass, constructor: Optional[Operation]) -> List[tuple]:
-        """(name, type hint) for each constructor parameter: the constructor's own, else the class properties."""
-        if constructor is not None and constructor.parameters:
-            return [(parameter.name, parameter.type_hint) for parameter in constructor.parameters]
-        if constructor is not None:
-            return []
-        return [(prop.name, prop.type_hint) for prop in oclass.properties]
+        """(name, type hint) for each constructor parameter: the constructor's own, else the class properties.
+        A ``(...)`` constructor names no parameters of its own, so it takes the properties too."""
+        if constructor is None or self._elides_parameters(constructor):
+            return [(prop.name, prop.type_hint) for prop in oclass.properties]
+        return [(parameter.name, parameter.type_hint) for parameter in constructor.parameters]
+
+    def _elides_parameters(self, constructor: Operation) -> bool:
+        return bool(constructor.parameters) and all(parameter.name.strip() == "..." for parameter in constructor.parameters)
 
     def _render_module(self, module: Module, known_names: List[str], kept: "CodeCleanEngineeringModel") -> List[str]:
         lines = self._module_banner(module)
@@ -122,8 +123,8 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         return lines
 
     def _property_notes(self, prop: Property) -> List[str]:
-        """The stereotype when the model names one other than the default, then origin, cardinality, and invariants."""
-        notes = [f"<< {prop.stereotype} >>"] if prop.stereotype not in _DEFAULT_STEREOTYPES else []
+        """The stereotype the model names, then origin, cardinality, and invariants."""
+        notes = [f"<< {prop.stereotype} >>"] if prop.stereotype else []
         notes.extend(property_notes(prop))
         return [f"{self.language.indent}{self.language.comment(note)}" for note in notes]
 

@@ -1,3 +1,5 @@
+// === Porting ===
+
 /**
  * Donor / account / device / verified live here. Cart **links** this type (`<< association >>`). `planSelected` is the cart bundle name.
  */
@@ -32,12 +34,15 @@ class Portability {
     // when no portNumber: fails
     TwilioService.check();
     PortalGateway.patchPhoneVerified();
+    throw new Error("not implemented");
   }
+
   resendSms(): void {
     // always Twilio send to portNumber
     // waits 30 seconds before another resend
     // when no portNumber: fails
     TwilioService.start();
+    throw new Error("not implemented");
   }
 }
 
@@ -45,13 +50,15 @@ class Portability {
  * Twilio Verify. Port-in SMS.
  */
 class TwilioService {
-
   constructor() {
   }
 
   start(portNumber: string): void {
+    throw new Error("not implemented");
   }
+
   check(portNumber: string, portingSmsCode: PortingSmsCode): void | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -61,7 +68,6 @@ class PortingSmsCode {
   constructor(code: string) {
     this.code = code;
   }
-
 }
 
 /**
@@ -73,5 +79,4 @@ class PortingErrors {
   constructor(portingSmsCode: string | null) {
     this.portingSmsCode = portingSmsCode;
   }
-
 }

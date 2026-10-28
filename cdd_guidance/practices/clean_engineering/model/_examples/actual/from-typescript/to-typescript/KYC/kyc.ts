@@ -1,3 +1,5 @@
+// === KYC ===
+
 class ProfileRequirement {
   field: string;
   requirement: string;
@@ -6,7 +8,6 @@ class ProfileRequirement {
     this.field = field;
     this.requirement = requirement;
   }
-
 }
 
 class ProfileRequirements {
@@ -49,11 +50,13 @@ class ProfileRequirements {
     // empty: Confirm ID may proceed
     // otherwise the unmet ProfileRequirement rows
   }
+
   validateInquiry(identity: Identity): string {
     // Identity.idNumber
     // absent: inquiry required
     // present: already complete
   }
+
   mapInquiry(customer: Customer, personaInquiry: PersonaInquiry): Customer {
     // maps PersonaInquiry onto Identity / Address
     // expiryDate from PersonaDocument or empty
@@ -61,6 +64,7 @@ class ProfileRequirements {
     // Customer.verified stays false
     // failed inquiry: PersonaInquiry.verified false; Identity / Address may stay empty
   }
+
   storeFailedInquiry(customer: Customer, personaInquiry: PersonaInquiry): Customer {
     // create failed
     // no field map

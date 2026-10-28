@@ -11,12 +11,28 @@
 *And* the line has valid ICCID
 *And* the Customer is forwarded to Verify ID
 
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| enteredValidIccid |
+| expectedValidIccid |
+| customerReadyToChooseSim |
+
 ### Scenario: ICCID contains spaces
 
 *Given* the Customer has ICCID with spaces
 *When* the Customer attaches ICCID with spaces
 *Then* the ICCID format is rejected
 *And* My Paradise does not query inventory or patch the cart
+
+### Examples
+
+| example |
+| --- |
+| enteredIccidWithSpaces |
+| customerReadyToChooseSim |
 
 ### Scenario: Inventory rejects ICCID
 
@@ -25,3 +41,10 @@
 *Then* My Paradise sends the ICCID inventory request to Mavenir with invalid ICCID
 *And* My Paradise does not patch the cart
 *And* the ICCID is rejected
+
+### Examples
+
+| example |
+| --- |
+| enteredInvalidIccid |
+| customerReadyToChooseSim |

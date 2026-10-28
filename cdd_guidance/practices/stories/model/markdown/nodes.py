@@ -468,6 +468,10 @@ class MarkdownScenario(Scenario):
             label = str(row.get("example") or row.get("name") or f"example-{index}")
             self._current.examples[label] = row["example"] if set(row) <= {"example"} else row
             return
+        if self._in_story_background and self._story_level is not None:
+            label = str(row.get("example") or row.get("name") or f"example-{len(self._story_level.examples) + 1}")
+            self._story_level.examples[label] = row["example"] if set(row) <= {"example"} else row
+            return
         index = len(self._shared_background.examples) + 1
         first = str(row.get(self._example_headers[0], "")).strip("+ ") if self._example_headers else ""
         label = str(row.get("example") or row.get("name") or first or self._example_group or f"example-{index}")
@@ -619,6 +623,8 @@ class MarkdownScenario(Scenario):
             for step in background.steps:
                 lines.extend(cls._step_lines(step))
             lines.append("")
+            # The story background's own examples sit in its section, so they read back onto the story.
+            lines.extend(cls._render_example_tables(background.examples))
         for sc in scenarios:
             kind = "Scenario Outline" if getattr(sc, "is_outline", False) else "Scenario"
             lines.append(f"### {kind}: {sc.name}")
@@ -952,8 +958,9 @@ class MarkdownStoryModel(StoryModel):
         return "\n".join(lines)
 
     def _should_render_outline(self, story_map: "MarkdownStoryModel", previous: Optional[str]) -> bool:
-        """Outline notation is for documents already written that way, or that carry
-        estimates. Nesting on its own renders as deeper headings."""
+        """Outline notation is for documents already written that way, or that carry estimates,
+        actors, or epics three deep, which headings and bullets cannot hold. An epic with sub-epics
+        renders as headings."""
         if previous and self._contains_outline_structure(previous.splitlines()):
             return True
         return any(
@@ -962,6 +969,10 @@ class MarkdownStoryModel(StoryModel):
 
     def _sub_tree_has_outline_signal(self, sub: MarkdownEpic) -> bool:
         if getattr(sub, "estimate", ""):
+            return True
+        if any(story.actors for story in sub.stories):
+            return True
+        if any(nested.epics for nested in sub.epics):
             return True
         for nested in sub.epics:
             if self._sub_tree_has_outline_signal(nested):
@@ -1259,6 +1270,7 @@ class MarkdownStoryModel(StoryModel):
             lines.append(f"- {self._story_label(story)}")
             for scenario in story.scenarios:
                 lines.append(f"  - {scenario.name}")
+
 
     # -- parse helpers ---------------------------------------------------------
 

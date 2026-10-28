@@ -1,3 +1,5 @@
+// === Plans ===
+
 class Plan {
   id: string;
   name: string;
@@ -12,7 +14,6 @@ class Plan {
     this.isSellable = isSellable;
     this.bypassVerified = bypassVerified;
   }
-
 }
 
 class PlanRepository {
@@ -27,6 +28,7 @@ class PlanRepository {
   }
 
   list(): Plan[] {
+    throw new Error("not implemented");
   }
 }
 
@@ -44,14 +46,13 @@ class MavenirProductOffering {
     this.productOfferingPrice = productOfferingPrice;
     this.bundledProductOffering = bundledProductOffering;
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 
   list(): MavenirProductOffering[] {
+    throw new Error("not implemented");
   }
 }

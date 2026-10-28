@@ -1,3 +1,5 @@
+// === KYC ===
+
 /**
  * One required Identity / Address field row (`field`, `requirement`).
  */
@@ -9,7 +11,6 @@ class ProfileRequirement {
     this.field = field;
     this.requirement = requirement;
   }
-
 }
 
 /**
@@ -54,23 +55,30 @@ class ProfileRequirements {
     // when Identity / Address are updated
     // empty: Confirm ID may proceed
     // otherwise the unmet ProfileRequirement rows
+    throw new Error("not implemented");
   }
+
   validateInquiry(identity: Identity): string {
     // Identity.idNumber
     // absent: inquiry required
     // present: already complete
+    throw new Error("not implemented");
   }
+
   mapInquiry(customer: Customer, personaInquiry: PersonaInquiry): Customer {
     // maps PersonaInquiry onto Identity / Address
     // expiryDate from PersonaDocument or empty
     // PersonaInquiry.verified from status completed
     // Customer.verified stays false
     // failed inquiry: PersonaInquiry.verified false; Identity / Address may stay empty
+    throw new Error("not implemented");
   }
+
   storeFailedInquiry(customer: Customer, personaInquiry: PersonaInquiry): Customer {
     // create failed
     // no field map
     // PersonaInquiry.verified false
     // Customer.verified stays false
+    throw new Error("not implemented");
   }
 }

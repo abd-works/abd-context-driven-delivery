@@ -10,14 +10,37 @@
 *When* Mavenir creates the product order and clears waiting pSIM
 *Then* My Paradise stores valid ICCID on the line
 
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| enteredValidIccid |
+| expectedValidIccid |
+| customerWaitingForPsim |
+
 ### Scenario: waiting pSIM is absent
 
 *Given* Mavenir has valid ICCID available in inventory but the Mavenir customer has no waiting pSIM characteristic
 *When* the Customer activates the SIM with valid ICCID
 *Then* the pSIM delivered order is rejected
 
+### Examples
+
+| example |
+| --- |
+| enteredValidIccid |
+| customerWaitingForPsim |
+
 ### Scenario: waiting pSIM already completed
 
 *Given* Mavenir has valid ICCID available in inventory and the Mavenir customer has waiting pSIM false
 *When* the Customer activates the SIM with valid ICCID
 *Then* the pSIM delivered order is rejected
+
+### Examples
+
+| example |
+| --- |
+| enteredValidIccid |
+| customerWaitingForPsim |

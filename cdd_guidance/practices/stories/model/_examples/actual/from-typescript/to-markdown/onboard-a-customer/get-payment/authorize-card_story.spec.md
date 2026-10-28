@@ -10,6 +10,16 @@
 *Then* the payment is authorized
 *And* the payment step does not place the order
 
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyForPayment |
+| paymentWithAuthorization |
+| stubAuth |
+| completedAuth |
+
 ### Scenario: Card not verified
 
 *Given* the Customer has stub auth
@@ -21,6 +31,16 @@
 *Then* the card is not verified
 *And* My Paradise requests a fresh payment authorization from Mavenir
 
+### Examples
+
+| example |
+| --- |
+| customerReadyForPayment |
+| maxPaymentAttempts |
+| paymentWithAuthorization |
+| stubAuth |
+| failedAuth |
+
 ### Scenario: Maximum payment attempts
 
 *Given* the Customer has stub auth
@@ -31,3 +51,14 @@
 *When* Mavenir returns failed auth
 *Then* My Paradise records the failed card addition with Zendesk
 *And* the payment step does not place the order
+
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyForPayment |
+| maxPaymentAttempts |
+| paymentWithAuthorization |
+| stubAuth |
+| failedAuth |

@@ -32,6 +32,24 @@
 | --- |
 | enteredInvalidEmailFormat |
 
+### Scenario: Authenticate with incorrect account credentials: ${example}
+
+*Given* Cognito has an already-registered Cognito user
+*And* the Customer is not signed in
+*And* the Customer has ${example}
+*When* the Customer authenticates ${example}
+*Then* My Paradise sends the sign-in request to Cognito
+*When* Cognito returns NotAuthorizedException
+*Then* the authentication is rejected
+*And* Cognito does not issue an account token
+
+### Examples
+
+| example |
+| --- |
+| enteredAlreadyRegisteredAccountCredentials |
+| storedAlreadyRegisteredCognitoUser |
+
 ### Scenario: Authenticate with unconfirmed account
 
 *Given* Cognito has an unconfirmed Cognito user

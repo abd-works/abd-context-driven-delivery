@@ -35,6 +35,11 @@ with story("List Product Offerings"):
             with then("Mavenir returns product bundles including ++plan++ ++Essentials++, ++plan++ ++Data Freedom++, ++plan++ ++Ace++, ++plan++ ++Atlas++, and ++plan++ ++Internal Test Plan PROMO++ with their productOfferingPrice and bundledProductOffering"):
                 pass
 
+# Story: Load Plan Catalog
+# Actor: My Paradise
+with story("Load Plan Catalog"):
+        pass
+
 # Story: Choose Onboarding Plan
 # Actor: Customer
 with story("Choose Onboarding Plan"):

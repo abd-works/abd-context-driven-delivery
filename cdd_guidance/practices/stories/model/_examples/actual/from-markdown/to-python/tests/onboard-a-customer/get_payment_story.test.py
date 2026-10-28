@@ -77,6 +77,10 @@ with story("Enter Payment"):
             with then("the payment authorization cannot be loaded"):
                 pass
 
+# Story: Evaluate Payment Flags
+with story("Evaluate Payment Flags"):
+        pass
+
 # Story: Authorize Card
 # Actor: My Paradise
 # background-examples: {"completed auth": {"payment status": "payment status", "example": "completed auth", "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3", "status": "completed", "reason": "APPROVED", "group": "payment status"}, "failed auth": {"payment status": "payment status", "example": "failed auth", "transactionId": "d4a1b2c3-9f3a-4e1b-8c7d-a2b5e8f1d0c3", "status": "failed", "reason": "DECLINED", "group": "payment status"}}

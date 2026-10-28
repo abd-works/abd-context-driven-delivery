@@ -1,3 +1,5 @@
+// === Subscription ===
+
 class Line {
   msisdn: string | null;
   // << association >>
@@ -24,6 +26,7 @@ class Line {
     // when patch fails: Error
     ShoppingCartGateway.patchCartWithSim();
   }
+
   attachIccid(iccid: string): void | Error {
     // always SimType.Psim
     // when whitespace: Error; no inventory or patch
@@ -31,6 +34,7 @@ class Line {
     MsisdnRepository.read();
     ShoppingCartGateway.patchCartWithSim();
   }
+
   activateSim(iccid: string): void | Error {
     // waiting pSIM must already be Active
     // absent waiting pSIM: Error
@@ -83,10 +87,8 @@ class Subscription {
 }
 
 class Usage {
-
   constructor() {
   }
-
 }
 
 class SubscriptionRepository {
@@ -131,7 +133,6 @@ class MavenirAgreement {
     this.characteristic = characteristic;
     this.agreementItem = agreementItem;
   }
-
 }
 
 class MavenirAgreementProduct {
@@ -148,7 +149,6 @@ class MavenirAgreementProduct {
     this.orderDate = orderDate;
     this.productPrice = productPrice;
   }
-
 }
 
 class MavenirProductOrder {
@@ -157,24 +157,21 @@ class MavenirProductOrder {
   constructor(id: string) {
     this.id = id;
   }
-
 }
 
 class MsisdnDataUsage {
-
   constructor() {
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 
   listAgreements(mavenirCustomerId: string): MavenirAgreement[] {
     // GET agreementManagement/agreement
   }
+
   createProductOrder(mavenirCustomerId: string): MavenirProductOrder | Error {
     // Create Product Order
     // always POST /customer/order
@@ -194,12 +191,13 @@ class PortalGateway {
     patchDone();
     patchWaitingPsim();
   }
+
   changePlan(mavenirCustomerId: string, plan: Plan): MavenirAgreement | Error {
+    throw new Error("not implemented");
   }
 }
 
 class CcsGateway {
-
   constructor() {
   }
 
@@ -219,5 +217,4 @@ class VoucherRedemption {
     this.discountAmount = discountAmount;
     this.totalAmount = totalAmount;
   }
-
 }

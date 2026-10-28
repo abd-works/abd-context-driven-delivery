@@ -4,6 +4,12 @@
 
 *Given* the User has a verified account with an account token
 
+### Examples
+
+| example |
+| --- |
+| enteredValidAccountCredentials |
+
 ### Scenario: Create customer
 
 *When* the User creates their Paradise account

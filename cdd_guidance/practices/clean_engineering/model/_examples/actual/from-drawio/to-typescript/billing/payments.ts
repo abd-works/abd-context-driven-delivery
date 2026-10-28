@@ -1,3 +1,5 @@
+// === Payments ===
+
 class Payment {
   paymentAttempts: number;
   // << composition >>
@@ -12,8 +14,11 @@ class Payment {
   }
 
   enter(cart: Cart): Payment | PaymentErrors {
+    throw new Error("not implemented");
   }
+
   recordFailed(): Payment | PaymentErrors {
+    throw new Error("not implemented");
   }
 }
 
@@ -25,7 +30,6 @@ class PaymentErrors {
     this.load = load;
     this.unverified = unverified;
   }
-
 }
 
 class PaymentCharge {
@@ -38,7 +42,6 @@ class PaymentCharge {
     this.submit = submit;
     this.chargedValue = chargedValue;
   }
-
 }
 
 class PaymentIframe {
@@ -49,17 +52,18 @@ class PaymentIframe {
     this.html = html;
     this.transactionId = transactionId;
   }
-
 }
 
 class FAC {
-
   constructor() {
   }
 
   create(customer: Customer): PaymentIframe | Error {
+    throw new Error("not implemented");
   }
+
   read(customer: Customer, transactionId: string): PaymentStatus | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -71,7 +75,6 @@ class PaymentStatus {
     this.status = status;
     this.reason = reason;
   }
-
 }
 
 class ApplePayCertificate {
@@ -82,14 +85,13 @@ class ApplePayCertificate {
     this.keyIdentifier = keyIdentifier;
     this.certificate = certificate;
   }
-
 }
 
 class Apple {
-
   constructor() {
   }
 
   read(): ApplePayCertificate {
+    throw new Error("not implemented");
   }
 }

@@ -14,7 +14,6 @@ import { scenario, story } from "tests/story-test";
 story('Enter Payment', () => {
   background('background', ({ given }) => {
   });
-
   scenario('Enter Payment', ({ given, when, then }) => {
     background('background', ({ given }) => {
       given('the Customer has completed order review and is on Checkout', () => {
@@ -133,7 +132,6 @@ story('Enter Payment', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -153,7 +151,6 @@ story('Evaluate Payment Flags', () => {
 story('Authorize Card', () => {
   background('background', ({ given }) => {
   });
-
   scenario('Payment completed', ({ given, when, then }) => {
     background('background', ({ given }) => {
     });
@@ -237,7 +234,6 @@ story('Authorize Card', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -249,7 +245,6 @@ story('Authorize Card', () => {
 story('Provide Apple Pay Certificate', () => {
   background('background', ({ given }) => {
   });
-
   scenario('Provide Apple Pay certificate', ({ given, when, then }) => {
     background('background', ({ given }) => {
     });
@@ -269,7 +264,6 @@ story('Provide Apple Pay Certificate', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -295,5 +289,4 @@ story('Adjust Credit Manually', () => {
       // TODO: implement step
     });
   });
-
 });

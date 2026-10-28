@@ -1,3 +1,5 @@
+// === Cart ===
+
 class Cart {
   // << association >>
   customer: Customer;
@@ -48,7 +50,9 @@ class Cart {
     // existing Cognito customer id: CustomerRepository.load through Midtier
     // missing Cognito customer id: CustomerRepository.create through Midtier, then AccountCredentials.storeCustomerId
     CustomerRepository.create();
+    throw new Error("not implemented");
   }
+
   pickPlan(plan: Plan): Cart | CartErrors    //applyPlan {
     // copies Plan onto Cart.bundle
     // Cart.bundle.plan is that Plan
@@ -60,7 +64,9 @@ class Cart {
     // when portability is present: portability.planSelected is the Plan name
     // when patch fails: CartErrors.patch
     PortalGateway.patchBundle();
+    throw new Error("not implemented");
   }
+
   pickNumber(availableNumber: AvailableNumber): Cart | CartErrors {
     // previousId is always the current msisdn
     // portin is always false
@@ -70,7 +76,9 @@ class Cart {
     // when patch fails: CartErrors.patch
     MsisdnInventoryRepository.reserve();
     PortalGateway.patchMsisdn();
+    throw new Error("not implemented");
   }
+
   bringNumber(portability: Portability): Cart | CartErrors {
     // always list size 1
     // previousId is always the current msisdn
@@ -86,7 +94,9 @@ class Cart {
     MsisdnInventoryRepository.list();
     MsisdnInventoryRepository.reserve();
     PortalGateway.patchPortability();
+    throw new Error("not implemented");
   }
+
   applyVoucher(code: string): Cart | VoucherErrors {
     // POST /customer/voucher
     // sets Cart.voucher
@@ -103,12 +113,16 @@ class Cart {
     // auto-apply rejection: VoucherErrors.notWorking
     Vouchera.read();
     PortalGateway.patchVoucher();
+    throw new Error("not implemented");
   }
+
   removeVoucher(): Cart | VoucherErrors {
     // DELETE /customer/voucher
     // voucher always null after success
     PortalGateway.removeVoucher();
+    throw new Error("not implemented");
   }
+
   checkout(payment: Payment): Cart | PaymentErrors {
     // payment is on the cart (Authorize Card)
     // Payment is not on the order
@@ -118,7 +132,9 @@ class Cart {
     // when failed and attempts equal PAYMENT_ATTEMPTS: Payment.recordFailed then Cart.createOrder
     FAC.read();
     createOrder();
+    throw new Error("not implemented");
   }
+
   createOrder(customer: Customer): Cart {
     // writes MavenirProductOrder (lives on Subscription after cook)
     // always POST /customer/order
@@ -130,7 +146,9 @@ class Cart {
     PortalGateway.createProductOrder();
     CaseRepository.open();
     storeOrderResult();
+    throw new Error("not implemented");
   }
+
   storeOrderResult(customer: Customer, success: boolean, payUpFront: boolean | null, verified: boolean): Cart {
     // always defaultPayment true
     // orderSuccess = success
@@ -140,6 +158,7 @@ class Cart {
     // fail: does not write verified
     // Then View Order Result when allSet else View Almost There
     // banners: orderUnprocessed / paymentUnverified / SimBanner iccidRequired
+    throw new Error("not implemented");
   }
 }
 
@@ -185,7 +204,6 @@ class Bundle {
     this.features = features;
     this.plan = plan;
   }
-
 }
 
 /**
@@ -193,26 +211,26 @@ class Bundle {
  */
 class GrowthBook {
   // disable-esim
-  DISABLEEsim: string;
+  DISABLEESIM: string;
   // disable-psim
-  DISABLEPsim: string;
+  DISABLEPSIM: string;
   // pay-up-front
   // when off: invoicePayment
   // when on: upfrontPayment
-  PAYUpFront: string;
+  PAYUPFRONT: string;
   // payment-attempts
   // always 3 on the scenario
   // live default is always 1
-  PAYMENTAttempts: string;
+  PAYMENTATTEMPTS: string;
   // roaming-plan-ticket
-  ROAMINGPlanTicket: string;
+  ROAMINGPLANTICKET: string;
 
-  constructor(DISABLEEsim: string, DISABLEPsim: string, PAYUpFront: string, PAYMENTAttempts: string, ROAMINGPlanTicket: string) {
-    this.DISABLEEsim = DISABLEEsim;
-    this.DISABLEPsim = DISABLEPsim;
-    this.PAYUpFront = PAYUpFront;
-    this.PAYMENTAttempts = PAYMENTAttempts;
-    this.ROAMINGPlanTicket = ROAMINGPlanTicket;
+  constructor(DISABLEESIM: string, DISABLEPSIM: string, PAYUPFRONT: string, PAYMENTATTEMPTS: string, ROAMINGPLANTICKET: string) {
+    this.DISABLEESIM = DISABLEESIM;
+    this.DISABLEPSIM = DISABLEPSIM;
+    this.PAYUPFRONT = PAYUPFRONT;
+    this.PAYMENTATTEMPTS = PAYMENTATTEMPTS;
+    this.ROAMINGPLANTICKET = ROAMINGPLANTICKET;
   }
 
   evaluate(key: string): boolean {
@@ -223,11 +241,14 @@ class GrowthBook {
     // Flagged: live also hides Yay
     // when PAY_UP_FRONT is off: invoicePayment Time to add your payment
     // when PAY_UP_FRONT is on: upfrontPayment Complete your payment
+    throw new Error("not implemented");
   }
+
   value(key: string): number {
     // always PAYMENT_ATTEMPTS
     // always 3 on the scenario
     // live default is always 1
+    throw new Error("not implemented");
   }
 }
 
@@ -254,7 +275,9 @@ class CartRepository {
     // when none: null
     // when Mavenir is unreachable: throws CartException with operation load, Customer and cause
     PortalGateway.read();
+    throw new Error("not implemented");
   }
+
   create(customer: Customer): Cart {
     // always sets Customer.cart
     // customer.id is always the MavenirCustomer id
@@ -262,6 +285,7 @@ class CartRepository {
     // never when a cart already exists for that Customer
     // when a Cart already exists or Mavenir is unreachable: throws CartException with operation create, Customer and cause
     PortalGateway.create();
+    throw new Error("not implemented");
   }
 }
 
@@ -279,7 +303,6 @@ class CartException {
     this.message = message;
     this.cause = cause;
   }
-
 }
 
 /**
@@ -297,20 +320,20 @@ class Voucher {
     this.expired = expired;
     this.redeemed = redeemed;
   }
-
 }
 
 /**
  * Vouchera builds the ++Voucher++. Vouchera GET /vouchers/{code}. `read` is catalog `Voucher.apply` through `VoucherRepository.get`. `redeem` is Subscription cook and returns `# Subscription` *VoucherRedemption*.
  */
 class Vouchera {
-
   constructor() {
   }
 
   read(code: string): Voucher | Error {
     // unknown code: none
+    throw new Error("not implemented");
   }
+
   redeem(code: string, redeemerIdentifier: string, orderAmount: number): VoucherRedemption {
     // Redeem Voucher
     // always POST vouchers/{code}/redeem
@@ -320,6 +343,7 @@ class Vouchera {
     // planIds miss: skip redeem then cook
     // flagged 5xx: success false; cook continues
     // writes Subscription.voucherRedemption
+    throw new Error("not implemented");
   }
 }
 
@@ -351,24 +375,26 @@ class MavenirShoppingCart {
     this.productCharacteristic = productCharacteristic;
     this.channel = channel;
   }
-
 }
 
 /**
  * Mavenir `portalGateway` shopping cart.
  */
 class PortalGateway {
-
   constructor() {
   }
 
   read(mavenirCustomerId: string): MavenirShoppingCart | Error {
     // when none for that MavenirCustomer: none
+    throw new Error("not implemented");
   }
+
   create(mavenirCustomerId: string): MavenirShoppingCart | Error {
     // always lineCount 1, empty cartItem, ON-BOARDING channel
     // never when a cart already exists for that MavenirCustomer
+    throw new Error("not implemented");
   }
+
   patchBundle(mavenirCustomerId: string, bundleId: string): MavenirShoppingCart | Error {
     // always fetches the catalog bundle
     // always builds the bundle cartItem
@@ -379,33 +405,46 @@ class PortalGateway {
     // Get Review Plan is later Select
     // when portability is present: planName is the bundle name
     PortalGateway.list();
+    throw new Error("not implemented");
   }
+
   patchMsisdn(mavenirCustomerId: string, msisdn: string): MavenirShoppingCart | Error {
     // always writes MSISDN ProductCharacteristic on the bundle cartItem
     // premium ++MSISDN++ is the same MSISDN ProductCharacteristic (no premium variant)
+    throw new Error("not implemented");
   }
+
   patchPortability(mavenirCustomerId: string, msisdn: string, characteristics: ProductCharacteristic[]): MavenirShoppingCart | Error {
     // always writes MSISDN and ++portability++ ProductCharacteristic rows on the bundle cartItem
+    throw new Error("not implemented");
   }
+
   patchSimType(mavenirCustomerId: string, simType: string): MavenirShoppingCart | Error {
     // always writes SIM_TYPE ProductCharacteristic on the bundle cartItem
     // Get Esim: value always 'eSIM'
     // Get Paradise Sim Card: value always 'pSIM'
     // no ICCID characteristic
     // bundle cartItem already present
+    throw new Error("not implemented");
   }
+
   patchIccid(mavenirCustomerId: string, iccid: string): MavenirShoppingCart | Error {
     // always writes SIM_TYPE 'pSIM' and ICCID on the existing bundle cartItem
     // no sim-resource reserve
+    throw new Error("not implemented");
   }
+
   createProductOrder(mavenirCustomerId: string): MavenirProductOrder | Error {
     // PATCH shoppingCart billing (pre-cook) then POST productOrderFromCart
     // SIM_TYPE 'pSIM' and ICCID already on bundle
     // Create Product Order cook
+    throw new Error("not implemented");
   }
+
   patchSubmitOrder(mavenirCustomerId: string): MavenirShoppingCart | Error {
     // always writes submitOrder true on the bundle cartItem
     // when unverified no bypass no portability
+    throw new Error("not implemented");
   }
 }
 
@@ -420,7 +459,6 @@ class ProductCharacteristic {
     this.name = name;
     this.value = value;
   }
-
 }
 
 /**
@@ -436,5 +474,4 @@ class Channel {
     this.name = name;
     this.role = role;
   }
-
 }

@@ -1,3 +1,5 @@
+// === Plans ===
+
 /**
  * Paradise *Plan* `<<represents>>` ++MavenirProductOffering++.
  */
@@ -17,7 +19,6 @@ class Plan {
     this.isSellable = isSellable;
     this.bypassVerified = bypassVerified;
   }
-
 }
 
 /**
@@ -46,6 +47,7 @@ class PlanRepository {
     // list order: price descending
     // Ace Best value is presentation
     PortalGateway.list();
+    throw new Error("not implemented");
   }
 }
 
@@ -63,19 +65,18 @@ class MavenirProductOffering {
     this.productOfferingPrice = productOfferingPrice;
     this.bundledProductOffering = bundledProductOffering;
   }
-
 }
 
 /**
  * Mavenir `portalGateway` catalog. `productOfferings/100000000?channelName=CRM`.
  */
 class PortalGateway {
-
   constructor() {
   }
 
   list(): MavenirProductOffering[] {
     // always service provider 100000000
     // always channelName CRM
+    throw new Error("not implemented");
   }
 }

@@ -1,3 +1,5 @@
+// === Cart ===
+
 class Cart {
   // << association >>
   customer: Customer;
@@ -49,6 +51,7 @@ class Cart {
     // missing Cognito customer id: CustomerRepository.create through Midtier, then AccountCredentials.storeCustomerId
     CustomerRepository.create();
   }
+
   pickPlan(plan: Plan): Cart | CartErrors    //applyPlan {
     // copies Plan onto Cart.bundle
     // Cart.bundle.plan is that Plan
@@ -61,6 +64,7 @@ class Cart {
     // when patch fails: CartErrors.patch
     PortalGateway.patchBundle();
   }
+
   pickNumber(availableNumber: AvailableNumber): Cart | CartErrors {
     // previousId is always the current msisdn
     // portin is always false
@@ -71,6 +75,7 @@ class Cart {
     MsisdnInventoryRepository.reserve();
     PortalGateway.patchMsisdn();
   }
+
   bringNumber(portability: Portability): Cart | CartErrors {
     // always list size 1
     // previousId is always the current msisdn
@@ -87,6 +92,7 @@ class Cart {
     MsisdnInventoryRepository.reserve();
     PortalGateway.patchPortability();
   }
+
   applyVoucher(code: string): Cart | VoucherErrors {
     // POST /customer/voucher
     // sets Cart.voucher
@@ -104,11 +110,13 @@ class Cart {
     Vouchera.read();
     PortalGateway.patchVoucher();
   }
+
   removeVoucher(): Cart | VoucherErrors {
     // DELETE /customer/voucher
     // voucher always null after success
     PortalGateway.removeVoucher();
   }
+
   checkout(payment: Payment): Cart | PaymentErrors {
     // payment is on the cart (Authorize Card)
     // Payment is not on the order
@@ -119,6 +127,7 @@ class Cart {
     FAC.read();
     createOrder();
   }
+
   createOrder(customer: Customer): Cart {
     // writes MavenirProductOrder (lives on Subscription after cook)
     // always POST /customer/order
@@ -131,6 +140,7 @@ class Cart {
     CaseRepository.open();
     storeOrderResult();
   }
+
   storeOrderResult(customer: Customer, success: boolean, payUpFront: boolean | null, verified: boolean): Cart {
     // always defaultPayment true
     // orderSuccess = success
@@ -172,7 +182,6 @@ class Bundle {
     this.features = features;
     this.plan = plan;
   }
-
 }
 
 class GrowthBook {
@@ -208,6 +217,7 @@ class GrowthBook {
     // when PAY_UP_FRONT is off: invoicePayment Time to add your payment
     // when PAY_UP_FRONT is on: upfrontPayment Complete your payment
   }
+
   value(key: string): number {
     // always PAYMENT_ATTEMPTS
     // always 3 on the scenario
@@ -236,6 +246,7 @@ class CartRepository {
     // when Mavenir is unreachable: throws CartException with operation load, Customer and cause
     PortalGateway.read();
   }
+
   create(customer: Customer): Cart {
     // always sets Customer.cart
     // customer.id is always the MavenirCustomer id
@@ -260,7 +271,6 @@ class CartException {
     this.message = message;
     this.cause = cause;
   }
-
 }
 
 class Voucher {
@@ -275,17 +285,16 @@ class Voucher {
     this.expired = expired;
     this.redeemed = redeemed;
   }
-
 }
 
 class Vouchera {
-
   constructor() {
   }
 
   read(code: string): Voucher | Error {
     // unknown code: none
   }
+
   redeem(code: string, redeemerIdentifier: string, orderAmount: number): VoucherRedemption {
     // Redeem Voucher
     // always POST vouchers/{code}/redeem
@@ -323,21 +332,21 @@ class MavenirShoppingCart {
     this.productCharacteristic = productCharacteristic;
     this.channel = channel;
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 
   read(mavenirCustomerId: string): MavenirShoppingCart | Error {
     // when none for that MavenirCustomer: none
   }
+
   create(mavenirCustomerId: string): MavenirShoppingCart | Error {
     // always lineCount 1, empty cartItem, ON-BOARDING channel
     // never when a cart already exists for that MavenirCustomer
   }
+
   patchBundle(mavenirCustomerId: string, bundleId: string): MavenirShoppingCart | Error {
     // always fetches the catalog bundle
     // always builds the bundle cartItem
@@ -349,13 +358,16 @@ class PortalGateway {
     // when portability is present: planName is the bundle name
     PortalGateway.list();
   }
+
   patchMsisdn(mavenirCustomerId: string, msisdn: string): MavenirShoppingCart | Error {
     // always writes MSISDN ProductCharacteristic on the bundle cartItem
     // premium ++MSISDN++ is the same MSISDN ProductCharacteristic (no premium variant)
   }
+
   patchPortability(mavenirCustomerId: string, msisdn: string, characteristics: ProductCharacteristic[]): MavenirShoppingCart | Error {
     // always writes MSISDN and ++portability++ ProductCharacteristic rows on the bundle cartItem
   }
+
   patchSimType(mavenirCustomerId: string, simType: string): MavenirShoppingCart | Error {
     // always writes SIM_TYPE ProductCharacteristic on the bundle cartItem
     // Get Esim: value always 'eSIM'
@@ -363,15 +375,18 @@ class PortalGateway {
     // no ICCID characteristic
     // bundle cartItem already present
   }
+
   patchIccid(mavenirCustomerId: string, iccid: string): MavenirShoppingCart | Error {
     // always writes SIM_TYPE 'pSIM' and ICCID on the existing bundle cartItem
     // no sim-resource reserve
   }
+
   createProductOrder(mavenirCustomerId: string): MavenirProductOrder | Error {
     // PATCH shoppingCart billing (pre-cook) then POST productOrderFromCart
     // SIM_TYPE 'pSIM' and ICCID already on bundle
     // Create Product Order cook
   }
+
   patchSubmitOrder(mavenirCustomerId: string): MavenirShoppingCart | Error {
     // always writes submitOrder true on the bundle cartItem
     // when unverified no bypass no portability
@@ -386,7 +401,6 @@ class ProductCharacteristic {
     this.name = name;
     this.value = value;
   }
-
 }
 
 class Channel {
@@ -399,5 +413,4 @@ class Channel {
     this.name = name;
     this.role = role;
   }
-
 }

@@ -2,6 +2,7 @@
 // Orders: 0.0.0.2
 
 /** Story: Load My Paradise Customer From Midtier And Store In Session
+ * background-examples: {"enteredValidAccountCredentials": {}, "storedAccountCredentialsWithToken": {}}
  * BACKGROUND: each
  * GIVEN: Mavenir has a customer and the Cognito user holds its id
  * SCENARIO: Load My Paradise Customer From Midtier And Store In Session

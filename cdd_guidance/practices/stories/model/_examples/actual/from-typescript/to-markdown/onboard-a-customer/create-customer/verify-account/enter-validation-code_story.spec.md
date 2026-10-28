@@ -7,6 +7,15 @@
 *And* Cognito has sent a validation code to the User
 *And* the User has account credentials with valid email and password
 
+### Examples
+
+| example |
+| --- |
+| storedUnconfirmedCognitoUser |
+| enteredValidAccountCredentials |
+| unusableValidationCodeExamples |
+| enteredValidValidationCode |
+
 ### Scenario: Enter validation code
 
 *When* the User activates the account with the emailed validation code
@@ -20,6 +29,11 @@
 | example |
 | --- |
 | enteredValidAccountCredentials |
+
+### Scenario: Activate with unusable validation code: ${example}
+
+*When* the User activates with ${example}
+*Then* Enter Validation Code shows ${helper}
 
 ### Scenario: Resend validation code
 

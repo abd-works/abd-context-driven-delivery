@@ -1,3 +1,5 @@
+// === Payments ===
+
 class Payment {
   // always compared to GrowthBook PAYMENT_ATTEMPTS
   // always null until enter
@@ -28,6 +30,7 @@ class Payment {
     GrowthBook.value();
     FAC.create();
   }
+
   recordFailed(): Payment | PaymentErrors {
     // always POST /customer/payment/failed with transactionId
     // always Then Cart.createOrder
@@ -45,7 +48,6 @@ class PaymentErrors {
     this.load = load;
     this.unverified = unverified;
   }
-
 }
 
 class PaymentCharge {
@@ -65,7 +67,6 @@ class PaymentCharge {
     this.submit = submit;
     this.chargedValue = chargedValue;
   }
-
 }
 
 class PaymentIframe {
@@ -76,11 +77,9 @@ class PaymentIframe {
     this.html = html;
     this.transactionId = transactionId;
   }
-
 }
 
 class FAC {
-
   constructor() {
   }
 
@@ -93,6 +92,7 @@ class FAC {
     // returns html + transactionId
     // FAC timeout 3s no TransactionId: Error 504
   }
+
   read(customer: Customer, transactionId: string): PaymentStatus | Error {
     // Read Tokenized Card Midtier + Mavenir
     // always GET /customer/payment/status/:transactionId
@@ -113,7 +113,6 @@ class PaymentStatus {
     this.status = status;
     this.reason = reason;
   }
-
 }
 
 class ApplePayCertificate {
@@ -127,11 +126,9 @@ class ApplePayCertificate {
     this.keyIdentifier = keyIdentifier;
     this.certificate = certificate;
   }
-
 }
 
 class Apple {
-
   constructor() {
   }
 

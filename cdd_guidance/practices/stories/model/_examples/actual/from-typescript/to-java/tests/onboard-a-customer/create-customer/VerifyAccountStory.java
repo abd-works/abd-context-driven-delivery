@@ -2,6 +2,7 @@
 // Orders: 0.0.0.3
 
 /** Story: Enter Validation Code
+ * background-examples: {"storedUnconfirmedCognitoUser": {}, "enteredValidAccountCredentials": {}, "unusableValidationCodeExamples": {}, "enteredValidValidationCode": {}}
  * BACKGROUND: each
  * GIVEN: the User has submitted valid account credentials
  * AND: Cognito has an unconfirmed Cognito user
@@ -14,6 +15,9 @@
  * AND: the account is verified
  * AND: Cognito issues an account token for the browser session
  * BUT: no Mavenir customer exists for those account credentials
+ * SCENARIO: Activate with unusable validation code: ${example}
+ * WHEN: the User activates with ${example}
+ * THEN: Enter Validation Code shows ${helper}
  * SCENARIO: Resend validation code
  * WHEN: more than 60 seconds has passed
  * AND: the User resends the validation code

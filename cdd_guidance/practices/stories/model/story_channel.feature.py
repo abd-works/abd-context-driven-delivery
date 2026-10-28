@@ -6,10 +6,10 @@ under actual/from-{source}/to-{target}, and walks every node.
     .\\.venv\\Scripts\\python.exe -m mamba.cli practices/stories/model/story_channel.feature.py
 """
 
-import shutil
 from pathlib import Path
 
 from expects import equal, expect
+from harness.output_folder import OutputFolder
 from mamba import describe, context, it, before, shared_context, included_context
 
 from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
@@ -27,8 +27,8 @@ EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected"
 ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
 
 _DIAGRAM = ("drawio", "miro")
-_CODE_WITH_EMPTY_STORIES = ("typescript",)
 _CODE = ("typescript", "python", "javascript", "java")
+_FLUENT = ("typescript", "javascript")
 
 
 def _kebab(name: str) -> str:
@@ -86,14 +86,12 @@ def kept(rows: list, channel: str) -> list:
         return [row for row in rows if row[0] in ("epic", "story", "increment")]
     if channel == "json":
         return [row for row in rows if row[0] not in ("step", "and", "background")]
-    if channel in _CODE and channel not in _CODE_WITH_EMPTY_STORIES:
-        return _stored_code(_code_rows(rows, require_scenarios=True))
     if channel in _CODE:
-        return _stored_code(_code_rows(rows, require_scenarios=False))
+        return _stored_code(_code_rows(rows))
     return rows
 
 
-def _code_rows(rows: list, *, require_scenarios: bool) -> list:
+def _code_rows(rows: list) -> list:
     """Code folders store a slug. Scenario and step text stay as written."""
     selected = []
     index = 0
@@ -109,9 +107,6 @@ def _code_rows(rows: list, *, require_scenarios: bool) -> list:
         while index < len(rows) and rows[index][0] not in ("story", "epic"):
             block.append(rows[index])
             index += 1
-        has_scenario = any(item[0] == "scenario" for item in block)
-        if require_scenarios and not has_scenario:
-            continue
         story = block[0]
         selected.append(("story", story[1], _kebab(story[2]), story[3], tuple(story[4]), story[5]))
         step_depth = story[1] + 2
@@ -121,28 +116,9 @@ def _code_rows(rows: list, *, require_scenarios: bool) -> list:
             if item[0] in ("step", "and") and item[1] > step_depth:
                 item = (item[0], item[1] - 1, *item[2:])
             selected.append(item)
-    return _drop_empty_epics(selected) if require_scenarios else selected
+    return selected
 
 
-def _drop_empty_epics(rows: list) -> list:
-    kept_rows = []
-    index = 0
-    while index < len(rows):
-        row = rows[index]
-        if row[0] != "epic":
-            kept_rows.append(row)
-            index += 1
-            continue
-        depth = row[1]
-        end = index + 1
-        while end < len(rows) and not (rows[end][0] == "epic" and rows[end][1] <= depth):
-            end += 1
-        body = _drop_empty_epics(rows[index + 1:end])
-        if body:
-            kept_rows.append(row)
-            kept_rows.extend(body)
-        index = end
-    return kept_rows
 
 
 def _grouped(rows: list) -> list:
@@ -191,8 +167,6 @@ def _normalize_loaded(rows: list, channel: str) -> list:
             normalized.append(row)
         else:
             normalized.append(row)
-    if channel not in _CODE_WITH_EMPTY_STORIES:
-        normalized = _drop_empty_epics(normalized)
     return _stored_code(normalized)
 
 
@@ -270,8 +244,7 @@ def load_source(name: str) -> StoryModel:
 
 def save_channel(source_name: str, target: str, source: StoryModel) -> StoryModel:
     folder = ACTUAL / f"from-{source_name}" / f"to-{target}"
-    if folder.exists():
-        shutil.rmtree(folder)
+    OutputFolder(folder).clear()
     folder.mkdir(parents=True)
     if target == "markdown":
         _write_markdown(source, folder)
@@ -316,38 +289,26 @@ with shared_context("a story map saved through a channel"):
         actual = self.loaded
         stores_scenarios = self.channel not in ("drawio", "miro")
         stores_steps = self.channel not in ("drawio", "miro", "json")
-        drops_empty_stories = self.channel in ("python", "javascript", "java")
 
         def node_name(name):
             if self.channel in _CODE:
                 return _kebab(name)
             return name
 
-        def kept_stories(epic):
-            stories = list(epic.stories)
-            if drops_empty_stories:
-                stories = [story for story in stories if story.scenarios]
-            return stories
-
-        def kept_epics(epics):
-            kept = []
-            for epic in epics:
-                if drops_empty_stories and not kept_stories(epic) and not kept_epics(epic.epics):
+        def clauses(steps):
+            """(keyword, text, [(keyword, text)]) per clause. The fluent brace surface chains a step that
+            repeats the previous step's phase as .and(), so for those channels it reads back as an And."""
+            rows = []
+            for step in steps:
+                ands = [(extra.keyword, extra.text) for extra in step.ands]
+                if self.channel in _FLUENT and rows and step.step_type == rows[-1][3]:
+                    rows[-1][2].extend([("And", step.text)] + ands)
                     continue
-                kept.append(epic)
-            return kept
+                rows.append((step.keyword, step.text, ands, step.step_type))
+            return [row[:3] for row in rows]
 
         def check_steps(actual_steps, expected_steps):
-            expect(len(actual_steps)).to(equal(len(expected_steps)))
-            for step_index, expected_step in enumerate(expected_steps):
-                actual_step = actual_steps[step_index]
-                expect(actual_step.keyword).to(equal(expected_step.keyword))
-                expect(actual_step.text).to(equal(expected_step.text))
-                expect(len(actual_step.ands)).to(equal(len(expected_step.ands)))
-                for and_index, expected_and in enumerate(expected_step.ands):
-                    actual_and = actual_step.ands[and_index]
-                    expect(actual_and.keyword).to(equal(expected_and.keyword))
-                    expect(actual_and.text).to(equal(expected_and.text))
+            expect(clauses(actual_steps)).to(equal(clauses(expected_steps)))
 
         def check_examples(actual_examples, expected_examples):
             expect(sorted(actual_examples)).to(equal(sorted(expected_examples)))
@@ -365,12 +326,11 @@ with shared_context("a story map saved through a channel"):
                     check_examples(actual_background.examples, expected_background.examples)
 
         def check_epics(actual_epics, expected_epics):
-            expected_epics = kept_epics(expected_epics)
             expect(len(actual_epics)).to(equal(len(expected_epics)))
             for epic_index, expected_epic in enumerate(expected_epics):
                 actual_epic = actual_epics[epic_index]
                 expect(node_name(actual_epic.name)).to(equal(node_name(expected_epic.name)))
-                expected_stories = kept_stories(expected_epic)
+                expected_stories = expected_epic.stories
                 expect(len(actual_epic.stories)).to(equal(len(expected_stories)))
                 for story_index, expected_story in enumerate(expected_stories):
                     actual_story = actual_epic.stories[story_index]
@@ -401,8 +361,7 @@ def _open(example, source_name: str, target: str) -> None:
 
 with describe("a story map"):
     with before.all:
-        if ACTUAL.exists():
-            shutil.rmtree(ACTUAL)
+        OutputFolder(ACTUAL).clear()
         self.sources = {name: load_source(name) for name in _SOURCES}
         self.walks = {name: walk(story_map) for name, story_map in self.sources.items()}
 
@@ -463,27 +422,27 @@ with describe("a story map"):
             with included_context("a story map saved through a channel"):
                 pass
             with context("with a story that has no scenarios"):
-                with it("should leave that story out"):
+                with it("should bring that story back"):
                     names = _story_names(_as_loaded(self, walk(self.loaded)))
-                    expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(False))
+                    expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(True))
         with describe("to javascript"):
             with before.all:
                 _open(self, "markdown", "javascript")
             with included_context("a story map saved through a channel"):
                 pass
             with context("with a story that has no scenarios"):
-                with it("should leave that story out"):
+                with it("should bring that story back"):
                     names = _story_names(_as_loaded(self, walk(self.loaded)))
-                    expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(False))
+                    expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(True))
         with describe("to java"):
             with before.all:
                 _open(self, "markdown", "java")
             with included_context("a story map saved through a channel"):
                 pass
             with context("with a story that has no scenarios"):
-                with it("should leave that story out"):
+                with it("should bring that story back"):
                     names = _story_names(_as_loaded(self, walk(self.loaded)))
-                    expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(False))
+                    expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(True))
 
     with describe("from drawio"):
         with describe("to markdown"):

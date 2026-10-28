@@ -91,7 +91,6 @@ story('Choose Esim', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -177,7 +176,6 @@ story('Request a Paradise Sim Card', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -266,7 +264,6 @@ story('Enter Existing Sim', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -379,7 +376,6 @@ story('Activate Sim', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -418,5 +414,4 @@ story('Complete Draft Sim Order', () => {
         // TODO: implement step
       });
   });
-
 });

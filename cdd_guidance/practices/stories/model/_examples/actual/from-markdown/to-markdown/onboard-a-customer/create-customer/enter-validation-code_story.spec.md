@@ -20,7 +20,7 @@
 *And* Cognito has an ++Cognito user++ ++unconfirmed Cognito user++
 
 *When* the User proceeds to check their email
-*Then* the User sees the code was sent to *[Jeff.anderson@Abdworks.com](mailto:Jeff.anderson@Abdworks.com)*
+*Then* the User sees the code was sent to *Jeff.anderson@Abdworks.com*
 *And* the User can enter a ++validation code++ in Enter Validation Code
 *And* the User can Resend
 *And* the User can Close

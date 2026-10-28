@@ -1,3 +1,5 @@
+// === Subscription ===
+
 class Line {
   msisdn: string | null;
   // << association >>
@@ -16,10 +18,15 @@ class Line {
   }
 
   selectSim(simType: SimType): void | Error {
+    throw new Error("not implemented");
   }
+
   attachIccid(iccid: string): void | Error {
+    throw new Error("not implemented");
   }
+
   activateSim(iccid: string): void | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -51,14 +58,13 @@ class Subscription {
   }
 
   changePlan(plan: Plan): Subscription | Error {
+    throw new Error("not implemented");
   }
 }
 
 class Usage {
-
   constructor() {
   }
-
 }
 
 class SubscriptionRepository {
@@ -76,6 +82,7 @@ class SubscriptionRepository {
   }
 
   list(customer: Customer): Subscription[] {
+    throw new Error("not implemented");
   }
 }
 
@@ -96,7 +103,6 @@ class MavenirAgreement {
     this.characteristic = characteristic;
     this.agreementItem = agreementItem;
   }
-
 }
 
 class MavenirAgreementProduct {
@@ -113,7 +119,6 @@ class MavenirAgreementProduct {
     this.orderDate = orderDate;
     this.productPrice = productPrice;
   }
-
 }
 
 class MavenirProductOrder {
@@ -122,35 +127,36 @@ class MavenirProductOrder {
   constructor(id: string) {
     this.id = id;
   }
-
 }
 
 class MsisdnDataUsage {
-
   constructor() {
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 
   listAgreements(mavenirCustomerId: string): MavenirAgreement[] {
+    throw new Error("not implemented");
   }
+
   createProductOrder(mavenirCustomerId: string): MavenirProductOrder | Error {
+    throw new Error("not implemented");
   }
+
   changePlan(mavenirCustomerId: string, plan: Plan): MavenirAgreement | Error {
+    throw new Error("not implemented");
   }
 }
 
 class CcsGateway {
-
   constructor() {
   }
 
   readUsage(msisdn: string, planName: string): MsisdnDataUsage {
+    throw new Error("not implemented");
   }
 }
 
@@ -164,5 +170,4 @@ class VoucherRedemption {
     this.discountAmount = discountAmount;
     this.totalAmount = totalAmount;
   }
-
 }

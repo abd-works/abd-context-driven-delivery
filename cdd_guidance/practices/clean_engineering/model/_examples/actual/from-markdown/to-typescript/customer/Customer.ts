@@ -1,3 +1,5 @@
+// === Customer ===
+
 class Customer {
   // derived from accountCredentials.customerId when not passed
   // empty string when credentials have no customer id
@@ -38,19 +40,11 @@ class Customer {
   // 0..1
   personaInquiry: PersonaInquiry | null;
 
-  constructor(id: string, verified: boolean, identity: Identity, address: Address, accountCredentials: AccountCredentials, cart: Cart | null, billing: Billing | null, subscriptions: Subscription[], personaInquiry: PersonaInquiry | null) {
+  constructor(accountCredentials: AccountCredentials) {
     // canonical form: new Customer(accountCredentials)
     // id, identity, and address are derived from accountCredentials when not passed
     // repository passes explicit id / identity / address when Mavenir has richer data
-    this.id = id;
-    this.verified = verified;
-    this.identity = identity;
-    this.address = address;
     this.accountCredentials = accountCredentials;
-    this.cart = cart;
-    this.billing = billing;
-    this.subscriptions = subscriptions;
-    this.personaInquiry = personaInquiry;
   }
 
   confirmIdentity(): Customer {
@@ -64,6 +58,7 @@ class Customer {
     // auto-apply voucher after success is Cart.applyVoucher
     ProfileRequirements.missing();
     PortalGateway.patchProfile();
+    throw new Error("not implemented");
   }
 }
 
@@ -85,12 +80,15 @@ class CustomerRepository {
     // returns the new Customer; Cart.setupAccount stores its id on the Cognito user
     AccountCredentials.verified();
     MidtierCustomerService.create();
+    throw new Error("not implemented");
   }
+
   load(accountCredentials: AccountCredentials): Customer {
     // failure throws CustomerException with operation load, AccountCredentials and cause
     // terminated billing or load failure signs out
     MidtierCustomerService.read();
     AccountCredentials.signOut();
+    throw new Error("not implemented");
   }
 }
 
@@ -98,16 +96,20 @@ class CustomerRepository {
  * My Paradise HTTP boundary to Midtier. Midtier validates the account token and forwards customer operations to Mavenir.
  */
 class MidtierCustomerService {
-
   constructor() {
   }
 
   validate(accountToken: AccountToken): string | Error {
     // Midtier validates the JWT and returns its Cognito email claim
+    throw new Error("not implemented");
   }
+
   create(accountToken: AccountToken): string | Error {
+    throw new Error("not implemented");
   }
+
   read(accountToken: AccountToken): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -128,7 +130,6 @@ class CustomerException {
     this.message = message;
     this.cause = cause;
   }
-
 }
 
 class Identity {
@@ -157,7 +158,6 @@ class Identity {
     this.idType = idType;
     this.otherPhoneNumber = otherPhoneNumber;
   }
-
 }
 
 class Address {
@@ -176,7 +176,6 @@ class Address {
     this.postalCode = postalCode;
     this.country = country;
   }
-
 }
 
 /**
@@ -208,36 +207,27 @@ class AccountCredentials {
   // << composition >>
   requirements: AccountCredentialRequirements;
 
-  constructor(email: string, password: string, confirmPassword: string, validationCode: string, verified: boolean, token: AccountToken | null, customerId: string | null, validationCodeWasSent: boolean, canActivate: boolean, isUpdatable: boolean, isPersistable: boolean, resendMessage: string | null, errors: AccountCredentialsErrors, requirements: AccountCredentialRequirements) {
+  constructor(emailOrCognitoUser: string | CognitoUser) {
     // from CognitoUser: email and verified come from the user; do not re-pass them
     // from email: password, confirmPassword, validationCode, verified optional
-    this.email = email;
-    this.password = password;
-    this.confirmPassword = confirmPassword;
-    this.validationCode = validationCode;
-    this.verified = verified;
-    this.token = token;
-    this.customerId = customerId;
-    this.validationCodeWasSent = validationCodeWasSent;
-    this.canActivate = canActivate;
-    this.isUpdatable = isUpdatable;
-    this.isPersistable = isPersistable;
-    this.resendMessage = resendMessage;
-    this.errors = errors;
-    this.requirements = requirements;
+    this.emailOrCognitoUser = emailOrCognitoUser;
   }
 
   missingRequirements(): AccountCredentialRequirement[] {
     // when AccountCredentials are updated
     // empty: credentials meet all requirements
     // otherwise the unmet AccountCredentialRequirement rows
+    throw new Error("not implemented");
   }
+
   register(): void {
     // missingRequirements must be empty
     // already-registered email fails
     // writes CognitoUser onto these credentials; verified stays false until activate
     AccountRepository.persistNewAccount();
+    throw new Error("not implemented");
   }
+
   activate(validationCode: ValidationCode): void {
     // requires validationCodeWasSent
     // unusable ValidationCode fails
@@ -245,7 +235,9 @@ class AccountCredentials {
     // signs in after confirmation
     AccountRepository.confirmAccount();
     AccountRepository.authenticateAccount();
+    throw new Error("not implemented");
   }
+
   authenticateAccount(): void {
     // email required, email format, and password required must be met — otherwise no Cognito call
     // existing account holder signs in
@@ -253,17 +245,24 @@ class AccountCredentials {
     // wrong password and unknown email fail with the same NotAuthorizedException
     // unconfirmed account returns CONFIRM_SIGN_UP
     AccountRepository.authenticateAccount();
+    throw new Error("not implemented");
   }
+
   resendValidationCode(): void {
     // throws ValidationCodeResendWaitException when 60 seconds have not elapsed
     AccountRepository.resendAccountCode();
+    throw new Error("not implemented");
   }
+
   signOut(): void {
     AmplifyService.signOut();
+    throw new Error("not implemented");
   }
+
   storeCustomerId(customerId: string): CognitoUser {
     // failure throws CustomerException with operation storeCustomerId, these AccountCredentials and cause
     AmplifyService.updateUserAttributes();
+    throw new Error("not implemented");
   }
 }
 
@@ -284,24 +283,33 @@ class AccountRepository {
   newAccount(credentials?: AccountCredentials): AccountCredentials {
     // constructs AccountCredentials('') when none given
     // wires the repository onto the returned aggregate
+    throw new Error("not implemented");
   }
+
   persistNewAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors {
     // called by AccountCredentials.register
     AmplifyService.signUp();
+    throw new Error("not implemented");
   }
+
   confirmAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors {
     // called by AccountCredentials.activate
     AmplifyService.confirmSignUp();
+    throw new Error("not implemented");
   }
+
   authenticateAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors {
     // called by AccountCredentials.authenticateAccount and by activate after confirm
     // unverified: no AccountToken
     // wrong password or unknown email fails
     AmplifyService.signIn();
+    throw new Error("not implemented");
   }
+
   resendAccountCode(accountCredentials: AccountCredentials): CognitoUser | null {
     // called by AccountCredentials.resendValidationCode
     AmplifyService.resendSignUpCode();
+    throw new Error("not implemented");
   }
 }
 
@@ -318,7 +326,6 @@ class AccountCredentialsErrors {
     this.signIn = signIn;
     this.validationCode = validationCode;
   }
-
 }
 
 /**
@@ -330,7 +337,6 @@ class ValidationCodeResendWaitException {
   constructor(availableAt: Date) {
     this.availableAt = availableAt;
   }
-
 }
 
 class AccountCredentialRequirement {
@@ -341,7 +347,6 @@ class AccountCredentialRequirement {
     this.field = field;
     this.requirement = requirement;
   }
-
 }
 
 /**
@@ -378,31 +383,42 @@ class AccountCredentialRequirements {
     this.confirmRequired = confirmRequired;
     this.confirmMismatch = confirmMismatch;
   }
-
 }
 
 /**
  * AWS Amplify Auth in My Paradise. Talks to Cognito. Not a hosted record store.
  */
 class AmplifyService {
-
   constructor() {
   }
 
   signUp(email: string, password: string): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   signIn(email: string, password: string): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   confirmSignUp(email: string, validationCode: ValidationCode): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   resendSignUp(email: string): ValidationCodeSend | Error {
+    throw new Error("not implemented");
   }
+
   signOut(): void {
+    throw new Error("not implemented");
   }
+
   fetchUserAttributes(email: string): CognitoUser | Error {
     // My Paradise reads the Mavenir customer id from Cognito user attributes through Amplify
+    throw new Error("not implemented");
   }
+
   getUser(email: string): CognitoUser | null {
+    throw new Error("not implemented");
   }
 }
 
@@ -424,7 +440,6 @@ class CognitoUser {
     this.validationCodeSentAt = validationCodeSentAt;
     this.accountToken = accountToken;
   }
-
 }
 
 class AccountToken {
@@ -435,7 +450,6 @@ class AccountToken {
     this.email = email;
     this.customerId = customerId;
   }
-
 }
 
 class ValidationCode {
@@ -444,7 +458,6 @@ class ValidationCode {
   constructor(code: string) {
     this.code = code;
   }
-
 }
 
 /**
@@ -460,7 +473,6 @@ class ValidationCodeSend {
     this.sentAt = sentAt;
     this.kind = kind;
   }
-
 }
 
 class MavenirCustomer {
@@ -506,31 +518,37 @@ class MavenirCustomer {
     this.contactMedium = contactMedium;
     this.engagedParty = engagedParty;
   }
-
 }
 
 /**
  * Mavenir `portalGateway`. Party create / read / profile. Cart, catalog, billing, and order slices live on the same service in their modules.
  */
 class PortalGateway {
-
   constructor() {
   }
 
   create(email: string): MavenirCustomer | Error {
     // email already in Mavenir fails
+    throw new Error("not implemented");
   }
+
   read(id: string): MavenirCustomer | Error {
     // deliverPsim validates waitingPsim from this read
+    throw new Error("not implemented");
   }
+
   patchPhoneVerified(mavenirCustomerId: string): MavenirCustomer | Error {
     // always writes phone_verified true
     // when Twilio approved
+    throw new Error("not implemented");
   }
+
   patchWaitingPsim(mavenirCustomerId: string, waitingPsim: boolean): MavenirCustomer | Error {
     // true when pSIM no iccid (createOrder)
     // false after deliverPsim
+    throw new Error("not implemented");
   }
+
   patchProfile(mavenirCustomer: MavenirCustomer, engagedParty: EngagedParty, contactMedium: ContactMedium): MavenirCustomer | Error {
     // EngagedParty names + birthDate + individualIdentification.validated
     // ContactMedium street + city + stateOrProvince + postCode + phoneNumber
@@ -538,17 +556,24 @@ class PortalGateway {
     // inquiryID when mavenirCustomer.inquiryId is present
     // individualIdentification.identificationId already on another MavenirCustomer: conflict
     // invalid AccountToken fails
+    throw new Error("not implemented");
   }
+
   patchVoucher(mavenirCustomer: MavenirCustomer, voucher: Voucher): MavenirCustomer | Error {
     // JSON-encoded Voucher as voucher characteristic
+    throw new Error("not implemented");
   }
+
   removeVoucher(mavenirCustomer: MavenirCustomer): MavenirCustomer | Error {
     // removes voucher characteristic
+    throw new Error("not implemented");
   }
+
   patchDone(mavenirCustomerId: string): MavenirCustomer | Error {
     // always writes done 'true'
     // Billing.createBilling / applyCredit live in # Billing
     // createOrder lives in # Subscription
+    throw new Error("not implemented");
   }
 }
 
@@ -573,7 +598,6 @@ class ContactMedium {
     this.postCode = postCode;
     this.country = country;
   }
-
 }
 
 class EngagedParty {
@@ -592,7 +616,6 @@ class EngagedParty {
     this.birthDate = birthDate;
     this.individualIdentification = individualIdentification;
   }
-
 }
 
 class IndividualIdentification {
@@ -614,5 +637,4 @@ class IndividualIdentification {
     this.validated = validated;
     this.endDateTime = endDateTime;
   }
-
 }

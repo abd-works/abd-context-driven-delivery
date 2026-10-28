@@ -9,12 +9,26 @@
 *Then* the Customer has a billing account
 *And* the Customer is on the Done step
 
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyToPlaceOrder |
+| expectedBillingAccountRequest |
+
 ### Scenario: Billing account already exists
 
 *Given* the Customer already has a billing account
 *When* the Customer creates a billing account
 *Then* the billing account is rejected
 *And* Mavenir does not receive a billing account request
+
+### Examples
+
+| example |
+| --- |
+| customerReadyToPlaceOrder |
 
 ### Scenario: Billing account creation fails
 
@@ -23,3 +37,10 @@
 *Then* the billing account cannot be created
 *When* My Paradise reloads the customer
 *Then* the Customer has no billing account
+
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyToPlaceOrder |

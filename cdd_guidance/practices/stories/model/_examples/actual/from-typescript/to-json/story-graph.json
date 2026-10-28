@@ -88,8 +88,12 @@
                       ]
                     },
                     {
+                      "name": "Enter Invalid account credentials: ${example}",
+                      "sequentialOrder": 3
+                    },
+                    {
                       "name": "Email already registered",
-                      "sequentialOrder": 3,
+                      "sequentialOrder": 4,
                       "exampleRows": [
                         {
                           "example": "enteredAlreadyRegisteredAccountCredentials"
@@ -101,7 +105,7 @@
                     },
                     {
                       "name": "Create Unconfirmed User",
-                      "sequentialOrder": 4,
+                      "sequentialOrder": 5,
                       "exampleRows": [
                         {
                           "example": "enteredValidAccountCredentials"
@@ -113,7 +117,7 @@
                     },
                     {
                       "name": "Email already registered in Cognito",
-                      "sequentialOrder": 5,
+                      "sequentialOrder": 6,
                       "exampleRows": [
                         {
                           "example": "enteredAlreadyRegisteredAccountCredentials"
@@ -162,7 +166,15 @@
                   ],
                   "backgrounds": [
                     {
-                      "name": "each"
+                      "name": "each",
+                      "exampleRows": [
+                        {
+                          "example": "enteredValidAccountCredentials"
+                        },
+                        {
+                          "example": "storedAccountCredentialsWithToken"
+                        }
+                      ]
                     }
                   ]
                 }
@@ -188,13 +200,31 @@
                       ]
                     },
                     {
-                      "name": "Resend validation code",
+                      "name": "Activate with unusable validation code: ${example}",
                       "sequentialOrder": 2
+                    },
+                    {
+                      "name": "Resend validation code",
+                      "sequentialOrder": 3
                     }
                   ],
                   "backgrounds": [
                     {
-                      "name": "each"
+                      "name": "each",
+                      "exampleRows": [
+                        {
+                          "example": "storedUnconfirmedCognitoUser"
+                        },
+                        {
+                          "example": "enteredValidAccountCredentials"
+                        },
+                        {
+                          "example": "unusableValidationCodeExamples"
+                        },
+                        {
+                          "example": "enteredValidValidationCode"
+                        }
+                      ]
                     }
                   ]
                 }
@@ -228,7 +258,12 @@
               ],
               "backgrounds": [
                 {
-                  "name": "each"
+                  "name": "each",
+                  "exampleRows": [
+                    {
+                      "example": "enteredValidAccountCredentials"
+                    }
+                  ]
                 }
               ]
             }
@@ -286,6 +321,18 @@
                           "example": "stubBundle"
                         }
                       ]
+                    },
+                    {
+                      "name": "Port the number: ${example}",
+                      "sequentialOrder": 3,
+                      "exampleRows": [
+                        {
+                          "example": "customerWithCart"
+                        },
+                        {
+                          "example": "stubBundle"
+                        }
+                      ]
                     }
                   ]
                 }
@@ -303,23 +350,75 @@
                   "scenarios": [
                     {
                       "name": "View available numbers",
-                      "sequentialOrder": 1
+                      "sequentialOrder": 1,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
                     },
                     {
                       "name": "View available numbers \u2014 MSISDN in cart",
-                      "sequentialOrder": 2
+                      "sequentialOrder": 2,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        },
+                        {
+                          "example": "stubBundle"
+                        }
+                      ]
                     },
                     {
                       "name": "Refresh available numbers",
-                      "sequentialOrder": 3
+                      "sequentialOrder": 3,
+                      "exampleRows": [
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
                     },
                     {
                       "name": "Search for a number",
-                      "sequentialOrder": 4
+                      "sequentialOrder": 4,
+                      "exampleRows": [
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
                     },
                     {
                       "name": "Numbers locked by another customer are excluded from results",
-                      "sequentialOrder": 5
+                      "sequentialOrder": 5,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -330,19 +429,84 @@
                   "scenarios": [
                     {
                       "name": "Pick number",
-                      "sequentialOrder": 1
+                      "sequentialOrder": 1,
+                      "exampleRows": [
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "expectedChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        },
+                        {
+                          "example": "reloadCart"
+                        },
+                        {
+                          "example": "stubBundle"
+                        }
+                      ]
                     },
                     {
                       "name": "Pick number \u2014 replace existing",
-                      "sequentialOrder": 2
+                      "sequentialOrder": 2,
+                      "exampleRows": [
+                        {
+                          "example": "storedHeldAvailableNumber"
+                        },
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "expectedChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        },
+                        {
+                          "example": "reloadCart"
+                        },
+                        {
+                          "example": "stubBundle"
+                        }
+                      ]
                     },
                     {
                       "name": "Reserve number request fails",
-                      "sequentialOrder": 3
+                      "sequentialOrder": 3,
+                      "exampleRows": [
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
                     },
                     {
                       "name": "Patch cart with number fails",
-                      "sequentialOrder": 4
+                      "sequentialOrder": 4,
+                      "exampleRows": [
+                        {
+                          "example": "enteredChosenAvailableNumber"
+                        },
+                        {
+                          "example": "storedAvailableNumbers"
+                        },
+                        {
+                          "example": "customerWithCart"
+                        }
+                      ]
                     }
                   ]
                 }
@@ -419,7 +583,15 @@
               "scenarios": [
                 {
                   "name": "Load plan catalog",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "internalTestPlan"
+                    },
+                    {
+                      "example": "purchasablePlansExamples"
+                    }
+                  ]
                 }
               ]
             },
@@ -430,15 +602,48 @@
               "scenarios": [
                 {
                   "name": "Select a plan",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "essentials"
+                    },
+                    {
+                      "example": "customerWithCart"
+                    },
+                    {
+                      "example": "reloadCart"
+                    }
+                  ]
                 },
                 {
                   "name": "Change an existing plan",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "essentials"
+                    },
+                    {
+                      "example": "customerWithCart"
+                    },
+                    {
+                      "example": "reloadCart"
+                    }
+                  ]
                 },
                 {
                   "name": "Failed to update plan",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "essentials"
+                    },
+                    {
+                      "example": "customerWithCart"
+                    },
+                    {
+                      "example": "reloadCart"
+                    }
+                  ]
                 }
               ]
             }
@@ -453,13 +658,42 @@
               "name": "Check The Order",
               "sequentialOrder": 1,
               "storyType": "user",
-              "scenarios": []
+              "scenarios": [
+                {
+                  "name": "Check the order: ${example}",
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "seedCustomerCart"
+                    },
+                    {
+                      "example": "loadCart"
+                    },
+                    {
+                      "example": "stubBundle"
+                    }
+                  ]
+                }
+              ]
             },
             {
               "name": "Upgrade To Data Freedom",
               "sequentialOrder": 1,
               "storyType": "user",
-              "scenarios": []
+              "scenarios": [
+                {
+                  "name": "Upgrade plan from review: ${example}",
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithCart"
+                    },
+                    {
+                      "example": "reloadCart"
+                    }
+                  ]
+                }
+              ]
             },
             {
               "name": "Change Plan From Review",
@@ -468,15 +702,57 @@
               "scenarios": [
                 {
                   "name": "Select a different plan from review",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithCart"
+                    },
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "enteredChosenAvailableNumber"
+                    },
+                    {
+                      "example": "essentials"
+                    },
+                    {
+                      "example": "dataFreedom"
+                    }
+                  ]
                 },
                 {
                   "name": "Keep current plan from review",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithCart"
+                    },
+                    {
+                      "example": "enteredChosenAvailableNumber"
+                    },
+                    {
+                      "example": "essentials"
+                    }
+                  ]
                 },
                 {
                   "name": "Plan update fails from review",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithCart"
+                    },
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "essentials"
+                    },
+                    {
+                      "example": "dataFreedom"
+                    }
+                  ]
                 }
               ]
             }
@@ -494,15 +770,42 @@
               "scenarios": [
                 {
                   "name": "Enter Payment",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "customerReadyForPayment"
+                    },
+                    {
+                      "example": "maxPaymentAttempts"
+                    },
+                    {
+                      "example": "stubAuth"
+                    }
+                  ]
                 },
                 {
                   "name": "Payment authorization fails to load",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "customerReadyForPayment"
+                    },
+                    {
+                      "example": "maxPaymentAttempts"
+                    }
+                  ]
                 },
                 {
                   "name": "FAC authorization timeout",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "customerReadyForPayment"
+                    },
+                    {
+                      "example": "maxPaymentAttempts"
+                    }
+                  ]
                 }
               ]
             },
@@ -513,15 +816,69 @@
               "scenarios": [
                 {
                   "name": "Payment completed",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyForPayment"
+                    },
+                    {
+                      "example": "paymentWithAuthorization"
+                    },
+                    {
+                      "example": "stubAuth"
+                    },
+                    {
+                      "example": "completedAuth"
+                    }
+                  ]
                 },
                 {
                   "name": "Card not verified",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "customerReadyForPayment"
+                    },
+                    {
+                      "example": "maxPaymentAttempts"
+                    },
+                    {
+                      "example": "paymentWithAuthorization"
+                    },
+                    {
+                      "example": "stubAuth"
+                    },
+                    {
+                      "example": "failedAuth"
+                    }
+                  ]
                 },
                 {
                   "name": "Maximum payment attempts",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyForPayment"
+                    },
+                    {
+                      "example": "maxPaymentAttempts"
+                    },
+                    {
+                      "example": "paymentWithAuthorization"
+                    },
+                    {
+                      "example": "stubAuth"
+                    },
+                    {
+                      "example": "failedAuth"
+                    }
+                  ]
                 }
               ]
             },
@@ -532,7 +889,15 @@
               "scenarios": [
                 {
                   "name": "Provide Apple Pay certificate",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "bermudaApplePayCert"
+                    },
+                    {
+                      "example": "bermudaApplePayCertificate"
+                    }
+                  ]
                 }
               ]
             }
@@ -549,8 +914,25 @@
               "storyType": "user",
               "scenarios": [
                 {
+                  "name": "Open plan deep link: ${plan.name}",
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "seedPurchasableCatalog"
+                    }
+                  ]
+                },
+                {
                   "name": "Unknown plan deep link",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "seedPurchasableCatalog"
+                    },
+                    {
+                      "example": "unknownPlanDeepLinkId"
+                    }
+                  ]
                 }
               ]
             },
@@ -561,19 +943,81 @@
               "scenarios": [
                 {
                   "name": "Apply Catalog Voucher via deep link",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "seedPurchasableCatalog"
+                    },
+                    {
+                      "example": "purchasablePlanIds"
+                    },
+                    {
+                      "example": "seedValidCatalogVoucher"
+                    },
+                    {
+                      "example": "enteredValidCatalogVoucherCode"
+                    },
+                    {
+                      "example": "expectedValidCatalogVoucherCode"
+                    }
+                  ]
                 },
                 {
                   "name": "Apply Catalog Voucher manually",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "seedPurchasableCatalog"
+                    },
+                    {
+                      "example": "purchasablePlanIds"
+                    },
+                    {
+                      "example": "seedValidCatalogVoucher"
+                    },
+                    {
+                      "example": "enteredValidCatalogVoucherCode"
+                    }
+                  ]
                 },
                 {
                   "name": "Short catalog voucher code is rejected",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "seedPurchasableCatalog"
+                    },
+                    {
+                      "example": "shortCatalogVoucherCode"
+                    },
+                    {
+                      "example": "VoucherCodeRule"
+                    }
+                  ]
                 },
                 {
                   "name": "Remove Catalog Voucher",
-                  "sequentialOrder": 4
+                  "sequentialOrder": 4,
+                  "exampleRows": [
+                    {
+                      "example": "seedPurchasableCatalog"
+                    },
+                    {
+                      "example": "seedAppliedValidCatalogVoucher"
+                    }
+                  ]
+                },
+                {
+                  "name": "Apply unusable catalog voucher: ${example}",
+                  "sequentialOrder": 5,
+                  "exampleRows": [
+                    {
+                      "example": "seedPurchasableCatalog"
+                    },
+                    {
+                      "example": "seedUnusableCatalogVoucher"
+                    }
+                  ]
                 }
               ]
             }
@@ -591,15 +1035,36 @@
               "scenarios": [
                 {
                   "name": "Choose eSIM",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToChooseSim"
+                    }
+                  ]
                 },
                 {
                   "name": "Choose eSIM \u2014 already on the line",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "customerReadyToChooseSim"
+                    }
+                  ]
                 },
                 {
                   "name": "Choose eSIM \u2014 cart patch fails",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToChooseSim"
+                    }
+                  ]
                 }
               ]
             },
@@ -610,15 +1075,36 @@
               "scenarios": [
                 {
                   "name": "Request a Paradise SIM card",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToChooseSim"
+                    }
+                  ]
                 },
                 {
                   "name": "Request a Paradise SIM card \u2014 already on the line",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "customerReadyToChooseSim"
+                    }
+                  ]
                 },
                 {
                   "name": "Request a Paradise SIM card \u2014 cart patch fails",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToChooseSim"
+                    }
+                  ]
                 }
               ]
             },
@@ -629,15 +1115,45 @@
               "scenarios": [
                 {
                   "name": "Enter existing SIM",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "enteredValidIccid"
+                    },
+                    {
+                      "example": "expectedValidIccid"
+                    },
+                    {
+                      "example": "customerReadyToChooseSim"
+                    }
+                  ]
                 },
                 {
                   "name": "ICCID contains spaces",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "enteredIccidWithSpaces"
+                    },
+                    {
+                      "example": "customerReadyToChooseSim"
+                    }
+                  ]
                 },
                 {
                   "name": "Inventory rejects ICCID",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "enteredInvalidIccid"
+                    },
+                    {
+                      "example": "customerReadyToChooseSim"
+                    }
+                  ]
                 }
               ]
             },
@@ -648,15 +1164,45 @@
               "scenarios": [
                 {
                   "name": "Activate Sim",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "enteredValidIccid"
+                    },
+                    {
+                      "example": "expectedValidIccid"
+                    },
+                    {
+                      "example": "customerWaitingForPsim"
+                    }
+                  ]
                 },
                 {
                   "name": "waiting pSIM is absent",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "enteredValidIccid"
+                    },
+                    {
+                      "example": "customerWaitingForPsim"
+                    }
+                  ]
                 },
                 {
                   "name": "waiting pSIM already completed",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "enteredValidIccid"
+                    },
+                    {
+                      "example": "customerWaitingForPsim"
+                    }
+                  ]
                 }
               ]
             }
@@ -674,67 +1220,267 @@
               "scenarios": [
                 {
                   "name": "Persona verification required",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithProfile"
+                    }
+                  ]
                 },
                 {
                   "name": "Persona verification already complete",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithProfile"
+                    },
+                    {
+                      "example": "expectedValidIdentity"
+                    }
+                  ]
                 },
                 {
                   "name": "Create a completed Persona inquiry",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "completedInquiryId"
+                    },
+                    {
+                      "example": "completedPersonaInquiryResult"
+                    },
+                    {
+                      "example": "validDocumentId"
+                    },
+                    {
+                      "example": "validPersonaDocument"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    },
+                    {
+                      "example": "expectedValidAddress"
+                    },
+                    {
+                      "example": "expectedValidIdentity"
+                    }
+                  ]
                 },
                 {
                   "name": "Persona inquiry not completed",
-                  "sequentialOrder": 4
+                  "sequentialOrder": 4,
+                  "exampleRows": [
+                    {
+                      "example": "failedPersonaInquiryResult"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    }
+                  ]
                 },
                 {
                   "name": "No government ID document on inquiry",
-                  "sequentialOrder": 5
+                  "sequentialOrder": 5,
+                  "exampleRows": [
+                    {
+                      "example": "completedInquiryWithoutDocument"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    }
+                  ]
                 },
                 {
                   "name": "Persona errors on inquiry load",
-                  "sequentialOrder": 6
+                  "sequentialOrder": 6,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithProfile"
+                    }
+                  ]
                 },
                 {
                   "name": "Document not found",
-                  "sequentialOrder": 7
+                  "sequentialOrder": 7,
+                  "exampleRows": [
+                    {
+                      "example": "completedPersonaInquiryResult"
+                    },
+                    {
+                      "example": "validDocumentId"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    }
+                  ]
                 },
                 {
                   "name": "Document email mismatch",
-                  "sequentialOrder": 8
+                  "sequentialOrder": 8,
+                  "exampleRows": [
+                    {
+                      "example": "completedPersonaInquiryResult"
+                    },
+                    {
+                      "example": "validDocumentId"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    }
+                  ]
                 },
                 {
                   "name": "Verify later",
-                  "sequentialOrder": 9
+                  "sequentialOrder": 9,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithProfile"
+                    }
+                  ]
                 },
                 {
                   "name": "Enter valid identity and address",
-                  "sequentialOrder": 10
+                  "sequentialOrder": 10,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithProfile"
+                    },
+                    {
+                      "example": "enteredValidAddress"
+                    },
+                    {
+                      "example": "enteredValidIdentity"
+                    },
+                    {
+                      "example": "expectedValidAddress"
+                    },
+                    {
+                      "example": "expectedValidIdentity"
+                    }
+                  ]
                 },
                 {
                   "name": "Enter identity after a verified Persona inquiry",
-                  "sequentialOrder": 11
+                  "sequentialOrder": 11,
+                  "exampleRows": [
+                    {
+                      "example": "completedInquiryId"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    },
+                    {
+                      "example": "enteredValidAddress"
+                    },
+                    {
+                      "example": "enteredValidIdentity"
+                    },
+                    {
+                      "example": "expectedValidIdentity"
+                    },
+                    {
+                      "example": "validProfileSeed"
+                    }
+                  ]
                 },
                 {
                   "name": "Re-enter a verified identity",
-                  "sequentialOrder": 12
+                  "sequentialOrder": 12,
+                  "exampleRows": [
+                    {
+                      "example": "completedInquiryId"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    },
+                    {
+                      "example": "enteredValidAddress"
+                    },
+                    {
+                      "example": "enteredValidIdentity"
+                    },
+                    {
+                      "example": "expectedValidIdentity"
+                    },
+                    {
+                      "example": "validProfileSeed"
+                    }
+                  ]
+                },
+                {
+                  "name": "Enter incomplete identity or address: ${example}",
+                  "sequentialOrder": 13,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithProfile"
+                    }
+                  ]
                 },
                 {
                   "name": "Confirm identity with a verified Persona inquiry",
-                  "sequentialOrder": 13
+                  "sequentialOrder": 14,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "completedInquiryId"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    },
+                    {
+                      "example": "expectedValidAddress"
+                    },
+                    {
+                      "example": "expectedValidIdentity"
+                    },
+                    {
+                      "example": "validProfileSeed"
+                    }
+                  ]
                 },
                 {
                   "name": "Customer already exists",
-                  "sequentialOrder": 14
+                  "sequentialOrder": 15,
+                  "exampleRows": [
+                    {
+                      "example": "completedInquiryId"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    },
+                    {
+                      "example": "expectedValidIdentity"
+                    },
+                    {
+                      "example": "validProfileSeed"
+                    }
+                  ]
                 },
                 {
                   "name": "Profile requirements unmet",
-                  "sequentialOrder": 15
+                  "sequentialOrder": 16,
+                  "exampleRows": [
+                    {
+                      "example": "customerWithProfile"
+                    }
+                  ]
                 },
                 {
                   "name": "Mavenir profile patch error",
-                  "sequentialOrder": 16
+                  "sequentialOrder": 17,
+                  "exampleRows": [
+                    {
+                      "example": "completedInquiryId"
+                    },
+                    {
+                      "example": "customerWithProfile"
+                    },
+                    {
+                      "example": "validProfileSeed"
+                    }
+                  ]
                 }
               ]
             },
@@ -757,8 +1503,26 @@
               "storyType": "user",
               "scenarios": [
                 {
-                  "name": "Redeem an any-plan voucher",
+                  "name": "Redeem a plan-restricted voucher that matches the cart bundle: ${example}",
                   "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "billingAccountId"
+                    },
+                    {
+                      "example": "cartWithBilling"
+                    },
+                    {
+                      "example": "essentials"
+                    }
+                  ]
+                },
+                {
+                  "name": "Redeem an any-plan voucher",
+                  "sequentialOrder": 2,
                   "exampleRows": [
                     {
                       "example": "anyPlanVoucher"
@@ -782,7 +1546,7 @@
                 },
                 {
                   "name": "Skip redeem when the cart bundle is not in the voucher plan list",
-                  "sequentialOrder": 2,
+                  "sequentialOrder": 3,
                   "exampleRows": [
                     {
                       "example": "ace"
@@ -797,7 +1561,7 @@
                 },
                 {
                   "name": "Failed voucher redemption",
-                  "sequentialOrder": 3,
+                  "sequentialOrder": 4,
                   "exampleRows": [
                     {
                       "example": "amountOffVoucher"
@@ -835,15 +1599,39 @@
               "scenarios": [
                 {
                   "name": "Create billing account",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    },
+                    {
+                      "example": "expectedBillingAccountRequest"
+                    }
+                  ]
                 },
                 {
                   "name": "Billing account already exists",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    }
+                  ]
                 },
                 {
                   "name": "Billing account creation fails",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    }
+                  ]
                 }
               ]
             },
@@ -854,23 +1642,63 @@
               "scenarios": [
                 {
                   "name": "Create product order",
-                  "sequentialOrder": 1
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    },
+                    {
+                      "example": "expectedProductOrderRequest"
+                    }
+                  ]
                 },
                 {
                   "name": "Pay-up-front charge fails",
-                  "sequentialOrder": 2
+                  "sequentialOrder": 2,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    }
+                  ]
                 },
                 {
                   "name": "Product order fails",
-                  "sequentialOrder": 3
+                  "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    }
+                  ]
                 },
                 {
                   "name": "Onboarding is already done",
-                  "sequentialOrder": 4
+                  "sequentialOrder": 4,
+                  "exampleRows": [
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    }
+                  ]
                 },
                 {
                   "name": "Unverified with no bypass and no portability",
-                  "sequentialOrder": 5
+                  "sequentialOrder": 5,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    }
+                  ]
                 }
               ]
             },
@@ -878,13 +1706,42 @@
               "name": "View Order Result",
               "sequentialOrder": 1,
               "storyType": "user",
-              "scenarios": []
+              "scenarios": [
+                {
+                  "name": "View order result: ${example}",
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "reloadCart"
+                    },
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    }
+                  ]
+                }
+              ]
             },
             {
               "name": "Create Order Ticket",
               "sequentialOrder": 1,
               "storyType": "user",
-              "scenarios": []
+              "scenarios": [
+                {
+                  "name": "Create order ticket: ${example}",
+                  "sequentialOrder": 1,
+                  "exampleRows": [
+                    {
+                      "example": "customerReadyToPlaceOrder"
+                    },
+                    {
+                      "example": "expectedTicketRequest"
+                    },
+                    {
+                      "example": "requesterName"
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -920,8 +1777,20 @@
                   ]
                 },
                 {
-                  "name": "Authenticate with unconfirmed account",
+                  "name": "Authenticate with incorrect account credentials: ${example}",
                   "sequentialOrder": 3,
+                  "exampleRows": [
+                    {
+                      "example": "enteredAlreadyRegisteredAccountCredentials"
+                    },
+                    {
+                      "example": "storedAlreadyRegisteredCognitoUser"
+                    }
+                  ]
+                },
+                {
+                  "name": "Authenticate with unconfirmed account",
+                  "sequentialOrder": 4,
                   "exampleRows": [
                     {
                       "example": "enteredValidAccountCredentials"
@@ -933,7 +1802,7 @@
                 },
                 {
                   "name": "Password reset required",
-                  "sequentialOrder": 4,
+                  "sequentialOrder": 5,
                   "exampleRows": [
                     {
                       "example": "enteredAlreadyRegisteredAccountCredentials"
@@ -945,7 +1814,7 @@
                 },
                 {
                   "name": "New password required",
-                  "sequentialOrder": 5,
+                  "sequentialOrder": 6,
                   "exampleRows": [
                     {
                       "example": "enteredAlreadyRegisteredAccountCredentials"

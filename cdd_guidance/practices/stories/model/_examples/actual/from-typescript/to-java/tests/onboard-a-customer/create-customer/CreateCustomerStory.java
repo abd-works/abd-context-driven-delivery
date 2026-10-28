@@ -2,6 +2,7 @@
 // Orders: 0.0.0
 
 /** Story: Create Customer
+ * background-examples: {"enteredValidAccountCredentials": {}}
  * BACKGROUND: each
  * GIVEN: the User has a verified account with an account token
  * SCENARIO: Create customer

@@ -7,7 +7,7 @@
 | account credential requirements | example | field | requirement | group |
 | --- | --- | --- | --- | --- |
 | account credential requirements | email required | email | Email is required | Account credential requirements |
-| account credential requirements | email format | email | Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com) | Account credential requirements |
+| account credential requirements | email format | email | Please use a valid email format: yourname@domain.com | Account credential requirements |
 | account credential requirements | password letters | password | Password must contain uppercase and lowercase letters | Account credential requirements |
 | account credential requirements | password number | password | Password must have at least one number | Account credential requirements |
 | account credential requirements | password symbol | password | Password must have at least one symbol | Account credential requirements |
@@ -24,7 +24,7 @@
 | account credentials | invalid confirm required | Confirm Password is required | disabled | Account credential requirements |
 | account credentials | invalid confirm mismatch | Passwords don't match | disabled | Account credential requirements |
 | account credentials | invalid email required | Email is required | disabled | Account credential requirements |
-| account credentials | invalid email format | Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com) | disabled | Account credential requirements |
+| account credentials | invalid email format | Please use a valid email format: yourname@domain.com | disabled | Account credential requirements |
 
 ### Scenario Outline: Enter new account credentials
 

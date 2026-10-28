@@ -19,6 +19,12 @@
 | --- |
 | enteredValidAccountCredentials |
 
+### Scenario: Enter Invalid account credentials: ${example}
+
+*When* the User validates ${example}
+*Then* the ${unmet} requirement is unmet
+*And* the customer cannot save the customer account
+
 ### Scenario: Email already registered
 
 *Given* already-registered account credentials are already registered

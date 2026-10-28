@@ -1,10 +1,11 @@
+// === Care ===
+
 class Case {
   subject: string;
 
   constructor(subject: string) {
     this.subject = subject;
   }
-
 }
 
 class CaseRepository {
@@ -19,6 +20,7 @@ class CaseRepository {
   }
 
   open(customer: Customer, subject: string): Case {
+    throw new Error("not implemented");
   }
 }
 
@@ -34,15 +36,14 @@ class Ticket {
     this.requesterName = requesterName;
     this.requesterEmail = requesterEmail;
   }
-
 }
 
 class Zendesk {
-
   constructor() {
   }
 
   create(customer: Customer, subject: string): Ticket {
+    throw new Error("not implemented");
   }
 }
 
@@ -86,7 +87,6 @@ class PersonaInquiry {
     this.addressCountryCode = addressCountryCode;
     this.currentGovernmentId = currentGovernmentId;
   }
-
 }
 
 class PersonaDocument {
@@ -99,16 +99,17 @@ class PersonaDocument {
     this.expirationDate = expirationDate;
     this.email = email;
   }
-
 }
 
 class PersonaService {
-
   constructor() {
   }
 
   create(customer: Customer): PersonaInquiry {
+    throw new Error("not implemented");
   }
+
   readDocument(documentId: string): PersonaDocument | Error {
+    throw new Error("not implemented");
   }
 }

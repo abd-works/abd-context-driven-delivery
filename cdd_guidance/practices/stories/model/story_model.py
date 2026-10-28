@@ -141,7 +141,9 @@ class StoryNode(BoundNode, ABC):
         stripped = (self.name or "").strip().strip("`").strip("*").strip()
         match = re.match(r"[A-Za-z][A-Za-z\-']*", stripped)
         self.opening_token = match.group(0).lower() if match else ""
-        self.opening_class = self._classify_opening(self.opening_token)
+        # One word ("CartStuff") has no object to follow a verb, whatever the word is.
+        single_word = bool(stripped) and len(stripped.split()) == 1
+        self.opening_class = "single-word" if single_word else self._classify_opening(self.opening_token)
 
     def _classify_opening(self, token: str) -> str:
         if not token:

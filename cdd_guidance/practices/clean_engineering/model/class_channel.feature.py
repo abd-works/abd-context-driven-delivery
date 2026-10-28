@@ -8,11 +8,11 @@ under actual/from-{source}/to-{target}, and walks every node.
 
 import html
 import re
-import shutil
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from expects import equal, expect
+from harness.output_folder import OutputFolder
 from mamba import before, context, describe, included_context, it, shared_context
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, is_interface_name
@@ -52,6 +52,15 @@ def _op_name(class_name: str, operation_name: str) -> str:
 
 def _is_constructor(class_name: str, operation) -> bool:
     return operation.name in {class_name, "constructor"}
+
+
+def _constructor_parameter_names(oclass) -> list:
+    """The constructor's own parameters; a missing or ``(...)`` constructor takes every property."""
+    constructor = next((op for op in oclass.operations if _is_constructor(oclass.name, op)), None)
+    own = [p.name for p in constructor.parameters] if constructor is not None else []
+    if constructor is None or (own and all(name.strip() == "..." for name in own)):
+        return [prop.name for prop in oclass.properties]
+    return own
 
 
 def walk(model: CleanEngineeringModel) -> list:
@@ -132,9 +141,7 @@ def _render_markdown(model: CleanEngineeringModel) -> str:
 
 
 def _render_typescript(model: CleanEngineeringModel) -> str:
-    channel = TypeScriptCleanEngineeringModel(name=model.name, sequential_order=1)
-    channel.translate_from(model)
-    return channel.render()
+    return TypeScriptCleanEngineeringModel(name=model.name, sequential_order=1).render(model)
 
 
 def _code_path(name: str) -> str:
@@ -164,8 +171,7 @@ def load_source(name: str) -> CleanEngineeringModel:
 
 def save_channel(source_name: str, target: str, source: CleanEngineeringModel) -> CleanEngineeringModel:
     folder = ACTUAL / f"from-{source_name}" / f"to-{target}"
-    if folder.exists():
-        shutil.rmtree(folder)
+    OutputFolder(folder).clear()
     folder.mkdir(parents=True)
     if target == "markdown":
         _write(folder / "class-model.md", _render_markdown(source))
@@ -295,16 +301,18 @@ with shared_context("a class model saved through a channel"):
     with it("should match each module, class, property, operation, parameter, and relationship"):
         expected = self.source
         actual = self.loaded
-        stores_properties = self.channel != "typescript"
+        # knowledge_graph is saved as TypeScript, so it keeps what TypeScript keeps.
+        saved_as_typescript = self.channel in ("typescript", "knowledge_graph")
+        stores_properties = not saved_as_typescript
         stores_intent = self.channel == "markdown"
         stores_property_notes = self.channel == "markdown"
         stores_invariants = self.channel != "drawio"
         stores_interactions = self.channel != "drawio"
-        stores_types = self.channel != "typescript"
+        stores_types = not saved_as_typescript
         stores_relationships = self.channel == "drawio"
 
         def check_parameters(actual_operation, expected_operation, class_name: str) -> None:
-            if self.channel == "typescript" and _is_constructor(class_name, expected_operation):
+            if saved_as_typescript and _is_constructor(class_name, expected_operation):
                 return
             expect(len(actual_operation.parameters)).to(equal(len(expected_operation.parameters)))
             for index, expected_parameter in enumerate(expected_operation.parameters):
@@ -456,8 +464,8 @@ with shared_context("a typescript file"):
                 if is_interface_name(loaded.name) or not loaded.properties:
                     continue
                 expect("constructor(" in block).to(equal(True))
-                for prop in loaded.properties:
-                    camel = _TYPESCRIPT.identifier(prop.name)
+                for name in _constructor_parameter_names(loaded):
+                    camel = _TYPESCRIPT.identifier(name)
                     expect(f"this.{camel} = {camel};" in block).to(equal(True))
 
     with it("should put the stereotype, cardinality, and origin on the lines above the field"):
@@ -503,8 +511,7 @@ def _open(example, source_name: str, target: str) -> None:
 
 with describe("a class model"):
     with before.all:
-        if ACTUAL.exists():
-            shutil.rmtree(ACTUAL)
+        OutputFolder(ACTUAL).clear()
         self.sources = {name: load_source(name) for name in _SOURCES}
         self.walks = {name: walk(model) for name, model in self.sources.items()}
 

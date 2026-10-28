@@ -3,6 +3,7 @@
 
 /** Story: Choose Esim
  * SCENARIO: Choose eSIM
+ * EXAMPLES: reloadCart, customerReadyToChooseSim
  * GIVEN: no SIM type is on the line
  * WHEN: the Customer selects eSIM
  * THEN: My Paradise sends the patch cart request to Mavenir with SIM type eSIM
@@ -11,10 +12,12 @@
  * BUT: the line has no ICCID
  * AND: the Customer is forwarded to Verify ID
  * SCENARIO: Choose eSIM — already on the line
+ * EXAMPLES: customerReadyToChooseSim
  * GIVEN: the line already has SIM type eSIM
  * WHEN: the Customer selects eSIM
  * THEN: My Paradise skips the cart patch
  * SCENARIO: Choose eSIM — cart patch fails
+ * EXAMPLES: reloadCart, customerReadyToChooseSim
  * GIVEN: Mavenir returns an error on cart patch
  * WHEN: the Customer selects eSIM
  * THEN: the SIM selection fails
@@ -25,6 +28,7 @@
 
 /** Story: Request a Paradise Sim Card
  * SCENARIO: Request a Paradise SIM card
+ * EXAMPLES: reloadCart, customerReadyToChooseSim
  * GIVEN: no SIM type is on the line and no ICCID is on the line
  * WHEN: the Customer requests a Paradise SIM card
  * THEN: My Paradise sends the patch cart request to Mavenir with SIM type pSIM
@@ -33,10 +37,12 @@
  * BUT: the line has no ICCID
  * AND: the Customer is forwarded to Verify ID
  * SCENARIO: Request a Paradise SIM card — already on the line
+ * EXAMPLES: customerReadyToChooseSim
  * GIVEN: the line already has SIM type pSIM
  * WHEN: the Customer requests a Paradise SIM card
  * THEN: My Paradise skips the cart patch
  * SCENARIO: Request a Paradise SIM card — cart patch fails
+ * EXAMPLES: reloadCart, customerReadyToChooseSim
  * GIVEN: Mavenir returns an error on cart patch
  * WHEN: the Customer requests a Paradise SIM card
  * THEN: the SIM selection fails
@@ -47,6 +53,7 @@
 
 /** Story: Enter Existing Sim
  * SCENARIO: Enter existing SIM
+ * EXAMPLES: reloadCart, enteredValidIccid, expectedValidIccid, customerReadyToChooseSim
  * GIVEN: Mavenir has valid ICCID available in inventory
  * WHEN: the Customer attaches valid ICCID
  * THEN: My Paradise sends the ICCID inventory request to Mavenir with valid ICCID
@@ -56,11 +63,13 @@
  * AND: the line has valid ICCID
  * AND: the Customer is forwarded to Verify ID
  * SCENARIO: ICCID contains spaces
+ * EXAMPLES: enteredIccidWithSpaces, customerReadyToChooseSim
  * GIVEN: the Customer has ICCID with spaces
  * WHEN: the Customer attaches ICCID with spaces
  * THEN: the ICCID format is rejected
  * AND: My Paradise does not query inventory or patch the cart
  * SCENARIO: Inventory rejects ICCID
+ * EXAMPLES: enteredInvalidIccid, customerReadyToChooseSim
  * GIVEN: Mavenir does not have invalid ICCID available in inventory
  * WHEN: the Customer attaches invalid ICCID
  * THEN: My Paradise sends the ICCID inventory request to Mavenir with invalid ICCID
@@ -70,6 +79,7 @@
 
 /** Story: Activate Sim
  * SCENARIO: Activate Sim
+ * EXAMPLES: reloadCart, enteredValidIccid, expectedValidIccid, customerWaitingForPsim
  * GIVEN: Mavenir has valid ICCID available in inventory
  * WHEN: the Customer activates the SIM with valid ICCID
  * THEN: My Paradise sends the ICCID inventory request to Mavenir with valid ICCID
@@ -78,10 +88,12 @@
  * WHEN: Mavenir creates the product order and clears waiting pSIM
  * THEN: My Paradise stores valid ICCID on the line
  * SCENARIO: waiting pSIM is absent
+ * EXAMPLES: enteredValidIccid, customerWaitingForPsim
  * GIVEN: Mavenir has valid ICCID available in inventory but the Mavenir customer has no waiting pSIM characteristic
  * WHEN: the Customer activates the SIM with valid ICCID
  * THEN: the pSIM delivered order is rejected
  * SCENARIO: waiting pSIM already completed
+ * EXAMPLES: enteredValidIccid, customerWaitingForPsim
  * GIVEN: Mavenir has valid ICCID available in inventory and the Mavenir customer has waiting pSIM false
  * WHEN: the Customer activates the SIM with valid ICCID
  * THEN: the pSIM delivered order is rejected

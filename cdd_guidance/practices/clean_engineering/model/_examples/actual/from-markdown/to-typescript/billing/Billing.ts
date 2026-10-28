@@ -1,3 +1,5 @@
+// === Billing ===
+
 /**
  * Paradise view of the party's billing account. Onboarding keeps `{ id, defaultPayment }`. Self-care adds state, invoices, balance, transactions. Lives on `Customer.billing`. `CustomerRepository.load` signs out when `state` is `terminated`.
  */
@@ -31,13 +33,16 @@ class Billing {
     // 409 when customer.account already present
     // 201 empty body
     PortalGateway.createBilling();
+    throw new Error("not implemented");
   }
+
   applyCredit(): Billing {
     // posts onto this account; uses Customer, Cart voucher, and VoucherRedemption already on the graph
     // cook after Vouchera.redeem, before productOrderFromCart
     // skip when VoucherRedemption.success false
     // then appears as Transaction / ArTransaction
     PortalGateway.applyCredit();
+    throw new Error("not implemented");
   }
 }
 
@@ -59,9 +64,12 @@ class BillingRepository {
     // Customer.account[0]
     // assembles invoices, transactions, defaultPayment, balance
     PortalGateway.read();
+    throw new Error("not implemented");
   }
+
   create(customer: Customer): Billing | Error {
     PortalGateway.createBilling();
+    throw new Error("not implemented");
   }
 }
 
@@ -82,7 +90,6 @@ class Invoice {
     this.dueAmount = dueAmount;
     this.status = status;
   }
-
 }
 
 /**
@@ -98,7 +105,6 @@ class Transaction {
     this.paymentDate = paymentDate;
     this.totalAmount = totalAmount;
   }
-
 }
 
 /**
@@ -136,7 +142,6 @@ class MavenirBillingAccount {
     this.accountBalance = accountBalance;
     this.creditAdjustments = creditAdjustments;
   }
-
 }
 
 /**
@@ -156,7 +161,6 @@ class MavenirInvoice {
     this.dueAmount = dueAmount;
     this.status = status;
   }
-
 }
 
 /**
@@ -174,7 +178,6 @@ class ArTransaction {
     this.totalAmount = totalAmount;
     this.paymentDate = paymentDate;
   }
-
 }
 
 /**
@@ -204,14 +207,12 @@ class MavenirCreditAdjustment {
     this.serviceProviderId = serviceProviderId;
     this.reason = reason;
   }
-
 }
 
 /**
  * Billing on the Mavenir party. Party create / read / profile live in `# Customer`.
  */
 class PortalGateway {
-
   constructor() {
   }
 
@@ -219,22 +220,33 @@ class PortalGateway {
     // POST v1/billingAccount?customerId=
     // 409 when account already present
     // 201 no body
+    throw new Error("not implemented");
   }
+
   read(mavenirCustomer: MavenirCustomer): MavenirBillingAccount | Error {
     // GET v1/billingAccount/{accountId}
+    throw new Error("not implemented");
   }
+
   readInvoices(mavenirCustomer: MavenirCustomer): MavenirInvoice[] {
     // GET v1/invoice/history
+    throw new Error("not implemented");
   }
+
   readTransactions(mavenirCustomer: MavenirCustomer): ArTransaction[] {
     // GET allARTransaction
+    throw new Error("not implemented");
   }
+
   readInvoicePdf(billingAccountId: string, invoiceId: string): void {
     // GET v1/invoice/invoicePDF
+    throw new Error("not implemented");
   }
+
   applyCredit(mavenirCustomer: MavenirCustomer, creditAdjustment: MavenirCreditAdjustment): MavenirCreditAdjustment {
     // POST allARTransaction
     // cook after Vouchera.redeem, before productOrderFromCart
     // skip when VoucherRedemption.success false
+    throw new Error("not implemented");
   }
 }

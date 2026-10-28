@@ -20,6 +20,10 @@
  * THEN: Mavenir returns product bundles including ++plan++ ++Essentials++, ++plan++ ++Data Freedom++, ++plan++ ++Ace++, ++plan++ ++Atlas++, and ++plan++ ++Internal Test Plan PROMO++ with their productOfferingPrice and bundledProductOffering
  */
 
+/** Story: Load Plan Catalog
+ * Actor: My Paradise
+ */
+
 /** Story: Choose Onboarding Plan
  * Actor: Customer
  * SCENARIO: Choose Onboarding Plan

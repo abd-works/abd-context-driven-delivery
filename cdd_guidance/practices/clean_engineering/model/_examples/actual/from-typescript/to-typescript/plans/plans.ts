@@ -1,3 +1,5 @@
+// === Plans ===
+
 class Plan {
   id: string;
   // after Midtier map
@@ -14,7 +16,6 @@ class Plan {
     this.isSellable = isSellable;
     this.bypassVerified = bypassVerified;
   }
-
 }
 
 class PlanRepository {
@@ -57,11 +58,9 @@ class MavenirProductOffering {
     this.productOfferingPrice = productOfferingPrice;
     this.bundledProductOffering = bundledProductOffering;
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 

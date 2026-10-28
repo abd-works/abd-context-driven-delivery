@@ -140,7 +140,7 @@
                           "account credential requirements": "account credential requirements",
                           "example": "email format",
                           "field": "email",
-                          "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "requirement": "Please use a valid email format: yourname@domain.com",
                           "group": "Account credential requirements"
                         },
                         {
@@ -258,7 +258,7 @@
                         {
                           "account credential requirements": "account credentials",
                           "example": "invalid email format",
-                          "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "field": "Please use a valid email format: yourname@domain.com",
                           "requirement": "disabled",
                           "group": "Account credential requirements"
                         }
@@ -284,7 +284,7 @@
                           "account credential requirements": "account credential requirements",
                           "example": "email format",
                           "field": "email",
-                          "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "requirement": "Please use a valid email format: yourname@domain.com",
                           "group": "Account credential requirements"
                         },
                         {
@@ -402,7 +402,7 @@
                         {
                           "account credential requirements": "account credentials",
                           "example": "invalid email format",
-                          "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "field": "Please use a valid email format: yourname@domain.com",
                           "requirement": "disabled",
                           "group": "Account credential requirements"
                         }
@@ -428,7 +428,7 @@
                           "account credential requirements": "account credential requirements",
                           "example": "email format",
                           "field": "email",
-                          "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "requirement": "Please use a valid email format: yourname@domain.com",
                           "group": "Account credential requirements"
                         },
                         {
@@ -546,7 +546,7 @@
                         {
                           "account credential requirements": "account credentials",
                           "example": "invalid email format",
-                          "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                          "field": "Please use a valid email format: yourname@domain.com",
                           "requirement": "disabled",
                           "group": "Account credential requirements"
                         }
@@ -570,7 +570,7 @@
                       "account credential requirements": "account credential requirements",
                       "example": "email format",
                       "field": "email",
-                      "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                      "requirement": "Please use a valid email format: yourname@domain.com",
                       "group": "Account credential requirements"
                     },
                     {
@@ -688,7 +688,7 @@
                     {
                       "account credential requirements": "account credentials",
                       "example": "invalid email format",
-                      "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)",
+                      "field": "Please use a valid email format: yourname@domain.com",
                       "requirement": "disabled",
                       "group": "Account credential requirements"
                     }

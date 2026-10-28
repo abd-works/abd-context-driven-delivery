@@ -1,3 +1,5 @@
+// === Care ===
+
 /**
  * Paradise *Case* `<<represents>>` a Zendesk ++Ticket++. One subject per open. Not stored on the Customer session.
  */
@@ -9,7 +11,6 @@ class Case {
   constructor(subject: string) {
     this.subject = subject;
   }
-
 }
 
 class CaseRepository {
@@ -28,6 +29,7 @@ class CaseRepository {
     // requesterName Identity.fullName
     // requesterEmail Identity.email
     Zendesk.create();
+    throw new Error("not implemented");
   }
 }
 
@@ -48,14 +50,12 @@ class Ticket {
     this.requesterName = requesterName;
     this.requesterEmail = requesterEmail;
   }
-
 }
 
 /**
  * Zendesk builds the ++Ticket++. Midtier maps; it is not a type. POST tickets.json.
  */
 class Zendesk {
-
   constructor() {
   }
 
@@ -66,6 +66,7 @@ class Zendesk {
     // cardAdditionFailed config out of GWT
     // requesterName Identity.fullName
     // requesterEmail Identity.email
+    throw new Error("not implemented");
   }
 }
 
@@ -112,7 +113,6 @@ class PersonaInquiry {
     this.addressCountryCode = addressCountryCode;
     this.currentGovernmentId = currentGovernmentId;
   }
-
 }
 
 /**
@@ -128,14 +128,12 @@ class PersonaDocument {
     this.expirationDate = expirationDate;
     this.email = email;
   }
-
 }
 
 /**
  * Persona builds the ++PersonaInquiry++. Midtier maps; it is not a type.
  */
 class PersonaService {
-
   constructor() {
   }
 
@@ -144,9 +142,12 @@ class PersonaService {
     // email pre-filled from Customer.identity.email
     // create failed: status failed, verified false
     // Verify Later: create is not called
+    throw new Error("not implemented");
   }
+
   readDocument(documentId: string): PersonaDocument | Error {
     // missing document: not found
     // email mismatch: unauthorized
+    throw new Error("not implemented");
   }
 }

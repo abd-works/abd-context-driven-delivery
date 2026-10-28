@@ -1,3 +1,5 @@
+// === Care ===
+
 class Case {
   // GWT seven: ID Verification Required | SIM Delivery Required | ID Verification Required and SIM Delivery Required | Promotional trial | Portability Required | Payment failed | Roaming plan - New Subscription
   // cardAdditionFailed config out of GWT
@@ -6,7 +8,6 @@ class Case {
   constructor(subject: string) {
     this.subject = subject;
   }
-
 }
 
 class CaseRepository {
@@ -42,11 +43,9 @@ class Ticket {
     this.requesterName = requesterName;
     this.requesterEmail = requesterEmail;
   }
-
 }
 
 class Zendesk {
-
   constructor() {
   }
 
@@ -100,7 +99,6 @@ class PersonaInquiry {
     this.addressCountryCode = addressCountryCode;
     this.currentGovernmentId = currentGovernmentId;
   }
-
 }
 
 class PersonaDocument {
@@ -113,11 +111,9 @@ class PersonaDocument {
     this.expirationDate = expirationDate;
     this.email = email;
   }
-
 }
 
 class PersonaService {
-
   constructor() {
   }
 
@@ -127,6 +123,7 @@ class PersonaService {
     // create failed: status failed, verified false
     // Verify Later: create is not called
   }
+
   readDocument(documentId: string): PersonaDocument | Error {
     // missing document: not found
     // email mismatch: unauthorized

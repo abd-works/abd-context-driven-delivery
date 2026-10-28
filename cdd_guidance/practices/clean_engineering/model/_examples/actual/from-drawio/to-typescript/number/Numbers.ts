@@ -1,3 +1,5 @@
+// === Numbers and SIMs ===
+
 class MsisdnInventoryRepository {
   // << aggregation >>
   availableNumbers: Collection<AvailableNumber>;
@@ -10,10 +12,15 @@ class MsisdnInventoryRepository {
   }
 
   list(size: number, category: string): AvailableNumber[] {
+    throw new Error("not implemented");
   }
+
   search(searchTerm: SearchTerm): AvailableNumber[] {
+    throw new Error("not implemented");
   }
+
   reserve(id: string, previousId: string | null, portin: boolean): void | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -29,6 +36,7 @@ class IccidInventoryRepository {
   }
 
   read(id: string): AvailableSim | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -38,7 +46,6 @@ class AvailableNumber {
   constructor(id: string) {
     this.id = id;
   }
-
 }
 
 class AvailableSim {
@@ -47,7 +54,6 @@ class AvailableSim {
   constructor(id: string) {
     this.id = id;
   }
-
 }
 
 class SearchTerm {
@@ -60,6 +66,7 @@ class SearchTerm {
   }
 
   convert(): string {
+    throw new Error("not implemented");
   }
 }
 
@@ -71,21 +78,26 @@ class MavenirMsisdnResource {
     this.id = id;
     this.resourceStatus = resourceStatus;
   }
-
 }
 
 class InventoryGateway {
-
   constructor() {
   }
 
   list(size: number, category: string): MavenirMsisdnResource[] {
+    throw new Error("not implemented");
   }
+
   search(pattern: string): MavenirMsisdnResource[] {
+    throw new Error("not implemented");
   }
+
   reserve(id: string, previousId: string | null, portin: boolean): void | Error {
+    throw new Error("not implemented");
   }
+
   read(id: string): MavenirSimResource | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -97,5 +109,4 @@ class MavenirSimResource {
     this.id = id;
     this.resourceStatus = resourceStatus;
   }
-
 }

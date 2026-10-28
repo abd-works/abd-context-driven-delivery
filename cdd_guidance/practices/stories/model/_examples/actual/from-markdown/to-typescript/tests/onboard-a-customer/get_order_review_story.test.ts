@@ -62,7 +62,6 @@ story('Check The Order', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -74,7 +73,6 @@ story('Check The Order', () => {
 story('Upgrade To Data Freedom', () => {
   background('background', ({ given }) => {
   });
-
   scenario('Upgrade plan from review', ({ given, when, then }) => {
     background('background', ({ given }) => {
       given('the Customer is reviewing their order', () => {
@@ -123,7 +121,6 @@ story('Upgrade To Data Freedom', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -226,5 +223,4 @@ story('Change Plan From Review', () => {
         // TODO: implement step
       });
   });
-
 });

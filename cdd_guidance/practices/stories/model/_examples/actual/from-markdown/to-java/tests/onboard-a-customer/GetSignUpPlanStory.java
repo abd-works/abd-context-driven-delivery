@@ -1,6 +1,10 @@
 // Epic: Get Sign Up Plan
 // Orders: 0.0.0
 
+/** Story: Hand Off Sign Up To Onboarding
+ * Actor: Website
+ */
+
 /** Story: Open Plan Deep Link
  * Actor: Customer
  * SCENARIO: Open Plan Deep Link
@@ -18,6 +22,10 @@
  * BUT: the deep-link plan id is not in the catalog
  * WHEN: the Customer opens a plan deep link
  * THEN: the plan is not found
+ */
+
+/** Story: Load Plan Catalog
+ * Actor: My Paradise
  */
 
 /** Story: Apply Catalog Voucher

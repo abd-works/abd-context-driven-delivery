@@ -1,3 +1,5 @@
+// === Subscription ===
+
 /**
  * The phone line on a Cart or Subscription. Owns number, SIM type, ICCID, and portability.
  */
@@ -26,20 +28,25 @@ class Line {
     // Request a Paradise SIM card: SimType.Psim, no ICCID
     // when patch fails: Error
     ShoppingCartGateway.patchCartWithSim();
+    throw new Error("not implemented");
   }
+
   attachIccid(iccid: string): void | Error {
     // always SimType.Psim
     // when whitespace: Error; no inventory or patch
     // when read miss: Error
     MsisdnRepository.read();
     ShoppingCartGateway.patchCartWithSim();
+    throw new Error("not implemented");
   }
+
   activateSim(iccid: string): void | Error {
     // waiting pSIM must already be Active
     // absent waiting pSIM: Error
     // waiting pSIM Cleared: Error
     Line.attachIccid();
     PortalGateway.createPsimDeliveredOrder();
+    throw new Error("not implemented");
   }
 }
 
@@ -85,6 +92,7 @@ class Subscription {
 
   changePlan(plan: Plan): Subscription | Error {
     PortalGateway.changePlan();
+    throw new Error("not implemented");
   }
 }
 
@@ -92,10 +100,8 @@ class Subscription {
  * Local / roaming data on the line. Loaded with the subscription (`getUsageRequest`).
  */
 class Usage {
-
   constructor() {
   }
-
 }
 
 /**
@@ -122,6 +128,7 @@ class SubscriptionRepository {
     // number / simType from characteristics
     PortalGateway.listAgreements();
     CcsGateway.readUsage();
+    throw new Error("not implemented");
   }
 }
 
@@ -146,7 +153,6 @@ class MavenirAgreement {
     this.characteristic = characteristic;
     this.agreementItem = agreementItem;
   }
-
 }
 
 /**
@@ -166,7 +172,6 @@ class MavenirAgreementProduct {
     this.orderDate = orderDate;
     this.productPrice = productPrice;
   }
-
 }
 
 /**
@@ -178,30 +183,28 @@ class MavenirProductOrder {
   constructor(id: string) {
     this.id = id;
   }
-
 }
 
 /**
  * CCS `subscriber/serviceUsage/.../subscribers/{msisdn}`.
  */
 class MsisdnDataUsage {
-
   constructor() {
   }
-
 }
 
 /**
  * Agreements and product order on the Mavenir party. Party create / read / profile live in `# Customer`. Billing commits live in `# Billing`. Cart shopping-cart slice lives in `# Cart`.
  */
 class PortalGateway {
-
   constructor() {
   }
 
   listAgreements(mavenirCustomerId: string): MavenirAgreement[] {
     // GET agreementManagement/agreement
+    throw new Error("not implemented");
   }
+
   createProductOrder(mavenirCustomerId: string): MavenirProductOrder | Error {
     // Create Product Order
     // always POST /customer/order
@@ -220,8 +223,11 @@ class PortalGateway {
     PortalGateway.patchSubmitOrder();
     patchDone();
     patchWaitingPsim();
+    throw new Error("not implemented");
   }
+
   changePlan(mavenirCustomerId: string, plan: Plan): MavenirAgreement | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -229,12 +235,12 @@ class PortalGateway {
  * Usage on the MSISDN. Midtier maps; it is not a type.
  */
 class CcsGateway {
-
   constructor() {
   }
 
   readUsage(msisdn: string, planName: string): MsisdnDataUsage {
     // GET ccsGateway/subscriber/serviceUsage/.../subscribers/{msisdn}
+    throw new Error("not implemented");
   }
 }
 
@@ -252,5 +258,4 @@ class VoucherRedemption {
     this.discountAmount = discountAmount;
     this.totalAmount = totalAmount;
   }
-
 }

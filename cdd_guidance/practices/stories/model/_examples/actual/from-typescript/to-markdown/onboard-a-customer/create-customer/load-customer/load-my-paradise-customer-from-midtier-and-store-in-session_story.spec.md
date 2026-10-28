@@ -4,6 +4,13 @@
 
 *Given* Mavenir has a customer and the Cognito user holds its id
 
+### Examples
+
+| example |
+| --- |
+| enteredValidAccountCredentials |
+| storedAccountCredentialsWithToken |
+
 ### Scenario: Load My Paradise Customer From Midtier And Store In Session
 
 *When* My Paradise loads the customer through Midtier

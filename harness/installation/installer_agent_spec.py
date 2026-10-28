@@ -16,7 +16,7 @@ from agent_bdd.spec_helpers import (
 from harness.installation.installer import Installer
 from harness.agent_tools.agent_tools import AgentToolSet
 
-CAR = "cdd_guidance.practices.car.car:Car"
+CAR = "cdd_guidance.practices._examples.car.car:Car"
 CAR_CTX = {
     "fidelity": "road_story",
     "make": "Dodge",

@@ -10,11 +10,24 @@
 *But* the line has no ICCID
 *And* the Customer is forwarded to Verify ID
 
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyToChooseSim |
+
 ### Scenario: Request a Paradise SIM card — already on the line
 
 *Given* the line already has SIM type pSIM
 *When* the Customer requests a Paradise SIM card
 *Then* My Paradise skips the cart patch
+
+### Examples
+
+| example |
+| --- |
+| customerReadyToChooseSim |
 
 ### Scenario: Request a Paradise SIM card — cart patch fails
 
@@ -24,3 +37,10 @@
 *When* My Paradise reloads the shopping cart
 *Then* the line has no SIM type
 *And* the line has no ICCID
+
+### Examples
+
+| example |
+| --- |
+| reloadCart |
+| customerReadyToChooseSim |

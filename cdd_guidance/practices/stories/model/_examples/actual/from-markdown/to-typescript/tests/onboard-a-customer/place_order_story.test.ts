@@ -82,7 +82,6 @@ story('Create Billing Account', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -217,7 +216,6 @@ story('Create Product Order', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -237,7 +235,6 @@ story('View Order Result', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -263,7 +260,6 @@ story('Create Order Ticket', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -288,5 +284,4 @@ story('View Order History', () => {
       // TODO: implement step
     });
   });
-
 });

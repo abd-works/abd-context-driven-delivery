@@ -9,11 +9,10 @@ import { scenario, story } from "tests/story-test";
  * Story: Enter Account Credentials
  */
 
-// background-examples: {"email required": {"account credential requirements": "account credential requirements", "example": "email required", "field": "email", "requirement": "Email is required", "group": "Account credential requirements"}, "email format": {"account credential requirements": "account credential requirements", "example": "email format", "field": "email", "requirement": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)", "group": "Account credential requirements"}, "password letters": {"account credential requirements": "account credential requirements", "example": "password letters", "field": "password", "requirement": "Password must contain uppercase and lowercase letters", "group": "Account credential requirements"}, "password number": {"account credential requirements": "account credential requirements", "example": "password number", "field": "password", "requirement": "Password must have at least one number", "group": "Account credential requirements"}, "password symbol": {"account credential requirements": "account credential requirements", "example": "password symbol", "field": "password", "requirement": "Password must have at least one symbol", "group": "Account credential requirements"}, "password length": {"account credential requirements": "account credential requirements", "example": "password length", "field": "password", "requirement": "Length must be greater than 8 characters", "group": "Account credential requirements"}, "confirm required": {"account credential requirements": "account credential requirements", "example": "confirm required", "field": "confirmPassword", "requirement": "Confirm Password is required", "group": "Account credential requirements"}, "confirm mismatch": {"account credential requirements": "account credential requirements", "example": "confirm mismatch", "field": "confirmPassword", "requirement": "Passwords don't match", "group": "Account credential requirements"}, "example": {"account credential requirements": "account credentials", "example": "example", "field": "unmet", "requirement": "Create account", "group": "Account credential requirements"}, "valid account credentials": {"account credential requirements": "account credentials", "example": "valid account credentials", "field": "", "requirement": "enabled", "group": "Account credential requirements"}, "Paradise Mobile account credentials": {"account credential requirements": "account credentials", "example": "Paradise Mobile account credentials", "field": "", "requirement": "enabled", "group": "Account credential requirements"}, "invalid password letters": {"account credential requirements": "account credentials", "example": "invalid password letters", "field": "Password must contain uppercase and lowercase letters", "requirement": "disabled", "group": "Account credential requirements"}, "invalid password number": {"account credential requirements": "account credentials", "example": "invalid password number", "field": "Password must have at least one number", "requirement": "disabled", "group": "Account credential requirements"}, "invalid password symbol": {"account credential requirements": "account credentials", "example": "invalid password symbol", "field": "Password must have at least one symbol", "requirement": "disabled", "group": "Account credential requirements"}, "invalid password length": {"account credential requirements": "account credentials", "example": "invalid password length", "field": "Length must be greater than 8 characters", "requirement": "disabled", "group": "Account credential requirements"}, "invalid confirm required": {"account credential requirements": "account credentials", "example": "invalid confirm required", "field": "Confirm Password is required", "requirement": "disabled", "group": "Account credential requirements"}, "invalid confirm mismatch": {"account credential requirements": "account credentials", "example": "invalid confirm mismatch", "field": "Passwords don't match", "requirement": "disabled", "group": "Account credential requirements"}, "invalid email required": {"account credential requirements": "account credentials", "example": "invalid email required", "field": "Email is required", "requirement": "disabled", "group": "Account credential requirements"}, "invalid email format": {"account credential requirements": "account credentials", "example": "invalid email format", "field": "Please use a valid email format: [yourname@domain.com](mailto:yourname@domain.com)", "requirement": "disabled", "group": "Account credential requirements"}}
+// background-examples: {"email required": {"account credential requirements": "account credential requirements", "example": "email required", "field": "email", "requirement": "Email is required", "group": "Account credential requirements"}, "email format": {"account credential requirements": "account credential requirements", "example": "email format", "field": "email", "requirement": "Please use a valid email format: yourname@domain.com", "group": "Account credential requirements"}, "password letters": {"account credential requirements": "account credential requirements", "example": "password letters", "field": "password", "requirement": "Password must contain uppercase and lowercase letters", "group": "Account credential requirements"}, "password number": {"account credential requirements": "account credential requirements", "example": "password number", "field": "password", "requirement": "Password must have at least one number", "group": "Account credential requirements"}, "password symbol": {"account credential requirements": "account credential requirements", "example": "password symbol", "field": "password", "requirement": "Password must have at least one symbol", "group": "Account credential requirements"}, "password length": {"account credential requirements": "account credential requirements", "example": "password length", "field": "password", "requirement": "Length must be greater than 8 characters", "group": "Account credential requirements"}, "confirm required": {"account credential requirements": "account credential requirements", "example": "confirm required", "field": "confirmPassword", "requirement": "Confirm Password is required", "group": "Account credential requirements"}, "confirm mismatch": {"account credential requirements": "account credential requirements", "example": "confirm mismatch", "field": "confirmPassword", "requirement": "Passwords don't match", "group": "Account credential requirements"}, "example": {"account credential requirements": "account credentials", "example": "example", "field": "unmet", "requirement": "Create account", "group": "Account credential requirements"}, "valid account credentials": {"account credential requirements": "account credentials", "example": "valid account credentials", "field": "", "requirement": "enabled", "group": "Account credential requirements"}, "Paradise Mobile account credentials": {"account credential requirements": "account credentials", "example": "Paradise Mobile account credentials", "field": "", "requirement": "enabled", "group": "Account credential requirements"}, "invalid password letters": {"account credential requirements": "account credentials", "example": "invalid password letters", "field": "Password must contain uppercase and lowercase letters", "requirement": "disabled", "group": "Account credential requirements"}, "invalid password number": {"account credential requirements": "account credentials", "example": "invalid password number", "field": "Password must have at least one number", "requirement": "disabled", "group": "Account credential requirements"}, "invalid password symbol": {"account credential requirements": "account credentials", "example": "invalid password symbol", "field": "Password must have at least one symbol", "requirement": "disabled", "group": "Account credential requirements"}, "invalid password length": {"account credential requirements": "account credentials", "example": "invalid password length", "field": "Length must be greater than 8 characters", "requirement": "disabled", "group": "Account credential requirements"}, "invalid confirm required": {"account credential requirements": "account credentials", "example": "invalid confirm required", "field": "Confirm Password is required", "requirement": "disabled", "group": "Account credential requirements"}, "invalid confirm mismatch": {"account credential requirements": "account credentials", "example": "invalid confirm mismatch", "field": "Passwords don't match", "requirement": "disabled", "group": "Account credential requirements"}, "invalid email required": {"account credential requirements": "account credentials", "example": "invalid email required", "field": "Email is required", "requirement": "disabled", "group": "Account credential requirements"}, "invalid email format": {"account credential requirements": "account credentials", "example": "invalid email format", "field": "Please use a valid email format: yourname@domain.com", "requirement": "disabled", "group": "Account credential requirements"}}
 story('Enter Account Credentials', () => {
   background('background', ({ given }) => {
   });
-
   scenario('Enter new account credentials', ({ given, when, then }) => {
     background('background', ({ given }) => {
       given('the plan catalog contains purchasable plans', () => {
@@ -103,7 +102,6 @@ story('Enter Account Credentials', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -161,7 +159,6 @@ story('Create Unconfirmed Cognito User', () => {
       });
     });
   });
-
 });
 
 /**
@@ -173,7 +170,6 @@ story('Create Unconfirmed Cognito User', () => {
 story('Enter Validation Code', () => {
   background('background', ({ given }) => {
   });
-
   scenario('Enter validation code', ({ given, when, then }) => {
     background('background', ({ given }) => {
       given('the User has submitted ++account credentials++ ++valid account credentials++', () => {
@@ -186,7 +182,7 @@ story('Enter Validation Code', () => {
     when('the User proceeds to check their email', () => {
       // TODO: implement step
     });
-    then('the User sees the code was sent to *[Jeff.anderson@Abdworks.com](mailto:Jeff.anderson@Abdworks.com)*', () => {
+    then('the User sees the code was sent to *Jeff.anderson@Abdworks.com*', () => {
       // TODO: implement step
     })
       .and('the User can enter a ++validation code++ in Enter Validation Code', () => {
@@ -257,7 +253,6 @@ story('Enter Validation Code', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -268,7 +263,6 @@ story('Enter Validation Code', () => {
 story('Confirm Cognito User', () => {
   background('background', ({ given }) => {
   });
-
   scenario('Confirm Cognito User', ({ given, when, then }) => {
     background('background', ({ given }) => {
       given('Cognito has an ++Cognito user++ ++unconfirmed Cognito user++', () => {
@@ -305,7 +299,6 @@ story('Confirm Cognito User', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -329,7 +322,6 @@ story('Issue Account Token To Browser Session', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -385,7 +377,6 @@ story('Validate Mavenir Customer in Cognito User Attributes', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -469,7 +460,6 @@ story('Submit Create Customer Request to Mid-Tier', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -499,7 +489,6 @@ story('Validate Cognito User', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -584,7 +573,6 @@ story('Submit Create Mavenir Customer', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -632,7 +620,6 @@ story('Create Customer', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -659,7 +646,6 @@ story('Store Mavenir Customer Id on Cognito User', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -738,7 +724,6 @@ story('Load My Paradise Customer From Midtier And Store In Session', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -777,7 +762,6 @@ story('Get Mavenir Customer and Transform To My Paradise Customer And Return', (
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -798,7 +782,6 @@ story('Get Mavenir Customer', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -839,7 +822,6 @@ story('Fix Orphan Cognito Account', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -866,7 +848,6 @@ story('Read False Initial Activation', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -1017,5 +998,4 @@ story('Sign In With Existing Account', () => {
         // TODO: implement step
       });
   });
-
 });

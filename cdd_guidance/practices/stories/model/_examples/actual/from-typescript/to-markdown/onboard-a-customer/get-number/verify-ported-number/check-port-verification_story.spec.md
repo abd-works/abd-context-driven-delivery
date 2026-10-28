@@ -4,6 +4,7 @@
 
 *Given* the Customer submitted portability and Twilio sent an SMS to the port number
 *And* Twilio is ready to confirm the SMS code as valid
+*When* the Customer enters verification code ${validPortingSmscode}
 *Then* My Paradise sends the verification check to Twilio with the port number and code
 *When* Twilio creates a verification check (verificationChecks.create)
 *Then* Twilio returns approved and the Customer is forwarded to Select Sim
@@ -19,6 +20,7 @@
 ### Scenario: Verify with unusable porting SMS code
 
 *Given* the Customer submitted portability and has an incorrect verification code
+*When* the Customer enters verification code ${mismatchPortingSmscode}
 *Then* My Paradise sends the verification check to Twilio
 *When* Twilio creates a verification check and returns a non-approved status
 *Then* the verification is rejected

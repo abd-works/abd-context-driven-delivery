@@ -9,12 +9,30 @@
 *Then* My Paradise stores Data Freedom as the cart bundle loaded from the gateway
 *And* the Customer is forwarded to Checkout
 
+### Examples
+
+| example |
+| --- |
+| customerWithCart |
+| reloadCart |
+| enteredChosenAvailableNumber |
+| essentials |
+| dataFreedom |
+
 ### Scenario: Keep current plan from review
 
 *Given* the Customer has opened plan selection from review with Essentials in the cart
 *When* the Customer keeps their current plan
 *Then* the cart bundle remains Essentials
 *And* the Customer is forwarded to Checkout
+
+### Examples
+
+| example |
+| --- |
+| customerWithCart |
+| enteredChosenAvailableNumber |
+| essentials |
 
 ### Scenario: Plan update fails from review
 
@@ -23,3 +41,12 @@
 *Then* My Paradise shows Failed to update new plan choice.
 *When* My Paradise reloads the shopping cart
 *Then* the cart bundle remains Essentials
+
+### Examples
+
+| example |
+| --- |
+| customerWithCart |
+| reloadCart |
+| essentials |
+| dataFreedom |

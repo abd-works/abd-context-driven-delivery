@@ -1,3 +1,5 @@
+// === Customer ===
+
 class Customer {
   id: string;
   verified: boolean;
@@ -16,19 +18,12 @@ class Customer {
   // << association >>
   personaInquiry: PersonaInquiry | null;
 
-  constructor(id: string, verified: boolean, identity: Identity, address: Address, accountCredentials: AccountCredentials, cart: Cart | null, billing: Billing | null, subscriptions: Subscription[], personaInquiry: PersonaInquiry | null) {
-    this.id = id;
-    this.verified = verified;
-    this.identity = identity;
-    this.address = address;
+  constructor(accountCredentials: AccountCredentials) {
     this.accountCredentials = accountCredentials;
-    this.cart = cart;
-    this.billing = billing;
-    this.subscriptions = subscriptions;
-    this.personaInquiry = personaInquiry;
   }
 
   confirmIdentity(): Customer {
+    throw new Error("not implemented");
   }
 }
 
@@ -44,21 +39,28 @@ class CustomerRepository {
   }
 
   create(accountCredentials: AccountCredentials): Customer | null {
+    throw new Error("not implemented");
   }
+
   load(accountCredentials: AccountCredentials): Customer {
+    throw new Error("not implemented");
   }
 }
 
 class MidtierCustomerService {
-
   constructor() {
   }
 
   validate(accountToken: AccountToken): string | Error {
+    throw new Error("not implemented");
   }
+
   create(accountToken: AccountToken): string | Error {
+    throw new Error("not implemented");
   }
+
   read(accountToken: AccountToken): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -76,7 +78,6 @@ class CustomerException {
     this.message = message;
     this.cause = cause;
   }
-
 }
 
 class Identity {
@@ -105,7 +106,6 @@ class Identity {
     this.idType = idType;
     this.otherPhoneNumber = otherPhoneNumber;
   }
-
 }
 
 class Address {
@@ -124,7 +124,6 @@ class Address {
     this.postalCode = postalCode;
     this.country = country;
   }
-
 }
 
 class AccountCredentials {
@@ -146,36 +145,36 @@ class AccountCredentials {
   // << composition >>
   requirements: AccountCredentialRequirements;
 
-  constructor(email: string, password: string, confirmPassword: string, validationCode: string, verified: boolean, token: AccountToken | null, customerId: string | null, validationCodeWasSent: boolean, canActivate: boolean, isUpdatable: boolean, isPersistable: boolean, resendMessage: string | null, errors: AccountCredentialsErrors, requirements: AccountCredentialRequirements) {
-    this.email = email;
-    this.password = password;
-    this.confirmPassword = confirmPassword;
-    this.validationCode = validationCode;
-    this.verified = verified;
-    this.token = token;
-    this.customerId = customerId;
-    this.validationCodeWasSent = validationCodeWasSent;
-    this.canActivate = canActivate;
-    this.isUpdatable = isUpdatable;
-    this.isPersistable = isPersistable;
-    this.resendMessage = resendMessage;
-    this.errors = errors;
-    this.requirements = requirements;
+  constructor(emailOrCognitoUser: string | CognitoUser) {
+    this.emailOrCognitoUser = emailOrCognitoUser;
   }
 
   missingRequirements(): AccountCredentialRequirement[] {
+    throw new Error("not implemented");
   }
+
   register(): void {
+    throw new Error("not implemented");
   }
+
   activate(validationCode: ValidationCode): void {
+    throw new Error("not implemented");
   }
+
   authenticateAccount(): void {
+    throw new Error("not implemented");
   }
+
   resendValidationCode(): void {
+    throw new Error("not implemented");
   }
+
   signOut(): void {
+    throw new Error("not implemented");
   }
+
   storeCustomerId(customerId: string): CognitoUser {
+    throw new Error("not implemented");
   }
 }
 
@@ -191,14 +190,23 @@ class AccountRepository {
   }
 
   newAccount(credentials?: AccountCredentials): AccountCredentials {
+    throw new Error("not implemented");
   }
+
   persistNewAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors {
+    throw new Error("not implemented");
   }
+
   confirmAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors {
+    throw new Error("not implemented");
   }
+
   authenticateAccount(accountCredentials: AccountCredentials): CognitoUser | AccountCredentialsErrors {
+    throw new Error("not implemented");
   }
+
   resendAccountCode(accountCredentials: AccountCredentials): CognitoUser | null {
+    throw new Error("not implemented");
   }
 }
 
@@ -212,7 +220,6 @@ class AccountCredentialsErrors {
     this.signIn = signIn;
     this.validationCode = validationCode;
   }
-
 }
 
 class ValidationCodeResendWaitException {
@@ -221,7 +228,6 @@ class ValidationCodeResendWaitException {
   constructor(availableAt: Date) {
     this.availableAt = availableAt;
   }
-
 }
 
 class AccountCredentialRequirement {
@@ -232,7 +238,6 @@ class AccountCredentialRequirement {
     this.field = field;
     this.requirement = requirement;
   }
-
 }
 
 class AccountCredentialRequirements {
@@ -266,27 +271,38 @@ class AccountCredentialRequirements {
     this.confirmRequired = confirmRequired;
     this.confirmMismatch = confirmMismatch;
   }
-
 }
 
 class AmplifyService {
-
   constructor() {
   }
 
   signUp(email: string, password: string): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   signIn(email: string, password: string): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   confirmSignUp(email: string, validationCode: ValidationCode): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   resendSignUp(email: string): ValidationCodeSend | Error {
+    throw new Error("not implemented");
   }
+
   signOut(): void {
+    throw new Error("not implemented");
   }
+
   fetchUserAttributes(email: string): CognitoUser | Error {
+    throw new Error("not implemented");
   }
+
   getUser(email: string): CognitoUser | null {
+    throw new Error("not implemented");
   }
 }
 
@@ -305,7 +321,6 @@ class CognitoUser {
     this.validationCodeSentAt = validationCodeSentAt;
     this.accountToken = accountToken;
   }
-
 }
 
 class AccountToken {
@@ -316,7 +331,6 @@ class AccountToken {
     this.email = email;
     this.customerId = customerId;
   }
-
 }
 
 class ValidationCode {
@@ -325,7 +339,6 @@ class ValidationCode {
   constructor(code: string) {
     this.code = code;
   }
-
 }
 
 class ValidationCodeSend {
@@ -338,7 +351,6 @@ class ValidationCodeSend {
     this.sentAt = sentAt;
     this.kind = kind;
   }
-
 }
 
 class MavenirCustomer {
@@ -373,29 +385,42 @@ class MavenirCustomer {
     this.contactMedium = contactMedium;
     this.engagedParty = engagedParty;
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 
   create(email: string): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
+
   read(id: string): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
+
   patchPhoneVerified(mavenirCustomerId: string): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
+
   patchWaitingPsim(mavenirCustomerId: string, waitingPsim: boolean): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
+
   patchProfile(mavenirCustomer: MavenirCustomer, engagedParty: EngagedParty, contactMedium: ContactMedium): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
+
   patchVoucher(mavenirCustomer: MavenirCustomer, voucher: Voucher): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
+
   removeVoucher(mavenirCustomer: MavenirCustomer): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
+
   patchDone(mavenirCustomerId: string): MavenirCustomer | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -419,7 +444,6 @@ class ContactMedium {
     this.postCode = postCode;
     this.country = country;
   }
-
 }
 
 class EngagedParty {
@@ -437,7 +461,6 @@ class EngagedParty {
     this.birthDate = birthDate;
     this.individualIdentification = individualIdentification;
   }
-
 }
 
 class IndividualIdentification {
@@ -454,5 +477,4 @@ class IndividualIdentification {
     this.validated = validated;
     this.endDateTime = endDateTime;
   }
-
 }

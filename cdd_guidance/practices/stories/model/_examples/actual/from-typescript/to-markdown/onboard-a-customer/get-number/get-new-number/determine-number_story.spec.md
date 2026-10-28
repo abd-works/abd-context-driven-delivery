@@ -7,13 +7,34 @@
 *Then* My Paradise sends the list resources request to Mavenir
 *When* Mavenir locks 20 MSISDN resources and returns the available number values
 *Then* My Paradise returns the available numbers
+*And* ${storedHeldAvailableNumber} and ${enteredChosenAvailableNumber} are in the Available Number list
+
+### Examples
+
+| example |
+| --- |
+| storedHeldAvailableNumber |
+| enteredChosenAvailableNumber |
+| storedAvailableNumbers |
+| customerWithCart |
 
 ### Scenario: View available numbers — MSISDN in cart
 
+*Given* MSISDN ${storedHeldAvailableNumber} is in the Mavenir shopping cart
 *When* the Customer loads available numbers
 *Then* My Paradise sends the list resources request to Mavenir
 *When* Mavenir locks 20 MSISDN resources and returns the available number values
+*Then* the Customer sees their number is ${storedHeldAvailableNumber}
 *And* My Paradise returns the available numbers
+
+### Examples
+
+| example |
+| --- |
+| storedHeldAvailableNumber |
+| storedAvailableNumbers |
+| customerWithCart |
+| stubBundle |
 
 ### Scenario: Refresh available numbers
 
@@ -22,6 +43,13 @@
 *Then* My Paradise sends the list resources request to Mavenir
 *When* Mavenir locks 20 MSISDN resources and returns the available numbers
 *Then* My Paradise returns a fresh set of available numbers
+
+### Examples
+
+| example |
+| --- |
+| storedAvailableNumbers |
+| customerWithCart |
 
 ### Scenario: Search for a number
 
@@ -32,6 +60,12 @@
 *Then* My Paradise returns Available Numbers matching 52637
 *And* the matching numbers are stored on the line for selection
 
+### Examples
+
+| example |
+| --- |
+| customerWithCart |
+
 ### Scenario: Numbers locked by another customer are excluded from results
 
 *Given* another customer has already locked the standard available numbers in Mavenir
@@ -40,3 +74,11 @@
 *When* Mavenir returns only available numbers, excluding the locked ones
 *Then* the locked numbers are not in the available numbers list
 *And* only the currently available numbers are returned
+
+### Examples
+
+| example |
+| --- |
+| storedHeldAvailableNumber |
+| enteredChosenAvailableNumber |
+| customerWithCart |

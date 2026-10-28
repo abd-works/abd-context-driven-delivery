@@ -14,7 +14,6 @@ import { scenario, story } from "tests/story-test";
 story('Determine Number', () => {
   background('background', ({ given }) => {
   });
-
   scenario('View available numbers', ({ given, when, then }) => {
     background('background', ({ given }) => {
       given('the Prospect is in Account Setup', () => {
@@ -133,7 +132,6 @@ story('Determine Number', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -173,7 +171,6 @@ story('Query Msisdn Inventory', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -210,7 +207,6 @@ story('List Msisdn Resources', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -232,7 +228,6 @@ story('Search Msisdn Inventory', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -254,7 +249,6 @@ story('Search Msisdn Resources', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -340,7 +334,6 @@ story('Choose a Number', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -422,7 +415,6 @@ story('Submit Reserve Number Request to Mid-Tier', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -477,7 +469,6 @@ story('Submit Reserve Msisdn', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -532,7 +523,6 @@ story('Reserve Msisdn Resource', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -569,7 +559,6 @@ story('Submit Patch Cart With Number Request to Mid-Tier', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -594,7 +583,6 @@ story('Patch Cart With Number', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -649,7 +637,6 @@ story('Patch Shopping Cart', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -660,7 +647,6 @@ story('Patch Shopping Cart', () => {
 story('Bring a Number', () => {
   background('background', ({ given }) => {
   });
-
   scenario('Bring a number', ({ given, when, then }) => {
     background('background', ({ given }) => {
       given('the Prospect is in Account Setup', () => {
@@ -750,7 +736,6 @@ story('Bring a Number', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -821,7 +806,6 @@ story('Confirm Number Already With Paradise', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -861,7 +845,6 @@ story('Evaluate Porting Two Factor Flag', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -1007,7 +990,6 @@ story('Submit Portability Request to Mid-Tier', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -1035,7 +1017,6 @@ story('Patch Cart With Portability', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -1090,7 +1071,6 @@ story('Send Port Verification', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -1130,7 +1110,6 @@ story('Send Verification Sms', () => {
       // TODO: implement step
     });
   });
-
 });
 
 /**
@@ -1141,7 +1120,6 @@ story('Send Verification Sms', () => {
 story('Enter Porting Sms Code', () => {
   background('background', ({ given }) => {
   });
-
   scenario('Enter ++porting SMS code++', ({ given, when, then }) => {
     background('background', ({ given }) => {
       given('the Prospect is in Account Setup', () => {
@@ -1249,7 +1227,6 @@ story('Enter Porting Sms Code', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -1311,7 +1288,6 @@ story('Check Port Verification', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -1352,7 +1328,6 @@ story('Check Verification', () => {
         // TODO: implement step
       });
   });
-
 });
 
 /**
@@ -1387,5 +1362,4 @@ story('Sweep Stale Number Reservations', () => {
         // TODO: implement step
       });
   });
-
 });

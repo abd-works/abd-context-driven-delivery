@@ -1,3 +1,5 @@
+// === Billing ===
+
 class Billing {
   id: string;
   state: string;
@@ -18,8 +20,11 @@ class Billing {
   }
 
   create(customer: Customer): Billing | Error {
+    throw new Error("not implemented");
   }
+
   applyCredit(): Billing {
+    throw new Error("not implemented");
   }
 }
 
@@ -35,8 +40,11 @@ class BillingRepository {
   }
 
   find(customer: Customer): Billing | null {
+    throw new Error("not implemented");
   }
+
   create(customer: Customer): Billing | Error {
+    throw new Error("not implemented");
   }
 }
 
@@ -54,7 +62,6 @@ class Invoice {
     this.dueAmount = dueAmount;
     this.status = status;
   }
-
 }
 
 class Transaction {
@@ -67,7 +74,6 @@ class Transaction {
     this.paymentDate = paymentDate;
     this.totalAmount = totalAmount;
   }
-
 }
 
 class MavenirBillingAccount {
@@ -95,7 +101,6 @@ class MavenirBillingAccount {
     this.accountBalance = accountBalance;
     this.creditAdjustments = creditAdjustments;
   }
-
 }
 
 class MavenirInvoice {
@@ -112,7 +117,6 @@ class MavenirInvoice {
     this.dueAmount = dueAmount;
     this.status = status;
   }
-
 }
 
 class ArTransaction {
@@ -127,7 +131,6 @@ class ArTransaction {
     this.totalAmount = totalAmount;
     this.paymentDate = paymentDate;
   }
-
 }
 
 class MavenirCreditAdjustment {
@@ -148,24 +151,33 @@ class MavenirCreditAdjustment {
     this.serviceProviderId = serviceProviderId;
     this.reason = reason;
   }
-
 }
 
 class PortalGateway {
-
   constructor() {
   }
 
   createBilling(mavenirCustomer: MavenirCustomer): MavenirBillingAccount | Error {
+    throw new Error("not implemented");
   }
+
   read(mavenirCustomer: MavenirCustomer): MavenirBillingAccount | Error {
+    throw new Error("not implemented");
   }
+
   readInvoices(mavenirCustomer: MavenirCustomer): MavenirInvoice[] {
+    throw new Error("not implemented");
   }
+
   readTransactions(mavenirCustomer: MavenirCustomer): ArTransaction[] {
+    throw new Error("not implemented");
   }
+
   readInvoicePdf(billingAccountId: string, invoiceId: string): void {
+    throw new Error("not implemented");
   }
+
   applyCredit(mavenirCustomer: MavenirCustomer, creditAdjustment: MavenirCreditAdjustment): MavenirCreditAdjustment {
+    throw new Error("not implemented");
   }
 }

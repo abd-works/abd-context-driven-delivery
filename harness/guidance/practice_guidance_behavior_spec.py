@@ -61,6 +61,16 @@ class Cart:
     def place_order(self) -> "Order": ...
 """
 
+_BEHAVIOR_PYTHON = """\
+from mamba import description, context, it
+
+
+with description("a cart"):
+    with context("that holds line items"):
+        with it("should place an order"):
+            pass  # BDD: SIGNATURE
+"""
+
 _STORY_MAP = """\
 (E) Manage Customer Orders
     (E) Place New Order
@@ -313,9 +323,9 @@ with description("a behavior tree"):
             with context("that has been re-rendered in markdown"):
                 with it("should be markdown of that behavior tree"):
                     result = Bdd(fidelity="behavior").render(
-                        "markdown", _CLASS_PYTHON, source="python"
+                        "markdown", _BEHAVIOR_PYTHON, source="python"
                     )
-                    expect(result["content"]).to(contain("Cart"))
+                    expect(result["content"]).to(contain("a cart"))
 
         with context("that has been generated in markdown"):
             with context("that has been re-rendered in python"):
