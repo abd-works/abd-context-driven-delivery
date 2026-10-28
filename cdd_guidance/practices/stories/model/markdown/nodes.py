@@ -1247,16 +1247,15 @@ class MarkdownStoryModel(StoryModel):
         if match is None or self._current_epic is None:
             return False
         parent_depth = _outline_depth(match) - 1
-        if match.group("marks") and parent_depth >= 1:
-            while len(self._sub_epic_stack) > parent_depth:
+        if match.group("marks") or parent_depth <= 0:
+            while len(self._sub_epic_stack) > max(parent_depth, 0):
                 self._sub_epic_stack.pop()
-        if not self._sub_epic_stack:
-            self._ensure_sub_epic()
+        parent = self._sub_epic_stack[-1] if self._sub_epic_stack else self._current_epic
         actor, story_name = self._split_outline_story(match.group("name"))
-        story = MarkdownStory(story_name, len(self._sub_epic_stack[-1].stories) + 1, StoryType.USER)
+        story = MarkdownStory(story_name, len(parent.stories) + 1, StoryType.USER)
         if actor:
             story.actors = [actor]
-        self._sub_epic_stack[-1].stories.append(story)
+        parent.stories.append(story)
         return True
 
     def _split_outline_story(self, raw_text: str) -> tuple[str, str]:

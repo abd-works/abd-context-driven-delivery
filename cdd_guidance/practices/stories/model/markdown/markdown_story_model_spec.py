@@ -245,13 +245,13 @@ _Scope: mixed markdown content should be tolerated._
 """
             self.reconstructed = self.markdown.parse(self.document)
 
-        with it("should synthesize a Epic so stories are not dropped"):
+        with it("should keep the stories on the Epic so they are not dropped"):
             epic = self.reconstructed.epics[0]
             expect(epic.name).to(equal("Resolve Check"))
-            expect(epic.epics).to(have_len(1))
-            expect(epic.epics[0].stories).to(have_len(2))
-            expect(epic.epics[0].stories[0].name).to(equal("Make Trait Check"))
-            expect(epic.epics[0].stories[1].name).to(equal("Oppose Check"))
+            expect(epic.epics).to(have_len(0))
+            expect(epic.stories).to(have_len(2))
+            expect(epic.stories[0].name).to(equal("Make Trait Check"))
+            expect(epic.stories[1].name).to(equal("Oppose Check"))
 
     with context("that writes outline headings at column 0"):
         with before.each:
@@ -304,6 +304,33 @@ _Scope: mixed markdown content should be tolerated._
             get_sim = parsed.epics[0].epics[0]
             expect(get_sim.stories[0].name).to(equal("Select Sim"))
             expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
+
+    with context("that has stories directly under an Epic with no sub-epic"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (S) Customer --> Select Sim
+## (S) Customer --> Activate Sim
+## (E) Place Order
+### (S) My Paradise --> Create Product Order
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+            self.text = self.markdown.render(self.reconstructed)
+
+        with it("should keep those stories on the Epic instead of inventing a sub-epic"):
+            epic = self.reconstructed.epics[0]
+            expect([story.name for story in epic.stories]).to(equal(["Select Sim", "Activate Sim"]))
+            expect([sub.name for sub in epic.epics]).to(equal(["Place Order"]))
+
+        with it("should render each such story as ## (S) under # (E)"):
+            outline = [line for line in self.text.splitlines() if "(E)" in line or "(S)" in line]
+            expect(outline).to(equal(self.document.strip().splitlines()))
+
+        with it("should read its own output back into the same tree"):
+            parsed = self.markdown.parse(self.text)
+            epic = parsed.epics[0]
+            expect([story.name for story in epic.stories]).to(equal(["Select Sim", "Activate Sim"]))
+            expect([sub.name for sub in epic.epics]).to(equal(["Place Order"]))
+            expect([story.name for story in epic.epics[0].stories]).to(equal(["Create Product Order"]))
 
     with context("that uses the old indented heading form"):
         with it("should still load nested sub-epics and stories"):
