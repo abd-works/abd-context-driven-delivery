@@ -342,6 +342,17 @@ Customer and Authenticate User.
 `server-runs-node` run that file. A Playwright file covers browser interaction
 the other two leave unseen.
 
+`tests/` holds only story-map folders. The shared step library sits in
+`test-utils/story-test/`, and stories import it through the `test-utils/...`
+alias (tsconfig paths and a Vitest alias):
+
+| File | What it does |
+|---|---|
+| `test-utils/story-test/story-test.ts` | `story`, `shareStory`, `background`, `scenario`, and the Given/When/Then chain. The story render writes it here and every story file imports `test-utils/story-test/story-test`. |
+| `test-utils/story-test/story-playwright.ts` | Playwright host. A browser story calls `usePlaywright()` before `story()`. |
+| `test-utils/story-test/my-paradise.ts` | Starts the app for browser stories and loads their examples. |
+| `test-utils/story-test/repositories.ts` | The repositories a story runs on: in-memory for the domain spec, node for the server spec and the browser. `reset-every-repository` reads it. |
+
 Rules `reduce-story-overlap`, `scaffold-test-scripts`,
 `playwright-tests-browser-interaction`, and `pml-artifact-layout` govern these
 files.

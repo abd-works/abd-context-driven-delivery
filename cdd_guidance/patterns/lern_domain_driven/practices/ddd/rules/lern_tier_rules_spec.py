@@ -151,6 +151,12 @@ with description("the lern_domain_driven pattern rules"):
             (self.root / "tests" / "repositories.ts").write_text("export const all = [subscriptionRepositoryNode];\n", encoding="utf-8")
             expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(equal([]))
 
+        with it("should pass once the step library's repositories file lists it"):
+            library = self.root / "test-utils" / "story-test"
+            library.mkdir(parents=True)
+            (library / "repositories.ts").write_text("export const all = [subscriptionRepositoryNode];\n", encoding="utf-8")
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(equal([]))
+
     with description("shared story rules"):
         with it("should flag a context cast and pass the tier-bound accessor"):
             expect(TierBoundRepositoryAccessor().check(story_file("const repo = ctx.planRepository as PlanRepository;"), None)).to(have_len(1))

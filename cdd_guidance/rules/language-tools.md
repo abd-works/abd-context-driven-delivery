@@ -10,7 +10,7 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 
 - **Test Runner**: [Vitest](https://vitest.dev/) (or Jest).
 - **Assertion Library**: Vitest `expect` (including `expect.poll` for async UI state).
-- **Machinery**: Copy `practices/stories/templates/ts/story-test.ts` → `tests/story-test.ts` once per tests tree if missing — not inlined in deploy templates.
+- **Machinery**: Copy `practices/stories/templates/ts/story-test.ts` → `tests/story-test.ts` once per tests tree if missing — not inlined in deploy templates. When a pattern names a step library folder, the file goes there instead and stories import it from there (LERN: `test-utils/story-test/story-test.ts`, imported as `test-utils/story-test/story-test`).
 - **Story file shape**: One `{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts` per story — `beforeAll` / `afterAll`, `background(({ given }) => { … scenario() … })`. The scenarios markdown for that story is the same stem with `.md`. Do not emit front-end / back-end / e2e files, and do not use `.spec.` (that name is for BDD describe/it). Template is **structure only** (`// test code goes here` in each step); replace when implementing.
 - **Style**: `story` / `background` / `scenario` from `story-test.ts`; chain `when(…).and(…)`; first `then(…)` then `.and(…)` for additional outcomes.
 

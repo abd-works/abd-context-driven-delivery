@@ -119,6 +119,24 @@ with description("a LernDomainDriven generator"):
             companion = self.stories.fidelities.current.clean_engineering
             expect(companion.practice_guidance.format).to(equal("typescript"))
 
+        with it("should point the step library at test-utils/story-test"):
+            expect(self.stories.story_test_folder).to(equal("test-utils/story-test"))
+
+        with it("should render a story map that writes and imports story-test from test-utils/story-test"):
+            story_map = (
+                "(E) Manage Customer Orders\n"
+                "    (E) Place New Order\n"
+                "        (S) Customer --> Browse Product Catalog\n"
+                "        (S) Customer --> Add Item To Cart\n"
+            )
+            paths = self.stories.render(format="typescript", content=story_map, source="markdown")["content"]
+            expect("test-utils/story-test/story-test.ts" in paths).to(be_true)
+            expect("tests/story-test.ts" in paths).to(equal(False))
+            leaves = [p for p in paths if p.endswith("_story.test.ts")]
+            expect(leaves).not_to(equal([]))
+            for leaf in leaves:
+                expect(paths[leaf]).to(contain('from "test-utils/story-test/story-test"'))
+
     with context("whose contexts slot is expanded"):
         with before.each:
             self.rendered = (_MODULE_DIR / "lern_domain_driven.md").read_text(encoding="utf-8")

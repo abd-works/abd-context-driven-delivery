@@ -100,6 +100,30 @@ with description("a TypeScript runnable-story Story Map") as self:
             leaf = next(p for p in self.tree if p.endswith("_story.test.ts"))
             expect(self.tree[leaf]).to(contain('from "stories/story-test"'))
 
+    with context("that names the step library folder"):
+        with before.each:
+            self.ts = TypeScriptStoryModel(tests_root="tests", story_test_folder="test-utils/story-test")
+            self.tree = self.ts.render(_story_map_with_stories())
+
+        with it("should place story-test in the step library folder"):
+            expect("test-utils/story-test/story-test.ts" in self.tree).to(be_true)
+            expect("tests/story-test.ts" in self.tree).to(equal(False))
+
+        with it("should keep story files under the tests root"):
+            leaf = next(p for p in self.tree if p.endswith("_story.test.ts"))
+            expect(leaf.startswith("tests/")).to(be_true)
+
+        with it("should import story-test from the step library folder"):
+            leaf = next(p for p in self.tree if p.endswith("_story.test.ts"))
+            expect(self.tree[leaf]).to(contain('from "test-utils/story-test/story-test"'))
+
+        with it("should still skip story-test when parsing the tree back"):
+            parsed = TypeScriptStoryModel("tests").parse(self.tree)
+            expect(parsed.epics[0].epics[0].stories[0].name).to(equal("Redeem a voucher"))
+            expect(
+                TypeScriptStoryModel("tests").leaf_files_of(self.tree)
+            ).not_to(contain("test-utils/story-test/story-test.ts"))
+
     with context("a scenario with two Then outcomes"):
         with it("should chain the second outcome with .and()"):
             story = Story("Select Plan", 1, StoryType.USER)

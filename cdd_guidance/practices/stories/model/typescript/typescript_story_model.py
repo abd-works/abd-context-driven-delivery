@@ -9,7 +9,11 @@ from cdd_guidance.practices.stories.model.code_story_model import (
     CodeStoryModelError,
 )
 from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic, TypeScriptStory, _story_test_text
-from cdd_guidance.practices.stories.model.typescript.story_file import story_test_file_path
+from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.typescript.story_file import (
+    default_story_test_folder,
+    story_test_file_path,
+)
 
 _SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
 
@@ -24,10 +28,34 @@ class TypeScriptStoryModel(CodeStoryModel):
     epic_type = TypeScriptEpic
     story_type = TypeScriptStory
 
+    def __init__(
+        self,
+        source: "StoryModel | str | None" = None,
+        tests_root: str | None = None,
+        story_test_folder: str | None = None,
+    ):
+        super().__init__(source, tests_root)
+        folder = default_story_test_folder(self.tests_root) if story_test_folder is None else story_test_folder
+        self._story_test_folder = folder.strip("/")
+
+    @property
+    def story_test_folder(self) -> str:
+        """Step library folder: where story-test.ts sits and where story files import it from."""
+        return self._story_test_folder
+
+    def render(
+        self,
+        canonical: StoryModel,
+        previous: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, str]:
+        return type(self)(
+            canonical, tests_root=self.tests_root, story_test_folder=self._story_test_folder
+        ).save(previous)
+
     def save(self, previous: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-        tree: Dict[str, str] = {story_test_file_path(self.tests_root): _story_test_text(self.tests_root)}
+        tree: Dict[str, str] = {story_test_file_path(self._story_test_folder): _story_test_text(self.tests_root)}
         for epic in self.epics:
-            epic.write(self.tests_root, tree, self.tests_root)
+            epic.write(self.tests_root, tree, self._story_test_folder)
         if previous:
             for path, body in list(tree.items()):
                 if path in previous and self._is_gwt_leaf(path):

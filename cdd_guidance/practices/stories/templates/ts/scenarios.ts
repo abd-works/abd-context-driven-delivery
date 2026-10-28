@@ -14,6 +14,7 @@
  *
  * # Machinery — copy once per tests/ tree if missing (do not inline in skills):
  *   practices/stories/templates/ts/story-test.ts → tests/story-test.ts
+ *   (into the step library folder when a pattern names one — LERN: test-utils/story-test/story-test.ts)
  * ```
  *
  * ## Path naming (`kebab-case-paths`)

@@ -19,6 +19,9 @@ class LernDomainDriven(PracticeGuidance):
     """# Instructions"""
 
     pattern = "lern_domain_driven"
+    # The shared step library (story-test.ts, story-playwright.ts, my-paradise.ts, repositories.ts) sits outside tests/,
+    # so tests/ holds only story-map folders.
+    story_test_folder = "test-utils/story-test"
 
     def __init__(self) -> None:
         super().__init__(
@@ -35,4 +38,5 @@ class LernDomainDriven(PracticeGuidance):
             format="typescript",
         )
         instance.mode = "tool"
+        instance.story_test_folder = self.story_test_folder
         return instance

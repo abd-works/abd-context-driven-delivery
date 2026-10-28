@@ -21,6 +21,9 @@ class Stories(PracticeGuidance):
         "spec_blurb": "Executable scenario-specifications with real-world examples",
     }
 
+    # Step library folder for the TypeScript render; a pattern names it. None keeps story-test.ts at the tests root.
+    story_test_folder: str | None = None
+
     def __init__(
         self,
         fidelity: str = "story_map",
@@ -45,3 +48,11 @@ class Stories(PracticeGuidance):
         )
         if stage is not None:
             self._activate(stage=stage)
+
+    def _live_adapter(self, format_name: str):
+        if self.story_test_folder is None or self._canonical_format(format_name) != "typescript":
+            return super()._live_adapter(format_name)
+        return self._format_adapter(format_name)(
+            tests_root=self.default_workspace_folder,
+            story_test_folder=self.story_test_folder,
+        )

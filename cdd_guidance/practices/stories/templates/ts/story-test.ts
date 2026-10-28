@@ -1,8 +1,10 @@
 /**
- * Given / When / Then helpers (Vitest). Copy to tests/story-test.ts once per tests/ tree.
+ * Given / When / Then helpers (Vitest). Copy to tests/story-test.ts once per tests/ tree,
+ * or into the step library folder when a pattern names one (LERN: test-utils/story-test/).
  *
  * ```
  * file: tests/story-test.ts
+ * file (LERN): test-utils/story-test/story-test.ts
  * ```
  */
 

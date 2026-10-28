@@ -98,9 +98,11 @@ def unreset_instances(text: str, class_names: list[str], setup_text: str) -> lis
 
 
 def test_setup_text(root: Path) -> str:
+    from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
+
     seen: set[Path] = set()
     parts: list[str] = []
-    for pattern in _TEST_SETUP_GLOBS:
+    for pattern in (*_TEST_SETUP_GLOBS, f"{LernDomainDriven.story_test_folder}/repositories.ts"):
         for path in root.glob(pattern):
             if path in seen or not path.is_file():
                 continue

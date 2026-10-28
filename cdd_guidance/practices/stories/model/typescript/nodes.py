@@ -8,6 +8,10 @@ from pathlib import Path
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Story
+from cdd_guidance.practices.stories.model.typescript.story_file import (
+    DEFAULT_STORY_TEST_IMPORT,
+    story_test_import_path,
+)
 
 
 class TypeScriptScenario(CodeScenario):
@@ -251,7 +255,7 @@ class TypeScriptStory(CodeStory):
         return "\n".join(lines)
 
     @classmethod
-    def create(cls, story: Story, story_test_import_path: str = "tests/story-test", **kwargs) -> str:
+    def create(cls, story: Story, story_test_import_path: str = DEFAULT_STORY_TEST_IMPORT, **kwargs) -> str:
         return "\n".join([
             f'import {{ scenario, story }} from "{story_test_import_path}";',
             "",
@@ -260,13 +264,13 @@ class TypeScriptStory(CodeStory):
 
 
 class TypeScriptEpic(CodeEpic):
-    def _write_stories(self, parent: str, files: dict, tests_root: str) -> None:
-        from cdd_guidance.practices.stories.model.typescript.story_file import story_test_import_path
+    """The model hands every epic its step library folder where code epics take the tests root."""
 
+    def _write_stories(self, parent: str, files: dict, story_test_folder: str) -> None:
         stories = self._file_stories()
         if not stories:
             return
-        import_path = story_test_import_path(tests_root)
+        import_path = story_test_import_path(story_test_folder)
         blocks = "\n".join(TypeScriptStory.story_text(story) for story in stories)
         example_names = _example_names(stories)
         example_import = (
@@ -285,7 +289,7 @@ class TypeScriptEpic(CodeEpic):
             blocks,
         ])
 
-    def _write_folder(self, folder: str, files: dict, tests_root: str) -> None:
+    def _write_folder(self, folder: str, files: dict, story_test_folder: str) -> None:
         noun = self._aggregate_noun()
         kebab = CodeEpic(noun).slug()
         files.setdefault(f"{folder}/examples/{kebab}.examples.ts", self._examples_file(noun))
