@@ -15,6 +15,7 @@ from harness.graph.bound_node import BoundNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 
 from .source_location import SourceLocation
 
@@ -108,6 +109,8 @@ class StoryNode(BoundNode, ABC):
         self.artifact_name = ""
         self.camel_case_path = False
         self.evidence: List[str] = []
+        self.written: Optional[WrittenBlock] = None
+        self.setup = CodeBody()
 
     def load_map_facts(self) -> None:
         """Fill the name, evidence, and child-count facts this node already owns."""
@@ -164,6 +167,13 @@ class StoryNode(BoundNode, ABC):
             self.child_band = "warning"
         else:
             self.child_band = "error"
+
+    def take_code_from(self, source: "StoryNode") -> None:
+        """Keep the code the source was read with, so a copy in another channel can still write it back."""
+        self.written = getattr(source, "written", None)
+        self.setup = getattr(source, "setup", CodeBody())
+        if hasattr(self, "body"):
+            self.body = getattr(source, "body", CodeBody())
 
     @abstractmethod
     def clone(self) -> "StoryNode":
@@ -359,9 +369,16 @@ class Step(StoryNode):
         self.call_graph: List[CallGraphEntry] = (
             list(origin.call_graph) if origin is not None and getattr(origin, "call_graph", None) else []
         )
+        self.body = CodeBody()
         if origin is not None:
+            self.take_code_from(origin)
             for extra in origin.ands:
                 self._ands.append(type(self)(extra))
+
+    @property
+    def code_key(self) -> tuple:
+        """What this step says in code: while it still says it, the lines it was read with stand."""
+        return (self.keyword, self.text, self.body.text)
 
     @property
     def ands(self) -> List["Step"]:
@@ -401,7 +418,12 @@ class Step(StoryNode):
         )
         cloned.ands = [step.clone() for step in self.ands]
         cloned.call_graph = list(self.call_graph)
+        cloned.take_code_from(self)
         return cloned
+
+
+def _steps_key(steps: List["Step"]) -> tuple:
+    return tuple(line.code_key for step in steps for line in (step, *step.ands))
 
 
 class Background(StoryNode):
@@ -416,6 +438,7 @@ class Background(StoryNode):
         self._steps = _BoundChildren(self, "steps")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
         if source is not None:
+            self.take_code_from(source)
             for step in source.steps:
                 self._steps.append(Step(step))
 
@@ -427,10 +450,15 @@ class Background(StoryNode):
     def steps(self, steps: List["Step"]) -> None:
         self._refill(self._steps, steps)
 
+    @property
+    def code_key(self) -> tuple:
+        return (self.name, _steps_key(self.steps))
+
     def clone(self) -> "Background":
         cloned = type(self)(self.name, self.sequential_order)
         cloned.steps = [step.clone() for step in self.steps]
         cloned.examples = self.examples.clone(cloned)
+        cloned.take_code_from(self)
         return cloned
 
 
@@ -469,6 +497,7 @@ class Scenario(StoryNode):
         self.evidence: List[str] = list(source.evidence) if source is not None else []
         self.source: Optional[SourceLocation] = source.source if source is not None else None
         if source is not None:
+            self.take_code_from(source)
             for background in source.backgrounds:
                 self.backgrounds.append(Background(background))
             for step in source.steps:
@@ -526,6 +555,12 @@ class Scenario(StoryNode):
         self.child_label = "steps"
         self.child_band = ""
 
+    @property
+    def code_key(self) -> tuple:
+        """What this scenario says in code: its name, examples, backgrounds, and every step with its body."""
+        backgrounds = tuple(background.code_key for background in self.backgrounds)
+        return (self.name, tuple(self.examples), backgrounds, _steps_key(self.steps))
+
     def clone(self) -> "Scenario":
         cloned = type(self)(self.name, self.sequential_order, self.story_name)
         cloned.is_outline = self.is_outline
@@ -536,6 +571,7 @@ class Scenario(StoryNode):
         for step in self.steps:
             cloned.steps.append(step.clone())
         cloned.examples = self.examples.clone(cloned)
+        cloned.take_code_from(self)
         return cloned
 
 
@@ -562,6 +598,7 @@ class Epic(StoryNode):
         if source is None:
             return
         self.estimate = source.estimate or ""
+        self.take_code_from(source)
         build_story = story_class or Story
         for child in source.epics:
             self.append_epic(type(self)(child, story_class=build_story))
@@ -599,6 +636,7 @@ class Epic(StoryNode):
     def clone(self) -> "Epic":
         cloned = type(self)(self.name, self.sequential_order)
         cloned.estimate = self.estimate or ""
+        cloned.take_code_from(self)
         for child in self.epics:
             cloned.epics.append(child.clone())
         for story in self.stories:
@@ -735,6 +773,7 @@ class Story(StoryNode):
         self._scenarios = _BoundChildren(self, "scenarios")
         if source is None:
             return
+        self.take_code_from(source)
         for background in source.backgrounds:
             self.backgrounds.append(Background(background))
         for scenario in source.scenarios:
@@ -787,6 +826,12 @@ class Story(StoryNode):
         shorter, longer = (left, right) if len(left) <= len(right) else (right, left)
         return longer.startswith(shorter[: max(3, len(shorter) - 1)])
 
+    @property
+    def code_key(self) -> tuple:
+        """What this story says in code apart from its scenarios, which keep their own keys."""
+        backgrounds = tuple(background.code_key for background in self.backgrounds)
+        return (self.name, tuple(self.actors), tuple(self.evidence), backgrounds)
+
     def clone(self) -> "Story":
         cloned = type(self)(self.name, self.sequential_order, self.story_type)
         cloned.increment = self.increment
@@ -797,6 +842,7 @@ class Story(StoryNode):
             cloned.backgrounds.append(background.clone())
         for scenario in self.scenarios:
             cloned.scenarios.append(scenario.clone())
+        cloned.take_code_from(self)
         return cloned
 
 

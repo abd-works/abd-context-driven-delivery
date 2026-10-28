@@ -1333,13 +1333,12 @@ code implementation — see § decisions).
 	Invariant: Increment has no code implementation; delegates to Markdown for the workspace's `thin-slicing.md`
 
 + render(canonical: StoryMap, previous: Dict<FilePath, String>): Dict<FilePath, String>
-	Invariant: HAND-WRITTEN regions in matching existing files are preserved byte-for-byte
+	Invariant: a sub-epic file read in this language and unchanged is written back to its own path, byte-for-byte
+	Invariant: every step body, setup, and line of code around the stories in previous survives regeneration for the epics, stories, scenarios, and steps canonical still names
 	Interaction:
-		self.translateFrom(canonical)                                    ← reconciles Epics/SubEpics/Stories/Scenarios
-		tree = {}
-		for filePath, generated in self._emitFiles():
-			tree[filePath] = self._preserveHandWritten(previous.get(filePath, ''), generated)
-		return tree
+		model = self.copyOf(canonical)
+		model.adoptCode(self.parse(previous))                            ← code canonical has none of, in this language
+		return model.save()
 
 + parse(external: Dict<FilePath, String>): StoryMap
 	Invariant: reconstructs Epic/SubEpic hierarchy from folder structure; leaf files yield `CodeStory` + `CodeScenario` nodes; raises CodeStoryMapError if no recognisable Epic folders found
@@ -1352,8 +1351,8 @@ code implementation — see § decisions).
 - _emitFiles(): Dict<FilePath, String>
 	Invariant: walks the built node tree, calling each node's `_writeCode` and aggregating file output
 
-- _preserveHandWritten(previous: String, generated: String): String
-	Invariant: every HAND-WRITTEN START/END region in previous survives regeneration byte-for-byte
+- adoptCode(kept: StoryMap): None
+	Invariant: an epic, story, background, scenario, or step without code in this language takes kept's code for the node with the same name
 
 - _folderSlug(node: Epic | SubEpic, siblings: List): String
 	Invariant: to_kebab; appends --{sequentialOrder} suffix on name collision

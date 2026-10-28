@@ -8,9 +8,9 @@ import textwrap
 from typing import Callable, List, Optional, Tuple, Union
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
-from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation, WrittenBlock
+from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock
 
 _SIGNATURE = "BDD: SIGNATURE"
 _SPEC = "spec"
@@ -100,22 +100,12 @@ class CodeBddModel(BddModel):
     def _read_block(self, node: Union[BddModel, BehaviorBlock], inside: Tuple[int, int], children: List[ChildBlock]) -> List[str]:
         """Read the lines inside one block: setup before the first child, each child with the lines above it,
         and return the lines after the last child. Blank lines right above the first child belong to it."""
-        lines = self._lines
-        start, end = inside
-        region = lines[start : children[0][0]] if children else lines[start:end]
-        kept = len(region)
-        while kept and not region[kept - 1].strip():
-            kept -= 1
-        node.setup = CodeBody("\n".join(region[:kept]), self.language)
-        node.written.inside = region[:kept]
-        if not children:
-            return region[kept:]
-        previous_end = None
-        for order, (first, last, read) in enumerate(children, 1):
-            lead = region[kept:] if previous_end is None else lines[previous_end + 1 : first]
+        setup, leads, closing = WrittenBlock.split_inside(self._lines, inside, [(first, last) for first, last, _ in children])
+        node.setup = CodeBody("\n".join(setup), self.language)
+        node.written.inside = setup
+        for order, ((_first, _last, read), lead) in enumerate(zip(children, leads), 1):
             read(lead, order)
-            previous_end = last
-        return lines[previous_end + 1 : end]
+        return closing
 
     def _render_inside(self, node: Union[Description, Context], path: tuple, written: Optional[WrittenBlock]) -> List[str]:
         inner = self._indents(path)[1]

@@ -4,9 +4,8 @@ from __future__ import annotations
 import re
 from typing import List
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
-from cdd_guidance.practices.stories.model.story_model import Background, StepType, Story
+from cdd_guidance.practices.stories.model.story_model import Background, Story
 
 
 class PythonScenario(CodeScenario):
@@ -58,43 +57,12 @@ class PythonScenario(CodeScenario):
                     names.append(name)
         return names
 
-    @classmethod
-    def create(cls, scenario) -> List[str]:
-        lines: List[str] = []
-        lines.extend(CodeScenario.background_lines(scenario, "            # "))
-        if scenario.examples:
-            lines.append("            # examples: " + ", ".join(scenario.examples))
-        for step in scenario.steps:
-            verb = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And": "and_"}.get(step.keyword, "then")
-            lines.extend(cls._step(verb, step, 12))
-        if not lines:
-            lines.append("            pass")
-        return lines
-
-    @staticmethod
-    def _step(verb: str, step, indent: int) -> List[str]:
-        pad = " " * indent
-        lines = [
-            f'{pad}with {verb}("{_quote(step.text)}"):',
-            f"{pad}    pass",
-        ]
-        if getattr(step, "call_graph", None):
-            for graph_line in render_call_graph_block(step.call_graph).splitlines():
-                lines.append(f"{pad}    # {graph_line}")
-        for extra in step.ands:
-            verb = "but_" if extra.keyword == "But" else "and_"
-            lines.extend([
-                f'{pad}with {verb}("{_quote(extra.text)}"):',
-                f"{pad}    pass",
-            ])
-        return lines
-
 
 def _unescape(value: str) -> str:
     return value.replace('\\"', '"').replace("\\\\", "\\")
 
 
-def _quote(value: str) -> str:
+def quote(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
@@ -127,68 +95,17 @@ class PythonStory(CodeStory):
         return story
 
     @classmethod
-    def story_text(cls, story: Story) -> str:
-        lines: List[str] = [f"# Story: {story.name}"]
-        actor = (story.actors[0] if story.actors else "").strip()
-        if actor:
-            lines.append(f"# Actor: {actor}")
-        if story.domain_terms:
-            lines.append("# Domain terms: " + ", ".join(story.domain_terms))
-        example_line = CodeStory.background_example_line(story, "# ")
-        if example_line:
-            lines.append(example_line)
-        lines.append(f'with story("{_quote(story.name)}"):')
-        if story.backgrounds:
-            scope = story.backgrounds[0].name if re.fullmatch(r"\w+", story.backgrounds[0].name or "") else "each"
-            lines.append(f"    with background.{scope}:")
-            for background in story.backgrounds:
-                for step in background.steps:
-                    lines.extend(PythonScenario._step("given", step, 8))
-        if not story.scenarios and not story.backgrounds:
-            lines.append("        pass")
-        for scenario in story.scenarios:
-            lines.append(f'        with scenario("{_quote(scenario.name)}"):')
-            lines.extend(PythonScenario.create(scenario))
-        lines.append("")
-        return "\n".join(lines)
-
-    @classmethod
     def create(cls, story: Story, **kwargs) -> str:
+        from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
+
         return "\n".join([
             "from __future__ import annotations",
             "",
             "from story_test import and_, background, given, scenario, story, then, when",
             "",
-            cls.story_text(story),
+            PythonStoryModel().story_text(cls(story)),
         ])
-
-
-def _example_names(stories) -> List[str]:
-    names = []
-    for story in stories:
-        for scenario in story.scenarios:
-            for name in scenario.examples:
-                if name not in names:
-                    names.append(name)
-    return names
 
 
 class PythonEpic(CodeEpic):
-    def _write_stories(self, parent: str, files: dict, tests_root: str) -> None:
-        stories = self._file_stories()
-        if not stories:
-            return
-        blocks = "\n".join(PythonStory.story_text(story) for story in stories)
-        names = _example_names(stories)
-        example_import = [f"from examples import {', '.join(names)}", ""] if names else []
-        files[f"{parent}/{self.snake()}_story.test.py"] = "\n".join([
-            "from __future__ import annotations",
-            "",
-            "from story_test import and_, background, given, scenario, story, then, when",
-            *example_import,
-            "",
-            f"# Epic: {self.name}",
-            f"# Orders: {self.order_path()}",
-            "",
-            blocks,
-        ])
+    pass

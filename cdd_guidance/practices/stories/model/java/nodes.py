@@ -108,42 +108,11 @@ class JavaStory(CodeStory):
         return story
 
     @classmethod
-    def story_text(cls, story: Story) -> str:
-        actor = (story.actors[0] if story.actors else "").strip()
-        lines = [f"/** Story: {story.name}"]
-        if actor:
-            lines.append(f" * Actor: {actor}")
-        example_line = CodeStory.background_example_line(story, " * ")
-        if example_line:
-            lines.append(example_line)
-        for background in story.backgrounds:
-            lines.append(f" * BACKGROUND: {background.name}")
-            for step in background.steps:
-                if step.keyword != "Given":
-                    continue
-                lines.append(f" * GIVEN: {step.text}")
-                for extra in step.ands:
-                    lines.append(f" * {extra.keyword.upper()}: {extra.text}")
-        for scenario in story.scenarios:
-            lines.extend(JavaScenario.create(scenario))
-        lines.append(" */")
-        lines.append("")
-        return "\n".join(lines)
-
-    @classmethod
     def create(cls, story: Story, **kwargs) -> str:
-        return cls.story_text(story)
+        from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
+
+        return JavaStoryModel().story_text(cls(story))
 
 
 class JavaEpic(CodeEpic):
-    def _write_stories(self, parent: str, files: dict, tests_root: str) -> None:
-        stories = self._file_stories()
-        if not stories:
-            return
-        blocks = "\n".join(JavaStory.story_text(story) for story in stories)
-        files[f"{parent}/{self.pascal()}Story.java"] = "\n".join([
-            f"// Epic: {self.name}",
-            f"// Orders: {self.order_path()}",
-            "",
-            blocks,
-        ])
+    pass

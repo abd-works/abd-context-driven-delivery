@@ -22,11 +22,20 @@ Every epic, increment, story, background, scenario, step, and example is a Story
 + sequential_order: int
 + parent: StoryNode
 + estimate: str
++ written: WrittenBlock | None
+	// how this node was written in code: a sub-epic file, a story, a background, or a scenario. None outside code
++ setup: CodeBody
+	// the code inside a story or scenario that is not a background, scenario, or step: shared fields and helpers
 ----
 + semantic_type(): str
 	// Epic, Story, Step, and the other node kinds
 + clone(): StoryNode
 	// a copy of this node, including its children
++ take_code_from(source: StoryNode): None
+	// keeps written and setup when the node is copied into another channel or cloned. A step also keeps its body
++ code_key: tuple
+	// a step: keyword, text, and body. A background: its name and steps. A scenario: name, examples, backgrounds, and steps.
+	// A story: name, actors, evidence, and backgrounds. While a node's key is the one it was read with, its code stands
 
 ## StoryModelFactory
 
@@ -601,6 +610,33 @@ The Miro REST API. `MiroStoryModel.upload` posts shapes through `create_shape`. 
 - get_next_increment_from_file(): CodeIncrement
 + save(): str
 	// one story file per story, under the epic folders
++ render(canonical: StoryModel, previous: dict | None): dict
+	// previous is the path-to-content map already on disk
+	// each epic, story, scenario, and step without code in this language takes the previous file's code for the same names
+	// -> parse(previous), then adopt_code
++ language: CodeLanguage
+	// each language model sets its instance. A model without one writes generically and adopts nothing
++ story_lines(story: Story): list[str]
+	// the one story render. Read in this language and story.code_key unchanged: every line as read
+	// otherwise: story_open, the setup, each background, then each scenario, story_close
+	// each scenario decides for itself, so editing one scenario rewrites only that one
++ scenario_lines(scenario: Scenario, indent: str): list[str]
+	// read in this language and scenario.code_key unchanged: every line as read
+	// otherwise: scenario_open, the setup, each background, each step through step_lines, scenario_close
++ step_lines(clause: StepClause, indent: str): list[str]
+	// one step, the verb it opens with, and the steps chained onto it, each with its body through CodeBody.lines_in
+	// step_placeholder marks a body still to write; an empty body also carries the realization call graph as comments
+- write_epics(files: dict): dict
+	// an epic with child epics is a folder; a sub-epic with stories is one file
+	// a sub-epic read from a file in this language writes back to that path, with the code above and below its stories as read
+- read_code(content: str, stories: list[Story], path: str): WrittenBlock | None
+	// each language's reader gives each story, background, scenario, and step the code it was written with
+	// the return is the file's code above the first story and below the last
+- file_name, file_header, folder_files, story_open, story_close, story_background_lines, no_scenarios_lines,
+  scenario_open, scenario_close, scenario_background_lines, examples_lines, clauses, verb,
+  step_open, step_close, and_open, and_body_indent, and_close, step_placeholder, empty_block
+	// each language model overrides the spelling operations above. None of them decides what a body holds
+	// TypeScript and JavaScript share BraceStoryModel; Python and Java spell their own
 
 ## CodeIncrement : Increment, CodeStoryNode
 

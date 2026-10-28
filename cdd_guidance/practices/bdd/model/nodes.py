@@ -8,7 +8,7 @@ from typing import List
 from harness.graph.bound_node import BoundChildren
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 from cdd_guidance.practices.stories.model.story_model import StoryNode
 
 
@@ -34,35 +34,6 @@ def private_probe_in_text(text: str, start_line: int) -> dict:
     return {}
 
 
-class WrittenBlock:
-    """The source lines around one describe, context, or it that no node holds, kept exactly as read."""
-
-    def __init__(self, language: CodeLanguage, name: str, lead: List[str], heading: List[str]) -> None:
-        self.language = language
-        self.name = name
-        self.lead = lead
-        self.heading = heading
-        self.inside: List[str] = []
-        self.inline = ""
-        self.closing: List[str] = []
-        self.close: List[str] = []
-
-    def is_in(self, language: CodeLanguage, name: str) -> bool:
-        return self.language is language and self.name == name
-
-    def inside_for(self, body: CodeBody) -> List[str] | None:
-        """The setup or test body lines exactly as read, while the model's body still says the same.
-        A block written on one line keeps its body in the heading, so it has no inside lines."""
-        as_read = CodeBody(self.inline or "\n".join(self.inside), self.language)
-        return self.inside if as_read.text == body.text else None
-
-    def lead_body(self) -> CodeBody:
-        return CodeBody("\n".join(self.lead), self.language)
-
-    def closing_body(self) -> CodeBody:
-        return CodeBody("\n".join(self.closing), self.language)
-
-
 class BehaviorNode(StoryNode):
     """A describe-tree node read from spec code. Knows its own source lines and loads the facts BDD rules read."""
 
@@ -70,7 +41,6 @@ class BehaviorNode(StoryNode):
         super().__init__(*args, **kwargs)
         self.line = 0
         self.end_line = 0
-        self.written: WrittenBlock | None = None
 
     def load_span_facts(self, span: str) -> None:
         """Fill the facts this node's own source lines carry."""
@@ -86,15 +56,13 @@ class Description(BehaviorNode):
 
     def __init__(self, name: str, sequential_order: int = 1) -> None:
         super().__init__(name=name, sequential_order=sequential_order)
-        self.setup = CodeBody()
         self.contexts = BoundChildren(self, "contexts")
         # Spec code often puts `it` straight under the outermost describe.
         self.observations = BoundChildren(self, "observations")
 
     def clone(self) -> "Description":
         cloned = type(self)(self.name, self.sequential_order)
-        cloned.written = self.written
-        cloned.setup = self.setup
+        cloned.take_code_from(self)
         for context in self.contexts:
             cloned.contexts.append(context.clone())
         for observation in self.observations:
@@ -112,14 +80,12 @@ class Context(BehaviorNode):
 
     def __init__(self, name: str, sequential_order: int = 1) -> None:
         super().__init__(name=name, sequential_order=sequential_order)
-        self.setup = CodeBody()
         self.observations = BoundChildren(self, "observations")
         self.contexts = BoundChildren(self, "contexts")
 
     def clone(self) -> "Context":
         cloned = type(self)(self.name, self.sequential_order)
-        cloned.written = self.written
-        cloned.setup = self.setup
+        cloned.take_code_from(self)
         for observation in self.observations:
             cloned.observations.append(observation.clone())
         for context in self.contexts:
@@ -145,8 +111,7 @@ class Observation(BehaviorNode):
 
     def clone(self) -> "Observation":
         cloned = type(self)(self.name, self.sequential_order)
-        cloned.written = self.written
-        cloned.body = self.body
+        cloned.take_code_from(self)
         cloned.call_graph = list(self.call_graph)
         cloned.surface_lines = list(self.surface_lines)
         return cloned

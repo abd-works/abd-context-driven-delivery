@@ -9,27 +9,42 @@ from typing import Dict, List, Optional
 
 from pathlib import Path
 
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError
+from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
+from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
+from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError, example_names_of
 from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
 from cdd_guidance.practices.stories.model.story_model import Epic
 
 
-class JavaScriptStoryModel(CodeStoryModel):
+class JavaScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = "_story.test.js"
     LANGUAGE_LINE_COMMENT = "//"
     epic_type = JavaScriptEpic
-    epic_type = JavaScriptEpic
     story_type = JavaScriptStory
+    language = CodeLanguage.named("javascript")
 
-    def save(self, previous: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-        tree: Dict[str, str] = {f"{self.tests_root}/story-test.js": _story_test_js()}
-        for epic in self.epics:
-            epic.write(self.tests_root, tree, self.tests_root)
-        if previous:
-            for path, body in list(tree.items()):
-                if path in previous and path.endswith(self.LEAF_EXTENSION):
-                    tree[path] = self._preserve_hand_written(previous[path], body)
-        return tree
+    def save(self) -> Dict[str, str]:
+        # WHY: a tree read from JavaScript already brings its own story-test helper; only a new tree needs the seed.
+        seed = {} if self.read_from_code() else {f"{self.tests_root}/story-test.js": _story_test_js()}
+        return self.write_epics(seed)
+
+    def file_name(self, epic: Epic) -> str:
+        return f"{epic.snake()}_story.test.js"
+
+    def file_header(self, epic: Epic, parent: str) -> List[str]:
+        relative = "../" * parent.count("/") + "story-test.js"
+        names = example_names_of(list(epic.stories))
+        example_import = [f"import {{ {', '.join(names)} }} from \"./examples\";"] if names else []
+        return [
+            "/**",
+            f" * Epic: {epic.name}",
+            f" * Orders: {epic.order_path()}",
+            " */",
+            "",
+            f'import {{ background, scenario, story }} from "{relative}";',
+            *example_import,
+            "",
+        ]
 
     def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
         return sorted(
@@ -51,7 +66,7 @@ class JavaScriptStoryModel(CodeStoryModel):
             parts = path.strip("/").split("/")
             if parts and parts[0] == self.tests_root:
                 parts = parts[1:]
-            if self.take_sub_epic_file(parts, content):
+            if self.take_sub_epic_file(parts, content, path):
                 continue
             # epic / ...subs... / story-folder / file
             if len(parts) < 4:

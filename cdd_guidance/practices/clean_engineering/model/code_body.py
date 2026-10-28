@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Union
 
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PROSE = re.compile(
@@ -122,6 +122,10 @@ class CodeBody:
     def is_empty(self) -> bool:
         return not self.text
 
+    def mentions(self, word: str) -> bool:
+        """The body uses this word as written, such as await in a callback that must be async."""
+        return re.search(rf"\b{re.escape(word)}\b", self.text) is not None
+
     def lines_in(self, language: CodeLanguage, indent: str, unfinished: str) -> List[str]:
         if self.language is language:
             return [f"{indent}{line}" if moves and line.strip() else line for moves, line in self._lines]
@@ -136,6 +140,57 @@ class CodeBody:
         if self.language is language or other.language is not language:
             return self
         return other
+
+
+WrittenKey = Union[str, Tuple, None]
+# What a node says in code when it is read: a name, or a tuple of names, steps, and bodies.
+
+
+class WrittenBlock:
+    """The source lines around one block of code that no node holds, kept exactly as read.
+
+    A BDD describe, context, or it, a story, scenario, or step chain: the language writes these lines back
+    unchanged while the node still has the key it was read with."""
+
+    def __init__(self, language: CodeLanguage, key: WrittenKey, lead: List[str], heading: List[str]) -> None:
+        self.language = language
+        self.key = key
+        self.path = ""
+        self.lead = lead
+        self.heading = heading
+        self.inside: List[str] = []
+        self.inline = ""
+        self.closing: List[str] = []
+        self.close: List[str] = []
+
+    def is_in(self, language: CodeLanguage, key: WrittenKey) -> bool:
+        return self.language is language and self.key == key
+
+    @staticmethod
+    def split_inside(lines: List[str], inside: Tuple[int, int], children: List[Tuple[int, int]]) -> Tuple[List[str], List[List[str]], List[str]]:
+        """The lines inside one block as (setup, the lines above each child, the lines after the last child).
+        Blank lines right above the first child belong to it; with no child they close the block."""
+        start, end = inside
+        region = lines[start : children[0][0]] if children else lines[start:end]
+        kept = len(region)
+        while kept and not region[kept - 1].strip():
+            kept -= 1
+        if not children:
+            return region[:kept], [], region[kept:]
+        leads = [region[kept:]] + [lines[previous[1] + 1 : child[0]] for previous, child in zip(children, children[1:])]
+        return region[:kept], leads, lines[children[-1][1] + 1 : end]
+
+    def inside_for(self, body: CodeBody) -> List[str] | None:
+        """The setup or test body lines exactly as read, while the model's body still says the same.
+        A block written on one line keeps its body in the heading, so it has no inside lines."""
+        as_read = CodeBody(self.inline or "\n".join(self.inside), self.language)
+        return self.inside if as_read.text == body.text else None
+
+    def lead_body(self) -> CodeBody:
+        return CodeBody("\n".join(self.lead), self.language)
+
+    def closing_body(self) -> CodeBody:
+        return CodeBody("\n".join(self.closing), self.language)
 
 
 PYTHON_SPELLING = CodeSpelling(

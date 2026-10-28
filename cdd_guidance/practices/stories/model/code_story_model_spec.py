@@ -294,34 +294,31 @@ with description("a code Story Map") as self:
                         expect(previous_leaf in self.new_tree).to(be_true)
 
     with context(
-        "that holds hand-written regions in a leaf file outside the generated Story blocks"
+        "that holds hand-written code in a leaf file outside the generated Story blocks"
     ):
         with before.each:
-            self.canonical = fixture.story_map_with_4_epics_and_3_leaf_epics()
-            first_leaf_path = f"{self.code_map.tests_root}/{CodeEpic('Epic 1').slug()}/{CodeEpic('Epic 1.1').slug()}/{CodeEpic('Epic 1.1').slug()}{self.code_map.LEAF_EXTENSION}"
-            initial_tree = self.code_map.render(self.canonical)
-            hand_written = (
-                initial_tree[first_leaf_path]
-                + "\n# HAND-WRITTEN START custom-block\nmy_setup_variable = 42\n# HAND-WRITTEN END\n"
-            )
-            self.first_leaf_path = first_leaf_path
-            self.previous_tree = dict(initial_tree)
-            self.previous_tree[first_leaf_path] = hand_written
+            from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
-        with context("with the leaf file regenerated"):
+            self.typescript_map = TypeScriptStoryModel("tests")
+            self.canonical = fixture.story_map_with_4_epics_and_3_leaf_epics()
+            initial_tree = self.typescript_map.render(self.canonical)
+            self.first_leaf_path = next(path for path in initial_tree if path.endswith("epic_1_1_story.test.ts"))
+            self.previous_tree = dict(initial_tree)
+            self.previous_tree[self.first_leaf_path] = (
+                initial_tree[self.first_leaf_path] + "\nconst mySetupVariable = 42;\n"
+            )
+
+        with context("with the leaf file regenerated from the canonical Story Map and the previous tree"):
             with before.each:
-                self.new_tree = self.code_map.render(
-                    self.canonical, previous=self.previous_tree
-                )
+                self.new_tree = self.typescript_map.render(self.canonical, previous=self.previous_tree)
 
             with context("the leaf file"):
-                with it("should preserve every hand-written region byte-for-byte"):
-                    expect("my_setup_variable = 42" in self.new_tree[self.first_leaf_path]).to(be_true)
+                with it("should keep the hand-written code byte-for-byte"):
+                    expect("const mySetupVariable = 42;" in self.new_tree[self.first_leaf_path]).to(be_true)
 
             with context("the generated Story blocks"):
-                with it("should be the only regions rewritten"):
-                    generated_leaf = self.new_tree[self.first_leaf_path]
-                    expect("## story: Story 1" in generated_leaf).to(be_true)
+                with it("should still be written from the canonical Story Map"):
+                    expect("story('Story 1', () => {" in self.new_tree[self.first_leaf_path]).to(be_true)
 
     with context(
         "that has been asked to parse a value that is not a valid code Story Map tree"
