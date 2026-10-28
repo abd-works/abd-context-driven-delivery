@@ -43,7 +43,7 @@
  *
  * Named domain fixtures under `examples/` at the lowest **shared** folder (epic, sub-epic, or story).
  * One file per domain concept (`account-credentials.examples.ts`). Import in the story file;
- * never repeat literals across scenarios. Golden layout: `practices/stories/examples/telco-website/`.
+ * never repeat literals across scenarios. Golden layout: `practices/stories/_examples/telco-website/`.
  *
  * import { validAccountCredentials } from "./examples/account-credentials.examples";
  *

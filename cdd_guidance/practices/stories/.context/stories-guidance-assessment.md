@@ -19,7 +19,7 @@ The assessment distinguishes:
 - Paradise Mobile `story-map.md`, `story-scenarios.md`, `thin-slice.md`, and `system-terms.md`
 - Story scenario Markdown under the Paradise Mobile epic and sub-epic folders
 - Paradise Mobile `*_story.spec.ts`, `examples/*.ts`, `story-test.ts`, and test setup
-- `practices/stories/examples/telco-website/examples.md`
+- `practices/stories/_examples/telco-website/examples.md`
 
 ## Executive Assessment
 

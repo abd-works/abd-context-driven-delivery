@@ -7,7 +7,7 @@ from mamba import before, context, description, it
 
 from harness.graph.graph import Graph
 
-_SAMPLE = Path(__file__).resolve().parent / "examples" / "input"
+_SAMPLE = Path(__file__).resolve().parent / "_examples" / "input"
 _PRACTICES = ["clean_engineering", "stories", "ddd", "bdd", "ux"]
 
 

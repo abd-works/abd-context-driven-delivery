@@ -12,7 +12,7 @@ from mamba import before, context, description, it
 
 from graph import Graph, Node, PracticeGraph, Source
 
-_FOLDS = _HERE / "examples" / "folds"
+_FOLDS = _HERE / "_examples" / "folds"
 
 
 def operation(practice: PracticeGraph, name: str, owner: str, text: str, folder: Path) -> Node:

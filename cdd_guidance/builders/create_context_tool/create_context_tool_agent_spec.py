@@ -22,7 +22,7 @@ from agent_bdd import (
 
 _REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
-_CAR_ROOT = "cdd_guidance/practices/create_context_tool/examples/car_chronicle"
+_CAR_ROOT = "cdd_guidance/practices/create_context_tool/_examples/car_chronicle"
 _OUTPUT_DIR = _REPO_ROOT / _CAR_ROOT / "output"
 _CAR_CHRONICLE_PY = f"{_CAR_ROOT}/car_chronicle.py"
 _CAR_TOOLSET = (

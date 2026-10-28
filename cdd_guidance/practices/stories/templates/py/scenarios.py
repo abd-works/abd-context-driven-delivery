@@ -47,7 +47,7 @@
 #   `{epic}/{sub-epic}/examples/` — catalog / givens shared by stories in the sub-epic
 #   `{epic}/{sub-epic}/{story}/examples/` — fixtures unique to this story
 # One file per domain concept (`account-credentials.examples.py`). Import in the story file;
-# never repeat literals across scenarios. Golden layout: `practices/stories/examples/telco-website/`.
+# never repeat literals across scenarios. Golden layout: `practices/stories/_examples/telco-website/`.
 #
 # from .examples.account_credentials_examples import valid_account_credentials
 #

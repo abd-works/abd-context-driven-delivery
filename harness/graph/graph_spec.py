@@ -14,7 +14,7 @@ from mamba import before, context, description, it
 from graph import Graph, Node, PracticeGraph, Source
 
 _ROOT = _HERE
-_SAMPLE = _ROOT / "examples" / "input"
+_SAMPLE = _ROOT / "_examples" / "input"
 _PRACTICES = ["clean_engineering", "stories", "ddd", "bdd", "ux"]
 # CustomerRepository.exception takes four parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = "exception"

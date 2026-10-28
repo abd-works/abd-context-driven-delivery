@@ -60,6 +60,6 @@ guides an AI through that way when it creates or edits one. The chain, in order:
 - Two clean_engineering fixtures disagree with their rules: `keep-classes-single-responsibility`
   (fixture has 11 public operations, rule budget is 18) and `use-exceptions-properly`
   (TypeScript `catch { }` is treated as intentional by the detector).
-- `graph_view_spec.py` writes fixtures into `harness/graph/examples/folds/` and never removes them.
+- `graph_view_spec.py` writes fixtures into `harness/graph/_examples/folds/` and never removes them.
 - Python module-level functions in a file that also has classes are hung on the first class by the
   Python parser and dropped from the graph by `OoadClass.own_operations`.

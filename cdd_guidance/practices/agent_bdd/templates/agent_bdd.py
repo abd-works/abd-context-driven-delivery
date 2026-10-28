@@ -3,7 +3,7 @@
 # =============================================================================
 # Fill placeholders (delete this block before committing):
 #
-#   {ToolsetPath}     e.g. cdd_guidance.builders.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+#   {ToolsetPath}     e.g. cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle
 #   {ActionName}      generate | validate | satisfy | repair | <custom>
 #   {SessionName}     stem for .agent_bdd_sessions/<name>.json
 #   {Description}     top-level describe label (e.g. "a CarChronicle generator")

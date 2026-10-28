@@ -15,7 +15,7 @@ from mamba import before, context, description, it
 from graph import Graph
 from host import GraphHost
 
-_SAMPLE = _HERE / "examples" / "input"
+_SAMPLE = _HERE / "_examples" / "input"
 _PRACTICES = ["clean_engineering", "stories", "ddd", "bdd", "ux"]
 
 

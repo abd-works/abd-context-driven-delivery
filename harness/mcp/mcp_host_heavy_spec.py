@@ -19,11 +19,11 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.installation.installer import Installer
-from harness.mcp.examples.parameter_types.parameter_types import ParameterTypes
+from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.mcp_server import HostPid, McpHost, McpInstallation
 from cdd_guidance.actions.iterate.iterate import Iterate
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
-from harness.mcp.examples.illegitimate_name.illegitimate_name import (
+from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
 from space.repo.repo import DefaultBranchError
@@ -459,7 +459,7 @@ with description("an MCP host") as self:
 with description("an MCP host tool ping") as self:
     with before.each:
         self.host = McpHost.from_refs(
-            ("harness.mcp.examples.hosting_demo.hosting_demo:HostingDemo",),
+            ("harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo",),
             repo=str(_REPO_ROOT),
             project=str(_REPO_ROOT),
         )

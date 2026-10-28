@@ -14,7 +14,7 @@ const repoRoot = path.resolve(here, "../../..");
 const port = process.env.PORT || "3000";
 const examplePath =
   process.env.STORY_DEMO_EXAMPLE ||
-  "/context_tools/ux/examples/manage-customer-orders/place-new-order/place-new-order.html";
+  "/context_tools/ux/_examples/manage-customer-orders/place-new-order/place-new-order.html";
 
 const url = `http://localhost:${port}${examplePath}`;
 

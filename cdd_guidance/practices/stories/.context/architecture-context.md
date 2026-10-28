@@ -115,7 +115,7 @@ Other language channels still exist (Python / JavaScript / Java) and may keep th
 
 Given / When / Then steps live inline in each story test file. Shared domain fixtures live in `examples/` at the lowest shared folder — not inventable inline tables in the GWT file.
 
-The `practices/stories/examples/{ts,py}/process-payments/` trees are historical examples of document-mode layout, not the acceptance-test tree above.
+The `practices/stories/_examples/{ts,py}/process-payments/` trees are historical examples of document-mode layout, not the acceptance-test tree above.
 
 
 **Python-only naming exception — snake-case epic helper:**

@@ -20,10 +20,10 @@ from mamba import context, description, it
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-_HOSTING_DEMO = "harness.mcp.examples.hosting_demo.hosting_demo:HostingDemo"
+_HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
 _ECHO = "echo_instructions.echo_instructions:EchoInstructions"
 _PARAMETER_TYPES = (
-    "harness.mcp.examples.parameter_types.parameter_types:ParameterTypes"
+    "harness.mcp._examples.parameter_types.parameter_types:ParameterTypes"
 )
 _ECHO_ARGUMENTS = {
     "text": "parcel",

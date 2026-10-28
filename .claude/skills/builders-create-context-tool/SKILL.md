@@ -24,7 +24,7 @@ description: >-
   
   ## Domain folder layout
   
-  - **`domain-folder-layout`** — One folder per domain. The `.py` module lives **inside** that folder (e.g. `practices/agent_bdd/agent_bdd.py`, `practices/create_context_tool/examples/car_chronicle/car_chronicle.py`). Same folder holds `{domain-slug}.md`, `examples/examples.md`, optional `formats/{format}/{domain-slug}-template.*`, optional `scanners/`. Repair fixtures: `examples/<descriptive-folder>/faultyAsset` and `repairedAsset`. **Never** park Python beside the folder and override `module_dir` to point at it — that is a layout smell.
+  - **`domain-folder-layout`** — One folder per domain. The `.py` module lives **inside** that folder (e.g. `practices/agent_bdd/agent_bdd.py`, `practices/create_context_tool/_examples/car_chronicle/car_chronicle.py`). Same folder holds `{domain-slug}.md`, `examples/examples.md`, optional `formats/{format}/{domain-slug}-template.*`, optional `scanners/`. Repair fixtures: `examples/<descriptive-folder>/faultyAsset` and `repairedAsset`. **Never** park Python beside the folder and override `module_dir` to point at it — that is a layout smell.
   
   ## Scaffold vs patch
   
@@ -44,7 +44,7 @@ description: >-
   
   ## Reference extension example
   
-  - **`reference-extension-example`** — **`practices/create_context_tool/examples/car_chronicle/`** shows a complete context extension: `car_chronicle.py` beside `car_chronicle.md`, `{domain-slug}-templates.md`, `examples/examples.md`, repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`). No `module_dir` override — the class module and markdown share one folder.
+  - **`reference-extension-example`** — **`practices/create_context_tool/_examples/car_chronicle/`** shows a complete context extension: `car_chronicle.py` beside `car_chronicle.md`, `{domain-slug}-templates.md`, `examples/examples.md`, repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`). No `module_dir` override — the class module and markdown share one folder.
   
   ## Examples and repair fixtures
   
