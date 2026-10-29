@@ -522,6 +522,70 @@ with description("a branch opened through the repo toolset"):
         with it("should refuse to close main"):
             expect(lambda: self.toolset.close_branch("main")).to(raise_error(DefaultBranchError))
 
+        with context("with end-to-end results from the release that lands and from older ones"):
+            with before.each:
+                self.toolset.switch_branch("feature/a")
+                WorkState(self.clone).session = "new-release"
+                (self.clone / ".gitignore").write_text(
+                    ".sessions/session.json\n.sessions/*/e2e-test-results/**/*.png\n", encoding="utf-8"
+                )
+                self.latest = _release_screenshot(self.clone, "new-release", finished=True)
+                self.older = _release_screenshot(self.clone, "old-release", finished=True)
+                self.recording = _release_screenshot(self.clone, "pml-my", finished=False)
+                self.toolset.close_branch()
+
+            with it("should push the landed release's screenshots to e2e-latest"):
+                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "e2e-latest")).to(
+                    equal(".sessions/new-release/e2e-test-results/run/pml-web/step.png")
+                )
+
+            with it("should keep the landed release's screenshots in the clone"):
+                expect(self.latest.exists()).to(equal(True))
+
+            with it("should remove an older release's results from the clone"):
+                expect(self.older.parent.parent.parent.exists()).to(equal(False))
+
+            with it("should remove an older release's results from main on origin"):
+                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).not_to(contain(".sessions/old-release/"))
+
+            with it("should keep the landed release's results on main on origin"):
+                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).to(
+                    contain(".sessions/new-release/e2e-test-results/run/pml-web/step.json")
+                )
+
+            with it("should keep the results of a release that never finished a run"):
+                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).to(
+                    contain(".sessions/pml-my/e2e-test-results/run/pml-web/step.json")
+                )
+
+            with it("should leave screenshots out of main"):
+                expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).not_to(contain(".png"))
+
+        with context("named by repo_path from a toolset started in another clone"):
+            with before.each:
+                (Path(self.tmp.name) / "host").mkdir()
+                self.host_origin, self.host = _clone_with_origin(Path(self.tmp.name) / "host")
+                self.toolset = Repo(self.host)
+                self.toolset.switch_branch("feature/a", repo_path=str(self.clone))
+
+            with it("should switch the named clone"):
+                expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/a"))
+
+            with it("should leave the toolset's own clone on main"):
+                expect(_git(self.host, "branch", "--show-current")).to(equal("main"))
+
+            with it("should save the branch in the named clone's .sessions/session.json"):
+                expect(WorkState(self.clone).branch).to(equal("feature/a"))
+
+            with it("should commit and push in the named clone"):
+                (self.clone / "work.txt").write_text("feature work\n", encoding="utf-8")
+                self.toolset.push_commit("work", repo_path=str(self.clone))
+                expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("work.txt"))
+
+            with it("should close the branch in the named clone"):
+                self.toolset.close_branch(repo_path=str(self.clone))
+                expect(_git(self.clone, "branch", "--list", "feature/a")).to(equal(""))
+
 
 # (E) Open Work Session
 # (E) Work With Repo Worktree
@@ -581,6 +645,21 @@ with description("a worktree opened through the repo toolset"):
         with it("should refuse to close a worktree when none is open"):
             expect(lambda: self.toolset.close_worktree()).to(raise_error(NoOpenWorktreeError))
 
+        with context("named by repo_path from a toolset started in another clone"):
+            with before.each:
+                (Path(self.tmp.name) / "host").mkdir()
+                self.host_origin, self.host = _clone_with_origin(Path(self.tmp.name) / "host")
+                self.toolset = Repo(self.host)
+                self.toolset.switch_worktree("feature/a", repo_path=str(self.clone))
+                self.tree = Path(WorkState(self.clone).worktree)
+
+            with it("should open the worktree beside the named clone"):
+                expect(_git(self.tree, "branch", "--show-current")).to(equal("feature/a"))
+
+            with it("should remove the named clone's worktree when closed"):
+                self.toolset.close_worktree(repo_path=str(self.clone))
+                expect(self.tree.exists()).to(equal(False))
+
 
 # (E) Open Work Session
 # (S) Repo --> Run Git
@@ -604,6 +683,19 @@ def _git(root: Path, *args: str) -> str:
         capture_output=True,
         text=True,
     ).stdout.strip()
+
+
+def _release_screenshot(clone: Path, release: str, *, finished: bool) -> Path:
+    """One step's recording and screenshot in the release's end-to-end results; a finished run also writes the release's
+    story map."""
+    results = clone / ".sessions" / release / "e2e-test-results"
+    shot = results / "run" / "pml-web" / "step.png"
+    shot.parent.mkdir(parents=True)
+    shot.write_bytes(b"png")
+    (shot.parent / "step.json").write_text("{}", encoding="utf-8")
+    if finished:
+        (results / "story-map.html").write_text("<html></html>", encoding="utf-8")
+    return shot
 
 
 def _clone_with_origin(root: Path) -> tuple[Path, Path]:

@@ -46,3 +46,12 @@ with description("a repo's work state"):
                 expect(sorted(item.name for item in WorkState(self.root).path.parent.iterdir())).to(
                     equal(["session.json"])
                 )
+
+        with context("whose session names the release being worked on"):
+            with it("should keep that release's files in its own session folder"):
+                expect(WorkState(self.root).release_folder()).to(equal(self.root.resolve() / ".sessions" / "self-care"))
+
+            with it("should find another release's folder by its name"):
+                expect(WorkState(self.root).release_folder("main-release")).to(
+                    equal(self.root.resolve() / ".sessions" / "main-release")
+                )

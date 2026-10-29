@@ -1,4 +1,5 @@
-"""Numbered versions of a design canvas: ``version-1``, ``version-2``, … beside each other under one folder.
+"""Numbered versions of a design canvas: ``version-1``, ``version-2``, … beside each other under one folder, the release's
+``.sessions/<release>/design-canvas``.
 
 People edit a published canvas directly, so a regeneration never writes over one: it starts the next version, a
 copy of the latest that the generator then renders into, and that version is published as a new canvas.
@@ -15,6 +16,8 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from space.work_state import DESIGN_CANVAS_FOLDER, WorkState
+
 _VERSION = re.compile(r"^version-(\d+)$")
 
 
@@ -23,12 +26,17 @@ class PublishedVersion(Exception):
 
 
 class CanvasVersions:
-    """The versions of the canvas kept under *root* (for example ``ux/design-canvas``)."""
+    """The versions of the canvas kept under *root* (for example ``.sessions/<release>/design-canvas``)."""
 
     record_name = "versions.json"
 
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root)
+
+    @classmethod
+    def from_release(cls, repo_root: str | Path, release: str = "") -> CanvasVersions:
+        """The canvas of *release* in the checkout at *repo_root*; the release being worked on when none is named."""
+        return cls(WorkState(repo_root).release_folder(release) / DESIGN_CANVAS_FOLDER)
 
     @property
     def numbers(self) -> List[int]:

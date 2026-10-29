@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 
 STATE_NAME = "session.json"
+DESIGN_CANVAS_FOLDER = "design-canvas"
+E2E_RESULTS_FOLDER = "e2e-test-results"
 _LEGACY_SESSION_KEY = "current"
 
 
@@ -42,6 +44,15 @@ class WorkState:
     @session.setter
     def session(self, name: str) -> None:
         self._store("session", name)
+
+    @property
+    def release(self) -> str:
+        """The release this checkout's work belongs to: the open session, else the branch, else ``default``."""
+        return self.session or self.branch or "default"
+
+    def release_folder(self, release: str = "") -> Path:
+        """``.sessions/<release>/``: the release's session files, its design canvas, and its end-to-end results."""
+        return self.root / ".sessions" / (release or self.release)
 
     def load(self) -> dict[str, str]:
         if not self.path.is_file():

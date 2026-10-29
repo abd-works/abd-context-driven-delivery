@@ -7,6 +7,7 @@ from mamba import description, context, it, before, after
 from expects import equal, expect, be_none, raise_error
 
 from harness.design_canvas.versions import CanvasVersions, PublishedVersion
+from space.work_state import WorkState
 
 
 with description("Canvas versions") as self:
@@ -80,3 +81,21 @@ with description("Canvas versions") as self:
             number = self.versions.start_next()
             expect(number).to(equal(1))
             expect((self.versions.folder(1) / "project" / "Main.dc.html").read_text(encoding="utf-8")).to(equal("version 2"))
+
+
+with description("a release's canvas") as self:
+    with before.each:
+        self.folder = tempfile.TemporaryDirectory()
+        self.repo = Path(self.folder.name)
+        WorkState(self.repo).session = "small-change"
+
+    with after.each:
+        self.folder.cleanup()
+
+    with it("should keep its versions in the release's session folder"):
+        expect(CanvasVersions.from_release(self.repo).root).to(equal(self.repo.resolve() / ".sessions" / "small-change" / "design-canvas"))
+
+    with it("should open a named release's canvas"):
+        expect(CanvasVersions.from_release(self.repo, "design-system-setup").root).to(
+            equal(self.repo.resolve() / ".sessions" / "design-system-setup" / "design-canvas")
+        )

@@ -31,7 +31,7 @@ Write this tier the way `practices-stories-stories-acceptance-tests` and `patter
 The tier sits beside the existing tiers. Its run setup and HTML report are tooling, not tests, so they live in `test-utils/legacy-compare/`.
 
 ```
-playwright.legacy-compare.config.ts        testMatch **/*.story.legacy-compare.ts; projects pml-my, then pml-web (no dependency, so pml-web runs even when pml-my fails); output test-results/end-to-end/<epic>/<sub-epic> (one folder per sub-epic; the screen-story config writes test-results/playwright so it never empties it)
+playwright.legacy-compare.config.ts        testMatch **/*.story.legacy-compare.ts; projects pml-my, then pml-web (no dependency, so pml-web runs even when pml-my fails); output .sessions/<release>/e2e-test-results/<epic>/<sub-epic> (one folder per sub-epic; the screen-story config writes test-results/playwright so it never empties it)
 test-utils/legacy-compare/story-legacy-compare.ts host: binds system and one live page per system; records readings, writes, ARIA, screenshots; writes the assert log
 test-utils/legacy-compare/pml-my.ts        starts pml-my under the overlay; loads examples into its edge stub through the overlay's sandbox-only seed hook
 test-utils/legacy-compare/setup.ts         backs up pml-web's local lowdb stores (not in git) before the run and restores them after; writes the assert log after it
@@ -76,8 +76,9 @@ Copy this checklist and tick it off for each sub-epic:
    - Tell the user the sub-epic, its stories and scenarios, both systems, the examples loaded, and whether the run is watched or fast.
    - Run nothing until the user says yes.
 7. **Run.**
-   - One folder per sub-epic: `npm run e2e` runs every sub-epic (pml-web against the saved recordings), each into `test-results/end-to-end/<epic>/<sub-epic>`, replacing that sub-epic's last result; `npm run e2e -- <epic>` runs every sub-epic of one epic; `npm run e2e -- <epic>/<sub-epic>` runs one. Access My Paradise has one compare file for the epic, so its folder is `test-results/end-to-end/access-my-paradise`. `npm run e2e -- --refresh-pml-my <epic>/<sub-epic>` re-records pml-my for those journeys only. Watched by default (headed, `slowMo`).
-   - pml-my's recordings are saved per journey in `test-results/end-to-end/baseline/pml-my/`. pml-my runs only journeys with no saved recording; each pml-my journey with no failing row is saved on its own, and setup copies the saved ones into every run. Set `LEGACY_COMPARE_REFRESH=1` (narrowed to a sub-epic with a file filter) to rerun saved journeys, and only when pml-my, its stubs, or the examples change. Never rerun pml-my for a harness change.
+   - One folder per sub-epic: `npm run e2e` runs every sub-epic (pml-web against the saved recordings), each into `.sessions/<release>/e2e-test-results/<epic>/<sub-epic>`, replacing that sub-epic's last result; `npm run e2e -- <epic>` runs every sub-epic of one epic; `npm run e2e -- <epic>/<sub-epic>` runs one. Access My Paradise has one compare file for the epic, so its folder is `.sessions/<release>/e2e-test-results/access-my-paradise`. `npm run e2e -- --refresh-pml-my <epic>/<sub-epic>` re-records pml-my for those journeys only. Watched by default (headed, `slowMo`).
+   - Results are kept per release in `.sessions/<release>/e2e-test-results/` (the release is `LEGACY_COMPARE_RELEASE`, else the open session). A run compares against another release's pml-web recordings: `LEGACY_COMPARE_BASELINE=<release>`, else the newest other release with a `story-map.html`; with none, or `LEGACY_COMPARE_BASELINE=pml-my`, against pml-my. Screenshots are git-ignored; when a branch closes, only the landed release's are pushed (branch `e2e-latest`) and older releases' results are removed and that removal committed on main, and a run fetches the baseline release's screenshots from `e2e-latest` when they are missing.
+   - pml-my's recordings are saved per journey in `.sessions/pml-my/e2e-test-results/pml-my/`. pml-my runs only journeys with no saved recording; each pml-my journey with no failing row is saved on its own, and setup copies the saved ones into every run. Set `LEGACY_COMPARE_REFRESH=1` (narrowed to a sub-epic with a file filter) to rerun saved journeys, and only when pml-my, its stubs, or the examples change. Never rerun pml-my for a harness change.
    - Keep the config's reporters (do not pass `--reporter`): they write the HTML report the trace step opens.
    - Fast: the same command with `LEGACY_COMPARE_FAST=1` set. Recordings and pml-web runs must use the same mode (headless is 1280px wide, headed 1265px with its scrollbar).
    - The script watches each sub-epic: when its Playwright output is quiet for 5 minutes, or it runs past 30 minutes (45 for a pml-my refresh; `LEGACY_COMPARE_MAX_MINUTES` overrides), it stops that run's process tree, logs `!!! end-to-end watchdog`, and retries the sub-epic once. Setup restores pml-web's stores from the stopped run's backup. Watch your own background jobs the same way: never wait on a run that has stopped writing.
@@ -85,11 +86,11 @@ Copy this checklist and tick it off for each sub-epic:
    - Load the examples once at the start, then never seed again. One page per system runs the stories in map order (`test.describe.serial`), and each scenario starts where the last one left the app.
    - Alternate flows run inside the journey. A flow gets its own short journey, with its own example load, only when it would leave the app stuck.
 8. **Open the trace.** Every journey records a Playwright trace (`trace: 'on'`). After the run, open the trace viewer on the journeys so the user can replay each one: a tree of journey › story › scenario › step marked green or red, with the page as it was at every step.
-   - One journey: `npx playwright show-trace test-results/end-to-end/<epic>/<sub-epic>/playwright/<journey-folder>/trace.zip` (one trace per viewer; open the pml-my and pml-web folders of a journey as two viewers).
-   - The whole run, with every journey's trace one click away: `npx playwright show-report test-results/end-to-end/<epic>/<sub-epic>/report`.
+   - One journey: `npx playwright show-trace .sessions/<release>/e2e-test-results/<epic>/<sub-epic>/playwright/<journey-folder>/trace.zip` (one trace per viewer; open the pml-my and pml-web folders of a journey as two viewers).
+   - The whole run, with every journey's trace one click away: `npx playwright show-report .sessions/<release>/e2e-test-results/<epic>/<sub-epic>/report`.
    - Start it in the background so the session is not blocked, and tell the user which journeys failed so they know where to look.
 9. **Report.**
-   - Every run writes `test-results/end-to-end/<epic>/<sub-epic>/compare.html` when it ends, beside `assert-log.md`, and `test-results/end-to-end/story-map.html`: every sub-epic and its stories with their counts, each linked to its sub-epic's report.
+   - Every run writes `.sessions/<release>/e2e-test-results/<epic>/<sub-epic>/compare.html` when it ends, beside `assert-log.md`, and `.sessions/<release>/e2e-test-results/story-map.html`: every sub-epic and its stories with their counts, each linked to its sub-epic's report.
      - What it shows:
        - pass/fail counts per sub-epic and story, broken down by kind (reading, write, page text, fonts/colours/sizes, look, journey state);
        - each Story › Scenario with its Given/When/Then steps, and pml-my's and pml-web's checks side by side;
@@ -97,8 +98,8 @@ Copy this checklist and tick it off for each sub-epic:
        - a **Failures only** filter and filters for each kind of check.
      - It is styled with the abd.works brand (tokens from `abd-works-brand/css/brand.css`, wordmarks in `test-utils/legacy-compare/assets/`), with the Executive/Engineering mode switch.
      - The screenshots are embedded (each distinct one once, at half size), so the page works on its own, including in Claude's file pane. Clicking one opens the full-size file when the page is opened from the run folder.
-     - To rebuild it for an existing run: `bun test-utils/legacy-compare/report.ts test-results/end-to-end/<epic>/<sub-epic>`.
-   - Every run also keeps a history: teardown writes the same report with no images (no screenshot, no embedded image data, a text wordmark) to `test-results/end-to-end/history/<run start, YYYY-MM-DD_HHMM>/<epic>/<sub-epic>.html`, and adds the sub-epic to `summary.md` there: pass and fail per story and kind, then every failing row as text. The script sets the run start once for all its sub-epics. The history is never deleted; the image report beside the run is replaced by the next run of that sub-epic.
+     - To rebuild it for an existing run: `bun test-utils/legacy-compare/report.ts .sessions/<release>/e2e-test-results/<epic>/<sub-epic>`.
+   - Every run also keeps a history: teardown writes the same report with no images (no screenshot, no embedded image data, a text wordmark) to `.sessions/<release>/e2e-test-results/history/<run start, YYYY-MM-DD_HHMM>/<epic>/<sub-epic>.html`, and adds the sub-epic to `summary.md` there: pass and fail per story and kind, then every failing row as text. The script sets the run start once for all its sub-epics. The history is never deleted; the image report beside the run is replaced by the next run of that sub-epic.
    - For each scenario and step, give: pml-my pass/fail, pml-web pass/fail, reading match, write match, structure match.
    - Say which side to fix for each failure. Point the user to the run's `compare.html` (publish it when they want to share it), fix, then go back to step 6 for the rerun.
    - **Every miss is a missing test on another layer.** Before fixing pml-web code for a failure, add the test that should have caught it, at the layer that owns the behaviour, then fix the code until that test and the compare both pass:
@@ -132,7 +133,7 @@ Copy this checklist and tick it off for each sub-epic:
 
 ## Assert log
 
-Write `test-results/end-to-end/<epic>/<sub-epic>/assert-log.md` with exactly these columns, one row per assertion:
+Write `.sessions/<release>/e2e-test-results/<epic>/<sub-epic>/assert-log.md` with exactly these columns, one row per assertion:
 
 ```
 | story › scenario › step | system | checked (reader field, mapping, or locator + expected) | seen | result | screenshots |

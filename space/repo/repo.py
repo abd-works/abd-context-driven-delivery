@@ -15,6 +15,7 @@ from typing import Any
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
+from space.repo.latest_release import LatestRelease
 from space.work_state import WorkState
 
 logger = logging.getLogger(__name__)
@@ -897,7 +898,8 @@ class Repo:
         return cls(root, memory=True, owner=owner, repo_name=repo_name)
 
     @classmethod
-    def git(cls, root: str | Path, *args: str) -> str:
+    def git(cls, root: str | Path, *args: str, env: dict[str, str] | None = None, timeout: float | None = None) -> str:
+        """Run git in ``root``. ``env`` adds variables to git's environment; ``timeout`` overrides the default limit."""
         found = shutil.which("git")
         if not found:
             for candidate in (
@@ -909,14 +911,14 @@ class Repo:
                     break
         if not found:
             raise RepoConnectError("Cannot connect git: `git` is not available.")
-        timeout = (
+        timeout = timeout or (
             _NETWORK_COMMAND_TIMEOUT_SECONDS
             if args and args[0] in _NETWORK_COMMANDS
             else _COMMAND_TIMEOUT_SECONDS
         )
         try:
             returncode, stdout, stderr = cls._run_git_process(
-                [found, "-c", "core.longpaths=true", "-C", str(root), *args], timeout
+                [found, "-c", "core.longpaths=true", "-C", str(root), *args], timeout, env
             )
         except subprocess.TimeoutExpired as exc:
             raise RepoConnectError(
@@ -934,9 +936,10 @@ class Repo:
         return (stdout or "").strip()
 
     @classmethod
-    def _run_git_process(cls, argv: list[str], timeout: float) -> tuple[int, str, str]:
+    def _run_git_process(cls, argv: list[str], timeout: float, env: dict[str, str] | None = None) -> tuple[int, str, str]:
         process = subprocess.Popen(
             argv,
+            env={**os.environ, **env} if env else None,
             # Under the MCP stdio host, an inherited stdin pipe can hang git on Windows.
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
@@ -1820,6 +1823,15 @@ class Repo:
     def _work_state(self) -> WorkState:
         return WorkState(self._primary_repo().root)
 
+    def _at(self, repo_path: str) -> Repo | None:
+        """The clone at ``repo_path`` when it names one other than this toolset's; else None."""
+        if not (repo_path or "").strip():
+            return None
+        target = Repo.open(repo_path)
+        if not self._memory and target.root == self.find_root():
+            return None
+        return target
+
     def _branch_name(self, name: str) -> str:
         cleaned = (name or "").strip() or self._work_state().branch
         if not cleaned:
@@ -1828,14 +1840,18 @@ class Repo:
 
     @agent_tool
     @mcp
-    def switch_branch(self, name: str = "") -> str:
+    def switch_branch(self, name: str = "", repo_path: str = "") -> str:
         """Switch the main clone to branch ``name``, creating it when missing.
 
+        ``repo_path`` names the project's clone; omit it to act on the clone the tools started in.
         ``name`` defaults to ``branch`` in ``.sessions/session.json``. Commits the branch being
         left and pushes it (the default branch is committed but not pushed), checks out
         ``name`` (a new branch starts from origin's copy or the default branch), and saves
         ``name`` as ``branch`` in ``.sessions/session.json``. Does not touch worktrees or sessions.
         """
+        other = self._at(repo_path)
+        if other is not None:
+            return other.switch_branch(name)
         wanted = self._branch_name(name)
         repository = self._primary_repo()
         if repository.current_branch != wanted:
@@ -1846,13 +1862,20 @@ class Repo:
 
     @agent_tool
     @mcp
-    def close_branch(self, name: str = "", commit_message: str = "branch: close") -> str:
+    def close_branch(self, name: str = "", commit_message: str = "branch: close", repo_path: str = "") -> str:
         """Close branch ``name``: commit, push, merge into the default branch, push it, delete ``name``.
 
+        ``repo_path`` names the project's clone; omit it to act on the clone the tools started in.
         ``name`` defaults to ``branch`` in ``.sessions/session.json``. Refuses the default branch and
         a branch still open in a worktree. Deletes ``name`` locally and on origin, leaves the main
         clone on the default branch, and saves the default branch as ``branch``. Does not touch sessions.
+        The release that landed (the open session, else ``name``) keeps its end-to-end results, its
+        screenshots pushed to ``e2e-latest``; every older release's results are removed and that removal is
+        committed and pushed on the default branch.
         """
+        other = self._at(repo_path)
+        if other is not None:
+            return other.close_branch(name, commit_message)
         wanted = self._branch_name(name)
         repository = self._primary_repo()
         default = repository.default_branch
@@ -1861,21 +1884,28 @@ class Repo:
         occupied = repository.worktree_for(wanted)
         if occupied is not None and Path(occupied.path).resolve() != Path(repository.root).resolve():
             raise BranchInWorktreeError(wanted, Path(occupied.path))
+        release = self._work_state().session or wanted
         self.switch_branch(wanted)
         repository.branch_named(wanted).close(commit_message)
         self._work_state().branch = default
-        return f"closed branch {wanted!r}: merged into {default!r}, pushed, and deleted"
+        pruned = [] if repository.in_memory else LatestRelease(repository, release).keep()
+        kept = f"; kept {release!r} end-to-end results, removed {', '.join(pruned)}" if pruned else ""
+        return f"closed branch {wanted!r}: merged into {default!r}, pushed, and deleted{kept}"
 
     @agent_tool
     @mcp
-    def switch_worktree(self, name: str = "") -> str:
+    def switch_worktree(self, name: str = "", repo_path: str = "") -> str:
         """Open the sibling worktree for branch ``name``, creating the branch and folder when missing.
 
+        ``repo_path`` names the project's clone; omit it to act on the clone the tools started in.
         ``name`` defaults to ``branch`` in ``.sessions/session.json`` and must not be the default
         branch. When the main clone has ``name`` checked out, it is committed, pushed, and the main
         clone goes back to the default branch so the worktree can take it. Saves ``branch`` and the
         worktree path as ``worktree`` in ``.sessions/session.json``; later repo tools act in it.
         """
+        other = self._at(repo_path)
+        if other is not None:
+            return other.switch_worktree(name)
         wanted = self._branch_name(name)
         primary = self._primary_repo()
         if wanted == primary.default_branch:
@@ -1891,12 +1921,16 @@ class Repo:
 
     @agent_tool
     @mcp
-    def close_worktree(self, commit_message: str = "worktree: close") -> str:
+    def close_worktree(self, commit_message: str = "worktree: close", repo_path: str = "") -> str:
         """Close the worktree saved in ``.sessions/session.json``: commit, push its branch, remove the folder.
 
+        ``repo_path`` names the project's clone; omit it to act on the clone the tools started in.
         Does not merge; the branch stays open as ``branch``. Clears ``worktree`` in
         ``.sessions/session.json`` and returns later repo tools to the main clone.
         """
+        other = self._at(repo_path)
+        if other is not None:
+            return other.close_worktree(commit_message)
         state = self._work_state()
         if not state.worktree:
             raise NoOpenWorktreeError()
@@ -1914,7 +1948,7 @@ class Repo:
         """Switch the main clone to a branch, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Call MCP ``repo.switch_branch``."""
+        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.switch_branch``."""
         return ""
 
     @command(name="close-branch")
@@ -1923,7 +1957,7 @@ class Repo:
         """Close a branch: commit, push, merge into main, push main, delete the branch.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Call MCP ``repo.close_branch``."""
+        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.close_branch``."""
         return ""
 
     @command(name="switch-worktree")
@@ -1932,7 +1966,7 @@ class Repo:
         """Open the sibling worktree for a branch other than main, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Call MCP ``repo.switch_worktree``."""
+        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.switch_worktree``."""
         return ""
 
     @command(name="close-worktree")
@@ -1940,7 +1974,7 @@ class Repo:
     def close_worktree_command(self) -> str:
         """Close the open worktree: commit, push its branch, remove the folder. The branch stays open.
 
-        Call MCP ``repo.close_worktree``."""
+        Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.close_worktree``."""
         return ""
 
     @agent_tool
@@ -1951,9 +1985,13 @@ class Repo:
         *,
         untracked: bool = True,
         sync_remote: bool = True,
+        repo_path: str = "",
     ) -> Commit:
-        """Commit the working tree using ``message`` (subject and optional body)."""
-        repository = self._agent_repo()
+        """Commit the working tree using ``message`` (subject and optional body).
+
+        ``repo_path`` names the checkout to commit; omit it to commit the one the tools act in."""
+        other = self._at(repo_path)
+        repository = other._agent_repo() if other is not None else self._agent_repo()
         text = (message or "").strip()
         if not text:
             raise ValueError("commit message is required")
@@ -1980,7 +2018,8 @@ class Repo:
         - Calls out key paths when that clarifies scope.
 
         If the working tree is clean, say so and do not call ``repo.push_commit``.
-        Otherwise call MCP ``repo.push_commit`` with the full message (subject plus body when useful).
+        Otherwise call MCP ``repo.push_commit`` with the full message (subject plus body when useful)
+        and ``repo_path`` set to the project's checkout (``CDD_PROJECT``, else the current working directory).
         """
         return ""
 
