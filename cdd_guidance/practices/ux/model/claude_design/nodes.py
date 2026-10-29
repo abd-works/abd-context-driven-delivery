@@ -14,14 +14,15 @@ from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
 class ClaudeDesignUxMap(UxMap):
-    """Screens page layout: one board per prototype screen, four to a row under the story explorer."""
+    """Screens page layout: one board per prototype screen, four to a row under the story explorer. Boards are plain
+    canvas frames, not full-window pages, so the editor stays around them; they are sized for a desktop screen."""
 
     folder = "screens"
     page = "screens"
-    width = 1280
-    height = 900
-    column_pitch = 1360
-    row_pitch = 1060
+    width = 1600
+    height = 1100
+    column_pitch = 1680
+    row_pitch = 1280
     top = 1100
     per_row = 4
 
@@ -57,6 +58,5 @@ class ClaudeDesignUxMap(UxMap):
                 "page": cls.page,
                 "title": Path(name).name.removesuffix(".dc.html").replace("-", " ").capitalize(),
                 "is_interactive": True,
-                "expand": "fill",
             }
         return boards
