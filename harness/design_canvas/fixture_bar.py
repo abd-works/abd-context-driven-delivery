@@ -20,7 +20,7 @@ BAR = '''<div style="position: absolute; top: 12px; left: 12px; display: flex; g
 <sc-for list="{{pasteOptions}}" as="p" hint-placeholder-count="3"><option value="{{p.value}}">{{p.label}}</option></sc-for>
 </select>
 </sc-if>
-<span style="padding: 6px 10px; border-radius: 4px; background: #0B0B0B; color: #E5531A">{{source}}</span>
+__EDIT_LINK__<span style="padding: 6px 10px; border-radius: 4px; background: #0B0B0B; color: #E5531A">{{source}}</span>
 </div>
 '''
 
@@ -100,6 +100,7 @@ const rows = this.fromFixture ? options.map((name) => ({ value: name, label: nam
 const pasteOptions = paste ? rows.concat([{ value: 'dev-seed', label: 'Dev seed: ' + paste.title }]) : rows;
 return {
 standalone: !this.props.scenario,
+inExplorer: Boolean(this.props.scenario),
 scenario: this.scenarioName(),
 scenarioOptions: (options.length ? options : [this.scenarioName()]).map((name) => ({ name: name })),
 pickScenario: (event) => this.pickScenario(event.target.value),
@@ -113,16 +114,27 @@ source: (this.state && this.state.source) || 'no fixture loaded'
 '''
 
 
+EDIT_LINK = ('<sc-if value="{{inExplorer}}" hint-placeholder-val="{{ false }}"><a href="__ARTBOARD__" title="Edit this screen on its own artboard" '
+             'style="padding: 6px 10px; border: 1px solid #E5531A; border-radius: 4px; background: #E5531A; color: #0B0B0B; text-decoration: none">Edit</a></sc-if>\n')
+
+
+def bar(artboard: str = "") -> str:
+    """The bar for a screen whose own artboard is *artboard* (its canvas path, e.g. ``/screens/select-plan.dc.html``).
+    Inside the story explorer it adds **Edit**: the explorer draws the screen through ``dc-import``, so an edit there
+    would land on the explorer; the link moves Play to the screen's own artboard, where its markup lives."""
+    return BAR.replace("__EDIT_LINK__", EDIT_LINK.replace("__ARTBOARD__", artboard) if artboard else "")
+
+
 def methods(story: str, scenario: str, path: str) -> str:
     return METHODS.replace('__STORY__', story).replace('__SCENARIO__', scenario).replace('__PATH__', path)
 
 
 def fixture_screen(title: str, head: str, root_class: str, body: str, story: str, scenario: str, path: str,
-                   own_methods: str, vals: str, width: int = 1280, height: int = 900) -> str:
+                   own_methods: str, vals: str, width: int = 1280, height: int = 900, artboard: str = "") -> str:
     """A whole fixture-driven screen artboard: *head* (stylesheets, the fixtures script), the bar at the top of the
     ``root_class`` element, *body* inside it, and a ``DCLogic`` class with the shared methods, *own_methods* (its
     ``fromFixture`` and ``paste``), and ``renderVals`` returning the bar's values with *vals* (JS object entries;
-    ``st`` is the state)."""
+    ``st`` is the state). *artboard* is the screen's own canvas path, for the explorer's Edit link."""
     return f'''<!doctype html>
 <html lang="en">
 <head>
@@ -140,7 +152,7 @@ a.button-primary{{display:inline-flex;align-items:center;justify-content:center;
 </style>
 </helmet>
 <div class="{root_class}">
-{BAR}{body}
+{bar(artboard)}{body}
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
