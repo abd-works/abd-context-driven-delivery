@@ -25,7 +25,8 @@ body{margin:0}
 .sm-k3{padding-left:16px;font-size:13px}
 .sm-k3.sm-on{font-weight:600}
 .sm-ex{padding-left:28px;color:#F2A07A}
-.sm-k4{padding-left:28px;white-space:pre-wrap;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:18px;color:#9B9BA8}
+.sm-nomark{display:none}
+.sm-k4{padding-left:34px;white-space:pre-wrap;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:18px;color:#9B9BA8}
 .sm-sel{background:rgba(229,83,26,0.18);box-shadow:inset 3px 0 0 #E5531A;color:#E8E8ED;font-weight:600}
 .sm-dot{display:inline-block;width:10px;flex-shrink:0;color:#4A4A52}
 .sm-dot.sm-shot{color:#E5531A}
@@ -150,7 +151,7 @@ const ck = sk + '-' + ci;
 rows.push(Object.assign({ label: sc.n, cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on' : ''), pick: () => (g === st.g && ci === st.c && st.open[ck] ? toggle(ck)() : go(g, ci, 0)) }, chev(st.open[ck])));
 if (!st.open[ck]) return;
 this.outlineRows(s.n, sc.n).forEach((ex) => rows.push({ label: ex.label, cls: 'sm-row sm-k3 sm-ex' + (g === st.g && ci === st.c && ex.name === exampleOf(g, ci) ? ' sm-sel' : ''), mark: '◆', markCls: 'sm-dot sm-shot', pick: () => go(g, ci, 0, ex.name) }));
-sc.t.forEach((tp, ti) => rows.push({ label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c && ti === st.t ? ' sm-sel' : ''), mark: '●', markCls: tp.i.length ? 'sm-dot sm-shot' : 'sm-dot', pick: () => go(g, ci, ti) }));
+sc.t.forEach((tp, ti) => rows.push({ label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c && ti === st.t ? ' sm-sel' : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti) }));
 });
 });
 });
