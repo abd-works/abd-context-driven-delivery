@@ -442,6 +442,21 @@ it('should keep the selected node type and drop the other class', async () => {
   expect(filtered?.body.filter).toMatchObject({ node_types: ['Operation'] });
 });
 
+it('should render original practice nodes and lern nodes after inject', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await user.type(screen.getByTestId('pattern-overlay'), 'C:\\lern\\practices');
+  await user.click(screen.getByTestId('working-folder'));
+  await screen.findByRole('button', { name: 'Expand ddd' });
+  await expand(user, 'ddd');
+  expect(screen.getByText('bounded context')).toBeTruthy();
+  expect(screen.getByText('CreateAccountView')).toBeTruthy();
+  await expand(user, 'clean_engineering');
+  await expand(user, 'account');
+  expect(screen.getAllByText('AccountCredentials').length).toBeGreaterThan(0);
+  expect(calls.some((call) => call.operation === 'inject' && call.body.folder === 'C:\\lern\\practices')).toBe(true);
+});
+
 it('should put the chosen folder on the page and show its classes', async () => {
   const user = userEvent.setup();
   await openFolder(user);
@@ -534,7 +549,13 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
   if (operation === 'choose_folder') {
     return folder;
   }
+  if (operation === 'inject') {
+    return `Injected ${String(body.folder)}`;
+  }
   if (operation === 'inventory') {
+    if (calls.some((call) => call.operation === 'inject')) {
+      return injectedInventory();
+    }
     return inventory;
   }
   if (operation === 'filter_choices') {
@@ -590,6 +611,25 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
     return 'Reloaded the working copy';
   }
   return 'ok';
+}
+
+function injectedInventory() {
+  const domain = {
+    ...domainTree,
+    children: [
+      ...domainTree.children,
+      { type: 'DomainView', name: 'CreateAccountView', node_id: 'view-create', children: [] },
+      { type: 'Route', name: 'AccountCredentials', node_id: 'route-account', children: [] },
+    ],
+  };
+  return {
+    ...inventory,
+    ddd: {
+      ...inventory.ddd,
+      node_types: [...inventory.ddd.node_types, 'DomainView', 'Route'],
+      tree: domain,
+    },
+  };
 }
 
 function constrained(types: string[]) {

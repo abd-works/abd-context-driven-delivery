@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 predicate zodInHost(CallExpr call) {
   zodCall(call) and
@@ -64,4 +65,4 @@ where
       "Host '" + imp.getFile().getBaseName() +
         "' imports '" + path + "'. Client and node never cross-import; both import the domain file."
   )
-select subject, message, contributor
+select "share-domain-logic", factId(subject), message

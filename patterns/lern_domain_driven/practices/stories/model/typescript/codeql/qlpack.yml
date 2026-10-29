@@ -2,3 +2,4 @@
 version: 0.0.1
 dependencies:
   codeql/javascript-all: "*"
+  cdd/stories-graph-query-typescript: "*"

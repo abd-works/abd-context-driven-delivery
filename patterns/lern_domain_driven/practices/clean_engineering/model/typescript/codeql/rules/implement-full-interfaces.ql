@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 from ThrowStmt thr, StringLiteral s, string message, AstNode contributor
 where
@@ -19,4 +20,4 @@ where
   (nodeFile(thr.getFile()) or serverFile(thr.getFile()) or coreFile(thr.getFile())) and
   message = "Repository method stubs with throw new Error('not implemented')." and
   contributor = s
-select s, message, contributor
+select "implement-full-interfaces", factId(s), message

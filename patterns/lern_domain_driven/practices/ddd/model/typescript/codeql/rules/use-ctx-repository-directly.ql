@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 predicate storyStepFile(File file) {
   file.getBaseName().regexpMatch(".*\\.story\\.(shared|domain\\.spec|server\\.spec)\\.ts")
@@ -48,4 +49,4 @@ where
         "Use ctx." + fn.getName() + " in the step. Do not wrap the ctx binding in a function."
     )
   )
-select subject, message, contributor
+select "use-ctx-repository-directly", factId(subject), message

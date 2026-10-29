@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 from TypeAssertion ta, string message, AstNode contributor
 where
@@ -22,4 +23,4 @@ where
   ta.getTypeAnnotation().toString() = "any" and
   message = "Uses (req as any) to bypass type checking." and
   contributor = ta
-select ta, message, contributor
+select "ensure-type-safe-routes", factId(ta), message

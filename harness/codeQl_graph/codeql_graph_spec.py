@@ -496,6 +496,9 @@ with description("a CodeQL graph"):
             with it("should type AccountCredentials as an entity root"):
                 expect(tree_child(self.aggregate, "AccountCredentials")["type"]).to(equal("EntityRoot"))
 
+            with it("should leave domain clients out of the default graph"):
+                expect(self.ddd.node_count("DomainClient")).to(equal(0))
+
             with context("with a bounded context, an aggregate, an entity root, a value object, and a repository"):
                 with it("should parent the bounded context on the practice"):
                     expect(tree_child(self.ddd_tree, "bounded context")["type"]).to(equal("BoundedContext"))
@@ -624,6 +627,93 @@ with description("a CodeQL graph"):
 
             with it("should load the python class query"):
                 expect((query_pack("clean_engineering", "python") / "nodes" / "classes.ql").is_file()).to(equal(True))
+
+
+_REPO = _HERE.parents[1]
+_LERN = _REPO / "patterns" / "lern_domain_driven" / "practices"
+_APP = Path(r"C:\dev\paradise-mobile\pml-web")
+
+
+with description("a CodeQL graph"):
+    with context("with no pattern injected"):
+        with before.all:
+            self.graph = CodeQLGraph()
+            self.graph._languages = {name: "typescript" for name in _PRACTICES}
+
+        with it("should list the original domain node queries"):
+            names = [Path(path).name for path in self.graph.query_files("ddd", "nodes")]
+            expect("entity-roots.ql" in names).to(equal(True))
+            expect("domain-client.ql" in names).to(equal(False))
+
+    with context("with the lern domain driven overlay"):
+        with before.all:
+            self.graph = CodeQLGraph()
+            self.graph.inject(str(_LERN))
+            roots = {name: str(_APP) for name in ("clean_engineering", "stories", "ddd")}
+            self.graph.load_working_copy(str(_APP), roots, database=str(_APP))
+            self.clean = self.graph.practice("clean_engineering")
+            self.stories = self.graph.practice("stories")
+            self.ddd = self.graph.practice("ddd")
+            self.clean_tree = self.clean.root_node.serialize()
+            self.stories_tree = self.stories.root_node.serialize()
+            self.ddd_tree = self.ddd.root_node.serialize()
+
+        with it("should union the original node queries with the pattern node queries"):
+            names = [Path(path).name for path in self.graph.query_files("ddd", "nodes")]
+            expect("entity-roots.ql" in names).to(equal(True))
+            expect("domain-client.ql" in names).to(equal(True))
+            expect("route.ql" in names).to(equal(True))
+
+        with it("should keep classes and modules from the original practice"):
+            expect(self.clean.node_count("OoadClass")).to(be_above(0))
+            expect(self.clean.node_count("Module")).to(be_above(0))
+            expect(self.clean.node_count("Operation")).to(be_above(0))
+
+        with it("should keep aggregates and entity roots from the original practice"):
+            expect(self.ddd.node_count("Aggregate")).to(be_above(0))
+            expect(self.ddd.node_count("EntityRoot")).to(be_above(0))
+            expect(self.ddd.node_count("Repository")).to(be_above(0))
+
+        with it("should count domain clients, nodes, routes, destinations, and views"):
+            expect(self.ddd.node_count("DomainClient")).to(be_above(0))
+            expect(self.ddd.node_count("DomainNode")).to(be_above(0))
+            expect(self.ddd.node_count("Route")).to(be_above(0))
+            expect(self.ddd.node_count("Destination")).to(be_above(0))
+            expect(self.ddd.node_count("DomainView")).to(be_above(0))
+
+        with it("should count shared stories and the specs that execute them"):
+            expect(self.stories.node_count("StoryShared")).to(be_above(0))
+            expect(self.stories.node_count("DomainSpec")).to(be_above(0))
+            expect(self.stories.node_count("ServerSpec")).to(be_above(0))
+            expect(self.stories.node_count("PlaywrightSpec")).to(be_above(0))
+
+        with it("should keep stories from the original practice"):
+            expect(self.stories.node_count("Story")).to(be_above(0))
+
+        with it("should navigate a route to an aggregate"):
+            route = tree_with(self.ddd_tree, "Route", "navigates")
+            holder = tree_child(route, "navigates")
+            expect(any(child.get("type") == "Aggregate" for child in holder.get("children") or [])).to(equal(True))
+
+        with it("should render an entity from a view"):
+            view = tree_with(self.ddd_tree, "DomainView", "renders")
+            rendered = [
+                child
+                for child in tree_child(view, "renders").get("children") or []
+                if child.get("type") in {"Entity", "EntityRoot"}
+            ]
+            expect(len(rendered)).to(be_above(0))
+
+        with it("should leave destination invokes off the clean engineering tree"):
+            expect("Destination" in {item.get("type") for item in walk_tree(self.clean_tree)}).to(equal(False))
+
+        with it("should render original classes and lern views in the returned trees"):
+            clean_types = {item.get("type") for item in walk_tree(self.clean_tree)}
+            domain_types = {item.get("type") for item in walk_tree(self.ddd_tree)}
+            expect("OoadClass" in clean_types).to(equal(True))
+            expect("DomainView" in domain_types).to(equal(True))
+            expect("Route" in domain_types).to(equal(True))
+            expect("StoryShared" in {item.get("type") for item in walk_tree(self.stories_tree)}).to(equal(True))
 
 
 def _node(practice: CodeQLPracticeGraph, type: str, name: str, line: int) -> CodeQLNode:

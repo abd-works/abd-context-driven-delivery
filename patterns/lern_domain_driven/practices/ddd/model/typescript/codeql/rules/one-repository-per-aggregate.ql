@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 predicate repositoryDeclaration(AstNode node, string name, File f) {
   exists(ClassDefinition cls |
@@ -59,4 +60,4 @@ where
       )
     )
   )
-select subject, message, contributor
+select "one-repository-per-aggregate", factId(subject), message

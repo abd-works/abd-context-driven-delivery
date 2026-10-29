@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 from AstNode subject, string message, AstNode contributor
 where
@@ -36,4 +37,4 @@ where
     message =
       "The node class decides the next page. Route handlers ask the node class instead of calling the repository."
   )
-select subject, message, contributor
+select "node-decides-next-page", factId(subject), message

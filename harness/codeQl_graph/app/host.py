@@ -19,6 +19,9 @@ class GraphHost:
     def __init__(self, graph: CodeQLGraph | None = None) -> None:
         self.graph = graph or CodeQLGraph()
 
+    def inject(self, folder: str) -> str:
+        return self.graph.inject(folder)
+
     def load_working_copy(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
         return self.graph.load_working_copy(folder, practices, database)
 
@@ -89,6 +92,7 @@ class GraphHost:
 
     def _operations(self) -> dict:
         return {
+            "inject": self._inject,
             "load_working_copy": self._load,
             "inventory": lambda _request: self.inventory(),
             "return_nodes": lambda request: self.return_nodes(request.get("filter")),
@@ -99,6 +103,9 @@ class GraphHost:
             "update_working_copy": lambda request: self.update_working_copy(list(request.get("paths") or [])),
             "choose_folder": lambda _request: self.choose_folder(),
         }
+
+    def _inject(self, request: dict) -> str:
+        return self.inject(str(request.get("folder", "")))
 
     def _load(self, request: dict) -> str:
         return self.load_working_copy(

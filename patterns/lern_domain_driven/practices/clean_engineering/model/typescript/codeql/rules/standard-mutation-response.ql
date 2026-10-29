@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 from Property p, string message, AstNode contributor
 where
@@ -18,4 +19,4 @@ where
   p.getName() = ["success", "ok", "message"] and
   message = "Route returns { success/message/ok } instead of an aggregate snapshot." and
   contributor = p
-select p, message, contributor
+select "standard-mutation-response", factId(p), message

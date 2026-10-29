@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 from AstNode subject, string message, AstNode contributor
 where
@@ -47,4 +48,4 @@ where
       "A screen view only renders. Screen file '" + f.getBaseName() +
         "' stays kebab-case under the sub-epic folder."
   )
-select subject, message, contributor
+select "views-render-only", factId(subject), message

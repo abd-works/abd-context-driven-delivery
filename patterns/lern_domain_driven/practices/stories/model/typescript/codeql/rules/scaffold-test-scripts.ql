@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 from File sentinel, TopLevel top, string message, AstNode contributor
 where
@@ -19,4 +20,4 @@ where
   inSubject(top) and
   message = "Missing playwright.config.ts. Keep Vitest and Playwright runners separate." and
   contributor = top
-select top, message, contributor
+select "scaffold-test-scripts", factId(top), message

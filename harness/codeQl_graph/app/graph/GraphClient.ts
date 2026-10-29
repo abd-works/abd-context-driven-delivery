@@ -8,6 +8,10 @@ export class GraphClient {
     return this.python.run('choose_folder');
   }
 
+  inject(folder: string): Promise<string> {
+    return this.python.run('inject', { folder });
+  }
+
   load(folder: string, practices: Record<string, string>): Promise<string> {
     return this.python.run('load_working_copy', { folder, practices, database: folder });
   }

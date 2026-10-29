@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 predicate srcDomainFolder(Container domain, string slug) {
   domain.getParentContainer().getBaseName() = "src" and
@@ -140,4 +141,4 @@ where
     contributor = imp and
     message = "Import '" + path + "' uses a placeholder npm scope."
   )
-select subject, message, contributor
+select "domain-core-file-matches-folder-slug", factId(subject), message

@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 from File f, TopLevel top, string message, AstNode contributor
 where
@@ -25,4 +26,4 @@ where
   inSubject(top) and
   message = "Sub-epic test file '" + f.getBaseName() + "' is missing a story-driven tier suffix." and
   contributor = top
-select top, message, contributor
+select "test-story-driven", factId(top), message

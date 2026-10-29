@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 predicate playwrightStory(File file) {
   file.getBaseName().regexpMatch(".*\\.story\\.playwright\\.ts") or
@@ -35,4 +36,4 @@ where
   message =
     "A browser Then on a form screen asserts the headings, fields, links, and buttons on that screen." and
   contributor = pathLiteral
-select thenStep, message, contributor
+select "browser-then-asserts-screen-widgets", factId(thenStep), message

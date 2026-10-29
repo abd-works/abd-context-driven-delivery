@@ -24,6 +24,18 @@ from harness.mcp.mcp_server import mcp
 Display = str
 Tuple = list[str]
 _RUN_QUERIES_FLAGS = ("--threads=0", "--quiet", "--ram=8192")
+_OVERLAY_ROOTS = {
+    "DomainClient",
+    "DomainNode",
+    "JsonStore",
+    "Route",
+    "DomainView",
+    "StoryShared",
+    "DomainSpec",
+    "ServerSpec",
+    "PlaywrightSpec",
+}
+_DOMAIN_OPERATION_PARENTS = {"Destination", "DomainView"}
 
 
 def query_pack(practice: str, language: str) -> Path:
@@ -674,6 +686,19 @@ class CodeQLNode:
                         holder.parent = self
                         self.children.append(holder)
                     edge.child.populate(holder)
+        if parent is None:
+            self._place_overlay()
+
+    def _place_overlay(self) -> None:
+        """Hang pattern nodes that no owns edge reaches from the practice root so the rendered tree is the superset."""
+        pending = [
+            node
+            for node in self.practice.by_id.values()
+            if node is not self and not node._populated and node.type in _OVERLAY_ROOTS
+        ]
+        for node in pending:
+            if not node._populated:
+                node.populate(self)
 
     def _edges_in_source_order(self, kind: str) -> list[Edge]:
         matched = [edge for edge in self.practice.edges.get(kind, []) if edge.parent is self]
@@ -802,8 +827,16 @@ class CodeQLPracticeGraph:
             if parent is None or child is None:
                 continue
             parent.practice.record(fact, parent, child)
-            if parent.practice is not child.practice:
+            if parent.practice is not child.practice and not self._stays_on_parent(fact, parent, child):
                 child.practice.record(fact, child, parent)
+
+    def _stays_on_parent(self, fact: dict, parent: CodeQLNode, child: CodeQLNode) -> bool:
+        """Destination and view operation edges stay on the domain view."""
+        return (
+            fact["kind"] in {"invokes", "renders"}
+            and child.type == "Operation"
+            and parent.type in _DOMAIN_OPERATION_PARENTS
+        )
 
     def record(self, fact: dict, parent: CodeQLNode, child: CodeQLNode) -> None:
         list_ = self.edges.setdefault(fact["kind"], [])
@@ -850,6 +883,7 @@ class CodeQLGraph:
         self._executable = shutil.which("codeql") or "codeql"
         self.practices: dict[str, CodeQLPracticeGraph] = {}
         self.filter = CodeQLFilter(self)
+        self._injected: list[Path] = []
         super().__init__()
 
     @property
@@ -911,6 +945,17 @@ class CodeQLGraph:
         names = ", ".join(touched) if touched else "no practices"
         return f"Updated the working copy for {names}."
 
+    @mcp
+    @agent_tool
+    def inject(self, folder: str) -> str:
+        """Union this practices root into query_files. folder lines up with practices/<practice>/model/<language>/codeql/{nodes,edges,rules}."""
+        path = Path(folder).resolve()
+        if not path.is_dir():
+            raise QueryFailure("inject", f"No practices folder at {path}")
+        if path not in self._injected:
+            self._injected.append(path)
+        return f"Injected {path}"
+
     def load_working_copy(self, folder: str, practices: dict[str, str], database: str | None = None) -> str:
         """Populate the graph from query results already stored on each working copy.
 
@@ -952,10 +997,52 @@ class CodeQLGraph:
         return self.practices.setdefault(name, CodeQLPracticeGraph(name))
 
     def query_files(self, practice: str, kind: str) -> list[str]:
-        folder = query_pack(practice, self._languages[practice]) / kind
-        if not folder.is_dir():
-            return []
-        return [str(path) for path in sorted(folder.glob("*.ql"))]
+        language = self._languages[practice]
+        folders = [query_pack(practice, language) / kind]
+        for root in self._injected:
+            folders.append(root / practice / "model" / language / "codeql" / kind)
+        found: list[str] = []
+        seen: set[str] = set()
+        for folder in folders:
+            if not folder.is_dir():
+                continue
+            for path in sorted(folder.glob("*.ql")):
+                key = str(path.resolve())
+                if key in seen:
+                    continue
+                seen.add(key)
+                found.append(str(path))
+        return found
+
+    def _additional_packs(self) -> str:
+        """Original practice packs so an injected query can import ddd, ce, and stories."""
+        if not self._injected:
+            return ""
+        folders: list[str] = []
+        seen: set[str] = set()
+        for practice in ("clean_engineering", "stories", "ddd", "bdd", "ux"):
+            for language in ("typescript", "python"):
+                folder = query_pack(practice, language)
+                self._add_pack(folders, seen, folder)
+        for root in self._injected:
+            if not root.is_dir():
+                continue
+            for practice_dir in root.iterdir():
+                model = practice_dir / "model"
+                if not model.is_dir():
+                    continue
+                for language_dir in model.iterdir():
+                    self._add_pack(folders, seen, language_dir / "codeql")
+        return os.pathsep.join(folders)
+
+    def _add_pack(self, folders: list[str], seen: set[str], folder: Path) -> None:
+        if not (folder / "qlpack.yml").is_file():
+            return
+        key = str(folder.resolve())
+        if key in seen:
+            return
+        seen.add(key)
+        folders.append(key)
 
     def run_query(self, ql_path: str, database: Path) -> list[Tuple]:
         return self.run_queries([ql_path], database).get(ql_path, [])
@@ -989,16 +1076,18 @@ class CodeQLGraph:
         if not queries:
             return
         paths = [str(Path(query).resolve()) for query in queries]
+        command = [
+            self._executable,
+            "database",
+            "run-queries",
+            *_RUN_QUERIES_FLAGS,
+        ]
+        packs = self._additional_packs()
+        if packs:
+            command.append(f"--additional-packs={packs}")
+        command.extend([str(database), "--", *paths])
         run = subprocess.run(
-            [
-                self._executable,
-                "database",
-                "run-queries",
-                *_RUN_QUERIES_FLAGS,
-                str(database),
-                "--",
-                *paths,
-            ],
+            command,
             check=False,
             capture_output=True,
             text=True,
@@ -1171,6 +1260,8 @@ class CodeQLGraph:
         pack = query_pack(name, language)
         source_ns = self._latest_mtime(self._practice_roots[name])
         queries_ns = self._latest_mtime(pack)
+        for root in self._injected:
+            queries_ns = max(queries_ns, self._latest_mtime(root / name / "model" / language / "codeql"))
         return {
             "source_ns": source_ns,
             "queries_ns": queries_ns,

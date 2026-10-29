@@ -28,6 +28,7 @@ const data = new DataManagementClient();
 export function App() {
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? '');
   const [folder, setFolder] = useState(() => window.localStorage.getItem(LAST_FOLDER) ?? '');
+  const [overlay, setOverlay] = useState('');
   const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
@@ -81,6 +82,10 @@ export function App() {
     setLoading(true);
     setError('');
     try {
+      const pattern = overlay.trim();
+      if (pattern) {
+        await graphs.inject(pattern);
+      }
       await graphs.load(trimmed, practiceRoots(trimmed));
       const inventory = await graphs.inventory();
       setCatalog(inventory);
@@ -187,6 +192,14 @@ export function App() {
             >
               {filtersOpen ? '▼' : '▶'}
             </button>
+            <input
+              className="chosen-folder"
+              data-testid="pattern-overlay"
+              value={overlay}
+              placeholder="Pattern practices"
+              spellCheck={false}
+              onChange={(event) => setOverlay(event.target.value)}
+            />
             <input
               className="chosen-folder"
               data-testid="chosen-folder"

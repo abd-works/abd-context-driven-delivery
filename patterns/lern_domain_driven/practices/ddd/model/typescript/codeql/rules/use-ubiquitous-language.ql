@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 from ClassDefinition cls, string suffix, string message, AstNode contributor
 where
@@ -18,4 +19,4 @@ where
   cls.getName().matches("%" + suffix) and
   message = "Class '" + cls.getName() + "' uses the technical suffix '" + suffix + "'." and
   contributor = cls
-select cls, message, contributor
+select "use-ubiquitous-language", factId(cls), message

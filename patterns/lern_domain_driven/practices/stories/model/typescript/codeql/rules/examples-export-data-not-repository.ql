@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 predicate exampleFile(File f) {
   f.getRelativePath().regexpMatch("(?i).*tests/.*/examples/.*\\.ts")
@@ -42,4 +43,4 @@ where
           " in examples/. Export field data or a seed helper that takes the repository from the story."
     )
   )
-select node, message, contributor
+select "examples-export-data-not-repository", factId(node), message

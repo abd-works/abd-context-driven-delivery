@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 from AstNode subject, string message, AstNode contributor
 where
@@ -37,4 +38,4 @@ where
       method.getDeclaringType().getName() + "." + method.getName() +
         " is not a collection operation. Reconstruct the aggregate inside load (and create, search, update)."
   )
-select subject, message, contributor
+select "repository-owns-aggregate-lifecycle", factId(subject), message

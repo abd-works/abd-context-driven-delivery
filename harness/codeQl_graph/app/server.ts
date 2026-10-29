@@ -34,6 +34,7 @@ const app = express();
 app.use(express.json());
 
 for (const operation of [
+  'inject',
   'load_working_copy',
   'inventory',
   'return_nodes',

@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 from StringLiteral lit, string message, AstNode contributor
 where
@@ -22,4 +23,4 @@ where
   not lit.getValue() = lit.getFile().getParentContainer().getBaseName() + ".json" and
   message = "Shared JSON database filename '" + lit.getValue() + "' found." and
   contributor = lit
-select lit, message, contributor
+select "one-json-store-per-aggregate", factId(lit), message

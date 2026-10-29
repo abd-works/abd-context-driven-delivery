@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 predicate fileSrcDomain(File f, string domain) {
   f.getParentContainer().getParentContainer().getBaseName() = "src" and
@@ -51,4 +52,4 @@ where
     "This file uses aggregates '" + home + "' and '" + other +
       "'. AskQuestion for cross-aggregate sync before generating stories." and
   contributor = imp
-select imp, message, contributor
+select "ask-cross-aggregate-sync", factId(imp), message

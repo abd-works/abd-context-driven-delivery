@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 from AstNode subject, string message, AstNode contributor
 where
@@ -43,4 +44,4 @@ where
       "Argument '" + hostP.getName() + "' on '" + hostFn.getName() +
         "' does not preserve core name '" + coreP.getName() + "'."
   )
-select subject, message, contributor
+select "cross-layer-method-naming", factId(subject), message

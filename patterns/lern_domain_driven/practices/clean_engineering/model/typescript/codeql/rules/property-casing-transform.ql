@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 from AstNode subject, string name, string message, AstNode contributor
 where
@@ -30,4 +31,4 @@ where
   not name.matches("@%") and
   message = "Property '" + name + "' uses snake_case. TypeScript properties must be camelCase." and
   contributor = subject
-select subject, message, contributor
+select "property-casing-transform", factId(subject), message

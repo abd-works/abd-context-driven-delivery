@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 from AstNode subject, string message, AstNode contributor
 where
@@ -36,4 +37,4 @@ where
       "Helper '" + helper.getName() +
         "' is declared in the spec. Move shared seeds to examples/ beside the data they set up."
   )
-select subject, message, contributor
+select "pml-artifact-layout", factId(subject), message

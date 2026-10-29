@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import lern
 
 predicate declaredNpmName(string name) {
   exists(JsonObject pkg, JsonObject section |
@@ -40,4 +41,4 @@ where
   not declaredNpmName(name) and
   message = "Import '" + path + "' is not declared in package.json." and
   contributor = imp
-select imp, message, contributor
+select "include-all-external-dependencies", factId(imp), message

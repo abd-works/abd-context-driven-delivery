@@ -10,6 +10,7 @@
 import javascript
 import subject_filter
 import model
+import ids
 
 from CallExpr call, string message, AstNode contributor
 where
@@ -18,4 +19,4 @@ where
   call.getCalleeName() = ["deleteMany", "deleteAll", "clearAll"] and
   message = "Blanket delete wipes the entire collection. Delete only the aggregate roots this test created." and
   contributor = call
-select call, message, contributor
+select "use-thorough-e2e-tests", factId(call), message
