@@ -1,4 +1,4 @@
-# Run the non-agent suite in the reporter each runner actually prints.
+﻿# Run the non-agent suite in the reporter each runner actually prints.
 # Mamba's default is progress (dots). Documentation is the report: nested
 # description / context / it lines, then the failure list.
 # Story files are Mamba with a different loader, so they go through story_test.
@@ -20,7 +20,7 @@ $mamba = if (Test-Path $venvMamba) { $venvMamba } else { "mamba" }
 $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
     [string[]]@(
         ".codeql", ".cq", ".venv", ".git", "node_modules", "__pycache__",
-        ".ruff_cache", "sandbox", "fixtures", "seeds", "templates"
+        ".ruff_cache", "sandbox", "fixtures", "seeds", "templates", "retired"
     ),
     [StringComparer]::OrdinalIgnoreCase
 )
