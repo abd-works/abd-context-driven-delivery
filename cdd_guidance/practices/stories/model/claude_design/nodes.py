@@ -161,7 +161,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         canvas.add_page(self.screens_page, "Screens")
         width, height, text = self._story_map()
         canvas.add_board("Main.dc.html", {"x": 0, "y": 0, "w": width, "h": height, "page": self.story_map_page,
-                                          "title": "Story map", "is_interactive": True}, text)
+                                          "title": "Story map", "is_interactive": True, "expand": "fill"}, text)
         canvas.add_board(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": 1880, "h": 948, "page": self.screens_page,
                                                                      "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
         for name, board in ClaudeDesignUxMap.boards(self.screens, self._screen_files()).items():

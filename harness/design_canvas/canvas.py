@@ -124,7 +124,8 @@ ZOOM_RANGE = range(20, 301, ZOOM_STEP)
 
 
 def _zoomable_artboard(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str) -> str:
-    """Zoom is CSS ``zoom`` through one class per 5% step: the canvas fills holes in class names, not inside styles."""
+    """The artboard fills its frame and scrolls; the map inside zooms with CSS ``zoom`` through one class per 5% step
+    (the canvas fills holes in class names, not inside styles), so zooming never shrinks the frame."""
     zoom_classes = "".join(f".zoom-{level}{{zoom:{level / 100}}}" for level in ZOOM_RANGE)
     return f"""<!doctype html>
 <html lang="en">
@@ -136,8 +137,10 @@ def _zoomable_artboard(title: str, width: int, height: int, body: str, style: st
 <body>
 <x-dc>
 <helmet>{head}<style>{style}{zoom_classes}</style></helmet>
-<div class="{{{{zoomClass}}}}" style="position: relative; width: {width}px; height: {height}px; {root_style}">
+<div style="position: relative; width: 100%; height: 100vh; overflow: auto; {root_style}">
+<div class="{{{{zoomClass}}}}" style="position: relative; width: {width}px; height: {height}px">
 {body}
+</div>
 </div>
 <div style="position: fixed; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 10">
 <button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomOut}}}}" aria-label="Zoom out">−</button>
