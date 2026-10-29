@@ -73,9 +73,11 @@ scenario:
   examples?: [example]
   invokes?: [operation | property]
   specifiedBy?: [observation]
+  shownOn?: [screen]
   where:
     - id is the text slugs from the root to this node, joined by dots
     - steps match given+ (when then+)+
+    - shownOn is the screen whose scenario names hold this scenario as Story › Scenario; with none, the scenario shows its story's screen
     - outline when examples count > 2
     - a later then names the next story
     - examples cover every domain concept the steps name

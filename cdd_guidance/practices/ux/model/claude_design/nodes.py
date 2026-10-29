@@ -43,9 +43,12 @@ class ClaudeDesignUxMap(UxMap):
         return found
 
     @classmethod
-    def boards(cls, screens: Iterable) -> Dict[str, dict]:
+    def boards(cls, screens: Iterable, files: Iterable[str] = ()) -> Dict[str, dict]:
+        """The prototypes the screens name, then any other screen artboard already in the folder (*files*)."""
+        names = cls.prototype_names(screens)
+        names += [name for name in files if name not in names]
         boards: Dict[str, dict] = {}
-        for index, name in enumerate(cls.prototype_names(screens)):
+        for index, name in enumerate(names):
             boards[name] = {
                 "x": (index % cls.per_row) * cls.column_pitch,
                 "y": cls.top + (index // cls.per_row) * cls.row_pitch,

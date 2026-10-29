@@ -29,6 +29,7 @@ body{margin:0}
 .sm-dot.sm-shot{color:#E5531A}
 .sm-btn{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border:1px solid #2A2A2A;border-radius:4px;background:transparent;color:#E8E8ED;cursor:pointer}
 .sm-btn:hover{border-color:#F2A07A}
+a.sm-btn{text-decoration:none;color:#E8E8ED}
 .sm-tab{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;padding:4px 10px;border:1px solid #2A2A2A;border-radius:999px;background:#111113;color:#E8E8ED;cursor:pointer}
 .sm-tab-on{background:#E5531A;border-color:#E5531A;color:#0B0B0B}
 </style>
@@ -53,7 +54,8 @@ __IMPORTS__
 <sc-if value="{{panelOpen}}" hint-placeholder-val="{{ true }}">
 <div class="sm-panel" style="width: 528px; height: 900px; box-sizing: border-box; border: 1px solid #2A2A2A; border-radius: 6px; background: #111113; display: flex; flex-direction: column">
 <div style="display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #2A2A2A">
-<div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #E5531A; flex-grow: 1">Story map</div>
+<a class="sm-btn" href="/Main.dc.html" aria-label="Back to the story map">← Story map</a>
+<div style="flex-grow: 1"></div>
 <button type="button" class="sm-btn" onClick="{{collapseAll}}">Collapse all</button>
 <button type="button" class="sm-btn" onClick="{{reset}}">Reset</button>
 <button type="button" class="sm-btn" onClick="{{next}}">Play next</button>
@@ -82,10 +84,24 @@ const S = [];
 T.forEach((e, ei) => e.u.forEach((u, ui) => u.s.forEach((s) => S.push({ e: ei, u: ui, n: s.n, c: s.c }))));
 const first = Math.max(0, S.findIndex((s) => s.c.length > 0));
 const startOpen = () => { const o = { e0: true }; o['u' + S[first].e + '-' + S[first].u] = true; o['s' + first] = true; o['s' + first + '-0'] = true; return o; };
-const st = Object.assign({ g: first, c: 0, t: 0, i: 0, open: startOpen() }, this.state || {});
+const opened = (g, c, base) => { const o = Object.assign({}, base); ['e' + S[g].e, 'u' + S[g].e + '-' + S[g].u, 's' + g, 's' + g + '-' + c].forEach((k) => { o[k] = true; }); return o; };
+let hash = '';
+try { hash = (window.location.hash || '').slice(1); } catch (e) { hash = ''; }
+const linked = (() => {
+if (!hash) return null;
+const q = {};
+hash.split('&').forEach((pair) => { const at = pair.indexOf('='); if (at > 0) q[decodeURIComponent(pair.slice(0, at))] = decodeURIComponent(pair.slice(at + 1)); });
+const g = S.findIndex((s) => s.n === q.story);
+if (g < 0) return null;
+const c = Math.max(0, S[g].c.findIndex((sc) => sc.n === q.scenario));
+const t = Math.max(0, ((S[g].c[c] || { t: [] }).t).findIndex((tp) => tp.x.split('\n').indexOf(q.step) >= 0));
+return { g: g, c: c, t: t, i: 0, hash: hash, open: opened(g, c, { e0: true }) };
+})();
+const fresh = linked && (!this.state || this.state.hash !== hash);
+const st = fresh ? linked : Object.assign({ g: first, c: 0, t: 0, i: 0, open: startOpen() }, this.state || {});
 const withOpen = (keys) => { const o = Object.assign({}, st.open); keys.forEach((k) => { o[k] = true; }); return o; };
-const go = (g, c, t) => this.setState({ g: g, c: c, t: t, i: 0, open: withOpen(['e' + S[g].e, 'u' + S[g].e + '-' + S[g].u, 's' + g, 's' + g + '-' + c]) });
-const toggle = (key) => () => this.setState({ open: Object.assign({}, st.open, { [key]: !st.open[key] }) });
+const go = (g, c, t) => this.setState({ g: g, c: c, t: t, i: 0, hash: hash, open: opened(g, c, st.open) });
+const toggle = (key) => () => this.setState({ hash: hash, open: Object.assign({}, st.open, { [key]: !st.open[key] }) });
 const chev = (open) => ({ mark: '›', markCls: open ? 'sm-chev sm-open' : 'sm-chev' });
 const camel = (stem) => stem.split('-').map((part, k) => (k ? part.charAt(0).toUpperCase() + part.slice(1) : part)).join('');
 const flat = [];
@@ -122,19 +138,22 @@ if (scen.p) live[camel(scen.p)] = true;
 const at = flat.findIndex((f) => f[0] === st.g && f[1] === st.c && f[2] === st.t);
 return {
 live: live,
+storyName: S[st.g].n,
+goToStory: (name) => { const g = S.findIndex((s) => s.n === name); if (g >= 0) go(g, 0, 0); },
+scenarioName: scen.n,
 stepText: step.x,
 showShot: !scen.p && imgs.length > 0,
 showNothing: !scen.p && imgs.length === 0,
 img: imgs[idx] || '',
 manyImgs: !scen.p && imgs.length > 1,
-thumbs: imgs.map((u, k) => ({ num: k + 1, cls: 'sm-tab' + (k === idx ? ' sm-tab-on' : ''), pick: () => this.setState({ i: k }) })),
+thumbs: imgs.map((u, k) => ({ num: k + 1, cls: 'sm-tab' + (k === idx ? ' sm-tab-on' : ''), pick: () => this.setState({ i: k, hash: hash }) })),
 rows: rows,
 panelOpen: !st.hidden,
 panelHidden: Boolean(st.hidden),
-hidePanel: () => this.setState({ hidden: true }),
-showPanel: () => this.setState({ hidden: false }),
-collapseAll: () => this.setState({ open: { e0: true } }),
-reset: () => this.setState({ g: first, c: 0, t: 0, i: 0, open: startOpen() }),
+hidePanel: () => this.setState({ hidden: true, hash: hash }),
+showPanel: () => this.setState({ hidden: false, hash: hash }),
+collapseAll: () => this.setState({ hash: hash, open: { e0: true } }),
+reset: () => this.setState({ g: first, c: 0, t: 0, i: 0, hash: hash, open: startOpen() }),
 next: () => { const f = flat[(at + 1) % flat.length]; go(f[0], f[1], f[2]); }
 };
 }

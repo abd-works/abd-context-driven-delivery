@@ -56,6 +56,8 @@ Ask who is trying to reach this outcome, what they need in front of them before 
 
 **Treat a system hop as a boundary interaction.** A hop is an observable request and response across a named system boundary, not every internal function call. Keep internal fan-out within the boundary Story unless another system exposes its own observable interaction. Give an intermediary its own Story when it validates, decides, or translates; keep simple forwarding or display as an outcome on the caller's Story.
 
+**Play the map in Claude Design.** For a stakeholder session, render the map with the `claude_design` format: one story-map artboard laid out like the drawio, one screen thumbnail per story, and a story explorer that runs each story's screen on its scenarios' fixtures. Follow `model/claude_design/claude_design.md`.
+
 #### Scaffold
 
 **When scaffolding only** (`/partition` or a names only first cut), follow this subsection. Write only verb-noun Epic, Sub-Epic, and Story names. Carry the actor on every Story — `{Actor} --> {Verb Noun}` — because the actor is part of the Story's name at every depth. Read the source material in full, split distinct mechanics, and apply `verb-noun-format`, `branch-on-mechanical-uniqueness`, and `do-not-invent-requirements`. Do not write Scenarios, increments, or explanatory prose. Do not read or apply the Rules below. **Stop reading this skill when scaffolding.**

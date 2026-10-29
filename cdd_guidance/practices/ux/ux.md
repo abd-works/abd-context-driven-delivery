@@ -6,7 +6,7 @@ UX maps how users see and act on the product: screens, regions, controls, and th
 
 **Canonical model.** Reuse `UxMap` → `Screen` → `Region` → `Control` → `Interaction`, plus `Transition`, `ContentType`, and `NavComponent` on the map. Optional `UxContext` holds notes and invariants that are not visible on screens. Do not invent a second page or control model in freehand HTML.
 
-**Primary path.** Start from grill and sketch. Draw information architecture in drawio, deepen to html mockups, then ship real frontend at **front_end_code**. Markdown is optional context (thinking, invariants, interaction notes), not the main artifact. Channels are drawio, html, markdown, and json — peers at the same fidelity; `transform` moves sideways. The html channel deepens in place: interactions and optional brand at **mockup**, production UI at **front_end_code**. Templates for generate live under `templates/`. Scanners read the canonical model, never file syntax.
+**Primary path.** Start from grill and sketch. Draw information architecture in drawio, deepen to html mockups, then ship real frontend at **front_end_code**. Markdown is optional context (thinking, invariants, interaction notes), not the main artifact. Channels are drawio, html, markdown, json, and claude_design — peers at the same fidelity; `transform` moves sideways. The html channel deepens in place: interactions and optional brand at **mockup**, production UI at **front_end_code**. Templates for generate live under `templates/`. Scanners read the canonical model, never file syntax.
 
 **Layout (mirror Stories; colocated):**
 
@@ -87,6 +87,8 @@ Decide what screens exist and how users move between them.
 
 Screens, layouts, named regions, transitions, nav components, content types. Story names and domain terms attach as traces. Optional `ux-context.md` for invariants not on the canvas. No control types, no interaction JS, no brand.
 
+Link each story to the screen it shows with a `shownOn` edge — on the story, a scenario, or a step, at the highest level that is true — so the Claude Design story map and explorer show the right screen. Follow `model/claude_design/claude_design.md`.
+
 #### Scaffold
 
 **When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
@@ -149,6 +151,7 @@ Ask what the person does on this screen to accomplish the outcome, and what they
    - Brand/css tokens already exist somewhere in the workspace (check before deciding).
    Do not invent brand. When active, pick the sibling folder under `specifications/` for the brand that applies (e.g. `specifications/abd-works/`) and start from its matching page rather than inventing tokens; if no named brand applies, `specifications/generic/` (no brand layer) is the default. Fall back to whatever brand/css tokens already exist in the workspace when neither covers it. Add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
 9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
+10. **Claude Design channel.** When the session runs in Claude Design, port each story's screen as a prototype screen on the canvas instead of a greybox: the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next story. Follow `practices/stories/model/claude_design/claude_design.md` § Prototype screens.
 
 #### Rules
 

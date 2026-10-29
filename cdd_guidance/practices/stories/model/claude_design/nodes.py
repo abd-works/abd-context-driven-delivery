@@ -13,8 +13,9 @@ import json
 import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
+from urllib.parse import quote, urlencode
 
-from harness.graph.schema_edges import step_key
+from harness.graph.schema_edges import scenario_key, step_key
 
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
 
@@ -38,14 +39,11 @@ def _text(value: str) -> str:
 
 
 class ClaudeDesignEpic(DiagramEpic):
-    """An epic or sub-epic as a header artboard on the story map page."""
+    """An epic or sub-epic: its bars over its stories' columns, at the drawio's own scale."""
 
-    bar_height = 240
-    sub_bar_height = 280
-    bar_gap = 80
-    epic_font = 64
-    sub_epic_font = 52
-    radius = 24
+    bar_height = 60
+    sub_bar_height = 70
+    bar_gap = 20
 
     def leaf_epics(self) -> List["ClaudeDesignEpic"]:
         """The epics whose stories sit in columns: sub-epics, or this epic when it has none."""
@@ -66,51 +64,44 @@ class ClaudeDesignEpic(DiagramEpic):
         count = max(len(self.stories), 1)
         return count * ClaudeDesignStory.width_px + (count - 1) * ClaudeDesignStory.gap_px
 
-    def artboard_name(self, first: bool) -> str:
-        return "Main.dc.html" if first else f"story-map/{_slug(self.top_epic().name)}--{_slug(self.name)}.dc.html"
-
-    def header_html(self, explorer_href: str) -> str:
+    def header_parts(self, left: int) -> List[str]:
+        """The sub-epic bar and each story's actor and card, from *left* on the story map. The epic bar spans its sub-epics; the map draws it."""
         width = self.column_width()
         top = self.top_epic()
-        parts = [_box(0, 0, width, self.bar_height, self.fill, self.stroke, self.epic_font, True, top.name, self.radius)]
+        parts: List[str] = []
         if self is not top:
-            parts.append(_box(0, self.bar_height + self.bar_gap, width, self.sub_bar_height, self.nested_fill,
-                              self.nested_stroke, self.sub_epic_font, True, self.name, self.radius + 4))
+            parts.append(_box(left, self.bar_height + self.bar_gap, width, self.sub_bar_height, LOOK["sub_epic"], self.name))
         for index, story in enumerate(self.stories):
-            parts.extend(story.header_cells(index * (ClaudeDesignStory.width_px + ClaudeDesignStory.gap_px),
-                                            self._story_top(), explorer_href))
-        return _page(f"Story map: {self.name}", width, self.header_height(), "\n".join(parts),
-                     style="body{margin:0} a{color:#000000} a:hover{color:#000000}",
-                     root_style="background: #ffffff; font-family: Helvetica, Arial, sans-serif; color: #000000")
+            parts.extend(story.header_cells(left + index * (ClaudeDesignStory.width_px + ClaudeDesignStory.gap_px), self.story_top()))
+        return parts
 
-    def _story_top(self) -> int:
-        return self.bar_height + self.bar_gap + self.sub_bar_height + self.bar_gap
+    @classmethod
+    def story_top(cls) -> int:
+        return cls.bar_height + cls.bar_gap + cls.sub_bar_height + cls.bar_gap
 
-    def header_height(self) -> int:
-        return self._story_top() + ClaudeDesignStory.actor_px + ClaudeDesignStory.actor_gap_px + ClaudeDesignStory.card_px
+    @classmethod
+    def header_height(cls) -> int:
+        return cls.story_top() + ClaudeDesignStory.actor_px + ClaudeDesignStory.actor_gap_px + ClaudeDesignStory.card_px
 
 
 class ClaudeDesignStory(DiagramStory):
     """A story column: its actor and card in the header, then one thumbnail per screen its steps show."""
 
-    width_px = 640
-    gap_px = 120
-    actor_px = 160
-    actor_gap_px = 40
-    card_px = 280
-    thumb_px = 450
-    thumb_gap_px = 120
-    actor_font = 44
-    card_font = 48
+    width_px = 160
+    gap_px = 20
+    actor_px = 40
+    actor_gap_px = 10
+    card_px = 70
+    thumb_px = 112
+    thumb_gap_px = 16
 
-    def header_cells(self, left: int, top: int, explorer_href: str) -> List[str]:
+    def header_cells(self, left: int, top: int) -> List[str]:
         actor = (self.actors or ["Customer"])[0]
-        person = ('<svg width="56" height="80" viewBox="0 0 14 20" aria-hidden="true" style="fill: none; stroke: #6c8ebf; '
+        person = ('<svg width="10" height="14" viewBox="0 0 14 20" aria-hidden="true" style="fill: none; stroke: #9B9BA8; '
                   'stroke-width: 1.5"><circle cx="7" cy="3.5" r="2.5"></circle><path d="M7 6v7M1 9h12M7 13l-5 6M7 13l5 6"></path></svg>')
         return [
-            _box(left, top, self.width_px, self.actor_px, self.actor_fill, self.actor_stroke, self.actor_font, False, actor, 0, icon=person),
-            _box(left, top + self.actor_px + self.actor_gap_px, self.width_px, self.card_px, self.fill, self.stroke,
-                 self.card_font, False, self.name, 0, href=explorer_href),
+            _box(left, top, self.width_px, self.actor_px, LOOK["actor"], actor, icon=person),
+            _box(left, top + self.actor_px + self.actor_gap_px, self.width_px, self.card_px, LOOK["story"], self.name),
         ]
 
     def shown_screens(self, screens: List) -> List[tuple]:
@@ -125,6 +116,11 @@ class ClaudeDesignStory(DiagramStory):
                         continue
                     seen.add(marker)
                     found.append((scenario, step, screen))
+        for screen in screens:
+            marker = screen.image or screen.name
+            if marker not in seen and self.name in list(getattr(screen, "story_names", []) or []):
+                seen.add(marker)
+                found.append((None, None, screen))
         return found
 
 
@@ -136,8 +132,10 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     story_map_page = "story-map"
     screens_page = ClaudeDesignUxMap.page
     screens_folder = ClaudeDesignUxMap.folder
-    sub_epic_gap = 240
-    thumbs_gap = 320
+    sub_epic_gap = 40
+    thumbs_gap = 24
+    margin = 24
+    screens_per_story = 1
     blank_image_bytes = 10000
 
     def render(
@@ -161,28 +159,43 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     # -- canvas ---------------------------------------------------------------------------
 
     def files(self) -> Dict[str, str]:
+        """One story-map artboard holds every bar, card and thumbnail: one Play, one live page to draw."""
         files: Dict[str, str] = {}
         boards: Dict[str, dict] = {}
         order: List[str] = []
         explorer_name = f"{self.screens_folder}/explorer.dc.html"
         explorer_href = f"/{explorer_name}"
+        parts: List[str] = []
         x = 0
-        for index, epic in enumerate(self._leaf_epics()):
-            name = epic.artboard_name(index == 0)
-            files[f"project/{name}"] = epic.header_html(explorer_href)
-            height = epic.header_height()
-            boards[name] = {"x": x, "y": 0, "w": epic.column_width(), "h": height, "page": self.story_map_page,
-                            "title": f"{epic.top_epic().name} › {epic.name}", "is_interactive": True}
-            order.append(name)
+        thumbs_top = ClaudeDesignEpic.header_height() + self.thumbs_gap
+        bottom = ClaudeDesignEpic.header_height()
+        spans: Dict[int, list] = {}
+        for epic in self._leaf_epics():
+            top = epic.top_epic()
+            span = spans.setdefault(id(top), [top.name, x, x])
+            span[2] = x + epic.column_width()
+            parts.extend(epic.header_parts(x))
             for column, story in enumerate(epic.stories):
                 left = x + column * (ClaudeDesignStory.width_px + ClaudeDesignStory.gap_px)
-                self._thumbnails(story, left, height + self.thumbs_gap, explorer_href, files, boards, order)
+                cells = self._thumbnails(story, left, thumbs_top, explorer_href)
+                parts.extend(cells)
+                if cells:
+                    bottom = max(bottom, thumbs_top + len(cells) * (ClaudeDesignStory.thumb_px + ClaudeDesignStory.thumb_gap_px))
             x += epic.column_width() + self.sub_epic_gap
+        parts = [_box(left, 0, right - left, ClaudeDesignEpic.bar_height, LOOK["epic"], name) for name, left, right in spans.values()] + parts
+        width = max(x - self.sub_epic_gap, 40) + 2 * self.margin
+        height = bottom + 2 * self.margin
+        body = f'<div style="position: absolute; left: {self.margin}px; top: {self.margin}px">' + "\n".join(parts) + "</div>"
+        files["project/Main.dc.html"] = _page("Story map", width, height, body, style=f"body{{margin:0;background:{BACKGROUND}}}",
+                                               root_style=f"background: {BACKGROUND}", head=_FONTS)
+        boards["Main.dc.html"] = {"x": 0, "y": 0, "w": width, "h": height, "page": self.story_map_page,
+                                  "title": "Story map", "is_interactive": True}
+        order.append("Main.dc.html")
         files[f"project/{explorer_name}"] = self._explorer()
         boards[explorer_name] = {"x": 0, "y": 0, "w": 1880, "h": 948, "page": self.screens_page,
                                  "title": "Story explorer", "is_interactive": True}
         order.append(explorer_name)
-        for name, board in ClaudeDesignUxMap.boards(self.screens).items():
+        for name, board in ClaudeDesignUxMap.boards(self.screens, self._screen_files()).items():
             boards[name] = board
             order.append(name)
         files["project/canvas.json"] = json.dumps({
@@ -204,18 +217,21 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
             found.extend(epic.leaf_epics())
         return found
 
-    def _thumbnails(self, story: ClaudeDesignStory, left: int, top: int, explorer_href: str,
-                    files: Dict[str, str], boards: Dict[str, dict], order: List[str]) -> None:
-        for row, (scenario, step, screen) in enumerate(story.shown_screens(self.screens)):
-            name = f"story-map/{_slug(story.name)}-{row + 1:02d}.dc.html"
-            title = f"{story.name} › {scenario.name} › {step.text}"
-            href = f"/{self.screens_folder}/{Path(screen.prototype).name}" if screen.prototype else explorer_href
-            image = f"../{screen.image}" if screen.image else ""
-            files[f"project/{name}"] = _thumbnail(title, image, href)
-            boards[name] = {"x": left, "y": top + row * (ClaudeDesignStory.thumb_px + ClaudeDesignStory.thumb_gap_px),
-                            "w": ClaudeDesignStory.width_px, "h": ClaudeDesignStory.thumb_px,
-                            "page": self.story_map_page, "title": title[:240], "is_interactive": True}
-            order.append(name)
+    def _thumbnails(self, story: ClaudeDesignStory, left: int, top: int, explorer_href: str) -> List[str]:
+        """Under each story, its main screens, up to ``screens_per_story``, in the order the UX map lists them: the UX map
+        names each story's main page first. Each opens the story explorer at the step it was captured on."""
+        shown = story.shown_screens(self.screens)
+        listed = {id(screen): index for index, screen in enumerate(self.screens)}
+        shown.sort(key=lambda found: listed.get(id(found[2]), len(listed)))
+        cells = []
+        for row, (scenario, step, screen) in enumerate(shown[: self.screens_per_story]):
+            place = {"story": story.name}
+            if scenario is not None:
+                place.update({"scenario": scenario.name, "step": step.text})
+            caption = f"{scenario.name} › {step.text}" if scenario is not None else story.name
+            cells.append(_thumbnail(left, top + row * (ClaudeDesignStory.thumb_px + ClaudeDesignStory.thumb_gap_px),
+                                    caption, screen.image, f"{explorer_href}#{urlencode(place, quote_via=quote)}"))
+        return cells
 
     def _prototypes(self) -> List[str]:
         return ClaudeDesignUxMap.prototype_names(self.screens)
@@ -229,7 +245,9 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
             tree.append({"n": epic.name, "u": [{"n": sub.name, "s": [self._story_entry(story) for story in sub.stories]}
                                                for sub in subs]})
         template = _EXPLORER_TEMPLATE.read_text(encoding="utf-8")
-        return (template.replace("__STYLESHEETS__", "\n".join(f'<link rel="stylesheet" href="{href}">' for href in self._stylesheets()))
+        heads = [f'<link rel="stylesheet" href="{href}">' for href in self._stylesheets()]
+        heads += [f'<script src="../{script}"></script>' for script in self._fixture_scripts()]
+        return (template.replace("__STYLESHEETS__", "\n".join(heads))
                 .replace("__IMPORTS__", "\n".join(self._imports()))
                 .replace("__DATA__", json.dumps(tree, ensure_ascii=False)))
 
@@ -250,22 +268,48 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
                 groups[-1]["x"] += "\n" + "\n".join(waiting)
             elif waiting:
                 groups.append({"x": "\n".join(waiting), "i": []})
+            if not prototype and not any(group["i"] for group in groups):
+                prototype, image = self._screen_of(scenario, story)
+                if image:
+                    groups[0]["i"] = [f"../{image}"]
             scenarios.append({"n": scenario.name, "p": prototype, "t": groups})
         return {"n": story.name, "c": scenarios}
+
+    def _screen_of(self, scenario, story: ClaudeDesignStory) -> tuple:
+        """A scenario whose steps show no screen shows its own ``shownOn`` screen, else its story's:
+        that screen's prototype, else its screenshot."""
+        own = shown_on(scenario, self.screens) or shown_on(story, self.screens)
+        prototype = next((_stem(screen.prototype) for screen in own if screen.prototype), "")
+        image = next((screen.image for screen in own if screen.image and not self._blank(screen)), "")
+        return prototype, image
 
     def _imports(self) -> List[str]:
         lines = []
         for prototype in self._prototypes():
             stem = _stem(prototype)
             lines.append(f'<sc-if value="{{{{live.{_camel(stem)}}}}}" hint-placeholder-val="{{{{ false }}}}">'
-                         f'<dc-import name="{stem}" hint-size="1280px,900px"></dc-import></sc-if>')
+                         f'<dc-import name="{stem}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" hint-size="1280px,900px"></dc-import></sc-if>')
         return lines
+
+    def _screen_files(self) -> List[str]:
+        """Screen artboards already in the canvas's screens folder: each needs a place on the Screens page."""
+        folder = self.workspace / "project" / self.screens_folder if self.workspace else None
+        if folder is None or not folder.is_dir():
+            return []
+        return [f"{self.screens_folder}/{path.name}" for path in sorted(folder.glob("*.dc.html")) if path.name != "explorer.dc.html"]
+
+    fixture_scripts = ("fixtures/canvas-fixtures.js",)
+
+    def _fixture_scripts(self) -> List[str]:
+        """A pattern's fixtures bundle, when the canvas has one: a screen inside the explorer loads its fixtures from it."""
+        root = self.workspace / "project" if self.workspace else None
+        return [script for script in self.fixture_scripts if root is not None and (root / script).is_file()]
 
     def _stylesheets(self) -> List[str]:
         """The stylesheets the prototype screens link, so a screen drawn inside the explorer keeps its own look."""
         found: List[str] = []
         root = self.workspace / "project" if self.workspace else None
-        for prototype in self._prototypes():
+        for prototype in [*self._prototypes(), *self._screen_files()]:
             path = root / prototype if root else None
             if path is None or not path.is_file():
                 continue
@@ -291,14 +335,20 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         return list(getattr(screens, "screens", screens))
 
 
-def shown_on(step, screens: Iterable) -> List:
-    """The screens a step is shown on: its ``shownOn`` edges, else the screens that list its step key."""
-    practice = getattr(step, "practice", None)
-    edged = [edge.child for edge in practice.edges_from(_SHOWN_ON, step)] if practice is not None else []
+def shown_on(node, screens: Iterable) -> List:
+    """The screens a step, scenario or story is shown on: its ``shownOn`` edges, else the screens that list its key."""
+    practice = getattr(node, "practice", None)
+    edged = [edge.child for edge in practice.edges_from(_SHOWN_ON, node)] if practice is not None else []
     if edged:
         return edged
-    key = step_key(step)
-    return [screen for screen in screens if key in list(getattr(screen, "step_names", []) or [])]
+    kind = node.semantic_type()
+    if kind == "Step":
+        key, names = step_key(node), "step_names"
+    elif kind in ("Scenario", "Background"):
+        key, names = scenario_key(node), "scenario_names"
+    else:
+        key, names = node.name, "story_names"
+    return [screen for screen in screens if key in list(getattr(screen, names, []) or [])]
 
 
 def _steps_of(scenario) -> List:
@@ -319,17 +369,34 @@ def _camel(stem: str) -> str:
     return head + "".join(part.capitalize() for part in rest)
 
 
-def _box(left, top, width, height, fill, stroke, size, bold, text, radius, href=None, icon="") -> str:
-    tag = "a" if href else "div"
-    link = f' href="{href}"' if href else ""
-    weight = "font-weight: 700; " if bold else ""
-    return (f'<{tag}{link} style="position: absolute; left: {left}px; top: {top}px; width: {width}px; height: {height}px; '
-            f'box-sizing: border-box; padding: 16px; gap: 16px; display: flex; align-items: center; justify-content: center; '
-            f'text-align: center; background: {fill}; border: 4px solid {stroke}; border-radius: {radius}px; font-size: {size}px; '
-            f'{weight}color: #000000; text-decoration: none">{icon}<span>{_text(text)}</span></{tag}>')
+_MONO = "'JetBrains Mono', ui-monospace, monospace"
+_SANS = "'Inter', system-ui, sans-serif"
+_FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700'
+          '&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap">')
+
+BACKGROUND = "#0B0B0B"
+
+# abd.works engineering look, the story explorer's: dark surfaces, thin borders, mono uppercase labels, one orange accent.
+LOOK = {
+    "epic": {"fill": "#111113", "stroke": "#2A2A2A", "color": "#E5531A", "size": 16, "weight": 600, "font": _MONO,
+             "extra": "text-transform: uppercase; letter-spacing: 0.1em; justify-content: flex-start; padding-left: 16px; "},
+    "sub_epic": {"fill": "#E5531A", "stroke": "#E5531A", "color": "#0B0B0B", "size": 13, "weight": 700, "font": _MONO,
+                 "extra": "text-transform: uppercase; letter-spacing: 0.06em; justify-content: flex-start; padding-left: 16px; "},
+    "actor": {"fill": "#111113", "stroke": "#2A2A2A", "color": "#9B9BA8", "size": 11, "weight": 500, "font": _SANS, "extra": ""},
+    "story": {"fill": "#111113", "stroke": "#2A2A2A", "color": "#E8E8ED", "size": 12, "weight": 600, "font": _SANS,
+              "extra": "box-shadow: inset 3px 0 0 #E5531A; "},
+}
 
 
-def _page(title: str, width: int, height: int, body: str, style: str, root_style: str) -> str:
+def _box(left, top, width, height, look: dict, text: str, radius: int = 6, icon: str = "") -> str:
+    return (f'<div style="position: absolute; left: {left}px; top: {top}px; width: {width}px; height: {height}px; '
+            f'box-sizing: border-box; padding: 4px 8px; gap: 6px; display: flex; align-items: center; justify-content: center; '
+            f'text-align: center; background: {look["fill"]}; border: 1px solid {look["stroke"]}; border-radius: {radius}px; '
+            f'font-family: {look["font"]}; font-size: {look["size"]}px; font-weight: {look["weight"]}; color: {look["color"]}; '
+            f'{look["extra"]}">{icon}<span>{_text(text)}</span></div>')
+
+
+def _page(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str = "") -> str:
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -339,7 +406,7 @@ def _page(title: str, width: int, height: int, body: str, style: str, root_style
 </head>
 <body>
 <x-dc>
-<helmet><style>{style}</style></helmet>
+<helmet>{head}<style>{style}</style></helmet>
 <div style="position: relative; width: {width}px; height: {height}px; {root_style}">
 {body}
 </div>
@@ -354,10 +421,10 @@ renderVals() {{ return {{}}; }}
 """
 
 
-def _thumbnail(title: str, image: str, href: str) -> str:
-    picture = (f'<img src="{image}" alt="{_text(title)}" style="display: block; width: 640px; height: 450px">' if image
-               else '<span style="display: flex; width: 640px; height: 450px; align-items: center; justify-content: center; '
-                    'color: #666666; font-family: Helvetica, Arial, sans-serif">No screenshot</span>')
-    return _page(title, ClaudeDesignStory.width_px, ClaudeDesignStory.thumb_px,
-                 f'<a href="{href}" style="display: block; width: 640px; height: 450px; background: #ffffff">{picture}</a>',
-                 style="body{margin:0}", root_style="background: #ffffff")
+def _thumbnail(left: int, top: int, caption: str, image: str, href: str) -> str:
+    """A screen at thumbnail size that opens the story explorer at its step."""
+    picture = (f'<img src="{image}" alt="{_text(caption)}" style="display: block; width: 100%; height: 100%; object-fit: cover; object-position: top">' if image
+               else '<span style="display: flex; height: 100%; align-items: center; justify-content: center; color: #9B9BA8; font-size: 11px">No screenshot</span>')
+    return (f'<a href="{href}" aria-label="{_text(caption)}" style="position: absolute; left: {left}px; top: {top}px; display: block; '
+            f'width: {ClaudeDesignStory.width_px}px; height: {ClaudeDesignStory.thumb_px}px; background: #111113; border: 1px solid #2A2A2A; '
+            f'border-radius: 6px; overflow: hidden; box-sizing: border-box">{picture}</a>')

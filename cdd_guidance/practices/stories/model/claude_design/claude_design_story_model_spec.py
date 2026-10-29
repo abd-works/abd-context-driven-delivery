@@ -48,22 +48,31 @@ with description("a Claude Design story map") as self:
         with it("puts the story map and the screens on their own pages"):
             expect([page["id"] for page in self.canvas["pages"]]).to(equal(["story-map", "screens"]))
 
-        with it("draws the first sub-epic as the entry header with its stories as cards"):
-            header = self.files["project/Main.dc.html"]
-            expect(header).to(contain("Onboard A Customer"))
-            expect(header).to(contain("Select Plan"))
-            expect(header).to(contain("Choose Plan"))
-            expect(header).to(contain("Create Credentials"))
+        with it("draws the whole story map on one artboard: epic, sub-epic and story cards"):
+            story_map = self.files["project/Main.dc.html"]
+            for name in ("Onboard A Customer", "Select Plan", "Choose Plan", "Create Credentials"):
+                expect(story_map).to(contain(name))
+            expect(self.canvas["boards"]["Main.dc.html"]["page"]).to(equal("story-map"))
+            expect([name for name in self.canvas["boards"] if self.canvas["boards"][name]["page"] == "story-map"]).to(equal(["Main.dc.html"]))
 
-        with it("sizes the header to one column per story"):
+        with it("sizes the story map to one column per story inside its margin"):
             board = self.canvas["boards"]["Main.dc.html"]
-            expect(board["w"]).to(equal(2 * ClaudeDesignStory.width_px + ClaudeDesignStory.gap_px))
-            expect(board["page"]).to(equal("story-map"))
+            expect(board["w"]).to(equal(2 * ClaudeDesignStory.width_px + ClaudeDesignStory.gap_px + 2 * ClaudeDesignStoryModel.margin))
 
-        with it("puts a thumbnail under the story for the screen its step is shown on"):
-            thumbnail = self.files["project/story-map/choose-plan-01.dc.html"]
-            expect(thumbnail).to(contain('src="../shots/plan-catalog.png"'))
-            expect(thumbnail).to(contain('href="/screens/plan-catalog.dc.html"'))
+        with it("puts the screen a story's step is shown on under the story, opening the explorer at that step"):
+            story_map = self.files["project/Main.dc.html"]
+            expect(story_map).to(contain('src="shots/plan-catalog.png"'))
+            expect(story_map).to(contain('href="/screens/explorer.dc.html#story=Choose%20Plan&scenario=See%20the%20plan%20catalog'))
+
+        with it("links only the thumbnails, not the story cards"):
+            expect(self.files["project/Main.dc.html"].count("<a href")).to(equal(1))
+
+        with it("draws each epic once, across all its sub-epics"):
+            expect(self.files["project/Main.dc.html"].count("Onboard A Customer")).to(equal(1))
+
+        with it("draws on the dark abd background, not white"):
+            expect(self.files["project/Main.dc.html"]).to(contain("#0B0B0B"))
+            expect(self.files["project/Main.dc.html"]).not_to(contain("#ffffff"))
 
         with it("places the explorer and the prototype screen on the screens page"):
             expect(self.canvas["boards"]["screens/explorer.dc.html"]["page"]).to(equal("screens"))
@@ -72,8 +81,35 @@ with description("a Claude Design story map") as self:
         with it("draws the prototype screen inside the explorer for the scenario that shows it"):
             explorer = self.files["project/screens/explorer.dc.html"]
             expect(explorer).to(contain('<dc-import name="plan-catalog"'))
+            expect(explorer).to(contain('go="{{goToStory}}"'))
             expect(explorer).to(contain('"p": "plan-catalog"'))
 
     with context("rendered from a story with no screens"):
-        with it("gives that story no thumbnails"):
-            expect(self.files).not_to(have_keys("project/story-map/create-credentials-01.dc.html"))
+        with it("gives that story no thumbnail"):
+            expect(self.files["project/Main.dc.html"]).not_to(contain("story=Create%20Credentials"))
+
+    with context("rendered with a screen that names a scenario, and a story whose screen names only the story"):
+        with before.each:
+            select_plan = Screen("Select plan", 2)
+            select_plan.prototype = "select-plan.dc.html"
+            select_plan.attach_scenario_name("Choose Plan \u203a Pick from the cart")
+            credentials = Screen("Create account", 3)
+            credentials.prototype = "create-credentials.dc.html"
+            credentials.attach_story_name("Create Credentials")
+            story_map = _story_map()
+            choose_plan = story_map.epics[0].epics[0].stories[0]
+            from_cart = Scenario("Pick from the cart", 2)
+            from_cart.steps.append(Step("the cart has no plan", StepType.GIVEN, 1))
+            choose_plan.scenarios.append(from_cart)
+            create = story_map.epics[0].epics[0].stories[1]
+            display = Scenario("Display Create Account", 1)
+            display.steps.append(Step("the User opens sign-up", StepType.WHEN, 1))
+            create.scenarios.append(display)
+            files = json.loads(ClaudeDesignStoryModel().render(story_map, screens=[_catalog_screen(), select_plan, credentials]))
+            self.explorer = files["project/screens/explorer.dc.html"]
+
+        with it("shows a scenario whose steps show no screen on its own shownOn screen"):
+            expect(self.explorer).to(contain('"n": "Pick from the cart", "p": "select-plan"'))
+
+        with it("shows a scenario with no screen of its own on its story's screen"):
+            expect(self.explorer).to(contain('"n": "Display Create Account", "p": "create-credentials"'))

@@ -256,6 +256,7 @@ class Screen(UxNode):
         self.chrome_of = chrome_of
         self.inactive_tabs: List[str] = []
         self.story_names: List[str] = []
+        self.scenario_names: List[str] = []
         self.step_names: List[str] = []
         self.domain_terms: List[str] = []
         self.domain_concepts: List[str] = []
@@ -272,6 +273,7 @@ class Screen(UxNode):
         self.chrome_of = source.chrome_of
         self.inactive_tabs = list(source.inactive_tabs)
         self.story_names = list(source.story_names)
+        self.scenario_names = list(source.scenario_names)
         self.step_names = list(source.step_names)
         self.domain_terms = list(source.domain_terms)
         self.domain_concepts = list(source.domain_concepts)
@@ -308,6 +310,11 @@ class Screen(UxNode):
         if story_name and story_name not in self.story_names:
             self.story_names.append(story_name)
 
+    def attach_scenario_name(self, scenario_name: str) -> None:
+        """A scenario this screen shows, named ``Story › Scenario``; the scenario's ``shownOn`` edge follows it."""
+        if scenario_name and scenario_name not in self.scenario_names:
+            self.scenario_names.append(scenario_name)
+
     def attach_step_name(self, step_name: str) -> None:
         """A step this screen shows, named ``Story › Scenario › Step``; the step's ``shownOn`` edge follows it."""
         if step_name and step_name not in self.step_names:
@@ -325,6 +332,7 @@ class Screen(UxNode):
             "chrome_of": self.chrome_of,
             "inactive_tabs": list(self.inactive_tabs),
             "story_names": list(self.story_names),
+            "scenario_names": list(self.scenario_names),
             "step_names": list(self.step_names),
             "domain_terms": list(self.domain_terms),
             "domain_concepts": list(self.domain_concepts),

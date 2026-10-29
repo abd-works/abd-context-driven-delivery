@@ -97,6 +97,7 @@ class JsonUxMap(UxMap):
         )
         screen.inactive_tabs = list(screen_data.get("inactive_tabs", []))
         screen.story_names = list(screen_data.get("story_names", []))
+        screen.scenario_names = list(screen_data.get("scenario_names", []))
         screen.step_names = list(screen_data.get("step_names", []))
         screen.domain_terms = list(screen_data.get("domain_terms", []))
         screen.domain_concepts = list(screen_data.get("domain_concepts", []))
@@ -212,6 +213,7 @@ class JsonUxMap(UxMap):
                     "chrome_of": screen.chrome_of,
                     "inactive_tabs": list(screen.inactive_tabs),
                     "story_names": list(screen.story_names),
+                    "scenario_names": list(screen.scenario_names),
                     "step_names": list(screen.step_names),
                     "domain_terms": list(screen.domain_terms),
                     "domain_concepts": list(screen.domain_concepts),

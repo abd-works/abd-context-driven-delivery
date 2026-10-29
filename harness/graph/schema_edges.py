@@ -171,6 +171,8 @@ def _matches(kind: str, owner, target, nodes: list) -> bool:
     if kind == "shownOn":
         if owner.semantic_type() == "Step":
             return step_key(owner) in list(getattr(target, "step_names", []) or [])
+        if owner.semantic_type() == "Scenario":
+            return scenario_key(owner) in list(getattr(target, "scenario_names", []) or [])
         return owner.name in list(getattr(target, "story_names", []) or [])
     if kind == "specifiedBy":
         return owner.name.casefold() == target.name.casefold()
@@ -184,6 +186,14 @@ def _matches(kind: str, owner, target, nodes: list) -> bool:
     if kind == "returnType":
         return _mentions(str(getattr(owner, "return_type", "") or ""), target.name)
     return False
+
+
+def scenario_key(scenario) -> str:
+    """A scenario named the way a screen lists it: ``Story › Scenario``."""
+    story = scenario.parent
+    while story is not None and story.semantic_type() != "Story":
+        story = story.parent
+    return " › ".join(part for part in (getattr(story, "name", ""), scenario.name) if part)
 
 
 def step_key(step) -> str:
