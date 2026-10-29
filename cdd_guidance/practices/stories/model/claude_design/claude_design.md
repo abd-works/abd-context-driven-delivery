@@ -2,11 +2,16 @@
 
 The Claude Design channel renders the story map, its scenarios, and the UX screens as one Claude Design canvas: a story map you can play, and a story explorer that runs real screens on the stories' own fixtures. Stakeholders walk the product story by story while the stories, the domain, and the screens stay one graph.
 
-**Where things live.** In the workspace: the canvas at `ux/design-canvas/project/` (artboards, `canvas.json`, `fixtures/`, `shots/`) and the UX map with its story → screen edges at `ux/ux.json`. In CDD: the generic canvas — `DesignCanvas` (pages, boards, `canvas.json`, writing to a folder), artboard and card helpers, the abd look, and the fixture bar — is `harness/design_canvas/`; this package lays out the story map and the explorer, and `ux/model/claude_design` lays out the Screens page.
+**Where things live.** In the workspace: each version of the canvas at `ux/design-canvas/version-N/project/` (artboards, `canvas.json`, `fixtures/`, `shots/`) and the UX map with its story → screen edges at `ux/ux.json`. In CDD: the generic canvas — `DesignCanvas` (pages, boards, `canvas.json`, writing to a folder), artboard and card helpers, the abd look, and the fixture bar — is `harness/design_canvas/`; this package lays out the story map and the explorer, and `ux/model/claude_design` lays out the Screens page.
 
 Render it with the `claude_design` format: `ClaudeDesignStoryModel().render(story_map, workspace=..., screens=ux_map.screens)` returns every canvas file as JSON (path → text). The story map comes from the latest story map drawio; the screens come from the UX map (`ux.model.claude_design`). Do not hand-edit the rendered files: change the generator, re-render, and republish.
 
 ---
+
+## Versions
+
+- **`never-overwrite-a-published-canvas`** — People edit a published canvas directly in Claude Design. A regeneration never publishes over it: `CanvasVersions.working()` (`harness/design_canvas/versions.py`) starts `version-N+1` as a copy of the latest version, the generator renders into it, and that version is published as a new canvas titled `<name> — version-N`. `ux/design-canvas/versions.json` records each version's link. A version is regenerated in place only while it is unpublished, or when the user explicitly says to overwrite it.
+- **`generators-add-to-the-prepared-version`** — Screen generators write into `CanvasVersions.unpublished()`, which refuses a published version.
 
 ## Pages
 
@@ -50,5 +55,5 @@ The fixtures bundle — `CanvasFixtures` with `load(story, scenario)`, `scenario
 
 1. Load the story map from its drawio and the UX map (`ux/ux.json`, with its `shownOn` edges) into the graph.
 2. Build the pattern's fixtures bundle into `project/fixtures/canvas-fixtures.js`.
-3. Render with the `claude_design` format and write the files under `ux/design-canvas/` (`DesignCanvas.write`).
-4. Port the next story's screen as a prototype screen, list it on the UX map with its story (and scenarios), re-render, and republish the canvas.
+3. Render with the `claude_design` format into the working version (`CanvasVersions.working()`), and pass `sources` (each story's and scenario's `path:line` from the practice graph) so the explorer can copy an open-in-file-viewer request.
+4. Publish the version as a new canvas and record its link; port further screens into the next version the same way.
