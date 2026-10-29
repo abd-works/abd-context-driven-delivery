@@ -125,3 +125,22 @@ with description("a Claude Design story map") as self:
         with it("gives the explorer each story's and scenario's location, for the copy-to-open request"):
             expect(self.explorer).to(contain('"n": "Choose Plan", "f": "tests/select_plan.story.shared.ts:69"'))
             expect(self.explorer).to(contain('"f": "tests/select_plan.story.shared.ts:73"'))
+
+    with context("rendered with a screen that serves a story"):
+        with before.each:
+            screen = _catalog_screen()
+            screen.attach_story_name("Choose Plan")
+            files = json.loads(ClaudeDesignStoryModel().render(_story_map(), screens=[screen]))
+            self.canvas = json.loads(files["project/canvas.json"])
+            self.panel = files["project/context/plan-catalog.dc.html"]
+
+        with it("puts a read-only story panel beside the screen on its page"):
+            board = self.canvas["boards"]["context/plan-catalog.dc.html"]
+            expect(board["page"]).to(equal("screen-plan-catalog"))
+            expect(board["x"]).to(equal(1680))
+            expect("is_interactive" in board).to(equal(False))
+
+        with it("opens the screen's story to its scenarios and steps, and greys the rest"):
+            expect(self.panel).to(contain('<div class="cx-story cx-on">Choose Plan</div>'))
+            expect(self.panel).to(contain('<div class="cx-scenario">See the plan catalog</div>'))
+            expect(self.panel).to(contain('<div class="cx-story">Create Credentials</div>'))

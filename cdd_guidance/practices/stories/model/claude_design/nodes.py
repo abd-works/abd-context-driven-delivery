@@ -173,7 +173,51 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
                                                                      "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
         for name, board in ClaudeDesignUxMap.boards(self.screens, self._screen_files()).items():
             canvas.add_board(name, board)
+            focus = self._stories_shown_on(name)
+            if focus:
+                canvas.add_board(f"{self.context_folder}/{stem(name)}.dc.html",
+                                 {"x": board["w"] + 80, "y": 0, "w": self.context_width, "h": board["h"], "page": board["page"],
+                                  "title": "Stories"}, self._context_panel(focus, board["h"]))
         return canvas
+
+    context_folder = "context"
+    context_width = 560
+
+    def _stories_shown_on(self, name: str) -> List[str]:
+        """The stories whose screen is this artboard: the story-level edges of the screens that prototype it."""
+        found: List[str] = []
+        for screen in self.screens:
+            if screen.prototype and Path(screen.prototype).name == Path(name).name:
+                found += [story for story in (getattr(screen, "story_names", []) or []) if story not in found]
+        return found
+
+    def _context_panel(self, focus: List[str], height: int) -> str:
+        """A read-only story panel for a screen's page: the whole hierarchy greyed and collapsed, except the stories
+        the screen serves, opened to their scenarios and steps. Nothing in it navigates or edits."""
+        lines: List[str] = []
+        for epic in self.epics:
+            lines.append(f'<div class="cx-epic">{escape(epic.name)}</div>')
+            for sub in epic.leaf_epics():
+                lines.append(f'<div class="cx-sub">{escape(sub.name)}</div>')
+                for story in sub.stories:
+                    if story.name not in focus:
+                        lines.append(f'<div class="cx-story">{escape(story.name)}</div>')
+                        continue
+                    lines.append(f'<div class="cx-story cx-on">{escape(story.name)}</div>')
+                    for scenario in self._story_entry(story)["c"]:
+                        lines.append(f'<div class="cx-scenario">{escape(scenario["n"])}</div>')
+                        steps = "\n".join(group["x"] for group in scenario["t"])
+                        lines.append(f'<div class="cx-steps">{escape(steps)}</div>')
+        style = (f"body{{margin:0;background:{BACKGROUND}}}"
+                 ".cx-epic,.cx-sub{font:600 11px/1.6 'JetBrains Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A4A52;padding:4px 0}"
+                 ".cx-sub{padding-left:12px}"
+                 ".cx-story{font:500 13px/1.6 'Inter',system-ui,sans-serif;color:#4A4A52;padding:2px 0 2px 24px}"
+                 f".cx-story.cx-on{{color:#E8E8ED;font-weight:600;box-shadow:inset 3px 0 0 {LOOK['epic']['color']};margin-top:6px}}"
+                 ".cx-scenario{font:600 13px/1.6 'Inter',system-ui,sans-serif;color:#F2A07A;padding:6px 0 0 36px}"
+                 ".cx-steps{font:400 12px/1.5 'JetBrains Mono',ui-monospace,monospace;color:#9B9BA8;white-space:pre-wrap;padding:2px 0 4px 48px}")
+        body = ('<div style="position: absolute; inset: 0; overflow: auto; box-sizing: border-box; padding: 20px 20px 40px; '
+                'background: #111113; border-left: 1px solid #2A2A2A">\n' + "\n".join(lines) + "\n</div>")
+        return artboard("Stories", self.context_width, height, body, style=style, root_style=f"background: {BACKGROUND}", head=FONTS)
 
     def _story_map(self) -> tuple:
         """The story map artboard: its width, height, and file text."""
