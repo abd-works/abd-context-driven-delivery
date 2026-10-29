@@ -2,8 +2,9 @@
 
 Every screen shows its story's scenario picker. Opened on its own it also shows *Load from fixture*; inside the story
 explorer the screen loads the explorer's selected scenario itself, and picking another scenario loads it at once and
-moves the explorer's tree to it. *Paste seed data* is a list box: the values any scenario of
-the story enters (an outline's example rows among them), and dev mode's seed paste for the screen's path. ``follow(event, story)`` moves the explorer to the next story, or lets
+moves the explorer's tree to it. *Paste seed data* is a list box: the
+scenarios whose typed values differ (an outline's example rows among them; scenarios that enter nothing are left
+out), and dev mode's seed paste for the screen's path. ``follow(event, story)`` moves the explorer to the next story, or lets
 the link open the next screen when the screen stands alone. See ``claude_design.md``."""
 
 BAR = '''<div style="position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; align-items: center; font: 600 12px/1 ui-monospace, Consolas, monospace; z-index: 5">
@@ -30,7 +31,7 @@ return typeof CanvasFixtures !== 'undefined' ? CanvasFixtures : null;
 }
 componentDidMount() {
 let tries = 0;
-const wait = () => { if (this.fixtures() || tries++ > 50) { this.forceUpdate(); return; } setTimeout(wait, 100); };
+const wait = () => { if (this.fixtures() || tries++ > 50) { this.findPasteRows(); this.forceUpdate(); return; } setTimeout(wait, 100); };
 wait();
 if (this.props.scenario) this.followExplorer();
 }
@@ -69,12 +70,34 @@ const state = { source: 'pasted: ' + paste.title };
 paste.fields.forEach((field) => Object.assign(state, this.paste(field)));
 this.setState(state);
 }
-pasteScenario(scenario) {
+typedValues(state) {
+if (!state) return {};
+if (state.entered) return state.entered;
+const typed = {};
+Object.keys(state).forEach((key) => { if (['string', 'number', 'boolean'].indexOf(typeof state[key]) >= 0) typed[key] = state[key]; });
+return typed;
+}
+findPasteRows() {
 const fixtures = this.fixtures();
 if (!fixtures || !this.fromFixture) return;
-Promise.resolve(this.fromFixture(fixtures.repositories(), scenario, fixtures.examples))
-.then((state) => this.setState(Object.assign({}, (state && state.entered) || state, { source: 'pasted: ' + scenario })))
-.catch((problem) => this.setState({ source: String(problem && problem.message || problem) }));
+const names = fixtures.scenarios(this.storyName()) || [];
+const tried = names.map((name) => Promise.resolve().then(() => this.fromFixture(fixtures.repositories(), name, fixtures.examples)).catch(() => null));
+Promise.all(tried).then((states) => {
+const seen = {};
+const rows = [];
+states.forEach((state, index) => {
+const typed = this.typedValues(state);
+const signature = JSON.stringify(typed);
+if (seen[signature] || !Object.keys(typed).some((key) => typed[key] !== '')) return;
+seen[signature] = true;
+rows.push({ value: names[index], label: names[index], typed: typed });
+});
+this.setState({ pasteRows: rows.length > 1 ? rows : [] });
+});
+}
+pasteScenario(scenario) {
+const row = ((this.state && this.state.pasteRows) || []).find((candidate) => candidate.value === scenario);
+if (row) this.setState(Object.assign({}, row.typed, { source: 'pasted: ' + scenario }));
 }
 pasteChoice(value) {
 if (value === 'dev-seed') { this.pasteSeedData(); return; }
@@ -95,7 +118,7 @@ barVals() {
 const fixtures = this.fixtures();
 const options = (fixtures && fixtures.scenarios(this.storyName())) || [];
 const paste = fixtures && fixtures.pasteFor('__PATH__');
-const rows = this.fromFixture ? options.map((name) => ({ value: name, label: name })) : [];
+const rows = ((this.state && this.state.pasteRows) || []).map((row) => ({ value: row.value, label: row.label }));
 const pasteOptions = paste ? rows.concat([{ value: 'dev-seed', label: 'Dev seed: ' + paste.title }]) : rows;
 return {
 standalone: !this.props.scenario,
