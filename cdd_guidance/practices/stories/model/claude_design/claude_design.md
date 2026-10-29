@@ -2,6 +2,8 @@
 
 The Claude Design channel renders the story map, its scenarios, and the UX screens as one Claude Design canvas: a story map you can play, and a story explorer that runs real screens on the stories' own fixtures. Stakeholders walk the product story by story while the stories, the domain, and the screens stay one graph.
 
+**Where things live.** In the workspace: the canvas at `ux/design-canvas/project/` (artboards, `canvas.json`, `fixtures/`, `shots/`) and the UX map with its story → screen edges at `ux/ux.json`. In CDD: the generic canvas — `DesignCanvas` (pages, boards, `canvas.json`, writing to a folder), artboard and card helpers, the abd look, and the fixture bar — is `harness/design_canvas/`; this package lays out the story map and the explorer, and `ux/model/claude_design` lays out the Screens page.
+
 Render it with the `claude_design` format: `ClaudeDesignStoryModel().render(story_map, workspace=..., screens=ux_map.screens)` returns every canvas file as JSON (path → text). The story map comes from the latest story map drawio; the screens come from the UX map (`ux.model.claude_design`). Do not hand-edit the rendered files: change the generator, re-render, and republish.
 
 ---
@@ -30,7 +32,7 @@ Render it with the `claude_design` format: `ClaudeDesignStoryModel().render(stor
 
 ## Prototype screens
 
-A prototype screen is a real screen ported to a `.dc.html` artboard — the product's markup and stylesheets, not a sketch — that draws what the scenario's Givens stored. Build each one on the shared fixture bar in `fixture_bar.py`:
+A prototype screen is a real screen ported to a `.dc.html` artboard — the product's markup and stylesheets, not a sketch — that draws what the scenario's Givens stored. Build each one on the shared fixture bar in `harness/design_canvas/fixture_bar.py`:
 
 - **`fixture-bar`** — Insert `BAR` at the screen's root and `methods(story, default_scenario, path)` into its `DCLogic` class; return `Object.assign(this.barVals(), {...})` from `renderVals`. Declare `story`, `scenario`, and `go` in `data-props`.
 - **`no-auto-load-standalone`** — Opened on its own, a screen does not load a fixture: it shows the scenario picker and **Load from fixture**, so a reader can walk it by hand or load the scenario. Inside the explorer the picker hides and the explorer's scenario loads automatically.
@@ -43,7 +45,7 @@ The fixtures bundle — `CanvasFixtures` with `load(story, scenario)`, `scenario
 
 ## Steps
 
-1. Load the story map from its drawio and the UX map (with `shownOn` edges) into the graph.
+1. Load the story map from its drawio and the UX map (`ux/ux.json`, with its `shownOn` edges) into the graph.
 2. Build the pattern's fixtures bundle into `project/fixtures/canvas-fixtures.js`.
-3. Render with the `claude_design` format and write the files under the canvas's `project/` folder.
+3. Render with the `claude_design` format and write the files under `ux/design-canvas/` (`DesignCanvas.write`).
 4. Port the next story's screen as a prototype screen, list it on the UX map with its story (and scenarios), re-render, and republish the canvas.

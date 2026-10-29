@@ -1,6 +1,6 @@
 ## Overview
 
-LERN's part of the Claude Design channel: the fixtures bundle a canvas screen runs. `LernCanvasFixtures(workspace).build(story_names, out_file)` bundles the shared stories (`*.story.shared.ts`), their example fixtures (`*.examples.ts`), the in-memory domain repositories, and dev mode's seed overlay (`test-utils/seed-overlay/seed-pastes.ts`) into one browser script, `CanvasFixtures`. Node-only modules (`*-node`, lowdb, Node built-ins, vitest) are stubbed, so all generic TypeScript runs in the browser.
+LERN's part of the Claude Design channel: the fixtures bundle a canvas screen runs. `LernCanvasFixtures(workspace).build(story_names, out_file)` bundles the shared stories (`*.story.shared.ts`), their example fixtures (`*.examples.ts`), the in-memory domain repositories, and dev mode's seed overlay (`test-utils/seed-overlay/seed-pastes.ts`) into one browser script, `CanvasFixtures`, written to `ux/design-canvas/project/fixtures/canvas-fixtures.js`. Node-only modules (`*-node`, lowdb, Node built-ins, vitest) are stubbed, so all generic TypeScript runs in the browser.
 
 ---
 
