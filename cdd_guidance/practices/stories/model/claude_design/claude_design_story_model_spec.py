@@ -113,3 +113,14 @@ with description("a Claude Design story map") as self:
 
         with it("shows a scenario with no screen of its own on its story's screen"):
             expect(self.explorer).to(contain('"n": "Display Create Account", "b": false, "p": "create-credentials"'))
+
+    with context("rendered with the story code's locations"):
+        with before.each:
+            sources = {"Choose Plan": "tests/select_plan.story.shared.ts:69",
+                       "Choose Plan \u203a See the plan catalog": "tests/select_plan.story.shared.ts:73"}
+            files = json.loads(ClaudeDesignStoryModel().render(_story_map(), screens=[_catalog_screen()], sources=sources))
+            self.explorer = files["project/screens/explorer.dc.html"]
+
+        with it("gives the explorer each story's and scenario's location, for the copy-to-open request"):
+            expect(self.explorer).to(contain('"n": "Choose Plan", "f": "tests/select_plan.story.shared.ts:69"'))
+            expect(self.explorer).to(contain('"f": "tests/select_plan.story.shared.ts:73"'))

@@ -130,6 +130,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     margin = 24
     screens_per_story = 1
     blank_image_bytes = 10000
+    sources: Dict[str, str] = {}
 
     def render(
         self,
@@ -137,13 +138,17 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         previous: Optional[str] = None,
         workspace: Optional[str] = None,
         screens=None,
+        sources: Optional[Dict[str, str]] = None,
     ) -> str:
         """The canvas files as JSON. *screens* is a UxMap (or its screens); with only a *workspace*
-        (the canvas root), the UX map beside it — ``ux.json`` in the folder that holds the canvas — supplies them."""
+        (the canvas root), the UX map beside it — ``ux.json`` in the folder that holds the canvas — supplies them.
+        *sources* maps a story (``Story``) or scenario (``Story › Scenario``) to its ``path:line`` in the story code:
+        the explorer offers to copy an "open in the file viewer" request for it."""
         source = canonical if canonical is not None else self
         drawn = source if isinstance(source, ClaudeDesignStoryModel) else type(self)(source)
         drawn.workspace = Path(workspace) if workspace else None
         drawn.screens = drawn._screens(screens)
+        drawn.sources = dict(sources or {})
         return json.dumps(drawn.files(), indent=1, ensure_ascii=False)
 
     def parse(self, text: str) -> "ClaudeDesignStoryModel":
@@ -258,8 +263,9 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
                 if image:
                     groups[0]["i"] = [f"../{image}"]
             background = scenario in story.backgrounds
-            scenarios.append({"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups})
-        return {"n": story.name, "c": scenarios}
+            scenarios.append({"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,
+                              "f": self.sources.get(scenario_key(scenario), "")})
+        return {"n": story.name, "f": self.sources.get(story.name, ""), "c": scenarios}
 
     def _screen_of(self, scenario, story: ClaudeDesignStory) -> tuple:
         """A scenario whose steps show no screen shows its own ``shownOn`` screen, else its story's:
