@@ -7,6 +7,7 @@ the story enters (an outline's example rows among them), and dev mode's seed pas
 the link open the next screen when the screen stands alone. See ``claude_design.md``."""
 
 BAR = '''<div style="position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; align-items: center; font: 600 12px/1 ui-monospace, Consolas, monospace; z-index: 5">
+<a href="/Main.dc.html" aria-label="Back to the story map" style="padding: 6px 10px; border: 1px solid #2A2A2A; border-radius: 4px; background: #0B0B0B; color: #E8E8ED; text-decoration: none">← Story map</a>
 <select aria-label="Scenario" value="{{scenario}}" onChange="{{pickScenario}}" style="max-width: 420px; padding: 6px 8px; border: 1px solid #2A2A2A; border-radius: 4px; background: #0B0B0B; color: #E8E8ED">
 <sc-for list="{{scenarioOptions}}" as="o" hint-placeholder-count="3"><option value="{{o.name}}">{{o.name}}</option></sc-for>
 </select>
