@@ -242,7 +242,8 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
             waiting: List[str] = []
             prototype = ""
             for step in _steps_of(scenario):
-                waiting.append(f"{step.keyword} {step.text}")
+                indent = "    " if step.keyword in ("And", "But") else ""
+                waiting.append(f"{indent}{step.keyword} {step.text}")
                 shown = [screen for screen in shown_on(step, self.screens) if not self._blank(screen)]
                 prototype = prototype or next((stem(s.prototype) for s in shown if s.prototype), "")
                 if shown:
