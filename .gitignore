@@ -70,6 +70,9 @@ conf/*
 !conf/.secrets.example
 *.secrets.txt
 
+# Graph harness dev server logs (regenerated when scripts start the API/UI)
+scripts/.run/
+
 # Temporary scratch files and scripts
 _*
 !**/__init__.py
