@@ -23,7 +23,7 @@ class LernCanvasFixtures:
 
     story_test_folder = "test-utils/story-test"
     tests_folder = "tests"
-    work_folder = ".cdd/canvas-fixtures"
+    work_folder = ".temp/canvas-fixtures"
     shared_story_glob = "*.story.shared.ts"
     examples_glob = "*.examples.ts"
     seed_pastes_module = "test-utils/seed-overlay/seed-pastes"
