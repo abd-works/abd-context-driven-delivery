@@ -26,6 +26,8 @@ body{margin:0}
 .sm-k3.sm-on{font-weight:600}
 .sm-ex{padding-left:28px;color:#F2A07A}
 .sm-nomark{display:none}
+.sm-icon{flex-shrink:0;align-self:center;color:#9B9BA8}
+.sm-k0 .sm-icon,.sm-on .sm-icon,.sm-box .sm-icon{color:#E5531A}
 .sm-box{background:rgba(229,83,26,0.14);box-shadow:inset 3px 0 0 #E5531A;border-radius:0}
 .sm-box:hover{background:rgba(229,83,26,0.20)}
 .sm-box-top{border-radius:4px 4px 0 0;margin-top:2px}
@@ -72,7 +74,7 @@ __IMPORTS__
 </div>
 <div style="display: flex; flex-direction: column; gap: 0; padding: 8px; overflow-y: auto; flex: 1 1 auto; min-height: 0">
 <sc-for list="{{rows}}" as="row" hint-placeholder-count="12">
-<button type="button" class="{{row.cls}}" onClick="{{row.pick}}"><span class="{{row.markCls}}">{{row.mark}}</span><span>{{row.label}}</span></button>
+<button type="button" class="{{row.cls}}" onClick="{{row.pick}}"><span class="{{row.markCls}}">{{row.mark}}</span><sc-if value="{{row.is_epic}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <path d="M4 2.5v11"></path> <path d="M4 3.5h8L10.5 6 12 8.5H4"></path> </g></svg></sc-if><sc-if value="{{row.is_subEpic}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <path d="M5.5 4v9"></path> <path d="M5.5 4.5h6.5L10.5 6.5 12 8.5H5.5"></path> </g></svg></sc-if><sc-if value="{{row.is_story}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <rect x="3" y="2.5" width="10" height="11" rx="1"></rect> <path d="M5.5 6h5M5.5 8.5h5M5.5 11h3"></path> </g></svg></sc-if><sc-if value="{{row.is_background}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <rect x="5" y="2.5" width="8" height="8"></rect> <path d="M3 5.5h8V13.5H3z"></path> </g></svg></sc-if><sc-if value="{{row.is_scenario}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"> <circle cx="4" cy="12" r="1.6"></circle> <circle cx="12" cy="4" r="1.6"></circle> <path d="M5.3 10.8 10.7 5.2"></path> </g></svg></sc-if><sc-if value="{{row.is_example}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"> <path d="M6.2 3.2C4.8 3.2 4 4.2 4 5.4v1.4L2.6 8 4 9.2v1.4c0 1.2.8 2.2 2.2 2.2"></path> <path d="M9.8 3.2c1.4 0 2.2 1 2.2 2.2v1.4L13.4 8 12 9.2v1.4c0 1.2-.8 2.2-2.2 2.2"></path> </g></svg></sc-if><span>{{row.label}}</span></button>
 </sc-for>
 </div>
 </div>
@@ -87,12 +89,18 @@ class Component extends DCLogic {
 componentDidMount() {
 this.followHash = () => this.forceUpdate();
 window.addEventListener('hashchange', this.followHash);
+window.addEventListener('storage', this.followHash);
+window.addEventListener('focus', this.followHash);
+document.addEventListener('visibilitychange', this.followHash);
 let tries = 0;
 const wait = () => { if (typeof CanvasFixtures !== 'undefined') { this.forceUpdate(); return; } if (tries++ < 100) setTimeout(wait, 100); };
 wait();
 }
 componentWillUnmount() {
 window.removeEventListener('hashchange', this.followHash);
+window.removeEventListener('storage', this.followHash);
+window.removeEventListener('focus', this.followHash);
+document.removeEventListener('visibilitychange', this.followHash);
 }
 componentDidUpdate() {
 const selected = document.querySelector('.sm-step-on') || document.querySelector('.sm-box-top');
@@ -117,7 +125,7 @@ const first = Math.max(0, S.findIndex((s) => s.c.length > 0));
 const startOpen = () => { const o = { e0: true }; o['u' + S[first].e + '-' + S[first].u] = true; o['s' + first] = true; o['s' + first + '-0'] = true; return o; };
 const opened = (g, c, base) => { const o = Object.assign({}, base); ['e' + S[g].e, 'u' + S[g].e + '-' + S[g].u, 's' + g, 's' + g + '-' + c].forEach((k) => { o[k] = true; }); return o; };
 let hash = '';
-try { hash = (window.location.hash || '').slice(1); } catch (e) { hash = ''; }
+try { hash = (window.location.hash || '').slice(1) || window.localStorage.getItem('design-canvas.link:/screens/explorer.dc.html') || ''; } catch (e) { hash = ''; }
 const linked = (() => {
 if (!hash) return null;
 const q = {};
@@ -141,22 +149,22 @@ const exampleOf = (g, c) => { const rowsOf = this.outlineRows(S[g].n, (S[g].c[c]
 const rows = [];
 T.forEach((e, ei) => {
 const ek = 'e' + ei;
-rows.push(Object.assign({ label: e.n, cls: 'sm-row sm-k0', pick: toggle(ek) }, chev(st.open[ek])));
+rows.push(Object.assign({ label: e.n, is_epic: true, cls: 'sm-row sm-k0', pick: toggle(ek) }, chev(st.open[ek])));
 if (!st.open[ek]) return;
 e.u.forEach((u, ui) => {
 const uk = 'u' + ei + '-' + ui;
-rows.push(Object.assign({ label: u.n, cls: 'sm-row sm-k1', pick: toggle(uk) }, chev(st.open[uk])));
+rows.push(Object.assign({ label: u.n, is_subEpic: true, cls: 'sm-row sm-k1', pick: toggle(uk) }, chev(st.open[uk])));
 if (!st.open[uk]) return;
 S.forEach((s, g) => {
 if (s.e !== ei || s.u !== ui) return;
 const sk = 's' + g;
-rows.push(Object.assign({ label: s.n, cls: 'sm-row sm-k2' + (g === st.g ? ' sm-on' : ''), pick: () => (g === st.g && st.open[sk] ? toggle(sk)() : go(g, 0, 0)) }, chev(st.open[sk])));
+rows.push(Object.assign({ label: s.n, is_story: true, cls: 'sm-row sm-k2' + (g === st.g ? ' sm-on' : ''), pick: () => (g === st.g && st.open[sk] ? toggle(sk)() : go(g, 0, 0)) }, chev(st.open[sk])));
 if (!st.open[sk]) return;
 s.c.forEach((sc, ci) => {
 const ck = sk + '-' + ci;
-rows.push(Object.assign({ label: sc.n, cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on sm-box sm-box-top' + (st.open[ck] ? '' : ' sm-box-bottom') : ''), pick: () => (g === st.g && ci === st.c && st.open[ck] ? toggle(ck)() : go(g, ci, 0)) }, chev(st.open[ck])));
+rows.push(Object.assign({ label: sc.n, is_background: Boolean(sc.b), is_scenario: !sc.b, cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on sm-box sm-box-top' + (st.open[ck] ? '' : ' sm-box-bottom') : ''), pick: () => (g === st.g && ci === st.c && st.open[ck] ? toggle(ck)() : go(g, ci, 0)) }, chev(st.open[ck])));
 if (!st.open[ck]) return;
-this.outlineRows(s.n, sc.n).forEach((ex) => rows.push({ label: ex.label, cls: 'sm-row sm-k3 sm-ex' + (g === st.g && ci === st.c ? ' sm-box' + (ex.name === exampleOf(g, ci) ? ' sm-step-on' : '') : ''), mark: '◆', markCls: 'sm-dot sm-shot', pick: () => go(g, ci, 0, ex.name) }));
+this.outlineRows(s.n, sc.n).forEach((ex) => rows.push({ label: ex.label, is_example: true, cls: 'sm-row sm-k3 sm-ex' + (g === st.g && ci === st.c ? ' sm-box' + (ex.name === exampleOf(g, ci) ? ' sm-step-on' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, 0, ex.name) }));
 sc.t.forEach((tp, ti) => rows.push({ label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c ? ' sm-box' + (ti === st.t ? ' sm-step-on' : '') + (ti === sc.t.length - 1 ? ' sm-box-bottom' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti) }));
 });
 });

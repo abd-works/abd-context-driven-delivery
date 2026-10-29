@@ -117,6 +117,9 @@ ZOOM_BUTTON = ("font: 600 12px/1 ui-monospace, Consolas, monospace; padding: 6px
 
 
 ZOOM_STEP = 5
+# The canvas opens a linked artboard without the link's #hash, so a zoomable artboard also keeps the hash of a link
+# clicked on it in local storage under this key plus the linked page; the linked artboard reads it from there.
+LINK_KEY = "design-canvas.link:"
 ZOOM_RANGE = range(20, 301, ZOOM_STEP)
 
 
@@ -143,8 +146,16 @@ def _zoomable_artboard(title: str, width: int, height: int, body: str, style: st
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{{"$preview":{{"width":{width},"height":{height}}}}}'>
+const LINK_KEY = '{LINK_KEY}';
 class Component extends DCLogic {{
 componentDidMount() {{
+this.keepLink = (event) => {{
+const link = event.target && event.target.closest ? event.target.closest('a[href*="#"]') : null;
+if (!link) return;
+const [page, hash] = link.getAttribute('href').split('#');
+try {{ window.localStorage.setItem(LINK_KEY + page, hash + '&at=' + Date.now()); }} catch (problem) {{ console.warn('canvas link target not kept', problem); }}
+}};
+document.addEventListener('click', this.keepLink, true);
 this.pinch = (event) => {{
 if (!event.ctrlKey) return;
 event.preventDefault();
@@ -153,6 +164,7 @@ this.zoomTo(this.zoom() * Math.exp(-event.deltaY / 200));
 window.addEventListener('wheel', this.pinch, {{ passive: false }});
 }}
 componentWillUnmount() {{
+document.removeEventListener('click', this.keepLink, true);
 window.removeEventListener('wheel', this.pinch);
 }}
 zoom() {{
