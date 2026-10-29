@@ -45,8 +45,9 @@ with description("a Claude Design story map") as self:
         self.canvas = json.loads(self.files["project/canvas.json"])
 
     with context("rendered from a story map whose step is shown on a screen"):
-        with it("puts the story map and the screens on their own pages"):
-            expect([page["id"] for page in self.canvas["pages"]]).to(equal(["story-map", "screens"]))
+        with it("puts the story map, the story explorer and each screen on its own page"):
+            expect([page["id"] for page in self.canvas["pages"]]).to(equal(["story-map", "screens", "screen-plan-catalog"]))
+            expect(self.canvas["boards"]["screens/plan-catalog.dc.html"]["page"]).to(equal("screen-plan-catalog"))
 
         with it("draws the whole story map on one artboard: epic, sub-epic and story cards"):
             story_map = self.files["project/Main.dc.html"]
@@ -74,9 +75,9 @@ with description("a Claude Design story map") as self:
             expect(self.files["project/Main.dc.html"]).to(contain("#0B0B0B"))
             expect(self.files["project/Main.dc.html"]).not_to(contain("#ffffff"))
 
-        with it("places the explorer and the prototype screen on the screens page"):
+        with it("places the explorer on its page and the prototype screen alone on its own page"):
             expect(self.canvas["boards"]["screens/explorer.dc.html"]["page"]).to(equal("screens"))
-            expect(self.canvas["boards"]["screens/plan-catalog.dc.html"]["page"]).to(equal("screens"))
+            expect(self.canvas["boards"]["screens/plan-catalog.dc.html"]["page"]).to(equal("screen-plan-catalog"))
 
         with it("draws the prototype screen inside the explorer for the scenario that shows it"):
             explorer = self.files["project/screens/explorer.dc.html"]

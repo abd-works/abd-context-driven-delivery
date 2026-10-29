@@ -14,17 +14,13 @@ from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
 class ClaudeDesignUxMap(UxMap):
-    """Screens page layout: one board per prototype screen, four to a row under the story explorer. Boards are plain
-    canvas frames, not full-window pages, so the editor stays around them; they are sized for a desktop screen."""
+    """Screen boards: each prototype screen on its own canvas page, as a plain frame (not a full-window page) sized for
+    a desktop screen, so the editor stays around it. The story explorer keeps the ``screens`` page."""
 
     folder = "screens"
     page = "screens"
     width = 1600
     height = 1100
-    column_pitch = 1680
-    row_pitch = 1280
-    top = 1100
-    per_row = 4
 
     def render(self, ux_map: UxMap) -> str:
         return json.dumps(self.boards(ux_map.screens), indent=1, ensure_ascii=False)
@@ -44,19 +40,27 @@ class ClaudeDesignUxMap(UxMap):
         return found
 
     @classmethod
-    def boards(cls, screens: Iterable, files: Iterable[str] = ()) -> Dict[str, dict]:
+    def names(cls, screens: Iterable, files: Iterable[str] = ()) -> List[str]:
         """The prototypes the screens name, then any other screen artboard already in the folder (*files*)."""
         names = cls.prototype_names(screens)
-        names += [name for name in files if name not in names]
-        boards: Dict[str, dict] = {}
-        for index, name in enumerate(names):
-            boards[name] = {
-                "x": (index % cls.per_row) * cls.column_pitch,
-                "y": cls.top + (index // cls.per_row) * cls.row_pitch,
-                "w": cls.width,
-                "h": cls.height,
-                "page": cls.page,
-                "title": Path(name).name.removesuffix(".dc.html").replace("-", " ").capitalize(),
-                "is_interactive": True,
-            }
-        return boards
+        return names + [name for name in files if name not in names]
+
+    @staticmethod
+    def title(name: str) -> str:
+        return Path(name).name.removesuffix(".dc.html").replace("-", " ").capitalize()
+
+    @staticmethod
+    def page_of(name: str) -> str:
+        """Each screen's own canvas page: the editor shows it alone there, so leaving Play lands on it to edit."""
+        return ("screen-" + Path(name).name.removesuffix(".dc.html"))[:40]
+
+    @classmethod
+    def pages(cls, screens: Iterable, files: Iterable[str] = ()) -> List[dict]:
+        return [{"id": cls.page_of(name), "name": cls.title(name)} for name in cls.names(screens, files)]
+
+    @classmethod
+    def boards(cls, screens: Iterable, files: Iterable[str] = ()) -> Dict[str, dict]:
+        """One board per screen, alone on its own page at a desktop size."""
+        return {name: {"x": 0, "y": 0, "w": cls.width, "h": cls.height, "page": cls.page_of(name), "title": cls.title(name),
+                       "is_interactive": True}
+                for name in cls.names(screens, files)}

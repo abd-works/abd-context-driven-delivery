@@ -1,6 +1,6 @@
 ## Overview
 
-The UX side of the Claude Design channel: the **Screens** page of the canvas, and the screens the story explorer shows. `ClaudeDesignUxMap` lays one board per prototype screen on the Screens page (four per row, 1600×1100, plain frames rather than full-window pages, so the editor stays around them). The story side (`stories/model/claude_design/claude_design.md`) owns the map, the explorer, and the prototype-screen contract.
+The UX side of the Claude Design channel: the **Screens** page of the canvas, and the screens the story explorer shows. `ClaudeDesignUxMap` lays one board per prototype screen each on its own canvas page (1600×1100 plain frames rather than full-window pages, so the editor stays around them and leaving Play lands on the screen to edit it); the story explorer keeps the `screens` page. The story side (`stories/model/claude_design/claude_design.md`) owns the map, the explorer, and the prototype-screen contract.
 
 ---
 

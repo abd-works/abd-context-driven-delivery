@@ -163,7 +163,9 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         """One story-map artboard holds every bar, card and thumbnail: one Play, one live page to draw."""
         canvas = DesignCanvas(self.name if self.name and self.name != "StoryModel" else "Story Map")
         canvas.add_page(self.story_map_page, "Story map")
-        canvas.add_page(self.screens_page, "Screens")
+        canvas.add_page(self.screens_page, "Story explorer")
+        for page in ClaudeDesignUxMap.pages(self.screens, self._screen_files()):
+            canvas.add_page(page["id"], page["name"])
         width, height, text = self._story_map()
         canvas.add_board("Main.dc.html", {"x": 0, "y": 0, "w": width, "h": height, "page": self.story_map_page,
                                           "title": "Story map", "is_interactive": True, "expand": "fill"}, text)
