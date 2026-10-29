@@ -40,6 +40,7 @@ class Stories(PracticeGuidance):
                 "json": ("stories.model.json.nodes", "JsonStoryModel"),
                 "drawio": ("stories.model.drawio.nodes", "DrawIOStoryModel"),
                 "miro": ("stories.model.miro.nodes", "MiroStoryModel"),
+                "claude_design": ("stories.model.claude_design.nodes", "ClaudeDesignStoryModel"),
                 "python": ("stories.model.python.python_story_model", "PythonStoryModel"),
                 "typescript": ("stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
                 "java": ("stories.model.java.java_story_model", "JavaStoryModel"),

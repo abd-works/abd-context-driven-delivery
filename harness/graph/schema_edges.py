@@ -169,6 +169,8 @@ def _matches(kind: str, owner, target, nodes: list) -> bool:
     if kind == "uses":
         return _epic_uses(owner, target, nodes)
     if kind == "shownOn":
+        if owner.semantic_type() == "Step":
+            return step_key(owner) in list(getattr(target, "step_names", []) or [])
         return owner.name in list(getattr(target, "story_names", []) or [])
     if kind == "specifiedBy":
         return owner.name.casefold() == target.name.casefold()
@@ -182,6 +184,18 @@ def _matches(kind: str, owner, target, nodes: list) -> bool:
     if kind == "returnType":
         return _mentions(str(getattr(owner, "return_type", "") or ""), target.name)
     return False
+
+
+def step_key(step) -> str:
+    """A step named the way a screen lists it: ``Story › Scenario › Step``."""
+    scenario = step.parent
+    while scenario is not None and scenario.semantic_type() not in {"Scenario", "Background"}:
+        scenario = scenario.parent
+    story = scenario.parent if scenario is not None else None
+    while story is not None and story.semantic_type() != "Story":
+        story = story.parent
+    parts = [getattr(story, "name", ""), getattr(scenario, "name", ""), getattr(step, "text", "") or step.name]
+    return " › ".join(part for part in parts if part)
 
 
 def _epic_uses(epic, module, nodes: list) -> bool:

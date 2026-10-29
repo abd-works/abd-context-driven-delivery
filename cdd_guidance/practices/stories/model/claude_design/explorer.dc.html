@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Story explorer</title>
+<script src="./support.js"></script>
+__STYLESHEETS__
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+.sm-panel{font-family:'Inter',system-ui,sans-serif;color:#E8E8ED}
+.sm-panel a{color:#E5531A}
+.sm-row{display:flex;gap:8px;align-items:baseline;width:100%;box-sizing:border-box;padding:5px 8px;border:0;border-radius:4px;background:transparent;font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:20px;text-align:left;color:#E8E8ED;cursor:pointer}
+.sm-row:hover{background:rgba(229,83,26,0.10)}
+.sm-chev{display:inline-block;width:10px;flex-shrink:0;color:#E5531A;font-weight:700;transition:transform 150ms ease}
+.sm-chev.sm-open{transform:rotate(90deg)}
+.sm-k0{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#E5531A}
+.sm-k1{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;background:#1A1A1E}
+.sm-k2{font-weight:600}
+.sm-k3{padding-left:16px;font-size:13px}
+.sm-k3.sm-on{font-weight:600}
+.sm-k4{padding-left:28px;white-space:pre-line;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:18px;color:#9B9BA8}
+.sm-sel{background:rgba(229,83,26,0.18);box-shadow:inset 3px 0 0 #E5531A;color:#E8E8ED;font-weight:600}
+.sm-dot{display:inline-block;width:10px;flex-shrink:0;color:#4A4A52}
+.sm-dot.sm-shot{color:#E5531A}
+.sm-btn{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border:1px solid #2A2A2A;border-radius:4px;background:transparent;color:#E8E8ED;cursor:pointer}
+.sm-btn:hover{border-color:#F2A07A}
+.sm-tab{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;padding:4px 10px;border:1px solid #2A2A2A;border-radius:999px;background:#111113;color:#E8E8ED;cursor:pointer}
+.sm-tab-on{background:#E5531A;border-color:#E5531A;color:#0B0B0B}
+</style>
+</helmet>
+<div style="width: 1880px; height: 948px; box-sizing: border-box; padding: 24px; gap: 24px; display: flex; background: #0B0B0B">
+<div style="position: relative; width: 1280px; height: 900px; flex-shrink: 0; background: #ffffff; border-radius: 6px; overflow: hidden">
+__IMPORTS__
+<sc-if value="{{showShot}}" hint-placeholder-val="{{ true }}">
+<img src="{{img}}" alt="{{stepText}}" style="display: block; width: 1280px; height: 900px">
+</sc-if>
+<sc-if value="{{showNothing}}" hint-placeholder-val="{{ false }}">
+<div class="sm-panel" style="width: 1280px; height: 900px; display: flex; align-items: center; justify-content: center; background: #111113; color: #9B9BA8">No screen for this step yet</div>
+</sc-if>
+<sc-if value="{{manyImgs}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; top: 12px; right: 12px; display: flex; gap: 8px">
+<sc-for list="{{thumbs}}" as="t" hint-placeholder-count="3">
+<button type="button" class="{{t.cls}}" onClick="{{t.pick}}">{{t.num}}</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+<sc-if value="{{panelOpen}}" hint-placeholder-val="{{ true }}">
+<div class="sm-panel" style="width: 528px; height: 900px; box-sizing: border-box; border: 1px solid #2A2A2A; border-radius: 6px; background: #111113; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #2A2A2A">
+<div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #E5531A; flex-grow: 1">Story map</div>
+<button type="button" class="sm-btn" onClick="{{collapseAll}}">Collapse all</button>
+<button type="button" class="sm-btn" onClick="{{reset}}">Reset</button>
+<button type="button" class="sm-btn" onClick="{{next}}">Play next</button>
+<button type="button" class="sm-btn" aria-label="Hide the story map" onClick="{{hidePanel}}">»</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 1px; padding: 8px; overflow-y: auto">
+<sc-for list="{{rows}}" as="row" hint-placeholder-count="12">
+<button type="button" class="{{row.cls}}" onClick="{{row.pick}}"><span class="{{row.markCls}}">{{row.mark}}</span><span>{{row.label}}</span></button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{panelHidden}}" hint-placeholder-val="{{ false }}">
+<button type="button" class="sm-btn" aria-label="Show the story map" onClick="{{showPanel}}" style="height: 900px; padding: 8px">«</button>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1880,"height":948}}'>
+class Component extends DCLogic {
+tree() {
+return __DATA__;
+}
+renderVals() {
+const T = this.tree();
+const S = [];
+T.forEach((e, ei) => e.u.forEach((u, ui) => u.s.forEach((s) => S.push({ e: ei, u: ui, n: s.n, c: s.c }))));
+const first = Math.max(0, S.findIndex((s) => s.c.length > 0));
+const startOpen = () => { const o = { e0: true }; o['u' + S[first].e + '-' + S[first].u] = true; o['s' + first] = true; o['s' + first + '-0'] = true; return o; };
+const st = Object.assign({ g: first, c: 0, t: 0, i: 0, open: startOpen() }, this.state || {});
+const withOpen = (keys) => { const o = Object.assign({}, st.open); keys.forEach((k) => { o[k] = true; }); return o; };
+const go = (g, c, t) => this.setState({ g: g, c: c, t: t, i: 0, open: withOpen(['e' + S[g].e, 'u' + S[g].e + '-' + S[g].u, 's' + g, 's' + g + '-' + c]) });
+const toggle = (key) => () => this.setState({ open: Object.assign({}, st.open, { [key]: !st.open[key] }) });
+const chev = (open) => ({ mark: '›', markCls: open ? 'sm-chev sm-open' : 'sm-chev' });
+const camel = (stem) => stem.split('-').map((part, k) => (k ? part.charAt(0).toUpperCase() + part.slice(1) : part)).join('');
+const flat = [];
+S.forEach((s, g) => s.c.forEach((sc, ci) => sc.t.forEach((tp, ti) => flat.push([g, ci, ti]))));
+const rows = [];
+T.forEach((e, ei) => {
+const ek = 'e' + ei;
+rows.push(Object.assign({ label: e.n, cls: 'sm-row sm-k0', pick: toggle(ek) }, chev(st.open[ek])));
+if (!st.open[ek]) return;
+e.u.forEach((u, ui) => {
+const uk = 'u' + ei + '-' + ui;
+rows.push(Object.assign({ label: u.n, cls: 'sm-row sm-k1', pick: toggle(uk) }, chev(st.open[uk])));
+if (!st.open[uk]) return;
+S.forEach((s, g) => {
+if (s.e !== ei || s.u !== ui) return;
+const sk = 's' + g;
+rows.push(Object.assign({ label: s.n, cls: 'sm-row sm-k2', pick: toggle(sk) }, chev(st.open[sk])));
+if (!st.open[sk]) return;
+s.c.forEach((sc, ci) => {
+const ck = sk + '-' + ci;
+rows.push(Object.assign({ label: sc.n, cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on' : ''), pick: toggle(ck) }, chev(st.open[ck])));
+if (!st.open[ck]) return;
+sc.t.forEach((tp, ti) => rows.push({ label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c && ti === st.t ? ' sm-sel' : ''), mark: '●', markCls: tp.i.length ? 'sm-dot sm-shot' : 'sm-dot', pick: () => go(g, ci, ti) }));
+});
+});
+});
+});
+const scen = S[st.g].c[st.c] || S[st.g].c[0] || { n: '', p: '', t: [{ x: '', i: [] }] };
+const step = scen.t[st.t] || scen.t[0] || { x: '', i: [] };
+const imgs = step.i;
+const idx = Math.min(st.i, Math.max(imgs.length - 1, 0));
+const live = {};
+if (scen.p) live[camel(scen.p)] = true;
+const at = flat.findIndex((f) => f[0] === st.g && f[1] === st.c && f[2] === st.t);
+return {
+live: live,
+stepText: step.x,
+showShot: !scen.p && imgs.length > 0,
+showNothing: !scen.p && imgs.length === 0,
+img: imgs[idx] || '',
+manyImgs: !scen.p && imgs.length > 1,
+thumbs: imgs.map((u, k) => ({ num: k + 1, cls: 'sm-tab' + (k === idx ? ' sm-tab-on' : ''), pick: () => this.setState({ i: k }) })),
+rows: rows,
+panelOpen: !st.hidden,
+panelHidden: Boolean(st.hidden),
+hidePanel: () => this.setState({ hidden: true }),
+showPanel: () => this.setState({ hidden: false }),
+collapseAll: () => this.setState({ open: { e0: true } }),
+reset: () => this.setState({ g: first, c: 0, t: 0, i: 0, open: startOpen() }),
+next: () => { const f = flat[(at + 1) % flat.length]; go(f[0], f[1], f[2]); }
+};
+}
+}
+</script>
+</body>
+</html>

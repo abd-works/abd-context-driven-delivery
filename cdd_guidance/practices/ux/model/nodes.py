@@ -256,8 +256,11 @@ class Screen(UxNode):
         self.chrome_of = chrome_of
         self.inactive_tabs: List[str] = []
         self.story_names: List[str] = []
+        self.step_names: List[str] = []
         self.domain_terms: List[str] = []
         self.domain_concepts: List[str] = []
+        self.image = ""
+        self.prototype = ""
         self.regions: List[Region] = []
 
     def update_self(self, source: "Screen") -> None:
@@ -269,8 +272,11 @@ class Screen(UxNode):
         self.chrome_of = source.chrome_of
         self.inactive_tabs = list(source.inactive_tabs)
         self.story_names = list(source.story_names)
+        self.step_names = list(source.step_names)
         self.domain_terms = list(source.domain_terms)
         self.domain_concepts = list(source.domain_concepts)
+        self.image = source.image
+        self.prototype = source.prototype
 
     def child_collections(self, source: "Screen") -> List[ChildCollectionPair]:
         return [
@@ -302,6 +308,11 @@ class Screen(UxNode):
         if story_name and story_name not in self.story_names:
             self.story_names.append(story_name)
 
+    def attach_step_name(self, step_name: str) -> None:
+        """A step this screen shows, named ``Story › Scenario › Step``; the step's ``shownOn`` edge follows it."""
+        if step_name and step_name not in self.step_names:
+            self.step_names.append(step_name)
+
     def attach_domain_term(self, term: str) -> None:
         if term and term not in self.domain_terms:
             self.domain_terms.append(term)
@@ -314,8 +325,11 @@ class Screen(UxNode):
             "chrome_of": self.chrome_of,
             "inactive_tabs": list(self.inactive_tabs),
             "story_names": list(self.story_names),
+            "step_names": list(self.step_names),
             "domain_terms": list(self.domain_terms),
             "domain_concepts": list(self.domain_concepts),
+            "image": self.image,
+            "prototype": self.prototype,
         }
 
 

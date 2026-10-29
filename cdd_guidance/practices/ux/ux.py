@@ -37,6 +37,7 @@ class Ux(PracticeGuidance):
                 "html": ("ux.model.html.nodes", "HtmlUxMap"),
                 "markdown": ("ux.model.markdown.nodes", "MarkdownUxMap"),
                 "json": ("ux.model.json.nodes", "JsonUxMap"),
+                "claude_design": ("ux.model.claude_design.nodes", "ClaudeDesignUxMap"),
             },
         )
 

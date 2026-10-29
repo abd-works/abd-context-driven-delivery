@@ -216,7 +216,7 @@ class BoundNode(Node):
 
     def __setattr__(self, name: str, value) -> None:
         object.__setattr__(self, name, value)
-        if name in {"source", "story_names", "collaborators", "dependencies", "type_hint", "return_type", "callees"} and getattr(self, "_ready", False):
+        if name in {"source", "story_names", "step_names", "collaborators", "dependencies", "type_hint", "return_type", "callees"} and getattr(self, "_ready", False):
             self._sync_schema_edges()
 
     @contextmanager

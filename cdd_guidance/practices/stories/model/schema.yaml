@@ -96,9 +96,11 @@ step:
   order: number
   belongsTo: scenario
   ands?: [step]
+  shownOn?: [screen]
   where:
     - id is the text slugs from the root to this node, joined by dots
     - ands continue the step they follow
+    - shownOn is the screen whose step names hold this step as Story › Scenario › Step
     - but marks a missing state
   rules:
     - plain-english-gwt-steps
