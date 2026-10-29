@@ -8,11 +8,14 @@ import { domainRepositories } from '__STORY_TEST__/repositories';
 __IMPORTS__
 __EXAMPLES__
 __SEED_PASTES__
+__RESETTABLE_IMPORTS__
 
 type Step = () => void | Promise<void>;
 type Frame = { name: string; beforeEach: Step[] };
 
 const STORIES: string[] = __STORIES__;
+/** Other state the stories' runtime resets between tests (gateways, clocks): reset with the repositories. */
+const RESETTABLES: unknown[] = [__RESETTABLES__];
 const EACH_BACKGROUND = 'Background (each scenario)';
 const frames: Frame[] = [];
 const givens = new Map<string, Step[]>();
@@ -93,6 +96,7 @@ export async function load(story: string, scenario: string): Promise<ReturnType<
   const steps = givens.get(key(story, scenario));
   if (!steps) throw new Error(`Canvas fixtures: no scenario "${scenario}" in story "${story}"`);
   for (const repository of Object.values(domainRepositories()) as Array<{ _reset?: () => void }>) repository._reset?.();
+  for (const held of RESETTABLES as Array<{ _reset?: () => void }>) held._reset?.();
   for (const step of steps) await step();
   return domainRepositories();
 }

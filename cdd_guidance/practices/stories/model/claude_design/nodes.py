@@ -163,7 +163,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         canvas.add_board("Main.dc.html", {"x": 0, "y": 0, "w": width, "h": height, "page": self.story_map_page,
                                           "title": "Story map", "is_interactive": True}, text)
         canvas.add_board(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": 1880, "h": 948, "page": self.screens_page,
-                                                                     "title": "Story explorer", "is_interactive": True}, self._explorer())
+                                                                     "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
         for name, board in ClaudeDesignUxMap.boards(self.screens, self._screen_files()).items():
             canvas.add_board(name, board)
         return canvas
@@ -193,7 +193,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         height = bottom + 2 * self.margin
         body = f'<div style="position: absolute; left: {self.margin}px; top: {self.margin}px">' + "\n".join(parts) + "</div>"
         return width, height, artboard("Story map", width, height, body, style=f"body{{margin:0;background:{BACKGROUND}}}",
-                                       root_style=f"background: {BACKGROUND}", head=FONTS)
+                                       root_style=f"background: {BACKGROUND}", head=FONTS, zoomable=True)
 
     def _leaf_epics(self) -> List[ClaudeDesignEpic]:
         found: List[ClaudeDesignEpic] = []
@@ -272,7 +272,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         for prototype in self._prototypes():
             name = stem(prototype)
             lines.append(f'<sc-if value="{{{{live.{camel(name)}}}}}" hint-placeholder-val="{{{{ false }}}}">'
-                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" hint-size="1280px,900px"></dc-import></sc-if>')
+                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" hint-size="1280px,900px" style="display: block; width: 100%; min-height: 100%"></dc-import></sc-if>')
         return lines
 
     def _screen_files(self) -> List[str]:

@@ -28,9 +28,12 @@ class LernCanvasFixtures:
     examples_glob = "*.examples.ts"
     seed_pastes_module = "test-utils/seed-overlay/seed-pastes"
 
-    def __init__(self, workspace: str | Path, story_test_folder: str | None = None) -> None:
+    def __init__(self, workspace: str | Path, story_test_folder: str | None = None, resettables: Iterable[str] = ()) -> None:
+        """*resettables*: ``module#export`` names (module relative to the workspace, without .ts) of other test state
+        whose ``_reset()`` must run with the repositories' on every load — gateways, clocks."""
         self.workspace = Path(workspace)
         self.story_test_folder = story_test_folder or self.story_test_folder
+        self.resettables = list(resettables)
 
     def shared_story_files(self) -> List[Path]:
         return sorted((self.workspace / self.tests_folder).rglob(self.shared_story_glob))
@@ -50,6 +53,8 @@ class LernCanvasFixtures:
                 .replace("__EXAMPLES__", "\n".join(examples))
                 .replace("__EXAMPLE_MODULES__", modules)
                 .replace("__SEED_PASTES__", self._seed_pastes(work))
+                .replace("__RESETTABLE_IMPORTS__", "\n".join(self._resettable_imports(work)))
+                .replace("__RESETTABLES__", ", ".join(f"resettable{index}" for index in range(len(self.resettables))))
                 .replace("__STORIES__", json.dumps(list(story_names), ensure_ascii=False)))
 
     def build(self, story_names: Iterable[str], out_file: str | Path) -> Path:
@@ -72,6 +77,13 @@ class LernCanvasFixtures:
         if module.is_file():
             return f"import {{ seedPastes }} from '{self._relative(work, module)}';"
         return "const seedPastes = (): unknown[] => [];"
+
+    def _resettable_imports(self, work: Path) -> List[str]:
+        imports = []
+        for index, name in enumerate(self.resettables):
+            module, export = name.split("#")
+            imports.append(f"import {{ {export} as resettable{index} }} from '{self._relative(work, self.workspace / module)}';")
+        return imports
 
     def _relative(self, start: Path, target: Path) -> str:
         relative = Path(os.path.relpath(target, start)).as_posix()

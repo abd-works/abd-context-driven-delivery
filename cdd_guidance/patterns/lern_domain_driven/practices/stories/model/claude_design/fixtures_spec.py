@@ -45,3 +45,9 @@ with description("LERN canvas fixtures") as self:
 
         with it("gives screens no seed pastes when the workspace has no seed overlay"):
             expect(self.fixtures.entry(["Choose Plan"])).to(contain("const seedPastes = (): unknown[] => [];"))
+
+        with it("resets the other test state it is given with the repositories"):
+            fixtures = LernCanvasFixtures(self.fixtures.workspace, resettables=["src/payment/payment#paymentGateway"])
+            entry = fixtures.entry(["Choose Plan"])
+            expect(entry).to(contain("import { paymentGateway as resettable0 } from '../../src/payment/payment';"))
+            expect(entry).to(contain("const RESETTABLES: unknown[] = [resettable0];"))

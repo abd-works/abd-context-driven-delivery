@@ -12,6 +12,7 @@ Render it with the `claude_design` format: `ClaudeDesignStoryModel().render(stor
 
 - **`two-pages`** — `canvas.json` has two pages: **Story map** and **Screens**. The Story map page holds one artboard; the Screens page holds one board per prototype screen.
 - **`one-map-artboard`** — The whole story map is one artboard (`Main.dc.html`) with one Play button. Do not split the map into an artboard per epic or story: many live artboards render hatched and slow.
+- **`map-zooms`** — The map zooms with a trackpad pinch (ctrl + wheel) and its − / % / + buttons (`artboard(..., zoomable=True)`).
 
 ## Story map artboard
 
@@ -23,9 +24,11 @@ Render it with the `claude_design` format: `ClaudeDesignStoryModel().render(stor
 
 ## Story explorer
 
-- **`screen-left-hierarchy-right`** — The explorer shows the live screen on the left and the story hierarchy on the right. Only the right panel wears the abd look; its styles are scoped (`sm-` prefixes) so they never reach the product screens, which keep their own stylesheets.
+- **`screen-left-hierarchy-right`** — The explorer fills the frame (its board expands to fill): the live screen at browser size on the left, edge to edge, and the story hierarchy as a full-height panel on the right. Only the right panel wears the abd look; its styles are scoped (`sm-` prefixes) so they never reach the product screens, which keep their own stylesheets.
 - **`collapsible-tree`** — The hierarchy is a collapsible tree — epic → sub-epic → story → scenario → step — with a small indent, plus *Collapse all*, *Reset*, *Play next*, and a button that hides the panel.
 - **`back-to-story-map`** — The panel starts with a **← Story map** link back to `Main.dc.html`.
+- **`outline-rows`** — An outline scenario (`Name: ${example}`) lists its example rows, read from the fixtures bundle's expanded scenarios; picking a row loads that row on the screen.
+- **`selection-in-view`** — The selected row scrolls into view whenever the selection changes, including when a screen's button moves the explorer.
 - **`group-steps-without-screens`** — A step with no screen of its own joins the next step that has one, so every row the reader picks shows a screen.
 - **`screen-cascade`** — A step shows the screen it is `shownOn`; without one, its scenario's screen; without that, its story's screen. When no screen applies, show the step's screenshot, else *No screen for this step yet*.
 - **`explorer-drives-the-screen`** — The explorer dc-imports each prototype screen with `story`, `scenario`, and `go` props. The screen loads the selected scenario's fixture itself, and `go(story)` moves the explorer to that story when a button on the screen leads there — the reader stays in the explorer.
@@ -35,10 +38,10 @@ Render it with the `claude_design` format: `ClaudeDesignStoryModel().render(stor
 A prototype screen is a real screen ported to a `.dc.html` artboard — the product's markup and stylesheets, not a sketch — that draws what the scenario's Givens stored. Build each one on the shared fixture bar in `harness/design_canvas/fixture_bar.py`:
 
 - **`fixture-bar`** — Insert `BAR` at the screen's root and `methods(story, default_scenario, path)` into its `DCLogic` class; return `Object.assign(this.barVals(), {...})` from `renderVals`. Declare `story`, `scenario`, and `go` in `data-props`.
-- **`no-auto-load-standalone`** — Opened on its own, a screen does not load a fixture: it shows the scenario picker and **Load from fixture**, so a reader can walk it by hand or load the scenario. Inside the explorer the picker hides and the explorer's scenario loads automatically.
+- **`no-auto-load-standalone`** — Opened on its own, a screen does not load a fixture: it shows the scenario picker and **Load from fixture**, so a reader can walk it by hand or load the scenario. Inside the explorer the explorer's scenario loads automatically; the picker stays, and picking a scenario there loads it and moves the explorer's tree to it.
 - **`from-fixture`** — The screen implements `fromFixture(repositories, scenario, examples)`, returning the state the scenario shows. Read it from the repositories the Givens filled and from the example fixtures — never hard-code data the stories already hold.
 - **`real-domain-logic`** — Buttons call the bundled domain objects (validate, verify, resend, select) and show their real messages; refusals come from the domain, not from copies in the screen.
-- **`paste-seed-data`** — The screen implements `paste(field)`, mapping each field of dev mode's seed paste (by the label it shows) into state. **Paste seed data** appears only where the seed overlay has a paste for the screen's path.
+- **`paste-seed-data`** — **Paste seed data** is a list box: every scenario of the story (an outline's example rows among them) and dev mode's seed paste for the screen's path. Picking a scenario types the values it enters — `fromFixture(...).entered` when the screen returns it, else its whole state — so pasting an invalid row shows the domain's refusal. The screen implements `paste(field)` to map each field of the dev seed paste (by the label it shows) into state.
 - **`follow-to-next-story`** — Links to the next screen call `follow(event, nextStory)`: inside the explorer it moves to that story and loads its fixture; standalone the link opens the next screen, which has its own picker.
 
 The fixtures bundle — `CanvasFixtures` with `load(story, scenario)`, `scenarios(story)`, `examples`, `pasteFor(path)` — comes from the active pattern (`patterns/lern_domain_driven/practices/stories/model/claude_design/`).

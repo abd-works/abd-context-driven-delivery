@@ -37,7 +37,8 @@ const browserOnly = {
       let source = '';
       try { source = readFileSync(args.path, 'utf8'); } catch { source = ''; }
       const names = [...new Set([...source.matchAll(EXPORTED)].map((match) => match[1]))];
-      const contents = names.map((name) => `export const ${name} = undefined;`).join('\n') + '\nexport default undefined;';
+      // A capitalised name is a class: an empty class keeps `instanceof` checks on node types false instead of throwing.
+      const contents = names.map((name) => (/^[A-Z]/.test(name) ? `export class ${name} {}` : `export const ${name} = undefined;`)).join('\n') + '\nexport default undefined;';
       return { contents, loader: 'js' };
     });
   },

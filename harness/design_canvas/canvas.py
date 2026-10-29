@@ -82,8 +82,12 @@ def camel(name: str) -> str:
     return head + "".join(part.capitalize() for part in rest)
 
 
-def artboard(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str = "") -> str:
-    """A static ``.dc.html`` artboard: *body* absolutely placed inside a *width* × *height* root."""
+def artboard(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str = "",
+             zoomable: bool = False) -> str:
+    """A static ``.dc.html`` artboard: *body* absolutely placed inside a *width* × *height* root. A *zoomable* artboard
+    zooms with a trackpad pinch (or ctrl + wheel) and its − / fit / + buttons."""
+    if zoomable:
+        return _zoomable_artboard(title, width, height, body, style, root_style, head)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -101,6 +105,70 @@ def artboard(title: str, width: int, height: int, body: str, style: str, root_st
 <script type="text/x-dc" data-dc-script data-props='{{"$preview":{{"width":{width},"height":{height}}}}}'>
 class Component extends DCLogic {{
 renderVals() {{ return {{}}; }}
+}}
+</script>
+</body>
+</html>
+"""
+
+
+ZOOM_BUTTON = ("font: 600 12px/1 ui-monospace, Consolas, monospace; padding: 6px 10px; border: 1px solid #2A2A2A; "
+               "border-radius: 4px; background: #111113; color: #E8E8ED; cursor: pointer")
+
+
+def _zoomable_artboard(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str) -> str:
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{escape(title)}</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>{head}<style>{style}</style></helmet>
+<div style="position: relative; width: {{{{outerWidth}}}}; height: {{{{outerHeight}}}}; {root_style}">
+<div style="position: absolute; left: 0; top: 0; width: {width}px; height: {height}px; transform: {{{{transform}}}}; transform-origin: 0 0">
+{body}
+</div>
+<div style="position: fixed; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 10">
+<button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomOut}}}}" aria-label="Zoom out">−</button>
+<button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomReset}}}}" aria-label="Actual size">{{{{zoomLabel}}}}</button>
+<button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomIn}}}}" aria-label="Zoom in">+</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{{"$preview":{{"width":{width},"height":{height}}}}}'>
+class Component extends DCLogic {{
+componentDidMount() {{
+this.pinch = (event) => {{
+if (!event.ctrlKey) return;
+event.preventDefault();
+this.zoomTo(this.zoom() * Math.exp(-event.deltaY / 200));
+}};
+window.addEventListener('wheel', this.pinch, {{ passive: false }});
+}}
+componentWillUnmount() {{
+window.removeEventListener('wheel', this.pinch);
+}}
+zoom() {{
+return (this.state && this.state.zoom) || 1;
+}}
+zoomTo(zoom) {{
+this.setState({{ zoom: Math.min(3, Math.max(0.2, zoom)) }});
+}}
+renderVals() {{
+const zoom = this.zoom();
+return {{
+transform: 'scale(' + zoom + ')',
+outerWidth: Math.round({width} * zoom) + 'px',
+outerHeight: Math.round({height} * zoom) + 'px',
+zoomLabel: Math.round(zoom * 100) + '%',
+zoomIn: () => this.zoomTo(zoom * 1.25),
+zoomOut: () => this.zoomTo(zoom / 1.25),
+zoomReset: () => this.zoomTo(1)
+}};
+}}
 }}
 </script>
 </body>
