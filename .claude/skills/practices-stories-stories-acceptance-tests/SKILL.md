@@ -86,9 +86,11 @@ scenario:
   examples?: [example]
   invokes?: [operation | property]
   specifiedBy?: [observation]
+  shownOn?: [screen]
   where:
     - id is the text slugs from the root to this node, joined by dots
     - steps match given+ (when then+)+
+    - shownOn is the screen whose scenario names hold this scenario as Story › Scenario; with none, the scenario shows its story's screen
     - outline when examples count > 2
     - a later then names the next story
     - examples cover every domain concept the steps name
@@ -109,9 +111,11 @@ step:
   order: number
   belongsTo: scenario
   ands?: [step]
+  shownOn?: [screen]
   where:
     - id is the text slugs from the root to this node, joined by dots
     - ands continue the step they follow
+    - shownOn is the screen whose step names hold this step as Story › Scenario › Step
     - but marks a missing state
   rules:
     - plain-english-gwt-steps
@@ -189,6 +193,7 @@ example:
     - system-stubs-domain-real
     - infrastructure-in-lifecycle-hooks
     - inline-simple-gwt-bodies
+    - domain-operations-inline-in-steps
     - extract-assertion-helper
 
 Use MCP tool: `stories-acceptance-tests()`

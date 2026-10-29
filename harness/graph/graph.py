@@ -17,9 +17,9 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.agent_tools import agent_tool, agent_toolset
-from harness.installation.files import skill
+from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
-from harness.graph.skipped_folders import SKIPPED_FOLDERS, skips_folder
+from harness.graph.skipped_folders import SKIPPED_FOLDERS, scanned_files, skips_folder
 
 Display = str
 Tuple = list[str]
@@ -996,6 +996,7 @@ class Graph:
     def __init__(self) -> None:
         self._folder: Path | None = None
         self._practice_roots: dict[str, Path] = {}
+        self._scope: list[Path] | None = None
         self.practices: dict[str, PracticeGraph] = {}
         self.filter = Filter(self)
         self.overlays: list[str] = []
@@ -1046,11 +1047,77 @@ class Graph:
             self.report_progress("Loading the saved graph")
             self._load_saved_json()
             return "Loaded the saved graph."
+        self._scope = None
         self.report_progress("Scanning the folder")
         self._build_working_copy()
         self.report_progress("Saving the graph")
         self.save_json()
         return "Loaded the working copies."
+
+    @mcp
+    @command(name="load-files")
+    @agent_tool
+    def load_files(
+        self,
+        folder: str,
+        practices: list[str],
+        files: list[str],
+        overlays: list[str] | None = None,
+    ) -> str:
+        """Build each practice from only the given files and run its rules on them.
+
+        ``files`` are files or folders, relative to ``folder`` or absolute; a folder
+        stands for the source files under it. Use it for the files being edited:
+        it reads them as they are now and never touches the saved graph.
+        """
+        self._folder = Path(folder).resolve()
+        self._practice_roots = {name: self._folder for name in practices}
+        self.overlays = _normalize_overlay_list(list(overlays or []))
+        self._scope = self._scoped_files(files)
+        self.report_progress("Reading the edited files")
+        self._build_working_copy()
+        return f"Loaded {len(self._scope)} edited files."
+
+    def edited_files(self) -> list[Path] | None:
+        """The files a ``load_files`` reads; ``None`` when the whole folder loads."""
+        return None if self._scope is None else list(self._scope)
+
+    def scoped(self, found: list[Path]) -> list[Path]:
+        """The files of ``found`` this load reads: all of them, or only the edited ones."""
+        if self._scope is None:
+            return found
+        wanted = set(self._scope)
+        return [path for path in found if path.resolve() in wanted]
+
+    def scope_folders(self) -> list[Path] | None:
+        """Folders holding the edited files, up to the loaded folder; ``None`` when the whole folder loads."""
+        if self._scope is None or self._folder is None:
+            return None
+        folders: set[Path] = set()
+        for path in self._scope:
+            folders.update(parent for parent in path.parents if parent != self._folder and self._folder in parent.parents)
+        return sorted(folders)
+
+    def _scoped_files(self, files: list[str]) -> list[Path]:
+        folder = self._folder or Path()
+        found: list[Path] = []
+        for item in files:
+            path = Path(item) if Path(item).is_absolute() else folder / item
+            path = path.resolve()
+            if folder not in path.parents:
+                continue
+            if path.is_dir():
+                found.extend(item.resolve() for item in scanned_files(path))
+            elif path.is_file():
+                found.append(path)
+        return sorted(set(found))
+
+    def write_json(self, path: str) -> str:
+        """Write this graph alone to ``path``, without merging into the folder's saved graph."""
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(self._graph_document(), separators=(",", ":")), encoding="utf-8")
+        return str(target)
 
     @mcp
     @agent_tool

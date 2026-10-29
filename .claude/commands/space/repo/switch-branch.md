@@ -1,4 +1,4 @@
-Check out an existing branch in the current clone only.
+Switch the main clone to a branch, creating it when missing.
 
-Ask the user for the branch name when it is not already clear from the chat.
-Call MCP ``repo.switch_branch`` with that name. Do not create branches or worktrees.
+Use the branch the user names; otherwise call without a name so the branch saved in
+``.sessions/session.json`` is used. Call MCP ``repo.switch_branch``.

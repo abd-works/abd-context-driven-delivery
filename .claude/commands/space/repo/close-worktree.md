@@ -1,3 +1,3 @@
-Close the current linked worktree (commit, push, remove). Does not close the branch.
+Close the open worktree: commit, push its branch, remove the folder. The branch stays open.
 
 Call MCP ``repo.close_worktree``.

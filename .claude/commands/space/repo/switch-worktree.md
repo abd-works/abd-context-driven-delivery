@@ -1,4 +1,4 @@
-Switch this toolset to the sibling worktree for a branch.
+Open the sibling worktree for a branch other than main, creating it when missing.
 
-Ask the user for the branch name when it is not already clear from the chat.
-Call MCP ``repo.switch_worktree`` with that name.
+Use the branch the user names; otherwise call without a name so the branch saved in
+``.sessions/session.json`` is used. Call MCP ``repo.switch_worktree``.

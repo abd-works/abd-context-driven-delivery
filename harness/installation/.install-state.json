@@ -84,6 +84,7 @@
     "skills/harness/catalog-generator/apply-brand/SKILL.md",
     "skills/harness/catalog-generator/generate-catalog/SKILL.md",
     "skills/harness/catalog-generator/generate-project-approach/SKILL.md",
+    "commands/harness/graph/load-files.md",
     "skills/harness/graph/read-graph/SKILL.md",
     "skills/harness/guidance/SKILL.md",
     "rules/harness/guidance.mdc",
@@ -91,6 +92,7 @@
     "commands/harness/guidance/guidance-diagnostics.md",
     "commands/harness/installation/clean.md",
     "commands/harness/installation/install.md",
+    "skills/harness/transformers/transform-sketch/SKILL.md",
     "skills/space/handoff/handoff-session/SKILL.md",
     "skills/space/handoff/write-handoff/SKILL.md",
     "skills/space/record-decisions/record-decisions-session/SKILL.md",
@@ -122,16 +124,6 @@
     "agents/context.md",
     "agents/discoverer.md",
     "agents/implementation.md",
-    "agents/specification.md",
-    "skills/practices/-examples/car/SKILL.md",
-    "rules/practices/-examples/car.mdc",
-    "skills/practices/-examples/car/car-trip-outline/SKILL.md",
-    "rules/practices/-examples/car/car-trip-outline.mdc",
-    "skills/practices/-examples/car/car-road-story/SKILL.md",
-    "rules/practices/-examples/car/car-road-story.mdc",
-    "skills/practices/-examples/car/car-full-journey/SKILL.md",
-    "rules/practices/-examples/car/car-full-journey.mdc",
-    "skills/actions/-examples/car-story/inspect-trip/SKILL.md",
-    "skills/actions/-examples/car-story/travel-to/SKILL.md"
+    "agents/specification.md"
   ]
 }

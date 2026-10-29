@@ -116,6 +116,46 @@ def typed_child(node: dict, holder: str, type: str) -> dict:
     raise AssertionError(f"missing {type} under {holder}")
 
 
+_STORY_FOLDER = "tests/onboard-a-customer/authenticate-user"
+_ENTITY_ROOT_FILE = "src/account-credentials/account-credentials.ts"
+_STORY_FILE = f"{_STORY_FOLDER}/authenticate_user.story.shared.ts"
+_EXAMPLES_FILE = f"{_STORY_FOLDER}/examples/account-credentials.examples.ts"
+_SPEC_FILE = f"{_STORY_FOLDER}/authenticate_user.story.server.spec.ts"
+
+
+def edited_graph(files: list[str]) -> Graph:
+    graph = Graph()
+    graph.load_files(str(_SAMPLE), _PRACTICES, files)
+    return graph
+
+
+def _inside(file: str | None, scope: list[str]) -> bool:
+    file = (file or "").replace("\\", "/")
+    return any(file == item or file.startswith(item + "/") for item in scope)
+
+
+def _practice_nodes(graph: Graph, practice: str, scope: list[str]) -> list[Node]:
+    nodes = [node for group in graph.practice(practice).nodes.values() for node in group]
+    return [node for node in nodes if _inside(node.source.file, scope)]
+
+
+def nodes_in(graph: Graph, practice: str, scope: list[str]) -> set[str]:
+    return {node.node_id for node in _practice_nodes(graph, practice, scope)}
+
+
+def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str]]:
+    return {(slug, node.node_id) for node in _practice_nodes(graph, practice, scope) for slug, _ in node.rules.violations()}
+
+
+def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str, str]]:
+    edges = [edge for group in graph.practice(practice).edges.values() for edge in group]
+    return {
+        (edge.parent.node_id, edge.child.node_id, edge.kind)
+        for edge in edges
+        if _inside(edge.parent.source.file, scope) and _inside(edge.child.source.file, scope)
+    }
+
+
 with description("a graph"):
     with context("loaded from the account credentials working copy"):
         with before.all:
@@ -886,6 +926,76 @@ with description("a graph"):
 
             with it("should have no edge types"):
                 expect(self.graph.practice("ux").edge_type_kinds).to(equal([]))
+
+    with context("loaded from only the edited files of a working copy that every graph practice reads"):
+        with before.all:
+            self.full = Graph()
+            roots = {name: str(_SAMPLE) for name in _PRACTICES}
+            self.full.load_working_copy(str(_ROOT), roots, database=str(_SAMPLE), force=True)
+
+        with context("with an edited entity root"):
+            with before.all:
+                self.scope = [_ENTITY_ROOT_FILE]
+                self.edited = edited_graph(self.scope)
+
+            with it("should read the same clean engineering nodes as the full load"):
+                expect(nodes_in(self.edited, "clean_engineering", self.scope)).to(
+                    equal(nodes_in(self.full, "clean_engineering", self.scope))
+                )
+
+            with it("should find the same clean engineering rule violations"):
+                expect(violations_in(self.edited, "clean_engineering", self.scope)).to(
+                    equal(violations_in(self.full, "clean_engineering", self.scope))
+                )
+
+            with it("should keep the edges to classes declared in files that were not edited"):
+                expect(edges_in(self.edited, "clean_engineering", self.scope)).to(
+                    equal(edges_in(self.full, "clean_engineering", self.scope))
+                )
+
+            with it("should place the same ddd building blocks"):
+                expect(nodes_in(self.edited, "ddd", self.scope)).to(equal(nodes_in(self.full, "ddd", self.scope)))
+
+            with it("should find the same ddd rule violations"):
+                expect(len(violations_in(self.edited, "ddd", self.scope))).to(be_above(0))
+                expect(violations_in(self.edited, "ddd", self.scope)).to(equal(violations_in(self.full, "ddd", self.scope)))
+
+        with context("with an edited story file"):
+            with before.all:
+                self.scope = [_STORY_FILE]
+                self.edited = edited_graph(self.scope)
+
+            with it("should read the same story nodes as the full load"):
+                expect(nodes_in(self.edited, "stories", self.scope)).to(equal(nodes_in(self.full, "stories", self.scope)))
+
+            with it("should find the same story rule violations"):
+                expect(len(violations_in(self.edited, "stories", self.scope))).to(be_above(0))
+                expect(violations_in(self.edited, "stories", self.scope)).to(equal(violations_in(self.full, "stories", self.scope)))
+
+        with context("with an edited story examples file"):
+            with before.all:
+                self.scope = [_EXAMPLES_FILE]
+                self.edited = edited_graph(self.scope)
+
+            with it("should read the examples the story declares from that file"):
+                expected = nodes_in(self.full, "stories", self.scope)
+                expect(len(expected)).to(be_above(0))
+                expect(nodes_in(self.edited, "stories", self.scope)).to(equal(expected))
+
+        with context("with an edited spec file"):
+            with before.all:
+                self.scope = [_SPEC_FILE]
+                self.edited = edited_graph(self.scope)
+
+            with it("should read the same bdd nodes as the full load"):
+                expect(nodes_in(self.edited, "bdd", self.scope)).to(equal(nodes_in(self.full, "bdd", self.scope)))
+
+            with it("should find the same bdd rule violations"):
+                expect(len(violations_in(self.edited, "bdd", self.scope))).to(be_above(0))
+                expect(violations_in(self.edited, "bdd", self.scope)).to(equal(violations_in(self.full, "bdd", self.scope)))
+
+            with it("should leave the files that were not edited out"):
+                expect(nodes_in(self.edited, "clean_engineering", ["src"])).to(equal(set()))
 
 
 def _node(practice: PracticeGraph, type: str, name: str, line: int) -> Node:

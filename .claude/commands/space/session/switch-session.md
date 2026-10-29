@@ -1,5 +1,6 @@
-Switch to an existing CDD session and set it current on disk.
+Switch to session ``name``, creating its folder when missing. Returns keep_log.
 
-Ask the user for the session name when it is not already clear from the chat.
-Call MCP ``session.switch`` with that name (paths optional — loaded from the session folder).
-Do not call ``session.open_named``.
+``name`` defaults to ``session`` in ``.sessions/session.json``, then to the saved ``branch``.
+Saves ``name`` as ``session`` there. Does not touch branches or worktrees.
+
+Use MCP tool: `session.switch(name: 'str' = '', workpath: 'Path | None' = None, repo_path: 'Path | None' = None, session_path: 'Path | None' = None)`

@@ -32,13 +32,15 @@ class Validate(GuidanceAction):
         rule: one Rule to check. Omit it to walk each guidance's rules.
         graph: true for the workspace's saved graph (.context/graph.json), or path(s) to graph_return_nodes JSON
         or a saved graph.json. When set, append a graph-rule report for each guidance's practice and still run AI validation.
-        paths: optional path prefixes (e.g. src/my-paradise) to scope graph violations."""
+        paths: the files or folders being edited (e.g. src/my-paradise/order.ts). For graph-backed guidance, the graph is
+        built from just these files as they are now and its rules run on them; the saved graph is not read or rebuilt."""
         self._bind_guidance(guidance)
         sections: list[str] = [_VALIDATE_MARKDOWN]
-        graph_paths = self._resolve_graph_json_paths(graph)
+        prefixes = self._workspace_relative(paths)
+        graph_paths = self._resolve_graph_json_paths(graph, prefixes)
         if graph_paths:
             sections.append(
-                self._graph_and_ai_rule_report(graph_paths, path_prefixes=paths)
+                self._graph_and_ai_rule_report(graph_paths, path_prefixes=prefixes)
             )
         elif graph:
             sections.append(
@@ -60,9 +62,13 @@ class Validate(GuidanceAction):
         sections.append("Validation report for artifacts under {session.path}/.")
         return "\n\n".join(sections)
 
-    def _resolve_graph_json_paths(self, graph: bool | str | list[str] | None) -> list[Path]:
+    def _resolve_graph_json_paths(
+        self, graph: bool | str | list[str] | None, edited: list[str]
+    ) -> list[Path]:
         from validate.graph_json_reader import load_graph_json_paths
 
+        if edited and graph in (None, True) and self._graph_practices():
+            return [self._edited_graph_json(edited)]
         paths = load_graph_json_paths(graph)
         if graph is True and not paths:
             session_path = self._session_path()
@@ -74,6 +80,32 @@ class Validate(GuidanceAction):
             if saved.is_file():
                 return [saved]
         return paths
+
+    def _edited_graph_json(self, edited: list[str]) -> Path:
+        """Build the graph from just the edited files and write it beside the session; the saved graph stays as it is.
+
+        Every graph practice loads, because one builds on another (DDD building blocks come from the
+        clean engineering classes); the report keeps only the listed guidance's practice.
+        """
+        from harness.graph.graph import Graph
+
+        workspace = self._validate_workspace()
+        graph = Graph()
+        graph.load_files(str(workspace), sorted(_GRAPH_PRACTICES), edited)
+        session_path = self._session_path()
+        folder = session_path if session_path is not None else workspace / ".context"
+        return Path(graph.write_json(str(folder / "edited-graph.json")))
+
+    def _workspace_relative(self, paths: list[str] | None) -> list[str]:
+        """Each path relative to the validate workspace, as graph node files are recorded."""
+        workspace = self._validate_workspace()
+        relative: list[str] = []
+        for item in paths or []:
+            path = Path(item)
+            if path.is_absolute() and workspace in path.resolve().parents:
+                path = path.resolve().relative_to(workspace)
+            relative.append(path.as_posix())
+        return relative
 
     def _graph_practices(self) -> list[str]:
         """Graph practices of the listed guidance (clean-engineering is clean_engineering); none for other guidance."""

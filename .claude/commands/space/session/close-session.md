@@ -1,3 +1,3 @@
-Close this work session and clear the saved current session on the repo.
+Close this work session and remove ``session`` from ``.sessions/session.json``.
 
 Use MCP tool: `session.close()`

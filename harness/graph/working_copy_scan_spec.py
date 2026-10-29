@@ -102,6 +102,26 @@ with description("a working copy scan") as self:
             )
             expect([node["name"] for node in returned]).to(contain("place"))
 
+    with context("limited to the edited files"):
+        with before.all:
+            self.saved = self.root / ".context" / "graph.json"
+            self.saved_stamp = self.saved.stat().st_mtime
+            self.scoped = Graph()
+            self.scoped.load_files(str(self.root), ["clean_engineering"], ["src/orders/order.ts", "src/billing"])
+
+        with it("should read only the classes in those files and folders"):
+            expect(_class_names(self.scoped)).to(equal(["Invoice", "Order"]))
+
+        with it("should make modules only of the folders that hold those files"):
+            expect(_module_names(self.scoped)).to(equal(["billing", "orders"]))
+
+        with it("should run the rules on those files"):
+            returned = json.loads(self.scoped.return_nodes({"practice": "clean_engineering", "violations": True}))
+            expect([node["name"] for node in returned]).to(contain("place"))
+
+        with it("should leave the saved graph alone"):
+            expect(self.saved.stat().st_mtime).to(equal(self.saved_stamp))
+
     with context("loaded with a relative practice root"):
         with before.all:
             self.relative = Graph()

@@ -36,8 +36,25 @@ def _report(graph: Graph, message: str) -> None:
     graph.report_progress(message)
 
 
-def _typescript_files(folder: Path) -> list[Path]:
-    return scanned_files(folder, {".ts", ".tsx"})
+def _typescript_files(graph: Graph, folder: Path) -> list[Path]:
+    """TypeScript under ``folder``; with edited files, each whole story folder that holds one.
+
+    A story reads its examples and steps from sibling files, so one edited file needs its story's other files.
+    """
+    found = scanned_files(folder, {".ts", ".tsx"})
+    edited = graph.edited_files()
+    if edited is None:
+        return found
+    stories = _edited_story_folders(found, edited)
+    return [path for path in found if path in edited or any(story in path.parents for story in stories)]
+
+
+def _edited_story_folders(found: list[Path], edited: list[Path]) -> set[Path]:
+    from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
+
+    model = TypeScriptStoryModel("tests")
+    stories = {path.parent for path in found if model.is_story_file(path.as_posix())}
+    return {story for story in stories if any(story == file.parent or story in file.parents for file in edited)}
 
 
 def fill_working_copy(graph: Graph) -> None:
@@ -149,13 +166,13 @@ _PARAMETER_FACTS = ("type_hint", "operation_name", "property_setter")
 
 def _record_clean(practice, root: Path) -> list[dict]:
     _report(practice.graph, "clean_engineering · folders")
-    roles = _code_folders(root)
+    roles = _code_folders(root, practice.graph.scope_folders())
     parsed: list[dict] = []
     nodes = []
     edges = []
     root_id = practice.root_node.node_id
-    files = _code_files(root)
-    class_names = _class_names(files, practice.graph)
+    files = _code_files(practice.graph, root)
+    class_names = _class_names(_declaring_files(practice.graph, root, files), practice.graph)
     ids = {rel: f"clean_engineering:{kind}:{rel}" for rel, kind in roles.items()}
     folders = {rel: _folder_module(root / rel) for rel in roles}
     for index, file in enumerate(files, start=1):
@@ -184,7 +201,21 @@ def _record_clean(practice, root: Path) -> list[dict]:
     return parsed
 
 
-def _code_files(root: Path) -> list[Path]:
+def _code_files(graph: Graph, root: Path) -> list[Path]:
+    """Source files under ``root``; only the edited ones when the graph loads a file scope."""
+    edited = graph.edited_files()
+    if edited is None:
+        return scanned_files(root, _CODE_SUFFIXES)
+    return [path for path in edited if path.suffix.lower() in _CODE_SUFFIXES]
+
+
+def _declaring_files(graph: Graph, root: Path, files: list[Path]) -> list[Path]:
+    """Files whose class names a type hint may name: every source file, even when only some are edited.
+
+    Names come from a text match, not a parse, so reading the files the scope leaves out stays cheap.
+    """
+    if graph.edited_files() is None:
+        return files
     return scanned_files(root, _CODE_SUFFIXES)
 
 
@@ -250,7 +281,7 @@ def _record_bdd(practice, root: Path) -> None:
 
     nodes: list = []
     edges: list = []
-    specs = [file for file in _code_files(root) if is_spec_file(file)]
+    specs = [file for file in _code_files(practice.graph, root) if is_spec_file(file)]
     for index, file in enumerate(specs, start=1):
         relative = file.relative_to(root).as_posix()
         _report(practice.graph, f"bdd · specs · {index}/{len(specs)} · {relative}")
@@ -330,10 +361,14 @@ def _fact_row(row: list, facts: dict) -> list:
     return row + ["", payload] if payload else row
 
 
-def _code_folders(root: Path) -> dict[str, str]:
-    """A module owns a module card (`.context/module-context.md` or `modules.md`). Any other folder with source is a package."""
-    from cdd_guidance.practices.clean_engineering.model.module_context_files import module_card
+def _code_folders(root: Path, scope: list[Path] | None = None) -> dict[str, str]:
+    """A module owns a module card (`.context/module-context.md` or `modules.md`). Any other folder with source is a package.
 
+    With a ``scope``, only those folders are read, not the whole tree.
+    """
+    if scope is not None:
+        roles = {folder.relative_to(root).as_posix(): _folder_role(folder, os.listdir(folder)) for folder in scope}
+        return {key: role for key, role in roles.items() if role}
     roles: dict[str, str] = {}
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [name for name in dirnames if not skips_folder(name)]
@@ -341,12 +376,20 @@ def _code_folders(root: Path) -> dict[str, str]:
         rel = folder.relative_to(root)
         if rel == Path("."):
             continue
-        key = rel.as_posix()
-        if module_card(folder).is_file():
-            roles[key] = "Module"
-        elif any(Path(name).suffix.lower() in _CODE_SUFFIXES for name in filenames):
-            roles[key] = "Package"
+        role = _folder_role(folder, filenames)
+        if role:
+            roles[rel.as_posix()] = role
     return roles
+
+
+def _folder_role(folder: Path, filenames: list[str]) -> str:
+    from cdd_guidance.practices.clean_engineering.model.module_context_files import module_card
+
+    if module_card(folder).is_file():
+        return "Module"
+    if any(Path(name).suffix.lower() in _CODE_SUFFIXES for name in filenames):
+        return "Package"
+    return ""
 
 
 def _nearest(path: str, roles: dict[str, str]) -> str:
@@ -646,9 +689,9 @@ def _record_stories(practice, source: Path) -> None:
     from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
     files: dict[str, str] = {}
-    sources = _typescript_files(source)
-    total = len(sources)
     graph = practice.graph
+    sources = _typescript_files(graph, source)
+    total = len(sources)
 
     def report(phase: str, detail: str) -> None:
         _report(graph, f"stories · {phase} · {detail}")

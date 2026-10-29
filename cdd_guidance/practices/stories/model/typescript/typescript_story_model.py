@@ -77,9 +77,10 @@ class TypeScriptStoryModel(BraceStoryModel):
         files.setdefault(f"{folder}/examples/{name}", text)
 
     def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(p for p in tree if self._is_gwt_leaf(p))
+        return sorted(p for p in tree if self.is_story_file(p))
 
-    def _is_gwt_leaf(self, path: str) -> bool:
+    def is_story_file(self, path: str) -> bool:
+        """A story test file (not an examples file) that this model reads a story from."""
         name = path.replace("\\", "/").rsplit("/", 1)[-1]
         if name in _SKIP_NAMES or name.endswith("-helper.ts"):
             return False
@@ -104,7 +105,7 @@ class TypeScriptStoryModel(BraceStoryModel):
         self.epics.clear()
         seen: set[tuple[str, ...]] = set()
         ordered = self._ordered_paths(external)
-        leaves = [path for path in ordered if self._is_gwt_leaf(path)]
+        leaves = [path for path in ordered if self.is_story_file(path)]
         total = len(leaves)
         with self.batch_schema_sync():
             self._read_leaves(external, leaves, seen, on_file, total)

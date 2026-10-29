@@ -40,6 +40,7 @@ description:
   alignsWith?: class
   contexts?: [context]
   descriptions?: [description]
+  observations?: [observation]
   where:
     - id is the text slugs from the spec through each parent description to this one, joined by dots
     - plain-English subject, state, or observable condition
@@ -78,13 +79,13 @@ observation:
   id: dotPath
   text: string
   order: number
-  belongsTo: context
+  belongsTo: [context | description]
   examples?: [example]
   demonstrates?: class
   invokes?: [operation | property]
   specifies?: scenario
   where:
-    - id is the context id, then this text slug, joined by dots
+    - id is the parent context or description id, then this text slug, joined by dots
     - one observable outcome a stakeholder can verify
     - behavior fidelity is a signature with no assertion body
     - examples are the concrete cases for this outcome

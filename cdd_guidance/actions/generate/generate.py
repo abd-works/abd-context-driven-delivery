@@ -16,13 +16,13 @@ class Generate(GuidanceAction):
     @Skill
     @agent_instructions
     def generate(self, guidance: GuidanceArg) -> str:
-        """Write artifacts for each listed guidance at its current fidelity. The shared rules and that fidelity's rules are part of these instructions. After the artifact is written, call validate with the same guidance."""
+        """Write artifacts for each listed guidance at its current fidelity. The shared rules and that fidelity's rules are part of these instructions. After the artifact is written, call validate with the same guidance and paths set to the files you wrote."""
         self._bind_guidance(guidance)
         rules = self._rules(guidance)
         instructions(rules)
         tools(self._render().render)
         self.run(guidance, self._generate_item, action="generate")
-        "After the artifact is written, call validate with this same guidance."
+        "After the artifact is written, call validate with this same guidance and paths set to the files you wrote, so the graph rules run on those files as they are now."
         tools(self._validate().validate)
         return ""
 
