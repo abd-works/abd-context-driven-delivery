@@ -2,7 +2,7 @@
 
 The Claude Design channel renders the story map, its scenarios, and the UX screens as one Claude Design canvas: a story map you can play, and a story explorer that runs real screens on the stories' own fixtures. Stakeholders walk the product story by story while the stories, the domain, and the screens stay one graph.
 
-**Where things live.** In the workspace: each version of the canvas at `ux/design-canvas/version-N/project/` (artboards, `canvas.json`, `fixtures/`, `shots/`) and the UX map with its story → screen edges at `ux/ux.json`. In CDD: the generic canvas — `DesignCanvas` (pages, boards, `canvas.json`, writing to a folder), artboard and card helpers, the abd look, and the fixture bar — is `harness/design_canvas/`; this package lays out the story map and the explorer, and `ux/model/claude_design` lays out the Screens page.
+**Where things live.** In the workspace: each version of the canvas at `ux/design-canvas/version-N/project/` (a released one at `ux/design-canvas/<release>/project/`) (artboards, `canvas.json`, `fixtures/`, `shots/`) and the UX map with its story → screen edges at `ux/ux.json`. In CDD: the generic canvas — `DesignCanvas` (pages, boards, `canvas.json`, writing to a folder), artboard and card helpers, the abd look, and the fixture bar — is `harness/design_canvas/`; this package lays out the story map and the explorer, and `ux/model/claude_design` lays out the Screens page.
 
 Render it with the `claude_design` format: `ClaudeDesignStoryModel().render(story_map, workspace=..., screens=ux_map.screens)` returns every canvas file as JSON (path → text). The story map comes from the latest story map drawio; the screens come from the UX map (`ux.model.claude_design`). Do not hand-edit the rendered files: change the generator, re-render, and republish.
 
@@ -11,6 +11,7 @@ Render it with the `claude_design` format: `ClaudeDesignStoryModel().render(stor
 ## Versions
 
 - **`never-overwrite-a-published-canvas`** — People edit a published canvas directly in Claude Design. A regeneration never publishes over it: `CanvasVersions.working()` (`harness/design_canvas/versions.py`) starts `version-N+1` as a copy of the latest version, the generator renders into it, and that version is published as a new canvas titled `<name> — version-N`. `ux/design-canvas/versions.json` records each version's link. A version is regenerated in place only while it is unpublished, or when the user explicitly says to overwrite it.
+- **`release-a-version`** — When a version is kept as a release, `CanvasVersions.release(N, name)` renames its folder and its `versions.json` entry to the release's name (for example `ux/design-canvas/design-system-setup/`), and the older versions are removed. Numbering then starts again at `version-1`, which `start_next()` copies from the latest release.
 - **`each-version-carries-its-files`** — Screens link stylesheets, fonts and images as relative files inside the version (`../styles/…`, `../assets/…`), never as `/_blob/…` uploads: an upload lives in one canvas's store, so a new version's canvas cannot see the uploads of the one before.
 - **`generators-add-to-the-prepared-version`** — Screen generators write into `CanvasVersions.unpublished()`, which refuses a published version.
 

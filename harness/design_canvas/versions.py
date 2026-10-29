@@ -2,7 +2,9 @@
 
 People edit a published canvas directly, so a regeneration never writes over one: it starts the next version, a
 copy of the latest that the generator then renders into, and that version is published as a new canvas.
-``versions.json`` remembers each version's published link.
+``versions.json`` remembers each version's published link, in the order they were published. A version kept as a
+release is renamed to the release's name (``release``); numbering then starts again at ``version-1``, copied from
+that release.
 """
 
 from __future__ import annotations
@@ -48,11 +50,25 @@ class CanvasVersions:
         """Begin the next version as a copy of the latest (screens, images, fixtures), leaving the latest untouched."""
         number = self.latest + 1
         target = self.folder(number)
-        if self.latest:
-            shutil.copytree(self.folder(self.latest), target)
+        base = self.folder(self.latest) if self.latest else self.latest_release()
+        if base is not None:
+            shutil.copytree(base, target)
         else:
             target.mkdir(parents=True)
         return number
+
+    def latest_release(self) -> Optional[Path]:
+        """The folder of the newest release (a published version renamed to its release's name), or None."""
+        released = [self.root / name for name in self.links() if not _VERSION.match(name) and (self.root / name).is_dir()]
+        return released[-1] if released else None
+
+    def release(self, number: int, name: str) -> Path:
+        """Keep a published version as the release *name*: its folder and its link take the release's name."""
+        target = self.root / name
+        self.folder(number).rename(target)
+        links = {(name if key == self.folder(number).name else key): url for key, url in self.links().items()}
+        self._write(links)
+        return target
 
     def working(self) -> int:
         """The version a generator writes into: the latest while it is unpublished (no one has edited it yet),
@@ -82,5 +98,7 @@ class CanvasVersions:
     def record_link(self, number: int, url: str) -> None:
         links = self.links()
         links[self.folder(number).name] = url
-        (self.root / self.record_name).write_text(json.dumps(dict(sorted(links.items(), key=lambda item: int(item[0].split("-")[1]))), indent=1),
-                                                  encoding="utf-8")
+        self._write(links)
+
+    def _write(self, links: Dict[str, str]) -> None:
+        (self.root / self.record_name).write_text(json.dumps(links, indent=1), encoding="utf-8")

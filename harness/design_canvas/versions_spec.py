@@ -60,3 +60,23 @@ with description("Canvas versions") as self:
         with it("refuses to add to a published version"):
             self.versions.record_link(1, "https://claude.ai/artifact/one")
             expect(lambda: self.versions.unpublished()).to(raise_error(PublishedVersion))
+
+    with context("keeping a published version as a release"):
+        with before.each:
+            for number in (1, 2):
+                (self.root / f"version-{number}" / "project").mkdir(parents=True)
+                (self.root / f"version-{number}" / "project" / "Main.dc.html").write_text(f"version {number}", encoding="utf-8")
+                self.versions.record_link(number, f"https://claude.ai/artifact/{number}")
+            self.versions.release(2, "design-system-setup")
+
+        with it("renames the version's folder and its link to the release"):
+            expect((self.root / "design-system-setup" / "project" / "Main.dc.html").is_file()).to(equal(True))
+            expect(self.versions.links()["design-system-setup"]).to(equal("https://claude.ai/artifact/2"))
+            expect(list(self.versions.links())).to(equal(["version-1", "design-system-setup"]))
+
+        with it("starts the next version from the release once no numbered version is left"):
+            import shutil
+            shutil.rmtree(self.root / "version-1")
+            number = self.versions.start_next()
+            expect(number).to(equal(1))
+            expect((self.versions.folder(1) / "project" / "Main.dc.html").read_text(encoding="utf-8")).to(equal("version 2"))
