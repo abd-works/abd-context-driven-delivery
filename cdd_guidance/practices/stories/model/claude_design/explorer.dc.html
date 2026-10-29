@@ -26,6 +26,12 @@ body{margin:0}
 .sm-k3.sm-on{font-weight:600}
 .sm-ex{padding-left:28px;color:#F2A07A}
 .sm-nomark{display:none}
+.sm-box{background:rgba(229,83,26,0.14);box-shadow:inset 3px 0 0 #E5531A;border-radius:0}
+.sm-box:hover{background:rgba(229,83,26,0.20)}
+.sm-box-top{border-radius:4px 4px 0 0;margin-top:2px}
+.sm-box-bottom{border-radius:0 0 4px 4px;margin-bottom:2px}
+.sm-box-top.sm-box-bottom{border-radius:4px}
+.sm-step-on{color:#E8E8ED;font-weight:600}
 .sm-k4{padding-left:34px;white-space:pre-wrap;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:18px;color:#9B9BA8}
 .sm-sel{background:rgba(229,83,26,0.18);box-shadow:inset 3px 0 0 #E5531A;color:#E8E8ED;font-weight:600}
 .sm-dot{display:inline-block;width:10px;flex-shrink:0;color:#4A4A52}
@@ -64,7 +70,7 @@ __IMPORTS__
 <button type="button" class="sm-btn" onClick="{{next}}">Play next</button>
 <button type="button" class="sm-btn" aria-label="Hide the story map" onClick="{{hidePanel}}">»</button>
 </div>
-<div style="display: flex; flex-direction: column; gap: 1px; padding: 8px; overflow-y: auto; flex: 1 1 auto; min-height: 0">
+<div style="display: flex; flex-direction: column; gap: 0; padding: 8px; overflow-y: auto; flex: 1 1 auto; min-height: 0">
 <sc-for list="{{rows}}" as="row" hint-placeholder-count="12">
 <button type="button" class="{{row.cls}}" onClick="{{row.pick}}"><span class="{{row.markCls}}">{{row.mark}}</span><span>{{row.label}}</span></button>
 </sc-for>
@@ -89,7 +95,7 @@ componentWillUnmount() {
 window.removeEventListener('hashchange', this.followHash);
 }
 componentDidUpdate() {
-const selected = document.querySelector('.sm-sel');
+const selected = document.querySelector('.sm-step-on') || document.querySelector('.sm-box-top');
 const key = selected ? selected.textContent : '';
 if (!selected || key === this.shownSelection) return;
 this.shownSelection = key;
@@ -148,10 +154,10 @@ rows.push(Object.assign({ label: s.n, cls: 'sm-row sm-k2' + (g === st.g ? ' sm-o
 if (!st.open[sk]) return;
 s.c.forEach((sc, ci) => {
 const ck = sk + '-' + ci;
-rows.push(Object.assign({ label: sc.n, cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on' : ''), pick: () => (g === st.g && ci === st.c && st.open[ck] ? toggle(ck)() : go(g, ci, 0)) }, chev(st.open[ck])));
+rows.push(Object.assign({ label: sc.n, cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on sm-box sm-box-top' + (st.open[ck] ? '' : ' sm-box-bottom') : ''), pick: () => (g === st.g && ci === st.c && st.open[ck] ? toggle(ck)() : go(g, ci, 0)) }, chev(st.open[ck])));
 if (!st.open[ck]) return;
-this.outlineRows(s.n, sc.n).forEach((ex) => rows.push({ label: ex.label, cls: 'sm-row sm-k3 sm-ex' + (g === st.g && ci === st.c && ex.name === exampleOf(g, ci) ? ' sm-sel' : ''), mark: '◆', markCls: 'sm-dot sm-shot', pick: () => go(g, ci, 0, ex.name) }));
-sc.t.forEach((tp, ti) => rows.push({ label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c && ti === st.t ? ' sm-sel' : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti) }));
+this.outlineRows(s.n, sc.n).forEach((ex) => rows.push({ label: ex.label, cls: 'sm-row sm-k3 sm-ex' + (g === st.g && ci === st.c ? ' sm-box' + (ex.name === exampleOf(g, ci) ? ' sm-step-on' : '') : ''), mark: '◆', markCls: 'sm-dot sm-shot', pick: () => go(g, ci, 0, ex.name) }));
+sc.t.forEach((tp, ti) => rows.push({ label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c ? ' sm-box' + (ti === st.t ? ' sm-step-on' : '') + (ti === sc.t.length - 1 ? ' sm-box-bottom' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti) }));
 });
 });
 });
