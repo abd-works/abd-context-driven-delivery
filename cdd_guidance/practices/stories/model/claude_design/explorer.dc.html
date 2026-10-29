@@ -21,6 +21,7 @@ body{margin:0}
 .sm-k0{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#E5531A}
 .sm-k1{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;background:#1A1A1E}
 .sm-k2{font-weight:600}
+.sm-k2.sm-on{color:#F2A07A}
 .sm-k3{padding-left:16px;font-size:13px}
 .sm-k3.sm-on{font-weight:600}
 .sm-ex{padding-left:28px;color:#F2A07A}
@@ -77,9 +78,14 @@ __IMPORTS__
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1880,"height":948}}'>
 class Component extends DCLogic {
 componentDidMount() {
+this.followHash = () => this.forceUpdate();
+window.addEventListener('hashchange', this.followHash);
 let tries = 0;
 const wait = () => { if (typeof CanvasFixtures !== 'undefined') { this.forceUpdate(); return; } if (tries++ < 100) setTimeout(wait, 100); };
 wait();
+}
+componentWillUnmount() {
+window.removeEventListener('hashchange', this.followHash);
 }
 componentDidUpdate() {
 const selected = document.querySelector('.sm-sel');
@@ -112,7 +118,7 @@ hash.split('&').forEach((pair) => { const at = pair.indexOf('='); if (at > 0) q[
 const g = S.findIndex((s) => s.n === q.story);
 if (g < 0) return null;
 const c = Math.max(0, S[g].c.findIndex((sc) => sc.n === q.scenario));
-const t = Math.max(0, ((S[g].c[c] || { t: [] }).t).findIndex((tp) => tp.x.split('\n').indexOf(q.step) >= 0));
+const t = Math.max(0, ((S[g].c[c] || { t: [] }).t).findIndex((tp) => tp.x.split('\n').some((line) => line === q.step || line.endsWith(' ' + q.step))));
 return { g: g, c: c, t: t, i: 0, hash: hash, open: opened(g, c, { e0: true }) };
 })();
 const fresh = linked && (!this.state || this.state.hash !== hash);
@@ -137,11 +143,11 @@ if (!st.open[uk]) return;
 S.forEach((s, g) => {
 if (s.e !== ei || s.u !== ui) return;
 const sk = 's' + g;
-rows.push(Object.assign({ label: s.n, cls: 'sm-row sm-k2', pick: toggle(sk) }, chev(st.open[sk])));
+rows.push(Object.assign({ label: s.n, cls: 'sm-row sm-k2' + (g === st.g ? ' sm-on' : ''), pick: () => (g === st.g && st.open[sk] ? toggle(sk)() : go(g, 0, 0)) }, chev(st.open[sk])));
 if (!st.open[sk]) return;
 s.c.forEach((sc, ci) => {
 const ck = sk + '-' + ci;
-rows.push(Object.assign({ label: sc.n, cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on' : ''), pick: toggle(ck) }, chev(st.open[ck])));
+rows.push(Object.assign({ label: sc.n, cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on' : ''), pick: () => (g === st.g && ci === st.c && st.open[ck] ? toggle(ck)() : go(g, ci, 0)) }, chev(st.open[ck])));
 if (!st.open[ck]) return;
 this.outlineRows(s.n, sc.n).forEach((ex) => rows.push({ label: ex.label, cls: 'sm-row sm-k3 sm-ex' + (g === st.g && ci === st.c && ex.name === exampleOf(g, ci) ? ' sm-sel' : ''), mark: '◆', markCls: 'sm-dot sm-shot', pick: () => go(g, ci, 0, ex.name) }));
 sc.t.forEach((tp, ti) => rows.push({ label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c && ti === st.t ? ' sm-sel' : ''), mark: '●', markCls: tp.i.length ? 'sm-dot sm-shot' : 'sm-dot', pick: () => go(g, ci, ti) }));
@@ -171,7 +177,7 @@ x = c >= 0 ? scenario : null;
 if (c < 0 && g === st.g) return;
 go(g, Math.max(c, 0), 0, x);
 },
-scenarioName: exampleOf(st.g, st.c) || scen.n,
+scenarioName: scen.b ? (S[st.g].c.map((sc, ci) => (sc.b ? null : exampleOf(st.g, ci) || sc.n)).find(Boolean) || scen.n) : (exampleOf(st.g, st.c) || scen.n),
 stepText: step.x,
 showShot: !scen.p && imgs.length > 0,
 showNothing: !scen.p && imgs.length === 0,

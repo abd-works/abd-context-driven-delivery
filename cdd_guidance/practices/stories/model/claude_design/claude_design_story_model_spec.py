@@ -109,7 +109,7 @@ with description("a Claude Design story map") as self:
             self.explorer = files["project/screens/explorer.dc.html"]
 
         with it("shows a scenario whose steps show no screen on its own shownOn screen"):
-            expect(self.explorer).to(contain('"n": "Pick from the cart", "p": "select-plan"'))
+            expect(self.explorer).to(contain('"n": "Pick from the cart", "b": false, "p": "select-plan"'))
 
         with it("shows a scenario with no screen of its own on its story's screen"):
-            expect(self.explorer).to(contain('"n": "Display Create Account", "p": "create-credentials"'))
+            expect(self.explorer).to(contain('"n": "Display Create Account", "b": false, "p": "create-credentials"'))

@@ -116,7 +116,13 @@ ZOOM_BUTTON = ("font: 600 12px/1 ui-monospace, Consolas, monospace; padding: 6px
                "border-radius: 4px; background: #111113; color: #E8E8ED; cursor: pointer")
 
 
+ZOOM_STEP = 5
+ZOOM_RANGE = range(20, 301, ZOOM_STEP)
+
+
 def _zoomable_artboard(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str) -> str:
+    """Zoom is CSS ``zoom`` through one class per 5% step: the canvas fills holes in class names, not inside styles."""
+    zoom_classes = "".join(f".zoom-{level}{{zoom:{level / 100}}}" for level in ZOOM_RANGE)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -126,16 +132,14 @@ def _zoomable_artboard(title: str, width: int, height: int, body: str, style: st
 </head>
 <body>
 <x-dc>
-<helmet>{head}<style>{style}</style></helmet>
-<div style="position: relative; width: {{{{outerWidth}}}}; height: {{{{outerHeight}}}}; {root_style}">
-<div style="position: absolute; left: 0; top: 0; width: {width}px; height: {height}px; transform: {{{{transform}}}}; transform-origin: 0 0">
+<helmet>{head}<style>{style}{zoom_classes}</style></helmet>
+<div class="{{{{zoomClass}}}}" style="position: relative; width: {width}px; height: {height}px; {root_style}">
 {body}
 </div>
 <div style="position: fixed; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 10">
 <button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomOut}}}}" aria-label="Zoom out">−</button>
 <button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomReset}}}}" aria-label="Actual size">{{{{zoomLabel}}}}</button>
 <button type="button" style="{ZOOM_BUTTON}" onClick="{{{{zoomIn}}}}" aria-label="Zoom in">+</button>
-</div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{{"$preview":{{"width":{width},"height":{height}}}}}'>
@@ -155,15 +159,14 @@ zoom() {{
 return (this.state && this.state.zoom) || 1;
 }}
 zoomTo(zoom) {{
-this.setState({{ zoom: Math.min(3, Math.max(0.2, zoom)) }});
+this.setState({{ zoom: Math.min({ZOOM_RANGE[-1] / 100}, Math.max({ZOOM_RANGE[0] / 100}, zoom)) }});
 }}
 renderVals() {{
 const zoom = this.zoom();
+const level = Math.round(zoom * 100 / {ZOOM_STEP}) * {ZOOM_STEP};
 return {{
-transform: 'scale(' + zoom + ')',
-outerWidth: Math.round({width} * zoom) + 'px',
-outerHeight: Math.round({height} * zoom) + 'px',
-zoomLabel: Math.round(zoom * 100) + '%',
+zoomClass: 'zoom-' + level,
+zoomLabel: level + '%',
 zoomIn: () => this.zoomTo(zoom * 1.25),
 zoomOut: () => this.zoomTo(zoom / 1.25),
 zoomReset: () => this.zoomTo(1)

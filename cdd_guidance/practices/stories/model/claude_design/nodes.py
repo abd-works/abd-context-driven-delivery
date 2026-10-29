@@ -210,7 +210,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
         cells = []
         for row, (scenario, step, screen) in enumerate(shown[: self.screens_per_story]):
             place = {"story": story.name}
-            if scenario is not None:
+            if scenario is not None and scenario in story.scenarios:
                 place.update({"scenario": scenario.name, "step": step.text})
             caption = f"{scenario.name} › {step.text}" if scenario is not None else story.name
             cells.append(thumbnail(left, top + row * (ClaudeDesignStory.thumb_px + ClaudeDesignStory.thumb_gap_px),
@@ -242,7 +242,7 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
             waiting: List[str] = []
             prototype = ""
             for step in _steps_of(scenario):
-                waiting.append(step.text)
+                waiting.append(f"{step.keyword} {step.text}")
                 shown = [screen for screen in shown_on(step, self.screens) if not self._blank(screen)]
                 prototype = prototype or next((stem(s.prototype) for s in shown if s.prototype), "")
                 if shown:
@@ -256,7 +256,8 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
                 prototype, image = self._screen_of(scenario, story)
                 if image:
                     groups[0]["i"] = [f"../{image}"]
-            scenarios.append({"n": scenario.name, "p": prototype, "t": groups})
+            background = scenario in story.backgrounds
+            scenarios.append({"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups})
         return {"n": story.name, "c": scenarios}
 
     def _screen_of(self, scenario, story: ClaudeDesignStory) -> tuple:
