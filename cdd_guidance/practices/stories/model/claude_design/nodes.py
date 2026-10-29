@@ -304,9 +304,9 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
                 groups[-1]["x"] += "\n" + "\n".join(waiting)
             elif waiting:
                 groups.append({"x": "\n".join(waiting), "i": []})
-            if not prototype and not any(group["i"] for group in groups):
+            if not prototype:
                 prototype, image = self._screen_of(scenario, story)
-                if image:
+                if image and not any(group["i"] for group in groups):
                     groups[0]["i"] = [f"../{image}"]
             background = scenario in story.backgrounds
             scenarios.append({"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,

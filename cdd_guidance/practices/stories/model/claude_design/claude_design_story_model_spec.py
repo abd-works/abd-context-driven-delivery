@@ -106,7 +106,13 @@ with description("a Claude Design story map") as self:
             display = Scenario("Display Create Account", 1)
             display.steps.append(Step("the User opens sign-up", StepType.WHEN, 1))
             create.scenarios.append(display)
-            files = json.loads(ClaudeDesignStoryModel().render(story_map, screens=[_catalog_screen(), select_plan, credentials]))
+            refused = Scenario("Email already registered", 2)
+            refused.steps.append(Step("an account exists", StepType.GIVEN, 1))
+            create.scenarios.append(refused)
+            shot = Screen("an account exists", 4)
+            shot.image = "shots/email-already-registered.png"
+            shot.attach_step_name("Create Credentials › Email already registered › an account exists")
+            files = json.loads(ClaudeDesignStoryModel().render(story_map, screens=[_catalog_screen(), select_plan, credentials, shot]))
             self.explorer = files["project/screens/explorer.dc.html"]
 
         with it("shows a scenario whose steps show no screen on its own shownOn screen"):
@@ -114,6 +120,9 @@ with description("a Claude Design story map") as self:
 
         with it("shows a scenario with no screen of its own on its story's screen"):
             expect(self.explorer).to(contain('"n": "Display Create Account", "b": false, "p": "create-credentials"'))
+
+        with it("shows a scenario whose steps have only a screenshot on its story's screen, not the screenshot"):
+            expect(self.explorer).to(contain('"n": "Email already registered", "b": false, "p": "create-credentials"'))
 
     with context("rendered with the story code's locations"):
         with before.each:
