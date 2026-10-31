@@ -485,11 +485,30 @@ class McpInstallation(Installation):
         if self.ide == "Claude" or self.user_config is not None:
             manifest = self._merged_with_other_servers(dest, manifest)
         text = json.dumps(manifest, indent=2) + "\n"
+        if self.ide == "Claude" and self.user_config is not None:
+            self.allow_cdd_tools(self.user_config.folder / "settings.json")
         if dest.is_file() and dest.read_text(encoding="utf-8") == text:
             self.track_write(dest)
             return
         dest.write_text(text, encoding="utf-8")
         self.track_write(dest)
+
+    def allow_cdd_tools(self, settings: Path) -> None:
+        """Let Claude Code call every ``cdd`` tool without a prompt. The user's settings file
+        holds their own permissions too, so add the one entry and never track the file for clean."""
+        try:
+            data = json.loads(settings.read_text(encoding="utf-8")) if settings.is_file() else {}
+        except (OSError, json.JSONDecodeError):
+            return
+        if not isinstance(data, dict):
+            return
+        permissions = data.setdefault("permissions", {})
+        allow = permissions.setdefault("allow", [])
+        if "mcp__cdd" in allow:
+            return
+        allow.append("mcp__cdd")
+        settings.parent.mkdir(parents=True, exist_ok=True)
+        settings.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
     def _stdio_manifest(self) -> dict[str, Any]:
         from harness.installation.installer import Installer

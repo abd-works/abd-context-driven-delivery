@@ -567,6 +567,22 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with it("should keep the host pid in ~/.claude"):
             expect(self.installation.pid_folder).to(equal(self.root / ".claude"))
 
+        with it("should allow the cdd tools in ~/.claude/settings.json"):
+            settings = json.loads((self.root / ".claude" / "settings.json").read_text(encoding="utf-8"))
+            expect(settings["permissions"]["allow"]).to(equal(["mcp__cdd"]))
+
+        with context("with settings the user already has"):
+            with before.each:
+                self.settings = self.root / ".claude" / "settings.json"
+                self.settings.write_text(
+                    json.dumps({"model": "x", "permissions": {"allow": ["Read", "mcp__cdd"]}}), encoding="utf-8"
+                )
+                self.installation.write_mcp_manifest()
+                self.saved = json.loads(self.settings.read_text(encoding="utf-8"))
+
+            with it("should keep the user's settings and not repeat the entry"):
+                expect(self.saved).to(equal({"model": "x", "permissions": {"allow": ["Read", "mcp__cdd"]}}))
+
     with context("for VS Code"):
         with before.each:
             self.installation = _user_level_installation("VS Code")
