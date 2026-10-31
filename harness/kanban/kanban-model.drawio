@@ -1,0 +1,86 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="CleanEngineering Model" id="CleanEngineering-model">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="harness-kanban--board" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Board&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ sessions_folder: Path&lt;br/&gt;+ practices: list[PracticeGuidance]&lt;br/&gt;+ columns: list[Column]&lt;br/&gt;+ tickets: list[Ticket]&lt;br/&gt;+ backlog_items: list[BacklogItem]&lt;br/&gt;+ active: Ticket&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ load(sessions_folder: Path): Board&lt;br/&gt;+ to_json(): dict&lt;br/&gt;+ new_ticket(title: str, scope: str, parent: Ticket): Ticket&lt;br/&gt;+ add_backlog_item(title: str, text: str): BacklogItem&lt;br/&gt;+ ticket(name: str): Ticket&lt;br/&gt;+ column(name: str): Column&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="250" width="260" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-kanban--column" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Column&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ tickets: list[Ticket]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Column(name: str, board: Board)&lt;br/&gt;+ to_json(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="1900" y="250" width="260" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-kanban--backlog" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Backlog&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ items: list[BacklogItem]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Backlog(board: Board)&lt;br/&gt;+ to_json(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="260" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-kanban--stage" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Stage&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ actions: list[GuidanceAction]&lt;br/&gt;+ practices: list[PracticeGuidance]&lt;br/&gt;+ work_required: list[FidelityGuidance]&lt;br/&gt;+ next_stage: Stage&lt;br/&gt;+ previous_stage: Stage&lt;br/&gt;+ in_progress: list[Ticket]&lt;br/&gt;+ done: list[Ticket]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Stage(name: str, board: Board, actions: list[GuidanceAction])&lt;br/&gt;+ to_json(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="944" width="260" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-kanban--ticket" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Ticket&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ title: str&lt;br/&gt;+ scope: str&lt;br/&gt;+ lineage: Ticket&lt;br/&gt;+ progress: list[FidelityProgress]&lt;br/&gt;+ column: Column&lt;br/&gt;+ is_done: bool&lt;br/&gt;+ next: FidelityProgress&lt;br/&gt;+ last_activity: str&lt;br/&gt;+ latest_handoff: str&lt;br/&gt;+ reports: dict&lt;br/&gt;+ practices: list[PracticeGuidance]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Ticket(session_folder: Path, board: Board)&lt;br/&gt;+ pull(): Stage&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): Ticket&lt;br/&gt;+ enable_practice(practice: PracticeGuidance, is_enabled: bool): Ticket&lt;br/&gt;+ close(): Ticket&lt;br/&gt;+ archive(): Ticket&lt;br/&gt;+ to_json(): dict&lt;br/&gt;- _log_lines(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1622" width="260" height="382" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-kanban--stagenotdone" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;StageNotDone&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ticket: Ticket&lt;br/&gt;+ stage: Column&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ StageNotDone(ticket: Ticket, stage: Column)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="1900" y="944" width="260" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-kanban--fidelityprogress" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FidelityProgress&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ fidelity: FidelityGuidance&lt;br/&gt;+ stage: Stage&lt;br/&gt;+ done_actions: list[GuidanceAction]&lt;br/&gt;+ remaining_actions: list[GuidanceAction]&lt;br/&gt;+ is_done: bool&lt;br/&gt;+ slug: str&lt;br/&gt;+ report_files: str&lt;br/&gt;+ state: str&lt;br/&gt;+ next_action: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_log(fidelity: FidelityGuidance, stage: Stage, lines: list[str]): FidelityProgress&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="40" y="944" width="260" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-kanban--backlogitem" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BacklogItem&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ title: str&lt;br/&gt;+ text: str&lt;br/&gt;+ path: Path&lt;br/&gt;+ last_activity: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BacklogItem(path: Path, board: Board)&lt;br/&gt;+ start(scope: str): Ticket&lt;br/&gt;+ to_json(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="660" y="250" width="260" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-kanban--kanban" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Kanban&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Kanban(project: str)&lt;br/&gt;+ board(): dict&lt;br/&gt;+ pull(ticket: str): dict&lt;br/&gt;+ move_next(ticket: str): dict&lt;br/&gt;+ move_previous(ticket: str): dict&lt;br/&gt;+ start(backlog_item: str, scope: str): dict&lt;br/&gt;+ new(title: str, scope: str, parent: str): dict&lt;br/&gt;+ add_backlog_item(title: str, text: str): dict&lt;br/&gt;+ enable_practice(ticket: str, practice: str, is_enabled: bool): dict&lt;br/&gt;+ close(ticket: str): dict&lt;br/&gt;+ archive(ticket: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="660" y="944" width="260" height="222" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.15;entryDx=0;entryDy=0;" edge="1" source="harness-kanban--stage" target="harness-kanban--stage" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="harness-kanban--stage" target="harness-kanban--stage" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="harness-kanban--ticket" target="harness-kanban--ticket" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.85;entryY=1.0;entryDx=0;entryDy=0;" edge="1" source="harness-kanban--stagenotdone" target="harness-kanban--column" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=0.0;exitDx=0;exitDy=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;" edge="1" source="harness-kanban--ticket" target="harness-kanban--fidelityprogress" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.85;entryDx=0;entryDy=0;" edge="1" source="harness-kanban--fidelityprogress" target="harness-kanban--stage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="318" y="1047" />
+              <mxPoint x="318" y="1167" />
+              <mxPoint x="2180" y="1167" />
+              <mxPoint x="1262" y="1167" />
+              <mxPoint x="1262" y="1106" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.85;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="harness-kanban--stagenotdone" target="harness-kanban--ticket" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.15;entryY=0.0;entryDx=0;entryDy=0;" edge="1" source="harness-kanban--board" target="harness-kanban--ticket" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1410" y="482" />
+              <mxPoint x="2180" y="482" />
+              <mxPoint x="2180" y="1492" />
+              <mxPoint x="79" y="1492" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=0.0;exitDx=0;exitDy=0;entryX=0.15;entryY=1.0;entryDx=0;entryDy=0;" edge="1" source="harness-kanban--ticket" target="harness-kanban--column" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="79" y="1612" />
+              <mxPoint x="2228" y="1612" />
+              <mxPoint x="2228" y="370" />
+              <mxPoint x="1939" y="370" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
