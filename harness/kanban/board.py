@@ -172,7 +172,7 @@ class Stage(Column):
     def work_required(self) -> list[FidelityGuidance]:
         """Every fidelity of every chosen practice whose stage is this stage, in practice order."""
         stage = self.name.lower()
-        return [fidelity for practice in self.practices for fidelity in _fidelities(practice) if fidelity.stage == stage]
+        return [fidelity for practice in self.practices for fidelity in self._fidelities_of(practice) if fidelity.stage == stage]
 
     @property
     def next_stage(self) -> Stage | None:
@@ -191,18 +191,16 @@ class Stage(Column):
     def to_json(self) -> dict[str, Any]:
         return {
             "name": self.name,
-            "work_required": [_fidelity_slug(fidelity) for fidelity in self.work_required],
+            "work_required": [self._slug(fidelity) for fidelity in self.work_required],
             "in_progress": [ticket.to_json() for ticket in self.in_progress],
             "done": [ticket.to_json() for ticket in self.done],
         }
 
+    def _fidelities_of(self, practice: PracticeGuidance) -> list[FidelityGuidance]:
+        entries = practice.fidelities.entries
+        return list(entries.values()) if isinstance(entries, dict) else list(entries)
 
-def _fidelities(practice: PracticeGuidance) -> list[FidelityGuidance]:
-    entries = practice.fidelities.entries
-    return list(entries.values()) if isinstance(entries, dict) else list(entries)
+    def _slug(self, fidelity: FidelityGuidance) -> str:
+        from harness.kanban.ticket import practice_key
 
-
-def _fidelity_slug(fidelity: FidelityGuidance) -> str:
-    from harness.kanban.ticket import practice_key
-
-    return f"{practice_key(fidelity.practice_guidance)}-{fidelity.name}"
+        return f"{practice_key(fidelity.practice_guidance)}-{fidelity.name}"

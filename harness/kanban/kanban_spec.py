@@ -86,262 +86,213 @@ with description("a board") as self:
             expect([type(practice).__name__ for practice in self.board.practices]).to(equal(["Stories", "Ddd", "Ux", "CleanEngineering", "Bdd"]))
 
     with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
-        # sessions_folder holds pet-visits/, sign-up/, closed/browse-pets/, default/,
-        #   _backlog/returns-and-refunds.md, _archive/old-spike/
+        with before.each:
+            sessions = SessionsFolder()
+            sessions.session("pet-visits", title="Pet visits")
+            sessions.session("sign-up", title="Sign up")
+            sessions.session("browse-pets", closed=True, title="Browse pets")
+            sessions.folder("default")
+            sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
+            sessions.folder("_archive/old-spike")
+            sessions.current("pet-visits")
+            self.board = Board(sessions.root, [Stories(), Ddd(), Ux()])
 
         with it("should show every work session as a ticket"):
-            # board.tickets
-            #   -> Ticket(sessions_folder / "pet-visits", board)
-            #   -> Ticket(sessions_folder / "sign-up", board)
-            #   -> Ticket(sessions_folder / "closed" / "browse-pets", board)
-            #   <- [pet-visits, sign-up, browse-pets]
-            pass  # BDD: SIGNATURE
+            expect(names(self.board.tickets)).to(equal(["pet-visits", "sign-up", "browse-pets"]))
 
         with it("should leave default off the board"):
-            # board.tickets
-            #   <- no ticket named default
-            pass  # BDD: SIGNATURE
+            expect(names(self.board.tickets)).not_to(contain("default"))
 
         with it("should show each backlog item in the Backlog column"):
-            # backlog.items
-            #   -> board.backlog_items
-            #       -> BacklogItem(sessions_folder / "_backlog" / "returns-and-refunds.md", board)
-            #   <- [returns-and-refunds]
-            pass  # BDD: SIGNATURE
+            expect([item.title for item in self.board.column("Backlog").items]).to(equal(["Returns and refunds"]))
 
         with it("should leave archived sessions off the board"):
-            # board.tickets
-            #   <- no ticket named old-spike
-            pass  # BDD: SIGNATURE
+            expect(names(self.board.tickets)).not_to(contain("old-spike"))
 
         with it("should show closed sessions in Complete"):
-            # complete.tickets
-            #   -> board.tickets
-            #   -> ticket.column  for each ticket
-            #   <- [browse-pets]
-            pass  # BDD: SIGNATURE
+            expect(names(self.board.column("Complete").tickets)).to(equal(["browse-pets"]))
 
         with it("should name the ticket of the current session as active"):
-            # board.active
-            #   -> board.tickets
-            #   <- pet-visits, the session named in .sessions/session.json
-            pass  # BDD: SIGNATURE
+            expect(self.board.active.name).to(equal("pet-visits"))
 
         with it("should list every column with its tickets or items"):
-            # board.to_json()
-            #   -> backlog.items
-            #   -> column.tickets  for each Stage and Complete
-            #   -> ticket.column, ticket.is_done, ticket.next  for each ticket
-            #   <- {"columns": [...], "active": "pet-visits"}
-            pass  # BDD: SIGNATURE
+            expect([column["name"] for column in self.board.to_json()["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
 
 with description("a backlog item") as self:
     with context("that a person has added to the backlog folder"):
-        # .sessions/_backlog/returns-and-refunds.md
-        # item = board.backlog_items[0]
+        with before.each:
+            self.sessions = SessionsFolder()
+            self.item_path = self.sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
+            self.board = Board(self.sessions.root, [Stories(), Ddd(), Ux()])
 
         with context("that has been started"):
-            # ticket = item.start("feature")
+            with before.each:
+                self.ticket = self.board.backlog_items[0].start("feature")
 
             with it("should open a ticket in Discovery"):
-                # item.start("feature")
-                #   -> board.new_ticket("Returns and refunds", "feature", None)
-                #   <- ticket
-                # ticket.column
-                #   <- Discovery
-                pass  # BDD: SIGNATURE
+                expect(self.board.ticket("returns-and-refunds").column.name).to(equal("Discovery"))
 
             with it("should name the item's file in the new ticket's session log"):
-                # item.start("feature")
-                #   -> board.new_ticket("Returns and refunds", "feature", None)
-                # ticket reads session.log
-                #   <- a line naming .sessions/_backlog/returns-and-refunds.md
-                pass  # BDD: SIGNATURE
+                log = self.sessions.root / "returns-and-refunds" / "session.log"
+                expect(log.read_text(encoding="utf-8")).to(contain(str(self.item_path)))
+
+GENERATE_STORY_MAP = "generate /work, /work/docs stories story_map markdown stories no-chat"
+VALIDATE_STORY_MAP_WITH_VIOLATIONS = "validate Stories story_map graph-rule actor-named-in-step map.md:12 no-chat"
+VALIDATE_STORY_MAP = "validate Stories story_map no-chat"
+REVIEW_STORY_MAP = "review /work stories story_map markdown stories no-chat"
+
+
+def every_action(practice: str, practice_class: str, fidelity: str) -> list:
+    return [
+        f"generate /work {practice} {fidelity} markdown {practice} no-chat",
+        f"validate {practice_class} {fidelity} no-chat",
+        f"review /work {practice} {fidelity} markdown {practice} no-chat",
+    ]
+
+
+DISCOVERY_DONE = every_action("stories", "Stories", "story_map") + every_action("ddd", "Ddd", "bounded_context") + every_action("ux", "Ux", "ia")
+IMPLEMENTATION_DONE = (
+    ["pull Specification", "pull Implementation"]
+    + every_action("stories", "Stories", "acceptance_tests")
+    + every_action("ddd", "Ddd", "tactics")
+    + every_action("ux", "Ux", "front_end_code")
+)
+
+
+def board_with(lines: list):
+    sessions = SessionsFolder()
+    sessions.session("pawplace", title="PawPlace")
+    sessions.session("pet-visits", *lines, title="Pet visits", scope="feature", parent="pawplace")
+    return sessions.root, Board(sessions.root, [Stories(), Ddd(), Ux()])
+
+
+def ticket_with(lines: list):
+    return board_with(lines)[1].ticket("pet-visits")
+
+
+def story_map(ticket):
+    return next(progress for progress in ticket.progress if progress.slug == "stories-story_map")
+
 
 with description("a ticket") as self:
-    # board = Board(sessions_folder, [stories, ddd, ux])
-
     with context("that has just been started"):
-        # ticket = board.new_ticket("Pet visits", "feature", pawplace)
+        with before.each:
+            sessions = SessionsFolder()
+            board = Board(sessions.root, [Stories(), Ddd(), Ux()])
+            pawplace = board.new_ticket("PawPlace", "initiative", None)
+            self.ticket = board.new_ticket("Pet visits", "feature", pawplace)
 
         with it("should be in Discovery, in progress"):
-            # ticket.column
-            #   -> ticket reads session.log  (no action lines)
-            #   <- Discovery
-            # ticket.is_done
-            #   <- False
-            pass  # BDD: SIGNATURE
+            expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", False)))
 
         with it("should keep its title, scope, and lineage"):
-            # ticket.title, ticket.scope, ticket.lineage
-            #   <- "Pet visits", "feature", pawplace
-            pass  # BDD: SIGNATURE
+            expect((self.ticket.title, self.ticket.scope, self.ticket.lineage.name)).to(equal(("Pet visits", "feature", "pawplace")))
 
         with it("should name Generate on story_map as next"):
-            # ticket.next
-            #   -> ticket.progress
-            #       -> discovery.work_required
-            #       -> FidelityProgress(stories story_map, discovery, [])
-            #   <- stories story_map, remaining [Generate, Validate, Review]
-            pass  # BDD: SIGNATURE
+            expect((self.ticket.next.slug, self.ticket.next.remaining_actions[0])).to(equal(("stories-story_map", Generate)))
 
     with context("with its first logged work on a Specification fidelity"):
-        # session.log: generate <paths> ux mockup html
-
         with it("should be in Specification"):
-            # ticket.column
-            #   -> ticket reads session.log
-            #   -> fidelity.stage  for ux mockup
-            #   <- Specification
-            pass  # BDD: SIGNATURE
+            ticket = ticket_with(["generate /work/ux ux mockup html ux no-chat"])
+            expect(ticket.column.name).to(equal("Specification"))
 
     with context("with a fidelity generated"):
-        # session.log: generate <paths> stories story_map markdown
+        with before.each:
+            self.lines = [GENERATE_STORY_MAP]
 
         with it("should show Generate done and Validate and Review remaining for that fidelity"):
-            # ticket.progress
-            #   -> ticket reads session.log
-            #   -> FidelityProgress(stories story_map, discovery, [Generate])
-            # progress.remaining_actions
-            #   -> discovery.actions
-            #   <- [Validate, Review]
-            pass  # BDD: SIGNATURE
+            expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal([Validate, Review]))
 
         with context("with log lines whose paths hold spaces and commas"):
-            # session.log: generate C:\My Work, D:\other files stories story_map markdown
-
             with it("should still find the practice and fidelity by name"):
-                # ticket.progress
-                #   -> ticket reads session.log
-                #   <- stories story_map has Generate done
-                pass  # BDD: SIGNATURE
+                ticket = ticket_with(["generate C:\\My Work, D:\\other files stories story_map markdown stories no-chat"])
+                expect(story_map(ticket).done_actions).to(equal([Generate]))
 
         with context("that has a validate naming graph-rule violations"):
-            # session.log: validate Stories story_map graph-rule actor-named-in-step map.md:12
+            with before.each:
+                self.lines.append(VALIDATE_STORY_MAP_WITH_VIOLATIONS)
 
             with it("should still need Validate for that fidelity"):
-                # progress.remaining_actions
-                #   -> ticket reads session.log
-                #   <- [Validate, Review]
-                pass  # BDD: SIGNATURE
+                expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal([Validate, Review]))
 
         with context("that has a validate with no violations"):
-            # session.log: validate Stories story_map no-chat
+            with before.each:
+                self.lines.append(VALIDATE_STORY_MAP)
 
             with it("should show Validate done for that fidelity"):
-                # progress.done_actions
-                #   -> ticket reads session.log
-                #   <- [Generate, Validate]
-                pass  # BDD: SIGNATURE
+                expect(story_map(ticket_with(self.lines)).done_actions).to(equal([Generate, Validate]))
 
             with it("should match the practice's class name in the validate line to its folder name"):
-                # ticket.progress
-                #   -> ticket reads session.log  (Stories in validate lines, stories in action lines)
-                #   <- one FidelityProgress for stories story_map
-                pass  # BDD: SIGNATURE
+                expect([progress.slug for progress in ticket_with(self.lines).progress if progress.done_actions]).to(equal(["stories-story_map"]))
 
             with context("that has been reviewed"):
-                # session.log: review stories story_map
+                with before.each:
+                    self.lines.append(REVIEW_STORY_MAP)
 
                 with it("should show the fidelity done"):
-                    # progress.is_done
-                    #   -> progress.remaining_actions
-                    #       -> discovery.actions
-                    #   <- True
-                    pass  # BDD: SIGNATURE
+                    expect(story_map(ticket_with(self.lines)).is_done).to(be_true)
 
         with context("that was reviewed before its validate passed"):
-            # session.log: review stories story_map, then validate Stories story_map graph-rule ...
+            with before.each:
+                self.lines += [REVIEW_STORY_MAP, VALIDATE_STORY_MAP]
 
             with it("should not count the review"):
-                # progress.done_actions
-                #   -> ticket reads session.log
-                #   <- [Generate]
-                pass  # BDD: SIGNATURE
+                expect(story_map(ticket_with(self.lines)).done_actions).to(equal([Generate, Validate]))
 
     with context("with every required fidelity in its stage done"):
-        # session.log: generate, validate, review for story_map, bounded_context, ia
+        with before.each:
+            self.root, self.board = board_with(DISCOVERY_DONE)
+            self.ticket = self.board.ticket("pet-visits")
 
         with it("should be done, waiting in its stage's done part"):
-            # ticket.is_done
-            #   -> ticket.progress
-            #       -> progress.is_done  for each Discovery fidelity
-            #   <- True
-            # discovery.done
-            #   <- includes the ticket
-            pass  # BDD: SIGNATURE
+            expect(names(self.board.column("Discovery").done)).to(equal(["pet-visits"]))
 
         with it("should have no next"):
-            # ticket.next
-            #   <- None
-            pass  # BDD: SIGNATURE
+            expect(self.ticket.next).to(be_none)
 
         with context("that has been pulled"):
-            # ticket.pull()
+            with before.each:
+                self.ticket.pull()
 
             with it("should be in the next stage"):
-                # ticket.pull()
-                #   -> ticket.is_done
-                #   -> discovery.next_stage
-                #   <- Specification
-                # ticket.column
-                #   <- Specification
-                pass  # BDD: SIGNATURE
+                expect(self.ticket.column.name).to(equal("Specification"))
 
             with it("should write the stage it entered to its session log"):
-                # ticket.pull()
-                #   -> ticket session.log
-                #   <- line: pull Specification
-                pass  # BDD: SIGNATURE
+                log = (self.root / "pet-visits" / "session.log").read_text(encoding="utf-8")
+                expect(log.splitlines()[-1]).to(contain("pull Specification"))
 
         with context("in Implementation"):
-            # session.log: pull Specification, pull Implementation, and every Implementation fidelity done
-
             with it("should refuse to be pulled past Implementation"):
-                # ticket.pull()
-                #   -> ticket.is_done
-                #   -> implementation.next_stage
-                #       <- None
-                #   <- StageNotDone
-                pass  # BDD: SIGNATURE
+                expect(ticket_with(IMPLEMENTATION_DONE).pull).to(raise_error(StageNotDone))
 
     with context("with its stage not done"):
-        # session.log: generate stories story_map only
+        with before.each:
+            self.ticket = ticket_with([GENERATE_STORY_MAP])
 
         with it("should refuse to be pulled"):
-            # ticket.pull()
-            #   -> ticket.is_done
-            #       <- False
-            #   <- StageNotDone
-            pass  # BDD: SIGNATURE
+            expect(self.ticket.pull).to(raise_error(StageNotDone))
 
         with it("should stay in its stage"):
-            # ticket.column
-            #   <- Discovery
-            pass  # BDD: SIGNATURE
+            expect(self.ticket.column.name).to(equal("Discovery"))
 
     with context("that has been closed"):
-        # ticket.close()
+        with before.each:
+            self.root, board = board_with([GENERATE_STORY_MAP])
+            self.closed = board.ticket("pet-visits").close()
 
         with it("should be in Complete"):
-            # ticket.column
-            #   <- Complete
-            pass  # BDD: SIGNATURE
+            expect(self.closed.column.name).to(equal("Complete"))
 
         with it("should have its folder in closed"):
-            # ticket.close()
-            #   <- Ticket at .sessions/closed/pet-visits
-            pass  # BDD: SIGNATURE
+            expect((self.root / "closed" / "pet-visits" / "session.log").is_file()).to(be_true)
 
     with context("that has been archived"):
-        # ticket.archive()
+        with before.each:
+            self.root, self.board = board_with([GENERATE_STORY_MAP])
+            self.board.ticket("pet-visits").archive()
 
         with it("should be off the board"):
-            # board.tickets
-            #   <- no ticket named pet-visits
-            pass  # BDD: SIGNATURE
+            expect(names(self.board.tickets)).not_to(contain("pet-visits"))
 
         with it("should have its folder in the archive"):
-            # ticket.archive()
-            #   <- Ticket at .sessions/_archive/pet-visits
-            pass  # BDD: SIGNATURE
+            expect((self.root / "_archive" / "pet-visits" / "session.log").is_file()).to(be_true)
