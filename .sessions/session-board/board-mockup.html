@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CDD Session Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* One visual world: Claude Code's dark desktop app, chat on the left, the board mod's pane docked right. */
+  --bg: #17171a;
+  --panel: #1f1f23;
+  --raise: #28282d;
+  --line: #34343a;
+  --ink: #e9e7e3;
+  --muted: #9a9894;
+  --accent: #d97757;
+  --ok: #6fbf8a;
+  --warn: #e0b45c;
+  --bad: #e06c6c;
+  --idle: #4a4a50;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.5 var(--sans); }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(560px, 1.35fr); height: 100%; }
+@media (max-width: 980px) { .app { grid-template-columns: 1fr; height: auto; } }
+
+/* ---------- chat side ---------- */
+.chat { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-height: 100%; }
+.chat-head { padding: 14px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: baseline; }
+.chat-head b { font-weight: 600; }
+.chat-head span { color: var(--muted); font-size: 12px; }
+.thread { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow: auto; }
+.msg { max-width: 62ch; }
+.msg.user { align-self: flex-end; background: var(--raise); padding: 10px 14px; border-radius: 10px; }
+.msg .who { font: 500 11px/1 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.tool { font: 12px/1.5 var(--mono); color: var(--muted); border-left: 2px solid var(--line); padding: 4px 10px; }
+.tool b { color: var(--ink); font-weight: 500; }
+.band { margin: 0 20px; border: 1px solid var(--line); border-left: 3px solid var(--warn); background: var(--panel); border-radius: 6px; padding: 10px 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.band .txt { flex: 1; min-width: 220px; font-size: 13px; }
+.band .txt code { font: 12px var(--mono); color: var(--warn); }
+.prompt { margin: 10px 20px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px 14px; color: var(--muted); font: 13px var(--mono); min-height: 64px; }
+.prompt .typed { color: var(--ink); }
+.status { margin: 8px 20px 14px; font: 12px var(--mono); color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+.status b { color: var(--ink); font-weight: 500; }
+.status .next { color: var(--accent); }
+
+/* ---------- board pane ---------- */
+.pane { display: flex; flex-direction: column; background: var(--panel); min-width: 0; }
+.pane-head { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pane-head .title { font: 600 13px var(--mono); letter-spacing: .04em; }
+.pane-head .meta { color: var(--muted); font: 12px var(--mono); flex: 1; }
+.btn { background: var(--raise); border: 1px solid var(--line); border-radius: 5px; padding: 5px 10px; font: 12px var(--mono); }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #1a1310; font-weight: 600; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+.legend { display: flex; gap: 14px; padding: 8px 16px; border-bottom: 1px solid var(--line); font: 11px var(--mono); color: var(--muted); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+.board { flex: 0 0 auto; overflow-x: auto; padding: 14px 16px; display: grid; grid-template-columns: 160px repeat(3, 264px) 160px; gap: 10px; align-items: start; }
+.col { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; min-height: 120px; }
+.col h3 { margin: 0; padding: 9px 10px; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
+.col h3 .n { color: var(--muted); font-weight: 400; }
+.split { display: grid; grid-template-columns: 1fr 1fr; }
+.split > div { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 80px; min-width: 0; }
+.split > div + div { border-left: 1px dashed var(--line); }
+.sub { font: 10px var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+.stack { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+
+.card { background: var(--raise); border: 1px solid var(--line); border-radius: 6px; padding: 8px 9px; cursor: pointer; text-align: left; width: 100%; }
+.card:hover { border-color: var(--muted); }
+.card.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.card.selected { outline: 1px solid var(--ink); }
+.card .t { font-weight: 600; font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
+.card .m { font: 11px var(--mono); color: var(--muted); margin-top: 3px; }
+.card .nx { font: 11px var(--mono); color: var(--accent); margin-top: 5px; overflow-wrap: anywhere; }
+.card .wait { font: 11px var(--mono); color: var(--ok); margin-top: 5px; }
+.dots { display: flex; gap: 3px; margin-top: 6px; }
+.dots span { width: 14px; height: 6px; border-radius: 2px; background: var(--idle); }
+.s-reviewed { background: var(--ok) !important; }
+.s-progress { background: var(--warn) !important; }
+.s-violations { background: var(--bad) !important; }
+
+/* ---------- card detail ---------- */
+.detail { border-top: 1px solid var(--line); padding: 14px 16px 16px; display: grid; gap: 12px; }
+.detail-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.detail-head h2 { margin: 0; font-size: 16px; font-weight: 600; text-wrap: balance; }
+.detail-head .m { font: 12px var(--mono); color: var(--muted); }
+.grid { overflow-x: auto; }
+table { border-collapse: collapse; font: 12px var(--mono); width: 100%; min-width: 520px; }
+th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 500; background: var(--bg); }
+td .chip { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; background: var(--idle); color: var(--ink); }
+td .chip.s-reviewed, td .chip.s-progress, td .chip.s-violations { color: #141414; }
+td .fid { display: block; color: var(--muted); font-size: 11px; margin-bottom: 3px; }
+td.req { box-shadow: inset 0 0 0 1px var(--accent); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.handoff { font: 12px var(--mono); color: var(--muted); }
+.handoff b { color: var(--ink); font-weight: 500; }
+
+.toast { position: fixed; right: 20px; bottom: 20px; background: var(--raise); border: 1px solid var(--line); border-left: 3px solid var(--ok); border-radius: 6px; padding: 10px 14px; font: 12px var(--mono); max-width: 360px; box-shadow: 0 8px 24px rgba(0,0,0,.4); transition: opacity .3s; }
+.toast.hide { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+.note { margin-top: auto; padding: 8px 16px 12px; font: 11px var(--mono); color: var(--muted); border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <section class="chat" aria-label="Claude Code chat">
+    <div class="chat-head"><b>abd-pet-store-demo</b><span>Claude Code · mod: cdd-board</span></div>
+    <div class="thread">
+      <div class="msg user"><div class="who">You</div>/practices-ux mockup for the visit booking screens</div>
+      <div class="tool"><b>cdd · generate</b> ux mockup → docs/ux/pet-visits/book-a-visit.html</div>
+      <div class="tool"><b>cdd · validate</b> ux mockup → 2 violations</div>
+      <div class="msg"><div class="who">Claude</div>The booking mockup is written. Validation found two problems: the visit-time control has no type, and the confirm screen has no route back to the calendar. I'll fix both next.</div>
+      <div class="tool"><b>cdd · validate</b> stories scenarios → 0 violations</div>
+    </div>
+    <div class="band" role="status">
+      <div class="txt"><b>pet-visits</b> · Specification · <code>ux-mockup</code> has 2 violations: <code>typed-controls</code>, <code>every-screen-has-a-way-back</code></div>
+      <button class="btn" data-say="Opens the violations in the chat">Show</button>
+      <button class="btn primary" data-say="Runs /actions-satisfy for ux mockup">Satisfy</button>
+    </div>
+    <div class="prompt"><span class="typed">/ticket pull returns-and-refunds</span></div>
+    <div class="status" aria-label="Status line">
+      <span><b>pet-visits</b></span><span>session/pet-visits</span><span>Specification</span><span class="next">next: ddd-model</span><span>2 violations</span>
+    </div>
+  </section>
+
+  <section class="pane" aria-label="Board pane">
+    <div class="pane-head">
+      <span class="title">BOARD</span>
+      <span class="meta">abd-pet-store-demo · system of work: new thin slice · 7 tickets</span>
+      <button class="btn" data-say="Creates a session, its branch, and a card in Backlog">+ Ticket</button>
+      <button class="btn" data-say="Re-reads .sessions/ and session.log">Refresh</button>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--ok)"></i>reviewed: validate passed</span>
+      <span><i style="background:var(--warn)"></i>in progress</span>
+      <span><i style="background:var(--bad)"></i>violations</span>
+      <span><i style="background:var(--idle)"></i>not started</span>
+      <span>bars: Stories · DDD · UX · CE · BDD</span>
+    </div>
+    <div class="board" id="board"></div>
+    <div class="detail" id="detail"></div>
+    <div class="note">Mockup with example tickets. In the mod, every card, column and chip is computed by board() from .sessions/ and each session.log; nothing is stored on the board.</div>
+  </section>
+</div>
+<div class="toast hide" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const PRACTICES = ["Stories", "DDD", "UX", "CE", "BDD"];
+const STAGES = {
+  Discovery:      { Stories: "story_map",        DDD: "bounded_context", UX: "ia",             CE: "modules", BDD: null },
+  Specification:  { Stories: "scenarios",        DDD: "model",           UX: "mockup",         CE: "model",   BDD: "behavior" },
+  Implementation: { Stories: "acceptance_tests", DDD: "tactics",         UX: "front_end_code", CE: "code",    BDD: "development" }
+};
+const ORDER = ["Discovery", "Specification", "Implementation"];
+// R reviewed · P in progress · V violations · - not started; one letter per practice per stage, Stories DDD UX CE BDD.
+const TICKETS = [
+  { name: "pet-visits", title: "Pet visits", scope: "feature", parent: "pawplace", active: true, last: "4 min ago",
+    handoff: "handoff-20261031T0412.md", progress: { Discovery: "RRRR-", Specification: "R-VPP", Implementation: "-----" } },
+  { name: "returns-and-refunds", title: "Returns and refunds", scope: "feature", parent: "pawplace", last: "yesterday",
+    handoff: "handoff-20261030T1730.md", progress: { Discovery: "RRRR-", Specification: "-----", Implementation: "-----" } },
+  { name: "marketing-engine", title: "Marketing engine", scope: "feature", parent: "pawplace", last: "2 days ago",
+    handoff: "handoff-20261029T1105.md", progress: { Discovery: "RPR--", Specification: "-----", Implementation: "-----" } },
+  { name: "sign-up", title: "Sign up", scope: "feature", parent: "pawplace", last: "3 days ago",
+    handoff: "handoff-20261028T1620.md", progress: { Discovery: "RRRR-", Specification: "RRRRR", Implementation: "RPRPP" } },
+  { name: "power-ups", title: "Power-ups", scope: "feature", parent: "pawplace", last: "created today", handoff: "",
+    progress: { Discovery: "-----", Specification: "-----", Implementation: "-----" } },
+  { name: "loyalty-points", title: "Loyalty points", scope: "feature", parent: "pawplace", last: "created today", handoff: "",
+    progress: { Discovery: "-----", Specification: "-----", Implementation: "-----" } },
+  { name: "browse-pets", title: "Browse pets", scope: "feature", parent: "pawplace", closed: true, last: "last week",
+    handoff: "handoff-20261024T0930.md", progress: { Discovery: "RRRR-", Specification: "RRRRR", Implementation: "RRRRR" } }
+];
+const CODE = { R: "reviewed", P: "progress", V: "violations", "-": "idle" };
+const LABEL = { reviewed: "reviewed", progress: "in progress", violations: "violations", idle: "not started" };
+let selected = "pet-visits";
+
+function stateOf(t, stage, i) { return CODE[t.progress[stage][i]]; }
+function required(stage) { return PRACTICES.map((p, i) => [p, i]).filter(([p]) => STAGES[stage][p]); }
+function stageDone(t, stage) { return required(stage).every(([, i]) => stateOf(t, stage, i) === "reviewed"); }
+function touched(t) { return ORDER.some(s => t.progress[s].replace(/-/g, "").length); }
+
+// The board's whole rule: Backlog, the first stage not fully reviewed, waiting in a stage's Done, or Complete.
+function position(t) {
+  if (t.closed) return { column: "Complete" };
+  if (!touched(t)) return { column: "Backlog" };
+  for (let k = 0; k < ORDER.length; k++) {
+    const stage = ORDER[k];
+    if (!stageDone(t, stage)) {
+      const prior = k > 0 && !required(stage).some(([, i]) => stateOf(t, stage, i) !== "idle");
+      return prior ? { column: ORDER[k - 1], done: true } : { column: stage, done: false };
+    }
+  }
+  return { column: "Implementation", done: true };
+}
+function nextSkill(t) {
+  const pos = position(t);
+  if (pos.column === "Backlog") return "stories-story_map";
+  if (pos.done || pos.column === "Complete") return "";
+  const open = required(pos.column).find(([, i]) => stateOf(t, pos.column, i) !== "reviewed");
+  return open ? `${open[0].toLowerCase()}-${STAGES[pos.column][open[0]]}` : "";
+}
+function dots(t) {
+  const pos = position(t);
+  const stage = ORDER.includes(pos.column) ? pos.column : pos.column === "Complete" ? "Implementation" : "Discovery";
+  return `<div class="dots" aria-label="${stage} progress">` + PRACTICES.map((p, i) =>
+    `<span class="s-${stateOf(t, stage, i)}" title="${p}: ${LABEL[stateOf(t, stage, i)]}"></span>`).join("") + "</div>";
+}
+function card(t) {
+  const pos = position(t);
+  const nx = nextSkill(t);
+  const tail = pos.done ? `<div class="wait">ready to pull</div>` : nx ? `<div class="nx">next: ${nx}</div>` : "";
+  return `<button class="card${t.active ? " active" : ""}${t.name === selected ? " selected" : ""}" data-name="${t.name}">
+    <div class="t">${t.title}</div><div class="m">${t.scope} · ${t.last}</div>${dots(t)}${tail}</button>`;
+}
+function renderBoard() {
+  const by = {};
+  TICKETS.forEach(t => { const p = position(t); const key = p.column + (ORDER.includes(p.column) ? (p.done ? ":done" : ":wip") : ""); (by[key] ||= []).push(t); });
+  const list = key => (by[key] || []).map(card).join("");
+  const count = c => ["wip", "done"].reduce((n, s) => n + (by[`${c}:${s}`] || []).length, 0);
+  let html = `<div class="col"><h3>Backlog <span class="n">${(by.Backlog || []).length}</span></h3><div class="stack">${list("Backlog")}</div></div>`;
+  ORDER.forEach(stage => {
+    html += `<div class="col"><h3>${stage} <span class="n">${count(stage)}</span></h3><div class="split">
+      <div><span class="sub">In progress</span>${list(stage + ":wip")}</div>
+      <div><span class="sub">Done</span>${list(stage + ":done")}</div></div></div>`;
+  });
+  html += `<div class="col"><h3>Complete <span class="n">${(by.Complete || []).length}</span></h3><div class="stack">${list("Complete")}</div></div>`;
+  document.getElementById("board").innerHTML = html;
+}
+function renderDetail() {
+  const t = TICKETS.find(x => x.name === selected);
+  const pos = position(t);
+  const rows = PRACTICES.map((p, i) => `<tr><th>${p}</th>` + ORDER.map(stage => {
+    const fid = STAGES[stage][p];
+    if (!fid) return `<td><span class="fid">—</span></td>`;
+    const s = stateOf(t, stage, i);
+    const req = stage === pos.column && !pos.done && s !== "reviewed" ? " req" : "";
+    return `<td class="${req.trim()}"><span class="fid">${fid}</span><span class="chip s-${s}">${LABEL[s]}</span></td>`;
+  }).join("") + "</tr>").join("");
+  const where = pos.column === "Backlog" || pos.column === "Complete" ? pos.column : `${pos.column} · ${pos.done ? "done, ready to pull" : "in progress"}`;
+  document.getElementById("detail").innerHTML = `
+    <div class="detail-head"><h2>${t.title}</h2>
+      <span class="m">${t.name} · session/${t.name} · ${t.scope} of ${t.parent} · ${where}</span></div>
+    <div class="grid"><table><thead><tr><th></th>${ORDER.map(s => `<th>${s}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="handoff">${t.handoff ? `Latest handoff: <b>.sessions/${t.name}/${t.handoff}</b>` : "No handoff yet"}${nextSkill(t) ? ` · Next: <b>${nextSkill(t)}</b>` : ""}</div>
+    <div class="actions">
+      <button class="btn primary" ${pos.done ? "" : "disabled"} data-say="Logs pull ${t.name}; the card moves into the next stage">Pull</button>
+      <button class="btn" ${nextSkill(t) ? "" : "disabled"} data-say="Fills the prompt with the next step: ${nextSkill(t)}">Run next</button>
+      <button class="btn" data-say="Splits ${t.name} into child sessions, one per story on its story map">Split</button>
+      <button class="btn" ${t.active ? "disabled" : ""} data-say="Switches the session and branch to ${t.name}">Switch to</button>
+      <button class="btn" data-say="Writes a handoff for ${t.name}">Handoff</button>
+      <button class="btn" ${t.closed ? "disabled" : ""} data-say="Closes ${t.name}; the card moves to Complete">Close</button>
+    </div>`;
+}
+let timer;
+function toast(text) {
+  const el = document.getElementById("toast");
+  el.textContent = text; el.classList.remove("hide");
+  clearTimeout(timer); timer = setTimeout(() => el.classList.add("hide"), 3200);
+}
+document.addEventListener("click", e => {
+  const c = e.target.closest(".card");
+  if (c) { selected = c.dataset.name; renderBoard(); renderDetail(); return; }
+  const b = e.target.closest("[data-say]");
+  if (b && !b.disabled) toast("Mockup: " + b.dataset.say);
+});
+renderBoard(); renderDetail();
+toast("stories-scenarios reviewed on pet-visits · 0 violations");
+</script>
+</body>
+</html>
