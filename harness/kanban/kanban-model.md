@@ -5,7 +5,7 @@
 ### board
 
 - Created with the practices chosen for the work (for example Stories, DDD, and UX). The columns and stages follow from those practices.
-- Reads `.sessions/`: every folder there is a ticket, except `default/`, `closed/`, and folders whose names start with `_`. `closed/` holds finished tickets; `_backlog/` holds backlog items; `_options/` holds options; `_archive/` holds archived sessions. `default/`, options, and archived sessions are not on the board.
+- Reads `.sessions/`: every folder there is a ticket, except `default/`, `closed/`, and folders whose names start with `_`. `closed/` holds finished tickets; `_backlog/` holds backlog items; `_options/` holds options; `_archive/` holds archived sessions. `default/` is where work goes when no session is open, so it is not a ticket; it, options, and archived sessions are not on the board.
 
 ### column
 
