@@ -103,3 +103,6 @@ sandbox/
 
 # Claude Code install tree — regenerate with installer
 .claude/
+
+# pip install -e build metadata
+*.egg-info/
