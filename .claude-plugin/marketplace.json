@@ -1,0 +1,11 @@
+{
+  "name": "abd-works",
+  "owner": { "name": "abd works" },
+  "plugins": [
+    {
+      "name": "cdd-board",
+      "source": "./harness/kanban/pane",
+      "description": "The CDD session board beside the chat: every session a ticket, its stage, and its next step"
+    }
+  ]
+}
