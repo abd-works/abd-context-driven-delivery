@@ -213,7 +213,8 @@ class FileInstallation(Installation):
 
     def _body_for(self, kind: str, tool: Any, toolset: Any) -> str:
         if self.mcp_mode:
-            return tool.docstring
+            # An ``"""overview"""`` docstring names the section the MCP tool returns; it is not body text.
+            return "" if tool.docstring.strip() == "overview" else tool.docstring
         if tool.kind == "instructions":
             return self._instructions_at_install(tool, toolset)
         if kind == "rules":
@@ -344,7 +345,12 @@ class FileInstallation(Installation):
     def _skill_overview(self, toolset: Any, parts: list[str]) -> str:
         raw = getattr(toolset, "overview", None)
         source = raw.strip() if isinstance(raw, str) and raw.strip() else (parts[0] if parts else "")
-        return self._without_mcp_invoke(source)
+        return self._first_paragraph(self._without_mcp_invoke(source))
+
+    def _first_paragraph(self, text: str) -> str:
+        """The skill description is the opening paragraph, without the section heading or rule lines."""
+        lines = [line for line in text.splitlines() if not line.lstrip().startswith("#") and line.strip() != "---"]
+        return "\n".join(lines).strip().split("\n\n")[0].strip()
 
     def _without_mcp_invoke(self, text: str) -> str:
         lines: list[str] = []

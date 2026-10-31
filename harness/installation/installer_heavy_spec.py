@@ -771,6 +771,25 @@ with description("a practice guidance class") as self:
             expect(text).to(contain("sample preamble"))
             expect(text).not_to(contain("Use MCP tool:"))
 
+        with context("with an overview that opens with its heading and closes with a rule"):
+            with before.each:
+                from harness.installation.files import FileInstallation
+
+                overview = "## Overview\n\nsample preamble\n\nsecond paragraph\n\n---"
+                writer = FileInstallation("Cursor", self.tree, "skill")
+                self.description = writer._skill_overview(type("Host", (), {"overview": overview})(), [overview])
+
+            with it("should describe the skill with the opening paragraph alone"):
+                expect(self.description).to(equal("sample preamble"))
+
+        with context("with an MCP tool whose docstring only names the overview section"):
+            with it("should leave that section name out of the skill body"):
+                from harness.installation.files import FileInstallation
+
+                writer = FileInstallation("Cursor", self.tree, "skill", mcp_mode=True)
+                tool = type("Tool", (), {"docstring": "overview"})()
+                expect(writer._body_for("skill", tool, None)).to(equal(""))
+
         with it("should not append a YAML CLI invoke fence to the skill body"):
             skill = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
             expect(skill).not_to(contain("tools.ps1"))
