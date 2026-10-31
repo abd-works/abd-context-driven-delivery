@@ -1,54 +1,89 @@
-"""The session kanban board: behavior signatures with their realizations (model: harness/kanban/kanban-model.md)."""
-from mamba import context, description, it
+"""The session kanban board (model: harness/kanban/kanban-model.md)."""
+import json
+import tempfile
+from pathlib import Path
+
+from expects import be_none, be_true, contain, equal, expect, raise_error
+from mamba import before, context, description, it
+
+from harness.installation.installer import Installer
+
+Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
+
+from bdd.bdd import Bdd  # noqa: E402
+from ddd.ddd import Ddd  # noqa: E402
+from generate.generate import Generate  # noqa: E402
+from harness.kanban.board import Board  # noqa: E402
+from harness.kanban.ticket import StageNotDone  # noqa: E402
+from review.review import Review  # noqa: E402
+from stories.stories import Stories  # noqa: E402
+from ux.ux import Ux  # noqa: E402
+from validate.validate import Validate  # noqa: E402
+
+
+class SessionsFolder:
+    """A temporary `.sessions/` folder: work sessions with their logs, closed sessions, backlog items."""
+
+    def __init__(self) -> None:
+        self.root = Path(tempfile.mkdtemp(prefix="kanban-sessions-"))
+
+    def session(self, name: str, *log_lines: str, closed: bool = False, **fields) -> Path:
+        folder = self.root / ("closed" if closed else "") / name
+        folder.mkdir(parents=True)
+        (folder / "session.json").write_text(json.dumps({"name": name, **fields}), encoding="utf-8")
+        stamped = [f"2026-10-31T0{index % 10}:00:00Z {line}" for index, line in enumerate(log_lines)]
+        (folder / "session.log").write_text("".join(f"{line}\n" for line in stamped), encoding="utf-8")
+        return folder
+
+    def folder(self, name: str) -> Path:
+        folder = self.root / name
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder
+
+    def backlog_item(self, file_name: str, heading: str) -> Path:
+        path = self.folder("_backlog") / file_name
+        path.write_text(f"# {heading}\n\nAn idea.\n", encoding="utf-8")
+        return path
+
+    def current(self, name: str) -> None:
+        (self.root / "session.json").write_text(json.dumps({"session": name}), encoding="utf-8")
+
+
+def names(items) -> list:
+    return [item.name for item in items]
+
 
 with description("a board") as self:
     with context("with Stories, DDD, and UX chosen"):
-        # board = Board(sessions_folder, [stories, ddd, ux])
+        with before.each:
+            self.board = Board(SessionsFolder().root, [Stories(), Ddd(), Ux()])
+            self.discovery = self.board.column("Discovery")
 
         with it("should have the columns Backlog, Discovery, Specification, Implementation, and Complete, in that order"):
-            # board.columns
-            #   -> Backlog(board)
-            #   -> Stage("Discovery", board, [generate, validate, review])
-            #   -> Stage("Specification", board, [generate, validate, review])
-            #   -> Stage("Implementation", board, [generate, validate, review])
-            #   -> Column("Complete", board)
-            #   <- [Backlog, Discovery, Specification, Implementation, Complete]
-            pass  # BDD: SIGNATURE
+            expect(names(self.board.columns)).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
 
         with it("should have story_map, bounded_context, and ia as Discovery's work required"):
-            # discovery.work_required
-            #   -> board.practices
-            #   -> fidelity.stage  for each fidelity of stories, ddd, ux
-            #   <- [stories story_map, ddd bounded_context, ux ia]
-            pass  # BDD: SIGNATURE
+            expect([fidelity.name for fidelity in self.discovery.work_required]).to(equal(["story_map", "bounded_context", "ia"]))
 
         with it("should give every stage Generate, Validate, and Review, in that order"):
-            # stage.actions
-            #   <- [Generate, Validate, Review]
-            pass  # BDD: SIGNATURE
+            expect([self.board.column(name).actions for name in ("Discovery", "Specification", "Implementation")]).to(equal([[Generate, Validate, Review]] * 3))
 
     with context("with BDD chosen"):
-        # board = Board(sessions_folder, [bdd])
+        with before.each:
+            self.board = Board(SessionsFolder().root, [Bdd()])
 
         with it("should have behavior as Discovery's work required"):
-            # discovery.work_required
-            #   -> fidelity.stage  for behavior, realization, development
-            #   <- [bdd behavior]
-            pass  # BDD: SIGNATURE
+            expect([fidelity.name for fidelity in self.board.column("Discovery").work_required]).to(equal(["behavior"]))
 
         with it("should have realization as Specification's work required"):
-            # specification.work_required
-            #   -> fidelity.stage  for behavior, realization, development
-            #   <- [bdd realization]
-            pass  # BDD: SIGNATURE
+            expect([fidelity.name for fidelity in self.board.column("Specification").work_required]).to(equal(["realization"]))
 
     with context("that has been loaded with no practices given"):
-        # board = Board.load(sessions_folder)
+        with before.each:
+            self.board = Board.load(SessionsFolder().root)
 
         with it("should choose every practice"):
-            # board.practices
-            #   <- [stories, ddd, ux, clean_engineering, bdd]
-            pass  # BDD: SIGNATURE
+            expect([type(practice).__name__ for practice in self.board.practices]).to(equal(["Stories", "Ddd", "Ux", "CleanEngineering", "Bdd"]))
 
     with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
         # sessions_folder holds pet-visits/, sign-up/, closed/browse-pets/, default/,
