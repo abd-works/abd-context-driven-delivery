@@ -1,0 +1,6 @@
+{
+  "name": "cdd-board",
+  "version": "0.1.0",
+  "description": "The CDD session board beside the chat: every session a ticket, its stage, and its next step",
+  "types": "./types/index.d.ts"
+}
