@@ -28,6 +28,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.hooks.hooks import Hook
 from harness.mcp.mcp_server import McpServer
+from harness.mcp.spec_support import StdioMcpHost, UserHome
 
 
 
@@ -671,6 +672,15 @@ with description("an agent toolset") as self:
                         expect(names).to(contain("diagnose_install"))
 
             with context("whose install standup has finished on the IDE path"):
+                with before.each:
+                    self.home = UserHome()
+                    self.host = StdioMcpHost(self.home.enter() / ".cursor")
+                    self.host.start()
+
+                with after.each:
+                    self.host.stop()
+                    self.home.leave()
+
                 with it("should leave hook and mcp hosts answering"):
                     installer = Installer(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
                     status = installer.ensure_runtimes()

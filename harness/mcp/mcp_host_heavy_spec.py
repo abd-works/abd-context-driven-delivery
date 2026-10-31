@@ -21,6 +21,7 @@ from mamba import after, before, context, description, it
 from harness.installation.installer import Installer
 from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.mcp_server import HostPid, McpHost, McpInstallation
+from harness.mcp.spec_support import UserHome
 from cdd_guidance.actions.iterate.iterate import Iterate
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 from harness.mcp._examples.illegitimate_name.illegitimate_name import (
@@ -479,30 +480,6 @@ with description("an MCP host tool ping") as self:
 
     with it("should still run a tool when ping is absent"):
         expect(self.host.dispatch("hosting-demo.increment", {"step": 1})).to(equal(1))
-
-
-class UserHome:
-    """Points HOME, USERPROFILE and APPDATA at a temp folder so specs never touch the user's own config."""
-
-    _KEYS = ("HOME", "USERPROFILE", "APPDATA")
-
-    def __init__(self) -> None:
-        self.root = Path(tempfile.mkdtemp(prefix="cdd-user-home-"))
-        self._prior = {key: os.environ.get(key) for key in self._KEYS}
-
-    def enter(self) -> Path:
-        os.environ["HOME"] = str(self.root)
-        os.environ["USERPROFILE"] = str(self.root)
-        os.environ["APPDATA"] = str(self.root / "AppData" / "Roaming")
-        return self.root
-
-    def leave(self) -> None:
-        for key, value in self._prior.items():
-            if value is None:
-                os.environ.pop(key, None)
-            else:
-                os.environ[key] = value
-        shutil.rmtree(self.root, ignore_errors=True)
 
 
 def _user_level_installation(ide: str) -> McpInstallation:
