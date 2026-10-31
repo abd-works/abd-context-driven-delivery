@@ -16,7 +16,7 @@
 
 - Discovery, Specification, or Implementation: a column where work is done, split into in progress and done.
 - Its *work required* is every chosen practice's fidelity for that stage. Each practice already says which fidelity belongs to which stage (`stage:` on every fidelity section in the practice's markdown), so the stage reads it from the practices rather than keeping a table.
-- Its *actions* are the steps every fidelity in the stage goes through. For now every stage uses the same three: Generate, Validate, then a human review.
+- Its *actions* are the steps every fidelity in the stage goes through. For now every stage uses the same three: Generate, Validate, then Review, where a person approves the fidelity.
 
 ### ticket
 
@@ -91,7 +91,7 @@ Create a board with its practices, then read columns and tickets from it; everyt
 ## Stage : Column
 
 + Stage(name: str, board: Board, actions: list[GuidanceAction])
-	// for now every stage is given Generate, Validate, and review, in that order
+	// for now every stage is given Generate, Validate, and Review, in that order
 ------
 + actions: list[GuidanceAction]
 + practices: list[PracticeGuidance]
@@ -151,16 +151,14 @@ Create a board with its practices, then read columns and tickets from it; everyt
 ------
 + title: str
 + path: Path
-+ is_option: bool
-	// true while its file is in `_options/`
 ----
 + promote(): BacklogItem
-	// only an option; afterwards its file is in `_backlog/`
+	// afterwards its file is in `_backlog/`; an item already there stays where it is
 + start(scope: str): Ticket
 	// the new ticket's session log names this item's path
 	-> Board.new_ticket
 
 ## Open
 
-- Human review has no action class yet. Until it does, a review is a `review <practice> <fidelity>` line in the session log, and `Stage.actions` holds Generate, Validate, and that review step.
+- Review is a new action beside Generate and Validate, deployed as a command for now (`/review <guidance>`). It records a person's approval of a fidelity as a `review` line in the session log, which the ticket reads like any other action line.
 - Starting a ticket's session (its folder and branch) stays with `space/session` and `space/repo`; the board reads what they write and does not call them.
