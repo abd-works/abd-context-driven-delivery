@@ -234,15 +234,6 @@ Property name is the match. **File:** `{name}.md` beside the class. **Section:**
 
 ---
 
-## harness/transformers
-*Transformers* loads each practice *Transformer* a sketch names and renders that practice’s logical templates.
-
-- **Purpose:** Load each practice transformer named by a sketch and render that practice’s logical templates.
-- **Seam (terms):** Transformers, Transformer
-- **Dependencies (one-way):** `actions/sketch`, `harness/agent_tools`, `practices/bdd`, `practices/clean_engineering`, `practices/ddd`, `practices/stories`
-
----
-
 ## harness/mcp
 *Mcp* marks a member `@mcp` and runs a stdio host so Cursor can call it. *McpInstallation* writes the config; *McpServer* and *McpHost* run the process.
 

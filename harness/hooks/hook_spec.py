@@ -670,7 +670,7 @@ with description("inject_rules hook dispatch"):
                     "hook_event_name": "postToolUse",
                     "tool_name": "Write",
                     "tool_input": {
-                        "path": "harness/transformers/.context/transformers-sketch.md"
+                        "path": "harness/kanban/.context/kanban-sketch.md"
                     },
                 },
                 toolsets=[Bdd()],
@@ -685,7 +685,7 @@ with description("inject_rules hook dispatch"):
                     "hook_event_name": "postToolUse",
                     "tool_name": "Write",
                     "tool_input": {
-                        "path": "harness/transformers/.context/transformers-sketch.md"
+                        "path": "harness/kanban/.context/kanban-sketch.md"
                     },
                 },
                 toolsets=[CleanEngineering()],

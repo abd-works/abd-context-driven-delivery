@@ -88,15 +88,6 @@ class Ddd(PracticeGuidance):
             parsed = from_clean_engineering(parsed)
         return super()._call_render(target, parsed, previous, keep_positioning, workspace)
 
-    @property
-    def model(self):
-        from cdd_guidance.practices.ddd.model.transformation.ddd_transformer import DddTransformer
-
-        class DddPracticeModel:
-            transformer = DddTransformer
-
-        return DddPracticeModel()
-
 
 def _has_aggregates(parsed) -> bool:
     contexts = list(getattr(parsed, "contexts", []) or [])
