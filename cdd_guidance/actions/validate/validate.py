@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
@@ -13,6 +14,8 @@ from harness.guidance import Rule
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
 _GRAPH_PRACTICES = frozenset({"clean_engineering", "ddd", "stories", "bdd", "ux"})
+REPORT_FOLDER = "validation-reports"
+REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 
 @agent_toolset
 class Validate(GuidanceAction):
@@ -59,8 +62,28 @@ class Validate(GuidanceAction):
 
         parts = [part for part in self.run(guidance, on, action="validate") if part]
         sections.extend(parts)
-        sections.append("Validation report for artifacts under {session.path}/.")
-        return "\n\n".join(sections)
+        report = "\n\n".join(sections)
+        saved = self._save_reports(report)
+        where = ", ".join(str(path) for path in saved) if saved else "{session.path}/"
+        return f"{report}\n\nValidation report for these artifacts: {where}"
+
+    def _save_reports(self, report: str) -> list[Path]:
+        """Save the report in the session for each listed guidance, so the board can link to it."""
+        session_path = self._session_path()
+        items = [item for item in self.listed() if not isinstance(item, str)]
+        if session_path is None or not items:
+            return []
+        folder = session_path / REPORT_FOLDER
+        folder.mkdir(parents=True, exist_ok=True)
+        date = datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)
+        paths = [folder / f"{self._report_slug(item)}-{date}.md" for item in items]
+        for path in paths:
+            path.write_text(report, encoding="utf-8")
+        return paths
+
+    def _report_slug(self, item) -> str:
+        current = getattr(getattr(item, "fidelities", None), "current", None)
+        return str((current or item).slug)
 
     def _resolve_graph_json_paths(
         self, graph: bool | str | list[str] | None, edited: list[str]

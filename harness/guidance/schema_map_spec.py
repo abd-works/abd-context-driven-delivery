@@ -15,6 +15,8 @@ from mamba import context, description, it
 
 from harness.guidance.schema_map import (
     fidelity_sections,
+    fidelity_order,
+    load_node_fidelities,
     node_fidelities,
     validate_schema_fidelities,
 )
@@ -71,3 +73,20 @@ with description("schema fidelity maps"):
         with it("should validate top-level schema fidelities against ddd.md"):
             errors = validate_schema_fidelities(_schema("ddd"), _practice_md("ddd"))
             expect(errors).to(equal([]))
+
+        with it("should read the types the model draws, nested under the aggregate"):
+            mapping = node_fidelities(_schema("ddd"))
+            drawn = {name: mapping.get(name) for name in ("entityRoot", "entity", "valueObject", "repository")}
+            expect(set(drawn.values())).to(equal({"model"}))
+
+        with it("should give an entity the fidelity that creates it and every higher one"):
+            folder = _REPO_ROOT / "cdd_guidance" / "practices" / "ddd"
+            expect(load_node_fidelities(folder)["entity"]).to(equal(["model", "tactics"]))
+
+        with it("should list the fidelities lowest first"):
+            expect(fidelity_order(_practice_md("ddd"))).to(equal(["bounded_context", "model", "tactics"]))
+
+        with it("should read the types tactics adds, nested under the aggregate"):
+            mapping = node_fidelities(_schema("ddd"))
+            added = {name: mapping.get(name) for name in ("domainEvent", "domainService", "factory", "specification")}
+            expect(set(added.values())).to(equal({"tactics"}))

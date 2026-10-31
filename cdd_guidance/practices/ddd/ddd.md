@@ -24,7 +24,7 @@ Build the solution around how the business actually works, in the words the busi
 
 ### Default folder
 
-`default_workspace_folder` is `src/` for **generate**. Documenting an existing system uses the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. A bounded context folder contains `.context/bounded-context.md`. The code-format build writes that file when it creates the context folder and the aggregate folders under it. A folder of classes with no such file is a module or a package. Leave production `src/` alone unless the user directs otherwise.
+**Generate** writes where the session's folder and the `outputs` of each fidelity say. Documenting an existing system uses the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. A bounded context folder contains `.context/bounded-context.md`. The code-format build writes that file when it creates the context folder and the aggregate folders under it. A folder of classes with no such file is a module or a package. Leave production `src/` alone unless the user directs otherwise.
 
 ### Document
 
@@ -71,6 +71,8 @@ Use these rules when defining domain logic in code, a model, or language.
 default_format: markdown
 stage: discovery
 clean_engineering: modules
+outputs:
+  markdown: ".context/bounded-context-map.md"
 ```
 
 #### Overview
@@ -161,6 +163,11 @@ Whenever you create, alter, or delete bounded contexts, aggregates, or the langu
 default_format: markdown
 stage: specification
 clean_engineering: model
+outputs:
+  python: "{bounded_context}/{aggregate}/{aggregate}.py"
+  typescript: "{bounded_context}/{aggregate}/{aggregate}.ts"
+  markdown: ".context/domain-model.md"
+  drawio: ".context/domain-model.drawio"
 ```
 
 #### Overview
@@ -239,6 +246,9 @@ If this change will not stay here, follow `practices/ddd/ddd-bounded-context.mdc
 default_format: python
 stage: implementation
 clean_engineering: code
+outputs:
+  python: "{bounded_context}/{aggregate}/"
+  typescript: "{bounded_context}/{aggregate}/"
 ```
 
 #### Overview

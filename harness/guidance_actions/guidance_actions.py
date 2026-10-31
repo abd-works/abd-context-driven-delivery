@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 import json
 import re
+import threading
 from pathlib import Path
 from typing import Any, NotRequired, TypedDict
 
@@ -76,13 +77,39 @@ def listed(action) -> list:
 
 @agent_toolset
 class GuidanceAction:
-    """Bind guidance and run an operation on that string or each listed Guidance."""
+    """Bind guidance and run an operation on that string or each listed Guidance.
+
+    The MCP server runs calls on several threads against one action, so what a call is working on
+    is kept per thread: two calls at once must each answer for their own guidance.
+    """
 
     def __init__(self) -> None:
         super().__init__()
-        self._guidance_text: str | None = None
-        self._tool_items: list = []
-        self._logged_session_action: str | None = None
+        self._running = threading.local()
+
+    @property
+    def _guidance_text(self) -> str | None:
+        return getattr(self._running, "guidance_text", None)
+
+    @_guidance_text.setter
+    def _guidance_text(self, text: str | None) -> None:
+        self._running.guidance_text = text
+
+    @property
+    def _tool_items(self) -> list:
+        return getattr(self._running, "tool_items", [])
+
+    @_tool_items.setter
+    def _tool_items(self, items: list) -> None:
+        self._running.tool_items = items
+
+    @property
+    def _logged_session_action(self) -> str | None:
+        return getattr(self._running, "logged_session_action", None)
+
+    @_logged_session_action.setter
+    def _logged_session_action(self, action: str | None) -> None:
+        self._running.logged_session_action = action
 
     def clear_session_action_log(self) -> None:
         self._logged_session_action = None

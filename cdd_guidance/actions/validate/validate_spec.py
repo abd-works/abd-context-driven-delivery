@@ -193,3 +193,46 @@ with description("a validate action on practice guidance") as self:
         with it("should write the edited graph beside the session"):
             self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
             expect((self.session / "edited-graph.json").is_file()).to(equal(True))
+
+        with it("should save the report in the session's reports folder, named after the fidelity and date"):
+            self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
+            saved = next((self.session / "validation-reports").glob("ddd-tactics-*.md"))
+            expect(saved.read_text(encoding="utf-8")).to(contain("private-method-naming"))
+
+        with it("should save a report for each listed guidance"):
+            self.action.validate(guidance=["ddd-tactics", "stories-scenarios"], paths=[_ENTITY_ROOT_FILE])
+            saved = list((self.session / "validation-reports").glob("stories-scenarios-*.md"))
+            expect(len(saved)).to(equal(1))
+
+        with it("should say where the report is saved"):
+            report = self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
+            saved = next((self.session / "validation-reports").glob("ddd-tactics-*.md"))
+            expect(report).to(contain(str(saved)))
+
+
+with description("two validate calls running at once on one action") as self:
+    with before.each:
+        import threading
+
+        from validate.validate import Validate
+
+        action = Validate()
+        self.wrong = []
+
+        def validate_repeatedly(slug, own_rule, other_rule):
+            for _ in range(4):
+                report = action.validate(slug)
+                if own_rule not in report or other_rule in report:
+                    self.wrong.append(slug)
+
+        calls = [
+            threading.Thread(target=validate_repeatedly, args=("stories-story-map", "verb-noun-format", "hide-inner-details")),
+            threading.Thread(target=validate_repeatedly, args=("clean-engineering-model", "hide-inner-details", "verb-noun-format")),
+        ]
+        for call in calls:
+            call.start()
+        for call in calls:
+            call.join()
+
+    with it("should check each call against the rules of its own guidance"):
+        expect(self.wrong).to(equal([]))

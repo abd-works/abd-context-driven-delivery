@@ -126,6 +126,10 @@ Whenever you write or reshape describe / that / with / it-should specs, or code 
 default_format: python
 stage: specification
 clean_engineering: model
+outputs:
+  python: "**/*_spec.py"
+  typescript: "**/*spec.ts"
+  java: "**/*Spec.java"
 ```
 
 #### Overview
@@ -176,6 +180,10 @@ it('should apply a percentage discount to eligible items', () => {
 default_format: markdown
 stage: specification
 clean_engineering: model
+outputs:
+  python: "**/*_spec.py"
+  typescript: "**/*spec.ts"
+  markdown: ".context/{scope}-realization.md"
 ```
 
 #### Overview
@@ -225,6 +233,10 @@ If this change will not stay here, follow `practices/bdd/bdd-behavior.mdc`.
 default_format: python
 stage: implementation
 clean_engineering: code
+outputs:
+  python: "**/*_spec.py"
+  typescript: "**/*spec.ts"
+  java: "**/*Spec.java"
 ```
 
 #### Overview

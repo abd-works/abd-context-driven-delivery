@@ -30,6 +30,10 @@ Every scaffold pass ends with **validate** on the new or patched practice folder
 
 - **`underscore-folder-imports`** — Practice folders use underscores (`practices/clean_engineering/`) matching the Python import path. Hyphens in folder names break imports — avoid them.
 
+## Fidelity outputs
+
+- **`outputs-relative-to-the-session`** — Declare each fidelity's `outputs` as paths relative to the session's folder, with no `root`. Put `markdown` and `drawio` under `.context/` and code straight in the folder, because the session decides where work lives and a declared root would send every session's artifacts to one place in the repository.
+
 ## Practice folder layout
 
 - **`domain-folder-layout`** — One folder per practice. The `.py` module lives **inside** that folder (e.g. `practices/agent_bdd/agent_bdd.py`, `builders/create_practice_guidance/_examples/car_chronicle/car_chronicle.py`). Same folder holds `{domain-slug}.md`, `_examples/examples.md`, optional `templates/` (artifact templates), optional `model/{format}/`, optional `scanners/`. Repair fixtures: `_examples/<descriptive-folder>/faultyAsset` and `repairedAsset`.

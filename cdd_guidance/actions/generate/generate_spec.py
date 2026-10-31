@@ -10,8 +10,11 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+import shutil
+import tempfile
+
 from expects import contain, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 from generate.generate import Generate
 from harness.agent_tools.agent_tools import AgentInstructions
@@ -47,6 +50,25 @@ with description("a generate action on practice guidance") as self:
             expanded = _expanded_generate(self.action, {"guidance": [guidance]})
             expect("validate" in expanded.tools).to(equal(True))
             expect(expanded.instructions).to(contain("call validate with this same guidance"))
+
+    with context("with a session open"):
+        with before.each:
+            from space.session import Session
+
+            self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
+            (self.project / ".git").mkdir()
+            Session._current = None
+            Session.new("alpha", self.project, self.project)
+
+        with after.each:
+            from space.session import Session
+
+            Session._current = None
+            shutil.rmtree(self.project, ignore_errors=True)
+
+        with it("should say where each format of the artifact is saved"):
+            prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
+            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/.context/story-map.md"))
 
     with context("with Bdd listed"):
         with it("should run generate using the practice default generate_output"):

@@ -7,7 +7,7 @@ import os
 import re
 import traceback
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
 _LOAD_FILE_BUDGET = 40
+_OUTPUT_PATTERN_MARKS = {"*", "{"}
 _DEFAULT_SESSION_NAME = "default"
 _REPO_SESSIONS_DIR = ".sessions"
 _LEGACY_REPO_SESSIONS_DIR = "sessions"
@@ -886,6 +887,9 @@ class Session:
             "SESSION ARTIFACTS: with session_path set, write every large/temporary agent output "
             "(graph JSON, MCP dumps, probes) under session_path—not only under Cursor agent-tools. "
             "List artifact paths on append_log. "
+            "PERMANENT ARTIFACTS: fidelity outputs belong to the folder the session was opened on, its "
+            "workpath, and sit at the repository root only when the session names no folder. Markdown and "
+            "drawio go in that folder's .context/; code goes straight in that folder. "
             f"Log file: {log_file}. Errors: {err_file}."
         )
 
@@ -1057,6 +1061,42 @@ class Session:
             relative = getattr(guidance, "default_workspace_folder", None) or "."
         folder = (Path(base) / relative).resolve()
         return [[str(folder)]]
+
+    def fidelity_outputs(self, guidance: PracticeGuidance) -> dict[str, list[str]]:
+        """Where the active fidelity writes each format: its declared paths under the session's workpath.
+
+        The workpath is the folder the session was opened on, and the repository when it names none.
+        The session's ``outputs`` field overrides by practice: ``root`` for the practice, and under a
+        fidelity's name its own ``root`` and a file name per format for a single-file output. An override
+        root is a folder under the workpath: the first of the fidelity's override, the practice's override,
+        and ``practice_folders`` in ``.context/config.json``.
+        """
+        current = getattr(getattr(guidance, "fidelities", None), "current", None)
+        if current is None:
+            return {}
+        key = self._practice_key_for_instance(guidance) or ""
+        practice = self._output_overrides().get(key, {})
+        fidelity = practice.get(self._fidelity_name(guidance), {})
+        chosen_root = fidelity.get("root") or practice.get("root") or self._project_default_folder(key)
+        root = (Path(self.workpath or self.repo_path or Path.cwd()) / (chosen_root or ".")).resolve()
+        return {
+            label: [self._output_path(root, name) for name in self._output_names(declared, fidelity.get(label))]
+            for label, declared in current.outputs.items()
+        }
+
+    def _output_overrides(self) -> dict:
+        if self.session_path is None:
+            return {}
+        return self._read_session_folder_json(self.session_path).get("outputs", {})
+
+    def _output_names(self, declared: str | list[str], override: str | None) -> list[str]:
+        names = [declared] if isinstance(declared, str) else list(declared)
+        is_single_file = len(names) == 1 and not set(names[0]) & _OUTPUT_PATTERN_MARKS
+        return [PurePosixPath(names[0]).with_name(override).as_posix()] if override and is_single_file else names
+
+    def _output_path(self, root: Path, name: str) -> str:
+        folder_mark = "/" if name.endswith("/") else ""
+        return f"{(root / name).as_posix()}{folder_mark}"
 
     def _project_default_folder(self, practice: str) -> str | None:
         """Workpath-relative folder from ``.context/config.json`` practice_folders."""
