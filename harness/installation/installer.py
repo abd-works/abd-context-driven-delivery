@@ -456,6 +456,7 @@ class Installer:
         self._install_all(toolsets)
         self._install_installer_toolset()
         self._install_agents()
+        self._install_standing_rules()
         self._remove_legacy_underscore_skills()
         if replace:
             # Only after a full wipe+republish is `_mcp_names()` the whole catalog.
@@ -482,6 +483,16 @@ class Installer:
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
             self._track_write(dest)
+
+    def _install_standing_rules(self) -> None:
+        """Install cdd_guidance/rules as always-on rules in the IDE rules folder."""
+        source = self.repo / "cdd_guidance" / "rules"
+        if not source.is_dir():
+            return
+        rules = FileInstallation(self.ide, self.path, "rules", repo=self.repo)
+        self._bind_install_tracker(rules)
+        for path in sorted([*source.glob("*.md"), *source.glob("*.mdc")]):
+            rules.write_standing_rule(path)
 
     def _agent_name(self, path: Path) -> str:
         text = path.read_text(encoding="utf-8")

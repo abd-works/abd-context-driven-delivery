@@ -812,6 +812,36 @@ with description("a practice guidance class") as self:
                 text = self.writer._with_installed_references(self.text, self.dest)
                 expect(text).to(contain("`practices/ddd/ddd-model.md`"))
 
+        with context("with an always-on rule in cdd_guidance/rules"):
+            with before.each:
+                self.source = self.tree / "source" / "coding.mdc"
+                self.source.parent.mkdir(parents=True)
+                self.source.write_text(
+                    '---\ndescription: "Coding rules"\nalwaysApply: true\nglobs: "**/*.py"\n---\n\nKeep seams small.\n',
+                    encoding="utf-8",
+                )
+
+            with context("installed for Claude Code"):
+                with before.each:
+                    from harness.installation.files import FileInstallation
+
+                    FileInstallation("Claude", self.tree, "rules", repo=_REPO_ROOT).write_standing_rule(self.source)
+                    self.text = (self.tree / "rules" / "coding.md").read_text(encoding="utf-8")
+
+                with it("should load in every session, with no paths"):
+                    expect(self.text).not_to(contain("paths:"))
+
+                with it("should keep the rule's description and body"):
+                    expect(self.text).to(equal('---\ndescription: "Coding rules"\n---\n\nKeep seams small.\n'))
+
+            with context("installed for Cursor"):
+                with it("should keep the source front matter as an .mdc rule"):
+                    from harness.installation.files import FileInstallation
+
+                    FileInstallation("Cursor", self.tree, "rules", repo=_REPO_ROOT).write_standing_rule(self.source)
+                    text = (self.tree / "rules" / "coding.mdc").read_text(encoding="utf-8")
+                    expect(text).to(equal(self.source.read_text(encoding="utf-8")))
+
         with context("with an MCP tool whose docstring only names the overview section"):
             with it("should leave that section name out of the skill body"):
                 from harness.installation.files import FileInstallation

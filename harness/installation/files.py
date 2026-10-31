@@ -431,6 +431,32 @@ class FileInstallation(Installation):
         lines.append("---")
         return "\n".join(lines) + "\n\n"
 
+    def write_standing_rule(self, source: Path) -> None:
+        """Install one always-on rule from ``cdd_guidance/rules``: ``.md`` scoped by ``paths`` for
+        Claude Code, the source front matter as written for every other IDE."""
+        text = source.read_text(encoding="utf-8")
+        suffix = ".md" if self.ide == "Claude" else ".mdc"
+        if self.ide == "Claude":
+            fields, body = self._front_matter_fields(text)
+            globs = "" if fields.get("alwaysApply") == "true" else fields.get("globs", "")
+            text = self._claude_rules_front_matter(fields.get("description", source.stem), globs) + body
+        dest = Path(self.path) / "rules" / f"{source.stem}{suffix}"
+        text = self._with_installed_references(text, dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(text, encoding="utf-8")
+        self.track_write(dest)
+
+    def _front_matter_fields(self, text: str) -> tuple[dict[str, str], str]:
+        if not text.startswith("---"):
+            return {}, text
+        head, _, body = text[3:].partition("\n---")
+        fields: dict[str, str] = {}
+        for line in head.splitlines():
+            key, separator, value = line.partition(":")
+            if separator:
+                fields[key.strip()] = value.strip().strip('"')
+        return fields, body.lstrip("\n")
+
     def _claude_rules_front_matter(self, description: str, globs: str) -> str:
         """Claude Code rules scope by ``paths``; a rule without paths loads in every session."""
         lines = ["---", f'description: "{description}"']
