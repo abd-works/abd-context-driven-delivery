@@ -1,3 +1,9 @@
 2026-10-31T05:02:43Z --- 1
 2026-10-31T05:02:52Z note loop 1: Session board: every session a ticket on a kanban computed from session files. Plan in the backlog item. .context/backlog/session-board.md no-chat /home/user/abd-context-driven-delivery/.sessions/session-board/session.err 1
 2026-10-31T05:28:40Z validate CleanEngineering model no-chat /home/user/abd-context-driven-delivery/.sessions/session-board/session.err 2
+2026-10-31T06:06:05Z validate Bdd behavior graph-rule no-implementation harness/kanban/kanban_spec.py:18 graph-rule no-implementation harness/kanban/kanban_spec.py:33 graph-rule no-implementation harness/kanban/kanban_spec.py:39 no-chat /home/user/abd-context-driven-delivery/.sessions/session-board/session.err 3
+2026-10-31T06:06:05Z validate Bdd behavior no-chat /home/user/abd-context-driven-delivery/.sessions/session-board/session.err 4
+2026-10-31T06:07:08Z validate Bdd realization graph-rule no-implementation harness/kanban/kanban_spec.py:18 graph-rule no-implementation harness/kanban/kanban_spec.py:33 graph-rule no-implementation harness/kanban/kanban_spec.py:39 no-chat /home/user/abd-context-driven-delivery/.sessions/session-board/session.err 5
+2026-10-31T06:07:08Z validate Bdd realization no-chat /home/user/abd-context-driven-delivery/.sessions/session-board/session.err 6
+2026-10-31T06:08:48Z validate Bdd behavior no-chat /home/user/abd-context-driven-delivery/.sessions/session-board/session.err 7
+2026-10-31T06:09:57Z validate Bdd realization no-chat /home/user/abd-context-driven-delivery/.sessions/session-board/session.err 8
