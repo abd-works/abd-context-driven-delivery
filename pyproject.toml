@@ -36,6 +36,8 @@ dependencies = [
 #   root → cdd_guidance, tools, harness
 #   cdd_guidance/practices, actions, patterns → short catalog imports
 # namespaces: folders of modules are packages without an __init__.py
+# _examples: practices/ and builders/ both hold _examples/car; as top-level packages they collide.
+# Examples are imported through their parent package (cdd_guidance.practices._examples...).
 where = [".", "harness", "tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_guidance/patterns", "cdd_guidance/builders"]
-exclude = ["retired*"]
+exclude = ["retired*", "_examples", "_examples.*"]
 namespaces = true
