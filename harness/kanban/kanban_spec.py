@@ -30,16 +30,16 @@ with description("a board") as self:
     with context("with BDD chosen"):
         # board = Board(sessions_folder, [bdd])
 
-        with it("should have no BDD fidelity in Discovery's work required"):
+        with it("should have behavior as Discovery's work required"):
             # discovery.work_required
             #   -> fidelity.stage  for behavior, realization, development
-            #   <- []
+            #   <- [bdd behavior]
             pass  # BDD: SIGNATURE
 
-        with it("should have both behavior and realization in Specification's work required"):
+        with it("should have realization as Specification's work required"):
             # specification.work_required
             #   -> fidelity.stage  for behavior, realization, development
-            #   <- [bdd behavior, bdd realization]
+            #   <- [bdd realization]
             pass  # BDD: SIGNATURE
 
     with context("that has been loaded with no practices given"):
@@ -50,9 +50,9 @@ with description("a board") as self:
             #   <- [stories, ddd, ux, clean_engineering, bdd]
             pass  # BDD: SIGNATURE
 
-    with context("with a sessions folder of work sessions, closed sessions, default, backlog items, options, and archived sessions"):
+    with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
         # sessions_folder holds pet-visits/, sign-up/, closed/browse-pets/, default/,
-        #   _backlog/returns-and-refunds.md, _options/loyalty-points.md, _archive/old-spike/
+        #   _backlog/returns-and-refunds.md, _archive/old-spike/
 
         with it("should show every work session as a ticket"):
             # board.tickets
@@ -72,13 +72,6 @@ with description("a board") as self:
             #   -> board.backlog_items
             #       -> BacklogItem(sessions_folder / "_backlog" / "returns-and-refunds.md", board)
             #   <- [returns-and-refunds]
-            pass  # BDD: SIGNATURE
-
-        with it("should leave options off the board"):
-            # board.to_json()
-            #   -> column.tickets  for each column
-            #   -> backlog.items
-            #   <- no loyalty-points anywhere
             pass  # BDD: SIGNATURE
 
         with it("should leave archived sessions off the board"):
@@ -108,31 +101,9 @@ with description("a board") as self:
             pass  # BDD: SIGNATURE
 
 with description("a backlog item") as self:
-    with context("that is an option"):
-        # option = board.options[0]  (.sessions/_options/loyalty-points.md)
-
-        with context("that has been promoted"):
-            # option.promote()
-
-            with it("should be in the Backlog column"):
-                # backlog.items
-                #   -> board.backlog_items
-                #   <- includes loyalty-points
-                pass  # BDD: SIGNATURE
-
-            with it("should have its file in the backlog folder"):
-                # option.promote()
-                #   <- BacklogItem at .sessions/_backlog/loyalty-points.md
-                pass  # BDD: SIGNATURE
-
-    with context("that is on the backlog"):
-        # item = board.backlog_items[0]  (.sessions/_backlog/returns-and-refunds.md)
-
-        with context("that has been promoted"):
-            with it("should stay in the backlog folder"):
-                # item.promote()
-                #   <- BacklogItem at .sessions/_backlog/returns-and-refunds.md
-                pass  # BDD: SIGNATURE
+    with context("that a person has added to the backlog folder"):
+        # .sessions/_backlog/returns-and-refunds.md
+        # item = board.backlog_items[0]
 
         with context("that has been started"):
             # ticket = item.start("feature")

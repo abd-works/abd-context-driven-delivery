@@ -5,7 +5,7 @@
 ### board
 
 - Created with the practices chosen for the work (for example Stories, DDD, and UX). The columns and stages follow from those practices.
-- Reads `.sessions/`: every folder there is a ticket, except `default/`, `closed/`, and folders whose names start with `_`. `closed/` holds finished tickets; `_backlog/` holds backlog items; `_options/` holds options; `_archive/` holds archived sessions. `default/` is where work goes when no session is open, so it is not a ticket; it, options, and archived sessions are not on the board.
+- Reads `.sessions/`: every folder there is a ticket, except `default/`, `closed/`, and folders whose names start with `_`. `closed/` holds finished tickets; `_backlog/` holds backlog items; `_archive/` holds archived sessions. `default/` is where work goes when no session is open, so it is not a ticket. The board reads no other `_` folder.
 
 ### column
 
@@ -15,7 +15,7 @@
 ### stage
 
 - Discovery, Specification, or Implementation: a column where work is done, split into in progress and done.
-- Its *work required* is every fidelity of the chosen practices whose `stage:` is this stage. Each fidelity section in a practice's markdown declares its stage, so the stage reads it from the practices rather than keeping a table. A practice can have none in a stage (BDD has none in Discovery) or several (BDD has behavior and realization in Specification).
+- Its *work required* is every fidelity of the chosen practices whose `stage:` is this stage. Each fidelity section in a practice's markdown declares its stage, so the stage reads it from the practices rather than keeping a table. A practice can have none in a stage or several, so the stage keeps every fidelity whose stage matches.
 - Its *actions* are the steps every fidelity in the stage goes through. For now every stage uses the same three: Generate, Validate, then Review, where a person approves the fidelity.
 
 ### ticket
@@ -32,11 +32,7 @@
 
 ### backlog item
 
-- An idea not yet started: one markdown file per idea in `.sessions/_backlog/`. The Backlog column shows them. Starting one opens a ticket for it.
-
-### option
-
-- A potential idea, before it is on the backlog: one markdown file per idea in `.sessions/_options/`, the same as a backlog item. Options are kept off the board; promoting one moves its file into `_backlog/`.
+- An idea not yet started: one markdown file per idea in `.sessions/_backlog/`, added by a person. The Backlog column shows them. Starting one opens a ticket for it.
 
 Build order: `Column` → `Stage` → `Backlog` → `FidelityProgress` → `Ticket` → `BacklogItem` → `Board`
 
@@ -60,8 +56,6 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 	// every folder in sessions_folder except `default/`, `closed/`, and `_` folders, plus every folder in `closed/`
 + << aggregation >> backlog_items: list[BacklogItem]
 	// every markdown file in `_backlog/`
-+ << aggregation >> options: list[BacklogItem]
-	// every markdown file in `_options/`; never shown on the board
 + active: Ticket
 	// the ticket whose session is the current session
 ----
@@ -158,8 +152,6 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 + title: str
 + path: Path
 ----
-+ promote(): BacklogItem
-	// afterwards its file is in `_backlog/`; an item already there stays where it is
 + start(scope: str): Ticket
 	// the new ticket's session log names this item's path
 	-> Board.new_ticket

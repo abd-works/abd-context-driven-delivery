@@ -124,7 +124,7 @@ Whenever you write or reshape describe / that / with / it-should specs, or code 
 
 ```yaml
 default_format: python
-stage: specification
+stage: discovery
 clean_engineering: model
 ```
 

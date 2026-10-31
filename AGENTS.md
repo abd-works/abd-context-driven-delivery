@@ -18,7 +18,7 @@ Agentic tools that bring agile product, delivery, and engineering practices to A
 | DDD | bounded_context | model | tactics |
 | UX | ia | mockup | front_end_code |
 | Clean Engineering | modules | model | code |
-| BDD | — | behavior, realization | development |
+| BDD | behavior | realization | development |
 
 ## Where context lives
 
