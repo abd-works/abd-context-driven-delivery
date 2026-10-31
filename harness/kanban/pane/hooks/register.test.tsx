@@ -61,6 +61,7 @@ const engine = (on: any, calls: { tool: string; args: unknown }[] = [], statuses
     return { value: undefined }
   })
   on('ui.toast', () => ({ value: undefined }))
+  on('ui.invalidate', () => ({ value: undefined }))
   on('mcp.call', (_: unknown, e: { tool: string; args: unknown }) => {
     calls.push({ tool: e.tool, args: e.args })
     return answer(e.tool === 'kanban.board' ? BOARD : PET_VISITS)
@@ -136,4 +137,71 @@ test('the system prompt names the active ticket and its next guidance', async ($
   })
 
   expect(composed.sections.at(-1)?.text).toContain('ticket pet-visits ("Pet visits"), in Specification. Its next guidance is ux-mockup.')
+})
+
+test('with the cdd server not connected, the status line says so and the pane asks for it', async ($, on) => {
+  const statuses: (string | undefined)[] = []
+  on('command.register', () => ({ value: { command: 'board' } }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('ui.status', (_: unknown, e: { text: string | undefined }) => {
+    statuses.push(e.text)
+    return { value: undefined }
+  })
+  on('mcp.call', () => {
+    throw new Error('no connected MCP tool "kanban.board" on a server named "cdd"')
+  })
+  on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
+
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+
+  expect(statuses.at(-1)).toMatch(/^cdd board: /)
+  expect((await ui.find({ type: 'Text' }))?.text).toBe('No board yet: is the cdd MCP server connected?')
+  await ui.unmount()
+})
+
+test('a prompt sent reads the board again, so a board the cdd server could not give at start appears', async ($, on) => {
+  let connected = false
+  const statuses: (string | undefined)[] = []
+  on('command.register', () => ({ value: { command: 'board' } }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('ui.toast', () => ({ value: undefined }))
+  on('ui.status', (_: unknown, e: { text: string | undefined }) => {
+    statuses.push(e.text)
+    return { value: undefined }
+  })
+  on('mcp.call', () => (connected ? answer(BOARD) : { value: { content: [], isError: true } }))
+  on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
+  on('prompt.submit', (_: unknown, e: { text: string }) => ({ text: e.text }))
+
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  connected = true
+  await $.prompt.submit({ text: 'next step?' })
+
+  expect(statuses.at(-1)).toBe('pet-visits · Specification · next: ux-mockup')
+})
+
+test('the system prompt names the ticket even when the board could not be read at session start', async ($, on) => {
+  let connected = false
+  on('command.register', () => ({ value: { command: 'board' } }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('ui.toast', () => ({ value: undefined }))
+  on('ui.status', () => ({ value: undefined }))
+  on('ui.invalidate', () => ({ value: undefined }))
+  on('mcp.call', () => (connected ? answer(BOARD) : { value: { content: [], isError: true } }))
+  on('session.start', (_: unknown, e: { cwd: string }) => ({ cwd: e.cwd }))
+  on('prompt.compose', () => ({ sections: [] }))
+
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  connected = true
+  const composed = await $.prompt.compose({
+    model: 'claude',
+    promptModel: 'claude',
+    surfaces: ['desktop'],
+    tools: [],
+    outputStyle: null,
+    traits: [],
+  })
+
+  expect(composed.sections.at(-1)?.text).toContain('ticket pet-visits')
 })

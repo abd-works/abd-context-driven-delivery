@@ -206,6 +206,24 @@ with description("a session"):
             state = json.loads((self.repo / ".sessions" / "session.json").read_text(encoding="utf-8"))
             expect(state.get("session")).to(equal("alpha"))
 
+    with context("whose session.json holds a board ticket's title, scope, and parent"):
+        with before.each:
+            Session._current = None
+            self.repo = Path(tempfile.mkdtemp())
+            self.work = self.repo / "work"
+            self.work.mkdir()
+            folder = self.repo / ".sessions" / "alpha"
+            folder.mkdir(parents=True)
+            (folder / "session.json").write_text(
+                json.dumps({"name": "alpha", "title": "Pet visits", "scope": "feature", "parent": "pawplace"}),
+                encoding="utf-8",
+            )
+            Session.switch("alpha", workpath=self.work, repo_path=self.repo)
+
+        with it("should keep the ticket's title, scope, and parent after it is switched to"):
+            stored = json.loads((self.repo / ".sessions" / "alpha" / "session.json").read_text(encoding="utf-8"))
+            expect((stored.get("title"), stored.get("scope"), stored.get("parent"))).to(equal(("Pet visits", "feature", "pawplace")))
+
     with context("that is closed"):
         with before.each:
             Session._current = None

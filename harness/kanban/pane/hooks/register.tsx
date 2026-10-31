@@ -40,7 +40,14 @@ const statusOf = (ticket: TicketJson): string =>
     .join(' · ')
 
 async function callBoard($: EngineInterface, tool: string, args: Record<string, unknown>): Promise<unknown> {
-  const result = await $.mcp.call(SERVER, tool, args)
+  let result
+  try {
+    result = await $.mcp.call(SERVER, tool, args)
+  } catch (failure) {
+    // The cdd server is not connected: say so on the status line rather than fail the hook.
+    $.ui.status(`cdd board: ${String(failure)}`)
+    return null
+  }
   const text = result.content[0]?.text
   if (result.isError || text === undefined) {
     $.ui.toast(`cdd ${tool} failed${text ? `: ${text}` : ''}`)
@@ -70,6 +77,11 @@ async function refresh($: EngineInterface): Promise<void> {
   announceChanges($, before, shown)
   const active = activeTicket(shown)
   $.ui.status(active ? statusOf(active) : undefined)
+  // The system prompt is cached; when the active ticket's summary changes, it is composed again next turn.
+  const wasActive = before ? activeTicket(before) : undefined
+  if (!before || (wasActive ? statusOf(wasActive) : '') !== (active ? statusOf(active) : '')) {
+    await $.ui.invalidate('prompt.section')
+  }
 }
 
 async function act($: EngineInterface, tool: string, ticket: string): Promise<void> {
@@ -91,6 +103,12 @@ export const register: Register = on => {
     return { text: 'Board opened.' }
   })
 
+  // The cdd server can still be connecting at session start; by the first prompt it answers.
+  on('prompt.submit', async ($, e, next) => {
+    await refresh($)
+    return next(e)
+  })
+
   on('tool.call', async ($, e, next) => {
     const ran = await next(e)
     if (e.tool.startsWith(`mcp__${SERVER}__`)) await refresh($)
@@ -99,6 +117,8 @@ export const register: Register = on => {
 
   on('prompt.compose', async ($, e, next) => {
     const composed = await next(e)
+    // The first prompt is composed before the first prompt.submit; read the board here if it is still empty.
+    if (!(await read($, board))) await refresh($)
     const shown = await read($, board)
     const active = shown ? activeTicket(shown) : undefined
     if (!active) return composed

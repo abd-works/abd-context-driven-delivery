@@ -66,6 +66,7 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 + new_ticket(title: str, scope: str, parent: Ticket): Ticket
 	// a new ticket is in Discovery, in progress, until its log shows work in a later stage
 + ticket(name: str): Ticket
++ column(name: str): Column
 
 ## Column
 
@@ -133,8 +134,9 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 
 ## FidelityProgress
 
-+ FidelityProgress(fidelity: FidelityGuidance, stage: Stage, done_actions: list[GuidanceAction])
++ FidelityProgress(fidelity: FidelityGuidance, stage: Stage, done_actions: list[GuidanceAction], has_violations: bool)
 	// validate is done only when its latest line for this fidelity names no graph-rule violations; review is done only after that
++ from_log(fidelity: FidelityGuidance, stage: Stage, lines: list[str]): FidelityProgress
 ------
 + fidelity: FidelityGuidance
 + << association >> stage: Stage
@@ -143,6 +145,10 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 	// the stage's actions not yet done, in order
 	-> Stage.actions
 + is_done: bool
++ slug: str
+	// practice folder name and fidelity, such as `stories-story_map`
++ state: str
+	// done, violations, in_progress, or not_started: what the board pane colours
 ----
 
 ## BacklogItem
@@ -155,6 +161,23 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 + start(scope: str): Ticket
 	// the new ticket's session log names this item's path
 	-> Board.new_ticket
+
+## Kanban
+
++ Kanban(project: str)
+	// the board as cdd MCP tools; the project is CDD_PROJECT, else the current folder, and its `.sessions/` is the board
+------
+----
++ board(): dict
+	-> Board.to_json
++ pull(ticket: str): dict
+	-> Ticket.pull
++ start(backlog_item: str, scope: str): dict
+	-> BacklogItem.start
++ close(ticket: str): dict
+	-> Ticket.close
++ archive(ticket: str): str
+	-> Ticket.archive
 
 ## Open
 

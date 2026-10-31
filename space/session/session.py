@@ -929,7 +929,9 @@ class Session:
     def _write_session_folder_json(self) -> None:
         if self.session_path is None:
             return
+        # Keep fields others store here, such as a board ticket's title, scope, and parent.
         payload = {
+            **self._read_session_folder_json(self.session_path),
             "name": self.name,
             "workpath": str(self.workpath),
             "repo_path": str(self.repo_path),
