@@ -100,3 +100,6 @@ sandbox/
 
 # Per-machine MCP config written by the installer (absolute paths)
 .mcp.json
+
+# Claude Code install tree — regenerate with installer
+.claude/
