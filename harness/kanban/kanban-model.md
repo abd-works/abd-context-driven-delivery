@@ -5,7 +5,7 @@
 ### board
 
 - Created with the practices chosen for the work (for example Stories, DDD, and UX). The columns and stages follow from those practices.
-- Reads `.sessions/`: every folder there is a ticket; `closed/` holds finished tickets; `_backlog/` holds backlog items; `_archive/` and `_options/` are not tickets. `_options/` records the chosen practices.
+- Reads `.sessions/`: every folder there is a ticket; `closed/` holds finished tickets; `_backlog/` holds backlog items; `_options/` holds options; `_archive/` holds archived sessions. Options and archived sessions are not on the board.
 
 ### column
 
@@ -31,7 +31,11 @@
 
 ### backlog item
 
-- An idea not yet started: a markdown file in `.sessions/_backlog/`. Starting it opens a ticket for it.
+- An idea not yet started: one markdown file per idea in `.sessions/_backlog/`. Backlog items are the Backlog column. Starting one opens a ticket for it.
+
+### option
+
+- A potential idea, before it is on the backlog: one markdown file per idea in `.sessions/_options/`, the same as a backlog item. Options are kept off the board; promoting one moves its file into `_backlog/`.
 
 Build order: `Column` → `Stage` → `FidelityProgress` → `Ticket` → `BacklogItem` → `Board`
 
@@ -45,14 +49,14 @@ Build order: `Column` → `Stage` → `FidelityProgress` → `Ticket` → `Backl
 
 ## Constraint
 
-Create a board with its practices, then read columns and tickets from it; everything is re-read from `.sessions/` when asked. Move a ticket only through `Ticket.pull`, `Ticket.close`, and `Ticket.archive`, so every move is a log line or a folder move the ticket reads back. Store only what cannot be read from the work: a ticket's title, scope, and lineage in its `session.json`, and the board's practices in `_options/`. Never store progress or location.
+Create a board with its practices, then read columns and tickets from it; everything is re-read from `.sessions/` when asked. Move a ticket only through `Ticket.pull`, `Ticket.close`, and `Ticket.archive`, so every move is a log line or a folder move the ticket reads back. Store only what cannot be read from the work: a ticket's title, scope, and lineage in its `session.json`. Never store progress or location.
 
 ## Board
 
 + Board(sessions_folder: Path, practices: list[PracticeGuidance])
 	// practices are chosen when the board is created; the columns follow from them
 + load(sessions_folder: Path): Board
-	// reads the chosen practices from `_options/`; with none recorded, every practice is chosen
+	// a board with every practice chosen
 ------
 + practices: list[PracticeGuidance]
 + << composition >> columns: list[Column]
@@ -61,6 +65,8 @@ Create a board with its practices, then read columns and tickets from it; everyt
 	// every folder in sessions_folder whose name does not start with `_`, plus every folder in `closed/`
 + << aggregation >> backlog_items: list[BacklogItem]
 	// every markdown file in `_backlog/`
++ << aggregation >> options: list[BacklogItem]
+	// every markdown file in `_options/`; never shown on the board
 + active: Ticket
 	// the ticket whose session is the current session
 ----
@@ -145,7 +151,11 @@ Create a board with its practices, then read columns and tickets from it; everyt
 ------
 + title: str
 + path: Path
++ is_option: bool
+	// true while its file is in `_options/`
 ----
++ promote(): BacklogItem
+	// only an option; afterwards its file is in `_backlog/`
 + start(scope: str): Ticket
 	// the new ticket's session log names this item's path
 	-> Board.new_ticket
