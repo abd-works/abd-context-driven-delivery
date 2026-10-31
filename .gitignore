@@ -97,3 +97,6 @@ story_map_ids.txt
 # Local scratch material (contracts, experiments) stays out of the repo
 sandbox/
 
+
+# Per-machine MCP config written by the installer (absolute paths)
+.mcp.json
