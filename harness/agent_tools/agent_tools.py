@@ -950,6 +950,8 @@ class AgentTool(AgentToolDestination):
     def should_log_session_invocation(self, arguments: dict[str, Any] | None) -> bool:
         if arguments and arguments.get("ping") is True:
             return False
+        if getattr(self.callable, NO_SESSION_LOG_FLAG, False):
+            return False
         if getattr(self.callable, "_is_agent_tool", False):
             return True
         return self.install_to_mcp
@@ -2194,6 +2196,16 @@ class ToolSetCollectionMark:
         merged.__qualname__ = target.__qualname__
         setattr(merged, "_is_toolset_collection", True)
         return merged
+
+
+NO_SESSION_LOG_FLAG = "_no_session_log"
+
+
+def noSessionLog(target: Callable[..., Any]) -> Callable[..., Any]:
+    """Keep an operation's calls out of the session log. Use it on reads an agent or a mod repeats often, such as the
+    session board, so the log keeps the work that was done rather than every look at it."""
+    setattr(target, NO_SESSION_LOG_FLAG, True)
+    return target
 
 
 agent_tool = AgentToolMark

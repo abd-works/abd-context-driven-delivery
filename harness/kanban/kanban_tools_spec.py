@@ -11,6 +11,7 @@ from harness.installation.installer import Installer
 Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.kanban.kanban import Kanban  # noqa: E402
+from space.session import Session  # noqa: E402
 
 DISCOVERY_DONE = [
     line
@@ -69,3 +70,18 @@ with description("the board tools") as self:
 
             with it("should leave the ticket off the board"):
                 expect(json.dumps(self.tools.board())).not_to(contain("pet-visits"))
+
+    with context("with a session open in the project"):
+        with before.each:
+            self.project = Path(tempfile.mkdtemp(prefix="kanban-tools-log-"))
+            (self.project / ".git").mkdir()
+            Session._current = None
+            Session.new("pet-visits", self.project, self.project)
+            self.log = self.project / ".sessions" / "pet-visits" / "session.log"
+
+        with context("that reads the board through the cdd server"):
+            with before.each:
+                Kanban(str(self.project)).tools["board"].log_session_invocation({}, repo_path=self.project)
+
+            with it("should leave the board read out of the session log"):
+                expect(self.log.read_text(encoding="utf-8")).not_to(contain("kanban.board"))

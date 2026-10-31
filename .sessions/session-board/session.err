@@ -9,3 +9,19 @@
 2026-10-31T06:23:57Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
 2026-10-31T06:35:04Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
 2026-10-31T06:35:04Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-10-31T15:41:14Z repo.close_branch DefaultBranchError: cannot close the default branch 'main'
+Traceback (most recent call last):
+  File "/home/user/abd-context-driven-delivery/harness/mcp/mcp_server.py", line 1170, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/user/abd-context-driven-delivery/harness/mcp/mcp_server.py", line 894, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/user/abd-context-driven-delivery/harness/mcp/mcp_server.py", line 712, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+  File "/home/user/abd-context-driven-delivery/harness/mcp/mcp_server.py", line 684, in _invoke_mcp_callable
+    return target(**args)
+  File "/home/user/abd-context-driven-delivery/space/repo/repo.py", line 1883, in close_branch
+    raise DefaultBranchError("close", default)
+space.repo.repo.DefaultBranchError: cannot close the default branch 'main'
+2026-10-31T15:41:14Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
