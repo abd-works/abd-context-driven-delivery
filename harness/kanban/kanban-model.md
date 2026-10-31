@@ -100,6 +100,8 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 	-> FidelityGuidance.stage
 + next_stage: Stage
 	// none after Implementation
++ previous_stage: Stage
+	// none before Discovery
 + in_progress: list[Ticket]
 + done: list[Ticket]
 	// tickets in this stage whose every required fidelity has every action done; they wait here until pulled
@@ -122,9 +124,17 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 	// true only in a stage, and only when every required fidelity in that stage is done
 + next: FidelityProgress
 	// the first fidelity in its current stage that is not done; none when it is done or Complete
++ latest_handoff: str
+	// the newest `handoff-*.md` in its session folder as a path from the project; empty when it has none
++ reports: dict
+	// each fidelity's newest report in `validation-reports/`, named `{practice}-{fidelity}-{date}.md`, as a path from the project; a fidelity with no report is left out
 ----
 + pull(): Stage
 	// only when is_done and its stage has a next stage; writes `pull <next stage>` to its session log and returns that stage; fails with StageNotDone otherwise. A done ticket in Implementation is closed, not pulled.
++ move_next(): Ticket
+	// a person's move to the next column, whatever its progress: writes `pull <next stage>` to its session log, and out of Implementation it closes
++ move_previous(): Ticket
+	// a person's move to the previous column: writes `pull <previous stage>`; out of Complete its folder leaves `closed/` and it is in Implementation; Discovery is as far back as it goes
 + close(): Ticket
 	// after closing, its folder is in `closed/` and its column is Complete
 + archive(): Ticket
@@ -147,6 +157,8 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 + is_done: bool
 + slug: str
 	// practice folder name and fidelity, such as `stories-story_map`
++ report_files: str
+	// the name pattern of this fidelity's dated validation reports
 + state: str
 	// done, violations, in_progress, or not_started: what the board pane colours
 ----
@@ -157,6 +169,8 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 ------
 + title: str
 + path: Path
++ last_activity: str
+	// when its file last changed
 ----
 + start(scope: str): Ticket
 	// the new ticket's session log names this item's path
@@ -172,8 +186,14 @@ Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 	-> Board.to_json
 + pull(ticket: str): dict
 	-> Ticket.pull
++ move_next(ticket: str): dict
+	-> Ticket.move_next
++ move_previous(ticket: str): dict
+	-> Ticket.move_previous
 + start(backlog_item: str, scope: str): dict
 	-> BacklogItem.start
++ new(title: str, scope: str, parent: str): dict
+	-> Board.new_ticket
 + close(ticket: str): dict
 	-> Ticket.close
 + archive(ticket: str): str

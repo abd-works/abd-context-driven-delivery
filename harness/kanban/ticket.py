@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 ARCHIVE_FOLDER = "_archive"
 LOG_FILE = "session.log"
 FIELDS_FILE = "session.json"
+HANDOFF_FILES = "handoff-*.md"
+REPORT_FOLDER = "validation-reports"
 GRAPH_RULE_VIOLATION = "graph-rule"
 PULL = "pull"
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -98,6 +100,18 @@ class Ticket:
         lines = self._log_lines()
         return lines[-1].split(" ", 1)[0] if lines else ""
 
+    @property
+    def latest_handoff(self) -> str:
+        """The newest handoff file, as a path from the project; handoff names sort by their timestamp."""
+        handoffs = sorted(self._folder.glob(HANDOFF_FILES))
+        return self._from_project(handoffs[-1]) if handoffs else ""
+
+    @property
+    def reports(self) -> dict[str, str]:
+        """The latest validation report of each fidelity that has one, as paths from the project; report names sort by their date."""
+        found = {progress.slug: sorted((self._folder / REPORT_FOLDER).glob(progress.report_files)) for progress in self.progress}
+        return {slug: self._from_project(files[-1]) for slug, files in found.items() if files}
+
     def pull(self) -> Stage:
         """Move a done ticket into the next stage by writing that stage to its session log."""
         column = self.column
@@ -106,6 +120,28 @@ class Ticket:
             raise StageNotDone(self, column)
         self._append_log(f"{PULL} {following.name}")
         return following
+
+    def move_next(self) -> Ticket:
+        """A person's move to the next column, whatever its progress; out of Implementation it closes."""
+        column = self.column
+        if not isinstance(column, Stage):
+            return self
+        following = column.next_stage
+        if following is None:
+            return self.close()
+        self._append_log(f"{PULL} {following.name}")
+        return self
+
+    def move_previous(self) -> Ticket:
+        """A person's move to the previous column; out of Complete it reopens, and Discovery is as far back as it goes."""
+        column = self.column
+        if not isinstance(column, Stage):
+            return self._reopen()
+        earlier = column.previous_stage
+        if earlier is None:
+            return self
+        self._append_log(f"{PULL} {earlier.name}")
+        return self
 
     def close(self) -> Ticket:
         return self._move_to(self._board.sessions_folder / CLOSED_FOLDER)
@@ -124,6 +160,8 @@ class Ticket:
             "is_done": self.is_done,
             "next": upcoming.slug if upcoming else None,
             "last_activity": self.last_activity,
+            "handoff": self.latest_handoff,
+            "reports": self.reports,
             "progress": {progress.slug: progress.state for progress in self.progress},
         }
 
@@ -150,6 +188,14 @@ class Ticket:
         stamp = datetime.now(timezone.utc).strftime(TIMESTAMP_FORMAT)
         with (self._folder / LOG_FILE).open("a", encoding="utf-8") as log:
             log.write(f"{stamp} {entry}\n")
+
+    def _from_project(self, path: Path) -> str:
+        return path.relative_to(self._board.sessions_folder.parent).as_posix()
+
+    def _reopen(self) -> Ticket:
+        reopened = self._move_to(self._board.sessions_folder)
+        reopened._append_log(f"{PULL} {self._stages[-1].name}")
+        return reopened
 
     def _move_to(self, parent: Path) -> Ticket:
         parent.mkdir(parents=True, exist_ok=True)
@@ -210,6 +256,11 @@ class FidelityProgress:
     @property
     def slug(self) -> str:
         return f"{practice_key(self._fidelity.practice_guidance)}-{self._fidelity.name}"
+
+    @property
+    def report_files(self) -> str:
+        """The name pattern of this fidelity's dated validation reports."""
+        return f"{self.slug.replace('_', '-')}-*.md"
 
     @property
     def state(self) -> str:

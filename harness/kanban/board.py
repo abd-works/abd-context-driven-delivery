@@ -97,7 +97,11 @@ class Board:
     def to_json(self) -> dict[str, Any]:
         """Every column with its tickets or items: what the board pane and other IDEs read."""
         active = self.active
-        return {"active": active.name if active else None, "columns": [column.to_json() for column in self._columns]}
+        return {
+            "project": self._sessions_folder.parent.name,
+            "active": active.name if active else None,
+            "columns": [column.to_json() for column in self._columns],
+        }
 
     def _build_columns(self) -> list[Column]:
         from generate.generate import Generate
@@ -179,6 +183,12 @@ class Stage(Column):
         columns = self._board.columns
         following = columns[columns.index(self) + 1]
         return following if isinstance(following, Stage) else None
+
+    @property
+    def previous_stage(self) -> Stage | None:
+        columns = self._board.columns
+        earlier = columns[columns.index(self) - 1]
+        return earlier if isinstance(earlier, Stage) else None
 
     @property
     def in_progress(self) -> list[Ticket]:

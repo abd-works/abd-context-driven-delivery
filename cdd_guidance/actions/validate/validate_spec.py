@@ -193,3 +193,18 @@ with description("a validate action on practice guidance") as self:
         with it("should write the edited graph beside the session"):
             self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
             expect((self.session / "edited-graph.json").is_file()).to(equal(True))
+
+        with it("should save the report in the session's reports folder, named after the fidelity and date"):
+            self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
+            saved = next((self.session / "validation-reports").glob("ddd-tactics-*.md"))
+            expect(saved.read_text(encoding="utf-8")).to(contain("private-method-naming"))
+
+        with it("should save a report for each listed guidance"):
+            self.action.validate(guidance=["ddd-tactics", "stories-scenarios"], paths=[_ENTITY_ROOT_FILE])
+            saved = list((self.session / "validation-reports").glob("stories-scenarios-*.md"))
+            expect(len(saved)).to(equal(1))
+
+        with it("should say where the report is saved"):
+            report = self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
+            saved = next((self.session / "validation-reports").glob("ddd-tactics-*.md"))
+            expect(report).to(contain(str(saved)))

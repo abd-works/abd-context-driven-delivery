@@ -22,6 +22,8 @@ class Generate(GuidanceAction):
         instructions(rules)
         tools(self._render().render)
         self.run(guidance, self._generate_item, action="generate")
+        places = self._where_outputs_go()
+        instructions(places)
         "After the artifact is written, call validate with this same guidance and paths set to the files you wrote, so the graph rules run on those files as they are now."
         tools(self._validate().validate)
         return ""
@@ -51,6 +53,18 @@ class Generate(GuidanceAction):
             item.generate_output()
         self.generate_fixes_from_validate()
         self.add_generate_header_to_generated()
+
+    def _where_outputs_go(self) -> str:
+        from space.session import Session
+
+        session = Session.current()
+        if session is None:
+            return ""
+        outputs = [session.fidelity_outputs(item) for item in self.listed() if not isinstance(item, str)]
+        places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
+        if not places:
+            return ""
+        return f"Save each format you write at its path, filling any {{name}} from the work: {'; '.join(places)}"
 
     @agent_instructions
     def add_generate_header_to_generated(self) -> str:

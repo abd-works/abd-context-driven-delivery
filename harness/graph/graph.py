@@ -627,6 +627,18 @@ class Node:
         return key in self.data
 
     @property
+    def fidelity(self) -> str:
+        """The fidelity that creates this node, from its practice's schema; empty when the schema gives none."""
+        return next(iter(self.fidelities), "")
+
+    @property
+    def fidelities(self) -> list[str]:
+        """The fidelity that creates this node and every higher fidelity of its practice."""
+        from harness.graph.schema_rules import fidelities_for_type
+
+        return fidelities_for_type(self.practice.name, self.type)
+
+    @property
     def rules(self):
         """Schema rules for this node, with violations on each entry."""
         from harness.graph.node_rules import attach_node_rules

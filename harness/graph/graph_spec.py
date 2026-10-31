@@ -1002,6 +1002,38 @@ def _node(practice: PracticeGraph, type: str, name: str, line: int) -> Node:
     return Node(practice, type, f"{type}:{line}:{name}", name, Source("story.ts", line, line))
 
 
+with description("a node's fidelity"):
+    with context("with a story node"):
+        with it("should be the fidelity the stories schema gives a story"):
+            expect(_node(PracticeGraph("stories"), "Story", "Create account", 1).fidelity).to(equal("story_map"))
+
+    with context("with a scenario node"):
+        with it("should be the fidelity the stories schema gives a scenario"):
+            expect(_node(PracticeGraph("stories"), "Scenario", "Create account", 1).fidelity).to(equal("scenarios"))
+
+    with context("with a class node"):
+        with it("should match its graph type to the schema's class type"):
+            expect(_node(PracticeGraph("clean_engineering"), "OoadClass", "Order", 1).fidelity).to(equal("model"))
+
+    with context("with a node created at a low fidelity"):
+        with before.each:
+            self.entity = _node(PracticeGraph("ddd"), "Entity", "Order", 1)
+
+        with it("should be the fidelity that first creates it"):
+            expect(self.entity.fidelity).to(equal("model"))
+
+        with it("should also belong to every higher fidelity of its practice"):
+            expect(self.entity.fidelities).to(equal(["model", "tactics"]))
+
+        with it("should reach implementation from the first fidelity of its practice"):
+            story = _node(PracticeGraph("stories"), "Story", "Create account", 1)
+            expect(story.fidelities).to(equal(["story_map", "scenarios", "acceptance_tests"]))
+
+    with context("with a type the schema gives no fidelity"):
+        with it("should be empty"):
+            expect(_node(PracticeGraph("stories"), "Unmapped", "Create account", 1).fidelity).to(equal(""))
+
+
 with description("a scenario"):
     with context("with steps recorded in query order"):
         with before.each:

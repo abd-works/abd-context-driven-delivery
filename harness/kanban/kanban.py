@@ -43,11 +43,33 @@ class Kanban:
     @mcp
     @agent_tool
     @noSessionLog
+    def move_next(self, ticket: str) -> dict[str, Any]:
+        """Move ticket to the next column whatever its progress; out of Implementation it closes."""
+        return self._board().ticket(ticket).move_next().to_json()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def move_previous(self, ticket: str) -> dict[str, Any]:
+        """Move ticket to the previous column; out of Complete it reopens in Implementation, and Discovery is as far back as it goes."""
+        return self._board().ticket(ticket).move_previous().to_json()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def start(self, backlog_item: str, scope: str = "feature") -> dict[str, Any]:
         """Start the backlog item titled backlog_item: open a ticket for it in Discovery. scope is feature, story, or slice."""
         board = self._board()
         item = next(entry for entry in board.backlog_items if entry.title == backlog_item)
         return item.start(scope).to_json()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def new(self, title: str, scope: str = "feature", parent: str = "") -> dict[str, Any]:
+        """Open a new ticket titled title in Discovery. scope is feature, story, or slice; parent names the ticket it was split from."""
+        board = self._board()
+        return board.new_ticket(title, scope, board.ticket(parent) if parent else None).to_json()
 
     @mcp
     @agent_tool

@@ -3,7 +3,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, match
 from mamba import before, context, description, it
 
 from harness.installation.installer import Installer
@@ -42,12 +42,106 @@ with description("the board tools") as self:
             columns = [column["name"] for column in self.tools.board()["columns"]]
             expect(columns).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
 
+        with it("should name the project the board belongs to"):
+            expect(self.tools.board()["project"]).to(equal(self.project.name))
+
+        with it("should say when a backlog item last changed"):
+            item = self.tools.board()["columns"][0]["items"][0]
+            expect(item["last_activity"]).to(match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"))
+
+        with it("should show no handoff for a ticket that has none"):
+            expect(self.tools.board()["columns"][1]["done"][0]["handoff"]).to(equal(""))
+
+        with context("with handoffs written for the ticket"):
+            with before.each:
+                session = self.project / ".sessions" / "pet-visits"
+                (session / "handoff-20261030T1730.md").write_text("earlier\n", encoding="utf-8")
+                (session / "handoff-20261031T0412.md").write_text("latest\n", encoding="utf-8")
+
+            with it("should show the latest handoff"):
+                handoff = self.tools.board()["columns"][1]["done"][0]["handoff"]
+                expect(handoff).to(equal(".sessions/pet-visits/handoff-20261031T0412.md"))
+
+        with it("should show no report for a fidelity that has none"):
+            expect(self.tools.board()["columns"][1]["done"][0]["reports"]).to(equal({}))
+
+        with context("with validation reports saved for a fidelity"):
+            with before.each:
+                reports = self.project / ".sessions" / "pet-visits" / "validation-reports"
+                reports.mkdir()
+                (reports / "clean-engineering-modules-20261030T173000.md").write_text("earlier\n", encoding="utf-8")
+                (reports / "clean-engineering-modules-20261031T041200.md").write_text("latest\n", encoding="utf-8")
+
+            with it("should show that fidelity's latest report"):
+                reports = self.tools.board()["columns"][1]["done"][0]["reports"]
+                latest = ".sessions/pet-visits/validation-reports/clean-engineering-modules-20261031T041200.md"
+                expect(reports).to(equal({"clean_engineering-modules": latest}))
+
+        with context("that opens a new ticket"):
+            with before.each:
+                self.opened = self.tools.new("Loyalty points", "feature")
+
+            with it("should return the new ticket in Discovery"):
+                expect((self.opened["name"], self.opened["column"])).to(equal(("loyalty-points", "Discovery")))
+
+        with context("that opens a ticket split from another"):
+            with before.each:
+                self.opened = self.tools.new("Book a visit", "story", "pet-visits")
+
+            with it("should name the ticket it was split from"):
+                expect(self.opened["parent"]).to(equal("pet-visits"))
+
         with context("that pulls a done ticket"):
             with before.each:
                 self.pulled = self.tools.pull("pet-visits")
 
             with it("should return the ticket in its next stage"):
                 expect(self.pulled["column"]).to(equal("Specification"))
+
+        with context("that moves a ticket to the next column"):
+            with before.each:
+                self.moved = self.tools.move_next("pet-visits")
+
+            with it("should show the ticket in the next stage"):
+                expect(self.moved["column"]).to(equal("Specification"))
+
+            with context("and on to the column after, with that stage's work not done"):
+                with before.each:
+                    self.moved = self.tools.move_next("pet-visits")
+
+                with it("should show the ticket in that stage all the same"):
+                    expect(self.moved["column"]).to(equal("Implementation"))
+
+                with context("and past Implementation"):
+                    with before.each:
+                        self.moved = self.tools.move_next("pet-visits")
+
+                    with it("should close the ticket"):
+                        expect(self.moved["column"]).to(equal("Complete"))
+
+                    with it("should leave a ticket in Complete where it is on another move forward"):
+                        expect(self.tools.move_next("pet-visits")["column"]).to(equal("Complete"))
+
+                    with context("and back again"):
+                        with before.each:
+                            self.moved = self.tools.move_previous("pet-visits")
+
+                        with it("should reopen the ticket in Implementation"):
+                            expect(self.moved["column"]).to(equal("Implementation"))
+
+            with context("and back to the previous column"):
+                with before.each:
+                    self.moved = self.tools.move_previous("pet-visits")
+
+                with it("should show the ticket in Discovery"):
+                    expect(self.moved["column"]).to(equal("Discovery"))
+
+        with context("that moves a ticket in Discovery back"):
+            with before.each:
+                self.moved = self.tools.move_previous("pet-visits")
+
+            with it("should leave the ticket in Discovery"):
+                expect(self.moved["column"]).to(equal("Discovery"))
 
         with context("that starts a backlog item"):
             with before.each:

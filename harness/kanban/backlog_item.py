@@ -32,6 +32,12 @@ class BacklogItem:
                 return line[2:].strip()
         return self._path.stem.replace("-", " ").replace("_", " ").capitalize()
 
+    @property
+    def last_activity(self) -> str:
+        """When the item's file last changed; a backlog item has no session log to read."""
+        changed = datetime.fromtimestamp(self._path.stat().st_mtime, timezone.utc)
+        return changed.strftime(TIMESTAMP_FORMAT)
+
     def start(self, scope: str) -> Ticket:
         """Open a ticket for this item; the ticket's session log names the item's file."""
         ticket = self._board.new_ticket(self.title, scope, None)
@@ -42,4 +48,4 @@ class BacklogItem:
         return ticket
 
     def to_json(self) -> dict[str, Any]:
-        return {"title": self.title, "path": str(self._path)}
+        return {"title": self.title, "path": str(self._path), "last_activity": self.last_activity}

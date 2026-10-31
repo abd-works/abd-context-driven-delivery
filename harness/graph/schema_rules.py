@@ -94,6 +94,18 @@ def schema_key_for_type(node_type: str) -> str:
 
 
 @lru_cache(maxsize=None)
+def _schema_fidelities(practice: str) -> dict[str, list[str]]:
+    from harness.guidance.schema_map import load_node_fidelities
+
+    return load_node_fidelities(_ROOT / "cdd_guidance" / "practices" / practice)
+
+
+def fidelities_for_type(practice: str, node_type: str) -> list[str]:
+    """The fidelity that creates this node type and every higher one; empty when the schema gives none."""
+    return list(_schema_fidelities(practice).get(schema_key_for_type(node_type), []))
+
+
+@lru_cache(maxsize=None)
 def _direct_rules_for_practice(practice: str, active_patterns: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
     """Rule slugs declared explicitly under ``rules:`` in schema (no inheritance)."""
     path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"

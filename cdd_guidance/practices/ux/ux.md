@@ -67,6 +67,10 @@ Whenever you name screens, attach stories, or import domain terms on the UX surf
 ```yaml
 default_format: drawio
 stage: discovery
+outputs:
+  root: ux
+  drawio: "{epic}/.context/information-architecture.drawio"
+  markdown: "{epic}/.context/ux-context.md"
 ```
 
 #### Overview
@@ -124,6 +128,9 @@ If this change will not stay here, follow `practices/ux.mdc`.
 ```yaml
 default_format: html
 stage: specification
+outputs:
+  root: ux
+  html: "{epic}/{user_goal}.html"
 ```
 
 #### Overview
@@ -180,6 +187,10 @@ If this change will not stay here, follow `practices/ux/ux-ia.mdc`.
 ```yaml
 default_format: html
 stage: implementation
+outputs:
+  root: src
+  typescript: "**/*View.tsx"
+  javascript: "**/*View.jsx"
 ```
 
 #### Overview

@@ -35,6 +35,10 @@ Whenever you define or change user interactions and resulting system behavior, a
 ```yaml
 default_format: markdown
 stage: discovery
+outputs:
+  root: tests
+  markdown: story-map.md
+  drawio: story-map.drawio
 ```
 
 #### Overview
@@ -89,6 +93,12 @@ If this change will not stay here, follow `practices/stories.mdc`.
 ```yaml
 default_format: python
 stage: specification
+outputs:
+  root: tests
+  python: "{story_snake}_story.test.py"
+  typescript: "{story_snake}_story.test.ts"
+  markdown: "{story_snake}_story.test.md"
+  realization: "{scope}-realization.md"
 ```
 
 #### Overview
@@ -159,6 +169,16 @@ Place one `{scope-kebab-case}-realization.md` per scope when the user wants a co
 default_format: python
 stage: implementation
 clean_engineering: code
+outputs:
+  root: tests
+  python:
+    - "{sub_epic_slug}.story.shared.py"
+    - "{sub_epic_slug}.story.domain.spec.py"
+    - "{sub_epic_slug}.story.server.spec.py"
+  typescript:
+    - "{sub_epic_slug}.story.shared.ts"
+    - "{sub_epic_slug}.story.domain.spec.ts"
+    - "{sub_epic_slug}.story.server.spec.ts"
 ```
 
 #### Overview

@@ -574,6 +574,8 @@ class FidelityGuidance(Guidance):
         self.default_format = default_format
         self.parent = practice_guidance
         self.fidelity = name
+        # The root folder and each format's file, pattern, or folder; the yaml binder fills it, as it does stage.
+        self.outputs: dict[str, str | list[str]] = {}
         if clean_engineering is not None:
             self.clean_engineering = clean_engineering
 
@@ -600,6 +602,21 @@ class FidelityGuidance(Guidance):
         self._default_format = value or ""
         if self._default_format:
             self.format = self._default_format
+
+    @property
+    def output_root(self) -> str:
+        """The folder this fidelity's outputs sit under, from its yaml."""
+        return str(self.outputs.get("root", ""))
+
+    @property
+    def output_files(self) -> dict[str, str | list[str]]:
+        """Each format's file, pattern, or folder, from its yaml."""
+        return {label: value for label, value in self.outputs.items() if label != "root"}
+
+    @property
+    def default_output(self) -> str | list[str]:
+        """The output of this fidelity's default format."""
+        return self.output_files.get(self.default_format, "")
 
     @property
     def clean_engineering(self) -> FidelityGuidance | None:

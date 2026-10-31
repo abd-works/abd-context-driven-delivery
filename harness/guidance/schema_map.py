@@ -9,14 +9,14 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-_NODE_HEADER = re.compile(r"^([A-Za-z]\w*):\s*$")
-_FIDELITY_PROP = re.compile(r"^  fidelity:\s*([A-Za-z0-9_-]+)\s*$")
-_FIDELITY_LIST = re.compile(r"^\s+- fidelity:\s*([A-Za-z0-9_-]+)\s*$")
+# A type is a key alone on its line, at the top level or nested as ``- entity:`` under the type that owns it.
+_NODE_HEADER = re.compile(r"^\s*(?:- )?([A-Za-z]\w*):\s*$")
+_FIDELITY_LINE = re.compile(r"^\s+(?:- )?fidelity:\s*([A-Za-z0-9_-]+)\s*$")
 _FIDELITY_SECTION = re.compile(r"^### ([A-Za-z0-9_-]+)\s*$")
 
 
 def node_fidelities(schema_text: str) -> dict[str, str]:
-    """Return each schema node key mapped to its ``fidelity`` value."""
+    """Return each schema node key mapped to the fidelity that creates it."""
     mapping: dict[str, str] = {}
     current: str | None = None
     for line in schema_text.splitlines():
@@ -26,7 +26,7 @@ def node_fidelities(schema_text: str) -> dict[str, str]:
             continue
         if current is None:
             continue
-        prop = _FIDELITY_PROP.match(line) or _FIDELITY_LIST.match(line)
+        prop = _FIDELITY_LINE.match(line)
         if prop:
             mapping[current] = prop.group(1)
             current = None
@@ -35,6 +35,11 @@ def node_fidelities(schema_text: str) -> dict[str, str]:
 
 def fidelity_sections(practice_markdown: str) -> frozenset[str]:
     """Fidelity entry names declared under ``## Fidelities`` in practice markdown."""
+    return frozenset(fidelity_order(practice_markdown))
+
+
+def fidelity_order(practice_markdown: str) -> list[str]:
+    """Fidelity names in the order ``## Fidelities`` declares them, lowest fidelity first."""
     names: list[str] = []
     in_fidelities = False
     for line in practice_markdown.splitlines():
@@ -48,18 +53,25 @@ def fidelity_sections(practice_markdown: str) -> frozenset[str]:
             match = _FIDELITY_SECTION.match(line)
             if match:
                 names.append(match.group(1))
-    return frozenset(names)
+    return names
 
 
 def schema_fidelity_path(practice_module_dir: Path) -> Path:
     return practice_module_dir / "model" / "schema.yaml"
 
 
-def load_node_fidelities(practice_module_dir: Path) -> dict[str, str]:
+def load_node_fidelities(practice_module_dir: Path) -> dict[str, list[str]]:
+    """Each schema node key mapped to the fidelity that creates it and every higher fidelity of the practice.
+
+    A node created at a low fidelity also belongs to the higher ones: they build it out rather than replace it.
+    """
     path = schema_fidelity_path(practice_module_dir)
-    if not path.is_file():
+    markdown = practice_module_dir / f"{practice_module_dir.name}.md"
+    if not path.is_file() or not markdown.is_file():
         return {}
-    return node_fidelities(path.read_text(encoding="utf-8"))
+    order = fidelity_order(markdown.read_text(encoding="utf-8"))
+    created = node_fidelities(path.read_text(encoding="utf-8"))
+    return {node: order[order.index(fidelity):] for node, fidelity in created.items() if fidelity in order}
 
 
 def fidelity_for_node(schema_text: str, node_key: str) -> str | None:

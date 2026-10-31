@@ -71,6 +71,9 @@ Use these rules when defining domain logic in code, a model, or language.
 default_format: markdown
 stage: discovery
 clean_engineering: modules
+outputs:
+  root: src
+  markdown: bounded-context-map.md
 ```
 
 #### Overview
@@ -161,6 +164,12 @@ Whenever you create, alter, or delete bounded contexts, aggregates, or the langu
 default_format: markdown
 stage: specification
 clean_engineering: model
+outputs:
+  root: src
+  python: "{bounded_context}/{aggregate}/{aggregate}.py"
+  typescript: "{bounded_context}/{aggregate}/{aggregate}.ts"
+  markdown: domain-model.md
+  drawio: domain-model.drawio
 ```
 
 #### Overview
@@ -239,6 +248,10 @@ If this change will not stay here, follow `practices/ddd/ddd-bounded-context.mdc
 default_format: python
 stage: implementation
 clean_engineering: code
+outputs:
+  root: src
+  python: "{bounded_context}/{aggregate}/"
+  typescript: "{bounded_context}/{aggregate}/"
 ```
 
 #### Overview
