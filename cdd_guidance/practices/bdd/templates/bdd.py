@@ -1,6 +1,6 @@
 """
 # Conceptual BDD Reference (Python/Mamba style)
-# Refer to cdd_guidance/rules/language-tools.md for tool recommendations.
+# Refer to cdd_guidance/references/language-tools.md for tool recommendations.
 # =============================================================================
 # BEHAVIOR (SIGNATURE) — `signature-markers`
 # Every `it` body is exactly `pass  # BDD: SIGNATURE` — nothing else. A bare comment is not a Python body.

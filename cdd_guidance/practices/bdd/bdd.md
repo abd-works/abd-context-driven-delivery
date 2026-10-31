@@ -2,7 +2,7 @@
 
 Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
 
-**Tooling & Idioms:** Refer to [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
+**Tooling & Idioms:** Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
 
 ## Guidance
 
@@ -157,7 +157,7 @@ If this change will not stay here, follow `practices/bdd.mdc`.
 - **`context-setup-expresses-state`** — Setup under a label must establish that label's state, not unrelated host boot.
 - **`shared-describe-subject`** — Same rule as shared rules (above); at behavior fidelity, scan the spec file for repeated top-level `describe` prefixes before adding another subject line.
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
-- **`framework-syntax`** — Refer to [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
+- **`framework-syntax`** — Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
 
 **Pass:**
 ```typescript
@@ -204,7 +204,7 @@ globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java,**/*-sketch.md,**/*-r
 
 Whenever you add or change call graphs on BDD observations, or change production code those graphs describe. Follow these rules.
 
-If this change will not stay here, follow `practices/bdd/behavior.mdc`.
+If this change will not stay here, follow `practices/bdd/bdd-behavior.mdc`.
 
 - **`strip-helpers-to-domain-calls`** — Same rule as story realizations: show the domain call the helper delegates to.
 - **`full-call-graph-per-observation`** — Follow every named domain or external-system collaborator from the entry operation through returns; do not stop at the first hop.
@@ -235,7 +235,7 @@ Implement BDD tests with production code.
 
 **Procedure:** Follow the **Test shape ladder** in `@clean_engineering` `## code` § Procedure — real conditions first, then stub TDD, then e2e swap on request.
 
-**Tooling & Idioms:** Refer to [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
+**Tooling & Idioms:** Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
 
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
@@ -274,7 +274,7 @@ globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java,**/*-sketch.md"
 
 Whenever you create, alter, or delete production code supported by BDD specs, or the specs themselves. Follow these rules.
 
-If this change will not stay here, follow `practices/bdd/behavior.mdc`.
+If this change will not stay here, follow `practices/bdd/bdd-behavior.mdc`.
 
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count. Changing the tree during implementation drops behaviors that were agreed on, or adds ones nobody specified.
 - **`red-then-green`** — Fix code by writing the test first, then watching it fail, then making production code changes.

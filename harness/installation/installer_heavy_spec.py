@@ -792,6 +792,26 @@ with description("a practice guidance class") as self:
             with it("should describe the skill with the opening paragraph alone"):
                 expect(self.description).to(equal("sample preamble"))
 
+        with context("with guidance that links a shared reference file and names a rule file"):
+            with before.each:
+                from harness.installation.files import FileInstallation
+
+                self.text = "See [tools](../../references/language-tools.md); follow `practices/ddd/ddd-model.mdc`."
+                self.dest = self.tree / "rules" / "practices" / "ddd" / "ddd-model.md"
+                self.writer = FileInstallation("Claude", self.tree, "rules", repo=_REPO_ROOT)
+
+            with it("should copy the shared file into the IDE references folder"):
+                self.writer._with_installed_references(self.text, self.dest)
+                expect((self.tree / "references" / "language-tools.md").is_file()).to(be_true)
+
+            with it("should link the shared file from where the guidance is installed"):
+                text = self.writer._with_installed_references(self.text, self.dest)
+                expect(text).to(contain("](../../../references/language-tools.md)"))
+
+            with it("should name the rule file with the IDE's extension"):
+                text = self.writer._with_installed_references(self.text, self.dest)
+                expect(text).to(contain("`practices/ddd/ddd-model.md`"))
+
         with context("with an MCP tool whose docstring only names the overview section"):
             with it("should leave that section name out of the skill body"):
                 from harness.installation.files import FileInstallation

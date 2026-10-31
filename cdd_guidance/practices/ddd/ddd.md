@@ -209,7 +209,7 @@ globs: "**/*bounded-context*,**/*-model.md,**/*-model.drawio,**/*-sketch.md"
 
 Whenever you add, change, or remove an aggregate's root, members, repository, domain operations, or its dependencies on other aggregates, or change code those aggregates support. Follow these rules.
 
-If this change will not stay here, follow `practices/ddd/bounded_context.mdc`.
+If this change will not stay here, follow `practices/ddd/ddd-bounded-context.mdc`.
 
 - **`aggregate-view-only`** — The model shows aggregate roots, member entities, value objects, repositories, domain operations, and dependencies between aggregates. No constructors, private helpers, ports, publishers, DTOs, framework types, factories, specifications, domain services, or event classes — unless the code being described already has them. Anything else in the view buries the domain under detail that is not decided yet.
 - **`every-class-carries-ddd-stereotype`** — Every class carries its stereotype: `<<Aggregate Root>> <<Entity>>`, `<<Entity>>`, `<<Value Object>>`, or `<<Repository>>`. A bare name leaves the reader guessing whether it has identity or a lifecycle.
@@ -286,7 +286,7 @@ globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java,**/*-sketch.md"
 
 Whenever you add factories, specifications, domain services, or domain events; persist, publish, or test repositories, events, or factories; or change production code they support. Follow these rules.
 
-If this change will not stay here, follow `practices/ddd/model.mdc`.
+If this change will not stay here, follow `practices/ddd/ddd-model.mdc`.
 
 - **`every-class-carries-ddd-stereotype`** — Every domain class carries its stereotype (`<<Factory>>`, `<<Specification>>`, `<<Domain Service>>`, `<<Domain Event>>`, plus the model's). In code a decorator or naming convention carries it. A bare class leaves the reader guessing which pattern applies.
 - **`factory-is-complex-creation`** — Factory only when valid creation needs subtype choice, several rules, or outside collaborators. Ordinary creation stays on the repository's `create` so callers have one obvious way to create it.

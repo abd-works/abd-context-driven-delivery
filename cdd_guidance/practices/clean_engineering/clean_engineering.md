@@ -202,7 +202,7 @@ globs: "**/*-model.md,**/*-model.py,**/*example_factory*,**/*-sketch.md"
 
 Whenever you create, alter, or delete types and how they relate, or change production code that those types support. Follow these rules.
 
-If this change will not stay here, follow `practices/clean_engineering/modules.mdc`.
+If this change will not stay here, follow `practices/clean-engineering/clean-engineering-modules.mdc`.
 
 **Shape classes**
 - `model-modules-follow-the-partition` — Use the module names and boundaries established by the partition artifact as the model's top-level modules. Change the partition before moving a model boundary, because otherwise the two artifacts describe different designs.
@@ -259,7 +259,7 @@ Ask what the caller can do now that they could not do before, what they see when
 
 #### Guidance
 
-Follow the idioms in [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md).
+Follow the idioms in [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md).
 
 Start by **Implementing the public surface.** Where the model asked for an interface, the class implements it in the same file and the interface stays public-only. Where it did not, continue to implement the class. Implement public properties and operations first; write out private members next — the seam the model named is the contract, and privates follow from what those operations need, not the other way around. Relationships keep the kind and cardinality already named. 
 
@@ -286,7 +286,7 @@ globs: "**/*.py,**/*.ts,**/*.tsx,**/*.js,**/*.java,**/*-sketch.md"
 
 Whenever you create, alter, or delete production behavior — bodies, constructors, call sites — including code supported by a model or module map. Follow these rules.
 
-If this change will not stay here, follow `practices/clean_engineering/model.mdc`.
+If this change will not stay here, follow `practices/clean-engineering/clean-engineering-model.mdc`.
 
 **Implement the model**
 - `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data — once they read the storage directly it becomes a public contract you cannot change. Private fields on the same class hide implementation; you do not need a second class for that. Read-only to callers can mean return a copy or immutable view from a property — it does not require a frozen class or a second type to hold build steps.

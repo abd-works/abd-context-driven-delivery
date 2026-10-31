@@ -119,7 +119,7 @@ globs: "**/*_story.test.*,**/*story_test*,**/*story-test*,**/*-sketch.md"
 
 Whenever you write or change Given/When/Then scenarios, or change acceptance tests or production code that those scenarios support. Follow these rules.
 
-If this change will not stay here, follow `practices/stories/story_map.mdc`.
+If this change will not stay here, follow `practices/stories/stories-story-map.mdc`.
 
 - **`gwt-steps-trace-to-domain-operations`** - Map every Given, When, and Then to a named domain operation or property. Express continuation as an operation on the aggregate that receives control, because routes, waits, and framework calls do not describe domain behaviour.
 - **`behavioral-and-system-observable-outcomes`** - Write each Then as a result a person or another system can observe, such as changed information, a returned response, or a changed interface state. Keep internal flags and function-local state out of Then, because they do not prove delivered behaviour.
@@ -180,7 +180,7 @@ When scenario realizations exist (inline or `{scope}-realization.md`), treat the
 
 **Develop the behaviour, not only the test.** Acceptance-test work owns both the executable specification and the production code that satisfies it. Represent each named scenario example as one code fixture, and do not invent fixture values the scenario does not name. Take one Scenario at a time: write the failing acceptance test, invoke the Clean Engineering companion at `code` fidelity, implement the smallest production change that can pass, rerun the test, refactor when it is green, and then continue to the next behaviour. After two failed fix attempts, diagnose the failure before changing more code.
 
-Refer to [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md) for language-specific test tools and idioms.
+Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for language-specific test tools and idioms.
 
 #### Rules
 
@@ -191,7 +191,7 @@ globs: "**/*.story.shared.*,**/*.story.domain.spec.*,**/*.story.server.spec.*,**
 
 Whenever you create, alter, or delete Spec-by-Example / acceptance tests, or production code they support. Follow these rules.
 
-If this change will not stay here, follow `practices/stories/scenarios.mdc`.
+If this change will not stay here, follow `practices/stories/stories-scenarios.mdc`.
 
 
 - **`examples-declare-seed-vs-interaction`** - Identify each fixture as **Seed** state owned by a system or **Interaction** data entered, displayed, or validated through the product. Use both when the Story needs both, because persisted records and user-facing data often represent the same concept differently.

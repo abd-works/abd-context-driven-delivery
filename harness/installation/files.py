@@ -1,6 +1,7 @@
 """Skill, command, rule, and agent marks plus markdown install."""
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -338,9 +339,32 @@ class FileInstallation(Installation):
         elif kind == "skill":
             text = self._skill_front_matter(rel.parent.name, self._skill_overview(toolset, parts)) + text
         dest = self.path / rel
+        text = self._with_installed_references(text, dest)
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(text, encoding="utf-8")
         self.track_write(dest)
+
+    _REFERENCE_LINK = re.compile(r"\]\((?:\.\./)+references/([\w.-]+\.md)\)")
+    _RULE_FILE_NAME = re.compile(r"`(practices/[\w/.-]+)\.mdc`")
+
+    def _with_installed_references(self, text: str, dest: Path) -> str:
+        """Point links into ``cdd_guidance/references`` at the copy in ``<ide>/references``, and name
+        rule files with this IDE's extension."""
+        text = self._REFERENCE_LINK.sub(lambda match: f"]({self._install_reference(match.group(1), dest)})", text)
+        if self.ide == "Claude":
+            text = self._RULE_FILE_NAME.sub(r"`\1.md`", text)
+        return text
+
+    def _install_reference(self, name: str, dest: Path) -> str:
+        """Copy one ``cdd_guidance/references`` file into ``<ide>/references``; return its link from ``dest``."""
+        repo = self.repo or Path(__file__).resolve().parents[2]
+        source = repo / "cdd_guidance" / "references" / name
+        target = Path(self.path) / "references" / name
+        if source.is_file():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+            self.track_write(target)
+        return Path(os.path.relpath(target, dest.parent)).as_posix()
 
     def _skill_overview(self, toolset: Any, parts: list[str]) -> str:
         raw = getattr(toolset, "overview", None)

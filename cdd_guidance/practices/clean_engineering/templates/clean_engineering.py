@@ -1,6 +1,6 @@
 """
 # Conceptual Clean Engineering Reference (Python style)
-# Refer to cdd_guidance/rules/language-tools.md for tool recommendations.
+# Refer to cdd_guidance/references/language-tools.md for tool recommendations.
 # =============================================================================
 # Put a class family in one file: the primary type, its subtypes, and
 # tightly connected peers that only make sense together (element +

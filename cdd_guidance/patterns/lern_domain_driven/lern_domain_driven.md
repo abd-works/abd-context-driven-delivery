@@ -429,7 +429,7 @@ globs: "packages/**/*,src/**/*"
 Whenever you create, alter, or delete a LERN domain module under `src/`, an epic
 package under `packages/`, or tests they support. Follow these rules.
 
-If this change will not stay here, follow `practices/clean_engineering/code.mdc`. If the tests are Spec-by-Example, also follow `practices/stories/acceptance_tests.mdc`. DDD aggregate rules in `.context/rules/ddd/tactics/` apply to domain classes.
+If this change will not stay here, follow `practices/clean-engineering/clean-engineering-code.mdc`. If the tests are Spec-by-Example, also follow `practices/stories/stories-acceptance-tests.mdc`. The `practices/ddd/ddd-tactics.mdc` rules apply to domain classes.
 
 ### Layout and tiers
 

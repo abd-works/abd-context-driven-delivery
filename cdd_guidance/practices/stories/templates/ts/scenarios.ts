@@ -1,5 +1,5 @@
 /**
- * Scenario template — refer to cdd_guidance/rules/language-tools.md for tooling.
+ * Scenario template — refer to cdd_guidance/references/language-tools.md for tooling.
  *
  * ## Artifact layout (`artifacts-mirror-story-hierarchy`)
  *

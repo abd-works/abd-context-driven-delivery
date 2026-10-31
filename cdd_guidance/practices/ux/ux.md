@@ -162,7 +162,7 @@ globs: "**/*.html,**/*mockup*,**/*-sketch.md"
 
 Whenever you place controls and wire story steps on a greybox, or change shipping UI that those mockups support. Follow these rules.
 
-If this change will not stay here, follow `practices/ux/ia.mdc`.
+If this change will not stay here, follow `practices/ux/ux-ia.mdc`.
 
 - **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
 - **`story-domain-js-imported`** — Import real modules; do not invent a UX-only adapter shape.
@@ -206,7 +206,7 @@ globs: "**/*View.tsx,**/*View.ts,**/*View.jsx,**/*View.js,**/*-sketch.md"
 
 Whenever you create, alter, or delete shipping UI or how it talks to the backend. Follow these rules.
 
-If this change will not stay here, follow `practices/ux/mockup.mdc`.
+If this change will not stay here, follow `practices/ux/ux-mockup.mdc`.
 
 - **`real-frontend-not-mockup`** — Shipping UI is production frontend code, not the greybox Story Demo frame.
 - **`real-backend-wired`** — Client talks to real services/persistence (CE **code**); no silent Fake path as the only path.

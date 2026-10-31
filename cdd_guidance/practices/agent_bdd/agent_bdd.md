@@ -2,7 +2,7 @@
 
 Write **agent BDD specs** — mamba tests that drive a real agent through the `agent(...)` harness and assert on the parsed `RunResponse` plus AI-judged prose.
 
-**Tooling & Idioms:** Refer to [`cdd_guidance/rules/language-tools.md`](../../rules/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
+**Tooling & Idioms:** Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
 
 The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA, mocks, minimalism, shared setup). Agent specs layer harness-specific rules on top.
 
@@ -53,7 +53,7 @@ globs: "**/*agent_spec*,**/.agent_bdd_sessions/**,**/*-sketch.md"
 
 Whenever an agent-harness spec (`agent()`, `instruct`, `instruct_use_tool`) is in play, or production behavior that spec is proving. Follow these rules.
 
-If the live-agent layer is not needed, follow `practices/bdd/development.mdc`.
+If the live-agent layer is not needed, follow `practices/bdd/bdd-development.mdc`.
 
 - **`same-harness-interface`** — `agent(workspace, session_file)` in `practices/agent_bdd/__init__.py` routes to `cli_agent` or `chat_agent` based on `AGENT_BDD_IN_CHAT`. Specs never import either implementation directly.
 - **`free-function-api`** — Call `instruct`, `instruct_use_tool`, and `ai_judge` as free functions. Do not use a session prefix.
