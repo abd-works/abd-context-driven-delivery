@@ -22,7 +22,7 @@ sandbox/node_modules/
 .kilo/
 tools/agent_skills/.deploy-state.json
 primitives/harness/.deploy-state.json
-installation/.install-state.json
+harness/installation/.install-state.json
 
 # SessionLog append-only audit trails (runtime; not sprint artifacts)
 **/logs/events.log
