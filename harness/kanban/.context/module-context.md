@@ -3,8 +3,8 @@
 *KanbanBoard* shows every work session as a ticket and where it stands in delivery: Backlog, Discovery, Specification, Implementation, Complete. It reads `.sessions/` each time it is asked and stores nothing of its own.
 
 - **Purpose:** Show every work session as a ticket on a kanban, placed by how far its selected guidance has got, and move tickets through the stages.
-- **Seam (terms):** KanbanBoard, Ticket, BacklogItem, BoardPosition, SkillProgress, Stage
-- **Dependencies (one-way):** space/session (Session), space/repo (Repo), harness/guidance (PracticeGuidance)
+- **Seam (terms):** KanbanBoard, Ticket, BacklogItem, BoardPosition, SkillProgress, Column, Stage
+- **Dependencies (one-way):** space/session (Session), space/repo (Repo), harness/guidance (FidelityGuidance)
 
 ## Constraint
 

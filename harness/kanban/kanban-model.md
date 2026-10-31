@@ -29,14 +29,20 @@
 - How far one selected guidance has got on one ticket: not started, in progress, violations, or reviewed.
 - Read from the ticket's session log, never stored. The latest `validate` line for that guidance decides between violations and reviewed: review is the practice's own rules passing.
 
+### column
+
+- One of the five places a ticket can be: Backlog, Discovery, Specification, Implementation, Complete.
+- Backlog and Complete are plain columns. The other three are *stages*.
+
 ### stage
 
-- Discovery, Specification, or Implementation: which fidelity of each practice belongs to it (Stories story_map, scenarios, acceptance_tests; DDD bounded_context, model, tactics; UX ia, mockup, front_end_code; Clean Engineering modules, model, code; BDD behavior, development).
-- *Stage work required* for a ticket is its selected guidance in that stage.
+- Discovery, Specification, or Implementation: a column where work is done, with an in-progress part and a done part.
+- Each practice already says which of its fidelities belongs to which stage: every fidelity section in a practice's markdown declares `stage:`, read as `FidelityGuidance.stage`. The board keeps no table of its own.
+- *Stage work required* for a ticket is its selected guidance whose stage is this stage.
 
 ### board position
 
-- Where a ticket sits: Backlog, a stage in progress, a stage done (waiting to be pulled), or Complete.
+- Where a ticket sits: a column, and, in a stage, whether the stage is done (waiting to be pulled).
 - Derived from the ticket's skill progress, its pull lines, and whether its folder is in `closed/`.
 
 ### backlog item
@@ -47,15 +53,15 @@
 
 - `.sessions/_options/`: the guidance a ticket can select from, and the guidance a new ticket starts with.
 
-Build order: `Stage` → `SkillProgress` → `SessionLog` → `BoardPosition` → `BoardOptions` → `Ticket` → `BacklogItem` → `KanbanBoard`
+Build order: `Column` → `Stage` → `SkillProgress` → `SessionLog` → `BoardPosition` → `BoardOptions` → `Ticket` → `BacklogItem` → `KanbanBoard`
 
 ---
 
 # harness/kanban
 
 - **Purpose:** Show every work session as a ticket on a kanban, placed by how far its selected guidance has got, and move tickets through the stages.
-- **Seam (terms):** KanbanBoard, Ticket, BacklogItem, BoardPosition, SkillProgress, Stage
-- **Dependencies (one-way):** space/session (Session), space/repo (Repo), harness/guidance (PracticeGuidance)
+- **Seam (terms):** KanbanBoard, Ticket, BacklogItem, BoardPosition, SkillProgress, Column, Stage
+- **Dependencies (one-way):** space/session (Session), space/repo (Repo), harness/guidance (FidelityGuidance)
 
 ## Constraint
 
@@ -66,8 +72,8 @@ Read the board through `KanbanBoard.board()`; it re-reads `.sessions/` every tim
 + KanbanBoard(sessions_folder: Path, options: BoardOptions, session: Session)
 	// always re-reads sessions_folder when asked; holds no ticket state between calls
 ------
-+ << composition >> stages: list[Stage]
-	// always exactly Discovery, Specification, Implementation, in that order
++ << composition >> columns: list[Column]
+	// always Backlog, Discovery, Specification, Implementation, Complete, in that order; the middle three are Stages
 + << aggregation >> tickets: list[Ticket]
 	// every folder in sessions_folder whose name does not start with `_`, plus every folder in `closed/`
 + << aggregation >> backlog: list[BacklogItem]
@@ -96,7 +102,7 @@ Read the board through `KanbanBoard.board()`; it re-reads `.sessions/` every tim
 + title: str
 + scope: str
 + << association >> lineage: Ticket
-+ selected_guidance: list[PracticeGuidance]
++ selected_guidance: list[FidelityGuidance]
 	// always a subset of the board options' available guidance
 + << composition >> skill_progress: list[SkillProgress]
 	// one per selected guidance; read from the session log, never stored
@@ -104,11 +110,11 @@ Read the board through `KanbanBoard.board()`; it re-reads `.sessions/` every tim
 + position: BoardPosition
 	-> SessionLog.pulled_into
 	-> Stage.work_required
-+ next_guidance: PracticeGuidance
++ next_guidance: FidelityGuidance
 	// the first selected guidance in the current stage that is not reviewed; none while waiting to be pulled
 + is_closed: bool
 ----
-+ select_guidance(guidance: list[PracticeGuidance]): Ticket
++ select_guidance(guidance: list[FidelityGuidance]): Ticket
 	// must only hold guidance the board options make available
 + pull(): BoardPosition
 	// only when the current stage's work required is all reviewed; fails with StageNotDone otherwise
@@ -125,9 +131,9 @@ Read the board through `KanbanBoard.board()`; it re-reads `.sessions/` every tim
 
 ## SkillProgress
 
-+ SkillProgress(guidance: PracticeGuidance, state: str)
++ SkillProgress(guidance: FidelityGuidance, state: str)
 ------
-+ guidance: PracticeGuidance
++ guidance: FidelityGuidance
 + state: str
 	// one of not_started, in_progress, violations, reviewed
 + is_reviewed: bool
@@ -135,41 +141,43 @@ Read the board through `KanbanBoard.board()`; it re-reads `.sessions/` every tim
 
 ## SessionLog
 
-+ SessionLog(log_path: Path, guidance: list[PracticeGuidance])
++ SessionLog(log_path: Path, guidance: list[FidelityGuidance])
 	// finds a guidance in a line by its practice and fidelity names, never by position: paths come first and can hold spaces and commas
 ------
 ----
-+ progress_for(guidance: PracticeGuidance): SkillProgress
++ progress_for(guidance: FidelityGuidance): SkillProgress
 	// reviewed only when the latest validate line for that guidance has no violations
 + pulled_into(): Stage
 	// the stage named by the latest pull line; none before the first pull
 + record_pull(stage: Stage): None
 	-> Session.append_log
-- _lines_naming(guidance: PracticeGuidance): list[str]
+- _lines_naming(guidance: FidelityGuidance): list[str]
 
 ## BoardPosition
 
-+ BoardPosition(column: str, stage: Stage, is_stage_done: bool)
-	// is_stage_done only when every selected guidance in the stage is reviewed
++ BoardPosition(column: Column, is_done: bool)
+	// is_done only in a Stage, and only when every selected guidance in that stage is reviewed
 ------
-+ column: str
-	// one of Backlog, Discovery, Specification, Implementation, Complete
-+ << association >> stage: Stage
-+ is_stage_done: bool
++ << association >> column: Column
++ is_done: bool
 + is_ready_to_pull: bool
+	// true only in a done Stage before Implementation
 ----
 
-## Stage
+## Column
 
-+ Stage(name: str, fidelities: dict[str, str])
++ Column(name: str)
 ------
 + name: str
-+ fidelities: dict[str, str]
-	// practice to its fidelity in this stage; BDD has none in Discovery
 ----
-+ work_required(selected: list[PracticeGuidance]): list[PracticeGuidance]
-	// the selected guidance whose fidelity belongs to this stage, in practice order
-+ contains(guidance: PracticeGuidance): bool
+
+## Stage : Column
+
++ Stage(name: str)
+------
+----
++ work_required(selected: list[FidelityGuidance]): list[FidelityGuidance]
+	// the selected guidance whose stage is this stage, in practice order
 
 ## BacklogItem
 
@@ -187,7 +195,7 @@ Read the board through `KanbanBoard.board()`; it re-reads `.sessions/` every tim
 + BoardOptions(options_folder: Path)
 	// with no `_options/` folder, every practice fidelity is available and selected by default
 ------
-+ available_guidance: list[PracticeGuidance]
-+ default_guidance: list[PracticeGuidance]
++ available_guidance: list[FidelityGuidance]
++ default_guidance: list[FidelityGuidance]
 	// always a subset of available_guidance
 ----
