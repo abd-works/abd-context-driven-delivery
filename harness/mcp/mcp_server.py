@@ -487,6 +487,7 @@ class McpInstallation(Installation):
         text = json.dumps(manifest, indent=2) + "\n"
         if self.ide == "Claude" and self.user_config is not None:
             self.allow_cdd_tools(self.user_config.folder / "settings.json")
+            self.drop_project_cdd_server()
         if dest.is_file() and dest.read_text(encoding="utf-8") == text:
             self.track_write(dest)
             return
@@ -510,6 +511,23 @@ class McpInstallation(Installation):
         settings.parent.mkdir(parents=True, exist_ok=True)
         settings.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
+    def drop_project_cdd_server(self) -> None:
+        """A ``cdd`` entry in the project's ``.mcp.json`` outranks the user-level host in Claude
+        Code, so it goes; the project's other servers stay."""
+        project_config = self._project_root() / ".mcp.json"
+        try:
+            data = json.loads(project_config.read_text(encoding="utf-8")) if project_config.is_file() else None
+        except (OSError, json.JSONDecodeError):
+            return
+        servers = data.get("mcpServers") if isinstance(data, dict) else None
+        if not isinstance(servers, dict) or "cdd" not in servers:
+            return
+        del servers["cdd"]
+        if servers or len(data) > 1:
+            project_config.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        else:
+            project_config.unlink()
+
     def _stdio_manifest(self) -> dict[str, Any]:
         from harness.installation.installer import Installer
 
@@ -530,8 +548,10 @@ class McpInstallation(Installation):
         }
         user = self.user_config
         if user is not None:
-            # One user-level entry serves every project, so it names the open project, not this one.
+            # One user-level entry serves every project, so it names the open project, not this one,
+            # and pins the installed checkout: start_host would otherwise run the open checkout's code.
             server["cwd"] = user.project_folder
+            server["env"]["CDD_REPO"] = str(repo)
             server["env"]["CDD_PROJECT"] = user.project_folder
             server["env"]["CDD_IDE_PATH"] = str(user.folder)
         if self.ide == "Claude":

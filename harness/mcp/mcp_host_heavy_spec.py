@@ -574,6 +574,32 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             expect("cwd" in self.data["mcpServers"]["cdd"]).to(equal(False))
             expect(self.data["mcpServers"]["cdd"]["env"]["CDD_PROJECT"]).to(equal("."))
 
+        with it("should pin the installed checkout, whichever project is open"):
+            expect(self.data["mcpServers"]["cdd"]["env"]["CDD_REPO"]).to(equal(str(_REPO_ROOT)))
+
+        with context("with a cdd server in the project's .mcp.json"):
+            with before.each:
+                self.project = self.root / "project"
+                (self.project / ".claude").mkdir(parents=True)
+                self.project_config = self.project / ".mcp.json"
+                self.installation = McpInstallation("Claude", self.project / ".claude", repo=_REPO_ROOT)
+                self.installation._is_temp_path = lambda path: False
+                for tool in SampleMcpOps().tools.values():
+                    self.installation.record_operation(tool)
+
+            with it("should remove the file when cdd was its only server"):
+                self.project_config.write_text(json.dumps({"mcpServers": {"cdd": {}}}), encoding="utf-8")
+                self.installation.write_mcp_manifest()
+                expect(self.project_config.exists()).to(equal(False))
+
+            with it("should keep the project's other servers"):
+                self.project_config.write_text(
+                    json.dumps({"mcpServers": {"cdd": {}, "other": {"command": "other"}}}), encoding="utf-8"
+                )
+                self.installation.write_mcp_manifest()
+                saved = json.loads(self.project_config.read_text(encoding="utf-8"))
+                expect(saved).to(equal({"mcpServers": {"other": {"command": "other"}}}))
+
         with it("should keep the host pid in ~/.claude"):
             expect(self.installation.pid_folder).to(equal(self.root / ".claude"))
 
