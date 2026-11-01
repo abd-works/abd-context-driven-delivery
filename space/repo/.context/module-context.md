@@ -37,6 +37,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `Repo.branch_named(name)` → `Branch` (current: `branch_named(current_branch)`)
 - `Branch.checkout()`, `Branch.commit(paths, message)` → `Commit`, `Branch.merge(other)` → `Commit`
 - `Commit.format(subject, trailers)` / `Commit.from_message(sha, message)` — message + trailer `data`
+- `Commit.to_mcp_result()` — sha, subject, message, and trailer `data` as the JSON result of `repo.push_commit`
 - `Repo.attach_project(owner, number)` → `Project` (links the board onto this repository)
 - `Project.link_repository()` — `gh project link` so the board appears on the repo Projects tab
 - `Project.state_named(name)` — column on the board (any live Status option)

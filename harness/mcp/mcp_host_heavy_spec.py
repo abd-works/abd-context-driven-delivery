@@ -27,7 +27,7 @@ from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
-from space.repo.repo import DefaultBranchError
+from space.repo.repo import Commit, DefaultBranchError
 from space.session import Session
 
 
@@ -335,6 +335,24 @@ with description("an MCP host tool result") as self:
             expect(self.payload["practice_roots"]["stories"][0][0]).to(
                 equal(str((self.work / "tests").resolve()))
             )
+
+    with context("that is a commit"):
+        with before.each:
+            self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
+            commit = Commit.from_message("abc123", "push: checkpoint\nReviewed-By: human")
+            self.payload = json.loads(self.host._content_blocks(commit)[0].text)
+
+        with it("should expose the commit sha as JSON"):
+            expect(self.payload["sha"]).to(equal("abc123"))
+
+        with it("should expose the commit subject as JSON"):
+            expect(self.payload["subject"]).to(equal("push: checkpoint"))
+
+        with it("should expose the full commit message as JSON"):
+            expect(self.payload["message"]).to(equal("push: checkpoint\nReviewed-By: human"))
+
+        with it("should expose the commit trailers as JSON"):
+            expect(self.payload["data"]).to(equal({"Reviewed-By": "human"}))
 
 
 with description("an MCP host") as self:

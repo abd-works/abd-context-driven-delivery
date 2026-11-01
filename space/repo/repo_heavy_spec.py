@@ -1,5 +1,6 @@
 """BDD spec for space/repo — clone, branch, worktree, and push."""
 
+import json
 import os
 import shutil
 import sys
@@ -20,6 +21,7 @@ from expects import be_a, be_below, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.mcp.mcp_server import McpHost
 from space.repo import TicketNotFoundError
 from space.repo.repo import (
     Branch,
@@ -774,6 +776,19 @@ with description("the repo push toolset"):
             commit = toolset.push_commit("push: checkpoint")
             expect(commit.sha).not_to(equal(""))
             expect(commit.subject).to(equal("push: checkpoint"))
+
+        with it("should return the new commit as JSON through the MCP host"):
+            (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")
+            host = McpHost.from_refs(
+                ("space.repo.repo:Repo",),
+                repo=str(self.repo_root),
+                project=str(self.repo_root),
+            )
+            commit = host.dispatch(
+                "repo.push_commit", {"message": "push: checkpoint", "sync_remote": False}
+            )
+            payload = json.loads(host._content_blocks(commit)[0].text)
+            expect(payload["sha"]).to(equal(_git(self.repo_root, "rev-parse", "HEAD")))
 
         with it("should publish push_commit on MCP and keep /push as instructions only"):
             from harness.agent_tools.agent_tools import InstallDestination

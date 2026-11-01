@@ -159,6 +159,15 @@ class Commit:
             data[key.strip()] = value.strip()
         return data
 
+    def to_mcp_result(self) -> dict:
+        """JSON-safe snapshot for MCP tool results — sha, subject, full message, trailers."""
+        return {
+            "sha": self.sha,
+            "subject": self.subject,
+            "message": self.message,
+            "data": self.data,
+        }
+
     @classmethod
     def note_text(cls, fields: dict[str, str]) -> str:
         return "\n".join(f"{key}: {value}" for key, value in fields.items())
