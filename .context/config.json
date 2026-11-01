@@ -1,5 +1,6 @@
 {
   "guidelines": {
+    "cdd_claude_mod": "enabled",
     "lern_domain_driven": "disabled",
     "mern_domain_driven": "disabled"
   },

@@ -14,6 +14,7 @@ _PRACTICE_GUIDANCE = {
 
 _PATTERN_GUIDANCE = {
     "lern_domain_driven": ("cdd_guidance.patterns.lern_domain_driven.lern_domain_driven", "LernDomainDriven"),
+    "cdd_claude_mod": ("cdd_guidance.patterns.cdd_claude_mod.cdd_claude_mod", "CddClaudeMod"),
 }
 
 
