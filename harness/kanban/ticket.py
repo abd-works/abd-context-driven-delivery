@@ -3,41 +3,92 @@
 from __future__ import annotations
 
 import inspect
-import json
-import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from harness.kanban.board import CLOSED_FOLDER, Stage
+from harness.agent_tools import agent_toolset
+from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.kanban.board import BACKLOG_FOLDER, CLOSED_FOLDER, Board, Card, Stage, name_of
+from harness.mcp.mcp_server import mcp
+from space.session import Session
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
-    from harness.kanban.board import Board, Column
+    from harness.kanban.backlog_item import BacklogItem
+    from harness.kanban.board import Column
 
 ARCHIVE_FOLDER = "_archive"
 LOG_FILE = "session.log"
-FIELDS_FILE = "session.json"
 HANDOFF_FILES = "handoff-*.md"
 REPORT_FOLDER = "validation-reports"
 GRAPH_RULE_VIOLATION = "graph-rule"
-PULL = "pull"
-TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+MOVED_INTO = "move"
+OLDER_MOVED_INTO = "pull"
+MARKED_DONE = "done"
+MARKED_IN_PROGRESS = "in-progress"
+LEAVE_COMMIT = "commit"
+LEAVE_PUSH = "push"
+LEAVE_MERGE = "merge"
+# Logs written before moves were named `move` say `pull`; both still place a ticket.
+MOVE_WORDS = (MOVED_INTO, OLDER_MOVED_INTO)
+OPEN_BRANCH = "branch"
+OPEN_WORKTREE = "worktree"
 
 
-class Ticket:
-    """*Ticket* is one work session seen as a unit of delivery. It knows its column and progress by reading its
-    own session log against the board's stages."""
+class TicketNotFoundError(LookupError):
+    """Raised when a tool names a ticket the board does not show."""
 
-    # never moves to the next stage by itself: a person moves it, and the move is written to its session log
+    def __init__(self, ticket: str) -> None:
+        super().__init__(f"no ticket named {ticket!r} on the board")
 
-    def __init__(self, session_folder: Path, board: Board) -> None:
-        self._folder = Path(session_folder)
-        self._board = board
+
+class TicketFileError(ValueError):
+    """Raised when a tool asks for a file outside the ticket's repository."""
+
+    def __init__(self, path: str) -> None:
+        super().__init__(f"{path!r} is not a file in this repository")
+
+
+@agent_toolset
+class Ticket(Card):
+    """Show one work session as a unit of delivery and move it through the stages."""
+
+    # Never moves to another column by itself: a person moves it, and the move is written to its session log.
+    # The board is read after every cdd call, so these tools stay out of the session log; a move writes its own line.
+
+    def __init__(self, session: Session, board: Board) -> None:
+        super().__init__(board)
+        self._session = session
+
+    @classmethod
+    @tool_subject
+    def load(cls, ticket: str) -> Ticket:
+        found = Board.current().ticket(ticket)
+        if found is None:
+            raise TicketNotFoundError(ticket)
+        return found
+
+    @classmethod
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def new(cls, title: str, scope: str = "feature", parent: str = "", path: str = "") -> Ticket:
+        """Open a new ticket titled title in Discovery. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on."""
+        board = Board.current()
+        name = name_of(title)
+        workpath = (board.repo_root / path).resolve() if path else board.repo_root
+        fields = {"title": title, "scope": scope, "parent": parent}
+        Session.new(name, workpath, board.repo_root, fields, is_current=False)
+        return board.ticket(name)
+
+    @property
+    def session(self) -> Session:
+        return self._session
 
     @property
     def name(self) -> str:
-        return self._folder.name
+        return self._session.name
 
     @property
     def title(self) -> str:
@@ -53,6 +104,12 @@ class Ticket:
         return self._board.ticket(parent) if parent else None
 
     @property
+    def practices(self) -> dict[str, bool]:
+        """Which practices this ticket works on: every practice until a person turns it off."""
+        active = {practice.name for practice in self._session.active_practices}
+        return {key: key in active for key in map(practice_key, self._board.practices)}
+
+    @property
     def progress(self) -> list[FidelityProgress]:
         """One per fidelity the board requires, in stage order; read from the session log each time."""
         lines = self._log_lines()
@@ -64,27 +121,41 @@ class Ticket:
 
     @property
     def column(self) -> Column:
-        """Complete once closed; otherwise the stage of its latest pull, or the earliest stage it has work in."""
+        """Complete once closed; otherwise the stage of its latest move, or the earliest stage it has work in."""
         if self._folder.parent.name == CLOSED_FOLDER:
             return self._board.column("Complete")
-        pulled = self._pulled_into()
-        if pulled is not None:
-            return pulled
-        worked = [progress.stage for progress in self.progress if progress.done_actions]
+        moved = self._moved_into()
+        if moved is not None:
+            return moved
+        worked = [progress.stage for progress in self._enabled_progress if progress.done_actions]
         return worked[0] if worked else self._stages[0]
 
     @property
     def is_done(self) -> bool:
+        """True in a stage when a person marked it done there, or when all its enabled work there is done."""
         column = self.column
         if not isinstance(column, Stage):
             return False
-        return all(progress.is_done for progress in self.progress if progress.stage is column)
+        marked = self._latest_mark(column)
+        if marked is not None:
+            return marked == MARKED_DONE
+        return all(progress.is_done for progress in self._enabled_progress if progress.stage is column)
 
     @property
     def next(self) -> FidelityProgress | None:
         """The first fidelity in its current stage that is not done; none when it is done or Complete."""
         column = self.column
-        return next((progress for progress in self.progress if progress.stage is column and not progress.is_done), None)
+        if self.is_done:
+            return None
+        return next((progress for progress in self._enabled_progress if progress.stage is column and not progress.is_done), None)
+
+    @property
+    def next_action(self) -> str:
+        """What Run next does: generate, validate, or review on the next fidelity, or satisfy while it has violations."""
+        upcoming = self.next
+        if upcoming is None:
+            return ""
+        return "satisfy" if upcoming.has_violations else upcoming.remaining_actions[0].__name__.lower()
 
     @property
     def last_activity(self) -> str:
@@ -103,58 +174,169 @@ class Ticket:
         found = {progress.slug: sorted((self._folder / REPORT_FOLDER).glob(progress.report_files)) for progress in self.progress}
         return {slug: self._from_project(files[-1]) for slug, files in found.items() if files}
 
+    @mcp
+    @agent_tool
+    @noSessionLog
     def move_next(self) -> Ticket:
-        """A person's move to the next column, whatever its progress; out of Implementation it closes."""
+        """Move ticket on: from In progress to its stage's Done, from Done to the next column, whatever its work. Out of Implementation it closes."""
         column = self.column
         if not isinstance(column, Stage):
             return self
+        if not self.is_done:
+            return self._mark(MARKED_DONE, column)
         following = column.next_stage
-        if following is None:
-            return self.close()
-        self._append_log(f"{PULL} {following.name}")
-        return self
+        return self._enter(following) if following else self.close()
 
-    def move_previous(self) -> Ticket:
-        """A person's move to the previous column; out of Complete it reopens, and Discovery is as far back as it goes."""
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def move_previous(self) -> Ticket | BacklogItem:
+        """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Implementation; out of Discovery it goes to the Backlog with its work."""
         column = self.column
         if not isinstance(column, Stage):
             return self._reopen()
+        if self.is_done:
+            return self._mark(MARKED_IN_PROGRESS, column)
         earlier = column.previous_stage
         if earlier is None:
-            return self
-        self._append_log(f"{PULL} {earlier.name}")
+            return self._to_backlog()
+        return self._enter(earlier)._mark(MARKED_DONE, earlier)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def close(self, leaving: list[str] | None = None) -> Ticket:
+        """Close ticket: its session ends, its folder moves to closed/, and it shows in Complete. leaving names what to do with its work first: commit, push, merge."""
+        self._leave(leaving or [])
+        self._session.close()
+        return self._moved_to(self._board.sessions_folder / CLOSED_FOLDER)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def archive(self) -> Ticket:
+        """Archive ticket: its session ends, its folder moves to _archive/, and it leaves the board."""
+        self._session.close()
+        return self._moved_to(self._board.sessions_folder / ARCHIVE_FOLDER)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def activate(self, leaving: list[str] | None = None, opening: list[str] | None = None) -> Ticket:
+        """Make ticket the current session. leaving names what to do with the active ticket's work first: commit, push, merge. opening names what to create for this ticket: branch, worktree."""
+        active = self._board.active
+        if active is not None and active.name != self.name:
+            active._leave(leaving or [])
+        wanted = opening or []
+        if OPEN_BRANCH in wanted:
+            self._board.repo.switch_branch(self.name)
+        if OPEN_WORKTREE in wanted:
+            self._board.repo.switch_worktree(self.name)
+        Session.switch(self.name, repo_path=self._board.repo_root)
         return self
 
-    def close(self) -> Ticket:
-        return self._move_to(self._board.sessions_folder / CLOSED_FOLDER)
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def workspace(self) -> dict[str, bool]:
+        """Say whether ticket already has its branch and its worktree, so activating it offers only what is missing."""
+        repo = self._board.repo
+        return {"has_branch": repo.has_branch(self.name), "has_worktree": repo.worktree_for(self.name) is not None}
 
-    def archive(self) -> Ticket:
-        return self._move_to(self._board.sessions_folder / ARCHIVE_FOLDER)
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def enable_practice(self, practice: str, is_enabled: bool) -> Ticket:
+        """Turn practice on or off for ticket, saved in its session.json."""
+        self._session.practices[practice].enabled = is_enabled
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def files(self) -> dict[str, dict[str, list[dict[str, Any]]]]:
+        """List the files each fidelity declares by format, each with its path from the project and whether it exists."""
+        return {progress.slug: self._files_of(progress.fidelity) for progress in self.progress}
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def read_file(self, path: str) -> dict[str, str]:
+        """Return the text of path, a file in this repository."""
+        root = self._board.repo_root.resolve()
+        target = (root / path).resolve()
+        if root not in target.parents or not target.is_file():
+            raise TicketFileError(path)
+        return {"path": path, "text": target.read_text(encoding="utf-8", errors="replace")}
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def report(self, fidelity: str) -> dict[str, Any]:
+        """Return the latest validation report of fidelity, a slug such as stories-story_map: its path and text, and the rules broken on the nodes of the graph saved beside it. has_saved_graph is false when the report has no saved graph, so no rules can be listed."""
+        path = self.reports.get(fidelity, "")
+        if not path:
+            return {"path": "", "text": "", "rules": [], "has_saved_graph": False}
+        report = self._board.repo_root / path
+        graph = report.with_suffix(".json")
+        return {
+            "path": path,
+            "text": report.read_text(encoding="utf-8", errors="replace"),
+            "rules": self._rules_broken_in(graph, fidelity) if graph.is_file() else [],
+            "has_saved_graph": graph.is_file(),
+        }
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def generate_commands(self, fidelities: list[str], formats: list[str]) -> list[str]:
+        """Return the commands that generate fidelities in formats. A format the same practice's earlier fidelity has no file in is rendered from that fidelity first."""
+        renders = [self._render_command(slug, formats) for slug in fidelities]
+        named = " ".join(slug.replace("_", "-") for slug in fidelities)
+        return [*filter(None, renders), f"/actions-generate {named} format={','.join(formats)}"]
 
     def to_json(self) -> dict[str, Any]:
+        progress = self.progress
         upcoming = self.next
         return {
+            **super().to_json(),
             "name": self.name,
-            "title": self.title,
             "scope": self.scope,
             "parent": self._fields.get("parent", ""),
             "column": self.column.name,
             "is_done": self.is_done,
+            "can_move_next": self.column.name != "Complete",
             "next": upcoming.slug if upcoming else None,
-            "last_activity": self.last_activity,
+            "next_action": self.next_action,
             "handoff": self.latest_handoff,
             "reports": self.reports,
-            "progress": {progress.slug: progress.state for progress in self.progress},
+            "practices": self.practices,
+            "progress": {entry.slug: entry.state for entry in progress},
+            "actions": {entry.slug: entry.action_states for entry in progress},
+            "allowed_actions": {entry.slug: entry.allowed_actions for entry in progress},
         }
+
+    @property
+    def _folder(self) -> Path:
+        return self._session.session_path
 
     @property
     def _stages(self) -> list[Stage]:
         return [column for column in self._board.columns if isinstance(column, Stage)]
 
     @property
-    def _fields(self) -> dict[str, str]:
-        path = self._folder / FIELDS_FILE
-        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    def _fields(self) -> dict[str, Any]:
+        return self._session.fields
+
+    @property
+    def _enabled_progress(self) -> list[FidelityProgress]:
+        practices = self.practices
+        return [entry for entry in self.progress if practices[entry.practice]]
+
+    def record(self, entry: str) -> None:
+        """Append entry to the session log, timestamped."""
+        with (self._folder / LOG_FILE).open("a", encoding="utf-8") as log:
+            log.write(f"{self._timestamp(datetime.now(timezone.utc))} {entry}\n")
 
     def _log_lines(self) -> list[str]:
         path = self._folder / LOG_FILE
@@ -162,28 +344,96 @@ class Ticket:
             return []
         return [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
-    def _pulled_into(self) -> Stage | None:
-        pulls = [line.split()[2] for line in self._log_lines() if len(line.split()) > 2 and line.split()[1] == PULL]
-        return next((stage for stage in self._stages if pulls and stage.name == pulls[-1]), None)
+    def _moved_into(self) -> Stage | None:
+        moves = [line.split()[2] for line in self._log_lines() if len(line.split()) > 2 and line.split()[1] in MOVE_WORDS]
+        return next((stage for stage in self._stages if moves and stage.name == moves[-1]), None)
 
-    def _append_log(self, entry: str) -> None:
-        stamp = datetime.now(timezone.utc).strftime(TIMESTAMP_FORMAT)
-        with (self._folder / LOG_FILE).open("a", encoding="utf-8") as log:
-            log.write(f"{stamp} {entry}\n")
+    def _latest_mark(self, stage: Stage) -> str | None:
+        """The latest mark a person made in stage since entering it; none when they have made none."""
+        marks = None
+        for line in self._log_lines():
+            words = line.split()
+            if len(words) > 2 and words[2] == stage.name and words[1] in (*MOVE_WORDS, MARKED_DONE, MARKED_IN_PROGRESS):
+                marks = None if words[1] in MOVE_WORDS else words[1]
+        return marks
+
+    def _mark(self, mark: str, stage: Stage) -> Ticket:
+        self.record(f"{mark} {stage.name}")
+        return self
+
+    def _enter(self, stage: Stage) -> Ticket:
+        self.record(f"{MOVED_INTO} {stage.name}")
+        return self
 
     def _from_project(self, path: Path) -> str:
-        return path.relative_to(self._board.sessions_folder.parent).as_posix()
+        return path.relative_to(self._board.repo_root).as_posix()
+
+    def _leave(self, leaving: list[str]) -> None:
+        repo = self._board.repo
+        if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
+            repo.push_commit(f"{self.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
+        if LEAVE_MERGE in leaving:
+            repo.close_branch(self.name)
 
     def _reopen(self) -> Ticket:
-        reopened = self._move_to(self._board.sessions_folder)
-        reopened._append_log(f"{PULL} {self._stages[-1].name}")
-        return reopened
+        reopened = self._moved_to(self._board.sessions_folder)
+        final = self._stages[-1]
+        return reopened._enter(final)._mark(MARKED_DONE, final)
 
-    def _move_to(self, parent: Path) -> Ticket:
-        parent.mkdir(parents=True, exist_ok=True)
-        destination = parent / self.name
-        shutil.move(str(self._folder), str(destination))
-        return Ticket(destination, self._board)
+    def _to_backlog(self) -> BacklogItem:
+        from harness.kanban.backlog_item import BacklogItem
+
+        self._session.close()
+        held = self._moved_to(self._board.sessions_folder / BACKLOG_FOLDER)
+        return BacklogItem.holding(held, self._board)
+
+    def _moved_to(self, parent: Path) -> Ticket:
+        return Ticket(self._session.move_to(parent), self._board)
+
+    def _rules_broken_in(self, graph: Path, fidelity: str) -> list[dict[str, Any]]:
+        from validate.graph_json_reader import violations_by_rule, violations_from_graph_json_files
+
+        practice = next(entry.practice for entry in self.progress if entry.slug == fidelity)
+        grouped = violations_by_rule(violations_from_graph_json_files([graph], [practice]))
+        return [
+            {"name": name, "count": len(hits), "violations": [{"location": hit["location"], "message": hit["violation_message"]} for hit in hits]}
+            for name, hits in grouped.items()
+        ]
+
+    def _files_of(self, fidelity: FidelityGuidance) -> dict[str, list[dict[str, Any]]]:
+        practice = fidelity.practice_guidance
+        previous = practice.fidelities.current
+        practice.fidelities.current = fidelity
+        try:
+            outputs = self._session.fidelity_outputs(practice)
+        finally:
+            practice.fidelities.current = previous
+        return {label: [entry for path in paths for entry in self._file_entries(path)] for label, paths in outputs.items()}
+
+    def _render_command(self, slug: str, formats: list[str]) -> str:
+        """The command that renders the fidelity before slug into formats it has no file in, when it has work to render."""
+        fidelity = next(entry for entry in self.progress if entry.slug == slug)
+        earlier = next((entry for entry in self.progress if entry.practice == fidelity.practice and entry.stage.next_stage is fidelity.stage), None)
+        if earlier is None:
+            return ""
+        made = {label for label, entries in self._files_of(earlier.fidelity).items() if any(entry["exists"] for entry in entries)}
+        wanted = [label for label in formats if label in earlier.fidelity.output_files and label not in made]
+        if not made or not wanted:
+            return ""
+        return f"/actions-render {earlier.slug.replace('_', '-')} format={','.join(wanted)} source={sorted(made)[0]}"
+
+    def _file_entries(self, declared: str) -> list[dict[str, Any]]:
+        """A declared path, or each file a pattern finds; a pattern that finds none stays as written, not yet there."""
+        root = self._board.repo_root.resolve()
+        relative = self._relative_to(root, declared)
+        if "*" not in relative:
+            return [{"path": relative, "exists": (root / relative).exists()}]
+        found = sorted(path for path in root.glob(relative) if path.is_file())
+        return [{"path": path.relative_to(root).as_posix(), "exists": True} for path in found] or [{"path": relative, "exists": False}]
+
+    def _relative_to(self, root: Path, declared: str) -> str:
+        path = Path(declared)
+        return path.relative_to(root).as_posix() if path.is_relative_to(root) else declared
 
 
 class FidelityProgress:
@@ -224,6 +474,10 @@ class FidelityProgress:
         return self._stage
 
     @property
+    def practice(self) -> str:
+        return practice_key(self._fidelity.practice_guidance)
+
+    @property
     def done_actions(self) -> list[type]:
         return list(self._done_actions)
 
@@ -232,12 +486,16 @@ class FidelityProgress:
         return [action for action in self._stage.actions if action not in self._done_actions]
 
     @property
+    def has_violations(self) -> bool:
+        return self._has_violations
+
+    @property
     def is_done(self) -> bool:
         return not self.remaining_actions
 
     @property
     def slug(self) -> str:
-        return f"{practice_key(self._fidelity.practice_guidance)}-{self._fidelity.name}"
+        return f"{self.practice}-{self._fidelity.name}"
 
     @property
     def report_files(self) -> str:
@@ -252,6 +510,25 @@ class FidelityProgress:
         if self._has_violations:
             return "violations"
         return "in_progress" if self._done_actions else "not_started"
+
+    @property
+    def action_states(self) -> dict[str, str]:
+        """Each action as to_do, in_progress, or done. A validate that left violations is in progress until they are fixed."""
+        states = {action.__name__.lower(): "done" if action in self._done_actions else "to_do" for action in self._stage.actions}
+        if self._has_violations:
+            states["validate"] = "in_progress"
+        return states
+
+    @property
+    def allowed_actions(self) -> list[str]:
+        """What can run now: Validate once generated, and Review only after a clean Validate."""
+        states = self.action_states
+        allowed = ["generate"]
+        if states["generate"] == "done":
+            allowed.append("validate")
+        if states["validate"] == "done":
+            allowed.append("review")
+        return allowed
 
 
 def practice_key(practice: PracticeGuidance) -> str:

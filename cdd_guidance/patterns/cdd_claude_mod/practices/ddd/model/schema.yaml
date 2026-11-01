@@ -13,13 +13,13 @@ domainComponent:
 tool:
   - is: class
   - name: string
-  - path: "{domain}"
+  - path: "{object}"
   - belongsTo: domainComponent
   - entityRoot: ddd.entityRoot
 clientRoot:
   - is: class
   - name: string
-  - path: "pane/hooks/{domain}/{domain}-client"
+  - path: "pane/hooks/{domain}/{object}-client"
   - calls: tool
 view:
   - is: class

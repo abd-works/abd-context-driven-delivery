@@ -1,6 +1,6 @@
 import type { ClientModule } from 'claude-code'
 
-import type { SplitGripJson } from '../types'
+import type { SplitGripJson } from '../../types'
 
 // The bar between the board and the ticket's details. Only a Client hears a drag. The bar moves with the split, so
 // a held pointer's row is always its distance from where the split now stands.

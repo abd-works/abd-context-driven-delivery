@@ -1062,6 +1062,11 @@ class Repo:
     def branch_named(self, name: str) -> Branch:
         return Branch(self, name)
 
+    def has_branch(self, name: str) -> bool:
+        if self._memory:
+            return name in self._branch_names
+        return bool(self._git("branch", "--list", name).strip())
+
     def cli_agent_tag_name(self, branch: str) -> str:
         slug = (branch or "").strip() or "HEAD"
         return f"cli-agent/{slug}"

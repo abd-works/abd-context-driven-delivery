@@ -1,5 +1,5 @@
-// {Domain}Json is exactly what {Domain}.to_json() returns. It is the agreement between Python and the mod.
-export type {Domain}Json = {
+// {Object}Json is exactly what {Object}.to_json() returns. It is the agreement between Python and the mod.
+export type {Object}Json = {
   name: string
   next_action: string | null
 }
@@ -7,7 +7,7 @@ export type {Domain}Json = {
 declare module 'claude-code' {
   interface PluginState {
     'cdd-{domain}': {
-      {domain}: {Domain}Json | null
+      {object}: {Object}Json | null
     }
   }
 }

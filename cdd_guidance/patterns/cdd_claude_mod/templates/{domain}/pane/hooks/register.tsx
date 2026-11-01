@@ -1,7 +1,6 @@
-import { read } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import { {Domain}Client, {domain}State } from './{domain}/{domain}-client'
+import { current{Object} } from './{domain}/{object}-client'
 import { {Screen}View } from './{domain}/{screen}-view'
 
 const PANE = 'cdd-{domain}'
@@ -13,9 +12,9 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('ui.render', { component: 'Pane', requestId: PANE }, ($, e, next) => {
-    const json = read($, {domain}State)
-    if (json === null) return next(e)
-    return {Screen}View($.ui.resolve(e), new {Domain}Client($, json))
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
+    const {object} = await current{Object}($)
+    if ({object} === null) return next(e)
+    return {Screen}View($, $.ui.resolve(e), {object})
   })
 }

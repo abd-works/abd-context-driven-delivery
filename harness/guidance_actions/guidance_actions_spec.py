@@ -30,17 +30,6 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.remove(_p)
     sys.path.insert(0, _p)
 sys.path.insert(0, _root)
-for _name in list(sys.modules):
-    if (
-        _name in {"scan", "lifecycle", "guidance_actions", "workspace", "practices", "tools", "cdd_guidance"}
-        or _name.startswith("scan.")
-        or _name.startswith("guidance_actions.")
-        or _name.startswith("practices.")
-        or _name.startswith("cdd_guidance.")
-        or _name.startswith("tools.")
-        or _name.startswith("workspace.")
-    ):
-        del sys.modules[_name]
 
 from expects import contain, equal, expect
 from mamba import description, it

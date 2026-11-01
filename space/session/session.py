@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -127,20 +128,58 @@ class Loop:
         return ""
 
 
-class Practice:
-    """One practice guideline and the graph of that same practice."""
+class PracticeSessionOutput:
+    """What one practice has in one session: its guideline, the paths it reads, its graph, and whether it is on."""
 
-    def __init__(self, name: str, guideline: PracticeGuidance, graph: Graph, folder_sets: list) -> None:
+    # The guideline, folders, and graph load on first use: the board asks every ticket's session
+    # which practices are enabled after every cdd call, and that question needs none of them.
+
+    def __init__(self, name: str, session: Session) -> None:
         self.name = name
-        self.guideline = guideline
-        self.graph = graph
-        self.folder_sets = folder_sets
+        self._session = session
+        self._guideline: PracticeGuidance | None = None
+        self._output_paths: list | None = None
+        self._graph: Graph | None = None
+
+    @property
+    def guideline(self) -> PracticeGuidance:
+        if self._guideline is None:
+            self._guideline = self._session._guidance_for(self.name)
+        return self._guideline
+
+    @guideline.setter
+    def guideline(self, guidance: PracticeGuidance) -> None:
+        self._guideline = guidance
+
+    @property
+    def output_paths(self) -> list:
+        if self._output_paths is None:
+            stored = self._session._stored_folders().get(self.name)
+            self._output_paths = stored or self._session._default_output_paths(self.guideline, self.name)
+        return self._output_paths
+
+    @property
+    def graph(self) -> Graph:
+        if self._graph is None:
+            folders = [[Path(item) for item in group] for group in self.output_paths]
+            self._graph = self._session._graph_for(self.name, folders)
+        return self._graph
+
+    @property
+    def enabled(self) -> bool:
+        """Whether the session works on this practice: true until a person turns it off."""
+        return self._session.fields.get("practices", {}).get(self.name, {}).get("enabled", True)
+
+    @enabled.setter
+    def enabled(self, is_enabled: bool) -> None:
+        saved = self._session.fields.get("practices", {})
+        self._session.save_fields(practices={**saved, self.name: {"enabled": is_enabled}})
 
     def to_mcp_result(self) -> dict:
         """JSON-safe snapshot for MCP tool results."""
         return {
             "name": self.name,
-            "folder_sets": [[str(Path(item)) for item in group] for group in self.folder_sets],
+            "output_paths": [[str(Path(item)) for item in group] for group in self.output_paths],
         }
 
 
@@ -166,7 +205,8 @@ class Session:
         self.session_path: Path | None = None
         self._loops: list[Loop] = []
         self._parent_folders: dict = {}
-        self._opened: list[Practice] = []
+        self._known: dict[str, PracticeSessionOutput] = {}
+        self._opened: list[PracticeSessionOutput] = []
         self._injected: list[tuple[str, str, str, str]] = []
         self._chat: tuple[str, Path, str] | None = None
 
@@ -195,7 +235,7 @@ class Session:
         stored = self._stored_folders()
         roots: dict[str, list[list[str]]] = {}
         for name in _PRACTICE_TYPES:
-            roots[name] = stored.get(name) or self._default_folder_sets(
+            roots[name] = stored.get(name) or self._default_output_paths(
                 self._guidance_for(name), name
             )
         return roots
@@ -255,11 +295,14 @@ class Session:
     def close(self) -> None:
         """Close this work session and remove ``session`` from ``.sessions/session.json``."""
         self.repo_path = self.repo_from_session()
+        if self.name and self.name != self.saved_current_session:
+            return
         self.saved_current_session = _MAIN_SESSION_NAME
         opened = type(self)._current
         if opened is not None and opened is not self:
             opened._forget()
-        self._forget()
+        if opened is self or not self.name:
+            self._forget()
 
     def _forget(self) -> None:
         self.name = ""
@@ -268,11 +311,48 @@ class Session:
         self.reset()
 
     @classmethod
-    def new(cls, name: str, workpath: Path, repo_path: Path) -> str:
-        """Open a new session folder. Returns keep_log."""
-        session = cls._slot()
-        session._bind_new(name, Path(workpath), Path(repo_path))
+    def new(
+        cls,
+        name: str,
+        workpath: Path,
+        repo_path: Path,
+        fields: dict[str, str] | None = None,
+        is_current: bool = True,
+    ) -> str:
+        """Open a new session folder, with ``fields`` saved in its ``session.json``. Returns keep_log.
+
+        ``is_current`` False leaves the current session as it is, because a session a person opens for
+        later, such as a board ticket, is not the one being worked on."""
+        session = cls._slot() if is_current else cls(repo_path)
+        session._bind_new(name, Path(workpath), Path(repo_path), fields or {}, is_current)
         return session.keep_log()
+
+    @classmethod
+    def at(cls, session_path: Path, repo_path: Path) -> Session:
+        """The session kept in ``session_path``, read without becoming the current session."""
+        session = cls(repo_path)
+        session.session_path = Path(session_path)
+        session.name = session.session_path.name
+        stored = session.fields.get("workpath", "")
+        session.workpath = Path(stored) if stored else session.repo_path
+        return session
+
+    @property
+    def fields(self) -> dict:
+        """What ``session.json`` in this session's folder holds, read each time."""
+        return self._read_session_folder_json(self.session_path) if self.session_path else {}
+
+    def save_fields(self, **fields: object) -> None:
+        """Merge ``fields`` into ``session.json``, keeping what others store there."""
+        merged = {**self.fields, **fields}
+        (self.session_path / "session.json").write_text(json.dumps(merged), encoding="utf-8")
+
+    def move_to(self, parent: Path) -> Session:
+        """Move this session's folder under ``parent``, such as ``.sessions/closed/``."""
+        parent.mkdir(parents=True, exist_ok=True)
+        destination = parent / self.name
+        shutil.move(str(self.session_path), str(destination))
+        return type(self).at(destination, self.repo_path)
 
     @classmethod
     @mcp
@@ -415,19 +495,30 @@ class Session:
 
             SessionLogs(self.repo_path).write_active_session(cleaned)
 
-    def practice(self, name: str) -> Practice:
+    def practice(self, name: str) -> PracticeSessionOutput:
         found = self._opened_named(name)
         if found is not None:
             return found
-        guidance = self._guidance_for(name)
-        sets = self._stored_folders().get(name) or self._default_folder_sets(guidance, name)
-        folders = [[Path(item) for item in group] for group in sets]
-        opened = Practice(name, guidance, self._graph_for(name, folders), sets)
+        if name not in _PRACTICE_TYPES:
+            raise ValueError(f"Unknown practice {name}")
+        opened = self.practices[name]
         self._opened.append(opened)
         return opened
 
     @property
-    def practices(self) -> list[Practice]:
+    def practices(self) -> dict[str, PracticeSessionOutput]:
+        """Every practice CDD has, by practice key, opened or not."""
+        for name in _PRACTICE_TYPES:
+            self._known.setdefault(name, PracticeSessionOutput(name, self))
+        return dict(self._known)
+
+    @property
+    def active_practices(self) -> list[PracticeSessionOutput]:
+        return [practice for practice in self.practices.values() if practice.enabled]
+
+    @property
+    def opened_practices(self) -> list[PracticeSessionOutput]:
+        """The practices this session has asked for, which its log lines name."""
         return list(self._opened)
 
     @property
@@ -442,10 +533,10 @@ class Session:
 
         return Repo(self.repo_path)
 
-    def remember_parent_folders(self, practice: str, folder_sets: list[list[Path]]) -> None:
+    def remember_parent_folders(self, practice: str, output_paths: list[list[Path]]) -> None:
         stored = self._stored_folders()
-        normalized = self._normalize_sets(folder_sets)
-        if normalized == self._default_folder_sets(self._guidance_for(practice), practice):
+        normalized = self._normalize_output_paths(output_paths)
+        if normalized == self._default_output_paths(self._guidance_for(practice), practice):
             stored.pop(practice, None)
         else:
             stored[practice] = normalized
@@ -463,6 +554,7 @@ class Session:
         self._chat = (chat_id, Path(chat_file), line_numbers)
 
     def reset(self) -> None:
+        self._known = {}
         self._opened = []
 
     def resolve(
@@ -739,7 +831,7 @@ class Session:
                 continue
             opened = self.practice(key)
             opened.guideline = item
-            for group in opened.folder_sets:
+            for group in opened.output_paths:
                 for folder in group:
                     resolved = Path(folder).resolve()
                     token = str(resolved)
@@ -862,7 +954,7 @@ class Session:
             f"Log file: {log_file}. Errors: {err_file}."
         )
 
-    def _bind_new(self, name: str, workpath: Path, repo_path: Path) -> None:
+    def _bind_new(self, name: str, workpath: Path, repo_path: Path, fields: dict[str, str], is_current: bool) -> None:
         self.name = name
         self.workpath = workpath.resolve()
         self.repo_path = repo_path.resolve()
@@ -870,7 +962,9 @@ class Session:
         self.session_path.mkdir(parents=True, exist_ok=True)
         self._read_practices_json()
         self._write_session_folder_json()
-        self.saved_current_session = name
+        self.save_fields(**fields)
+        if is_current:
+            self.saved_current_session = name
         self._ensure_initial_loop()
 
     def _ensure_initial_loop(self) -> None:
@@ -958,7 +1052,7 @@ class Session:
             return Path(named).resolve()
         return Path.cwd().resolve()
 
-    def _opened_named(self, name: str) -> Practice | None:
+    def _opened_named(self, name: str) -> PracticeSessionOutput | None:
         for opened in self._opened:
             if opened.name == name:
                 return opened
@@ -990,10 +1084,10 @@ class Session:
         module = importlib.import_module(module_name)
         return getattr(module, class_name)()
 
-    def _graph_for(self, name: str, folder_sets: list[list[Path]]) -> Graph:
+    def _graph_for(self, name: str, output_paths: list[list[Path]]) -> Graph:
         from harness.graph.graph import Graph
 
-        primary = folder_sets[0][0]
+        primary = output_paths[0][0]
         graph = Graph()
         if self._within_load_budget(primary):
             root = str(self.repo_path or primary)
@@ -1017,7 +1111,7 @@ class Session:
                 return False
         return True
 
-    def _default_folder_sets(
+    def _default_output_paths(
         self, guidance: PracticeGuidance, practice: str | None = None
     ) -> list[list[str]]:
         """Content roots under the workpath.
@@ -1062,7 +1156,7 @@ class Session:
     def _output_root(self, guidance: PracticeGuidance, practice: str, override: str | None) -> Path:
         if override:
             return (Path(self.workpath or self.repo_path or Path.cwd()) / override).resolve()
-        return Path(self._default_folder_sets(guidance, practice)[0][0])
+        return Path(self._default_output_paths(guidance, practice)[0][0])
 
     def _output_names(self, declared: str | list[str], override: str | None) -> list[str]:
         names = [declared] if isinstance(declared, str) else list(declared)
@@ -1084,8 +1178,8 @@ class Session:
             return None
         return ContextConfig(root).practice_folder(practice)
 
-    def _normalize_sets(self, folder_sets: list[list[Path]]) -> list[list[str]]:
-        return [[str(Path(item).resolve()) for item in group] for group in folder_sets]
+    def _normalize_output_paths(self, output_paths: list[list[Path]]) -> list[list[str]]:
+        return [[str(Path(item).resolve()) for item in group] for group in output_paths]
 
     def _stored_folders(self) -> dict:
         return dict(self._parent_folders)

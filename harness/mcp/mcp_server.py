@@ -22,7 +22,7 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
-from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
+from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
 from harness.installation.destination import Destination, Installation
 
 logger = logging.getLogger(__name__)
@@ -672,6 +672,8 @@ def _invoke_mcp_callable(
     args = _coerce_mcp_arguments(op.member, arguments)
     toolset = op.tool
     operation = op.operation
+    if getattr(op.member, ON_SUBJECT_FLAG, False):
+        return op.member(**args)
     if toolset is not None and operation:
         owner = toolset if inspect.isclass(toolset) else type(toolset)
         descriptor = owner.__dict__.get(operation)
@@ -1187,7 +1189,7 @@ class McpHost:
 
     @staticmethod
     def _json_default(value: object) -> object:
-        converter = getattr(value, "to_mcp_result", None)
+        converter = getattr(value, "to_mcp_result", None) or getattr(value, "to_json", None)
         if callable(converter):
             return converter()
         if isinstance(value, Path):

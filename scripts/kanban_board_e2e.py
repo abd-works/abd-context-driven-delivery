@@ -15,7 +15,7 @@ for practice, cls, fidelity in [("stories","Stories","story_map"),("ddd","Ddd","
 (ticket / "session.log").write_text("\n".join(lines) + "\n")
 proc = subprocess.Popen(["claude", "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
     "--plugin-dir", str(Path(__file__).resolve().parents[1] / "harness" / "kanban" / "pane"),
-    "--allowedTools", "mcp__cdd__kanban_board,mcp__cdd__kanban_pull"],
+    "--allowedTools", "mcp__cdd__board_show,mcp__cdd__ticket_move_next"],
     cwd=project, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 def ask(text):
     proc.stdin.write(json.dumps({"type": "user", "message": {"role": "user", "content": text}}) + "\n"); proc.stdin.flush()
@@ -30,6 +30,6 @@ def ask(text):
         if event.get("type") == "result": return event.get("result")
 print("TURN 1:", ask("Reply with just: ok")); time.sleep(3)
 print("TURN 2:", ask("Without calling any tool, quote the sentence in your system prompt that names a CDD session board ticket, in one line."))
-print("TURN 3:", ask("Call mcp__cdd__kanban_pull with ticket pet-visits, then tell me in one line which column it is in now."))
+print("TURN 3:", ask("Call mcp__cdd__ticket_move_next with ticket pet-visits, then tell me in one line which column it is in now."))
 proc.stdin.close(); proc.wait(timeout=60)
 print("LOG TAIL:", (ticket / "session.log").read_text().splitlines()[-1])

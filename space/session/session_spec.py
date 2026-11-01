@@ -200,7 +200,7 @@ with description("a session"):
             expect("--- 1" in first).to(equal(True))
 
         with it("should leave practices empty until a practice is asked for"):
-            expect(Session.current().practices).to(equal([]))
+            expect(Session.current().opened_practices).to(equal([]))
 
         with it("should record the name in repo sessions session.json"):
             state = json.loads((self.repo / ".sessions" / "session.json").read_text(encoding="utf-8"))
@@ -272,7 +272,7 @@ with description("a session"):
                 expect(Session.current().workpath).to(equal(self.work.resolve()))
 
             with it("should leave practices empty until a practice is asked for"):
-                expect(Session.current().practices).to(equal([]))
+                expect(Session.current().opened_practices).to(equal([]))
 
             with it("should return keep_log to the agent"):
                 expect("log_action" in self.instructions).to(equal(True))
@@ -795,8 +795,32 @@ with description("a practice"):
         with it("should return that same practice on the next ask"):
             expect(self.session.practice("bdd") is self.opened).to(equal(True))
 
+        with it("should list every practice CDD has, opened or not"):
+            expect(sorted(self.session.practices)).to(equal(["bdd", "clean_engineering", "ddd", "stories", "ux"]))
+
+        with it("should have every practice active until one is turned off"):
+            expect(len(self.session.active_practices)).to(equal(5))
+
+        with it("should start with the practice enabled"):
+            expect(self.opened.enabled).to(equal(True))
+
+        with context("with a practice turned off"):
+            with before.each:
+                self.session.practices["ddd"].enabled = False
+
+            with it("should leave that practice out of the active practices"):
+                expect([practice.name for practice in self.session.active_practices]).to(equal(["stories", "clean_engineering", "bdd", "ux"]))
+
+            with it("should save it in the session's session.json"):
+                saved = json.loads((self.session.session_path / "session.json").read_text(encoding="utf-8"))
+                expect(saved["practices"]["ddd"]["enabled"]).to(equal(False))
+
+            with it("should read as turned off from the same folder later"):
+                later = Session.at(self.session.session_path, self.repo)
+                expect(later.practices["ddd"].enabled).to(equal(False))
+
         with it("should leave the other practices unopened"):
-            expect([item.name for item in self.session.practices]).to(equal(["bdd"]))
+            expect([item.name for item in self.session.opened_practices]).to(equal(["bdd"]))
 
         with context("with the practice default folders"):
             with it("should point that practice's graph root at its default workspace folder under workpath"):
@@ -910,7 +934,7 @@ with description("a practice"):
                 self.opened = self.session.practice("bdd")
 
             with it("should keep each set on that practice"):
-                expect(len(self.opened.folder_sets)).to(equal(2))
+                expect(len(self.opened.output_paths)).to(equal(2))
 
     with context("that a practice has not been invoked"):
         with before.each:
@@ -918,7 +942,7 @@ with description("a practice"):
             self.session = Session()
 
         with it("should omit that practice's entry"):
-            expect(self.session.practices).to(equal([]))
+            expect(self.session.opened_practices).to(equal([]))
 
     with context("with harness/guidance as the tree for clean engineering, stories, and bdd"):
         with before.each:
@@ -1091,3 +1115,34 @@ with description("a .sessions/session.json written before branch and worktree we
 
     with it("should read its current as the session"):
         expect(WorkState(self.repo).session).to(equal("alpha"))
+
+
+with description("a session read for a board") as self:
+    with before.each:
+        Session._current = None
+        self.repo = Path(tempfile.mkdtemp(prefix="session-board-"))
+        (self.repo / ".git").mkdir()
+        Session.new("alpha", self.repo, self.repo)
+        Session.new("beta", self.repo, self.repo, {"title": "Beta"}, is_current=False)
+        self.beta = Session.at(self.repo / ".sessions" / "beta", self.repo)
+
+    with context("that was opened without becoming current"):
+        with it("should leave the current session as it was"):
+            expect(Session.current(self.repo).name).to(equal("alpha"))
+
+        with it("should keep the fields it was opened with"):
+            expect(self.beta.fields["title"]).to(equal("Beta"))
+
+    with context("that is not the current session and has closed"):
+        with before.each:
+            self.beta.close()
+
+        with it("should leave the current session as it was"):
+            expect(Session.current(self.repo).name).to(equal("alpha"))
+
+    with context("that has moved to another folder"):
+        with before.each:
+            self.moved = self.beta.move_to(self.repo / ".sessions" / "closed")
+
+        with it("should keep its log and fields in the new folder"):
+            expect(self.moved.fields["title"]).to(equal("Beta"))

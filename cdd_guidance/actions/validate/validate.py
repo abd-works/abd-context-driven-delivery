@@ -63,12 +63,17 @@ class Validate(GuidanceAction):
         parts = [part for part in self.run(guidance, on, action="validate") if part]
         sections.extend(parts)
         report = "\n\n".join(sections)
-        saved = self._save_reports(report)
+        saved = self._save_reports(report, graph_paths)
         where = ", ".join(str(path) for path in saved) if saved else str(self._session_path())
         return f"{report}\n\nValidation report for these artifacts: {where}"
 
-    def _save_reports(self, report: str) -> list[Path]:
-        """Save the report in the session for each listed guidance, so the board can link to it."""
+    def _save_reports(self, report: str, checked_graphs: list[Path]) -> list[Path]:
+        """Save the report in the session for each listed guidance, so the board can link to it.
+
+        The graph it checked goes beside each report under the same name, so a report's violations stay on
+        their nodes for as long as the report is kept."""
+        from validate.graph_json_reader import save_checked_graph
+
         items = [item for item in self.listed() if not isinstance(item, str)]
         if not items:
             return []
@@ -78,6 +83,7 @@ class Validate(GuidanceAction):
         paths = [folder / f"{self._report_slug(item)}-{date}.md" for item in items]
         for path in paths:
             path.write_text(report, encoding="utf-8")
+            save_checked_graph(checked_graphs, path.with_suffix(".json"))
         return paths
 
     def _report_slug(self, item) -> str:

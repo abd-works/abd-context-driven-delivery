@@ -17,6 +17,7 @@ from mamba import before, context, description, it
 
 from validate.graph_json_reader import (
     refresh_stale_limit_operation_parameter_messages,
+    save_checked_graph,
     violations_from_graph_json_files,
 )
 
@@ -74,3 +75,16 @@ with description("graph JSON reader"):
         with it("should keep only the practices asked for"):
             violations = violations_from_graph_json_files([_SAVED_GRAPH], practices=["ddd"])
             expect([item["rule_slug"] for item in violations]).to(equal(["load-with-identity-in-hand"]))
+
+        with it("should keep every hit when several checked graphs are saved as one"):
+            with tempfile.TemporaryDirectory() as folder:
+                saved = Path(folder) / "report.json"
+                save_checked_graph([_SAVED_GRAPH, _SAVED_GRAPH], saved)
+                expect(len(violations_from_graph_json_files([saved]))).to(equal(4))
+
+        with it("should keep the same message when several checked graphs are saved as one"):
+            with tempfile.TemporaryDirectory() as folder:
+                saved = Path(folder) / "report.json"
+                save_checked_graph([_SAVED_GRAPH, _SAVED_GRAPH], saved)
+                messages = [item["violation_message"] for item in violations_from_graph_json_files([saved])]
+                expect(messages[:2]).to(equal([item["violation_message"] for item in violations_from_graph_json_files([_SAVED_GRAPH])]))

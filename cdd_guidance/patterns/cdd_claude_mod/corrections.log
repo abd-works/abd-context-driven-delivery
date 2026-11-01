@@ -1,0 +1,4 @@
+Mistake: the pattern named clients `{Domain}Client`, and the diagrams showed `DomainClient` calling `kanban.move_next`. For the Kanban that reads as a `KanbanClient`, but `moveNext` belongs to a ticket.
+Correction: a client is named after the Python object it mirrors, so it is `TicketClient`, with `{Object}Client` and `{Object}Json` in the pattern and templates. `{Domain}` is only the component and its toolset.
+Mistake: that fix kept the MCP tool as `kanban.move_next` and the toolset as `Kanban`, so the word changed in the middle of the line.
+Correction: the tool matches the domain too, `ticket.move_next`, and the component's name appears in folders only.

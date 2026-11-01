@@ -1,13 +1,14 @@
-import type { ElementTable } from 'claude-code'
+import type { ElementTable, EngineInterface } from 'claude-code'
 
-import type { {Domain}Client } from './{domain}-client'
+import { moveNext } from './{object}-client'
+import type { {Object}Client } from './{object}-client'
 
-// Paints the client and calls its operations. No rule, no MCP call, no atom write.
-export function {Screen}View({ Box, Button, Text }: ElementTable, client: {Domain}Client) {
+// Paints the client and hands presses to its actions. No rule, no MCP call, no atom write.
+export function {Screen}View($: EngineInterface, { Box, Button, Text }: ElementTable, {object}: {Object}Client) {
   return (
     <Box flexDirection="column">
-      <Text>{client.name}</Text>
-      <Button key="move-next" label="Move next" onPress={() => client.moveNext()} />
+      <Text>{{object}.name}</Text>
+      <Button key="move-next" label="Move next" onPress={() => moveNext($, {object})} />
     </Box>
   )
 }

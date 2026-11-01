@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,22 @@ def violations_from_graph_json_files(
     for path in paths:
         merged.extend(violations_from_graph_json_file(path, practices))
     return merged
+
+
+def save_checked_graph(paths: list[Path], destination: Path) -> None:
+    """Keep the graph a validation checked at ``destination``. Several graphs merge into one node list of their hits."""
+    if not paths:
+        return
+    if len(paths) == 1:
+        shutil.copyfile(paths[0], destination)
+        return
+    destination.write_text(json.dumps([_hit_node(item) for item in violations_from_graph_json_files(paths)]), encoding="utf-8")
+
+
+def _hit_node(violation: dict[str, Any]) -> dict[str, Any]:
+    """One violation as a summary node; its message already names the node, so the node stays unnamed."""
+    hit = {"message": violation["violation_message"], "file": violation["location"], "start": violation["line_number"], "end": violation["end_line"]}
+    return {"type": "", "name": "", "practice": violation["practice"], "violations": [{"rule": violation["rule_slug"], "messages": [hit]}]}
 
 
 def _violations_from_saved_graph(

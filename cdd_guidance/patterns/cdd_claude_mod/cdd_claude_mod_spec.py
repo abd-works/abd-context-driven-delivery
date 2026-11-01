@@ -18,7 +18,7 @@ _TEMPLATES = (
     "{domain}/pane/types/index.d.ts",
     "{domain}/pane/hooks/hooks.json",
     "{domain}/pane/hooks/register.tsx",
-    "{domain}/pane/hooks/{domain}/{domain}-client.ts",
+    "{domain}/pane/hooks/{domain}/{object}-client.ts",
     "{domain}/pane/hooks/{domain}/{screen}-view.tsx",
 )
 
@@ -49,10 +49,25 @@ with description("a Claude Code mod pattern"):
             expect(_MARKDOWN).to(contain("domain-lives-in-python"))
 
         with it("should trace one action from the client to the domain"):
-            expect(_MARKDOWN).to(contain("`ticket.moveNext()` | `kanban.move_next` | `Kanban.move_next(ticket)` | `Ticket.move_next()`"))
+            expect(_MARKDOWN).to(contain("`moveNext($, ticket)` | `ticket.move_next` | `Ticket.move_next()`"))
+
+        with it("should name each client after the object it mirrors"):
+            expect(_MARKDOWN).to(contain("`TicketClient` for `Ticket`"))
+
+        with it("should keep $ out of the client, which only displays"):
+            expect(_MARKDOWN).to(contain("client-only-displays"))
+
+        with it("should make every action and view a plain function that takes $"):
+            expect(_MARKDOWN).to(contain("actions-are-plain-functions"))
+
+        with it("should build the client and view from any class with MCP operations"):
+            expect(_MARKDOWN).to(contain("**The input is any class with MCP operations.**"))
 
         with it("should map each LERN piece to its counterpart"):
             expect(_MARKDOWN).to(contain("patterns-lern-domain-driven"))
+
+        with it("should test through the mounted pane and keep no browser tests"):
+            expect("Playwright" in _MARKDOWN).to(equal(False))
 
     with context("whose rules collection injects on matching paths"):
         with before.each:
@@ -86,3 +101,11 @@ with description("a Claude Code mod pattern"):
         with it("should scaffold every piece of a mod"):
             for template in _TEMPLATES:
                 expect((_MODULE_DIR / "templates" / template).is_file()).to(be_true)
+
+        with it("should give the client constructor no $"):
+            client = (_MODULE_DIR / "templates" / "{domain}/pane/hooks/{domain}/{object}-client.ts").read_text(encoding="utf-8")
+            expect(client).to(contain("constructor(private readonly json: {Object}Json) {}"))
+
+        with it("should pass $ to the view, which is a plain function"):
+            view = (_MODULE_DIR / "templates" / "{domain}/pane/hooks/{domain}/{screen}-view.tsx").read_text(encoding="utf-8")
+            expect(view).to(contain("export function {Screen}View($: EngineInterface,"))

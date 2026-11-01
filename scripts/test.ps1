@@ -94,7 +94,7 @@ function Invoke-Reported {
         $relative = Get-RelativePath $file
         Write-Host ""
         Write-Host "[$index/$($Files.Count)] $relative"
-        & $RunOne $relative
+        & $RunOne $relative | Out-Host
         if ($LASTEXITCODE -ne 0) {
             Write-Output $relative
         }

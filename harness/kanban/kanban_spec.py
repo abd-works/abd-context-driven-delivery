@@ -1,10 +1,11 @@
 """The session kanban board (model: harness/kanban/.context/kanban-model.md)."""
 import json
+import os
 import tempfile
 from pathlib import Path
 
 from expects import be_none, be_true, contain, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 from harness.installation.installer import Installer
 
@@ -13,7 +14,8 @@ Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 from bdd.bdd import Bdd  # noqa: E402
 from ddd.ddd import Ddd  # noqa: E402
 from generate.generate import Generate  # noqa: E402
-from harness.kanban.board import Board  # noqa: E402
+from harness.kanban.board import Board, Card  # noqa: E402
+from harness.kanban.ticket import Ticket  # noqa: E402
 from review.review import Review  # noqa: E402
 from stories.stories import Stories  # noqa: E402
 from ux.ux import Ux  # noqa: E402
@@ -24,7 +26,10 @@ class SessionsFolder:
     """A temporary `.sessions/` folder: work sessions with their logs, closed sessions, backlog items."""
 
     def __init__(self) -> None:
-        self.root = Path(tempfile.mkdtemp(prefix="kanban-sessions-"))
+        self.project = Path(tempfile.mkdtemp(prefix="kanban-sessions-"))
+        self.root = self.project / ".sessions"
+        self.root.mkdir()
+        os.environ["CDD_PROJECT"] = str(self.project)
 
     def session(self, name: str, *log_lines: str, closed: bool = False, **fields) -> Path:
         folder = self.root / ("closed" if closed else "") / name
@@ -53,6 +58,10 @@ def names(items) -> list:
 
 
 with description("a board") as self:
+    with after.each:
+        os.environ.pop("CDD_PROJECT", None)
+
+    # (S) Board Pane --> Display Board
     with context("with Stories, DDD, and UX chosen"):
         with before.each:
             self.board = Board(SessionsFolder().root, [Stories(), Ddd(), Ux()])
@@ -84,6 +93,7 @@ with description("a board") as self:
         with it("should choose every practice"):
             expect([type(practice).__name__ for practice in self.board.practices]).to(equal(["Stories", "Ddd", "Ux", "CleanEngineering", "Bdd"]))
 
+    # (S) Board Pane --> Display Ticket Card, Display Backlog Items As Tickets
     with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
         with before.each:
             sessions = SessionsFolder()
@@ -103,26 +113,56 @@ with description("a board") as self:
             expect(names(self.board.tickets)).not_to(contain("main"))
 
         with it("should show each backlog item in the Backlog column"):
-            expect([item.title for item in self.board.column("Backlog").items]).to(equal(["Returns and refunds"]))
+            expect([card.title for card in self.board.column("Backlog").cards]).to(equal(["Returns and refunds"]))
 
         with it("should leave archived sessions off the board"):
             expect(names(self.board.tickets)).not_to(contain("old-spike"))
 
         with it("should show closed sessions in Complete"):
-            expect(names(self.board.column("Complete").tickets)).to(equal(["browse-pets"]))
+            expect(names(self.board.column("Complete").cards)).to(equal(["browse-pets"]))
 
         with it("should name the ticket of the current session as active"):
             expect(self.board.active.name).to(equal("pet-visits"))
+
+        with it("should show tickets and backlog items alike as the board's cards"):
+            expect([card.title for card in self.board.cards]).to(equal(["Pet visits", "Sign up", "Browse pets", "Returns and refunds"]))
+
+        with it("should count both a ticket and a backlog item as a card"):
+            expect(all(isinstance(card, Card) for card in self.board.cards)).to(be_true)
+
+        with it("should give each card one column"):
+            expect([card.column.name for card in self.board.cards]).to(equal(["Discovery", "Discovery", "Complete", "Backlog"]))
 
         with it("should list every column with its tickets or items"):
             expect([column["name"] for column in self.board.to_json()["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
 
 with description("a backlog item") as self:
+    with after.each:
+        os.environ.pop("CDD_PROJECT", None)
+
+    # (S) Person --> Add Backlog Item, Start Backlog Item
     with context("that a person has added to the backlog folder"):
         with before.each:
             self.sessions = SessionsFolder()
             self.item_path = self.sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
             self.board = Board(self.sessions.root, [Stories(), Ddd(), Ux()])
+
+        with it("should be in the Backlog"):
+            expect(self.board.backlog_items[0].column.name).to(equal("Backlog"))
+
+        with context("that a person has moved on"):
+            with before.each:
+                self.moved = self.board.backlog_items[0].move_next()
+
+            with it("should open its ticket in Discovery"):
+                expect((self.moved.name, self.moved.column.name)).to(equal(("returns-and-refunds", "Discovery")))
+
+        with context("that a person has moved back"):
+            with before.each:
+                self.moved = self.board.backlog_items[0].move_previous()
+
+            with it("should stay in the Backlog"):
+                expect(self.moved.column.name).to(equal("Backlog"))
 
         with context("that has been started"):
             with before.each:
@@ -168,12 +208,15 @@ def story_map(ticket):
 
 
 with description("a ticket") as self:
+    with after.each:
+        os.environ.pop("CDD_PROJECT", None)
+
+    # (S) Person --> Open Ticket Session
     with context("that has just been started"):
         with before.each:
-            sessions = SessionsFolder()
-            board = Board(sessions.root, [Stories(), Ddd(), Ux()])
-            pawplace = board.new_ticket("PawPlace", "initiative", None)
-            self.ticket = board.new_ticket("Pet visits", "feature", pawplace)
+            SessionsFolder()
+            Ticket.new("PawPlace", "initiative")
+            self.ticket = Ticket.new("Pet visits", "feature", "pawplace")
 
         with it("should be in Discovery, in progress"):
             expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", False)))
@@ -184,11 +227,13 @@ with description("a ticket") as self:
         with it("should name Generate on story_map as next"):
             expect((self.ticket.next.slug, self.ticket.next.remaining_actions[0])).to(equal(("stories-story_map", Generate)))
 
+    # (S) Board Pane --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):
         with it("should be in Specification"):
             ticket = ticket_with(["generate /work/ux ux mockup html ux no-chat"])
             expect(ticket.column.name).to(equal("Specification"))
 
+    # (S) Board Pane --> Display Fidelity Progress; (S) Person --> Generate Fidelity Output, Validate Fidelity, Review Fidelity
     with context("with a fidelity generated"):
         with before.each:
             self.lines = [GENERATE_STORY_MAP]
@@ -232,6 +277,7 @@ with description("a ticket") as self:
             with it("should not count the review"):
                 expect(story_map(ticket_with(self.lines)).done_actions).to(equal([Generate, Validate]))
 
+    # (S) Person --> Review Fidelity, Complete Stage Work; (S) Person --> Move Ticket
     with context("with every required fidelity in its stage done"):
         with before.each:
             self.root, self.board = board_with(DISCOVERY_DONE)
@@ -252,8 +298,19 @@ with description("a ticket") as self:
 
             with it("should write the stage it entered to its session log"):
                 log = (self.root / "pet-visits" / "session.log").read_text(encoding="utf-8")
-                expect(log.splitlines()[-1]).to(contain("pull Specification"))
+                expect(log.splitlines()[-1]).to(contain("move Specification"))
 
+    with context("with a session log written before moves were named move"):
+        with before.each:
+            self.ticket = ticket_with(["pull Specification", "done Specification"])
+
+        with it("should still be in the stage the log names"):
+            expect(self.ticket.column.name).to(equal("Specification"))
+
+        with it("should still be marked done there"):
+            expect(self.ticket.is_done).to(be_true)
+
+    # (S) Person --> Mark Ticket Done In Stage
     with context("with its stage not done"):
         with before.each:
             self.ticket = ticket_with([GENERATE_STORY_MAP])
@@ -261,6 +318,27 @@ with description("a ticket") as self:
         with it("should stay in its stage"):
             expect(self.ticket.column.name).to(equal("Discovery"))
 
+        with context("that a person has moved on"):
+            with before.each:
+                self.ticket.move_next()
+
+            with it("should be done in its stage, in the same column"):
+                expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", True)))
+
+            with it("should have no next"):
+                expect(self.ticket.next).to(be_none)
+
+    # (S) Person --> Choose Ticket Practices
+    with context("with every practice but Stories turned off"):
+        with before.each:
+            self.ticket = ticket_with(every_action("stories", "Stories", "story_map"))
+            self.ticket.enable_practice("ddd", False)
+            self.ticket.enable_practice("ux", False)
+
+        with it("should be done with the one practice it works on"):
+            expect(self.ticket.is_done).to(be_true)
+
+    # (S) Person --> Close Active Session
     with context("that has been closed"):
         with before.each:
             self.root, board = board_with([GENERATE_STORY_MAP])
@@ -272,6 +350,7 @@ with description("a ticket") as self:
         with it("should have its folder in closed"):
             expect((self.root / "closed" / "pet-visits" / "session.log").is_file()).to(be_true)
 
+    # (S) Person --> Archive Ticket
     with context("that has been archived"):
         with before.each:
             self.root, self.board = board_with([GENERATE_STORY_MAP])

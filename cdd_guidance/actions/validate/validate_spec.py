@@ -20,6 +20,7 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
+from validate.graph_json_reader import violations_from_graph_json_files
 from validate.validate import Validate
 
 
@@ -209,6 +210,25 @@ with description("a validate action on practice guidance") as self:
             self.action.validate(guidance=["ddd-tactics", "stories-scenarios"], paths=[_ENTITY_ROOT_FILE])
             saved = list((self.session / "validation-reports").glob("stories-scenarios-*.md"))
             expect(len(saved)).to(equal(1))
+
+        with it("should save the graph it checked beside the report, under the same name"):
+            self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
+            report = next((self.session / "validation-reports").glob("ddd-tactics-*.md"))
+            expect(report.with_suffix(".json").is_file()).to(equal(True))
+
+        with it("should keep the rule hits on the nodes of the saved graph"):
+            self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
+            saved = next((self.session / "validation-reports").glob("ddd-tactics-*.json"))
+            slugs = [item["rule_slug"] for item in violations_from_graph_json_files([saved], ["ddd"])]
+            expect(slugs).to(contain("private-method-naming"))
+
+        with it("should leave an earlier report's saved graph as it was"):
+            folder = self.session / "validation-reports"
+            folder.mkdir()
+            earlier = folder / "ddd-tactics-20200101T000000.json"
+            earlier.write_text("[]", encoding="utf-8")
+            self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
+            expect(earlier.read_text(encoding="utf-8")).to(equal("[]"))
 
         with it("should say where the report is saved"):
             report = self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
