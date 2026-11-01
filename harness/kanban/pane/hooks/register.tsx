@@ -59,7 +59,6 @@ const CHEVRON =
 const CHEVRON_PIXELS = 18
 
 const TICKET_ACTIONS: Record<string, { tool: string; argument: string }> = {
-  pull: { tool: 'kanban.pull', argument: 'ticket' },
   close: { tool: 'kanban.close', argument: 'ticket' },
   switch: { tool: 'session.switch', argument: 'name' },
 }
@@ -128,7 +127,6 @@ const ageOf = (now: number, stamp: string): string => {
   return days === 1 ? 'yesterday' : `${days} days ago`
 }
 
-const canPull = (ticket: TicketJson): boolean => ticket.is_done && ticket.column !== FINAL_STAGE
 const canMovePrevious = (ticket: TicketJson): boolean => ticket.column !== FIRST_STAGE
 const canMoveNext = (ticket: TicketJson): boolean => ticket.column !== 'Complete'
 
@@ -472,7 +470,6 @@ function ticketActions($: EngineInterface, view: View, ticket: TicketJson) {
   const split = `Split ticket ${name} into child tickets, one per story on its story map: call kanban.new with parent ${name} for each story.`
   return (
     <Box key="actions" flexDirection="row" flexWrap="wrap" gap={1}>
-      {actionButton(view, 'pull', 'Pull', canPull(ticket) ? () => act($, 'kanban.pull', { ticket: name }) : null, true)}
       {actionButton(view, 'run-next', 'Run next', next ? () => fillPrompt($, runNext) : null)}
       {actionButton(view, 'split', 'Split', isClosed ? null : () => fillPrompt($, split))}
       {actionButton(view, 'switch-to', 'Switch to', name === shown.active || isClosed ? null : () => act($, 'session.switch', { name }))}

@@ -3,7 +3,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from expects import contain, equal, expect, match
+from expects import contain, equal, expect, have_key, match
 from mamba import before, context, description, it
 
 from harness.installation.installer import Installer
@@ -91,13 +91,6 @@ with description("the board tools") as self:
             with it("should name the ticket it was split from"):
                 expect(self.opened["parent"]).to(equal("pet-visits"))
 
-        with context("that pulls a done ticket"):
-            with before.each:
-                self.pulled = self.tools.pull("pet-visits")
-
-            with it("should return the ticket in its next stage"):
-                expect(self.pulled["column"]).to(equal("Specification"))
-
         with context("that moves a ticket to the next column"):
             with before.each:
                 self.moved = self.tools.move_next("pet-visits")
@@ -149,6 +142,22 @@ with description("the board tools") as self:
 
             with it("should return the new ticket in Discovery"):
                 expect((self.started["name"], self.started["column"])).to(equal(("returns-and-refunds", "Discovery")))
+
+        with context("that opens a ticket on a folder in the repository"):
+            with before.each:
+                self.tools.new("Pet records", "feature", "", "harness/pets")
+
+            with it("should save that folder as the session's workpath"):
+                fields = json.loads((self.project / ".sessions" / "pet-records" / "session.json").read_text(encoding="utf-8"))
+                expect(fields["workpath"]).to(equal(str((self.project / "harness" / "pets").resolve())))
+
+        with context("that opens a ticket with no folder"):
+            with before.each:
+                self.tools.new("Pet records", "feature")
+
+            with it("should leave the session working on the repository"):
+                fields = json.loads((self.project / ".sessions" / "pet-records" / "session.json").read_text(encoding="utf-8"))
+                expect(fields).not_to(have_key("workpath"))
 
         with context("that closes a ticket"):
             with before.each:

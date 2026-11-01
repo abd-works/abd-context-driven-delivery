@@ -17,6 +17,8 @@ For each aggregate on the bounded-context map, in this order:
 
 Same order, same place, every aggregate. A reader comparing two aggregates sees their differences, not differences in drawing.
 
+The drawio render routes every arrow around the cards with the same code as the Clean Engineering class view: cards fit their text, each bounded context has its own card colour, and an arrow out of an aggregate carries the operation or field that needs it. Mark each owned member `<< composition >>` and write `->` under the operation that calls another aggregate, because those lines are what draw the arrows.
+
 ## Finding the operations
 
 Walk the stories and scenarios. Every verb the business performs on the aggregate is a public operation on the class that owns the state it changes, named with the scenario's verb. Then sort them:

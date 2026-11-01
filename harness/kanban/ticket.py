@@ -25,20 +25,11 @@ PULL = "pull"
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
-class StageNotDone(Exception):
-    """A pull refused because the ticket's stage is not done, or there is no stage after it."""
-
-    def __init__(self, ticket: Ticket, stage: Column) -> None:
-        super().__init__(f"{ticket.name} cannot be pulled out of {stage.name}: its stage is not done, or it has no next stage.")
-        self.ticket = ticket
-        self.stage = stage
-
-
 class Ticket:
     """*Ticket* is one work session seen as a unit of delivery. It knows its column and progress by reading its
     own session log against the board's stages."""
 
-    # never moves to the next stage by itself: someone pulls it, and the pull is written to its session log
+    # never moves to the next stage by itself: a person moves it, and the move is written to its session log
 
     def __init__(self, session_folder: Path, board: Board) -> None:
         self._folder = Path(session_folder)
@@ -111,15 +102,6 @@ class Ticket:
         """The latest validation report of each fidelity that has one, as paths from the project; report names sort by their date."""
         found = {progress.slug: sorted((self._folder / REPORT_FOLDER).glob(progress.report_files)) for progress in self.progress}
         return {slug: self._from_project(files[-1]) for slug, files in found.items() if files}
-
-    def pull(self) -> Stage:
-        """Move a done ticket into the next stage by writing that stage to its session log."""
-        column = self.column
-        following = column.next_stage if isinstance(column, Stage) else None
-        if not self.is_done or following is None:
-            raise StageNotDone(self, column)
-        self._append_log(f"{PULL} {following.name}")
-        return following
 
     def move_next(self) -> Ticket:
         """A person's move to the next column, whatever its progress; out of Implementation it closes."""

@@ -1,6 +1,19 @@
 ## Overview
 
-Rules for rendering and auditing UML class diagrams in Draw.io under clean engineering. Layout is a judgment call constrained by these rules — not a script dump. Prefer incremental edits when a `.drawio` already exists; full regeneration destroys manual positioning. Pass **`keep_positioning=true`** on `render` / `create_diagram` (or `transform` with `previous` XML) to update class contents in place, leave existing relationship routing, and layout only new classes.
+Rules for rendering and auditing UML class diagrams in Draw.io under clean engineering. Prefer incremental edits when a `.drawio` already exists, because full regeneration replaces every position a person chose. Pass **`keep_positioning=true`** on `render` / `create_diagram` (or `transform` with `previous` XML) to update class contents in place, leave existing relationship routing, and layout only new classes.
+
+## How the diagram is drawn
+
+`diagram/class_layout.py` draws every class-shaped view, so the Clean Engineering class view and the DDD aggregate view read the same way.
+
+- **Cards fit their text.** Each card is as wide as its longest line, so nothing wraps and the card height stays true.
+- **Cards sit on a compact grid.** `CardPlacement` swaps cards on a grid, the way a person tidies a diagram by hand, and keeps the arrangement with the fewest crossings and the shortest arrows. A base stays above what derives from it, an owner above what it owns, and a module's cards together. The search is seeded, so one model always gives one diagram.
+- **Arrows are searched, not guessed.** `ArrowRouter` finds each arrow's way across a 10px grid, around every card and every arrow already drawn, then lifts each arrow that still crosses another and searches again with the rest in place. An arrow keeps its own point on the card, and two arrows run at least 20px apart.
+- **Colour shows the module.** A page holding two or more modules colours each card by its module, so a reader sees where a class lives without a tab per module.
+- **Labels name the relationship.** An arrow carries the property it stands for.
+- **One arrow per relationship.** A subclass restating its base's field draws no arrow, and two opposite arrows draw only the stronger. A class no field reaches gets one dashed arrow from its first use in an operation, so no card stands alone.
+
+A good diagram comes from a good model: mark each relationship with `<< composition >>`, `<< aggregation >>`, or `<< association >>` and write `Derived : Base` on the class heading, because those are what draw the arrows.
 
 **Scanners** live under `scanners/` (`*_scanner.py`, rule slug = `RULE` / filename). Run them via the Drawio kit **scan** / **validate** after every **render**; iterate until hard violations are gone. On failure, **repair** (sub-agent) fixes the layout generator.
 
@@ -8,7 +21,7 @@ Rules for rendering and auditing UML class diagrams in Draw.io under clean engin
 
 ## Page and hierarchy
 
-One page per module / Key Abstraction (KA). Page name matches the module/KA name. Local classes live on that page; cross-boundary types appear as **imported** cards at the top.
+A model of up to 40 classes draws on one page, coloured by module, because a reader follows a relationship across modules far more easily on one page than across tabs. A larger model draws one page per module / Key Abstraction (KA): the page name matches the module/KA name, local classes live on that page, and cross-boundary types appear as **imported** cards.
 
 - **`class-title-no-markdown-bold`** — Class titles are plain text inside the HTML `<b>` tag. Do not bake markdown `**name**` into the label; bold is already the `<b>` wrapper. `**Prospect**` displayed inside `<b>` shows the asterisks.
 - **`stereotype-above-class-name`** — UML stereotype sits **above** the class name on its own line, italic, not bold. The class name is bold. Do not put `<<Stereotype>>` on the same line as the name inside `<b>`.
@@ -16,8 +29,8 @@ One page per module / Key Abstraction (KA). Page name matches the module/KA name
 ### Hierarchy rules
 
 - **`base-above-derived`** — Base and imported ancestor classes sit at higher vertical positions (lower `y`) than their derived classes. Inheritance arrows point **upward** (child → parent). Sibling subtypes share a `y` row side by side below the parent. Do not put a base below its children, and do not flatten grandchild and grandparent onto the same row.
-- **`cross-model-ancestors-on-page`** — When a local type extends or uses a type from another module/KA, import the **full ancestor chain** needed to read the ancestry — grandparents included — at the top of the page. Imported cards use a **dashed border** and a `«from: Module/KA Name»` stereotype above the class name; show only key properties (enough to recognise the type). Do not render imports as solid local cards, and do not omit a grandparent that explains where the immediate parent comes from.
-- **`module-spatial-cohesion`** — Classes of the same module/KA form a tight cluster (short internal edges). Different modules/KAs on the same page sit with a clear gap (~200px+). Cross-boundary edges may be longer — that length is the signal. Instance notes sit beside their class inside the cluster, not in the gap. On multi-module pages, if mental bounding boxes overlap, reposition until they separate. A single-module page satisfies cohesion by default — still avoid scattering classes unnecessarily far apart. Wrap long edge labels; leave ~60–80px corridors so labels do not sit on boxes.
+- **`cross-model-ancestors-on-page`** — On a page per module, when a local type extends or uses a type from another module/KA, import the **full ancestor chain** needed to read the ancestry — grandparents included. Imported cards use a **dashed border** and a `«from: Module/KA Name»` stereotype above the class name; show only key properties (enough to recognise the type). Do not render imports as solid local cards, and do not omit a grandparent that explains where the immediate parent comes from.
+- **`module-spatial-cohesion`** — Classes of the same module/KA form a tight cluster with short internal edges, and each module has its own card colour. Cross-boundary edges may be longer — that length is the signal. Instance notes sit beside their class inside the cluster. Wrap long edge labels so labels do not sit on boxes.
 - **`aggregate-layout-cohesion`** — Cluster an aggregate root with its members and its repository. Do not insert unrelated objects (auth cards) in the gap between a root and its value objects. Repositories sit beside the aggregate they collect.
 - **`repository-aggregation-diamond`** — A Repository relates to its aggregate with an aggregation (hollow diamond) and a `<<Repository>>` tag. A repo with no diamond is an unlabeled box, not a collection.
 - **`leaf-nodes-not-in-horizontal-row`** — A hub with 4+ leaf neighbours must not place those leaves in one wide horizontal row (same `y`, large `x` span). Fan leaves into multiple rows or a compact cluster.
@@ -30,10 +43,10 @@ An edge relates exactly two classes. Routing that cuts a third class, stacks on 
 
 ### Routing rules
 
-- **`prefer-short-routes`** — Related classes sit near each other so arrows stay short. Prefer **0–2** explicit waypoints; more than 2 across a short gap is a violation. Endpoint boxes should leave only a small clear gap (≲320px — about one intervening card or row gutter). Do not park imports far from the locals they link to, and do not stretch a tall single-column stack when a 2–3 column pack would keep ownership edges short. Cross-boundary length is a signal only when two *modules* share one page — on a single-module / per-aggregate page, every edge should be short.
-- **`edges-do-not-cross-classes`** — No edge segment may enter the bounding box of any class except its two endpoints. Prefer exit/entry sides that keep obstacles off the direct path; otherwise add explicit waypoints so the edge dog-legs around the obstacle. Do not rely on Draw.io’s auto-router for long inheritance edges across siblings.
-- **`edges-do-not-overlap-edges`** — Two orthogonal edges must not share the same column or row for more than ~12px. Spread parallel runs ~20–40px apart with waypoints, and give each edge a unique exit/entry on a shared side.
-- **`edges-do-not-cross-other-edges`** — Transverse crossings (one segment through another) are distinct from collinear overlap — both fail readability; crossings are definitive.
+- **`prefer-short-routes`** — Related classes sit near each other so arrows stay short. Prefer **0–2** explicit waypoints across a short gap. Do not park imports far from the locals they link to, and do not stretch a tall single-column stack when a compact grid would keep ownership edges short. Cross-boundary length is a signal only when two *modules* share one page — on a single-module / per-aggregate page, every edge should be short.
+- **`edges-do-not-cross-classes`** — No edge segment may enter the bounding box of any class except its two endpoints. Every edge carries explicit waypoints, because Draw.io's own router ignores other cards on long edges.
+- **`edges-do-not-overlap-edges`** — Two orthogonal edges must not share the same column or row for more than ~12px. Keep parallel runs at least 20px apart, and give each edge a unique exit/entry on a shared side.
+- **`edges-do-not-cross-other-edges`** — Transverse crossings (one segment through another) are distinct from collinear overlap, and both hurt readability. A page may keep up to 5 crossings, each at a right angle, because some models cannot be drawn flat and a few clean crossings read better than long detours. More than 5 is a violation.
 - **`distinct-anchor-points`** — When two or more edges leave or arrive on the same side of a class, assign explicit `exitX`/`exitY` or `entryX`/`entryY` so paths are visually distinct. Do not leave a shared side on the default center anchor for every edge.
 - **`edges-approach-perpendicular`** — The first and last segments must hit the exit/entry side head-on (perpendicular), not slide along the class border.
 
@@ -42,11 +55,11 @@ An edge relates exactly two classes. Routing that cuts a third class, stacks on 
 - **`run-audit-after-every-render`** — After every generate or layout change, run Drawio **scan** / `audit_diagram_report` and iterate until done. Priority:
   1. class box overlap → **must be zero**
   2. **`edges-do-not-cross-classes`** → **must be zero**
-  3. **`prefer-short-routes`** → **must be zero** (excessive gap / >2 waypoints)
-  4. **`edges-do-not-overlap-edges`** / **`edges-do-not-cross-other-edges`** → **minimize** / definitive
-  5. **`distinct-anchor-points`** / **`edges-approach-perpendicular`** → **minimize**
+  3. **`edges-do-not-overlap-edges`** / **`distinct-anchor-points`** → **must be zero**
+  4. **`edges-do-not-cross-other-edges`** → **at most 5 on a page**
+  5. **`prefer-short-routes`** / **`edges-approach-perpendicular`** → **minimize**
 
-  Use orthogonal inheritance routing when a subtype is not directly under its parent. Do not skip the audit because the layout “looks right” during generation.
+  Do not skip the audit because the layout “looks right” during generation.
 
 ---
 
@@ -79,4 +92,4 @@ When the source is a Domain Language file (`*-domain-language.md`, `state: domai
 
 ## Relationship notation (class view)
 
-Reuse clean engineering relationship kinds on Draw.io edges (hollow triangle for inheritance; filled/unfilled diamond for composition/aggregation; open arrow for association). Cardinality and navigability belong on the edge when the source model states them. Modules-view diagrams use dependency arrows and containment nesting instead — see `drawio_class_model.py` — not these UML edge styles.
+Reuse clean engineering relationship kinds on Draw.io edges (hollow triangle for inheritance; filled/unfilled diamond for composition/aggregation; open arrow for association). Cardinality and navigability belong on the edge when the source model states them. A dashed open arrow is a use in an operation, not a field. Modules-view diagrams use dependency arrows and containment nesting instead — see `drawio_class_model.py` — not these UML edge styles.

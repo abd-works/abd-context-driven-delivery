@@ -539,17 +539,17 @@ with description("session hook logs"):
 
     with context("when no work session is active"):
 
-        with it("should create default session logs under .sessions/default/logs"):
+        with it("should create main session logs under .sessions/main/logs"):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 from harness.hooks.session_logs import SessionLogs
 
                 logs = SessionLogs(root)
-                folder = logs.ensure_default_session()
+                folder = logs.ensure_main_session()
                 expect(folder.is_dir()).to(be_true)
                 log = logs.session_log_path("prompt-log.txt")
                 expect(log.parent.as_posix()).to(
-                    equal((root / ".sessions/default/logs").as_posix())
+                    equal((root / ".sessions/main/logs").as_posix())
                 )
                 log.write_text("probe\n", encoding="utf-8")
                 expect(log.is_file()).to(be_true)

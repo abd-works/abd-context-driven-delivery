@@ -43,35 +43,29 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     module_tab_label,
     path_parent,
 )
+from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import (
+    GROUP_FILL_COLORS,
+    SMALLEST_PORT_SPACING,
+    ArrowRouter,
+    CardPlacement,
+    DiagramArrow,
+    DiagramCard,
+)
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import CELL_WIDTH, Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
     DrawIOClass,
     DrawIOModule,
-    DrawIORelationship,
     ImportedClass,
     MODULE_CHILD_STYLE,
     MODULE_STYLE,
     Page,
 )
 from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
-EDGE_STYLES = {'inheritance': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;endSize=16;endFill=0;html=1;', 'composition': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;', 'aggregation': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;', 'association': 'edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;'}
+_EDGE_BASE_STYLE = 'edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;'
+EDGE_STYLES = {'inheritance': f'{_EDGE_BASE_STYLE}endArrow=block;endSize=16;endFill=0;', 'composition': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;', 'aggregation': f'{_EDGE_BASE_STYLE}startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;', 'association': f'{_EDGE_BASE_STYLE}endArrow=open;endSize=12;', 'dependency': f'{_EDGE_BASE_STYLE}dashed=1;endArrow=open;endSize=12;'}
 DEFAULT_EDGE_STYLE = EDGE_STYLES['association']
-CLUSTER_GAP_X = 360
-CLUSTER_GAP_Y = 420
-INNER_COLS = 2
-INNER_COL_GAP = 72
-INNER_ROW_GAP = 52
-FAMILY_GAP_X = 80
-FAMILY_INNER_COLS = 2
-COLS_PER_ROW = INNER_COLS
-COL_GAP = INNER_COL_GAP
-ROW_GAP = INNER_ROW_GAP
-START_X = 40
-START_Y = 40
-ROUTE_CLEARANCE = 24
-ROUTE_LANE_STEP = 10
-SHORT_ROUTE_MAX_WAYPOINTS = 2
-OVERLAP_GAP = 24
+CLASSES_ON_ONE_PAGE = 40
+PAGE_EDGE_ALLOWANCE = 200
 MODULE_COL_GAP = 48
 MODULE_ROW_GAP = 32
 MODULE_START_X = 40
@@ -97,13 +91,11 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         self._id_to_oclass: Dict[str, OoadClass] = {}
         self._relationships: List[Tuple[str, str, str]] = []
         self._modules: List[Module] = []
-        self._previous_positions: Optional[Dict[str, Tuple[float, float]]] = None
         self._import_ids: List[str] = []
         self._page_ids: set = set()
         self._local_ids = None
         self._id_to_module: dict[str, str] = {}
         self._local_module_name = ''
-        self._placements: Dict[str, Tuple[float, float, float, float]] = {}
         self._cell_id = ''
         self._cell_x = 0.0
         self._cell_y = 0.0
@@ -111,46 +103,15 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         self._cell_height = None
         self._cell_parent_id = '1'
         self._cell_style = ''
-        self._from_module = ''
         self._edge_src_id = ''
         self._edge_tgt_id = ''
         self._edge_kind = ''
         self._edge_id = ''
-        self._exit_x = None
-        self._exit_y = None
-        self._entry_x = None
-        self._entry_y = None
-        self._waypoints: List[Tuple[float, float]] = []
         self._forest: Optional[ContainmentForest] = None
         self._layout: Optional[_ContainmentLayout] = None
         self._abs_x = 0.0
         self._abs_y = 0.0
-        self._prefer_move: set[str] = set()
         self._name_to_id: dict[str, str] = {}
-        self._origin_x = 0.0
-        self._origin_y = 0.0
-        self._pack_cols = INNER_COLS
-        self._route_src = None
-        self._route_tgt = None
-        self._exit_side = ''
-        self._entry_side = ''
-        self._exit_frac = 0.5
-        self._entry_frac = 0.5
-        self._obstacles: list = []
-        self._route_lane = 0
-        self._avoid_segments: list = []
-        self._all_placements: dict = {}
-        self._anchor_side = ''
-        self._anchor_frac = 0.5
-        self._clearance = 0.0
-        self._highways: List[float] = []
-        self._hit_margin = 3.0
-        self._endpoint_tol = 2.0
-        self._proximity = 10
-        self._other_segment = None
-        self._ccw_third = (0.0, 0.0)
-        self._fan_outward = 1.0
-        self._fan_count = 6
 
     def load_module(self, source: Module) -> DrawIOModule:
         loaded = DrawIOModule(name=source.name, sequential_order=source.sequential_order)
@@ -251,7 +212,7 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         order = 1
         id_to_class: dict[str, OoadClass] = {}
         id_to_name: dict[str, str] = {}
-        module = DrawIOModule(name='', sequential_order=1)
+        modules: Dict[str, DrawIOModule] = {}
         for cell in mxcells:
             if cell.get('vertex') != '1':
                 continue
@@ -264,11 +225,12 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             if 'dashed=1' in cell.get('style', ''):
                 continue
             oclass = DrawIOClass(name=name, sequential_order=order, properties=props, operations=ops)
+            module_name = self._style_module(cell.get('style', ''))
+            module = modules.setdefault(module_name, DrawIOModule(name=module_name, sequential_order=len(modules) + 1))
             module.classes.append(oclass)
             id_to_class[cell_id] = oclass
             order += 1
-        if module.classes:
-            model.modules.append(module)
+        model.modules.extend(modules.values())
         for cell in mxcells:
             if cell.get('edge') != '1':
                 continue
@@ -326,6 +288,10 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             oclass = DrawIOClass(name=name, sequential_order=len(module.classes) + 1, properties=props, operations=ops)
             module.classes.append(oclass)
             self._id_to_class[cell_id] = oclass
+
+    def _style_module(self, style: str) -> str:
+        found = re.search(r'(?:^|;)module=([^;]*)', style)
+        return found.group(1) if found else ''
 
     def _parse_multipage_edges(self, page_cells) -> None:
         for cell in page_cells:
@@ -461,9 +427,19 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         self._id_to_module = self._class_module_labels(canonical.modules)
         self._modules = canonical.modules
         named_modules = [m for m in canonical.modules if m.classes]
-        if len(named_modules) < 2:
+        self._module_fills = self._module_fill_colors(named_modules)
+        if len(named_modules) < 2 or len(canonical.classes) <= CLASSES_ON_ONE_PAGE:
             return self._render_classes_single_page(canonical)
         return self._render_classes_multipage(named_modules)
+
+    def _module_fill_colors(self, named_modules) -> Dict[str, str]:
+        """One colour per module, so a reader sees where a class lives. One module needs no colour."""
+        if len(named_modules) < 2:
+            return {}
+        return {
+            self._module_tab_label(module.name): GROUP_FILL_COLORS[index % len(GROUP_FILL_COLORS)]
+            for index, module in enumerate(named_modules)
+        }
 
     def _bind_class_ids(self, canonical) -> None:
         """One cell id per class. The same name in two modules is two boxes."""
@@ -516,29 +492,99 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         self._import_ids = import_ids
         self._local_id_list = local_ids
         self._local_ids = local_set
-        placements = self._layout_page_with_imports(local_ids)
-        self._placements = placements
         self._page_ids = local_set | set(import_ids)
-        self._append_imported_class_cells(root_el)
-        self._append_local_class_cells(root_el)
-        self._render_edges_on_page(root_el)
+        arrows = self._page_arrows()
+        cards = self._page_cards(arrows)
+        CardPlacement(list(cards.values()), arrows).place()
+        self._draw_cards(root_el, cards)
+        self._draw_arrows(root_el, cards, arrows)
+        self._fit_page_to_cards(root_el, cards)
 
-    def _append_imported_class_cells(self, root_el) -> None:
-        for iid in self._import_ids:
-            self._from_module = self._id_to_module.get(iid, 'other')
-            self._cell_id = iid
-            x, y, _w, _h = self._placements[iid]
-            self._cell_x = int(round(x))
-            self._cell_y = int(round(y))
-            self._create_imported_class_cell(root_el, self._id_to_oclass[iid])
+    def _page_arrows(self) -> List[DiagramArrow]:
+        """One arrow per pair of classes on this page, keeping the strongest kind and naming every property it stands for."""
+        rank = {'inheritance': 4, 'composition': 3, 'aggregation': 2, 'association': 1, 'relative': 1}
+        arrows: Dict[Tuple[str, str], DiagramArrow] = {}
+        for source, target, kind in self._page_relationships():
+            if source == target:
+                continue
+            label = self._arrow_labels.get((source, target), '')
+            arrow = arrows.setdefault((source, target), DiagramArrow(source, target, kind, label))
+            if rank[kind] > rank[arrow.kind]:
+                arrow.kind = kind
+        drawn = {
+            pair: arrow for pair, arrow in arrows.items()
+            if not self._repeats_inherited_arrow(arrow, arrows) and not self._is_weaker_than_opposite(pair, arrows, rank)
+        }
+        return list(drawn.values()) + self._arrows_for_unlinked_classes(drawn)
 
-    def _append_local_class_cells(self, root_el) -> None:
-        for lid in self._local_id_list:
-            self._cell_id = lid
-            x, y, _w, _h = self._placements[lid]
-            self._cell_x = int(round(x))
-            self._cell_y = int(round(y))
-            self._create_class_cell(root_el, self._id_to_oclass[lid])
+    def _is_weaker_than_opposite(self, pair, arrows: Dict[Tuple[str, str], DiagramArrow], rank: Dict[str, int]) -> bool:
+        opposite = arrows.get((pair[1], pair[0]))
+        return opposite is not None and rank[opposite.kind] > rank[arrows[pair].kind]
+
+    def _arrows_for_unlinked_classes(self, arrows: Dict[Tuple[str, str], DiagramArrow]) -> List[DiagramArrow]:
+        """A class no field reaches still belongs to the model, so its first use in an operation draws it in, dashed."""
+        linked = {cell_id for pair in arrows for cell_id in pair}
+        found = []
+        for cell_id in sorted(self._page_ids - linked):
+            arrow = self._operation_arrow(cell_id)
+            if arrow is not None:
+                found.append(arrow)
+        return found
+
+    def _operation_arrow(self, cell_id: str) -> Optional[DiagramArrow]:
+        oclass = self._id_to_oclass[cell_id]
+        name = self._plain_class_name(oclass.name)
+        for operation in oclass.operations:
+            for callee in operation.callees:
+                target = self._resolve_target(oclass, callee.split('.', 1)[0].strip())
+                if target in self._page_ids and target != cell_id:
+                    return DiagramArrow(cell_id, target, 'dependency', operation.name)
+        for other_id in sorted(self._page_ids - {cell_id}):
+            for operation in self._id_to_oclass[other_id].operations:
+                signature = operation.return_type + ' '.join(parameter.save() for parameter in operation.parameters)
+                if re.search(rf'\b{re.escape(name)}\b', signature):
+                    return DiagramArrow(other_id, cell_id, 'dependency', operation.name)
+        return None
+
+    def _repeats_inherited_arrow(self, arrow: DiagramArrow, arrows: Dict[Tuple[str, str], DiagramArrow]) -> bool:
+        """A subclass restating its base's field says nothing a reader cannot already see on the base."""
+        return any(
+            source == arrow.source and kind == 'inheritance' and (target, arrow.target) in arrows
+            for source, target, kind in self._relationships
+        )
+
+    def _page_cards(self, arrows: List[DiagramArrow]) -> Dict[str, DiagramCard]:
+        cards: Dict[str, DiagramCard] = {}
+        for cell_id in self._page_ids:
+            node = self._card_node(cell_id)
+            arrow_count = sum(1 for arrow in arrows if cell_id in (arrow.source, arrow.target))
+            width = max(node.width(), SMALLEST_PORT_SPACING * (arrow_count + 1))
+            cards[cell_id] = DiagramCard(cell_id, width, node.height(), self._id_to_module.get(cell_id, ''))
+        return dict(sorted(cards.items()))
+
+    def _card_node(self, cell_id: str) -> DrawIOClass:
+        oclass = self._id_to_oclass[cell_id]
+        if cell_id in self._import_ids:
+            return self._imported_class(oclass, self._id_to_module.get(cell_id, 'other'))
+        node = self.load_class(oclass)
+        module_label = self._id_to_module.get(cell_id, '')
+        node.fill_color = self._module_fills.get(module_label, '')
+        node.owning_module = self._module_of[id(oclass)].name.strip() if id(oclass) in self._module_of else ''
+        return node
+
+    def _draw_cards(self, root_el, cards: Dict[str, DiagramCard]) -> None:
+        for card in cards.values():
+            node = self._card_node(card.cell_id)
+            node.cell_id = card.cell_id
+            node.geometry = card.geometry
+            Page('', root_el).place(node)
+
+    def _draw_arrows(self, root_el, cards: Dict[str, DiagramCard], arrows: List[DiagramArrow], kept_paths=()) -> None:
+        routed = ArrowRouter(list(cards.values()), arrows, kept_paths=kept_paths).route()
+        used_ids = [int(cell.get('id')) for cell in root_el.iter('mxCell') if (cell.get('id') or '').isdigit()]
+        first_id = max(used_ids, default=len(cards) + 10) + 1
+        for offset, arrow in enumerate(routed):
+            self._create_edge(root_el, arrow, cards, str(first_id + offset))
 
     def _render_classes_single_page(self, canonical) -> str:
         mxfile = ET.Element('mxfile')
@@ -550,6 +596,7 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         self._page_width = '1654'
         self._page_height = '1169'
         self._set_graph_attrs(model_el)
+        self._graph_of = lambda _root: model_el
         root_el = self._add_graph_root(model_el)
         self._place_and_draw_single_page(root_el, canonical)
         ET.indent(ET.ElementTree(mxfile), space='  ')
@@ -565,24 +612,43 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         return root_el
 
     def _place_and_draw_single_page(self, root_el, canonical) -> None:
-        previous = self.previous
-        prev_pos = self._read_positions(previous) if previous else {}
-        prev_edges = self._read_edges(previous) if self.keep_positioning and previous else {}
-        self._previous_positions = prev_pos if previous else None
-        if self.keep_positioning and previous:
-            placements = self._layout_classes_keep_positioning(self._id_to_oclass)
-        else:
-            placements = self.place_classes()
-            placements = self._resolve_class_overlaps(placements)
-        self._placements = placements
-        self._local_id_list = [self._object_id[id(c)] for c in canonical.classes]
-        self._append_local_class_cells(root_el)
-        kept_pairs = self._copy_kept_edges(root_el, prev_edges)
-        page_rels = [(s, t, k) for s, t, k in self._relationships if (s, t) not in kept_pairs]
-        self._relationships = page_rels
-        self._page_ids = set(placements.keys())
+        previous = self.previous if self.keep_positioning else None
+        prev_edges = self._read_edges(previous) if previous else {}
+        self._import_ids = []
         self._local_ids = None
-        self._render_edges_on_page(root_el)
+        self._page_ids = set(self._id_to_oclass)
+        arrows = self._page_arrows()
+        cards = self._page_cards(arrows)
+        self._place_cards_keeping(cards, arrows, self._read_positions(previous) if previous else {})
+        self._draw_cards(root_el, cards)
+        kept_pairs = self._copy_kept_edges(root_el, prev_edges)
+        new_arrows = [arrow for arrow in arrows if (arrow.source, arrow.target) not in kept_pairs]
+        kept_paths = [self._edge_waypoints(prev_edges[pair]) for pair in kept_pairs]
+        self._draw_arrows(root_el, cards, new_arrows, kept_paths)
+        self._fit_page_to_cards(root_el, cards)
+
+    def _place_cards_keeping(self, cards, arrows, positions) -> None:
+        """Cards already on the page stay where a person left them. Only new ones are laid out, below the rest."""
+        new_cards = [card for cell_id, card in cards.items() if cell_id not in positions]
+        new_ids = {card.cell_id for card in new_cards}
+        inner = [arrow for arrow in arrows if arrow.source in new_ids and arrow.target in new_ids]
+        CardPlacement(new_cards, inner).place()
+        for cell_id, (x, y) in positions.items():
+            if cell_id in cards:
+                cards[cell_id].x, cards[cell_id].y = x, y
+        kept = [card for card in cards.values() if card.cell_id not in new_ids]
+        if kept:
+            bottom = max(card.y + card.height for card in kept)
+            for card in new_cards:
+                card.y += bottom
+
+    def _edge_waypoints(self, edge: ET.Element) -> List[Tuple[int, int]]:
+        return [(int(float(point.get('x', 0))), int(float(point.get('y', 0)))) for point in edge.iter('mxPoint')]
+
+    def _fit_page_to_cards(self, root_el, cards: Dict[str, DiagramCard]) -> None:
+        graph = self._graph_of(root_el)
+        graph.set('pageWidth', str(int(max(card.x + card.width for card in cards.values()) + PAGE_EDGE_ALLOWANCE)))
+        graph.set('pageHeight', str(int(max(card.y + card.height for card in cards.values()) + PAGE_EDGE_ALLOWANCE)))
 
     def _copy_kept_edges(self, root_el, prev_edges) -> set:
         kept_pairs: set[Tuple[str, str]] = set()
@@ -642,99 +708,6 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def _plain_class_name(self, name: str) -> str:
         return DiagramClass(name=name, sequential_order=1).display_name()
-
-    def _class_name_for_id(self, cid: str) -> str:
-        oclass = self._id_to_oclass.get(cid)
-        if oclass is None:
-            return cid.split('--')[-1]
-        return self._plain_class_name(oclass.name) or oclass.name
-
-    def _noun_family_for_class(self, cid: str) -> str:
-        """Group classes that share a leading domain noun (Offer, Specialist, CrossSell, …)."""
-        name = re.sub(r'\s+', '', self._class_name_for_id(cid))
-        lowered = name.lower()
-        if lowered in ('eventmap', 'opendiscovery'):
-            return 'Meta'
-        if name in ('Name', 'ContactDetails', 'HouseholdGrouping', 'ClientSearchCriteria', 'ClientIdentity'):
-            return 'Client'
-        if name in ('CandidateMatch',) or name.startswith('ClientMatch'):
-            return 'Client'
-        if name in ('ProductRelationship', 'RelationshipStage'):
-            return 'Product'
-        compounds = (
-            'CrossSell',
-            'Specialist',
-            'Client',
-            'Offer',
-            'Product',
-            'Notice',
-            'Withheld',
-            'Household',
-            'Candidate',
-            'Relationship',
-            'Eligibility',
-        )
-        for prefix in compounds:
-            if name.startswith(prefix):
-                if prefix == 'Notice' and 'Status' in name:
-                    return 'Specialist'
-                return prefix
-        if 'Specialist' in name or name == 'RequiredSpecialist':
-            return 'Specialist'
-        if 'Repository' in name:
-            stem = name.replace('Repository', '')
-            for prefix in compounds:
-                if stem.startswith(prefix):
-                    return prefix
-        match = re.match(r'^([A-Z][a-z]+)', name)
-        return match.group(1) if match else name
-
-    def _family_sort_rank(self, family: str) -> Tuple[int, str]:
-        order = {
-            'Offer': 0,
-            'CrossSell': 1,
-            'Specialist': 2,
-            'Withheld': 3,
-            'Client': 4,
-            'Product': 5,
-            'Candidate': 6,
-            'Relationship': 7,
-            'Household': 8,
-            'Eligibility': 9,
-            'Meta': 90,
-        }
-        return (order.get(family, 50), family)
-
-    def _is_aggregate_root_cell(self, cid: str) -> bool:
-        oclass = self._id_to_oclass.get(cid)
-        if oclass is None:
-            return False
-        if 'aggregate root' in (oclass.name or '').lower():
-            return True
-        module_name = getattr(self, '_local_module_name', None)
-        if not module_name:
-            return False
-        return cid.endswith(f"--{self._slug(module_name.strip())}")
-
-    def _module_aggregate_id(self, members: List[str]) -> Optional[str]:
-        for cid in members:
-            if self._is_aggregate_root_cell(cid):
-                return cid
-        return None
-
-    def _family_bounds(
-        self,
-        placements: Dict[str, Tuple[float, float, float, float]],
-        cids: List[str],
-    ) -> Optional[Tuple[float, float, float, float]]:
-        geos = [placements[cid] for cid in cids if cid in placements]
-        if not geos:
-            return None
-        x0 = min(g[0] for g in geos)
-        y0 = min(g[1] for g in geos)
-        x1 = max(g[0] + g[2] for g in geos)
-        y1 = max(g[1] + g[3] for g in geos)
-        return (x0, y0, x1 - x0, y1 - y0)
 
     def _extends_base_name(self, name: str) -> Optional[str]:
         return DiagramClass(name=name, sequential_order=1).extends_base_name()
@@ -913,59 +886,6 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
     def _append_copied_edge(self, root_el: ET.Element, edge: ET.Element) -> None:
         root_el.append(copy.deepcopy(edge))
 
-    def _place_new_classes_clear_of_existing(self, new_placements: Dict[str, Tuple[float, float, float, float]], existing_placements: Dict[str, Tuple[float, float, float, float]]) -> Dict[str, Tuple[float, float, float, float]]:
-        """Shift newly laid-out classes so they do not overlap kept positions."""
-        if not new_placements:
-            return new_placements
-        if not existing_placements:
-            return new_placements
-        max_right = max((x + w for x, _y, w, _h in existing_placements.values()))
-        min_new_x = min((x for x, _y, _w, _h in new_placements.values()))
-        shift_x = max_right + CLUSTER_GAP_X - min_new_x
-        if shift_x < 0:
-            shift_x = 0.0
-        shifted = {cid: (x + shift_x, y, w, h) for cid, (x, y, w, h) in new_placements.items()}
-        for cid in list(shifted):
-            while any((self._rects_overlap(shifted[cid], geo) for geo in existing_placements.values())):
-                x, y, w, h = shifted[cid]
-                shifted[cid] = (x, y + OVERLAP_GAP, w, h)
-        return shifted
-
-    def _layout_classes_keep_positioning(self, id_to_oclass) -> Dict[str, Tuple[float, float, float, float]]:
-        """Keep existing class positions; layout only classes that are new."""
-        placements, new_ids = self._kept_and_new_class_ids(id_to_oclass)
-        if not new_ids:
-            return placements
-        new_placements = self._layout_new_classes(id_to_oclass, new_ids)
-        new_placements = self._place_new_classes_clear_of_existing(new_placements, placements)
-        placements.update(new_placements)
-        return placements
-
-    def _kept_and_new_class_ids(self, id_to_oclass):
-        previous_positions = self._previous_positions or {}
-        placements: Dict[str, Tuple[float, float, float, float]] = {}
-        new_ids: List[str] = []
-        for cid, oclass in id_to_oclass.items():
-            if cid in previous_positions:
-                x, y = previous_positions[cid]
-                placements[cid] = (x, y, float(CELL_WIDTH), float(self.load_class(oclass).height()))
-            else:
-                new_ids.append(cid)
-        return (placements, new_ids)
-
-    def _layout_new_classes(self, id_to_oclass, new_ids):
-        saved_id_to_oclass = self._id_to_oclass
-        saved_rels = self._relationships
-        saved_prev = self._previous_positions
-        self._id_to_oclass = {cid: id_to_oclass[cid] for cid in new_ids}
-        self._relationships = [(src, tgt, kind) for src, tgt, kind in saved_rels if src in self._id_to_oclass and tgt in self._id_to_oclass]
-        self._previous_positions = None
-        new_placements = self.place_classes()
-        self._id_to_oclass = saved_id_to_oclass
-        self._relationships = saved_rels
-        self._previous_positions = saved_prev
-        return new_placements
-
     def _create_module_cell(self, root_el, module) -> ET.Element:
         node = self.load_module(module)
         node.cell_id = self._cell_id
@@ -990,17 +910,6 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         geo.set('as', 'geometry')
         return cell
 
-    def _create_class_cell(self, root_el, oclass) -> ET.Element:
-        node = self.load_class(oclass)
-        node.cell_id = self._cell_id
-        node.geometry = Geometry(
-            float(self._cell_x),
-            float(self._cell_y),
-            float(CELL_WIDTH),
-            float(node.height()),
-        )
-        return Page('', root_el).place(node)
-
     def _module_tab_label(self, module_name: str) -> str:
         return module_tab_label(module_name)
 
@@ -1015,23 +924,31 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
 
     def _collect_relationships(self, classes: List[OoadClass]) -> List[Tuple[str, str, str]]:
         relationships = []
+        self._arrow_labels: Dict[Tuple[str, str], str] = {}
         for oclass in classes:
             src = self._object_id.get(id(oclass))
             if not src:
                 continue
-            for rel in oclass.relationships:
-                tgt = self._resolve_target(oclass, rel.target)
-                if tgt:
-                    relationships.append((src, tgt, rel.kind or 'association'))
-            base = self._extends_base_name(oclass.name)
-            if not base:
-                continue
-            tgt = self._resolve_target(oclass, base)
-            if tgt:
-                pair = (src, tgt, 'inheritance')
-                if pair not in relationships:
-                    relationships.append(pair)
+            for prop in oclass.properties:
+                self._collect_property_relationship(src, oclass, prop, relationships)
+            for base in self._base_names(oclass):
+                tgt = self._resolve_target(oclass, base)
+                if tgt and (src, tgt, 'inheritance') not in relationships:
+                    relationships.append((src, tgt, 'inheritance'))
         return relationships
+
+    def _collect_property_relationship(self, src, oclass, prop, relationships) -> None:
+        rel = getattr(prop, 'relationship', None)
+        tgt = self._resolve_target(oclass, rel.target) if rel is not None else None
+        if not tgt:
+            return
+        relationships.append((src, tgt, rel.kind or 'association'))
+        named = self._arrow_labels.get((src, tgt))
+        self._arrow_labels[(src, tgt)] = f'{named}, {prop.name}' if named else prop.name
+
+    def _base_names(self, oclass: OoadClass) -> List[str]:
+        named = self._extends_base_name(oclass.name)
+        return [named] if named else list(oclass.bases)
 
     def _direct_import_ids(self, local_ids) -> List[str]:
         """Foreign class ids with a direct link from this aggregate.
@@ -1071,156 +988,6 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             return False
         return self._id_to_module.get(src, '') != self._import_local_label
 
-    def _create_imported_class_cell(self, root_el, oclass) -> ET.Element:
-        node = self._imported_class(oclass, self._from_module)
-        node.cell_id = self._cell_id
-        node.geometry = Geometry(
-            float(self._cell_x),
-            float(self._cell_y),
-            float(CELL_WIDTH),
-            float(node.height()),
-        )
-        return Page('', root_el).place(node)
-
-    def _layout_page_with_imports(self, local_ids) -> Dict[str, Tuple[float, float, float, float]]:
-        """Pack locals tightly; inheritance imports above, others beside linkers."""
-        local_set = set(local_ids)
-        page_rels = [(s, t, k) for s, t, k in self._relationships if s in local_set and t in local_set]
-        self._origin_x = float(START_X)
-        self._origin_y = float(START_Y)
-        self._pack_cols = 4
-        saved_rels = self._relationships
-        self._relationships = page_rels
-        local_map, _width, _height = self._pack_cluster(local_ids)
-        self._relationships = saved_rels
-        self._placements = dict(local_map)
-        self._relax_layout_for_edges(page_rels, local_set)
-        if not self._import_ids:
-            return self._resolve_class_overlaps(self._placements)
-        self._place_page_imports()
-        return self._resolve_class_overlaps(self._placements, prefer_move=set(self._import_ids))
-
-    def _linkers_for(self, imported_id: str) -> List[Tuple[str, str]]:
-        out: List[Tuple[str, str]] = []
-        for s, t, k in self._relationships:
-            kind = (k or 'association').lower()
-            if s == imported_id and t in self._placements:
-                out.append((t, kind))
-            elif t == imported_id and s in self._placements:
-                out.append((s, kind))
-        return out
-
-    def _place_page_imports(self) -> None:
-        parents, children, beside_ids = self._classify_import_bands()
-        if parents:
-            self._place_inheritance_parents(parents)
-        self._place_inheritance_children(children)
-        self._place_beside_imports(beside_ids)
-
-    def _classify_import_bands(self) -> Tuple[List[str], List[str], List[str]]:
-        inheritance_parents = []
-        inheritance_children = []
-        for iid in self._import_ids:
-            links = self._linkers_for(iid)
-            if any((k == 'inheritance' for _lid, k in links)):
-                if any((s == iid and t in self._placements and ((k or '').lower() == 'inheritance') for s, t, k in self._relationships)):
-                    inheritance_children.append(iid)
-                else:
-                    inheritance_parents.append(iid)
-        beside_ids = [iid for iid in self._import_ids if iid not in inheritance_parents and iid not in inheritance_children]
-        return (inheritance_parents, inheritance_children, beside_ids)
-
-    def _place_inheritance_parents(self, inheritance_parents: List[str]) -> None:
-        band_h = max((float(self._imported_class(self._id_to_oclass[i]).height()) for i in inheritance_parents)) + INNER_ROW_GAP * 2
-        self._placements = {cid: (x, y + band_h, w, h) for cid, (x, y, w, h) in self._placements.items()}
-        used: List[Tuple[float, float, float, float]] = []
-        for iid in inheritance_parents:
-            used.append(self._place_one_inheritance_parent(iid, used))
-
-    def _place_one_inheritance_parent(self, iid: str, used: List) -> Tuple[float, float, float, float]:
-        h = float(self._imported_class(self._id_to_oclass[iid]).height())
-        links = self._linkers_for(iid)
-        primary = min((lid for lid, _k in links), key=lambda lid: (self._placements[lid][1], self._placements[lid][0]))
-        x = self._placements[primary][0]
-        y = float(START_Y)
-        candidate = (x, y, float(CELL_WIDTH), h)
-        for _ in range(12):
-            if all((not self._rects_overlap(candidate, geo) for geo in used)):
-                break
-            x += CELL_WIDTH + INNER_COL_GAP
-            candidate = (x, y, float(CELL_WIDTH), h)
-        self._placements[iid] = candidate
-        return candidate
-
-    def _place_inheritance_children(self, inheritance_children: List[str]) -> None:
-        child_slots: dict[str, int] = {}
-        for iid in inheritance_children:
-            h = float(self._imported_class(self._id_to_oclass[iid]).height())
-            links = self._linkers_for(iid)
-            primary = min((lid for lid, _k in links), key=lambda lid: (self._placements[lid][1], self._placements[lid][0]))
-            px, py, _pw, ph = self._placements[primary]
-            slot = child_slots.get(primary, 0)
-            child_slots[primary] = slot + 1
-            x = px + slot * (CELL_WIDTH + INNER_COL_GAP)
-            y = py + ph + INNER_ROW_GAP
-            self._placements[iid] = (x, y, float(CELL_WIDTH), h)
-
-    def _place_beside_imports(self, beside_ids: List[str]) -> None:
-        """Place imports in columns beside the local noun-family island they belong to."""
-        if not beside_ids:
-            return
-        from collections import defaultdict
-        local_set = set(self._local_id_list)
-        used = [geo for cid, geo in self._placements.items() if cid in local_set]
-        by_family: dict[str, List[str]] = defaultdict(list)
-        for iid in beside_ids:
-            by_family[self._noun_family_for_class(iid)].append(iid)
-        for family in sorted(by_family.keys(), key=self._family_sort_rank):
-            iids = sorted(
-                by_family[family],
-                key=lambda cid: self._imported_class(self._id_to_oclass[cid]).display_name(),
-            )
-            locals_in_family = [
-                cid for cid in self._local_id_list
-                if cid in self._placements and self._noun_family_for_class(cid) == family
-            ]
-            bounds = self._family_bounds(self._placements, locals_in_family)
-            if bounds is not None:
-                bx, by, bw, _bh = bounds
-                x = bx + bw + INNER_COL_GAP
-                y = by
-            else:
-                hubs = []
-                for iid in iids:
-                    for lid, _kind in self._linkers_for(iid):
-                        if lid in self._placements:
-                            hubs.append(lid)
-                if not hubs:
-                    x, y = (float(START_X), float(START_Y))
-                else:
-                    hub = min(hubs, key=lambda lid: (self._placements[lid][1], self._placements[lid][0]))
-                    hx, hy, hw, _hh = self._placements[hub]
-                    x = hx + hw + INNER_COL_GAP
-                    y = hy
-            for iid in iids:
-                h = float(self._imported_class(self._id_to_oclass[iid]).height())
-                w = float(CELL_WIDTH)
-                candidate = (x, y, w, h)
-                guard = 0
-                while any((self._rects_overlap(candidate, geo) for geo in used)) and guard < 16:
-                    guard += 1
-                    y += h + INNER_ROW_GAP
-                    candidate = (x, y, w, h)
-                self._placements[iid] = candidate
-                used.append(candidate)
-                y += h + INNER_ROW_GAP
-
-    def _fan_imports_by_hub(self, by_hub) -> None:
-        return
-
-    def _place_fanned_import(self, iid) -> None:
-        return
-
     def _add_diagram_page(self, mxfile: ET.Element, page_name: str) -> ET.Element:
         diagram = ET.SubElement(mxfile, 'diagram')
         diagram.set('name', page_name)
@@ -1229,6 +996,7 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         self._page_width = '1654'
         self._page_height = '1169'
         self._set_graph_attrs(model_el)
+        self._graph_of = lambda _root: model_el
         root_el = ET.SubElement(model_el, 'root')
         cell0 = ET.SubElement(root_el, 'mxCell')
         cell0.set('id', '0')
@@ -1237,1761 +1005,29 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         cell1.set('parent', '0')
         return root_el
 
-    def _render_edges_on_page(self, root_el) -> None:
-        """Wire edges present on this page.
-
-    When *local_ids* is set (per-aggregate tabs), only draw:
-    - edges that leave a local class (local → local/import)
-    - inheritance into a local base (import → local, inheritance)
-
-    Never import↔import, and never inbound association from an import.
-    """
-        edge_specs = self._page_edge_specs()
-        self._assign_distinct_anchors(edge_specs)
-        edge_specs.sort(key=self._edge_sort_key)
-        self._draw_routed_edges(root_el, edge_specs)
-
     def _page_relationships(self) -> List[Tuple[str, str, str]]:
         page_ids = self._page_ids
         local_ids = self._local_ids
         return [(s, t, k) for s, t, k in self._relationships if s in page_ids and t in page_ids and (local_ids is None or s in local_ids or (t in local_ids and (k or '').lower() == 'inheritance'))]
 
-    def _page_edge_specs(self) -> List[dict]:
-        edge_specs: List[dict] = []
-        for src_id, tgt_id, kind in self._page_relationships():
-            exit_side, entry_side = self._relationship_anchor_sides(src_id, tgt_id, kind)
-            edge_specs.append({
-                'src_id': src_id,
-                'tgt_id': tgt_id,
-                'kind': kind,
-                'exit_side': exit_side,
-                'entry_side': entry_side,
-                'exit_frac': 0.5,
-                'entry_frac': 0.5,
-                'exit_lane': 0,
-                'entry_lane': 0,
-            })
-        self._separate_bidirectional_pairs(edge_specs)
-        return edge_specs
-
-    def _relationship_anchor_sides(self, src_id: str, tgt_id: str, kind: str) -> Tuple[str, str]:
-        src = self._placements[src_id]
-        tgt = self._placements[tgt_id]
-        kind_l = (kind or 'association').lower()
-        import_ids = set(getattr(self, '_import_ids', []) or [])
-        if tgt_id in import_ids and src_id not in import_ids:
-            return self._import_neighbor_sides(src, tgt)
-        prefer_vertical = kind_l in ('composition', 'aggregation')
-        if prefer_vertical and abs(src[0] - tgt[0]) <= 12:
-            return self._vertical_anchor_sides(src, tgt)
-        return self._closest_facing_sides(src, tgt, prefer_vertical=prefer_vertical)
-
-    def _vertical_anchor_sides(self, src, tgt) -> Tuple[str, str]:
-        sy, sh = src[1], src[3]
-        ty, th = tgt[1], tgt[3]
-        if ty >= sy + sh * 0.45:
-            return ('bottom', 'top')
-        if ty + th <= sy + sh * 0.55:
-            return ('top', 'bottom')
-        return self._preferred_sides(src, tgt)
-
-    def _import_neighbor_sides(self, src, tgt) -> Tuple[str, str]:
-        sx, _sy, sw, _sh = src
-        tx, ty, tw, th = tgt
-        same_row = abs(src[1] - ty) <= max(src[3], th) * 0.55
-        if tx >= sx + sw - 8 and same_row:
-            return ('right', 'left')
-        if tx + tw <= sx + 8 and same_row:
-            return ('left', 'right')
-        if tx >= sx + sw - 8:
-            return ('right', 'left')
-        if tx + tw <= sx + 8:
-            return ('left', 'right')
-        return self._preferred_sides(src, tgt)
-
-    def _separate_bidirectional_pairs(self, edge_specs: List[dict]) -> None:
-        seen: dict[Tuple[str, str], int] = {}
-        for idx, spec in enumerate(edge_specs):
-            pair = (spec['src_id'], spec['tgt_id'])
-            rev = (spec['tgt_id'], spec['src_id'])
-            if rev in seen and (spec['kind'] or '').lower() == (edge_specs[seen[rev]]['kind'] or '').lower():
-                spec['lane_boost'] = 3
-                spec['exit_side'], spec['entry_side'] = self._alternate_sides(
-                    edge_specs[seen[rev]]['exit_side'],
-                    edge_specs[seen[rev]]['entry_side'],
-                )
-            seen[pair] = idx
-
-    def _alternate_sides(self, exit_side: str, entry_side: str) -> Tuple[str, str]:
-        flip = {'top': 'bottom', 'bottom': 'top', 'left': 'right', 'right': 'left'}
-        if exit_side in ('top', 'bottom'):
-            return ('right', 'left')
-        return (flip.get(exit_side, 'bottom'), flip.get(entry_side, 'top'))
-
-    def _edge_sort_key(self, spec: dict) -> Tuple[int, float, str]:
-        s = self._placements[spec['src_id']]
-        t = self._placements[spec['tgt_id']]
-        dist = abs(s[0] + s[2] / 2 - (t[0] + t[2] / 2)) + abs(s[1] + s[3] / 2 - (t[1] + t[3] / 2))
-        ownership = 0 if self._ownership_kinds(spec['kind']) else 1
-        return (ownership, dist, spec['src_id'])
-
-    def _draw_routed_edges(self, root_el, edge_specs) -> None:
-        used_ids = {cell.get('id', '') for cell in root_el.iter('mxCell')}
-        numeric_ids = [int(i) for i in used_ids if i.isdigit()]
-        edge_counter = max(numeric_ids) if numeric_ids else len(self._page_ids) + 10
-        self._routed_segments: List[List[Tuple[Tuple[float, float], Tuple[float, float]]]] = []
-        self._exit_bus_counters: dict[Tuple[str, str], int] = {}
-        for lane_idx, spec in enumerate(edge_specs):
-            edge_counter += 1
-            self._edge_spec = spec
-            self._edge_counter = edge_counter
-            self._lane_idx = lane_idx
-            self._draw_one_routed_edge(root_el)
-
-    def _draw_one_routed_edge(self, root_el) -> None:
-        spec = self._edge_spec
-        self._exit_x, self._exit_y = self._side_anchor(spec['exit_side'], spec['exit_frac'])
-        self._entry_x, self._entry_y = self._side_anchor(spec['entry_side'], spec['entry_frac'])
-        self._bind_route_from_spec()
-        self._waypoints = DrawIORelationship(
-            target=spec.get('tgt_name', ''),
-            kind=spec.get('kind', ''),
-        ).route(self, self._placements[spec['src_id']])
-        if (not self._waypoints) and self._same_side_sibling_conflict():
-            retry = self._simple_route_variants_inner()
-            if retry is not None:
-                self._waypoints = retry
-        self._route_trial_points = self._waypoints
-        self._edge_src_id = spec['src_id']
-        self._edge_tgt_id = spec['tgt_id']
-        self._edge_kind = spec['kind']
-        self._edge_id = str(self._edge_counter)
-        self._create_edge(root_el)
-        self._routed_segments.append(self._segments_from_route(self._placements[spec['src_id']]))
-
-    def _bind_route_from_spec(self) -> None:
-        spec = self._edge_spec
-        self._route_tgt = self._placements[spec['tgt_id']]
-        self._exit_side = spec['exit_side']
-        self._entry_side = spec['entry_side']
-        self._exit_frac = spec['exit_frac']
-        self._entry_frac = spec['entry_frac']
-        self._obstacles = [geo for cid, geo in self._placements.items() if cid not in (spec['src_id'], spec['tgt_id'])]
-        bus_key = (spec['src_id'], spec['exit_side'])
-        bus_idx = self._exit_bus_counters.get(bus_key, 0)
-        self._exit_bus_counters[bus_key] = bus_idx + 1
-        spec['bus_idx'] = bus_idx
-        lane_boost = int(spec.get('lane_boost', 0))
-        exit_lane = int(spec.get('exit_lane', self._lane_idx)) + bus_idx
-        entry_lane = int(spec.get('entry_lane', 0))
-        import_ids = set(getattr(self, '_import_ids', []) or [])
-        touches_import = spec['tgt_id'] in import_ids or spec['src_id'] in import_ids
-        lane_scale = 4 if touches_import else 1
-        self._route_lane = (max(exit_lane, entry_lane) * lane_scale + lane_boost) * ROUTE_LANE_STEP
-        self._avoid_segments = self._routed_segments
-        self._all_placements = self._placements
-
-    def _create_edge(self, root_el) -> ET.Element:
-        style = self._edge_anchor_style()
+    def _create_edge(self, root_el, arrow: DiagramArrow, cards: Dict[str, DiagramCard], edge_id: str) -> ET.Element:
         cell = ET.SubElement(root_el, 'mxCell')
-        cell.set('id', self._edge_id)
-        cell.set('value', '')
-        cell.set('style', style)
+        cell.set('id', edge_id)
+        cell.set('value', arrow.label)
+        cell.set('style', arrow_style(EDGE_STYLES.get(arrow.kind, DEFAULT_EDGE_STYLE), arrow, cards))
         cell.set('edge', '1')
-        cell.set('source', self._edge_src_id)
-        cell.set('target', self._edge_tgt_id)
+        cell.set('source', arrow.source)
+        cell.set('target', arrow.target)
         cell.set('parent', '1')
         geo = ET.SubElement(cell, 'mxGeometry')
         geo.set('relative', '1')
         geo.set('as', 'geometry')
-        self._append_edge_waypoints(geo)
+        if arrow.corners:
+            points = ET.SubElement(geo, 'Array')
+            points.set('as', 'points')
+            for x, y in arrow.corners:
+                ET.SubElement(points, 'mxPoint', attrib={'x': str(x), 'y': str(y)})
         return cell
-
-    def _edge_anchor_style(self) -> str:
-        style = EDGE_STYLES.get(self._edge_kind, DEFAULT_EDGE_STYLE)
-        parts = self._edge_anchor_parts()
-        if parts:
-            style = style.rstrip(';') + ';' + ';'.join(parts) + ';'
-        return style
-
-    def _edge_anchor_parts(self) -> List[str]:
-        parts: List[str] = []
-        if self._exit_x is not None:
-            parts.append(f'exitX={self._exit_x}')
-        if self._exit_y is not None:
-            parts.append(f'exitY={self._exit_y}')
-        if self._exit_x is not None or self._exit_y is not None:
-            parts.extend(['exitDx=0', 'exitDy=0'])
-        if self._entry_x is not None:
-            parts.append(f'entryX={self._entry_x}')
-        if self._entry_y is not None:
-            parts.append(f'entryY={self._entry_y}')
-        if self._entry_x is not None or self._entry_y is not None:
-            parts.extend(['entryDx=0', 'entryDy=0'])
-        return parts
-
-    def _append_edge_waypoints(self, geo) -> None:
-        if not self._waypoints:
-            return
-        arr = ET.SubElement(geo, 'Array')
-        arr.set('as', 'points')
-        for wx, wy in self._waypoints:
-            pt = ET.SubElement(arr, 'mxPoint')
-            pt.set('x', str(int(round(wx))))
-            pt.set('y', str(int(round(wy))))
-
-    def _rects_overlap(self, first, second) -> bool:
-        ax, ay, aw, ah = first
-        bx, by, bw, bh = second
-        gap = OVERLAP_GAP
-        return ax < bx + bw + gap and ax + aw + gap > bx and (ay < by + bh + gap) and (ay + ah + gap > by)
-
-    def _resolve_class_overlaps(self, placements: Dict[str, Tuple[float, float, float, float]], prefer_move: Optional[set[str]]=None) -> Dict[str, Tuple[float, float, float, float]]:
-        """Push overlapping class boxes apart — prefer sideways on the same row.
-
-    *prefer_move* ids (e.g. imports) are shifted right instead of shoving local
-    packs down into long vertical spines.
-    """
-        self._prefer_move = prefer_move or set()
-        self._overlap_placements = placements
-        ids = list(placements.keys())
-        for _ in range(len(ids) * len(ids) + 1):
-            if not self._nudge_one_overlap(ids):
-                break
-        return placements
-
-    def _nudge_one_overlap(self, ids) -> bool:
-        placements = self._overlap_placements
-        for i, a in enumerate(ids):
-            for b in ids[i + 1:]:
-                if self._rects_overlap(placements[a], placements[b]):
-                    self._overlap_a = a
-                    self._overlap_b = b
-                    self._separate_overlap_pair()
-                    return True
-        return False
-
-    def _separate_overlap_pair(self) -> None:
-        placements = self._overlap_placements
-        a, b = self._overlap_a, self._overlap_b
-        ax, ay, aw, ah = placements[a]
-        bx, by, bw, bh = placements[b]
-        prefer_move = self._prefer_move
-        if a in prefer_move and b not in prefer_move:
-            placements[a] = (bx + bw + OVERLAP_GAP, ay, aw, ah)
-            return
-        if b in prefer_move and a not in prefer_move:
-            placements[b] = (ax + aw + OVERLAP_GAP, by, bw, bh)
-            return
-        self._separate_same_or_stacked()
-
-    def _separate_same_or_stacked(self) -> None:
-        placements = self._overlap_placements
-        a, b = self._overlap_a, self._overlap_b
-        ax, ay, aw, ah = placements[a]
-        bx, by, bw, bh = placements[b]
-        same_row = abs(ay - by) <= max(ah, bh) * 0.6
-        if same_row and ax <= bx:
-            placements[b] = (ax + aw + OVERLAP_GAP, by, bw, bh)
-            return
-        if same_row:
-            placements[a] = (bx + bw + OVERLAP_GAP, ay, aw, ah)
-            return
-        if ay <= by:
-            placements[b] = (bx, ay + ah + OVERLAP_GAP, bw, bh)
-            return
-        placements[a] = (ax, by + bh + OVERLAP_GAP, aw, ah)
-
-    def _relax_layout_for_edges(
-        self,
-        relationships: List[Tuple[str, str, str]],
-        local_set: set[str],
-    ) -> None:
-        """Sugiyama-style pass 1: nudge locals so direct edge-to-edge routes clear obstacles."""
-        import_ids = set(getattr(self, '_import_ids', []) or [])
-        movable = {cid for cid in local_set if cid not in import_ids}
-        nudge_steps = [
-            (float(INNER_COL_GAP), 0.0),
-            (-float(INNER_COL_GAP), 0.0),
-            (0.0, float(INNER_ROW_GAP)),
-            (0.0, -float(INNER_ROW_GAP)),
-            (float(INNER_COL_GAP), float(INNER_ROW_GAP)),
-            (-float(INNER_COL_GAP), float(INNER_ROW_GAP)),
-        ]
-        for _ in range(8):
-            moved = False
-            for src_id, tgt_id, kind in relationships:
-                if src_id not in self._placements or tgt_id not in self._placements:
-                    continue
-                if self._straight_edge_clear(src_id, tgt_id, kind):
-                    continue
-                for cid in (tgt_id, src_id):
-                    if cid not in movable:
-                        continue
-                    cid_family = self._noun_family_for_class(cid)
-                    if (
-                        cid_family != self._noun_family_for_class(src_id)
-                        and cid_family != self._noun_family_for_class(tgt_id)
-                    ):
-                        continue
-                    if self._nudge_class_for_edge(src_id, tgt_id, kind, cid, nudge_steps):
-                        moved = True
-                        break
-            if not moved:
-                break
-
-    def _straight_edge_clear(self, src_id: str, tgt_id: str, kind: str) -> bool:
-        placements = self._placements
-        exit_side, entry_side = self._anchor_sides_for_pair(
-            placements[src_id], placements[tgt_id], kind,
-        )
-        return self._straight_route_clear(placements, src_id, tgt_id, exit_side, entry_side)
-
-    def _anchor_sides_for_pair(
-        self,
-        src_geo: Tuple[float, float, float, float],
-        tgt_geo: Tuple[float, float, float, float],
-        kind: str,
-    ) -> Tuple[str, str]:
-        kind_l = (kind or 'association').lower()
-        prefer_vertical = kind_l in ('composition', 'aggregation')
-        if prefer_vertical and abs(src_geo[0] - tgt_geo[0]) <= 12:
-            return self._vertical_anchor_sides(src_geo, tgt_geo)
-        return self._closest_facing_sides(src_geo, tgt_geo, prefer_vertical=prefer_vertical)
-
-    def _anchor_side_candidates(
-        self,
-        src_geo: Tuple[float, float, float, float],
-        tgt_geo: Tuple[float, float, float, float],
-        kind: str,
-    ) -> List[Tuple[str, str]]:
-        kind_l = (kind or 'association').lower()
-        prefer_vertical = kind_l in ('composition', 'aggregation')
-        primary = self._anchor_sides_for_pair(src_geo, tgt_geo, kind)
-        sx, sy, sw, sh = src_geo
-        tx, ty, tw, th = tgt_geo
-        scx, scy = (sx + sw / 2.0, sy + sh / 2.0)
-        tcx, tcy = (tx + tw / 2.0, ty + th / 2.0)
-        candidates: List[Tuple[str, str, float, int]] = []
-        if tx + tw * 0.15 >= sx + sw * 0.85:
-            gap = max(0.0, tx - (sx + sw))
-            candidates.append(('right', 'left', gap + abs(scy - tcy), 0))
-        if tx + tw * 0.85 <= sx + sw * 0.15:
-            gap = max(0.0, sx - (tx + tw))
-            candidates.append(('left', 'right', gap + abs(scy - tcy), 0))
-        if ty + th * 0.15 >= sy + sh * 0.85:
-            gap = max(0.0, ty - (sy + sh))
-            candidates.append(('bottom', 'top', gap + abs(scx - tcx), 1))
-        if ty + th * 0.85 <= sy + sh * 0.15:
-            gap = max(0.0, sy - (ty + th))
-            candidates.append(('top', 'bottom', gap + abs(scx - tcx), 1))
-        vertical_bias = 0 if prefer_vertical else 1
-        candidates.sort(key=lambda item: (abs(item[3] - vertical_bias), item[2]))
-        ordered: List[Tuple[str, str]] = []
-        for exit_side, entry_side, _dist, _bias in candidates:
-            pair = (exit_side, entry_side)
-            if pair not in ordered:
-                ordered.append(pair)
-        if primary not in ordered:
-            ordered.insert(0, primary)
-        return ordered or [primary]
-
-    def _straight_route_clear(
-        self,
-        placements: Dict[str, Tuple[float, float, float, float]],
-        src_id: str,
-        tgt_id: str,
-        exit_side: str,
-        entry_side: str,
-    ) -> bool:
-        src, tgt = placements[src_id], placements[tgt_id]
-        self._anchor_frac = 0.5
-        exit_pt = self._point_on_side(src, exit_side)
-        entry_pt = self._point_on_side(tgt, entry_side)
-        obstacles = [geo for cid, geo in placements.items() if cid not in (src_id, tgt_id)]
-        if exit_side in ('top', 'bottom'):
-            elbows = ([(exit_pt[0], entry_pt[1])], [(entry_pt[0], exit_pt[1])])
-        else:
-            elbows = ([(entry_pt[0], exit_pt[1])], [(exit_pt[0], entry_pt[1])])
-        for mid in ([], *elbows):
-            if self._polyline_clear_of_boxes(exit_pt, entry_pt, mid, obstacles):
-                return True
-        return False
-
-    def _polyline_clear_of_boxes(
-        self,
-        exit_pt: Tuple[float, float],
-        entry_pt: Tuple[float, float],
-        mids: List[Tuple[float, float]],
-        obstacles: List[Tuple[float, float, float, float]],
-    ) -> bool:
-        points = [exit_pt, *mids, entry_pt]
-        for i in range(len(points) - 1):
-            ax, ay = points[i]
-            bx, by = points[i + 1]
-            for ox, oy, ow, oh in obstacles:
-                if self._segment_crosses_rect(ax, ay, bx, by, ox, oy, ow, oh):
-                    return False
-        return True
-
-    def _segment_crosses_rect(
-        self,
-        ax: float,
-        ay: float,
-        bx: float,
-        by: float,
-        ox: float,
-        oy: float,
-        ow: float,
-        oh: float,
-    ) -> bool:
-        margin = 2.0
-        rx0, ry0 = (ox - margin, oy - margin)
-        rx1, ry1 = (ox + ow + margin, oy + oh + margin)
-        if abs(ax - bx) < 0.5:
-            x = ax
-            if not (rx0 <= x <= rx1):
-                return False
-            seg_lo, seg_hi = sorted((ay, by))
-            return seg_hi > ry0 and seg_lo < ry1
-        if abs(ay - by) < 0.5:
-            y = ay
-            if not (ry0 <= y <= ry1):
-                return False
-            seg_lo, seg_hi = sorted((ax, bx))
-            return seg_hi > rx0 and seg_lo < rx1
-        return False
-
-    def _nudge_class_for_edge(
-        self,
-        src_id: str,
-        tgt_id: str,
-        kind: str,
-        cid: str,
-        nudge_steps: List[Tuple[float, float]],
-    ) -> bool:
-        placements = self._placements
-        x, y, w, h = placements[cid]
-        for dx, dy in nudge_steps:
-            candidate = (x + dx, y + dy, w, h)
-            if candidate[0] < float(START_X) - 4 or candidate[1] < float(START_Y) - 4:
-                continue
-            if any((self._rects_overlap(candidate, geo) for oid, geo in placements.items() if oid != cid)):
-                continue
-            placements[cid] = candidate
-            if self._straight_edge_clear(src_id, tgt_id, kind):
-                return True
-            placements[cid] = (x, y, w, h)
-        return False
-
-    def _closest_facing_sides(
-        self,
-        src: Tuple[float, float, float, float],
-        tgt: Tuple[float, float, float, float],
-        prefer_vertical: bool = False,
-    ) -> Tuple[str, str]:
-        sx, sy, sw, sh = src
-        tx, ty, tw, th = tgt
-        scx, scy = (sx + sw / 2.0, sy + sh / 2.0)
-        tcx, tcy = (tx + tw / 2.0, ty + th / 2.0)
-        candidates: List[Tuple[str, str, float, int]] = []
-        if tx + tw * 0.15 >= sx + sw * 0.85:
-            gap = max(0.0, tx - (sx + sw))
-            candidates.append(('right', 'left', gap + abs(scy - tcy), 0))
-        if tx + tw * 0.85 <= sx + sw * 0.15:
-            gap = max(0.0, sx - (tx + tw))
-            candidates.append(('left', 'right', gap + abs(scy - tcy), 0))
-        if ty + th * 0.15 >= sy + sh * 0.85:
-            gap = max(0.0, ty - (sy + sh))
-            candidates.append(('bottom', 'top', gap + abs(scx - tcx), 1))
-        if ty + th * 0.85 <= sy + sh * 0.15:
-            gap = max(0.0, sy - (ty + th))
-            candidates.append(('top', 'bottom', gap + abs(scx - tcx), 1))
-        if not candidates:
-            return self._preferred_sides(src, tgt)
-        vertical_bias = 0 if prefer_vertical else 1
-        candidates.sort(key=lambda item: (abs(item[3] - vertical_bias), item[2]))
-        return (candidates[0][0], candidates[0][1])
-
-    def _preferred_sides(self, src: Tuple[float, float, float, float], tgt: Tuple[float, float, float, float]) -> Tuple[str, str]:
-        sx, sy, sw, sh = src
-        tx, ty, tw, th = tgt
-        scx, scy = (sx + sw / 2.0, sy + sh / 2.0)
-        tcx, tcy = (tx + tw / 2.0, ty + th / 2.0)
-        dx, dy = (tcx - scx, tcy - scy)
-        target_below = ty >= sy + sh * 0.45
-        target_above = ty + th <= sy + sh * 0.55
-        same_row = abs(sy - ty) <= max(sh, th) * 0.35
-        if tx >= sx + sw - 8 and abs(ty - sy) <= max(sh, th) * 0.65:
-            return ('right', 'left')
-        if tx + tw <= sx + 8 and abs(ty - sy) <= max(sh, th) * 0.65:
-            return ('left', 'right')
-        if target_below and not same_row:
-            return ('bottom', 'top')
-        if target_above and not same_row:
-            return ('top', 'bottom')
-        if abs(dy) >= max(abs(dx) * 0.6, (sh + th) * 0.25):
-            if dy >= 0:
-                return ('bottom', 'top')
-            return ('top', 'bottom')
-        if abs(dx) >= abs(dy):
-            if dx >= 0:
-                return ('right', 'left')
-            return ('left', 'right')
-        if dy >= 0:
-            return ('bottom', 'top')
-        return ('top', 'bottom')
-
-    def _side_anchor(self, side: str, frac: float) -> Tuple[float, float]:
-        if side == 'top':
-            return (frac, 0.0)
-        if side == 'bottom':
-            return (frac, 1.0)
-        if side == 'left':
-            return (0.0, frac)
-        return (1.0, frac)
-
-    def _distribute_fracs(self, count: int) -> List[float]:
-        if count <= 1:
-            return [0.5]
-        return [round(0.15 + 0.7 * i / (count - 1), 3) for i in range(count)]
-
-    def _assign_distinct_anchors(self, edge_specs: List[dict]) -> None:
-        from collections import defaultdict
-        exit_groups: dict[Tuple[str, str], List[int]] = defaultdict(list)
-        entry_groups: dict[Tuple[str, str], List[int]] = defaultdict(list)
-        for idx, spec in enumerate(edge_specs):
-            exit_groups[spec['src_id'], spec['exit_side']].append(idx)
-            entry_groups[spec['tgt_id'], spec['entry_side']].append(idx)
-        for idxs in exit_groups.values():
-            for lane, (frac, idx) in enumerate(zip(self._distribute_fracs(len(idxs)), idxs)):
-                edge_specs[idx]['exit_frac'] = frac
-                edge_specs[idx]['exit_lane'] = lane
-        for idxs in entry_groups.values():
-            for lane, (frac, idx) in enumerate(zip(self._distribute_fracs(len(idxs)), idxs)):
-                edge_specs[idx]['entry_frac'] = frac
-                edge_specs[idx]['entry_lane'] = lane
-
-    def _point_on_side(self, geo, side) -> Tuple[float, float]:
-        frac = self._anchor_frac
-        x, y, w, h = geo
-        if side == 'top':
-            return (x + w * frac, y)
-        if side == 'bottom':
-            return (x + w * frac, y + h)
-        if side == 'left':
-            return (x, y + h * frac)
-        return (x + w, y + h * frac)
-
-    def _outward_point(self, geo, side) -> Tuple[float, float]:
-        ax, ay = self._point_on_side(geo, side)
-        clearance = self._clearance
-        if side == 'top':
-            return (ax, ay - clearance)
-        if side == 'bottom':
-            return (ax, ay + clearance)
-        if side == 'left':
-            return (ax - clearance, ay)
-        return (ax + clearance, ay)
-
-    def _polyline_hits_obstacle(self, points) -> bool:
-        margin = self._hit_margin
-        for i in range(len(points) - 1):
-            start_x, start_y = points[i]
-            end_x, end_y = points[i + 1]
-            for left, top, width, height in self._obstacles:
-                if self._line_intersects_rect(
-                    (start_x, start_y, end_x, end_y),
-                    (left, top, width, height, margin),
-                ):
-                    return True
-        return False
-
-    def _line_intersects_rect(self, segment, rect) -> bool:
-        start_x, start_y, end_x, end_y = segment
-        left, top, width, height, margin = rect
-        left -= margin
-        top -= margin
-        width += 2 * margin
-        height += 2 * margin
-        corners = [
-            (left, top),
-            (left + width, top),
-            (left + width, top + height),
-            (left, top + height),
-        ]
-        sides = [
-            (corners[0], corners[1]),
-            (corners[1], corners[2]),
-            (corners[2], corners[3]),
-            (corners[3], corners[0]),
-        ]
-        for first, second in sides:
-            if self._segments_cross_2d(
-                (start_x, start_y, end_x, end_y),
-                (first[0], first[1], second[0], second[1]),
-            ):
-                return True
-        if left <= start_x <= left + width and top <= start_y <= top + height:
-            return True
-        return False
-
-    def _ccw_2d(self, first, second) -> bool:
-        ax, ay = first
-        bx, by = second
-        cx, cy = self._ccw_third
-        return (cy - ay) * (bx - ax) > (by - ay) * (cx - ax)
-
-    def _segments_cross_2d(self, first, second) -> bool:
-        ax, ay, bx, by = first
-        cx, cy, dx, dy = second
-        self._ccw_third = (dx, dy)
-        first_turn = self._ccw_2d((ax, ay), (cx, cy)) != self._ccw_2d((bx, by), (cx, cy))
-        self._ccw_third = (cx, cy)
-        second_turn = self._ccw_2d((ax, ay), (bx, by))
-        self._ccw_third = (dx, dy)
-        return first_turn and second_turn != self._ccw_2d((ax, ay), (bx, by))
-
-    def _dedupe_points(self, points: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
-        out: List[Tuple[float, float]] = []
-        for pt in points:
-            if not out or abs(out[-1][0] - pt[0]) > 0.5 or abs(out[-1][1] - pt[1]) > 0.5:
-                out.append(pt)
-        return out
-
-    def _column_gutters(self, placements: Dict[str, Tuple[float, float, float, float]]) -> List[float]:
-        """Vertical channel x positions: page margins + midpoints between class columns."""
-        if not placements:
-            return [START_X - ROUTE_CLEARANCE]
-        xs = sorted({int(round(geo[0])) for geo in placements.values()})
-        gutters = [float(xs[0] - ROUTE_CLEARANCE)]
-        for i, x in enumerate(xs):
-            gutters.append(float(x + CELL_WIDTH + COL_GAP / 2.0))
-        gutters.append(float(xs[-1] + CELL_WIDTH + ROUTE_CLEARANCE))
-        out: List[float] = []
-        for g in sorted(gutters):
-            if not out or abs(out[-1] - g) > 1:
-                out.append(g)
-        return out
-
-    def _row_highways(self, placements: Dict[str, Tuple[float, float, float, float]]) -> List[float]:
-        """Horizontal channel y positions through gaps between stacked class rows."""
-        if not placements:
-            return [START_Y - ROUTE_CLEARANCE]
-        bands = sorted({(int(round(geo[1])), int(round(geo[1] + geo[3]))) for geo in placements.values()})
-        highways = [float(bands[0][0] - ROUTE_CLEARANCE)]
-        for i in range(len(bands) - 1):
-            _top0, bottom = bands[i]
-            top1, _bottom1 = bands[i + 1]
-            if top1 > bottom:
-                highways.append(float((bottom + top1) / 2.0))
-        highways.append(float(bands[-1][1] + ROUTE_CLEARANCE))
-        out: List[float] = []
-        for y in sorted(highways):
-            if not out or abs(out[-1] - y) > 1:
-                out.append(y)
-        return out
-
-    def _nearest(self, values: List[float], target: float) -> float:
-        return min(values, key=lambda v: abs(v - target))
-
-    def _ownership_kinds(self, kind: str) -> bool:
-        return (kind or '').lower() in {'composition', 'aggregation'}
-
-    def _is_value_object(self, cid: str) -> bool:
-        oclass = self._id_to_oclass.get(cid)
-        if oclass is None:
-            return False
-        if 'repository' in cid or 'event' in cid:
-            return False
-        loaded = self.load_class(oclass)
-        stereotypes = loaded.tactical_stereotypes()
-        if any(('value object' in s.lower() for s in stereotypes)):
-            return True
-        display = loaded.display_name()
-        if display.endswith('Event'):
-            return False
-        for _src, tgt, kind in self._relationships:
-            if tgt == cid and self._ownership_kinds(kind):
-                return False
-        meaningful_ops = [
-            op for op in loaded.operations
-            if op.name != display and (not op.name.startswith('_'))
-        ]
-        if meaningful_ops:
-            return False
-        return len(loaded.properties) <= 3
-
-    def _infer_clusters(self, ids) -> List[List[str]]:
-        """Group classes by module/BC when available; else by composition aggregates.
-
-    Nested owners (a composed class that itself composes others) become their
-    own cluster so related lines stay local and foreign lines stay in the gaps.
-    """
-        named = self._clusters_from_named_modules(ids)
-        if named is not None:
-            return named
-        return self._clusters_from_ownership(ids)
-
-    def _clusters_from_named_modules(self, ids) -> Optional[List[List[str]]]:
-        id_set = set(ids)
-        named_modules = [m for m in self._modules or [] if m.name and m.name.strip() and m.classes]
-        if len(named_modules) < 2:
-            return None
-        clusters: List[List[str]] = []
-        seen: set[str] = set()
-        for module in named_modules:
-            members = [self._object_id[id(c)] for c in module.classes if self._object_id.get(id(c)) in id_set]
-            members = [m for m in members if m not in seen]
-            if members:
-                clusters.append(members)
-                seen.update(members)
-        leftovers = sorted((cid for cid in ids if cid not in seen))
-        if leftovers:
-            clusters.append(leftovers)
-        return clusters
-
-    def _ownership_parent_maps(self):
-        from collections import defaultdict
-        children: Dict[str, List[str]] = defaultdict(list)
-        parents: Dict[str, str] = {}
-        for src, tgt, kind in self._relationships:
-            if src == tgt or not self._ownership_kinds(kind):
-                continue
-            children[src].append(tgt)
-            parents.setdefault(tgt, src)
-        return (children, parents)
-
-    def _clusters_from_ownership(self, ids) -> List[List[str]]:
-        children, parents = self._ownership_parent_maps()
-        self._cluster_ids = ids
-        self._cluster_children = children
-        self._cluster_parents = parents
-        self._cluster_assigned: set[str] = set()
-        self._member_clusters: List[List[str]] = []
-        self._collect_nested_root_clusters()
-        self._collect_top_root_clusters()
-        leftovers = sorted((cid for cid in ids if cid not in self._cluster_assigned))
-        self._attach_associated_orphans(leftovers)
-        return self._member_clusters
-
-    def _collect_nested_root_clusters(self) -> None:
-        ids = self._cluster_ids
-        children = self._cluster_children
-        parents = self._cluster_parents
-        nested_roots = sorted((cid for cid in ids if children.get(cid) and cid in parents))
-        for root in nested_roots:
-            if root in self._cluster_assigned:
-                continue
-            self._member_clusters.append(self._nested_root_members(root))
-
-    def _nested_root_members(self, root) -> List[str]:
-        children = self._cluster_children
-        parents = self._cluster_parents
-        assigned = self._cluster_assigned
-        members = [root]
-        assigned.add(root)
-        for child in sorted(children.get(root, ())):
-            if child in assigned:
-                continue
-            if children.get(child) and child in parents and (child != root):
-                continue
-            members.append(child)
-            assigned.add(child)
-        return members
-
-    def _collect_top_root_clusters(self) -> None:
-        ids = self._cluster_ids
-        children = self._cluster_children
-        parents = self._cluster_parents
-        nested_roots = set((cid for cid in ids if children.get(cid) and cid in parents))
-        self._nested_cluster_roots = nested_roots
-        top_roots = sorted((cid for cid in ids if children.get(cid) and cid not in parents))
-        for root in top_roots:
-            if root in self._cluster_assigned:
-                continue
-            self._member_clusters.append(self._top_root_members(root))
-
-    def _top_root_members(self, root) -> List[str]:
-        children = self._cluster_children
-        nested_roots = self._nested_cluster_roots
-        assigned = self._cluster_assigned
-        members = [root]
-        assigned.add(root)
-        for child in sorted(children.get(root, ())):
-            if child in assigned or child in nested_roots:
-                continue
-            members.append(child)
-            assigned.add(child)
-        return members
-
-    def _attach_associated_orphans(self, leftovers) -> None:
-        clusters = self._member_clusters
-        self._cluster_of_tmp = {cid: index for index, members in enumerate(clusters) for cid in members}
-        still_orphan: List[str] = []
-        for cid in leftovers:
-            if self._attach_orphan_if_unique(cid):
-                continue
-            still_orphan.append(cid)
-        for cid in still_orphan:
-            clusters.append([cid])
-
-    def _attach_orphan_if_unique(self, cid) -> bool:
-        clusters = self._member_clusters
-        cluster_of_tmp = self._cluster_of_tmp
-        assigned = self._cluster_assigned
-        assoc_targets = [tgt for src, tgt, kind in self._relationships if src == cid and (not self._ownership_kinds(kind)) and (tgt in cluster_of_tmp)]
-        assoc_targets += [src for src, tgt, kind in self._relationships if tgt == cid and (not self._ownership_kinds(kind)) and (src in cluster_of_tmp)]
-        target_clusters = {cluster_of_tmp[t] for t in assoc_targets}
-        if len(target_clusters) != 1:
-            return False
-        clusters[next(iter(target_clusters))].append(cid)
-        assigned.add(cid)
-        return True
-
-    def _pack_cluster(self, members) -> Tuple[Dict[str, Tuple[float, float, float, float]], float, float]:
-        id_to_oclass = self._id_to_oclass
-        origin_x = self._origin_x
-        origin_y = self._origin_y
-        relationships = self._relationships
-        cols = self._pack_cols
-        if cols is None:
-            cols = INNER_COLS
-        if not members:
-            return ({}, 0.0, 0.0)
-        member_set = set(members)
-        col_count = max(1, cols)
-        from collections import defaultdict
-        composition: Dict[str, List[str]] = defaultdict(list)
-        aggregation: Dict[str, List[str]] = defaultdict(list)
-        for src, tgt, kind in relationships:
-            if src not in member_set or tgt not in member_set or src == tgt:
-                continue
-            k = (kind or '').lower()
-            if k == 'composition':
-                composition[src].append(tgt)
-            elif k == 'aggregation' and 'repository' not in src:
-                aggregation[src].append(tgt)
-        owned = {c for kids in composition.values() for c in kids}
-        owned |= {c for kids in aggregation.values() for c in kids}
-
-        def _is_repo(cid: str) -> bool:
-            return 'repository' in cid
-        roots = [m for m in members if m not in owned and (composition.get(m) or aggregation.get(m))]
-        if not roots:
-            roots = [m for m in members if m not in owned and (not _is_repo(m))] or list(members)
-
-        def _root_score(cid: str) -> Tuple[int, int, str]:
-            return (-(len(composition.get(cid, ())) + len(aggregation.get(cid, ()))), 0 if 'aggregate' in cid or 'entity' in cid else 1, cid)
-        roots = sorted(set(roots), key=_root_score)
-        aggregate_roots = [m for m in members if self._is_aggregate_root_cell(m)]
-        if aggregate_roots:
-            roots = sorted(set(aggregate_roots), key=_root_score)
-        placed: set[str] = set()
-        placements: Dict[str, Tuple[float, float, float, float]] = {}
-        cursor_y = origin_y
-        max_x = origin_x
-        cluster_bottom = origin_y
-
-        def _grid_column_count(count: int) -> int:
-            if count <= 1:
-                return 1
-            return min(col_count, max(2, int(math.ceil(math.sqrt(count)))))
-
-        def _place_row(cids: List[str], y: float) -> float:
-            nonlocal max_x
-            if not cids:
-                return y
-            row_cols = min(col_count, max(1, len(cids)))
-            row_h = 0.0
-            x = origin_x
-            col = 0
-            row_y = y
-            for cid in cids:
-                if cid in placed:
-                    continue
-                h = float(self.load_class(id_to_oclass[cid]).height())
-                if col >= row_cols:
-                    x = origin_x
-                    row_y += row_h + INNER_ROW_GAP
-                    row_h = 0.0
-                    col = 0
-                placements[cid] = (x, row_y, float(CELL_WIDTH), h)
-                placed.add(cid)
-                max_x = max(max_x, x + CELL_WIDTH)
-                row_h = max(row_h, h)
-                x += CELL_WIDTH + INNER_COL_GAP
-                col += 1
-            return row_y + row_h
-
-        def _place_vo_row(kids: List[str], start_y: float) -> float:
-            nonlocal max_x, cluster_bottom
-            if not kids:
-                return start_y
-            x = origin_x
-            row_y = start_y
-            row_h = 0.0
-            vo_cols = _grid_column_count(len(kids))
-            col = 0
-            for kid in kids:
-                if kid in placed:
-                    continue
-                kh = float(self.load_class(id_to_oclass[kid]).height())
-                if col >= vo_cols:
-                    x = origin_x
-                    row_y += row_h + INNER_ROW_GAP
-                    row_h = 0.0
-                    col = 0
-                placements[kid] = (x, row_y, float(CELL_WIDTH), kh)
-                placed.add(kid)
-                max_x = max(max_x, x + CELL_WIDTH)
-                row_h = max(row_h, kh)
-                cluster_bottom = max(cluster_bottom, row_y + row_h)
-                x += CELL_WIDTH + INNER_COL_GAP
-                col += 1
-            return row_y + row_h
-
-        def _composition_parent(cid: str) -> Optional[str]:
-            for src, tgt, kind in relationships:
-                if tgt != cid or src not in member_set:
-                    continue
-                if (kind or '').lower() == 'composition':
-                    return src
-            return None
-
-        def _place_aggregate_header(root: str, y: float) -> float:
-            nonlocal max_x, cluster_bottom
-            if root in placed:
-                return y
-            oh = float(self.load_class(id_to_oclass[root]).height())
-            placements[root] = (origin_x, y, float(CELL_WIDTH), oh)
-            placed.add(root)
-            max_x = max(max_x, origin_x + CELL_WIDTH)
-            bottom = y + oh
-            repo_x = origin_x + CELL_WIDTH + INNER_COL_GAP
-            for src, tgt, kind in relationships:
-                if tgt != root or src in placed or src not in member_set:
-                    continue
-                if (kind or '').lower() != 'aggregation' or 'repository' not in src:
-                    continue
-                rh = float(self.load_class(id_to_oclass[src]).height())
-                placements[src] = (repo_x, y, float(CELL_WIDTH), rh)
-                placed.add(src)
-                max_x = max(max_x, repo_x + CELL_WIDTH)
-                repo_x += CELL_WIDTH + INNER_COL_GAP
-                bottom = max(bottom, y + rh)
-            cluster_bottom = max(cluster_bottom, bottom)
-            return bottom
-
-        def _grid_sort_key(cid: str) -> Tuple[int, int, int, str]:
-            for ri, root in enumerate(roots):
-                if cid == root:
-                    return (-1, 0, 0, cid)
-                if _composition_parent(cid) == root:
-                    return (0, ri, 0, cid)
-                for src, tgt, kind in relationships:
-                    if tgt == cid and src == root and (kind or '').lower() in ('association', 'aggregation'):
-                        return (1, ri, 0, cid)
-            vo = 1 if self._is_value_object(cid) else 0
-            return (2, 0, vo, cid)
-
-        def _place_noun_family_islands(kids: List[str], start_y: float) -> float:
-            nonlocal max_x, cluster_bottom
-            from collections import defaultdict
-            families: Dict[str, List[str]] = defaultdict(list)
-            for kid in kids:
-                if kid in placed:
-                    continue
-                families[self._noun_family_for_class(kid)].append(kid)
-            if not families:
-                return start_y
-            island_y = start_y
-            island_row_h = 0.0
-            island_x = origin_x
-            page_span = col_count * (float(CELL_WIDTH) + float(INNER_COL_GAP))
-            for fname in sorted(families.keys(), key=self._family_sort_rank):
-                members_in_family = sorted(families[fname], key=_grid_sort_key)
-                inner_cols = min(FAMILY_INNER_COLS, len(members_in_family))
-                ix = island_x
-                local_y = island_y
-                inner_row_h = 0.0
-                col = 0
-                for kid in members_in_family:
-                    kh = float(self.load_class(id_to_oclass[kid]).height())
-                    if col >= inner_cols:
-                        ix = island_x
-                        local_y += inner_row_h + INNER_ROW_GAP
-                        inner_row_h = 0.0
-                        col = 0
-                    placements[kid] = (ix, local_y, float(CELL_WIDTH), kh)
-                    placed.add(kid)
-                    max_x = max(max_x, ix + CELL_WIDTH)
-                    inner_row_h = max(inner_row_h, kh)
-                    cluster_bottom = max(cluster_bottom, local_y + kh)
-                    ix += CELL_WIDTH + INNER_COL_GAP
-                    col += 1
-                island_w = inner_cols * CELL_WIDTH + max(0, inner_cols - 1) * INNER_COL_GAP
-                island_bottom = local_y + inner_row_h
-                island_row_h = max(island_row_h, island_bottom - start_y)
-                island_x += island_w + FAMILY_GAP_X
-                if island_x > origin_x + page_span:
-                    island_x = origin_x
-                    island_y += island_row_h + INNER_ROW_GAP
-                    island_row_h = 0.0
-            return island_y + island_row_h
-
-        module_aggregate = self._module_aggregate_id(members)
-        primary_root = module_aggregate or (roots[0] if roots else None)
-        header_bottom = origin_y
-        if primary_root is not None:
-            header_bottom = _place_aggregate_header(primary_root, origin_y)
-
-        remaining = [m for m in members if m not in placed and 'repository' not in m]
-        for extra_root in roots[1:]:
-            if extra_root not in remaining:
-                remaining.append(extra_root)
-        grid_bottom = _place_noun_family_islands(remaining, header_bottom + INNER_ROW_GAP)
-        cursor_y = max(cursor_y, grid_bottom + INNER_ROW_GAP)
-
-        for src, tgt, kind in relationships:
-            if (kind or '').lower() != 'aggregation' or 'repository' not in src:
-                continue
-            if src not in member_set or src in placed or tgt not in placements:
-                continue
-            tx, ty, _tw, th = placements[tgt]
-            rh = float(self.load_class(id_to_oclass[src]).height())
-            rx = tx + CELL_WIDTH + INNER_COL_GAP
-            candidate = (rx, ty, float(CELL_WIDTH), rh)
-            guard = 0
-            while any((self._rects_overlap(candidate, geo) for _oid, geo in placements.items())) and guard < 8:
-                guard += 1
-                rx += CELL_WIDTH + INNER_COL_GAP
-                candidate = (rx, ty, float(CELL_WIDTH), rh)
-            placements[src] = candidate
-            placed.add(src)
-            max_x = max(max_x, candidate[0] + CELL_WIDTH)
-            cluster_bottom = max(cluster_bottom, ty + max(th, rh))
-
-        still = [m for m in members if m not in placed]
-        if still:
-            cursor_y = _place_row(still, cursor_y) + INNER_ROW_GAP
-        width = max_x - origin_x
-        height = max(0.0, cursor_y - origin_y - INNER_ROW_GAP)
-        return (placements, width, height)
-
-    def place_classes(self) -> Dict[str, Tuple[float, float, float, float]]:
-        return self._layout_classes_clustered(self._id_to_oclass)
-
-    def _layout_classes_clustered(self, id_to_oclass) -> Dict[str, Tuple[float, float, float, float]]:
-        """Place same-module / same-aggregate classes in tight islands.
-
-    Distinct modules (or composition aggregates when modules are flat) sit
-    farther apart so intra-context edges stay short and inter-context edges
-    run in the gaps instead of tangling through unrelated boxes.
-    """
-        self._id_to_oclass = id_to_oclass
-        reused = self._reuse_previous_if_clear()
-        if reused is not None:
-            return reused
-        ids = list(id_to_oclass.keys())
-        clusters = self._infer_clusters(ids)
-        named_module_count = sum((1 for m in self._modules or [] if m.name and m.name.strip() and m.classes))
-        if named_module_count >= 2:
-            return self._layout_module_driven_clusters(clusters)
-        return self._layout_ownership_clusters(clusters)
-
-    def _reuse_previous_if_clear(self):
-        previous_positions = self._previous_positions
-        if not previous_positions:
-            return None
-        trial: Dict[str, Tuple[float, float, float, float]] = {}
-        for cid in self._id_to_oclass:
-            if cid not in previous_positions:
-                return None
-            x, y = previous_positions[cid]
-            h = float(self.load_class(self._id_to_oclass[cid]).height())
-            trial[cid] = (x, y, float(CELL_WIDTH), h)
-        if self._trial_has_overlap(trial):
-            return None
-        return trial
-
-    def _trial_has_overlap(self, trial) -> bool:
-        cid_list = list(trial.keys())
-        for i, a in enumerate(cid_list):
-            for b in cid_list[i + 1:]:
-                if self._rects_overlap(trial[a], trial[b]):
-                    return True
-        return False
-
-    def _layout_module_driven_clusters(self, clusters) -> Dict[str, Tuple[float, float, float, float]]:
-        placements: Dict[str, Tuple[float, float, float, float]] = {}
-        cursor_y = float(START_Y)
-        self._pack_cols = INNER_COLS
-        for members in clusters:
-            self._origin_x = float(START_X)
-            self._origin_y = cursor_y
-            local, _width, height = self._pack_cluster(members)
-            placements.update(local)
-            cursor_y += height + CLUSTER_GAP_Y
-        return placements
-
-    def _layout_ownership_clusters(self, clusters) -> Dict[str, Tuple[float, float, float, float]]:
-        child_clusters, parent_of_cluster = self._ownership_cluster_tree(clusters)
-        roots = [i for i in range(len(clusters)) if i not in parent_of_cluster]
-        roots.sort(key=lambda i: (-len(clusters[i]), i))
-        parent_roots = [i for i in roots if child_clusters[i] or len(clusters[i]) > 1]
-        leaf_orphans = [i for i in roots if i not in parent_roots]
-        self._placements = {}
-        self._cluster_members = clusters
-        self._parent_roots = parent_roots
-        self._child_clusters_by_root = child_clusters
-        self._cursor_y = float(START_Y)
-        cursor_y = self._place_parent_root_clusters()
-        self._place_leaf_orphan_clusters(leaf_orphans, cursor_y)
-        return self._placements
-
-    def _ownership_cluster_tree(self, clusters):
-        cluster_of = {cid: index for index, members in enumerate(clusters) for cid in members}
-        child_clusters: Dict[int, List[int]] = {i: [] for i in range(len(clusters))}
-        parent_of_cluster: Dict[int, int] = {}
-        for src, tgt, kind in self._relationships:
-            if not self._ownership_kinds(kind):
-                continue
-            if src not in cluster_of or tgt not in cluster_of:
-                continue
-            ps, pt = (cluster_of[src], cluster_of[tgt])
-            if ps == pt:
-                continue
-            if pt not in child_clusters[ps]:
-                child_clusters[ps].append(pt)
-            parent_of_cluster.setdefault(pt, ps)
-        return (child_clusters, parent_of_cluster)
-
-    def _place_cluster_at(self, index) -> Tuple[float, float]:
-        self._pack_cols = INNER_COLS
-        local, width, height = self._pack_cluster(self._cluster_members[index])
-        self._placements.update(local)
-        return (width, height)
-
-    def _place_parent_root_clusters(self) -> float:
-        clusters = self._cluster_members
-        cursor_y = self._cursor_y
-        for root_i in self._parent_roots:
-            children = sorted(self._child_clusters_by_root[root_i])
-            child_packs = self._measure_child_cluster_packs(children)
-            approx_children_width = sum((cw for _i, cw, _ch in child_packs))
-            if children:
-                approx_children_width += CLUSTER_GAP_X * (len(children) - 1)
-            root_w_est = min(INNER_COLS, len(clusters[root_i])) * CELL_WIDTH
-            band_width = max(root_w_est, approx_children_width)
-            self._origin_x = float(START_X + max(0.0, (band_width - root_w_est) / 2.0))
-            self._origin_y = cursor_y
-            _root_w, root_h = self._place_cluster_at(root_i)
-            cursor_y = self._place_child_cluster_row(child_packs, cursor_y, root_h, band_width, approx_children_width)
-        return cursor_y
-
-    def _measure_child_cluster_packs(self, children):
-        child_packs = []
-        saved_x, saved_y = (self._origin_x, self._origin_y)
-        for child_i in children:
-            self._origin_x = 0.0
-            self._origin_y = 0.0
-            self._pack_cols = INNER_COLS
-            _local, cw, ch = self._pack_cluster(self._cluster_members[child_i])
-            child_packs.append((child_i, cw, ch))
-        self._origin_x, self._origin_y = (saved_x, saved_y)
-        return child_packs
-
-    def _place_child_cluster_row(self, child_packs, cursor_y, root_h, band_width, approx_children_width) -> float:
-        child_y = cursor_y + root_h + CLUSTER_GAP_Y
-        child_x = float(START_X + max(0.0, (band_width - approx_children_width) / 2.0))
-        child_row_h = 0.0
-        for child_i, cw, _ch in child_packs:
-            self._origin_x = child_x
-            self._origin_y = child_y
-            _cw, ch2 = self._place_cluster_at(child_i)
-            child_x += cw + CLUSTER_GAP_X
-            child_row_h = max(child_row_h, ch2)
-        return child_y + child_row_h + CLUSTER_GAP_Y
-
-    def _place_leaf_orphan_clusters(self, leaf_orphans, cursor_y) -> None:
-        if not leaf_orphans:
-            return
-        orphan_x = float(START_X)
-        orphan_y = cursor_y + CLUSTER_GAP_Y * 0.5
-        row_h = 0.0
-        for orphan_i in leaf_orphans:
-            self._origin_x = orphan_x
-            self._origin_y = orphan_y
-            ow, oh = self._place_cluster_at(orphan_i)
-            orphan_x += ow + CLUSTER_GAP_X
-            row_h = max(row_h, oh)
-            if orphan_x > START_X + 3 * (CELL_WIDTH + CLUSTER_GAP_X):
-                orphan_x = float(START_X)
-                orphan_y += row_h + CLUSTER_GAP_Y
-                row_h = 0.0
-
-    def _segments_from_route(self, src) -> List[Tuple[Tuple[float, float], Tuple[float, float]]]:
-        self._anchor_frac = self._exit_frac
-        p1 = self._point_on_side(src, self._exit_side)
-        self._anchor_frac = self._entry_frac
-        p2 = self._point_on_side(self._route_tgt, self._entry_side)
-        points = self._dedupe_points([p1, *self._route_trial_points, p2])
-        return [(points[i], points[i + 1]) for i in range(len(points) - 1)]
-
-    def _segment_pair_conflicts(self, segs_a: List[Tuple[Tuple[float, float], Tuple[float, float]]], segs_b: List[Tuple[Tuple[float, float], Tuple[float, float]]]) -> bool:
-        self._proximity = 10
-        self._endpoint_tol = 2.0
-        for sa in segs_a:
-            for sb in segs_b:
-                if self._edge_segments_overlap(sa, sb):
-                    return True
-                crossed, _pt = self._orthogonal_segments_cross(sa, sb)
-                if crossed:
-                    return True
-        return False
-
-    def _segments_overlap_1d(self, first, second) -> bool:
-        a_start, a_end = first
-        b_start, b_end = second
-        threshold = 8
-        lo_a, hi_a = min(a_start, a_end), max(a_start, a_end)
-        lo_b, hi_b = min(b_start, b_end), max(b_start, b_end)
-        return min(hi_a, hi_b) - max(lo_a, lo_b) > threshold
-
-    def _edge_segments_overlap(self, seg_a, seg_b) -> bool:
-        (ax1, ay1), (ax2, ay2) = seg_a
-        (bx1, by1), (bx2, by2) = seg_b
-        proximity = self._proximity
-        a_horiz = abs(ay2 - ay1) < 2
-        a_vert = abs(ax2 - ax1) < 2
-        b_horiz = abs(by2 - by1) < 2
-        b_vert = abs(bx2 - bx1) < 2
-        if a_horiz and b_horiz and abs(ay1 - by1) < proximity:
-            if self._segments_overlap_1d((ax1, ax2), (bx1, bx2)):
-                return True
-        if a_vert and b_vert and abs(ax1 - bx1) < proximity:
-            if self._segments_overlap_1d((ay1, ay2), (by1, by2)):
-                return True
-        return False
-
-    def _orthogonal_segments_cross(self, seg_a, seg_b) -> Tuple[bool, Optional[Tuple[float, float]]]:
-        (ax1, ay1), (ax2, ay2) = seg_a
-        (bx1, by1), (bx2, by2) = seg_b
-        endpoint_tol = self._endpoint_tol
-        a_horiz = abs(ay2 - ay1) < 2
-        a_vert = abs(ax2 - ax1) < 2
-        b_horiz = abs(by2 - by1) < 2
-        b_vert = abs(bx2 - bx1) < 2
-        if a_horiz and b_vert:
-            y = (ay1 + ay2) / 2
-            x = (bx1 + bx2) / 2
-            a_lo_x, a_hi_x = sorted((ax1, ax2))
-            b_lo_y, b_hi_y = sorted((by1, by2))
-            if a_lo_x + endpoint_tol < x < a_hi_x - endpoint_tol and b_lo_y + endpoint_tol < y < b_hi_y - endpoint_tol:
-                return (True, (x, y))
-        if a_vert and b_horiz:
-            x = (ax1 + ax2) / 2
-            y = (by1 + by2) / 2
-            a_lo_y, a_hi_y = sorted((ay1, ay2))
-            b_lo_x, b_hi_x = sorted((bx1, bx2))
-            if a_lo_y + endpoint_tol < y < a_hi_y - endpoint_tol and b_lo_x + endpoint_tol < x < b_hi_x - endpoint_tol:
-                return (True, (x, y))
-        return (False, None)
-
-    def _capped_outward_point(self, geo, side) -> Tuple[float, float]:
-        """Outward stub one clearance step from the anchor."""
-        ax, ay = self._point_on_side(geo, side)
-        clearance = self._clearance
-        if side == 'bottom':
-            return (ax, ay + clearance)
-        if side == 'top':
-            return (ax, ay - clearance)
-        if side == 'left':
-            return (ax - clearance, ay)
-        return (ax + clearance, ay)
-
-    def _route_waypoints(self, src) -> List[Tuple[float, float]]:
-        """Brownie router: direct edge-to-edge, anchor variants, Sugiyama gutters, then channels."""
-        self._route_src = src
-        self._bind_route_geometry()
-        self._route_check_edges = True
-        direct = self._try_direct_routes()
-        if direct is not None:
-            return direct
-        variant = self._try_anchor_variant_routes()
-        if variant is not None:
-            return variant
-        gutter = self._try_sugiyama_gutter_routes()
-        if gutter is not None:
-            return gutter
-        simple = self._try_simple_routes()
-        if simple is not None:
-            return simple
-        return self._route_channel_search()
-
-    def _try_direct_routes(self) -> Optional[List[Tuple[float, float]]]:
-        if self._route_is_clear([]):
-            return []
-        return None
-
-    def _try_anchor_variant_routes(self) -> Optional[List[Tuple[float, float]]]:
-        spec = self._edge_spec
-        src_geo = self._placements[spec['src_id']]
-        tgt_geo = self._placements[spec['tgt_id']]
-        saved_exit = (self._exit_side, self._entry_side, self._exit_frac, self._entry_frac)
-        for exit_side, entry_side in self._anchor_side_candidates(src_geo, tgt_geo, spec.get('kind', '')):
-            if (exit_side, entry_side) == (saved_exit[0], saved_exit[1]):
-                continue
-            self._exit_side = exit_side
-            self._entry_side = entry_side
-            self._rebind_route_points()
-            found = self._try_direct_routes()
-            if found is not None:
-                spec['exit_side'] = exit_side
-                spec['entry_side'] = entry_side
-                return found
-            if exit_side in ('top', 'bottom'):
-                elbows = ([(self._route_exit_pt[0], self._route_entry_pt[1])], [(self._route_entry_pt[0], self._route_exit_pt[1])])
-            else:
-                elbows = ([(self._route_entry_pt[0], self._route_exit_pt[1])], [(self._route_exit_pt[0], self._route_entry_pt[1])])
-            for elbow in elbows:
-                if self._route_is_clear(elbow):
-                    spec['exit_side'] = exit_side
-                    spec['entry_side'] = entry_side
-                    return elbow
-        self._exit_side, self._entry_side, self._exit_frac, self._entry_frac = saved_exit
-        self._rebind_route_points()
-        return None
-
-    def _rebind_route_points(self) -> None:
-        src, tgt = (self._route_src, self._route_tgt)
-        self._anchor_frac = self._exit_frac
-        self._route_exit_pt = self._point_on_side(src, self._exit_side)
-        self._anchor_frac = self._entry_frac
-        self._route_entry_pt = self._point_on_side(tgt, self._entry_side)
-        self._anchor_frac = self._exit_frac
-        self._route_leave = self._capped_outward_point(src, self._exit_side)
-        self._anchor_frac = self._entry_frac
-        self._route_approach = self._capped_outward_point(tgt, self._entry_side)
-
-    def _try_sugiyama_gutter_routes(self) -> Optional[List[Tuple[float, float]]]:
-        """Route through horizontal/vertical gutters between layered rows (≤2 waypoints)."""
-        placements = self._all_placements or {}
-        row_gutters = self._row_highways(placements)
-        col_gutters = self._column_gutters(placements)
-        exit_pt, entry_pt = (self._route_exit_pt, self._route_entry_pt)
-        leave, approach = (self._route_leave, self._route_approach)
-        if {self._exit_side, self._entry_side} <= {'top', 'bottom'}:
-            lo = min(exit_pt[1], entry_pt[1])
-            hi = max(exit_pt[1], entry_pt[1])
-            gutters = [y for y in row_gutters if lo + 8.0 < y < hi - 8.0]
-            gutters.sort(key=lambda y: abs(y - (exit_pt[1] + entry_pt[1]) / 2.0))
-            for gutter_y in gutters[:6]:
-                for mid in (
-                    [(exit_pt[0], gutter_y), (entry_pt[0], gutter_y)],
-                    [(exit_pt[0], gutter_y)],
-                ):
-                    if len(mid) <= SHORT_ROUTE_MAX_WAYPOINTS and self._route_is_clear(mid):
-                        return mid
-        if {self._exit_side, self._entry_side} <= {'left', 'right'}:
-            lo = min(exit_pt[0], entry_pt[0])
-            hi = max(exit_pt[0], entry_pt[0])
-            gutters = [x for x in col_gutters if lo + 8.0 < x < hi - 8.0]
-            gutters.sort(key=lambda x: abs(x - (exit_pt[0] + entry_pt[0]) / 2.0))
-            for gutter_x in gutters[:6]:
-                mid = [(gutter_x, exit_pt[1]), (gutter_x, entry_pt[1])]
-                if self._route_is_clear(mid):
-                    return mid
-        mixed = [
-            [leave, (leave[0], entry_pt[1]), approach],
-            [leave, (entry_pt[0], leave[1]), approach],
-            [leave, (col_gutters[len(col_gutters) // 2], leave[1]), (col_gutters[len(col_gutters) // 2], entry_pt[1]), approach],
-        ]
-        for mid in mixed:
-            pts = self._dedupe_points(mid)
-            if len(pts) <= SHORT_ROUTE_MAX_WAYPOINTS + 1 and self._route_is_clear(pts):
-                return pts
-        return None
-
-    def _bind_route_geometry(self) -> None:
-        src = self._route_src
-        tgt = self._route_tgt
-        self._avoid_segments = self._avoid_segments or []
-        placements = self._all_placements or {str(i): geo for i, geo in enumerate([src, tgt, *self._obstacles])}
-        self._all_placements = placements
-        self._route_gutters = self._column_gutters(placements)
-        self._route_lane_i = int(round(self._route_lane / ROUTE_LANE_STEP)) if ROUTE_LANE_STEP else 0
-        self._clearance = max(12.0, min(ROUTE_CLEARANCE, ROW_GAP * 0.35))
-        self._highways = self._row_highways(placements)
-        self._route_lane_sep = 24.0
-        self._anchor_frac = self._exit_frac
-        self._route_exit_pt = self._point_on_side(src, self._exit_side)
-        self._anchor_frac = self._entry_frac
-        self._route_entry_pt = self._point_on_side(tgt, self._entry_side)
-        self._route_bus_y = self._gap_lane_y(self._route_exit_pt, self._route_entry_pt)
-        self._anchor_frac = self._exit_frac
-        self._route_leave = self._capped_outward_point(src, self._exit_side)
-        self._anchor_frac = self._entry_frac
-        self._route_approach = self._capped_outward_point(tgt, self._entry_side)
-        if self._exit_side in ('top', 'bottom') or self._entry_side in ('top', 'bottom'):
-            self._highways.append(self._route_bus_y)
-
-    def _route_is_clear(self, pts) -> bool:
-        self._hit_margin = 3.0
-        if self._polyline_hits_obstacle(pts):
-            return False
-        self._route_trial_points = pts
-        segs = self._segments_from_route(self._route_src)
-        points = [segs[0][0], *[p for seg in segs for p in seg[1:]]]
-        if self._polyline_hits_obstacle(points):
-            return False
-        if self._route_check_edges and any((self._segment_pair_conflicts(segs, prior) for prior in self._avoid_segments)):
-            return False
-        return True
-
-    def _try_simple_routes(self):
-        self._route_check_edges = True
-        found = self._simple_route_variants_inner()
-        if found is not None:
-            return found
-        src, tgt = (self._route_src, self._route_tgt)
-        scx, scy = (src[0] + src[2] / 2.0, src[1] + src[3] / 2.0)
-        tcx, tcy = (tgt[0] + tgt[2] / 2.0, tgt[1] + tgt[3] / 2.0)
-        if abs(scx - tcx) + abs(scy - tcy) >= 420:
-            return None
-        if not self._avoid_segments:
-            self._route_check_edges = False
-            return self._simple_route_variants_inner()
-        return None
-
-    def _gap_lane_y(self, exit_pt, entry_pt) -> float:
-        lane_sep = self._route_lane_sep
-        spec = getattr(self, '_edge_spec', {}) or {}
-        lane_i = self._route_lane_i + int(spec.get('exit_lane', 0)) + int(spec.get('entry_lane', 0)) + int(spec.get('bus_idx', 0))
-        src = self._route_src
-        tgt = self._route_tgt
-        if self._exit_side == 'bottom' and self._entry_side == 'top':
-            gap_lo = exit_pt[1] + 12.0
-            gap_hi = entry_pt[1] - 12.0
-            span_top = src[1] + src[3]
-            span_bot = tgt[1]
-            intervening = [
-                geo for geo in self._obstacles
-                if geo[1] < span_bot and geo[1] + geo[3] > span_top
-            ]
-            if intervening:
-                gap_lo = max(gap_lo, max((g[1] + g[3] for g in intervening)) + lane_sep * 0.5)
-        elif self._exit_side == 'top' and self._entry_side == 'bottom':
-            gap_lo = entry_pt[1] + 12.0
-            gap_hi = exit_pt[1] - 12.0
-        else:
-            gap_lo = min(exit_pt[1], entry_pt[1]) + 12.0
-            gap_hi = max(exit_pt[1], entry_pt[1]) - 12.0
-        bus_idx = int(spec.get('bus_idx', 0))
-        span = max(lane_sep, gap_hi - gap_lo)
-        lane_y = gap_lo + span * (0.2 + 0.12 * lane_i + 0.08 * bus_idx)
-        if lane_y > gap_hi - lane_sep * 0.5:
-            lane_y = max(gap_lo + lane_sep * 0.25, gap_hi - lane_sep * (0.5 + bus_idx * 0.15))
-        occupied = self._occupied_horiz_ys()
-        guard = 0
-        while any((abs(lane_y - oy) < lane_sep for oy in occupied)) and guard < 12:
-            lane_y += lane_sep
-            guard += 1
-        return lane_y
-
-    def _simple_route_variants_inner(self):
-        exit_pt = self._route_exit_pt
-        entry_pt = self._route_entry_pt
-        leave, approach = (self._route_leave, self._route_approach)
-        if self._route_is_clear([]):
-            return []
-        if self._exit_side in ('top', 'bottom'):
-            elbows = ([(exit_pt[0], entry_pt[1])], [(entry_pt[0], exit_pt[1])])
-        else:
-            elbows = ([(entry_pt[0], exit_pt[1])], [(exit_pt[0], entry_pt[1])])
-        for elbow in elbows:
-            if self._route_is_clear(elbow):
-                return elbow
-        needs_perpendicular = self._exit_side in ('top', 'bottom') or self._entry_side in ('top', 'bottom')
-        if not needs_perpendicular and self._route_is_clear([]):
-            return []
-        if (
-            abs(exit_pt[0] - entry_pt[0]) < 4
-            and self._exit_side == 'bottom'
-            and self._entry_side == 'top'
-            and self._route_is_clear([])
-        ):
-            return []
-        if (
-            abs(exit_pt[0] - entry_pt[0]) < 4
-            and self._exit_side == 'top'
-            and self._entry_side == 'bottom'
-            and self._route_is_clear([])
-        ):
-            return []
-        if {self._exit_side, self._entry_side} <= {'left', 'right'}:
-            lane_y = (exit_pt[1] + entry_pt[1]) / 2.0 + self._route_lane_i * self._route_lane_sep
-            for mid in (
-                [(leave[0], lane_y), (approach[0], lane_y)],
-                [(exit_pt[0], entry_pt[1])],
-                [leave, (approach[0], leave[1])],
-                [leave, approach],
-            ):
-                if self._route_is_clear(mid):
-                    return mid
-        if {self._exit_side, self._entry_side} <= {'top', 'bottom'}:
-            lane_y = self._gap_lane_y(exit_pt, entry_pt)
-            for mid in (
-                [(exit_pt[0], lane_y), (entry_pt[0], lane_y)],
-                [(exit_pt[0], lane_y)],
-            ):
-                if self._route_is_clear(mid):
-                    return mid
-            shared_y = (leave[1] + approach[1]) / 2.0 + self._route_lane_i * self._route_lane_sep
-            mid = [(exit_pt[0], shared_y), (entry_pt[0], shared_y)]
-            if self._route_is_clear(mid):
-                return mid
-        if {self._exit_side, self._entry_side} <= {'left', 'right'}:
-            lane_x = (leave[0] + approach[0]) / 2.0 + self._route_lane_i * self._route_lane_sep
-            mid = [(lane_x, exit_pt[1]), (lane_x, entry_pt[1])]
-            if self._route_is_clear(mid):
-                return mid
-            mid = [(lane_x, exit_pt[1])]
-            if self._route_is_clear(mid):
-                return mid
-        elbow = [leave, approach]
-        if self._route_is_clear(elbow):
-            return elbow
-        return None
-
-    def _same_side_sibling_conflict(self) -> bool:
-        if not self._avoid_segments:
-            return False
-        trial = self._segments_from_route(self._route_src)
-        return any((self._segment_pair_conflicts(trial, prior) for prior in self._avoid_segments))
-
-    def _occupied_horiz_ys(self) -> List[float]:
-        ys: List[float] = []
-        for segs in self._avoid_segments:
-            for a, b in segs:
-                if abs(a[1] - b[1]) < 2.0 and abs(a[0] - b[0]) > 12.0:
-                    ys.append((a[1] + b[1]) / 2.0)
-        return ys
-
-    def _occupied_vert_xs(self) -> List[float]:
-        xs: List[float] = []
-        for segs in self._avoid_segments:
-            for a, b in segs:
-                if abs(a[0] - b[0]) < 2.0 and abs(a[1] - b[1]) > 12.0:
-                    xs.append((a[0] + b[0]) / 2.0)
-        return xs
-
-    def _distinct_channel_x(self, base_x: float) -> float:
-        lane_sep = self._route_lane_sep
-        lane_i = self._route_lane_i
-        spec = getattr(self, '_edge_spec', {}) or {}
-        bus_idx = int(spec.get('bus_idx', 0))
-        x = base_x + (lane_i + bus_idx) * lane_sep
-        occupied = self._occupied_vert_xs()
-        guard = 0
-        while any((abs(x - ox) < lane_sep for ox in occupied)) and guard < 16:
-            x += lane_sep
-            guard += 1
-        return x
-
-    def _sorted_free_ys(self, cands: List[float]) -> List[float]:
-        occupied = self._occupied_horiz_ys()
-        lane_sep = self._route_lane_sep
-        uniq: List[float] = []
-        for y in cands:
-            if all((abs(y - e) >= 1.0 for e in uniq)):
-                uniq.append(y)
-
-        def _score(y: float) -> Tuple[float, float]:
-            if not occupied:
-                return (0.0, abs(y - cands[0]))
-            dist = min((abs(y - o) for o in occupied))
-            penalty = 0.0 if dist >= lane_sep else lane_sep - dist
-            return (penalty, -dist)
-        return sorted(uniq, key=_score)
-
-    def _fan_y(self, base) -> List[float]:
-        outward = self._fan_outward
-        count = self._fan_count
-        lane_i = self._route_lane_i
-        lane_sep = self._route_lane_sep
-        order = [lane_i] + [i for i in range(count) if i != lane_i]
-        vals: List[float] = []
-        for step in order:
-            y = base + outward * float(step) * lane_sep
-            if outward > 0 and y < base - 0.5:
-                continue
-            if outward < 0 and y > base + 0.5:
-                continue
-            if all((abs(y - e) >= lane_sep - 0.5 for e in vals)):
-                vals.append(y)
-        return vals or [base]
-
-    def _route_channels(self, extra: float=0.0) -> List[float]:
-        src, tgt = (self._route_src, self._route_tgt)
-        gutters = self._route_gutters
-        lane_i = self._route_lane_i
-        lane_sep = self._route_lane_sep
-        xs = [self._distinct_channel_x(gx + (lane_i - 2) * 8) for gx in gutters]
-        near_left = src[0] - 16.0 - extra
-        near_right = src[0] + src[2] + 16.0 + extra
-        margin = float(START_X)
-        far_left = [
-            max(margin, gutters[0] - 40 - lane_i * 10 - extra),
-            max(margin, gutters[0] - 80 - lane_i * 14 - extra),
-            max(margin, gutters[0] - 140 - lane_i * 18 - extra),
-        ]
-        far_right = [gutters[-1] + 40 + lane_i * 10 + extra, gutters[-1] + 80 + lane_i * 14 + extra, gutters[-1] + 140 + lane_i * 18 + extra]
-        return self._channel_order(extra, xs, near_left, near_right, far_left, far_right)
-
-    def _channel_order(self, extra, xs, near_left, near_right, far_left, far_right):
-        src, tgt = (self._route_src, self._route_tgt)
-        span_top = min(src[1], tgt[1])
-        span_bot = max(src[1] + src[3], tgt[1] + tgt[3])
-        intervening = [geo for geo in self._all_placements.values() if geo != src and geo != tgt and (geo[1] < span_bot) and (geo[1] + geo[3] > span_top)]
-        if intervening:
-            band_lo = min((g[0] for g in intervening)) - 20.0 - extra
-            band_hi = max((g[0] + g[2] for g in intervening)) + 20.0 + extra
-            if self._route_exit_pt[0] >= src[0] + src[2] * 0.5:
-                outside = [band_hi, band_hi + 40.0, band_lo, band_lo - 40.0]
-            else:
-                outside = [band_lo, band_lo - 40.0, band_hi, band_hi + 40.0]
-            return outside + far_right + far_left + [near_right, near_left] + xs
-        if self._route_entry_pt[0] >= self._route_exit_pt[0]:
-            return far_right + [near_right] + xs + [near_left] + far_left
-        return far_left + [near_left] + xs + [near_right] + far_right
-
-    def _route_candidates(self, extra: float=0.0):
-        if self._exit_side in ('left', 'right') or self._entry_side in ('left', 'right'):
-            return self._side_route_candidates(extra)
-        return self._vertical_route_candidates(extra)
-
-    def _side_route_candidates(self, extra: float):
-        leave, approach = (self._route_leave, self._route_approach)
-        channels = self._route_channels(extra)
-        self._fan_outward = 1.0
-        self._fan_count = 6
-        y_vals = self._sorted_free_ys(self._fan_y(leave[1]) + [leave[1] - (i + 1) * self._route_lane_sep for i in range(5)])
-        paths: List[List[Tuple[float, float]]] = []
-        for y in y_vals[:8]:
-            for cx in channels[:8]:
-                paths.append([leave, (leave[0], y), (cx, y), (approach[0], y), approach])
-                paths.append([leave, (cx, leave[1]), (cx, y), (approach[0], y), approach])
-        paths.append([leave, (approach[0], leave[1]), approach])
-        paths.append([leave, approach])
-        return paths
-
-    def _vertical_route_candidates(self, extra: float):
-        channels = self._route_channels(extra)
-        exit_pt, entry_pt = (self._route_exit_pt, self._route_entry_pt)
-        out_exit = 1.0 if self._exit_side == 'bottom' else -1.0
-        out_entry = -1.0 if self._entry_side == 'top' else 1.0
-        stub_y = exit_pt[1] + out_exit * 10.0
-        src_ys, tgt_ys = self._vertical_route_ys(stub_y, out_exit, out_entry)
-        return self._vertical_route_paths(channels, stub_y, src_ys, tgt_ys)
-
-    def _vertical_route_ys(self, stub_y, out_exit, out_entry):
-        exit_pt, entry_pt = (self._route_exit_pt, self._route_entry_pt)
-        self._fan_outward = out_exit
-        self._fan_count = 6
-        src_ys = self._sorted_free_ys(self._fan_y(stub_y))
-        self._fan_outward = out_entry
-        tgt_ys = self._sorted_free_ys(self._fan_y(entry_pt[1] + out_entry * 10.0))
-        tgt_ys = [y for y in tgt_ys if (self._entry_side != 'top' or y <= entry_pt[1]) and (self._entry_side != 'bottom' or y >= entry_pt[1])] or [entry_pt[1] + out_entry * 10.0]
-        if self._exit_side == 'bottom' and self._entry_side == 'top':
-            src_ys, tgt_ys = self._clip_gap_ys(src_ys, tgt_ys)
-        src_ys = [y for y in src_ys if (self._exit_side != 'bottom' or y >= exit_pt[1]) and (self._exit_side != 'top' or y <= exit_pt[1])] or [stub_y]
-        return (src_ys, tgt_ys)
-
-    def _clip_gap_ys(self, src_ys, tgt_ys):
-        gap_lo = self._route_exit_pt[1] + 10.0
-        gap_hi = self._route_entry_pt[1] - 10.0
-        in_gap = [y for y in tgt_ys if gap_lo - 0.5 <= y <= gap_hi + 0.5]
-        if in_gap:
-            tgt_ys = in_gap
-        src_in_gap = [y for y in src_ys if gap_lo - 0.5 <= y <= gap_hi + 0.5]
-        if src_in_gap:
-            src_ys = src_in_gap
-        return (src_ys, tgt_ys)
-
-    def _vertical_route_paths(self, channels, stub_y, src_ys, tgt_ys):
-        exit_pt, entry_pt = (self._route_exit_pt, self._route_entry_pt)
-        channel_paths: List[List[Tuple[float, float]]] = []
-        gap_paths: List[List[Tuple[float, float]]] = []
-        distinct_channels = [self._distinct_channel_x(cx) for cx in channels[:8]]
-        for tgt_hw in tgt_ys:
-            for cx in distinct_channels:
-                channel_paths.append([(exit_pt[0], stub_y), (cx, stub_y), (cx, tgt_hw), (entry_pt[0], tgt_hw)])
-            for src_hw in src_ys[:4]:
-                for cx in distinct_channels[:6]:
-                    channel_paths.append([(exit_pt[0], src_hw), (cx, src_hw), (cx, tgt_hw), (entry_pt[0], tgt_hw)])
-        for src_hw in src_ys[:6]:
-            gap_paths.append([(exit_pt[0], src_hw), (entry_pt[0], src_hw)])
-            for tgt_hw in tgt_ys[:4]:
-                if abs(tgt_hw - src_hw) >= self._route_lane_sep * 0.5:
-                    gap_paths.append([(exit_pt[0], src_hw), (entry_pt[0], src_hw), (entry_pt[0], tgt_hw)])
-        if self._avoid_segments:
-            return channel_paths + gap_paths
-        return gap_paths + channel_paths
-
-    def _search_route(self, extra: float):
-        for path in self._route_candidates(extra):
-            pts = self._dedupe_points(path)
-            if pts and self._route_is_clear(pts):
-                return pts
-        return None
-
-    def _route_channel_search(self):
-        self._route_check_edges = True
-        found = self._search_route(0.0)
-        if found is not None:
-            return found
-        if not self._avoid_segments:
-            self._route_check_edges = False
-            found = self._search_route(0.0)
-            if found is not None:
-                return found
-        else:
-            for extra in (40.0, 100.0, 180.0, 280.0):
-                found = self._search_route(extra)
-                if found is not None:
-                    return found
-        best = self._best_conflict_route()
-        if best is not None:
-            return best
-        return self._fallback_channel_path()
-
-    def _best_conflict_route(self):
-        best = None
-        best_conflicts = 10 ** 9
-        self._route_check_edges = False
-        for extra in (0.0, 40.0, 100.0, 180.0, 280.0, 400.0):
-            for path in self._route_candidates(extra):
-                pts = self._dedupe_points(path)
-                if not pts or not self._route_is_clear(pts):
-                    continue
-                self._route_trial_points = pts
-                segs = self._segments_from_route(self._route_src)
-                conflicts = sum((1 for prior in self._avoid_segments if self._segment_pair_conflicts(segs, prior)))
-                if conflicts < best_conflicts:
-                    best = pts
-                    best_conflicts = conflicts
-                    if conflicts == 0:
-                        return pts
-        return best
-
-    def _fallback_channel_path(self):
-        exit_pt, entry_pt = (self._route_exit_pt, self._route_entry_pt)
-        out_exit = 1.0 if self._exit_side == 'bottom' else -1.0
-        out_entry = -1.0 if self._entry_side == 'top' else 1.0
-        ox = self._route_channels(280.0)[0]
-        return self._dedupe_points([(exit_pt[0], exit_pt[1] + out_exit * 10.0), (ox, exit_pt[1] + out_exit * 10.0), (ox, entry_pt[1] + out_entry * 10.0), (entry_pt[0], entry_pt[1] + out_entry * 10.0)])
 
     def _parse_class_html(self, value: str) -> Tuple[Optional[str], List[Property], List[Operation]]:
         text = html.unescape(value)
@@ -3039,6 +1075,19 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         if 'startFill=0' in style and 'diamondThin' in style:
             return 'aggregation'
         return 'association'
+
+def arrow_style(base_style: str, arrow: DiagramArrow, cards: Dict[str, DiagramCard]) -> str:
+    """The arrow's style plus its exit and entry points, as fractions of each card, so Draw.io keeps both ends put."""
+    source, target = cards[arrow.source], cards[arrow.target]
+    exit_x = round((arrow.exit_point[0] - source.x) / source.width, 4)
+    exit_y = round((arrow.exit_point[1] - source.y) / source.height, 4)
+    entry_x = round((arrow.entry_point[0] - target.x) / target.width, 4)
+    entry_y = round((arrow.entry_point[1] - target.y) / target.height, 4)
+    return (
+        f'{base_style}exitX={exit_x};exitY={exit_y};exitDx=0;exitDy=0;exitPerimeter=0;'
+        f'entryX={entry_x};entryY={entry_y};entryDx=0;entryDy=0;entryPerimeter=0;'
+    )
+
 
 class _ContainmentLayout:
 

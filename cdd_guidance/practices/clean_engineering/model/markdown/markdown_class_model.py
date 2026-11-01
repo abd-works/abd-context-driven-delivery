@@ -71,6 +71,11 @@ def _class_heading_name(raw: str) -> str:
     return name
 
 
+def _class_heading_bases(raw: str) -> List[str]:
+    name = re.sub(r"<<[^>]+>>", "", raw).replace("**", "").strip()
+    return [name.split(" : ", 1)[1].strip()] if " : " in name else []
+
+
 class MarkdownOoadClass(OoadClass):
     def load_property_field(self, source: Property) -> Property:
         loaded = Property(name=source.name)
@@ -97,9 +102,9 @@ class MarkdownOoadClass(OoadClass):
     def render(self, known_names: Optional[List[str]] = None) -> str:
         names = known_names or []
         heading = self.name
-        iface = companion_interface_name(self.name, names)
-        if iface:
-            heading = f"{self.name} : {iface}"
+        base = companion_interface_name(self.name, names) or next(iter(self.bases), None)
+        if base:
+            heading = f"{self.name} : {base}"
         lines: List[str] = [f"## {heading}", ""]
         if self.intent:
             lines.append(self.intent)
@@ -210,7 +215,9 @@ class MarkdownModule(Module):
         heading = re.match(r"^#{2,3}\s+(.+)", class_block)
         class_name = _class_heading_name(heading.group(1)) if heading else ""
         body = class_block[heading.end():].lstrip("\n") if heading else class_block
-        return MarkdownOoadClass.parse_body(class_name, body, len(self.classes) + 1)
+        parsed = MarkdownOoadClass.parse_body(class_name, body, len(self.classes) + 1)
+        parsed.bases = _class_heading_bases(heading.group(1)) if heading else []
+        return parsed
 
     def load_class(self, source: OoadClass) -> MarkdownOoadClass:
         loaded = MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
@@ -381,13 +388,9 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             class_name = _class_heading_name(heading.group(1))
             if not class_name or class_name.lower().startswith("module "):
                 continue
-            module.classes.append(
-                MarkdownOoadClass.parse_body(
-                    class_name,
-                    class_block[heading.end():].lstrip("\n"),
-                    class_order,
-                )
-            )
+            parsed = MarkdownOoadClass.parse_body(class_name, class_block[heading.end():].lstrip("\n"), class_order)
+            parsed.bases = _class_heading_bases(heading.group(1))
+            module.classes.append(parsed)
             class_order += 1
 
     def _headings(self, text: str) -> List[tuple]:

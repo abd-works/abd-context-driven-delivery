@@ -300,31 +300,6 @@ test('a pressed backlog card offers Start, which opens a ticket for the item', a
   await ui.unmount()
 })
 
-test('Pull asks the cdd server to pull a ticket whose stage is done', async ($, on) => {
-  const calls: { tool: string; args: unknown }[] = []
-  engine(on, calls)
-  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
-  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-
-  await pressCard(ui, 'Discovery/loyalty')
-  await ui.press({ key: 'pull' })
-
-  expect(calls.find(call => call.tool === 'kanban.pull')?.args).toEqual({ ticket: 'loyalty' })
-  await ui.unmount()
-})
-
-test('Pull does nothing on a ticket whose stage is not done', async ($, on) => {
-  const calls: { tool: string; args: unknown }[] = []
-  engine(on, calls)
-  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
-  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-
-  await ui.press({ key: 'pull' })
-
-  expect(calls.find(call => call.tool === 'kanban.pull')).toBeUndefined()
-  await ui.unmount()
-})
-
 test('Switch to makes the chosen ticket the current session', async ($, on) => {
   const calls: { tool: string; args: unknown }[] = []
   engine(on, calls)
@@ -369,17 +344,6 @@ test('Satisfy on the band fills the prompt with the fidelities that have violati
 
   expect(fills.at(-1)).toBe('/actions-satisfy ux-mockup')
   await ui.unmount()
-})
-
-test('/ticket pull asks the cdd server to pull the named ticket', async ($, on) => {
-  const calls: { tool: string; args: unknown }[] = []
-  engine(on, calls)
-  on('command.run', (_: unknown, e: unknown) => e)
-  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
-
-  await $.command.run({ command: 'ticket', args: 'pull loyalty', origin: { kind: 'composer' } } as never)
-
-  expect(calls.find(call => call.tool === 'kanban.pull')?.args).toEqual({ ticket: 'loyalty' })
 })
 
 test('a session open and closed under one name raises no toast on each read of the board', async ($, on) => {

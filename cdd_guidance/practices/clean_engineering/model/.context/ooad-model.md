@@ -331,11 +331,6 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 	// roots sit in columns by dependency depth. A column gap separates the columns. A row gap separates roots in one column
 	// -> module.size()
 	// -> module.place_children()
-+ place_classes(): None
-	// classes of one module, or one aggregate, sit in a tight cluster. A clear gap separates clusters
-	// a saved class box stays when the boxes do not overlap. A new class shifts clear of the boxes that stayed
-	// -> class.place_below(base) for a derived class
-	// -> imported.place_above() or imported.place_beside()
 
 ## DiagramModule : Module, DiagramNode
 
@@ -382,16 +377,6 @@ Optional on a property. Cardinality lives here. A class reads these from its pro
 	// the cell label. A module writes purpose and seam terms. A class writes properties and operations
 + cell(): Vertex
 	// one mxCell from cell_id, html, geometry, and style
-
-## DrawIORelationship : Relationship
-
-+ route(source: DrawIOClass, target: DrawIOClass): None
-	// an orthogonal edge between the two class boxes
-	// a clear path uses a straight run. A blocked path uses a channel, with at most two waypoints
-	// the first segment leaves the source side head-on. The last segment enters the target side head-on
-	// the edge does not enter any other class box
-	// two edges do not share a column or a row. Edges on the same side use distinct anchors
-	// a saved edge stays. A new edge is routed
 
 ## DrawIOCleanEngineeringModel : DiagramCleanEngineeringModel
 
@@ -660,4 +645,4 @@ The statements inside one operation, test, or step, kept with the language they 
 
 `harness/graph/working_copy.py` walks the repo, parses TypeScript under `src/` with `TypeScriptCleanEngineeringModel`, and registers nodes and edges on `PracticeGraph`. `Graph.load_working_copy` calls `fill_working_copy`, then `root_node.populate()` for the explorer tree. DDD and cross-practice story edges are built in the same module after clean engineering facts exist.
 
-Python, TypeScript, JavaScript, and Java extend the code types: model, module, and class. There is no language property type and no language parameter type. A language class reads the property, the operation, and the parameter. A nested module is a module whose parent is a module. `CleanEngineeringModel` loads the top modules. `Module` loads its child modules and its classes. `load_properties`, `load_operations`, and `load_relationships` stay on `OoadClass`. `load_parameters` stays on `Operation`. Every other model implements `save(): str`. Markdown and JSON are one file and continue through parameters and relationships. A code path is a folder of module folders and one class file per class. Draw.io and Miro extend `DiagramCleanEngineeringModel`. A modules view stops at classes. A class view continues through properties and operations. `DiagramNode` owns `geometry`, `height`, `keep_or_place`, `overlaps`, and `draw`. `DiagramCleanEngineeringModel.place_modules` lays out module columns. `DiagramModule.size` and `place_children` lay out the nested grid. `place_classes` clusters classes. `DiagramClass.place_below` puts a base above its subtypes. `ImportedClass` sits above or beside. A Draw.io node is a `DrawIONode`: `style`, `html`, and `cell`. `DrawIORelationship.route` draws the orthogonal edge. A Miro node is a `MiroNode`: `mermaid_id` and `mermaid_lines`. An `ImportedClass` is a `DiagramClass` owned by another module. A code node is a `CodeOoadNode`: `slug` and `name_from_slug`. A markdown node is a `MarkdownOoadNode`: `strip_markup`. A JSON node is a `JsonOoadNode`: `record`. A channel overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its path contains.
+Python, TypeScript, JavaScript, and Java extend the code types: model, module, and class. There is no language property type and no language parameter type. A language class reads the property, the operation, and the parameter. A nested module is a module whose parent is a module. `CleanEngineeringModel` loads the top modules. `Module` loads its child modules and its classes. `load_properties`, `load_operations`, and `load_relationships` stay on `OoadClass`. `load_parameters` stays on `Operation`. Every other model implements `save(): str`. Markdown and JSON are one file and continue through parameters and relationships. A code path is a folder of module folders and one class file per class. Draw.io and Miro extend `DiagramCleanEngineeringModel`. A modules view stops at classes. A class view continues through properties and operations. `DiagramNode` owns `geometry`, `height`, `keep_or_place`, `overlaps`, and `draw`. `DiagramCleanEngineeringModel.place_modules` lays out module columns. `DiagramModule.size` and `place_children` lay out the nested grid. `CardPlacement` sets where class cards sit and `ArrowRouter` routes the arrows between them, both in `diagram/class_layout.py`. `DiagramClass.place_below` puts a base above its subtypes. `ImportedClass` sits above or beside. A Draw.io node is a `DrawIONode`: `style`, `html`, and `cell`. A Miro node is a `MiroNode`: `mermaid_id` and `mermaid_lines`. An `ImportedClass` is a `DiagramClass` owned by another module. A code node is a `CodeOoadNode`: `slug` and `name_from_slug`. A markdown node is a `MarkdownOoadNode`: `strip_markup`. A JSON node is a `JsonOoadNode`: `record`. A channel overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its path contains.

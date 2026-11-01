@@ -58,8 +58,6 @@ class Generate(GuidanceAction):
         from space.session import Session
 
         session = Session.current()
-        if session is None:
-            return ""
         outputs = [session.fidelity_outputs(item) for item in self.listed() if not isinstance(item, str)]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:

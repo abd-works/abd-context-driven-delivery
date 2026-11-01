@@ -157,8 +157,6 @@ class RulesCollection(MarkdownCollection):
         except ImportError:
             return
         session = Session.current()
-        if session is None:
-            return
         guidance = self._owner_practice()
         if guidance is None:
             return

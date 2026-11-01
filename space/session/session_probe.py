@@ -47,8 +47,6 @@ def probe_session_log() -> dict[str, Any]:
         Validate().validate(["bdd"])
 
         session = Session.current()
-        if session is None or session.session_path is None:
-            return _fail("no session bound after generate/validate")
 
         log_path = session.session_path / "session.log"
         log_text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""

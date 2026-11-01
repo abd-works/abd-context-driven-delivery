@@ -171,9 +171,7 @@ class GuidanceAction:
         except BaseException as failure:
             from space.session import Session
 
-            session = Session.current()
-            if session is not None:
-                session.record_failure(failure, tool=action or type(self).__name__)
+            Session.current().record_failure(failure, tool=action or type(self).__name__)
             raise
 
     def _log_running_action(self, action: str) -> None:
@@ -186,15 +184,13 @@ class GuidanceAction:
         from space.session import Session
 
         session = Session.current()
-        if session is None or session.session_path is None:
-            return
         items = self.listed() if self._guidance_text is None else []
         session.log_guidance_action(action, items)
 
     @echo
     @agent_instructions
     def begin(self, guidance: GuidanceArg | None = None, action: str = "") -> str:
-        """Start a guidance action: open the workspace if needed, attach this action to the session turn, and load decision records. A session is optional — the action still runs without one. Follow act_quickly."""
+        """Start a guidance action: open the workspace if needed, attach this action to the session turn, and load decision records. With no named session the action runs in the main session. Follow act_quickly."""
         self._bind_guidance(guidance)
         tools(self.act_quickly)
         return ""

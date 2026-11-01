@@ -19,7 +19,7 @@ class Kanban:
     """Show every work session as a ticket on a kanban, and move tickets through the stages."""
 
     # The board is read after every cdd call and every prompt, so its tools stay out of the session log;
-    # a pull still writes its own `pull <stage>` line there.
+    # a move still writes its own `pull <stage>` line there.
 
     def __init__(self, project: str = "") -> None:
         self._project = project
@@ -30,15 +30,6 @@ class Kanban:
     def board(self) -> dict[str, Any]:
         """Return the session board: Backlog, Discovery, Specification, Implementation, and Complete, with every ticket's progress through Generate, Validate, and Review, and the active ticket."""
         return self._board().to_json()
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def pull(self, ticket: str) -> dict[str, Any]:
-        """Pull ticket into the next stage. Only a ticket whose stage is done can be pulled; a done ticket in Implementation is closed instead."""
-        board = self._board()
-        board.ticket(ticket).pull()
-        return board.ticket(ticket).to_json()
 
     @mcp
     @agent_tool
@@ -57,19 +48,19 @@ class Kanban:
     @mcp
     @agent_tool
     @noSessionLog
-    def start(self, backlog_item: str, scope: str = "feature") -> dict[str, Any]:
-        """Start the backlog item titled backlog_item: open a ticket for it in Discovery. scope is feature, story, or slice."""
+    def start(self, backlog_item: str, scope: str = "feature", path: str = "") -> dict[str, Any]:
+        """Start the backlog item titled backlog_item: open a ticket for it in Discovery. scope is feature, story, or slice; path is the folder in the repository its session works on."""
         board = self._board()
         item = next(entry for entry in board.backlog_items if entry.title == backlog_item)
-        return item.start(scope).to_json()
+        return item.start(scope, path).to_json()
 
     @mcp
     @agent_tool
     @noSessionLog
-    def new(self, title: str, scope: str = "feature", parent: str = "") -> dict[str, Any]:
-        """Open a new ticket titled title in Discovery. scope is feature, story, or slice; parent names the ticket it was split from."""
+    def new(self, title: str, scope: str = "feature", parent: str = "", path: str = "") -> dict[str, Any]:
+        """Open a new ticket titled title in Discovery. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on."""
         board = self._board()
-        return board.new_ticket(title, scope, board.ticket(parent) if parent else None).to_json()
+        return board.new_ticket(title, scope, board.ticket(parent) if parent else None, path).to_json()
 
     @mcp
     @agent_tool

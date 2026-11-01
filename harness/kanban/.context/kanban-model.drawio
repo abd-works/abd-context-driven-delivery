@@ -1,0 +1,306 @@
+<mxfile host="65bd71144e">
+    <diagram name="CleanEngineering Model" id="CleanEngineering-model">
+        <mxGraphModel dx="2783" dy="1247" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3130" pageHeight="2710" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="cdd_guidance-practices--stagename" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;StageName&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ DISCOVERY&lt;br/&gt;+ SPECIFICATION&lt;br/&gt;+ IMPLEMENTATION&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#666666;module=cdd_guidance/practices;" parent="1" vertex="1">
+                    <mxGeometry x="1510" y="480" width="200" height="94" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-graph--graph" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Graph&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ practices: dict[str, PracticeGraph]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ load_files(folder: str, practices: list[str], files: list[str], overlays: list[str]): str&lt;br/&gt;+ files_of(fidelity: str): list[str]&lt;br/&gt;+ write_json(path: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=harness/graph;" parent="1" vertex="1">
+                    <mxGeometry x="1350" y="2400" width="520" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-graph--node" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Node&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ type: str&lt;br/&gt;+ source: Source&lt;br/&gt;+ fidelity: str&lt;br/&gt;+ failed_rules: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=harness/graph;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="2400" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-graph--practicegraph" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeGraph&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ nodes: dict[str, list[Node]]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=harness/graph;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="2410" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-guidance--fidelityguidance" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FidelityGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ stage: StageName&lt;br/&gt;+ outputs: dict&lt;br/&gt;+ rules: RulesCollection&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/guidance;" parent="1" vertex="1">
+                    <mxGeometry x="2140" y="100" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-guidance--practiceguidance" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ fidelities: list[FidelityGuidance]&lt;br/&gt;+ rules: RulesCollection&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/guidance;" parent="1" vertex="1">
+                    <mxGeometry x="2660" y="120" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-guidance--rule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Rule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ slug: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/guidance;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="120" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-guidance--rulescollection" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;RulesCollection&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ rules: list[Rule]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/guidance;" parent="1" vertex="1">
+                    <mxGeometry x="1510" y="120" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-guidance_actions--generate" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Generate&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ generate(guidance: GuidanceArg): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#666666;module=harness/guidance_actions;" parent="1" vertex="1">
+                    <mxGeometry x="2650" y="2160" width="240" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-guidance_actions--guidanceaction" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;GuidanceAction&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ listed: list[FidelityGuidance]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ run(guidance: GuidanceArg, operation, action: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#666666;module=harness/guidance_actions;" parent="1" vertex="1">
+                    <mxGeometry x="2610" y="1360" width="320" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-guidance_actions--review" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Review&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ review(guidance: GuidanceArg): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#666666;module=harness/guidance_actions;" parent="1" vertex="1">
+                    <mxGeometry x="2130" y="2410" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-guidance_actions--validate" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Validate&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ validate(guidance: GuidanceArg, rule: Rule, graph: bool, paths: list[str]): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#666666;module=harness/guidance_actions;" parent="1" vertex="1">
+                    <mxGeometry x="2000" y="1870" width="480" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-kanban--backlog" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Backlog&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Backlog(board: Board)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=harness/kanban;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="730" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-kanban--backlogitem" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BacklogItem&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ text: str&lt;br/&gt;+ path: Path&lt;br/&gt;+ last_activity: Activity&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BacklogItem(path: Path, board: Board)&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): BacklogItem&lt;br/&gt;+ start(scope: str, path: str): Ticket&lt;br/&gt;+ to_json(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=harness/kanban;" parent="1" vertex="1">
+                    <mxGeometry x="610" y="1300" width="240" height="206" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-kanban--board" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Board&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ repo: Repo&lt;br/&gt;+ columns: list[Column]&lt;br/&gt;+ tickets: list[Ticket]&lt;br/&gt;+ backlog_items: list[BacklogItem]&lt;br/&gt;+ active: Ticket&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Board(repo: Repo)&lt;br/&gt;+ to_json(): dict&lt;br/&gt;+ new_ticket(title: str, scope: str, parent: Ticket, path: str): Ticket&lt;br/&gt;+ add_backlog_item(title: str, text: str): BacklogItem&lt;br/&gt;+ ticket(name: str): Ticket&lt;br/&gt;+ column(name: str): Column&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=harness/kanban;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="1290" width="420" height="222" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-kanban--card" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Card&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ title: str&lt;br/&gt;+ column: Column&lt;br/&gt;+ last_activity: Activity&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ move_next(): Card&lt;br/&gt;+ move_previous(): Card&lt;br/&gt;+ to_json(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=harness/kanban;" parent="1" vertex="1">
+                    <mxGeometry x="1510" y="800" width="200" height="142" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-kanban--column" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Column&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ cards: list[Card]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Column(name: str, board: Board)&lt;br/&gt;+ to_json(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=harness/kanban;" parent="1" vertex="1">
+                    <mxGeometry x="170" y="470" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-kanban--kanban" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Kanban&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Kanban(project: str)&lt;br/&gt;+ board(): dict&lt;br/&gt;+ move_next(ticket: str): dict&lt;br/&gt;+ move_previous(ticket: str): dict&lt;br/&gt;+ start(backlog_item: str, scope: str, path: str): dict&lt;br/&gt;+ new(title: str, scope: str, parent: str, path: str): dict&lt;br/&gt;+ add_backlog_item(title: str, text: str): dict&lt;br/&gt;+ enable_practice(ticket: str, practice: str, is_enabled: bool): dict&lt;br/&gt;+ close(ticket: str): dict&lt;br/&gt;+ archive(ticket: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=harness/kanban;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="60" width="400" height="206" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-kanban--stage" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Stage&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: StageName&lt;br/&gt;+ next_stage: Stage&lt;br/&gt;+ previous_stage: Stage&lt;br/&gt;+ in_progress: list[Ticket]&lt;br/&gt;+ done: list[Ticket]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Stage(name: StageName, board: Board)&lt;br/&gt;+ to_json(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=harness/kanban;" parent="1" vertex="1">
+                    <mxGeometry x="610" y="790" width="240" height="158" as="geometry"/>
+                </mxCell>
+                <mxCell id="harness-kanban--ticket" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Ticket&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ session: Session&lt;br/&gt;+ name: str&lt;br/&gt;+ scope: str&lt;br/&gt;+ lineage: Ticket&lt;br/&gt;+ column: Column&lt;br/&gt;+ is_done: bool&lt;br/&gt;+ last_activity: Activity&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Ticket(session: Session, board: Board)&lt;br/&gt;+ move_next(): Ticket&lt;br/&gt;+ move_previous(): Card&lt;br/&gt;+ close(): Ticket&lt;br/&gt;+ archive(): Ticket&lt;br/&gt;+ to_json(): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=harness/kanban;" parent="1" vertex="1">
+                    <mxGeometry x="980" y="1280" width="240" height="254" as="geometry"/>
+                </mxCell>
+                <mxCell id="space-repo--repo" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Repo&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ root: Path&lt;br/&gt;+ sessions: list[Session]&lt;br/&gt;+ current_session: Session&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Repo(root: Path)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#666666;module=space/repo;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="1860" width="200" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="space-session--actionstate" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ActionState&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ TO_DO&lt;br/&gt;+ IN_PROGRESS&lt;br/&gt;+ DONE&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=space/session;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="2150" width="200" height="94" as="geometry"/>
+                </mxCell>
+                <mxCell id="space-session--activity" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Activity&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ at: datetime&lt;br/&gt;+ action: GuidanceAction&lt;br/&gt;+ fidelity: FidelityGuidance&lt;br/&gt;+ format: str&lt;br/&gt;+ paths: list[Path]&lt;br/&gt;+ violations: list[str]&lt;br/&gt;+ entered_stage: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_log_line(line: str, session: Session): Activity&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=space/session;" parent="1" vertex="1">
+                    <mxGeometry x="2080" y="780" width="320" height="174" as="geometry"/>
+                </mxCell>
+                <mxCell id="space-session--practice" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Practice&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ guideline: PracticeGuidance&lt;br/&gt;+ graph: Graph&lt;br/&gt;+ folder_sets: list&lt;br/&gt;+ enabled: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ artifacts(fidelity: FidelityGuidance): list[Path]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=space/session;" parent="1" vertex="1">
+                    <mxGeometry x="1460" y="1840" width="300" height="142" as="geometry"/>
+                </mxCell>
+                <mxCell id="space-session--session" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Session&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ workpath: Path&lt;br/&gt;+ session_path: Path&lt;br/&gt;+ practices: dict[str, Practice]&lt;br/&gt;+ active_practices: list[Practice]&lt;br/&gt;+ work_required: list[FidelityGuidance]&lt;br/&gt;+ activities: list[Activity]&lt;br/&gt;+ latest_handoff: Path&lt;br/&gt;+ next_action: GuidanceAction&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ practice(name: str): Practice&lt;br/&gt;+ action_states(fidelity: FidelityGuidance): dict[GuidanceAction, ActionState]&lt;br/&gt;+ is_stage_done(stage: StageName): bool&lt;br/&gt;+ violations(fidelity: FidelityGuidance): list[str]&lt;br/&gt;+ reports(fidelity: FidelityGuidance): list[Path]&lt;br/&gt;+ artifacts(fidelity: FidelityGuidance): list[Path]&lt;br/&gt;+ fidelity_outputs(guidance: PracticeGuidance): dict&lt;br/&gt;+ log_guidance_action(action: str, guidance_items: list)&lt;br/&gt;+ log_validation(guidance: PracticeGuidance, violations: list[str])&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=space/session;" parent="1" vertex="1">
+                    <mxGeometry x="1380" y="1240" width="460" height="334" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="repo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.35;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--board" target="space-repo--repo" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="200" y="1820"/>
+                            <mxPoint x="700" y="1820"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="3" value="columns" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3333;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--board" target="harness-kanban--column" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="110" y="1290"/>
+                            <mxPoint x="110" y="620"/>
+                            <mxPoint x="210" y="620"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="4" value="tickets, active" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--board" target="harness-kanban--ticket" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="340" y="1570"/>
+                            <mxPoint x="1100" y="1570"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="5" value="backlog_items" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=1.0;exitY=0.4955;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4854;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--board" target="harness-kanban--backlogitem" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="cards" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=0.8;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--column" target="harness-kanban--card" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="330" y="610"/>
+                            <mxPoint x="750" y="610"/>
+                            <mxPoint x="750" y="740"/>
+                            <mxPoint x="1610" y="740"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--backlog" target="harness-kanban--column" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="name" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6667;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--stage" target="cdd_guidance-practices--stagename" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="770" y="610"/>
+                            <mxPoint x="1610" y="610"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.3333;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--stage" target="harness-kanban--column" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="690" y="630"/>
+                            <mxPoint x="290" y="630"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="10" value="last_activity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=1.0;exitY=0.493;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5172;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--card" target="space-session--activity" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="session" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=1.0;exitY=0.4724;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.479;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--ticket" target="space-session--session" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--ticket" target="harness-kanban--card" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1100" y="990"/>
+                            <mxPoint x="1640" y="990"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.35;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--backlogitem" target="harness-kanban--card" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="730" y="1010"/>
+                            <mxPoint x="1580" y="1010"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="14" value="sessions, current_session" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.65;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2609;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="space-repo--repo" target="space-session--session" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="760" y="1610"/>
+                            <mxPoint x="1500" y="1610"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="15" value="practices" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.7391;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="space-session--session" target="space-session--practice" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1720" y="1790"/>
+                            <mxPoint x="1560" y="1790"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="16" value="activities" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3438;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="space-session--session" target="space-session--activity" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1610" y="1010"/>
+                            <mxPoint x="2190" y="1010"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="17" value="next_action" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=1.0;exitY=0.479;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="space-session--session" target="harness-guidance_actions--guidanceaction" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" value="guideline" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6667;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3182;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="space-session--practice" target="harness-guidance--practiceguidance" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1660" y="1810"/>
+                            <mxPoint x="1970" y="1810"/>
+                            <mxPoint x="1970" y="2520"/>
+                            <mxPoint x="2920" y="2520"/>
+                            <mxPoint x="2920" y="1470"/>
+                            <mxPoint x="2960" y="1470"/>
+                            <mxPoint x="2960" y="250"/>
+                            <mxPoint x="2730" y="250"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="19" value="graph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="space-session--practice" target="harness-graph--graph" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="action" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6562;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3438;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="space-session--activity" target="harness-guidance_actions--guidanceaction" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2290" y="1320"/>
+                            <mxPoint x="2720" y="1320"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="21" value="fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="space-session--activity" target="harness-guidance--fidelityguidance" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" value="fidelities" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.5455;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-guidance--practiceguidance" target="harness-guidance--fidelityguidance" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" value="rules" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6818;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-guidance--practiceguidance" target="harness-guidance--rulescollection" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2810" y="230"/>
+                            <mxPoint x="2910" y="230"/>
+                            <mxPoint x="2910" y="70"/>
+                            <mxPoint x="970" y="70"/>
+                            <mxPoint x="970" y="240"/>
+                            <mxPoint x="1610" y="240"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="24" value="stage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-guidance--fidelityguidance" target="cdd_guidance-practices--stagename" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2190" y="440"/>
+                            <mxPoint x="1610" y="440"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="25" value="rules" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.0;exitY=0.5455;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-guidance--fidelityguidance" target="harness-guidance--rulescollection" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="26" value="rules" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-guidance--rulescollection" target="harness-guidance--rule" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="27" value="listed" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6562;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-guidance_actions--guidanceaction" target="harness-guidance--fidelityguidance" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2820" y="300"/>
+                            <mxPoint x="2290" y="300"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-guidance_actions--generate" target="harness-guidance_actions--guidanceaction" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2770" y="1540"/>
+                            <mxPoint x="2850" y="1540"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-guidance_actions--validate" target="harness-guidance_actions--guidanceaction" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2240" y="1480"/>
+                            <mxPoint x="2690" y="1480"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-guidance_actions--review" target="harness-guidance_actions--guidanceaction" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2240" y="1980"/>
+                            <mxPoint x="2750" y="1980"/>
+                            <mxPoint x="2750" y="1480"/>
+                            <mxPoint x="2770" y="1480"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="31" value="practices" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.0;exitY=0.4545;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-graph--graph" target="harness-graph--practicegraph" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="32" value="nodes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.0;entryY=0.4545;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-graph--practicegraph" target="harness-graph--node" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="33" value="board" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="harness-kanban--kanban" target="harness-kanban--board" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="270" y="440"/>
+                            <mxPoint x="400" y="440"/>
+                            <mxPoint x="400" y="1250"/>
+                            <mxPoint x="340" y="1250"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="34" value="action_states" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="space-session--session" target="space-session--actionstate" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1610" y="1770"/>
+                            <mxPoint x="1100" y="1770"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

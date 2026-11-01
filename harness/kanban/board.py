@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 STAGE_NAMES = ("Discovery", "Specification", "Implementation")
 CLOSED_FOLDER = "closed"
 BACKLOG_FOLDER = "_backlog"
-NO_SESSION_FOLDER = "default"
+MAIN_SESSION_FOLDER = "main"
 CURRENT_SESSION_FILE = "session.json"
 
 
@@ -82,14 +82,19 @@ class Board:
     def ticket(self, name: str) -> Ticket | None:
         return next((ticket for ticket in self.tickets if ticket.name == name), None)
 
-    def new_ticket(self, title: str, scope: str, parent: Ticket | None) -> Ticket:
-        """A new ticket is in Discovery, in progress, until its log shows work in a later stage."""
+    def new_ticket(self, title: str, scope: str, parent: Ticket | None, path: str = "") -> Ticket:
+        """A new ticket is in Discovery, in progress, until its log shows work in a later stage.
+
+        path is the folder in the repository the session works on; without one it works on the repository.
+        """
         from harness.kanban.ticket import Ticket
 
         name = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
         folder = self._sessions_folder / name
         folder.mkdir(parents=True, exist_ok=True)
         fields = {"name": name, "title": title, "scope": scope, "parent": parent.name if parent else ""}
+        if path:
+            fields["workpath"] = str((self._sessions_folder.parent / path).resolve())
         (folder / "session.json").write_text(json.dumps(fields), encoding="utf-8")
         (folder / "session.log").touch()
         return Ticket(folder, self)
@@ -114,7 +119,7 @@ class Board:
     def _ticket_folders(self) -> list[Path]:
         if not self._sessions_folder.is_dir():
             return []
-        skipped = {CLOSED_FOLDER, NO_SESSION_FOLDER}
+        skipped = {CLOSED_FOLDER, MAIN_SESSION_FOLDER}
         open_folders = [
             folder for folder in sorted(self._sessions_folder.iterdir())
             if folder.is_dir() and folder.name not in skipped and not folder.name.startswith("_")

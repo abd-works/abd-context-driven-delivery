@@ -646,7 +646,7 @@ class HookServer:
             )
         from harness.hooks.session_logs import SessionLogs
 
-        SessionLogs(self._repo_root).ensure_default_session()
+        SessionLogs(self._repo_root).ensure_main_session()
         if not raw.strip():
             return HookResult()
         try:

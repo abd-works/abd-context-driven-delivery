@@ -1,19 +1,19 @@
-*Drawio* is the miniature kit a caller hires to create, scan, and repair a Clean Engineering Draw.io diagram. *Diagram* is the mxfile. *Page* is one tab. *DiagramNode* is the placed-cell contract — geometry, HTML, style, draw, and keep-or-place. It is written like a class without the `+` seam marks: one type, not a second `IDiagramNode`. *DrawIOModule* and *DrawIOClass* are the live `Module` and `OoadClass` filling that contract. *DrawIORelationship* is the live `Relationship` routing itself. *ImportedClass* is a local-page view of a class owned by another module. *Inheritance* is the relationship that must point up at a parent sitting above its children.
+*Drawio* is the miniature kit a caller hires to create, scan, and repair a Clean Engineering Draw.io diagram. *Diagram* is the mxfile. *Page* is one tab. *DiagramNode* is the placed-cell contract — geometry, HTML, style, draw, and keep-or-place. It is written like a class without the `+` seam marks: one type, not a second `IDiagramNode`. *DrawIOModule* and *DrawIOClass* are the live `Module` and `OoadClass` filling that contract. *ImportedClass* is a local-page view of a class owned by another module. *Inheritance* is the relationship that must point up at a parent sitting above its children.
 
 - A caller never lays out HTML, waypoints, or mxCell attributes. They ask `Drawio` to create or scan a path.
 - *DrawIOModule* always draws from the `Module` it wraps. It never copies purpose or seam terms into a second record.
 - *DrawIOClass* always draws from the `OoadClass` it wraps. Properties, operations, and stereotypes come from that class.
-- *DrawIORelationship* always draws from the `Relationship` it wraps. Kind chooses the arrowhead; the two classes choose the ends.
+- A *DiagramArrow* is one relationship on a page: kind chooses the arrowhead, the two classes choose the ends, and `ArrowRouter` finds the way between them.
 - **Invariant:** No second `*Model` / `*Entry` family restates `Module`, `OoadClass`, or `Relationship`.
 
-Build order: `Geometry` → `DiagramNode` → `DrawIOModule` → `DrawIOClass` → `ImportedClass` → `DrawIORelationship` → `Inheritance` → `Page` → `Diagram` → `DrawIOCleanEngineeringModel` → `Drawio`
+Build order: `Geometry` → `DiagramCard` → `DiagramArrow` → `CardPlacement` → `ArrowRouter` → `DiagramNode` → `DrawIOModule` → `DrawIOClass` → `ImportedClass` → `Page` → `Diagram` → `DrawIOCleanEngineeringModel` → `Drawio`
 
 ---
 
 # cdd_guidance.practices.clean_engineering.model.drawio
 
 - **Purpose:** Turn a Clean Engineering model into a Draw.io mxfile and back, and scan the file against layout rules in `drawio.md`.
-- **Seam (terms):** Drawio, Diagram, Page, DiagramNode, DrawIOModule, DrawIOClass, DrawIORelationship
+- **Seam (terms):** Drawio, Diagram, Page, DiagramNode, DrawIOModule, DrawIOClass
 - **Dependencies (one-way):** cdd_guidance.practices.clean_engineering.model
 
 ## Constraint
@@ -121,41 +121,60 @@ parse_html(value: str): None
 	-> DiagramNode.keep_or_place
 	-> DiagramNode.draw
 
-## DrawIORelationship
+## DiagramCard
 
-+ DrawIORelationship(relationship: Relationship, source: DrawIOClass, target: DrawIOClass)
-	// A relationship edge relates exactly two class cells. It never crosses a third class's geometry.
++ DiagramCard(cell_id: str, width: float, height: float, group: str)
+	// A card's size is fixed before layout, so layout only ever sets where it sits.
 ------
-+ << association >> relationship: Relationship
-+ << association >> source: DrawIOClass
-+ << association >> target: DrawIOClass
-+ waypoints: list[tuple]
++ cell_id: str
++ width: float
++ height: float
++ group: str
+	// the module or bounded context it belongs to; cards of one group stay together
++ x: float
++ y: float
++ geometry: Geometry
++ center: tuple
+----
+
+## DiagramArrow
+
++ DiagramArrow(source: str, target: str, kind: str, label: str)
+	// One relationship. It relates exactly two cards and never passes through a third.
+------
++ source: str
++ target: str
++ kind: str
++ label: str
+	// the property or operation the arrow stands for
 + exit_side: str
 + entry_side: str
-+ exit_frac: float
-+ entry_frac: float
++ exit_point: tuple
++ entry_point: tuple
++ corners: list[tuple]
++ routed: bool
++ path: list[tuple]
 ----
-+ kind(): str
-	-> relationship
-+ style(): str
-+ route(page: Page): None
-	// First and last segments hit the chosen sides perpendicularly. Parallel runs do not share a column or row.
-	-> Geometry.side_anchor
-	-> Page.obstacles
-+ draw(page: Page): None
-	-> DrawIORelationship.route
-+ copy_route_from(previous: DrawIORelationship): None
-	// When keep_positioning holds, existing routing stays; only a new relationship routes.
 
-## Inheritance : DrawIORelationship
+## CardPlacement
 
-+ Inheritance(relationship: Relationship, source: DrawIOClass, target: DrawIOClass)
-	// The parent cell always sits at a smaller y than the child. The arrow is child → parent, block, unfilled.
++ CardPlacement(cards: list[DiagramCard], arrows: list[DiagramArrow])
+	// Shared by every class-shaped view. A base always sits above what derives from it. One model always gives one layout.
 ------
 ----
-+ route(page: Page): None
-	// Siblings share a y row under the parent. A grandparent import sits above the parent.
-	-> ImportedClass.draw
++ place(): None
+	// swaps cards on a compact grid, keeping the arrangement with the fewest crossings and the shortest arrows
+	-> DiagramCard.geometry
+
+## ArrowRouter
+
++ ArrowRouter(cards: list[DiagramCard], arrows: list[DiagramArrow], obstacles: list[Geometry], kept_paths: list[list])
+	// Shared by every class-shaped view. Arrows never pass through a card or run along each other, and each has its own end points.
+------
+----
++ route(): list[DiagramArrow]
+	// routes shortest first, then lifts each arrow that crosses another and searches again with the rest in place
+	-> DiagramArrow.corners
 
 ## Page
 
@@ -165,14 +184,14 @@ parse_html(value: str): None
 + name: str
 + << composition >> modules: list[DrawIOModule]
 + << composition >> classes: list[DrawIOClass]
-+ << composition >> relationships: list[DrawIORelationship]
++ << composition >> arrows: list[DiagramArrow]
 ----
 + draw(): None
 	// Every diagram node draws itself. The page only orders the asks and then separates overlaps.
 	-> DiagramNode.draw
 	-> DiagramNode.keep_or_place
-	-> DrawIORelationship.draw
-	-> Page.separate_overlaps
+	-> CardPlacement.place
+	-> ArrowRouter.route
 + place(node: DiagramNode): None
 	-> DiagramNode.geometry
 + obstacles(except_ids: list): list[Geometry]
@@ -194,7 +213,6 @@ parse_html(value: str): None
 + parse(text: str): CleanEngineeringModel
 	-> DrawIOModule.parse_html
 	-> DrawIOClass.parse_html
-	-> DrawIORelationship
 + render(canonical: CleanEngineeringModel): str
 	// Modules view when the canonical has modules and no class members to show; otherwise class view, one page per module.
 	-> Page.draw

@@ -16,6 +16,8 @@ SKIP_DIR_NAMES = frozenset({'node_modules', '.git', 'dist', 'build', 'coverage',
 _REPAIR_FIXTURE_NAMES = frozenset({'faultyasset', 'repairedasset'})
 _REPAIR_FIXTURE_DIRS = frozenset({'faultyassets', 'repairedassets'})
 
+MOST_CROSSINGS_ON_A_PAGE = 5
+
 class DrawioViolation:
 
     def __init__(self, rule: str, message: str, *, location: str='', line: int | None=None, severity: str='error') -> None:
@@ -800,10 +802,62 @@ class DrawioScanner:
             violations.append(('edge_crosses_class', f'Edge {edge_desc} crosses through {crossed}'))
         for desc_a, desc_b, detail in self._check_edge_on_edge_overlaps(root):
             violations.append(('edge_on_edge_overlap', f'{desc_a} overlaps {desc_b} — {detail}'))
+        for desc_a, desc_b, detail in self._check_edges_crossing_edges(root):
+            violations.append(('edge_crosses_edge', f'{desc_a} crosses {desc_b}: {detail}'))
         for cls_name, side, descs in self._check_shared_anchors(root):
             violations.append(('shared_anchor', f"{cls_name} {side}: {len(descs)} edges share default anchor — {', '.join(descs)}"))
         violations.extend(self._inheritance_flow_violations(self._get_all_edges(root)))
         return violations
+
+    def _check_edges_crossing_edges(self, root) -> list:
+        """Each pair of arrows that cross at a right angle, away from a card they share, once a page has too many to read easily."""
+        classes = self._get_all_classes(root)
+        id_to_name = {cid: name for cid, name, *_ in classes}
+        id_to_geo = {cid: (x, y, w, h) for cid, name, x, y, w, h in classes}
+        edges = [c for c in root.findall('mxCell') if c.get('edge') == '1']
+        edge_segs = [(ec, self._compute_edge_segments(ec, id_to_geo)) for ec in edges]
+        crossings = []
+        for index, (ec_a, segs_a) in enumerate(edge_segs):
+            for ec_b, segs_b in edge_segs[index + 1:]:
+                point = self._crossing_point(ec_a, segs_a, ec_b, segs_b, id_to_geo)
+                if point is not None:
+                    detail = f'cross at ~({int(point[0])},{int(point[1])})'
+                    crossings.append((self._edge_description(ec_a, id_to_name), self._edge_description(ec_b, id_to_name), detail))
+        return crossings if len(crossings) > MOST_CROSSINGS_ON_A_PAGE else []
+
+    def _crossing_point(self, ec_a, segs_a, ec_b, segs_b, id_to_geo):
+        shared = {ec_a.get('source'), ec_a.get('target')} & {ec_b.get('source'), ec_b.get('target')}
+        for seg_a in segs_a:
+            for seg_b in segs_b:
+                point = self._right_angle_crossing(seg_a, seg_b)
+                if point is not None and not self._is_at_shared_card(point, shared, id_to_geo):
+                    return point
+        return None
+
+    def _is_at_shared_card(self, point, shared, id_to_geo) -> bool:
+        for sid in shared:
+            geo = id_to_geo.get(sid)
+            if geo and abs(point[0] - (geo[0] + geo[2] / 2)) < geo[2] / 2 + 5 and abs(point[1] - (geo[1] + geo[3] / 2)) < geo[3] / 2 + 5:
+                return True
+        return False
+
+    def _right_angle_crossing(self, seg_a, seg_b):
+        tolerance = 2
+        (ax1, ay1), (ax2, ay2) = seg_a
+        (bx1, by1), (bx2, by2) = seg_b
+        if abs(ay2 - ay1) >= tolerance:
+            (ax1, ay1), (ax2, ay2), (bx1, by1), (bx2, by2) = (bx1, by1), (bx2, by2), (ax1, ay1), (ax2, ay2)
+        if abs(ay2 - ay1) >= tolerance or abs(bx2 - bx1) >= tolerance:
+            return None
+        y, x = (ay1 + ay2) / 2, (bx1 + bx2) / 2
+        low_x, high_x = sorted((ax1, ax2))
+        low_y, high_y = sorted((by1, by2))
+        if low_x + tolerance < x < high_x - tolerance and low_y + tolerance < y < high_y - tolerance:
+            return (x, y)
+        return None
+
+    def _edge_description(self, edge_cell, id_to_name) -> str:
+        return f"{id_to_name.get(edge_cell.get('source', ''), '?')} -> {id_to_name.get(edge_cell.get('target', ''), '?')}"
 
     def _inheritance_flow_violations(self, edges):
         violations = []

@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
 _LOAD_FILE_BUDGET = 40
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
-_DEFAULT_SESSION_NAME = "default"
+_MAIN_SESSION_NAME = "main"
 _REPO_SESSIONS_DIR = ".sessions"
 _LEGACY_REPO_SESSIONS_DIR = "sessions"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
@@ -211,32 +211,21 @@ class Session:
         """Reload in-memory session when repo ``.sessions/session.json`` current changed."""
         slot = cls._slot()
         repo = slot.repo_from_session(repo_path)
-        if repo is None:
-            return
-        slot.repo_path = repo
         saved = cls._read_repo_current_name(repo)
-        if saved == _DEFAULT_SESSION_NAME:
-            return
-        current = cls._current
-        if (
-            current is not None
-            and current.name == saved
-            and current.session_path is not None
-            and current.repo_path == repo
-        ):
+        if slot.name == saved and slot.session_path is not None and slot.repo_path == repo:
             return
         cls._current = None
         session = cls._slot()
         session.repo_path = repo
-        session.resolve(saved, repo_path=repo)
+        session.resolve(saved, repo if saved == _MAIN_SESSION_NAME else None, repo)
 
     @classmethod
     def _read_repo_current_name(cls, repo_path: Path) -> str:
-        return WorkState(repo_path).session or _DEFAULT_SESSION_NAME
+        return WorkState(repo_path).session or _MAIN_SESSION_NAME
 
     @classmethod
     def current_folder(cls, repo_path: Path | str | None = None) -> Path:
-        """``.sessions/{current}/`` on the project's checkout; ``.sessions/default/`` when none is named.
+        """``.sessions/{current}/`` on the project's checkout; ``.sessions/main/`` when none is named.
 
         Reads the project (``repo_path``, else ``CDD_PROJECT``), not a session held in memory."""
         slot = cls._slot()
@@ -247,23 +236,12 @@ class Session:
     @mcp
     @command(name="current-session")
     @agent_tool
-    def current(cls, repo_path: Path | str | None = None) -> Session | None:
-        """Named session already in memory, or the one saved on the repo."""
+    def current(cls, repo_path: Path | str | None = None) -> Session:
+        """The session saved on the repo; the main session, which works on the whole repository, when none is named."""
         cls.refresh_current_from_repo(repo_path)
-        if cls._current is not None and cls._current.name:
-            return cls._current
-        session = cls._slot()
-        repo = session.repo_from_session(repo_path)
-        if repo is None:
-            return None
-        session.repo_path = repo
-        name = session.saved_current_session
-        if name == _DEFAULT_SESSION_NAME:
-            return None
-        session.resolve(name, repo_path=repo)
-        return session if session.name else None
+        return cls._current
 
-    def repo_from_session(self, repo_path: Path | str | None = None) -> Path | None:
+    def repo_from_session(self, repo_path: Path | str | None = None) -> Path:
         """Repo that holds ``.sessions`` — the path already in hand, or the repo it sits in."""
         if repo_path is not None:
             return self._repo_root_of(Path(repo_path))
@@ -277,7 +255,7 @@ class Session:
     def close(self) -> None:
         """Close this work session and remove ``session`` from ``.sessions/session.json``."""
         self.repo_path = self.repo_from_session()
-        self.saved_current_session = _DEFAULT_SESSION_NAME
+        self.saved_current_session = _MAIN_SESSION_NAME
         opened = type(self)._current
         if opened is not None and opened is not self:
             opened._forget()
@@ -350,8 +328,6 @@ class Session:
         range for this chat). Dispatch logs ``session.mark_loop``; the ``--- N`` marker carries the
         same pointer when chat is bound."""
         session = cls.current()
-        if session is None or not session.name:
-            raise ValueError("no current session; open one with session.switch")
         session._bind_chat_for_append(conversation_id, transcript_path, transcript_lines)
         opened = session.loop()
         return str(opened.number)
@@ -366,8 +342,6 @@ class Session:
         ``number`` defaults to the highest ``--- N`` marker in session.log.
         Run via MCP ``session.read_loop`` or slash ``/read-loop``."""
         session = cls.current()
-        if session is None or not session.name:
-            raise ValueError("no current session; open one with session.switch")
         if number is None:
             loop_number = session._latest_loop_with_entries()
         else:
@@ -410,8 +384,6 @@ class Session:
         only copy under Cursor ``.cursor/projects/.../agent-tools``. Reference those files
         in ``paths`` on this call."""
         session = cls.current()
-        if session is None or not session.name:
-            raise ValueError("no current session; open one with session.switch")
         text = (note or "").strip()
         if not text:
             raise ValueError("note is required")
@@ -427,15 +399,15 @@ class Session:
     def saved_current_session(self) -> str:
         """``session`` in repo/.sessions/session.json."""
         if self.repo_path is None:
-            return _DEFAULT_SESSION_NAME
-        return WorkState(self.repo_path).session or _DEFAULT_SESSION_NAME
+            return _MAIN_SESSION_NAME
+        return WorkState(self.repo_path).session or _MAIN_SESSION_NAME
 
     @saved_current_session.setter
     def saved_current_session(self, name: str) -> None:
         if self.repo_path is None:
             return
         cleaned = (name or "").strip()
-        if cleaned == _DEFAULT_SESSION_NAME:
+        if cleaned == _MAIN_SESSION_NAME:
             cleaned = ""
         WorkState(self.repo_path).session = cleaned
         if cleaned:

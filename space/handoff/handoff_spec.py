@@ -132,14 +132,14 @@ with description("write_handoff"):
             Session._current = None
             self.tmp.cleanup()
 
-        with it("should write into the default session folder"):
+        with it("should write into the main session folder"):
             path = Path(self.toolset.write_handoff("content"))
-            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "default"))
+            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
 
-        with it("should write into the default session folder when the saved current is default"):
-            _save_current(self.root, "default")
+        with it("should write into the main session folder when the saved current is main"):
+            _save_current(self.root, "main")
             path = Path(self.toolset.write_handoff("content"))
-            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "default"))
+            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
 
     with context("given no CDD_PROJECT"):
         with before.each:
@@ -157,6 +157,6 @@ with description("write_handoff"):
             Session._current = None
             self.tmp.cleanup()
 
-        with it("should write under the current working folder's default session"):
+        with it("should write under the current working folder's main session"):
             path = Path(self.toolset.write_handoff("content"))
-            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "default"))
+            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))

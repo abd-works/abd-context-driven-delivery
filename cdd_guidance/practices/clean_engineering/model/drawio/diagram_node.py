@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import html
+import math
 import re
 import xml.etree.ElementTree as ET
 from typing import List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
@@ -43,6 +43,12 @@ MODULE_CHILD_STYLE = (
 )
 
 
+MEMBER_CHARACTER_WIDTH = 5.5
+CARD_TEXT_PADDING = 18
+CARD_MIN_WIDTH = 200
+CARD_WIDTH_STEP = 20
+
+
 class Page:
     """One mxGraphModel root that writes DiagramNode cells as mxCell."""
 
@@ -70,6 +76,15 @@ class Page:
 class DrawIOClass(DiagramClass):
     """Draw.io UML class cell."""
 
+    fill_color = ''
+    owning_module = ''
+
+    def width(self) -> int:
+        """Wide enough that no line wraps, because the height counts one printed line per member."""
+        longest = max((len(line) for line in self._member_lines()), default=0)
+        wanted = longest * MEMBER_CHARACTER_WIDTH + CARD_TEXT_PADDING
+        return max(CARD_MIN_WIDTH, math.ceil(wanted / CARD_WIDTH_STEP) * CARD_WIDTH_STEP)
+
     def html(self) -> str:
         name_html = html.escape(self.display_name())
         stereo = self._stereotype_html()
@@ -82,28 +97,29 @@ class DrawIOClass(DiagramClass):
         )
 
     def style(self) -> str:
-        return CLASS_STYLE
+        if not self.fill_color:
+            return CLASS_STYLE
+        return f'{CLASS_STYLE}fillColor={self.fill_color};strokeColor=#666666;module={self.owning_module};'
+
+    def _property_lines(self) -> List[str]:
+        return [f"+ {p.name}{(': ' + p.type_hint if p.type_hint else '')}" for p in self.properties]
+
+    def _operation_lines(self) -> List[str]:
+        return [
+            f"{('- ' if op.name.startswith('_') else '+ ')}"
+            f"{op.name}({', '.join(parameter.save() for parameter in op.parameters)})"
+            f"{(': ' + op.return_type if op.return_type else '')}"
+            for op in self.operations
+        ]
+
+    def _member_lines(self) -> List[str]:
+        return [self.display_name()] + self._property_lines() + self._operation_lines()
 
     def _properties_html(self) -> str:
-        bits = ''.join(
-            (
-                f"+ {html.escape(p.name)}"
-                f"{(': ' + html.escape(p.type_hint) if p.type_hint else '')}<br/>"
-                for p in self.properties
-            )
-        )
-        return bits or '<br/>'
+        return ''.join(f'{html.escape(line)}<br/>' for line in self._property_lines()) or '<br/>'
 
     def _operations_html(self) -> str:
-        bits = ''.join(
-            (
-                f"{('- ' if op.name.startswith('_') else '+ ')}"
-                f"{html.escape(op.name)}({', '.join(parameter.save() for parameter in op.parameters)})"
-                f"{(': ' + html.escape(op.return_type) if op.return_type else '')}<br/>"
-                for op in self.operations
-            )
-        )
-        return bits or '<br/>'
+        return ''.join(f'{html.escape(line)}<br/>' for line in self._operation_lines()) or '<br/>'
 
     def _stereotype_html(self) -> str:
         stereotypes = self.tactical_stereotypes()
@@ -204,8 +220,3 @@ class DrawIOModule(DiagramModule):
         return terms
 
 
-class DrawIORelationship(Relationship):
-    """Orthogonal Draw.io edge between two class boxes."""
-
-    def route(self, model, source_box):
-        return model._route_waypoints(source_box)

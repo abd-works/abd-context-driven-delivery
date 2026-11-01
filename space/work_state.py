@@ -47,8 +47,8 @@ class WorkState:
 
     @property
     def release(self) -> str:
-        """The release this checkout's work belongs to: the open session, else the branch, else ``default``."""
-        return self.session or self.branch or "default"
+        """The release this checkout's work belongs to: the open session, else the branch, else ``main``."""
+        return self.session or self.branch or "main"
 
     def release_folder(self, release: str = "") -> Path:
         """``.sessions/<release>/``: the release's session files, its design canvas, and its end-to-end results."""

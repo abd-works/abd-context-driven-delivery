@@ -64,16 +64,15 @@ class Validate(GuidanceAction):
         sections.extend(parts)
         report = "\n\n".join(sections)
         saved = self._save_reports(report)
-        where = ", ".join(str(path) for path in saved) if saved else "{session.path}/"
+        where = ", ".join(str(path) for path in saved) if saved else str(self._session_path())
         return f"{report}\n\nValidation report for these artifacts: {where}"
 
     def _save_reports(self, report: str) -> list[Path]:
         """Save the report in the session for each listed guidance, so the board can link to it."""
-        session_path = self._session_path()
         items = [item for item in self.listed() if not isinstance(item, str)]
-        if session_path is None or not items:
+        if not items:
             return []
-        folder = session_path / REPORT_FOLDER
+        folder = self._session_path() / REPORT_FOLDER
         folder.mkdir(parents=True, exist_ok=True)
         date = datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)
         paths = [folder / f"{self._report_slug(item)}-{date}.md" for item in items]
@@ -94,11 +93,9 @@ class Validate(GuidanceAction):
             return [self._edited_graph_json(edited)]
         paths = load_graph_json_paths(graph)
         if graph is True and not paths:
-            session_path = self._session_path()
-            if session_path is not None:
-                default = session_path / "clean-engineering-violations.json"
-                if default.is_file():
-                    return [default]
+            default = self._session_path() / "clean-engineering-violations.json"
+            if default.is_file():
+                return [default]
             saved = self._validate_workspace() / ".context" / "graph.json"
             if saved.is_file():
                 return [saved]
@@ -115,9 +112,7 @@ class Validate(GuidanceAction):
         workspace = self._validate_workspace()
         graph = Graph()
         graph.load_files(str(workspace), sorted(_GRAPH_PRACTICES), edited)
-        session_path = self._session_path()
-        folder = session_path if session_path is not None else workspace / ".context"
-        return Path(graph.write_json(str(folder / "edited-graph.json")))
+        return Path(graph.write_json(str(self._session_path() / "edited-graph.json")))
 
     def _workspace_relative(self, paths: list[str] | None) -> list[str]:
         """Each path relative to the validate workspace, as graph node files are recorded."""
@@ -139,26 +134,15 @@ class Validate(GuidanceAction):
         ]
         return [name for name in names if name in _GRAPH_PRACTICES]
 
-    def _session_path(self) -> Path | None:
+    def _session_path(self) -> Path:
         from space.session import Session
 
-        session = Session.current()
-        if session is None or session.session_path is None:
-            return None
-        return Path(session.session_path)
+        return Path(Session.current().session_path)
 
     def _validate_workspace(self) -> Path:
         from space.session import Session
 
-        session = Session.current()
-        if session is not None and session.workpath is not None:
-            return Path(session.workpath).resolve()
-        import os
-
-        project = os.environ.get("CDD_PROJECT")
-        if project:
-            return Path(project).resolve()
-        return Path.cwd().resolve()
+        return Path(Session.current().workpath).resolve()
 
     def _graph_json_report(
         self,
@@ -261,11 +245,9 @@ class Validate(GuidanceAction):
     def _log_graph_validation(self, violations: list) -> None:
         from space.session import Session
 
+        if self._guidance_text is not None or not violations:
+            return
         session = Session.current()
-        if session is None or session.session_path is None or self._guidance_text is not None:
-            return
-        if not violations:
-            return
         synopsis = [
             f"graph-rule {item.get('rule_slug', '')} {item.get('location', '')}:{item.get('line_number', '')}"
             for item in violations[:40]
@@ -284,9 +266,9 @@ class Validate(GuidanceAction):
     def _log_validation_to_session(self) -> None:
         from space.session import Session
 
-        session = Session.current()
-        if session is None or session.session_path is None or self._guidance_text is not None:
+        if self._guidance_text is not None:
             return
+        session = Session.current()
         for item in self.listed():
             session.log_validation(item, [])
 

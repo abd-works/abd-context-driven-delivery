@@ -63,8 +63,8 @@ with description("a session"):
             self.root = Path(tempfile.mkdtemp())
             self.server = HookServer(self.root, HandlerCatalog([], self.root))  # pyright: ignore[reportUndefinedVariable]
 
-        with it("should return no named session until one is open on the repo"):
-            expect(self.server.session).to(equal(None))
+        with it("should hold the main session until another is open on the repo"):
+            expect(self.server.session.name).to(equal("main"))
 
         with it("should keep one in-memory session object for new and switch"):
             expect(Session._slot()).to(be_a(Session))
@@ -120,8 +120,8 @@ with description("a session"):
             self.hooks = HookServer(self.repo, HandlerCatalog([], self.repo))
             self.mcp = McpServer(repo=self.repo, project=self.repo)
 
-        with it("should return no named session until one is open on the repo"):
-            expect(self.mcp.session).to(equal(None))
+        with it("should hold the main session until another is open on the repo"):
+            expect(self.mcp.session.name).to(equal("main"))
 
         with it("should agree with the hook server on the same repo"):
             expect(self.mcp.session is self.hooks.session).to(equal(True))
@@ -240,8 +240,8 @@ with description("a session"):
         with it("should clear the in-process name"):
             expect(Session._slot().name).to(equal(""))
 
-        with it("should return no current session without a repo path when nothing is open"):
-            expect(Session.current()).to(equal(None))
+        with it("should go back to the main session"):
+            expect(Session.current().name).to(equal("main"))
 
     # (S) Session --> Select Existing Session
     with context("that is selected"):
@@ -400,7 +400,7 @@ with description("a session"):
             host = McpHost.from_refs(
                 ("space.session.session:Session",),
                 repo=str(self.repo),
-                project=str(self.work),
+                project=str(self.repo),
             )
             try:
                 host.dispatch("session.append_log", {"note": ""})
@@ -431,7 +431,7 @@ with description("a session"):
             host = McpHost.from_refs(
                 ("space.session.session:Session",),
                 repo=str(self.repo),
-                project=str(self.work),
+                project=str(self.repo),
             )
             host.dispatch("session.mark_loop", {})
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
@@ -1025,11 +1025,21 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
             expect("tool session.mark_loop" in log).to(equal(True))
 
     with context("with no session named on the project"):
-        with it("should have no current session"):
-            expect(Session.current()).to(equal(None))
+        with it("should be in the main session"):
+            expect(Session.current().name).to(equal("main"))
 
-        with it("should give the project's default session folder"):
-            expect(Session.current_folder()).to(equal(self.project.resolve() / ".sessions" / "default"))
+        with it("should keep the main session in the project's main session folder"):
+            expect(Session.current().session_path).to(equal(self.project.resolve() / ".sessions" / "main"))
+
+        with it("should work on the whole repository"):
+            expect(Session.current().workpath).to(equal(self.project.resolve()))
+
+        with it("should give the project's main session folder"):
+            expect(Session.current_folder()).to(equal(self.project.resolve() / ".sessions" / "main"))
+
+        with it("should leave the session unnamed in .sessions/session.json"):
+            Session.current()
+            expect(WorkState(self.project).session).to(equal(""))
 
 
 with description("a session switched to without a name"):

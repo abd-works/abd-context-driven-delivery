@@ -969,8 +969,6 @@ class AgentTool(AgentToolDestination):
 
         Session.refresh_current_from_repo(repo_path)
         session = Session.current()
-        if session is None or session.session_path is None:
-            return
         apply_chat_context(session)
         payload = arguments or {}
         logged_args = {
@@ -1132,8 +1130,6 @@ class GuidanceAgentOperation(AgentOperation):
 
         Session.refresh_current_from_repo(repo_path)
         session = Session.current()
-        if session is None or session.session_path is None:
-            return
         apply_chat_context(session)
         payload = dict(arguments or {})
         if "guidance" in payload:

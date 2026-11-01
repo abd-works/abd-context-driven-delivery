@@ -38,9 +38,9 @@ class BacklogItem:
         changed = datetime.fromtimestamp(self._path.stat().st_mtime, timezone.utc)
         return changed.strftime(TIMESTAMP_FORMAT)
 
-    def start(self, scope: str) -> Ticket:
+    def start(self, scope: str, path: str = "") -> Ticket:
         """Open a ticket for this item; the ticket's session log names the item's file."""
-        ticket = self._board.new_ticket(self.title, scope, None)
+        ticket = self._board.new_ticket(self.title, scope, None, path)
         stamp = datetime.now(timezone.utc).strftime(TIMESTAMP_FORMAT)
         log = self._board.sessions_folder / ticket.name / LOG_FILE
         with log.open("a", encoding="utf-8") as lines:

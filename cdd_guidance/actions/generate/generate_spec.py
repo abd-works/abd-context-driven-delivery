@@ -52,6 +52,21 @@ with description("a generate action on practice guidance") as self:
             expect("validate" in expanded.tools).to(equal(True))
             expect(expanded.instructions).to(contain("call validate with this same guidance"))
 
+    with context("with no named session on the project"):
+        with before.each:
+            self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
+            (self.project / ".git").mkdir()
+            Session._current = None
+            Session.current(self.project)
+
+        with after.each:
+            Session._current = None
+            shutil.rmtree(self.project, ignore_errors=True)
+
+        with it("should say where each format of the artifact is saved in the main session"):
+            prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
+            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/tests/story-map.md"))
+
     with context("with a session open"):
         with before.each:
             self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))

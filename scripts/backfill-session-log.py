@@ -57,8 +57,6 @@ def main() -> int:
     Session._current = None
     Session.switch(args.session, workpath=workpath, repo_path=_REPO)
     session = Session.current()
-    if session is None or session.session_path is None:
-        raise SystemExit("could not open target session")
 
     session.note_chat(args.chat_id, transcript, line_numbers)
     session._append_log("--- retroactive backfill")

@@ -1169,9 +1169,7 @@ class McpHost:
                 return self._runtime.invoke_prompt(resolved, args)
             return self._runtime.invoke_tool(resolved, args)
         except BaseException as failure:
-            session = Session.current()
-            if session is not None:
-                session.record_failure(failure, tool=resolved)
+            Session.current().record_failure(failure, tool=resolved)
             raise
         finally:
             clear_chat_context()

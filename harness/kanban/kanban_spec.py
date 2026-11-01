@@ -1,9 +1,9 @@
-"""The session kanban board (model: harness/kanban/kanban-model.md)."""
+"""The session kanban board (model: harness/kanban/.context/kanban-model.md)."""
 import json
 import tempfile
 from pathlib import Path
 
-from expects import be_none, be_true, contain, equal, expect, raise_error
+from expects import be_none, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
 from harness.installation.installer import Installer
@@ -14,7 +14,6 @@ from bdd.bdd import Bdd  # noqa: E402
 from ddd.ddd import Ddd  # noqa: E402
 from generate.generate import Generate  # noqa: E402
 from harness.kanban.board import Board  # noqa: E402
-from harness.kanban.ticket import StageNotDone  # noqa: E402
 from review.review import Review  # noqa: E402
 from stories.stories import Stories  # noqa: E402
 from ux.ux import Ux  # noqa: E402
@@ -91,7 +90,7 @@ with description("a board") as self:
             sessions.session("pet-visits", title="Pet visits")
             sessions.session("sign-up", title="Sign up")
             sessions.session("browse-pets", closed=True, title="Browse pets")
-            sessions.folder("default")
+            sessions.folder("main")
             sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
             sessions.folder("_archive/old-spike")
             sessions.current("pet-visits")
@@ -100,8 +99,8 @@ with description("a board") as self:
         with it("should show every work session as a ticket"):
             expect(names(self.board.tickets)).to(equal(["pet-visits", "sign-up", "browse-pets"]))
 
-        with it("should leave default off the board"):
-            expect(names(self.board.tickets)).not_to(contain("default"))
+        with it("should leave main off the board"):
+            expect(names(self.board.tickets)).not_to(contain("main"))
 
         with it("should show each backlog item in the Backlog column"):
             expect([item.title for item in self.board.column("Backlog").items]).to(equal(["Returns and refunds"]))
@@ -151,12 +150,6 @@ def every_action(practice: str, practice_class: str, fidelity: str) -> list:
 
 
 DISCOVERY_DONE = every_action("stories", "Stories", "story_map") + every_action("ddd", "Ddd", "bounded_context") + every_action("ux", "Ux", "ia")
-IMPLEMENTATION_DONE = (
-    ["pull Specification", "pull Implementation"]
-    + every_action("stories", "Stories", "acceptance_tests")
-    + every_action("ddd", "Ddd", "tactics")
-    + every_action("ux", "Ux", "front_end_code")
-)
 
 
 def board_with(lines: list):
@@ -250,9 +243,9 @@ with description("a ticket") as self:
         with it("should have no next"):
             expect(self.ticket.next).to(be_none)
 
-        with context("that has been pulled"):
+        with context("that a person has moved on"):
             with before.each:
-                self.ticket.pull()
+                self.ticket.move_next()
 
             with it("should be in the next stage"):
                 expect(self.ticket.column.name).to(equal("Specification"))
@@ -261,16 +254,9 @@ with description("a ticket") as self:
                 log = (self.root / "pet-visits" / "session.log").read_text(encoding="utf-8")
                 expect(log.splitlines()[-1]).to(contain("pull Specification"))
 
-        with context("in Implementation"):
-            with it("should refuse to be pulled past Implementation"):
-                expect(ticket_with(IMPLEMENTATION_DONE).pull).to(raise_error(StageNotDone))
-
     with context("with its stage not done"):
         with before.each:
             self.ticket = ticket_with([GENERATE_STORY_MAP])
-
-        with it("should refuse to be pulled"):
-            expect(self.ticket.pull).to(raise_error(StageNotDone))
 
         with it("should stay in its stage"):
             expect(self.ticket.column.name).to(equal("Discovery"))
