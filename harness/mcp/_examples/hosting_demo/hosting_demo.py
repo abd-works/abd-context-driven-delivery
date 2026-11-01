@@ -1,6 +1,7 @@
 """Hosting demo toolset for MCP host specs."""
 from __future__ import annotations
 
+import time
 from typing import TypedDict
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
@@ -61,3 +62,10 @@ class HostingDemo:
         plain = self._ordinary_helper()
         count = self.increment(step=1)
         return {"plain": plain, "count": int(count)}
+
+    @Mcp
+    @agent_tool
+    def linger(self, seconds: float) -> float:
+        """Keep a call running long enough for a client to cancel it."""
+        time.sleep(seconds)
+        return seconds

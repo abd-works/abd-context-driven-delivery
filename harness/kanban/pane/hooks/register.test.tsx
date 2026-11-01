@@ -115,14 +115,15 @@ type Engine = {
   answers: Record<string, unknown>
   board: unknown
   commandFails: boolean
+  paneOpening: { isPlaced: true } | { isPlaced: false; reason: string }
 }
 
 // Stands for the engine and the cdd server. A tool answers from `answers`, and board.show answers `board`, which a
 // test changes to show what the server would return after a tool ran.
 const engine = (on: any, board: unknown = boardOf()): Engine => {
-  const stub: Engine = { calls: [], statuses: [], fills: [], sent: [], toasts: [], answers: {}, board, commandFails: false }
+  const stub: Engine = { calls: [], statuses: [], fills: [], sent: [], toasts: [], answers: {}, board, commandFails: false, paneOpening: { isPlaced: true } }
   on('command.register', () => ({ value: { command: 'board' } }))
-  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('ui.open', () => ({ value: stub.paneOpening }))
   on('ui.status', (_: unknown, e: { text: string | undefined }) => {
     stub.statuses.push(e.text)
     return { value: undefined }
@@ -186,6 +187,16 @@ test('the /board command opens the pane and reads the board', async ($, on) => {
 
   expect(ran.text).toBe('Board opened.')
   expect(stub.calls[0]?.tool).toBe('board.show')
+})
+
+test('with no surface to draw the pane, the /board command says why', async ($, on) => {
+  const stub = engine(on)
+  await start($)
+  stub.paneOpening = { isPlaced: false, reason: 'no surface attached' }
+
+  const ran = await $.command.run({ command: 'board', args: '' })
+
+  expect(ran.text).toBe('Board not drawn: no surface attached')
 })
 
 // (S) Board Pane --> Display Board

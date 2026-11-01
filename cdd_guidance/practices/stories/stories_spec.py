@@ -412,3 +412,19 @@ with description("Stories"):
             expect('from "./whens"' in text).to(equal(False))
             expect("_test_helper.ts" in text).to(equal(False))
             expect("_test_helper.py" in text).to(equal(False))
+
+
+with description("a Python story test file"):
+    with context("that starts with a future import"):
+        with it("should compile after the story transform"):
+            import ast
+            import importlib.util
+
+            loader_path = Path(__file__).parent / "templates" / "py" / "story_test.py"
+            spec = importlib.util.spec_from_file_location("story_test_loader", loader_path)
+            loader = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(loader)
+            source = 'from __future__ import annotations' + chr(10) + 'with story("Get Sim"):' + chr(10) + '    pass' + chr(10)
+            tree = loader.StoryNodeTransformer().visit(ast.parse(source))
+            ast.fix_missing_locations(tree)
+            expect(compile(tree, "get_sim_story.test.py", "exec").co_filename).to(equal("get_sim_story.test.py"))

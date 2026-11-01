@@ -356,6 +356,21 @@ with description("an MCP host tool result") as self:
 
 
 with description("an MCP host") as self:
+    with context("whose stdio session has crashed"):
+        with before.each:
+            self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
+            self.sessions = []
+
+            async def crash_once():
+                self.sessions.append("started")
+                if len(self.sessions) == 1:
+                    raise RuntimeError("stdio session crashed")
+
+            self.host.run_stdio = crash_once
+
+        with it("should end the process so the client opens a new connection"):
+            expect(self.host.run).to(raise_error(RuntimeError))
+
     with context("that has stood up without a manifest file"):
         with before.each:
             self.host = McpHost.standup(Path("no-such-mcp.json"), repo=_REPO_ROOT)

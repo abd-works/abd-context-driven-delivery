@@ -1069,30 +1069,12 @@ class McpHost:
         async def handle_call_tool(
             name: str, arguments: dict[str, object] | None
         ) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-            try:
-                resolved = self._runtime.resolve_call_name(name)
-                if resolved in _SYNC_DISPATCH_TOOLS:
-                    value = self.dispatch(name, arguments)
-                else:
-                    # Dispatch off the event loop. A synchronous tool call blocks
-                    # stdin and stdout, and the client then waits until its timeout.
-                    # A call that is still running after the limit is a failed call.
-                    timeout = _LONG_CALL_TIMEOUT_SECONDS.get(
-                        resolved, _CALL_TIMEOUT_SECONDS
-                    )
-                    try:
-                        with anyio.fail_after(timeout):
-                            value = await anyio.to_thread.run_sync(
-                                self.dispatch, name, arguments
-                            )
-                    except TimeoutError:
-                        return self._content_blocks(
-                            f"TimeoutError: {name} exceeded {timeout} seconds"
-                        )
-                return self._content_blocks(value)
-            except Exception as error:
-                logger.exception("MCP tool %s failed", name)
-                return self._content_blocks(f"{type(error).__name__}: {error}")
+            blocks = await self._call_tool_blocks(name, arguments)
+            # A worker thread runs to the end even when the client cancels it, and
+            # the cancellation has already answered the request. Stop here, because
+            # a second answer raises in the MCP session and takes down the host.
+            await anyio.lowlevel.checkpoint()
+            return blocks
 
         @self._server.list_prompts()
         async def handle_list_prompts() -> list[types.Prompt]:
@@ -1117,6 +1099,34 @@ class McpHost:
                     )
                 ],
             )
+
+    async def _call_tool_blocks(
+        self, name: str, arguments: dict[str, object] | None
+    ) -> list[types.TextContent]:
+        try:
+            resolved = self._runtime.resolve_call_name(name)
+            if resolved in _SYNC_DISPATCH_TOOLS:
+                value = self.dispatch(name, arguments)
+            else:
+                # Dispatch off the event loop. A synchronous tool call blocks
+                # stdin and stdout, and the client then waits until its timeout.
+                # A call that is still running after the limit is a failed call.
+                timeout = _LONG_CALL_TIMEOUT_SECONDS.get(
+                    resolved, _CALL_TIMEOUT_SECONDS
+                )
+                try:
+                    with anyio.fail_after(timeout):
+                        value = await anyio.to_thread.run_sync(
+                            self.dispatch, name, arguments
+                        )
+                except TimeoutError:
+                    return self._content_blocks(
+                        f"TimeoutError: {name} exceeded {timeout} seconds"
+                    )
+            return self._content_blocks(value)
+        except Exception as error:
+            logger.exception("MCP tool %s failed", name)
+            return self._content_blocks(f"{type(error).__name__}: {error}")
 
     def _mcp_tool(self, tool: McpTool) -> types.Tool:
         return types.Tool(
@@ -1218,14 +1228,13 @@ class McpHost:
             self._unbind_as_serving()
 
     def run(self) -> None:
-        while True:
-            try:
-                anyio.run(self.run_stdio)
-                return
-            except (KeyboardInterrupt, SystemExit):
-                raise
-            except Exception:
-                logger.exception("MCP stdio host crashed; restarting")
+        try:
+            anyio.run(self.run_stdio)
+        except Exception:
+            # The client initializes a connection once, so a new session on this
+            # stdio refuses every call. Exiting closes the connection for the client.
+            logger.exception("MCP stdio host crashed; exiting")
+            raise
 
     def ping(self) -> str:
         return "pong"

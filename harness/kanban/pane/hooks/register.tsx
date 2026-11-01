@@ -83,9 +83,9 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'board' }, async $ => {
-    await $.ui.open({ id: PANE, title: 'Board' })
+    const opened = await $.ui.open({ id: PANE, title: 'Board' })
     await refresh($)
-    return { text: 'Board opened.' }
+    return { text: opened.isPlaced ? 'Board opened.' : `Board not drawn: ${opened.reason}` }
   })
 
   on('command.run', { command: 'ticket' }, async ($, e) => {
