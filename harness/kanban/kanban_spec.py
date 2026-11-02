@@ -64,7 +64,7 @@ with description("a board") as self:
     # (S) Board Pane --> Display Board
     with context("with Stories, DDD, and UX chosen"):
         with before.each:
-            self.board = Board(SessionsFolder().root, [Stories(), Ddd(), Ux()])
+            self.board = Board(SessionsFolder().project, [Stories(), Ddd(), Ux()])
             self.discovery = self.board.column("Discovery")
 
         with it("should have the columns Backlog, Discovery, Specification, Implementation, and Complete, in that order"):
@@ -78,7 +78,7 @@ with description("a board") as self:
 
     with context("with BDD chosen"):
         with before.each:
-            self.board = Board(SessionsFolder().root, [Bdd()])
+            self.board = Board(SessionsFolder().project, [Bdd()])
 
         with it("should have behavior as Discovery's work required"):
             expect([fidelity.name for fidelity in self.board.column("Discovery").work_required]).to(equal(["behavior"]))
@@ -88,7 +88,7 @@ with description("a board") as self:
 
     with context("that has been loaded with no practices given"):
         with before.each:
-            self.board = Board.load(SessionsFolder().root)
+            self.board = Board.load(SessionsFolder().project)
 
         with it("should choose every practice"):
             expect([type(practice).__name__ for practice in self.board.practices]).to(equal(["Stories", "Ddd", "Ux", "CleanEngineering", "Bdd"]))
@@ -104,7 +104,7 @@ with description("a board") as self:
             sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
             sessions.folder("_archive/old-spike")
             sessions.current("pet-visits")
-            self.board = Board(sessions.root, [Stories(), Ddd(), Ux()])
+            self.board = Board(sessions.project, [Stories(), Ddd(), Ux()])
 
         with it("should show every work session as a ticket"):
             expect(names(self.board.tickets)).to(equal(["pet-visits", "sign-up", "browse-pets"]))
@@ -145,7 +145,7 @@ with description("a backlog item") as self:
         with before.each:
             self.sessions = SessionsFolder()
             self.item_path = self.sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
-            self.board = Board(self.sessions.root, [Stories(), Ddd(), Ux()])
+            self.board = Board(self.sessions.project, [Stories(), Ddd(), Ux()])
 
         with it("should be in the Backlog"):
             expect(self.board.backlog_items[0].column.name).to(equal("Backlog"))
@@ -196,7 +196,7 @@ def board_with(lines: list):
     sessions = SessionsFolder()
     sessions.session("pawplace", title="PawPlace")
     sessions.session("pet-visits", *lines, title="Pet visits", scope="feature", parent="pawplace")
-    return sessions.root, Board(sessions.root, [Stories(), Ddd(), Ux()])
+    return sessions.root, Board(sessions.project, [Stories(), Ddd(), Ux()])
 
 
 def ticket_with(lines: list):

@@ -4,6 +4,7 @@ Each signature here has a test of the same name in `pane/hooks/register.test.tsx
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -45,6 +46,14 @@ CHECKED_GRAPH = {
         },
     },
 }
+STORY_MAP_GRAPH = {
+    "practices": {
+        "stories": {
+            "nodes": [["node-1", "", "Story", "stories", "docs/map.md", 12, 12]],
+            "rules": [["verb-noun-format", "node-1", "Name the story with a verb"], ["verb-noun-format", "node-1", "Name the epic with a verb"]],
+        },
+    },
+}
 
 
 class ProjectTools:
@@ -65,6 +74,13 @@ class ProjectTools:
         (folder / "session.json").write_text(json.dumps({"name": name, **fields}), encoding="utf-8")
         (folder / "session.log").write_text("".join(f"{line}\n" for line in log_lines), encoding="utf-8")
         return folder
+
+    def report(self, ticket: str, name: str, graph: dict | None = None) -> None:
+        reports = self.sessions / ticket / "validation-reports"
+        reports.mkdir()
+        (reports / f"{name}.md").write_text("# Graph rule validation\n", encoding="utf-8")
+        if graph:
+            (reports / f"{name}.json").write_text(json.dumps(graph), encoding="utf-8")
 
     def backlog_item(self, file_name: str, heading: str) -> None:
         folder = self.sessions / "_backlog"
@@ -163,7 +179,38 @@ with description("the board tools") as self:
             # (S) Person --> Fix Report Violations
             with it("should list each rule the report names with its violations"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
-                expect(report["rules"][0]["violations"][0]).to(equal({"location": "docs/map.md", "message": "Name the story with a verb"}))
+                expect(report["rules"][0]["violations"][0]["message"]).to(equal("Name the story with a verb"))
+
+            with it("should give a violation the line it failed on"):
+                report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
+                expect(report["rules"][0]["violations"][0]["location"] + ":" + str(report["rules"][0]["violations"][0]["line"])).to(equal("docs/map.md:12"))
+
+            with it("should show no source for a file that is not in the repository"):
+                report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
+                expect(report["rules"][0]["violations"][0]["source"]).to(equal([]))
+
+            with context("with the file a violation names in the repository"):
+                with before.each:
+                    docs = self.project.root / "docs"
+                    docs.mkdir()
+                    (docs / "map.md").write_text("".join(f"line {number}\n" for number in range(1, 21)), encoding="utf-8")
+
+                with it("should show the source lines around a violation"):
+                    report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
+                    source = report["rules"][0]["violations"][0]["source"]
+                    expect((source[0], source[-1])).to(equal(({"number": 10, "text": "line 10"}, {"number": 16, "text": "line 16"})))
+
+            with it("should return exactly the fields ViolationJson names"):
+                contract = (Path(__file__).parent / "pane" / "types" / "index.d.ts").read_text(encoding="utf-8")
+                declared = contract[contract.index("export type ViolationJson"):].split("\n")[0]
+                report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
+                expect(set(report["rules"][0]["violations"][0])).to(equal(set(re.findall(r"(\w+):", declared))))
+
+            with it("should return exactly the fields ReportRuleJson names"):
+                contract = (Path(__file__).parent / "pane" / "types" / "index.d.ts").read_text(encoding="utf-8")
+                declared = contract[contract.index("export type ReportRuleJson"):].split("\n")[0]
+                report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
+                expect(set(report["rules"][0])).to(equal(set(re.findall(r"(\w+):", declared))))
 
             with it("should count the violations of each rule"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
@@ -190,6 +237,23 @@ with description("the board tools") as self:
             with it("should still return the report's text"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
                 expect(report["text"]).to(contain("verb-noun-format"))
+
+        with context("with a validation report on a rule the practice describes"):
+            with before.each:
+                self.project.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
+
+            with it("should show the text of each rule under its name"):
+                report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
+                expect(report["rules"][0]["description"]).to(contain("verb"))
+
+        with context("with a validation report on a rule the practice does not describe"):
+            with before.each:
+                unknown = {"practices": {"stories": {"nodes": [], "rules": [["made-up-rule", "node-1", "Broken"]]}}}
+                self.project.report("pet-visits", "stories-story-map-20261031T041200", unknown)
+
+            with it("should leave a rule the practice does not describe without text"):
+                report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
+                expect(report["rules"][0]["description"]).to(equal(""))
 
         # (E) Tickets
         # (S) Person --> Open Ticket Session
@@ -345,6 +409,10 @@ with description("the board tools") as self:
                 fields = json.loads((self.project.sessions / "pet-visits" / "session.json").read_text(encoding="utf-8"))
                 expect(fields["practices"]).to(equal({"ux": {"enabled": False}}))
 
+        # (S) Person --> Choose Action And Formats
+        with it("should give each fidelity its default format"):
+            expect(self.project.column("Discovery")["default_formats"]["stories-story_map"]).to(equal("markdown"))
+
         # (S) Board Pane --> Display Fidelity Progress
         with it("should show each fidelity's Generate, Validate, and Review"):
             actions = self.project.ticket_json("pet-visits")["actions"]["stories-story_map"]
@@ -358,6 +426,9 @@ with description("the board tools") as self:
             with it("should show the fidelity's rules"):
                 expect([rule["slug"] for rule in self.help["rules"]]).to(contain("verb-noun-format"))
 
+            with it("should name the stage a fidelity belongs to"):
+                expect(self.help["stage"]).to(equal("Discovery"))
+
             with it("should link to the fidelity's page on the forge"):
                 expect(self.help["href"]).to(equal("https://forge.abdworks.net/abd-context-driven-delivery/fidelities/stories-story_map.html"))
 
@@ -368,8 +439,26 @@ with description("the board tools") as self:
             with it("should show the practice's shared rules"):
                 expect([rule["slug"] for rule in self.help["rules"]]).to(contain("do-not-invent-requirements"))
 
+            with it("should name no fidelity on a practice's help"):
+                expect((self.help["fidelity"], self.help["stage"])).to(equal(("", "")))
+
         # (E) Review
         # (S) Person --> List Ticket Files
+        with context("with a work folder outside the repository"):
+            with before.each:
+                self.outside = Path(tempfile.mkdtemp())
+                (self.outside / "src").mkdir()
+                (self.outside / "src" / "visits_spec.py").write_text("", encoding="utf-8")
+                (self.project.sessions / "pet-visits" / "session.json").write_text(json.dumps({"name": "pet-visits", "workpath": str(self.outside)}), encoding="utf-8")
+
+            with after.each:
+                shutil.rmtree(self.outside)
+
+            # (S) Person --> View Files
+            with it("should list the files a pattern finds there"):
+                files = self.project.call("ticket.files", ticket="pet-visits", fidelities=["bdd-behavior"])["bdd-behavior"]["python"]
+                expect(files).to(equal([{"path": (self.outside / "src" / "visits_spec.py").as_posix(), "exists": True}]))
+
         with context("with a fidelity's markdown generated"):
             with before.each:
                 docs = self.project.root / "docs"
@@ -379,8 +468,12 @@ with description("the board tools") as self:
                 (self.project.sessions / "pet-visits" / "session.json").write_text(json.dumps({"name": "pet-visits", **fields}), encoding="utf-8")
 
             with it("should list the file with whether it exists"):
-                files = self.project.call("ticket.files", ticket="pet-visits")["stories-story_map"]["markdown"]
+                files = self.project.call("ticket.files", ticket="pet-visits", fidelities=["stories-story_map"])["stories-story_map"]["markdown"]
                 expect(files).to(equal([{"path": "docs/story-map.md", "exists": True}]))
+
+            with it("should list only the fidelities asked for"):
+                files = self.project.call("ticket.files", ticket="pet-visits", fidelities=["stories-story_map"])
+                expect(list(files)).to(equal(["stories-story_map"]))
 
             # (S) Person --> Generate Fidelity Output
             with it("should render the earlier fidelity into the new format first"):
@@ -438,6 +531,63 @@ with description("the board tools") as self:
         with it("should not allow Review until Validate is clean"):
             expect(self.project.ticket_json("sign-up")["allowed_actions"]["stories-story_map"]).not_to(contain("review"))
 
+        # (S) Person --> Open Validation Report
+        with context("with that fidelity's report saved with its graph"):
+            with before.each:
+                self.project.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
+
+            with it("should count the violations of the fidelity on its ticket"):
+                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-story_map": 2}))
+
+        with context("with that fidelity's report saved without its graph"):
+            with before.each:
+                self.project.report("sign-up", "stories-story-map-20261031T041200")
+
+            with it("should leave a fidelity with no saved graph uncounted"):
+                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({}))
+
+    # (S) Person --> Open Validation Report
+    with context("with violations left on two fidelities"):
+        with before.each:
+            self.project.ticket(
+                "sign-up",
+                "2026-10-31T01:00:00Z validate Stories story_map graph-rule verb-noun-format map.md:12 no-chat",
+                "2026-10-31T01:00:01Z validate CleanEngineering modules graph-rule verb-noun-format map.md:12 no-chat",
+                title="Sign up",
+            )
+            self.project.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
+            reports = self.project.sessions / "sign-up" / "validation-reports"
+            (reports / "clean-engineering-modules-20261031T041200.md").write_text("# Graph rule validation\n", encoding="utf-8")
+            (reports / "clean-engineering-modules-20261031T041200.json").write_text(json.dumps(CHECKED_GRAPH), encoding="utf-8")
+
+        with it("should list the rules of every fidelity with violations"):
+            rules = self.project.call("ticket.violations", ticket="sign-up")["rules"]
+            expect([rule["fidelity"] for rule in rules]).to(equal(["stories-story_map", "clean_engineering-modules"]))
+
+        with it("should name the fidelity a rule was broken on"):
+            report = self.project.call("ticket.report", ticket="sign-up", fidelity="stories-story_map")
+            expect(report["rules"][0]["fidelity"]).to(equal("stories-story_map"))
+
+        with it("should give the folder of the reports for every fidelity"):
+            expect(self.project.call("ticket.violations", ticket="sign-up")["path"]).to(equal(".sessions/sign-up/validation-reports"))
+
+    with context("with violations two fidelities of one practice share in their saved graphs"):
+        with before.each:
+            self.project.ticket(
+                "sign-up",
+                "2026-10-31T01:00:00Z validate Stories story_map graph-rule verb-noun-format map.md:12 no-chat",
+                "2026-10-31T01:00:01Z validate Stories scenarios graph-rule verb-noun-format map.md:12 no-chat",
+                title="Sign up",
+            )
+            self.project.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
+            reports = self.project.sessions / "sign-up" / "validation-reports"
+            (reports / "stories-scenarios-20261031T041200.md").write_text("# Graph rule validation\n", encoding="utf-8")
+            (reports / "stories-scenarios-20261031T041200.json").write_text(json.dumps(STORY_MAP_GRAPH), encoding="utf-8")
+
+        with it("should list a rule two fidelities share once"):
+            rules = self.project.call("ticket.violations", ticket="sign-up")["rules"]
+            expect([rule["fidelity"] for rule in rules]).to(equal(["stories-story_map"]))
+
     # (S) Person --> Activate Ticket
     with context("with a git repository and two tickets"):
         with before.each:
@@ -464,6 +614,64 @@ with description("the board tools") as self:
         with it("should say a ticket has no branch yet"):
             expect(self.project.call("ticket.workspace", ticket="sign-up")["has_branch"]).to(be_false)
 
+        with context("with the active ticket on no branch of its own"):
+            with before.each:
+                Session.switch("pet-visits", repo_path=self.project.root)
+                (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
+
+            with it("should say the ticket being left has no branch yet"):
+                expect(self.project.call("ticket.workspace", ticket="sign-up")["leaving_has_branch"]).to(be_false)
+
+            with it("should commit nothing on a ticket that has no branch"):
+                self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "push", "merge"])
+                count = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                expect(count.stdout.strip()).to(equal("1"))
+
+            with it("should leave the branch checked out as it was"):
+                self.project.call("ticket.close", ticket="pet-visits", leaving=["commit", "merge"])
+                branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                expect(branch.stdout.strip()).to(equal("main"))
+
+        with context("with the active ticket on its own branch"):
+            with before.each:
+                subprocess.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
+                subprocess.run(["git", "config", "user.name", "t"], cwd=self.project.root, check=True)
+                subprocess.run(["git", "config", "user.email", "t@t"], cwd=self.project.root, check=True)
+                Session.switch("pet-visits", repo_path=self.project.root)
+                (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
+
+            with it("should say the ticket being left is on its branch"):
+                expect(self.project.call("ticket.workspace", ticket="sign-up")["leaving_has_branch"]).to(be_true)
+
+            with it("should commit the branch the ticket being left is on"):
+                self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
+                count = subprocess.run(["git", "rev-list", "--count", "pet-visits"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                expect(count.stdout.strip()).to(equal("2"))
+
+        with context("with specs in the repository and one changed on the ticket's branch"):
+            with before.each:
+                (self.project.root / "src").mkdir()
+                (self.project.root / "src" / "theirs_spec.py").write_text("", encoding="utf-8")
+                subprocess.run(["git", "add", "src"], cwd=self.project.root, check=True)
+                subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "spec"], cwd=self.project.root, check=True)
+                subprocess.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
+                (self.project.root / "src" / "mine_spec.py").write_text("", encoding="utf-8")
+
+            with it("should list only the files the ticket's branch changed"):
+                files = self.project.call("ticket.files", ticket="pet-visits", fidelities=["bdd-behavior"])["bdd-behavior"]["python"]
+                expect(files).to(equal([{"path": "src/mine_spec.py", "exists": True}]))
+
+        with context("with the active ticket's branch not checked out"):
+            with before.each:
+                subprocess.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
+                Session.switch("pet-visits", repo_path=self.project.root)
+                (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
+
+            with it("should commit nothing on a branch that is not checked out"):
+                self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
+                count = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                expect(count.stdout.strip()).to(equal("1"))
+
     with context("with a session open in the project"):
         with before.each:
             Session.new("pet-visits", self.project.root, self.project.root)
@@ -479,7 +687,7 @@ with description("the board tools") as self:
             expect(names).to(equal({
                 "board.show", "board.set_wip_limit", "board.help",
                 "ticket.new", "ticket.move_next", "ticket.move_previous", "ticket.close", "ticket.archive", "ticket.activate",
-                "ticket.workspace", "ticket.enable_practice", "ticket.files", "ticket.read_file", "ticket.report", "ticket.generate_commands",
+                "ticket.workspace", "ticket.enable_practice", "ticket.files", "ticket.read_file", "ticket.report", "ticket.violations", "ticket.generate_commands",
                 "backlog-item.add", "backlog-item.start",
             }))
 
@@ -497,6 +705,12 @@ with description("the board tools") as self:
         with it("should return exactly the fields TicketJson names"):
             declared = self.contract[self.contract.index("export type TicketJson = {"):].split("\n}")[0]
             expect(set(self.project.ticket_json("pet-visits"))).to(equal(set(re.findall(r"^  (\w+)\??:", declared, re.M))))
+
+        with it("should return exactly the fields WorkspaceJson names"):
+            subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
+            declared = self.contract[self.contract.index("export type WorkspaceJson"):].split("\n")[0]
+            workspace = self.project.call("ticket.workspace", ticket="pet-visits")
+            expect(set(workspace)).to(equal(set(re.findall(r"(\w+):", declared))))
 
         with it("should return exactly the fields BacklogItemJson names"):
             declared = self.contract[self.contract.index("export type BacklogItemJson"):].split("\n")[0]
@@ -516,7 +730,18 @@ with description("the board tools") as self:
                 "should give every tool behaviour the same signature in the plugin tests",
                 "should return exactly the fields TicketJson names",
                 "should return exactly the fields BacklogItemJson names",
+                "should return exactly the fields WorkspaceJson names",
+                "should list a rule two fidelities share once",
+                "should list only the files the ticket's branch changed",
+                "should leave the branch checked out as it was",
+                "should commit nothing on a branch that is not checked out",
+                "should name no fidelity on a practice's help",
+                "should give the folder of the reports for every fidelity",
+                "should say the ticket being left is on its branch",
                 "should return only the fields ColumnJson names on a stage",
+                "should return exactly the fields ViolationJson names",
+                "should return exactly the fields ReportRuleJson names",
+                "should leave a rule the practice does not describe without text",
                 "should name each tool after its object",
                 "should take the ticket's name on every ticket tool that acts on one",
                 "should leave the board read out of the session log",

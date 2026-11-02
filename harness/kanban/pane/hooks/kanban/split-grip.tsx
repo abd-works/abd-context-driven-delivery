@@ -14,7 +14,7 @@ const SplitGrip: ClientModule<SplitGripJson> = (grip, surface) => {
   return (
     <Box key="grip" width="100%" justifyContent="center">
       <Text color={grip.color} hover={{ color: grip.hoverColor }}>
-        ═══ drag to resize ═══
+        ━━━━━━━━
       </Text>
     </Box>
   )

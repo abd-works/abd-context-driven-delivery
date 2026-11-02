@@ -14,6 +14,7 @@ export type TicketJson = {
   last_activity: string
   handoff: string
   reports: Record<string, string>
+  violation_counts: Record<string, number>
   practices: Record<string, boolean>
   progress: Record<string, string>
   actions: Record<string, ActionStatesJson>
@@ -28,6 +29,7 @@ export type ColumnJson = {
   tickets?: TicketJson[]
   work_required?: string[]
   formats?: Record<string, string[]>
+  default_formats?: Record<string, string>
   wip_limit?: number
   is_over_limit?: boolean
   in_progress?: TicketJson[]
@@ -36,7 +38,7 @@ export type ColumnJson = {
 
 export type BoardJson = { project: string; active: string | null; columns: ColumnJson[] }
 
-export type WorkspaceJson = { has_branch: boolean; has_worktree: boolean }
+export type WorkspaceJson = { has_branch: boolean; has_worktree: boolean; leaving_has_branch: boolean }
 
 export type FileEntryJson = { path: string; exists: boolean }
 
@@ -44,14 +46,18 @@ export type TicketFilesJson = Record<string, Record<string, FileEntryJson[]>>
 
 export type FileTextJson = { path: string; text: string }
 
-export type ViolationJson = { location: string; message: string }
+export type SourceLineJson = { number: number; text: string }
 
-export type ReportRuleJson = { name: string; count: number; violations: ViolationJson[] }
+export type ViolationJson = { location: string; line: number | null; message: string; source: SourceLineJson[] }
+
+export type ReportRuleJson = { fidelity: string; name: string; description: string; count: number; violations: ViolationJson[] }
 
 export type ReportJson = { path: string; text: string; rules: ReportRuleJson[]; has_saved_graph: boolean }
 
 export type HelpJson = {
-  title: string
+  practice: string
+  fidelity: string
+  stage: string
   overview: string
   guidance: string
   rules: { slug: string; text: string }[]
@@ -62,17 +68,20 @@ export type TicketCardJson = {
   address: string
   title: string
   meta: string
-  segments: { scope: string; color: string; isDim: boolean; skill: string }[]
-  tail: { text: string; color: string } | null
   titleColor: string
+  hoverColor: string
   mutedColor: string
 }
+
+export type RegionOffsetsJson = { board: number; details: number }
+
+export type BoardScrollbarJson = { offset: number; limit: number; shownShare: number; trackColor: string; thumbColor: string; hoverColor: string }
 
 export type SplitGripJson = { boardRows: number; color: string; hoverColor: string }
 
 export type PanelGripJson = { panel: string; width: number; color: string; hoverColor: string }
 
-export type TileHoverJson = { place: string; ticket: string; stage: string; slugs: string[]; label: string; mark: string; color: string }
+export type TileHoverJson = { place: string; ticket: string; stage: string; slugs: string[]; label: string; color: string; opensOnHover: boolean; menuSlugs: string[] }
 
 export type SplitLayoutJson = { expanded: 'board' | 'details' | null; boardRows: number | null }
 
@@ -101,7 +110,7 @@ export type BacklogDraftJson = { isOpen: boolean; title: string; text: string }
 
 export type PanelFrameJson = { kind: string; width: number; isExpanded: boolean }
 
-export type ReportPanelJson = PanelFrameJson & { kind: 'report'; ticket: string; fidelity: string; report: ReportJson }
+export type ReportPanelJson = PanelFrameJson & { kind: 'report'; ticket: string; fidelity: string; report: ReportJson; closedRules: string[] }
 
 export type FilesPanelJson = PanelFrameJson & {
   kind: 'files'
@@ -112,6 +121,7 @@ export type FilesPanelJson = PanelFrameJson & {
   tabs: string[]
   activeTab: string
   texts: Record<string, string>
+  lines: Record<string, number>
 }
 
 export type HelpPanelJson = PanelFrameJson & { kind: 'help'; help: HelpJson }
@@ -124,14 +134,20 @@ declare module 'claude-code' {
       board: Shaped<BoardJson | null>
       selected: string | null
       splitLayout: SplitLayoutJson
+      regionOffsets: RegionOffsetsJson
       surfaceModulesFailed: boolean
       onlyActive: boolean
       columnOffset: number
+      editingLimit: string | null
+      hidesDisabled: boolean
       openCard: string | null
       tile: Shaped<TileJson | null>
       activation: Shaped<ActivationJson | null>
       backlogDraft: BacklogDraftJson
       sidePanels: Shaped<SidePanelJson[]>
+      panelWidths: Record<string, number>
+      serverFailure: string | null
+      cardOffset: number
     }
   }
 }

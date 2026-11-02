@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
-from space.work_state import WorkState
+from space.work_state import SESSIONS_FOLDER, WorkState
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -26,8 +26,12 @@ _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
 _LOAD_FILE_BUDGET = 40
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
 _MAIN_SESSION_NAME = "main"
-_REPO_SESSIONS_DIR = ".sessions"
 _LEGACY_REPO_SESSIONS_DIR = "sessions"
+_CLOSED_FOLDER = "closed"
+_ARCHIVE_FOLDER = "_archive"
+_BACKLOG_FOLDER = "_backlog"
+_BOARD_FILE = "_board.json"
+_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
 _KNOWN_ACTIONS = (
     "generate",
@@ -196,6 +200,9 @@ _PRACTICE_TYPES = {
 class Session:
     """Process session — one in-memory current; new and switch open named sessions."""
 
+    main_session = _MAIN_SESSION_NAME
+    default_wip = 3
+
     _current: Session | None = None
 
     def __init__(self, repo_root: Path | str | None = None) -> None:
@@ -337,6 +344,44 @@ class Session:
         session.workpath = Path(stored) if stored else session.repo_path
         return session
 
+    @classmethod
+    def all_in(cls, repo_path: Path | str) -> list[Session]:
+        """The repo's work sessions, open ones first then closed: not main, and not the folders the sessions share."""
+        return [cls.at(folder, Path(repo_path)) for folder in cls._work_folders(Path(repo_path))]
+
+    @classmethod
+    def backlog_folder(cls, repo_path: Path | str) -> Path:
+        """Where sessions wait before work starts, and where a session moved back is held."""
+        return cls.sessions_dir(Path(repo_path)) / _BACKLOG_FOLDER
+
+    @classmethod
+    def board_file(cls, repo_path: Path | str) -> Path:
+        """The file that holds what the repo's sessions share on the board."""
+        return cls.sessions_dir(Path(repo_path)) / _BOARD_FILE
+
+    @staticmethod
+    def timestamp(moment: datetime) -> str:
+        """A moment as session logs write it."""
+        return moment.astimezone(timezone.utc).strftime(_TIMESTAMP_FORMAT)
+
+    @classmethod
+    def _work_folders(cls, repo_path: Path) -> list[Path]:
+        sessions = cls.sessions_dir(repo_path)
+        if not sessions.is_dir():
+            return []
+        skipped = {_CLOSED_FOLDER, _MAIN_SESSION_NAME}
+        open_folders = [
+            folder for folder in sorted(sessions.iterdir())
+            if folder.is_dir() and folder.name not in skipped and not folder.name.startswith("_")
+        ]
+        closed = sessions / _CLOSED_FOLDER
+        closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
+        return open_folders + closed_folders
+
+    @property
+    def is_closed(self) -> bool:
+        return self.session_path is not None and self.session_path.parent.name == _CLOSED_FOLDER
+
     @property
     def fields(self) -> dict:
         """What ``session.json`` in this session's folder holds, read each time."""
@@ -353,6 +398,19 @@ class Session:
         destination = parent / self.name
         shutil.move(str(self.session_path), str(destination))
         return type(self).at(destination, self.repo_path)
+
+    def move_to_closed(self) -> Session:
+        return self.move_to(self.sessions_dir(self.repo_path) / _CLOSED_FOLDER)
+
+    def move_to_archive(self) -> Session:
+        return self.move_to(self.sessions_dir(self.repo_path) / _ARCHIVE_FOLDER)
+
+    def move_to_backlog(self) -> Session:
+        return self.move_to(self.backlog_folder(self.repo_path))
+
+    def reopen(self) -> Session:
+        """Back among the open sessions, from closed or the backlog."""
+        return self.move_to(self.sessions_dir(self.repo_path))
 
     @classmethod
     @mcp
@@ -721,7 +779,7 @@ class Session:
         err.parent.mkdir(parents=True, exist_ok=True)
         prior = err.read_text(encoding="utf-8") if err.is_file() else ""
         line_number = len(prior.splitlines()) + 1
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        stamp = self.timestamp(datetime.now(timezone.utc))
         with err.open("a", encoding="utf-8") as handle:
             handle.write(f"{stamp} {message}\n")
         self.note_chat("no-chat", err, str(line_number))
@@ -889,7 +947,7 @@ class Session:
         err.parent.mkdir(parents=True, exist_ok=True)
         prior = err.read_text(encoding="utf-8") if err.is_file() else ""
         line_number = len(prior.splitlines()) + 1
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        stamp = self.timestamp(datetime.now(timezone.utc))
         header = f"{stamp} {tool} {type(failure).__name__}: {failure}".strip()
         with err.open("a", encoding="utf-8") as handle:
             handle.write(f"{header}\n")
@@ -980,7 +1038,7 @@ class Session:
 
     @staticmethod
     def sessions_dir(repo_path: Path) -> Path:
-        return Path(repo_path).resolve() / _REPO_SESSIONS_DIR
+        return WorkState(repo_path).sessions_folder
 
     @classmethod
     def _session_folder(cls, repo_path: Path, name: str) -> Path:
@@ -1032,7 +1090,7 @@ class Session:
 
     def _repo_holding(self, session_path: Path) -> Path:
         folder = Path(session_path).resolve().parent
-        if folder.name in {".sessions", "sessions"}:
+        if folder.name in {SESSIONS_FOLDER, _LEGACY_REPO_SESSIONS_DIR}:
             return folder.parent
         return folder
 
@@ -1281,7 +1339,7 @@ class Session:
     def _append_log(self, line: str) -> None:
         if self.session_path is None:
             return
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        stamp = self.timestamp(datetime.now(timezone.utc))
         written = f"{stamp} {line}"
         log = self.session_path / "session.log"
         with log.open("a", encoding="utf-8") as handle:

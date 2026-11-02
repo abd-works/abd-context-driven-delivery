@@ -1,8 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { BacklogDraftJson, BacklogItemJson } from '../../types'
-import { callTool, itemAddress, refresh } from './board-client'
+import type { BacklogDraftJson, BacklogItemJson, TicketJson } from '../../types'
+import { callTool, itemAddress, refresh, select, ticketAddress } from './board-client'
 
 const EMPTY_DRAFT: BacklogDraftJson = { isOpen: false, title: '', text: '' }
 
@@ -34,8 +34,11 @@ export class BacklogItemClient {
 }
 
 export async function start($: EngineInterface, item: BacklogItemClient): Promise<void> {
-  await callTool($, 'backlog-item.start', { backlog_item: item.title })
+  const ticket = await callTool<TicketJson>($, 'backlog-item.start', { backlog_item: item.title })
   await refresh($)
+  if (!ticket) return
+  await select($, ticketAddress(ticket))
+  $.ui.toast(`${item.title} started in Discovery`)
 }
 
 export function currentDraft($: EngineInterface) {
@@ -60,6 +63,9 @@ export function typeDraftText($: EngineInterface, text: string) {
 
 export async function add($: EngineInterface, draft: BacklogDraftJson): Promise<void> {
   await update($, backlogDraft, () => EMPTY_DRAFT)
-  await callTool($, 'backlog-item.add', { title: draft.title.trim(), text: draft.text.trim() })
+  const item = await callTool<BacklogItemJson>($, 'backlog-item.add', { title: draft.title.trim(), text: draft.text.trim() })
   await refresh($)
+  if (!item) return
+  await select($, itemAddress(item))
+  $.ui.toast(`${item.title} added to Backlog`)
 }

@@ -65,9 +65,8 @@ Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built y
 
 ## Board
 
-+ Board(sessions_folder: Path, practices: list[PracticeGuidance])
++ Board(repo_root: Path, practices: list[PracticeGuidance])
 ------
-+ sessions_folder: Path
 + repo_root: Path
 + << association >> repo: Repo
 	// the repository the sessions folder sits in
@@ -81,12 +80,12 @@ Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built y
 + cards: list[Card]
 	// its tickets, then its backlog items
 + active: Ticket
-	// the ticket that represents the session saved in `.sessions/session.json`; none in the main session
+	// the ticket WorkState names as the open session; none in the main session
 ----
 + to_json(): dict
 	// the project, the active ticket's name, and every column with its tickets or items; the shape the board pane and other IDEs read
 	-> Column.to_json
-+ load(sessions_folder: Path): Board
++ load(repo_root: Path): Board
 	// a board with every practice chosen
 + current(): Board
 	// the board of the project being worked on: `CDD_PROJECT`, else the current folder. The `@tool_subject` of the `board.*` tools
@@ -97,7 +96,7 @@ Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built y
 + wip_limit(stage: str): int
 	// 3 until a person sets it
 + help(practice: str, fidelity: str): dict
-	// `board.help`: the overview, guidance, rules, and forge page of a practice or fidelity
+	// `board.help`: the practice, fidelity, and stage, with the overview, guidance, rules, and forge page
 + ticket(name: str): Ticket
 + backlog_item(title: str): BacklogItem
 + column(name: str): Column
@@ -191,6 +190,7 @@ The base type of Ticket and BacklogItem.
 	// the timestamp of its log's latest line
 + latest_handoff: str
 + reports: dict[str, str]
++ violation_counts: dict[str, int]
 ----
 + move_next(): Ticket
 	// a person's move on, whatever its session's work: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Implementation it closes
@@ -215,13 +215,16 @@ The base type of Ticket and BacklogItem.
 	-> Repo.switch_worktree
 	-> Session.switch
 + workspace(): dict
-	// `ticket.workspace`: whether it has its branch and worktree
+	// `ticket.workspace`: whether it has its branch and worktree, and whether the ticket being left is on its branch
++ violations(): dict
+	// `ticket.violations`: the rules of every fidelity with violations, each naming its fidelity, a rule the practice's fidelities share listed once
 + enable_practice(practice: str, is_enabled: bool): Ticket
 	// `ticket.enable_practice`
 	-> PracticeSessionOutput.enabled
-+ files(): dict
-	// `ticket.files`: each fidelity's declared files by format, with whether each exists
++ files(fidelities: list[str]): dict
+	// `ticket.files`: the declared files by format of the fidelities asked for, with whether each exists. A pattern in the whole repository lists only what the ticket's branch changed
 	-> Session.fidelity_outputs
+	-> Repo.files_changed_on
 + read_file(path: str): dict
 	// `ticket.read_file`: refuses a path outside the repository
 + report(fidelity: str): dict
@@ -303,6 +306,8 @@ The repository the board shows. Only the members the board's work depends on are
 	// Intended: the session saved in `.sessions/session.json`, else the main session
 ----
 + has_branch(name: str): bool
++ files_changed_on(branch: str): list[str]
+	// what the branch changed since it left the default branch, with uncommitted changes when it is checked out
 + worktree_for(branch: str): Worktree
 + switch_branch(name: str): str
 	// commits and pushes the branch being left, and leaves the default branch committed but not pushed
@@ -370,6 +375,18 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 	// what `session.json` holds, read each time
 + save_fields(fields)
 + move_to(parent: Path): Session
++ all_in(repo_path: Path): list[Session]
+	// the repo's work sessions, open then closed: not main, and not the folders the sessions share
++ backlog_folder(repo_path: Path): Path
++ board_file(repo_path: Path): Path
++ timestamp(moment: datetime): str
++ is_closed: bool
++ move_to_closed(): Session
++ move_to_archive(): Session
++ move_to_backlog(): Session
++ reopen(): Session
++ main_session: str
++ default_wip: int
 + close()
 	// ends the session; when it is the current one, the repository goes back to the main session
 + log_guidance_action(action: str, guidance_items: list)
@@ -599,6 +616,8 @@ One schema rule on a node, the guidance Rule of the same slug with its executabl
 - `Validate` with an explicit graph file and paths filters its report to those paths; the saved graph holds the whole file, so `Ticket.report` lists every violation of the practice in it.
 - Review is a `GuidanceAction` deployed as a command (`/review <guidance>`). It records a person's approval of a fidelity as a `review` line in the session log, which the ticket reads like any other action line.
 - A person's move to Done is written as `done <stage>` and back as `in-progress <stage>`. The latest mark since entering the stage wins; with no mark, `is_done` is derived from progress.
+- Leaving a ticket commits, pushes, and merges only when the ticket has its branch and that branch is checked out, because those steps act on whatever is checked out. A ticket in its own worktree therefore has nothing committed by leaving it.
+- `Stage.to_json` gives each fidelity's formats and `default_formats`, which is how a tile knows which chip to open with.
 - Locking is pane state, not a board rule: with Active session only on, the canvas disables every action on a ticket other than `Board.active`. The pane reads `active` from `Board.to_json` and holds the switch itself.
 - Ticket-wide Run sends one action across a ticket's enabled practices at its current stage. It is a prompt the pane fills, so it needs no operation here beyond `Ticket.practices`.
 - `FidelityProgress` and `Stage.work_required` stay until `Session` takes over what they do, and the ticket stops reading the log itself.

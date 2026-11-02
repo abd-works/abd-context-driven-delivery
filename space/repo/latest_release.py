@@ -14,7 +14,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from space.work_state import E2E_RESULTS_FOLDER
+from space.work_state import E2E_RESULTS_FOLDER, WorkState
 
 if TYPE_CHECKING:
     from space.repo.repo import Repo
@@ -34,7 +34,7 @@ class LatestRelease:
 
     @property
     def _sessions(self) -> Path:
-        return Path(self._repository.root) / ".sessions"
+        return WorkState(self._repository.root).sessions_folder
 
     def keep(self) -> list[str]:
         """Push this release's screenshots to ``e2e-latest``, then remove every older release's results.

@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import time
@@ -32,6 +33,7 @@ class Installer:
     domain_slug = "installer"
     TOOLSET_REF = "harness.installation.installer:Installer"
     _STATE_NAME = ".install-state.json"
+    _BOARD_PLUGIN = "cdd-board@abd-works"
     _DEFAULT_PATHS = {
         "Cursor": ".cursor",
         "VS Code": ".github",
@@ -547,7 +549,7 @@ class Installer:
     def ensure_runtimes(self) -> dict[str, Any]:
         """Start the hook daemon and MCP host; fail if either stays down."""
         if self.ide == "Claude":
-            return {"hook": "not installed", "mcp": self._ensure_mcp_runtime()}
+            return {"hook": "not installed", "mcp": self._ensure_mcp_runtime(), "board": self._install_board_plugin()}
         hook_pid = self._ensure_hook_runtime()
         mcp = self._ensure_mcp_runtime()
         print(
@@ -581,6 +583,36 @@ class Installer:
                 return "running"
             time.sleep(0.25)
         raise RuntimeError(f"install failed: MCP host is not running ({status})")
+
+    def _install_board_plugin(self) -> str:
+        """Install the ``cdd-board`` plugin from this checkout at user level, for every project.
+        The board is a convenience on top of the install, so a miss is printed, never raised."""
+        claude = self._claude_cli()
+        if claude is None:
+            print(f"{self._BOARD_PLUGIN} not installed: no claude command found", file=sys.stderr)
+            return "missing"
+        self._run_claude(claude, "plugin", "marketplace", "add", str(self.repo))
+        self._run_claude(claude, "plugin", "install", self._BOARD_PLUGIN, "--scope", "user")
+        self._run_claude(claude, "plugin", "update", self._BOARD_PLUGIN, "--scope", "user")
+        if self._BOARD_PLUGIN in self._run_claude(claude, "plugin", "list"):
+            return "installed"
+        print(f"{self._BOARD_PLUGIN} not installed: claude plugin install did not take", file=sys.stderr)
+        return "missing"
+
+    def _claude_cli(self) -> str | None:
+        """The desktop app's newest Claude Code, else the one on PATH, which can be too old for the plugin."""
+        bundled = Path(os.environ.get("APPDATA") or Path.home()) / "Claude" / "claude-code"
+        versions = [path for path in bundled.glob("*/*/claude.exe") if re.fullmatch(r"[\d.]+", path.parent.parent.name)]
+        if versions:
+            return str(max(versions, key=lambda path: [int(part) for part in path.parent.parent.name.split(".")]))
+        return shutil.which("claude")
+
+    def _run_claude(self, claude: str, *args: str) -> str:
+        try:
+            run = subprocess.run([claude, *args], capture_output=True, text=True, encoding="utf-8", timeout=120)
+        except (OSError, subprocess.SubprocessError) as error:
+            return str(error)
+        return run.stdout + run.stderr
 
     def _print_channel_notice(self, diagnosis: dict[str, Any]) -> None:
         notice = diagnosis.get("notice") or ""

@@ -1067,6 +1067,16 @@ class Repo:
             return name in self._branch_names
         return bool(self._git("branch", "--list", name).strip())
 
+    def files_changed_on(self, branch: str) -> list[str]:
+        """Paths from the repository root that ``branch`` changed since it left the default branch, with uncommitted changes when it is checked out."""
+        if not self.has_branch(branch):
+            return []
+        committed = self._git("diff", "--name-only", f"{self.default_branch}...{branch}").splitlines()
+        if self.current_branch != branch:
+            return committed
+        uncommitted = self._git("status", "--porcelain", "--untracked-files=all", "--no-renames").splitlines()
+        return [*committed, *(line[3:].strip('"') for line in uncommitted)]
+
     def cli_agent_tag_name(self, branch: str) -> str:
         slug = (branch or "").strip() or "HEAD"
         return f"cli-agent/{slug}"

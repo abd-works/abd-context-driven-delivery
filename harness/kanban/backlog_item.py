@@ -8,7 +8,7 @@ from typing import Any
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.kanban.board import BACKLOG_FOLDER, Board, Card, Column, name_of
+from harness.kanban.board import Board, Card, Column, name_of
 from harness.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
 from space.session import Session
@@ -52,7 +52,7 @@ class BacklogItem(Card):
 
     @classmethod
     def _written(cls, board: Board, file_name: str, title: str, text: str) -> BacklogItem:
-        folder = board.sessions_folder / BACKLOG_FOLDER
+        folder = Session.backlog_folder(board.repo_root)
         folder.mkdir(parents=True, exist_ok=True)
         path = folder / f"{file_name}.md"
         path.write_text(f"# {title}\n\n{text}\n".rstrip() + "\n", encoding="utf-8")
@@ -112,7 +112,7 @@ class BacklogItem(Card):
         return self._path.with_suffix("")
 
     def _ticket_brought_back(self, held: Path) -> Ticket:
-        session = Session.at(held, self._board.repo_root).move_to(self._board.sessions_folder)
+        session = Session.at(held, self._board.repo_root).reopen()
         return Ticket(session, self._board)
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:

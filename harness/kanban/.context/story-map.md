@@ -11,7 +11,7 @@ section: body
 
 **Acceptance criteria:** A stack of cards on the story map is one Story. The top card is the Story and the cards under it are its acceptance criteria, listed under it here.
 
-**Evidence:** The line under each Story says where it stands. **Observed** means the code and specs do it today. Signatures in quotes are in `kanban_tools_spec.py`, `kanban_spec.py`, or `register.test.tsx`, which are organised by these stories. **Live** means it was also pressed in a real Claude Code terminal against the real cdd server. **Differs from the canvas** says where the terminal pane could not do what the canvas does.
+**Evidence:** The line under each Story says where it stands. **Observed** means the code and specs do it today. Signatures in quotes are in `kanban_tools_spec.py`, `kanban_spec.py`, or `register.test.tsx`, which are organised by these stories. **Live** means it was also pressed in a real Claude Code terminal against the real cdd server. **Differs from the canvas** says where the pane could not do what the canvas does; `canvas-differences.md` lists all of it with the reasons.
 
 **Actors:** Person, Board Pane, Claude Code.
 
@@ -31,10 +31,10 @@ Observed: `ColumnView`; "should return every column of the board", register.test
 
 **Acceptance criteria:**
 
-- Display Connected Status: with the cdd server not connected, the pane says so and asks for it. Observed: register.test "with the cdd server not connected, the status line says so and the pane asks for it".
+- Display Connected Status: with the cdd server not connected, the pane says so and asks for it; lost after the board was read, a band across the pane's top says what failed and how to reconnect, until the server answers again. Observed: register.test "with the cdd server not connected, the status line says so and the pane asks for it", "with the cdd server lost after the board was read, a band across the pane says so".
 - Draw Board Columns: Backlog, Discovery, Specification, Implementation, and Complete, in that order, with In progress and Done inside each stage. Observed: `ColumnView`. Live.
-- Refresh Board After Tool Calls: after a session starts, a prompt is sent, or a cdd tool call finishes, the board shows the state it is in then. Observed: register.test "a prompt sent reads the board again".
-- Announce Ticket Changes: a toast shows when a ticket moves or a fidelity is reviewed. Observed: `announceChanges`; register.test "a ticket that moves raises a toast naming its new column", "a session open and closed under one name raises no toast on each read of the board".
+- Refresh Board After Tool Calls: after a session starts, a prompt is sent, a cdd tool call finishes, or a turn ends, the board, an open tile, and an open Files panel or report show the state they are in then. Observed: register.test "a prompt sent reads the board again".
+- Announce Ticket Changes: a toast shows when a ticket moves, including from In progress to Done and to the Backlog, or a fidelity is reviewed. Observed: `announceChanges`; register.test "a ticket that moves raises a toast naming its new column", "a session open and closed under one name raises no toast on each read of the board".
 
 ### (S) Person --> Arrange Board And Details
 
@@ -51,7 +51,7 @@ Observed: the Backlog column shows the title of each file in `.sessions/_backlog
 
 ### (S) Board Pane --> Display Ticket Card
 
-Observed: `ticket-card.tsx` draws the title, age, and next step, with one block per enabled practice stacked on the right, dim while its work is not started; register.test "a card shows each enabled practice as a block and dims work not started". Live.
+Observed: `ticket-card.tsx` draws the title and age, with one block per enabled practice stacked on the right, dim while its work is not started; register.test "a card shows each enabled practice as a block and dims work not started". Live.
 
 **Acceptance criteria:**
 
@@ -68,11 +68,11 @@ Observed: `TicketDetailView`, `PracticeGridView`; register.test "a press anywher
 
 - A press anywhere on a card shows that ticket in the details region below the board.
 - The details show the ticket's practices with their fidelity progress and its latest validation reports. Observed: kanban_tools_spec "should show that fidelity's latest report".
-- Expand Ticket: the expanded card sits over the board, shows the same tiles as the details, and only one is expanded at a time. Observed: `CardExpansionView`; register.test "an expanded card shows the same tiles as the details", "only one card is expanded at a time". Live. Differs from the canvas: it spans the pane under the header instead of growing out of the card, because a Box paints over only what was drawn before it.
+- Expand Ticket: the expanded card sits over the board, shows the same tiles as the details, and only one is expanded at a time. Observed: `CardExpansionView`; register.test "an expanded card shows the same tiles as the details", "only one card is expanded at a time". Live. Differs from the canvas: it opens over the ticket's column at a fixed row instead of growing out of the card, because a plugin cannot read where a Box was drawn.
 
 ### (S) Person --> Set Stage WIP Limit
 
-Observed: `Board.set_wip_limit`, saved in `.sessions/_board.json`; "should show the stage over its limit", register.test "a stage over its limit shows its count in red". Live. Differs from the canvas: - and + buttons set the limit in place of an input, because the mobile surface has no Input.
+Observed: `Board.set_wip_limit`, saved in `.sessions/_board.json`; "should show the stage over its limit", register.test "a stage over its limit shows its count in red". Live. Differs from the canvas: mobile keeps - and + buttons, because that surface has no Input.
 
 ### (S) Person --> Arrange Side Panel
 
@@ -151,7 +151,7 @@ Observed: `Ticket.latest_handoff`; "should show the latest handoff". Live.
 
 ### (S) Board Pane --> Display Fidelity Progress
 
-Observed: `PracticeGridView`; kanban_spec "should show Validate done for that fidelity", "should show each fidelity's Generate, Validate, and Review". Live.
+Observed: `ActionMarksView` on a closed tile and the step marks on its bar, ○ to do, … in progress, ✓ done; kanban_spec "should show Validate done for that fidelity", "should show each fidelity's Generate, Validate, and Review". Live.
 
 **Acceptance criteria:**
 
@@ -167,7 +167,7 @@ Observed: `Ticket.enable_practice` saves the choice to the ticket's `session.jso
 
 ### (S) Person --> Run Action Across Practices
 
-Observed: the stage head runs one action on every enabled practice in a stage; register.test "a stage head runs one action on every enabled practice in the stage". Differs from the canvas: the stage head alone offers it, with no separate card menu.
+Observed: the stage head runs one action on every enabled practice in a stage; register.test "a stage head runs one action on every enabled practice in the stage". Differs from the canvas: on an expanded card it moves to a tile while that tile is open, because one tile is open at a time.
 
 ### (S) Person --> Mark Ticket Done In Stage
 
@@ -189,19 +189,19 @@ Observed: `Board.help`; the ? on a tile or a practice name opens help in a side 
 
 ### (S) Person --> Run Next Step
 
-Observed: Run next fills the prompt with the command for the ticket's next action. Live.
+Observed: on generate, Run next sends the commands of `ticket.generate_commands` for the fidelity's default format; on validate or review it fills the prompt. Live.
 
 **Acceptance criteria:**
 
 - Name Next Fidelity: the button names the step that runs next. Observed: `Ticket.next`, `Ticket.next_action`; kanban_spec "should name Generate on story_map as next", "should name generate as the next action", register.test "Run next names the step that runs next". Live.
 - Run next steps generate, validate, review for each practice in order. Observed: `Ticket.next_action`.
-- Run next holds on fix violations until they are fixed. Observed: "should name satisfy as the next action"; Run next opens the report. Live.
+- Run next holds on fix violations until they are fixed, and says "fix violations". Observed: "should name satisfy as the next action", register.test "Run next on held violations says fix violations"; Run next opens the report. Live.
 
 ## (E) Generate
 
 ### (S) Person --> Choose Action And Formats
 
-Observed: `TileBarView` lists the actions and formats, with a check on formats already generated; register.test "a format already generated carries a check". Live. Differs from the canvas: buttons in place of a list box and icons, because the mobile surface has no Select.
+Observed: `TileBarView` lists the actions and format chips. A tile opens with the default format's chip picked unless that output exists, a chip stands for a group and each fidelity uses one format from it, a generated chip is green, and one generated on some fidelities says "n of m"; Run clears the picks and stays off with no format, on a render with nothing to render, and with no enabled practice. register.test "should give each fidelity its default format", "a format already generated carries a check". Live. Differs from the canvas: glyphs in place of format icons, because a Button holds only text; mobile has buttons in place of the list box, because that surface has no Select.
 
 ### (S) Claude Code --> Resolve Fidelity Output Paths
 
@@ -253,7 +253,7 @@ Observed: register.test "Satisfy on the band fills the prompt with the fidelitie
 
 ### (S) Person --> List Ticket Files
 
-Observed: `Ticket.files`, the list mode of the files panel, for the tile's or ticket's fidelities; pressing a file opens it; "should list the file with whether it exists". Live.
+Observed: `Ticket.files`, the list mode of the files panel, for the tile's or ticket's fidelities and no others; pressing a file opens it; "should list the file with whether it exists", "should list only the fidelities asked for". On a ticket whose work is in the whole repository, a pattern lists only what its branch changed, so another ticket's specs are not listed as this one's: "should list only the files the ticket's branch changed". A list that cannot be read says so in a toast. Live.
 
 ### (S) Person --> Browse Ticket Folder
 

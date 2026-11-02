@@ -3,8 +3,12 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { ViewContext } from './kanban/view-context'
 import { currentDraft } from './kanban/backlog-item-client'
 import {
+  arePracticesHidden,
   currentBoard,
   currentColumnOffset,
+  currentEditingLimit,
+  currentRegionOffsets,
+  currentServerFailure,
   currentSplitLayout,
   haveSurfaceModulesFailed,
   isOnlyActive,
@@ -13,22 +17,27 @@ import {
   select,
   selectedAddress,
   setBoardRows,
+  scrollRegion,
+  setColumnOffset,
 } from './kanban/board-client'
 import { BandView, PaneView } from './kanban/board-view'
-import { currentPanels, reloadReport, setPanelWidth } from './kanban/side-panel-client'
+import { currentPanels, reloadFiles, reloadFileText, reloadReport, setPanelWidth } from './kanban/side-panel-client'
 import {
   activateNamed,
   activeTicket,
   closeNamed,
   currentActivation,
+  currentCardOffset,
   currentOpenCard,
   currentTile,
   fillSatisfy,
   fillShowViolations,
+  hoverTile,
   leaveTile,
   moveNext,
   movePrevious,
-  openTile,
+  reloadTile,
+  scrollCard,
   toggleTile,
 } from './kanban/ticket-client'
 
@@ -36,9 +45,9 @@ import {
 const PLUGIN = 'cdd-board'
 const PANE = 'cdd-board'
 const SERVER = 'cdd'
-const WIDE_PANE_COLUMNS = 140
 const SURFACE_MODULE_SURFACES: string[] = ['terminal', 'desktop']
 const SURFACE_WITHOUT_INPUTS = 'mobile'
+const SURFACE_WITHOUT_PICTURES = 'terminal'
 
 const TICKET_VERBS = ['next', 'previous', 'close', 'activate']
 
@@ -52,21 +61,25 @@ async function runTicketCommand($: EngineInterface, verb: string, ticket: string
 async function refreshAll($: EngineInterface): Promise<void> {
   await refresh($)
   await reloadReport($)
+  await reloadTile($)
+  await reloadFiles($)
+  await reloadFileText($)
 }
 
-type TileAddress = { ticket: string; stage: string; place: string; slugs: string[] }
+type TileAddress = { ticket: string; stage: string; place: string; slugs: string[]; menuSlugs?: string[] }
 
 const isTileAddress = (value: unknown): value is TileAddress => typeof value === 'object' && value !== null && 'place' in value
 
 // What a surface module posts is plain data from code, so only the shapes it sends are believed.
 async function answerSurfaceModule($: EngineInterface, data: Record<string, unknown>): Promise<void> {
-  const { select: address, boardRows, panel, width, hoverTile, leaveTile: left, pressTile } = data
+  const { select: address, boardRows, columnOffset, panel, width, hoverTile: hovered, leaveTile: left, pressTile } = data
   if (typeof address === 'string') await select($, address)
   if (typeof boardRows === 'number') await setBoardRows($, boardRows)
+  if (typeof columnOffset === 'number') await setColumnOffset($, columnOffset)
   if (typeof panel === 'string' && typeof width === 'number') await setPanelWidth($, panel, width)
-  if (isTileAddress(hoverTile)) await openTile($, hoverTile.ticket, hoverTile.stage, hoverTile.place, hoverTile.slugs, false)
+  if (isTileAddress(hovered)) await hoverTile($, hovered.ticket, hovered.stage, hovered.place, hovered.slugs)
   if (typeof left === 'string') await leaveTile($, left)
-  if (isTileAddress(pressTile)) await toggleTile($, pressTile.ticket, pressTile.stage, pressTile.place, pressTile.slugs)
+  if (isTileAddress(pressTile)) await toggleTile($, pressTile.ticket, pressTile.stage, pressTile.place, pressTile.slugs, pressTile.menuSlugs)
 }
 
 export const register: Register = on => {
@@ -118,6 +131,12 @@ export const register: Register = on => {
     return ran
   })
 
+  // A skill writes its files after its cdd tool call, so what the tiles and panels show is read again as its turn ends.
+  on('turn.complete', async ($, e, next) => {
+    await refreshAll($)
+    return next(e)
+  })
+
   on('prompt.compose', async ($, e, next) => {
     const composed = await next(e)
     // The first prompt is composed before the first prompt.submit; read the board here if it is still empty.
@@ -134,7 +153,17 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const active = await activeTicket($)
     if (!active || active.violations.length === 0) return next(e)
-    return BandView($, $.ui.resolve(e), active, () => fillShowViolations($, active), () => fillSatisfy($, active))
+    return BandView($, $.ui.resolve(e), e.surface !== SURFACE_WITHOUT_PICTURES, active, () => fillShowViolations($, active), () => fillSatisfy($, active))
+  })
+
+  // A region clips its rows, so the engine's window cannot reach them: the pane moves them itself. Expanded, or with a
+  // panel beside it, the tree is as tall as it needs and the engine's window moves it.
+  on('ui.scroll', { requestId: PANE }, async ($, e, next) => {
+    if (await scrollCard($, e.by, e.bodyRows)) return {}
+    const layout = await currentSplitLayout($)
+    if (layout.expanded || (await currentPanels($)).length) return next(e)
+    await scrollRegion($, e.pointer?.row ?? 0, e.by, e.bodyRows)
+    return {}
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
@@ -148,9 +177,9 @@ export const register: Register = on => {
       address: await selectedAddress($),
       now: await $.clock.now(),
       bodyColumns: e.props.bodyColumns,
-      isWide: e.props.bodyColumns >= WIDE_PANE_COLUMNS,
+      bodyRows: e.props.scroll.bodyRows,
       hasSurfaceModules: SURFACE_MODULE_SURFACES.includes(e.surface) && !(await haveSurfaceModulesFailed($)),
-      hasPictures: e.surface !== 'terminal',
+      hasPictures: e.surface !== SURFACE_WITHOUT_PICTURES,
       hasInputs: e.surface !== SURFACE_WITHOUT_INPUTS,
       onlyActive: await isOnlyActive($),
       openCard: await currentOpenCard($),
@@ -159,8 +188,13 @@ export const register: Register = on => {
       draft: await currentDraft($),
       panels: await currentPanels($),
       columnOffset: await currentColumnOffset($),
+      editingLimit: await currentEditingLimit($),
+      hidesDisabled: await arePracticesHidden($),
+      serverFailure: await currentServerFailure($),
+      cardOffset: await currentCardOffset($),
       layout: await currentSplitLayout($),
+      regionOffsets: await currentRegionOffsets($),
     }
-    return PaneView($, view, e.props.scroll.bodyRows)
+    return PaneView($, view)
   })
 }

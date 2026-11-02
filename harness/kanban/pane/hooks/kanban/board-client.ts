@@ -1,19 +1,25 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { BacklogItemJson, BoardJson, ColumnJson, SplitLayoutJson, TicketJson } from '../../types'
+import type { BacklogItemJson, BoardJson, ColumnJson, RegionOffsetsJson, SplitLayoutJson, TicketJson } from '../../types'
+import { HEADER_ROWS, regionRowsOf, scrollLimitsOf } from './board-layout'
 import { activeTicketJson, allTickets, statusOf, ticketsOf } from './ticket-summary'
 
 const SERVER = 'cdd'
 const ITEM_COLUMN = 'Backlog'
+const RESULT_SHOWN_IN_TOAST = 120
 
 // Change the tag when the board's shape changes: it declines what an earlier version stored.
-const board = atom({ plugin: 'cdd-board', key: 'board' } as const, null as BoardJson | null, { shape: 'board-3' })
+const board = atom({ plugin: 'cdd-board', key: 'board' } as const, null as BoardJson | null, { shape: 'board-4' })
 const selected = atom({ plugin: 'cdd-board', key: 'selected' } as const, null as string | null)
 const splitLayout = atom({ plugin: 'cdd-board', key: 'splitLayout' } as const, { expanded: null, boardRows: null } as SplitLayoutJson)
+const regionOffsets = atom({ plugin: 'cdd-board', key: 'regionOffsets' } as const, { board: 0, details: 0 } as RegionOffsetsJson)
 const surfaceModulesFailed = atom({ plugin: 'cdd-board', key: 'surfaceModulesFailed' } as const, false)
 const onlyActive = atom({ plugin: 'cdd-board', key: 'onlyActive' } as const, true)
 const columnOffset = atom({ plugin: 'cdd-board', key: 'columnOffset' } as const, 0)
+const editingLimit = atom({ plugin: 'cdd-board', key: 'editingLimit' } as const, null as string | null)
+const hidesDisabled = atom({ plugin: 'cdd-board', key: 'hidesDisabled' } as const, false)
+const serverFailure = atom({ plugin: 'cdd-board', key: 'serverFailure' } as const, null as string | null)
 
 // A session can sit in closed/ under the name of an open one, so a column and name together say which ticket is meant.
 export const ticketAddress = (ticket: TicketJson): string => `${ticket.column}/${ticket.name}`
@@ -91,16 +97,44 @@ export async function callTool<T>($: EngineInterface, tool: string, args: Record
   try {
     result = await $.mcp.call(SERVER, tool, args)
   } catch (failure) {
-    // The cdd server is not connected: say so on the status line rather than fail the hook.
+    // The cdd server is not connected: say so on the status line and in the pane rather than fail the hook.
     $.ui.status(`cdd board: ${String(failure)}`)
+    await update($, serverFailure, () => String(failure))
     return null
   }
+  if (await read($, serverFailure)) await update($, serverFailure, () => null)
   const text = result.content[0]?.text
   if (result.isError || text === undefined) {
     $.ui.toast(`cdd ${tool} failed${text ? `: ${text}` : ''}`)
     return null
   }
-  return JSON.parse(text) as T
+  return parsed<T>($, tool, text)
+}
+
+// A result the engine cut down for size arrives as words, not JSON. Thrown from a press, that failure would show nowhere.
+function parsed<T>($: EngineInterface, tool: string, text: string): T | null {
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    $.ui.toast(`cdd ${tool} sent back what the board cannot read: ${text.slice(0, RESULT_SHOWN_IN_TOAST)}`)
+    return null
+  }
+}
+
+export function currentServerFailure($: EngineInterface) {
+  return read($, serverFailure)
+}
+
+const standingOf = (ticket: TicketJson): string => (ticket.column === 'Complete' ? ticket.column : `${ticket.column} · ${ticket.is_done ? 'Done' : 'In progress'}`)
+
+// A ticket moved back out of Discovery leaves the columns and comes back as a backlog item under its title.
+function announceReturns($: EngineInterface, before: BoardJson, after: BoardJson): void {
+  const names = new Set(allTickets(after).map(ticket => ticket.name))
+  const earlierItems = new BoardClient(before).backlogItems.map(item => item.title)
+  const items = new BoardClient(after).backlogItems.map(item => item.title)
+  for (const ticket of allTickets(before)) {
+    if (!names.has(ticket.name) && items.includes(ticket.title) && !earlierItems.includes(ticket.title)) $.ui.toast(`${ticket.title} moved to Backlog`)
+  }
 }
 
 function announceChanges($: EngineInterface, before: BoardJson | null, after: BoardJson): void {
@@ -111,11 +145,12 @@ function announceChanges($: EngineInterface, before: BoardJson | null, after: Bo
     const was = earlier.get(ticket.name)
     // A name held by an open and a closed session cannot be compared across reads, so it announces nothing.
     if (!was || named.indexOf(ticket.name) !== named.lastIndexOf(ticket.name)) continue
-    if (was.column !== ticket.column) $.ui.toast(`${ticket.name} moved to ${ticket.column}`)
+    if (standingOf(was) !== standingOf(ticket)) $.ui.toast(`${ticket.title} moved to ${standingOf(ticket)}`)
     for (const [slug, state] of Object.entries(ticket.progress)) {
       if (state === 'done' && was.progress[slug] !== 'done') $.ui.toast(`${slug} reviewed on ${ticket.name}`)
     }
   }
+  announceReturns($, before, after)
 }
 
 export async function refresh($: EngineInterface): Promise<void> {
@@ -157,6 +192,32 @@ export async function setWipLimit($: EngineInterface, stage: string, limit: numb
   await refresh($)
 }
 
+export function currentEditingLimit($: EngineInterface) {
+  return read($, editingLimit)
+}
+
+export function editLimit($: EngineInterface, stage: string) {
+  return update($, editingLimit, () => stage)
+}
+
+export function cancelLimit($: EngineInterface) {
+  return update($, editingLimit, () => null)
+}
+
+export async function submitLimit($: EngineInterface, stage: string, text: string): Promise<void> {
+  await update($, editingLimit, () => null)
+  const limit = Number.parseInt(text, 10)
+  if (limit >= 1) await setWipLimit($, stage, limit)
+}
+
+export function arePracticesHidden($: EngineInterface) {
+  return read($, hidesDisabled)
+}
+
+export function toggleHiddenPractices($: EngineInterface) {
+  return update($, hidesDisabled, isHidden => !isHidden)
+}
+
 export function selectedAddress($: EngineInterface) {
   return read($, selected)
 }
@@ -169,12 +230,26 @@ export function currentSplitLayout($: EngineInterface) {
   return read($, splitLayout)
 }
 
-export function showRegion($: EngineInterface, expanded: SplitLayoutJson['expanded']) {
-  return update($, splitLayout, layout => ({ ...layout, expanded }))
+export function toggleRegion($: EngineInterface, region: NonNullable<SplitLayoutJson['expanded']>) {
+  return update($, splitLayout, layout => ({ ...layout, expanded: layout.expanded === region ? null : region }))
 }
 
 export function setBoardRows($: EngineInterface, boardRows: number) {
   return update($, splitLayout, layout => ({ ...layout, boardRows }))
+}
+
+export function currentRegionOffsets($: EngineInterface) {
+  return read($, regionOffsets)
+}
+
+// The wheel moves the region it is over, and without a pointer, the board.
+export async function scrollRegion($: EngineInterface, row: number, by: number, bodyRows: number): Promise<void> {
+  const layout = await read($, splitLayout)
+  const shown = await read($, board)
+  if (!shown) return
+  const region = row < HEADER_ROWS + regionRowsOf(bodyRows, layout).boardRows ? 'board' : 'details'
+  const limit = scrollLimitsOf(shown, bodyRows, layout)[region]
+  await update($, regionOffsets, offsets => ({ ...offsets, [region]: Math.min(Math.max(offsets[region] + by, 0), limit) }))
 }
 
 export function noteSurfaceModulesFailed($: EngineInterface) {
@@ -197,6 +272,6 @@ export function currentColumnOffset($: EngineInterface) {
   return read($, columnOffset)
 }
 
-export function scrollColumns($: EngineInterface, step: number) {
-  return update($, columnOffset, offset => Math.max(0, offset + step))
+export function setColumnOffset($: EngineInterface, offset: number) {
+  return update($, columnOffset, () => Math.max(0, offset))
 }

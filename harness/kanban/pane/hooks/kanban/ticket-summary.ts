@@ -18,13 +18,17 @@ export const violationsOf = (ticket: TicketJson): string[] =>
     .filter(([, state]) => state === 'violations')
     .map(([slug]) => slug)
 
+export const guidanceSlug = (slug: string): string => slug.replaceAll('_', '-')
+
+export const countOf = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`
+
 export const statusOf = (ticket: TicketJson): string => {
   const violations = violationsOf(ticket).length
   return [
     ticket.name,
     ticket.column,
     ticket.next ? `next: ${ticket.next}` : ticket.is_done ? 'done' : '',
-    violations ? `${violations} ${violations === 1 ? 'violation' : 'violations'}` : '',
+    violations ? countOf(violations, 'violation') : '',
   ]
     .filter(Boolean)
     .join(' · ')

@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 
+SESSIONS_FOLDER = ".sessions"
 STATE_NAME = "session.json"
 DESIGN_CANVAS_FOLDER = "design-canvas"
 E2E_RESULTS_FOLDER = "e2e-test-results"
@@ -18,8 +19,12 @@ class WorkState:
         self.root = Path(repo_root).resolve()
 
     @property
+    def sessions_folder(self) -> Path:
+        return self.root / SESSIONS_FOLDER
+
+    @property
     def path(self) -> Path:
-        return self.root / ".sessions" / STATE_NAME
+        return self.sessions_folder / STATE_NAME
 
     @property
     def branch(self) -> str:
@@ -52,7 +57,7 @@ class WorkState:
 
     def release_folder(self, release: str = "") -> Path:
         """``.sessions/<release>/``: the release's session files, its design canvas, and its end-to-end results."""
-        return self.root / ".sessions" / (release or self.release)
+        return self.sessions_folder / (release or self.release)
 
     def load(self) -> dict[str, str]:
         if not self.path.is_file():
