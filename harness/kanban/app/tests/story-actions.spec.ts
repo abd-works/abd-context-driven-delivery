@@ -5,11 +5,12 @@ import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
-import { fixtureRoot } from './fixture-repo'
+import { fixtureRoot } from '../test-utils/fixture-repo'
 import { BOARD_POST_HEADERS, card, FakeChat, openBoard, openCardOf, toast, turnOffActiveSessionOnly } from './support'
 
 // A spec per story that acts, each against the real server, the real cdd tools, and the throwaway repository.
 // The specs share that repository, so each works on its own ticket, and the session changes come last.
+const CARD_CORNER = { x: 6, y: 6 }
 let chat: FakeChat
 
 const column = (page: Page, name: string) => page.locator(`.board-column[data-column="${name}"]`)
@@ -19,7 +20,7 @@ async function waitForChat(page: Page): Promise<void> {
 }
 
 async function showTicket(page: Page, ticket: string): Promise<void> {
-  await card(page, ticket).click({ position: { x: 6, y: 6 } })
+  await card(page, ticket).click({ position: CARD_CORNER })
 }
 
 async function lastReceived(text: string): Promise<void> {
@@ -40,26 +41,6 @@ test.beforeEach(async ({ page }) => {
   await openBoard(page)
 })
 
-test.describe('Move Ticket', () => {
-  test('should move a ticket to Done, on to the next column, and back', async ({ page }) => {
-    await turnOffActiveSessionOnly(page)
-    const moveMe = card(page, 'move-me')
-    await moveMe.getByRole('button', { name: 'Move Move me to the next column' }).first().click()
-    await expect(toast(page, 'Move me moved to Discovery · Done')).toBeVisible()
-    await moveMe.getByRole('button', { name: 'Move Move me to the next column' }).first().click()
-    await expect(column(page, 'Specification').locator('.ticket-card[data-ticket="move-me"]')).toBeVisible()
-    await moveMe.getByRole('button', { name: 'Move Move me to the previous column' }).first().click()
-    await expect(column(page, 'Discovery').locator('.ticket-card[data-ticket="move-me"]')).toBeVisible()
-  })
-
-  test('should send a ticket back out of Discovery to the Backlog with its work', async ({ page }) => {
-    await turnOffActiveSessionOnly(page)
-    await card(page, 'back-to-backlog').getByRole('button', { name: 'Move Back to backlog to the Backlog' }).first().click()
-    await expect(page.locator('.ticket-card[data-item="Back to backlog"]')).toBeVisible()
-    await expect(toast(page, 'Back to backlog moved to Backlog')).toBeVisible()
-  })
-})
-
 test.describe('Restrict Actions To Active Session', () => {
   test('should disable what changes a ticket that is not active, and leave information open', async ({ page }) => {
     const billing = card(page, 'billing-report')
@@ -76,18 +57,6 @@ test.describe('Restrict Actions To Active Session', () => {
 })
 
 test.describe('Add Backlog Item', () => {
-  test('should add an item, and start it into Discovery', async ({ page }) => {
-    await page.getByRole('button', { name: 'New backlog ticket' }).click()
-    await page.getByRole('textbox', { name: 'Title' }).fill('Gift cards')
-    await page.getByRole('textbox', { name: 'Text' }).fill('Sell them at the till.')
-    await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await expect(toast(page, 'Gift cards added to Backlog')).toBeVisible()
-    await expect(page.getByText('Sell them at the till.')).toBeVisible()
-    await page.getByRole('button', { name: 'Move Gift cards into Discovery' }).click()
-    await expect(card(page, 'gift-cards')).toBeVisible()
-    await expect(toast(page, 'Gift cards started in Discovery')).toBeVisible()
-  })
-
   test('should keep Add off with no title', async ({ page }) => {
     await page.getByRole('button', { name: 'New backlog ticket' }).click()
     await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeDisabled()
@@ -97,14 +66,6 @@ test.describe('Add Backlog Item', () => {
 })
 
 test.describe('Set Stage WIP Limit', () => {
-  test('should show a stage over its limit once a person lowers it', async ({ page }) => {
-    await page.getByRole('button', { name: 'WIP limit for Discovery is 3. Edit' }).click()
-    await page.getByRole('spinbutton', { name: 'WIP limit for Discovery' }).fill('1')
-    await page.getByRole('spinbutton', { name: 'WIP limit for Discovery' }).press('Enter')
-    await expect(page.getByRole('button', { name: 'WIP limit for Discovery is 1. Edit' })).toBeVisible()
-    await expect(column(page, 'Discovery').locator('.stage-head')).toHaveClass(/is-over-limit/)
-  })
-
   test('should close the field on Escape without changing the limit', async ({ page }) => {
     await page.getByRole('button', { name: 'WIP limit for Specification is 3. Edit' }).click()
     await page.getByRole('spinbutton', { name: 'WIP limit for Specification' }).fill('9')

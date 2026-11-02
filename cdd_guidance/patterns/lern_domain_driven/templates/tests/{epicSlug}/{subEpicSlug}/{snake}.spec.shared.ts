@@ -1,5 +1,6 @@
 /**
  * States each behavior once. Reaches the tier only through its driver, so every tier runs these same signatures.
+ * `before` runs once for each `it`, so a tier on a real store resets it between behaviors.
  *
  * ```
  * file: tests/{epicSlug}/{subEpicSlug}/{snake}.spec.shared.ts
@@ -12,7 +13,7 @@ export type {Domain}Driver = {
   {reading}Of: ({identity}: string) => Promise<string>
 }
 
-export const {snake}Behavior = shareBehavior<{Domain}Driver>(({ describe, it, before, expect, driver }) => {
+export const {camel}Behavior = shareBehavior<{Domain}Driver>(({ describe, it, before, expect, driver }) => {
   describe('a {domain}', () => {
     describe('that has been {eventPastParticiple}', () => {
       before(() => driver().{operation}('{example}'))

@@ -2,9 +2,7 @@ import type { Request } from 'express'
 import { z } from 'zod'
 
 import { HttpException } from '../../session-board/http-exception'
-
-export type ChatCommand = { kind: 'submit' | 'fill' | 'command'; text: string }
-export type Chat = { id: string; isBusy: boolean }
+import type { Chat, ChatCommand } from './chat'
 
 const CONFLICT = 409
 const ChatAddress = z.object({ chat: z.string().min(1) })
@@ -21,9 +19,9 @@ export class ChatsNode {
 
   constructor(private readonly now: () => number = Date.now) {}
 
-  private stateOf(id: string): ChatState {
-    const state = this.chats.get(id) ?? { isBusy: false, seen: 0, waiting: [] }
-    this.chats.set(id, state)
+  private stateOf(chat: string): ChatState {
+    const state = this.chats.get(chat) ?? { isBusy: false, seen: 0, waiting: [] }
+    this.chats.set(chat, state)
     return state
   }
 
@@ -47,8 +45,8 @@ export class ChatsNode {
 
   // A fill during a running turn can report success and show nothing, so it waits here until the turn ends.
   // A submit and a command are the engine's to hold until idle, so they go at once.
-  next(id: string, isBusy: boolean): ChatCommand | null {
-    const state = this.stateOf(id)
+  next(chat: string, isBusy: boolean): ChatCommand | null {
+    const state = this.stateOf(chat)
     state.seen = this.now()
     state.isBusy = isBusy
     const ready = state.waiting.findIndex(command => command.kind !== 'fill' || !isBusy)

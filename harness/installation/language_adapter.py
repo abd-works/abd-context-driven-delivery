@@ -26,6 +26,9 @@ export type CddConnection = {{
   call<Result>(tool: string, args: Record<string, unknown>): Promise<Result>
 }}
 """
+# The install sits outside any application's package, so without this Node reads its files as CommonJS.
+_MANIFEST_FILE = "package.json"
+_MANIFEST = '{\n  "private": true,\n  "type": "module"\n}\n'
 _OPEN_DATA = "Record<string, unknown>"
 _SCHEMA_TYPES = {"string": "string", "integer": "number", "number": "number", "boolean": "boolean", "null": "null"}
 _SCALAR_TYPES = {str: "string", int: "number", float: "number", bool: "boolean", type(None): "null"}
@@ -299,7 +302,7 @@ class LanguageAdapterInstallation(Installation):
         peers = self._typescript_toolsets()
         root = self.path / _FOLDER / _TYPESCRIPT
         # Rendering first collects each file's imports and nested shapes before anything is written.
-        files = {root / _CONNECTION_FILE: _CONNECTION.format(note=_NOTE.format(source="the installer"))}
+        files = {root / _CONNECTION_FILE: _CONNECTION.format(note=_NOTE.format(source="the installer")), root / _MANIFEST_FILE: _MANIFEST}
         files.update({root / Path(peer.file_path): peer.render() for peer in peers.values()})
         return [self._written(path, text) for path, text in files.items()]
 

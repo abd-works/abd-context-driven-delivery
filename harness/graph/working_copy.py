@@ -625,7 +625,7 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
     for cls in classes:
         folder = str(Path(cls["file"]).parent).replace("\\", "/")
         kind = inferred_tactical_kind(_stereotyped_name(cls["text"], cls["name"]), names)
-        if kind is None:
+        if kind is None or f"{folder}/".startswith(_TEST_FOLDERS):
             continue
         members.setdefault(folder, []).append({**cls, "kind": kind})
     nodes = []
@@ -822,6 +822,7 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
     if ddd is None or stories is None:
         return
     _record_lern_context_mappings(graph, root, ddd)
+    _record_lern_tier_folders(ddd, root)
     aggregates = {
         node.source.file.replace("\\", "/"): node
         for node in ddd.by_id.values()
@@ -890,6 +891,10 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
             story_file.set_fact(key, value)
 
 
+# A helper class in a test folder is never a domain aggregate, whatever its name suggests.
+_TEST_FOLDERS = ("tests/", "test-utils/")
+
+
 def _record_cdd_access(graph: Graph, root: Path) -> None:
     """CDD access overlay: what reaches the domain from outside Python, each file carrying the facts its rules read."""
     from cdd_guidance.patterns.cdd_access import access_facts
@@ -925,6 +930,15 @@ def _cdd_access_node(practice, root: Path, file: Path, semantic: str, facts: dic
     practice.apply_nodes([[node_id, file.name, semantic, "ddd", relative, start, end]])
     for key, value in facts.items():
         practice.by_id[node_id].set_fact(key, value)
+
+
+def _record_lern_tier_folders(ddd, root: Path) -> None:
+    """A folder holding its slug's routes or node is an aggregate, even with no domain class: a CDD-backed one has none."""
+    for file in scanned_files(root):
+        folder = file.parent.relative_to(root).as_posix()
+        is_tier_file = file.name in (f"{file.parent.name}-routes.ts", f"{file.parent.name}-node.ts")
+        if is_tier_file and folder.startswith("src/") and f"ddd:Aggregate:{folder}" not in ddd.by_id:
+            ddd.apply_nodes([[f"ddd:Aggregate:{folder}", file.parent.name, "Aggregate", "ddd", folder, 1, 1]])
 
 
 def _record_lern_behaviors(graph: Graph, root: Path) -> None:

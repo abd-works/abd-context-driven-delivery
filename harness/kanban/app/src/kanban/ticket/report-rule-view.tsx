@@ -1,0 +1,89 @@
+import type { ReportRuleData, SourceLineData, ViolationData } from '@cdd/harness/kanban/ticket'
+
+import { countOf } from '../board/board-brand'
+import { useBoard } from '../board/board-context'
+import type { ReportPanel } from '../board/board-store'
+import { ChevronIcon } from '../board/icons'
+import { locationOf } from './report-client'
+
+function SourceLineView({ violation, entry }: { violation: ViolationData; entry: SourceLineData }) {
+  return (
+    <div className={entry.number === violation.line ? 'code-line is-failing' : 'code-line'}>
+      <span className="line-number">{entry.number}</span>
+      <span className="line-text">{entry.text}</span>
+    </div>
+  )
+}
+
+function ViolationLocationView({ panel, rule, violation }: { panel: ReportPanel; rule: ReportRuleData; violation: ViolationData }) {
+  const { page } = useBoard()
+  const location = locationOf(violation)
+  const line = violation.line ?? 1
+  // A location with no source has no file to open, so only one with source lines is a link.
+  if (!violation.source.length) return <span className="file-location">{location}</span>
+  return (
+    <button className="file-link" title={`Open at line ${line}`} onClick={() => void page.files.openFileAtLine(panel.ticket, rule.fidelity, violation.location, line)}>
+      {location}
+    </button>
+  )
+}
+
+function ViolationSourceView({ violation }: { violation: ViolationData }) {
+  return (
+    <div className="violation-source">
+      {violation.source.map(entry => (
+        <SourceLineView key={entry.number} violation={violation} entry={entry} />
+      ))}
+    </div>
+  )
+}
+
+function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; rule: ReportRuleData; violation: ViolationData; isOff: boolean }) {
+  const { page } = useBoard()
+  return (
+    <article className="violation">
+      <div className="violation-head">
+        <div className="violation-words">
+          <ViolationLocationView panel={panel} rule={rule} violation={violation} />
+          <div className="violation-message">{violation.message}</div>
+        </div>
+        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} onClick={() => void page.fixViolation(rule, violation)}>
+          Fix
+        </button>
+      </div>
+      {violation.source.length ? <ViolationSourceView violation={violation} /> : null}
+    </article>
+  )
+}
+
+function RuleHeadView({ rule, place, isOpen, isOff }: { rule: ReportRuleData; place: string; isOpen: boolean; isOff: boolean }) {
+  const { page } = useBoard()
+  return (
+    <div className="rule-head">
+      <div className="rule-words">
+        <h2>
+          <button className="rule-toggle" aria-expanded={isOpen} onClick={() => page.panels.toggleRule(place)}>
+            <ChevronIcon isTurned={!isOpen} />
+            <span>{rule.name}</span>
+            <span className="rule-count">{countOf(rule.count, 'violation')}</span>
+          </button>
+        </h2>
+        <p>{rule.description}</p>
+      </div>
+      <button className="ghost-button" disabled={isOff} onClick={() => void page.fixRule(rule)}>
+        Fix all
+      </button>
+    </div>
+  )
+}
+
+export function RuleView({ panel, rule, isOff }: { panel: ReportPanel; rule: ReportRuleData; isOff: boolean }) {
+  const place = `${rule.fidelity}/${rule.name}`
+  const isOpen = !panel.closedRules.includes(place)
+  return (
+    <section className="report-rule">
+      <RuleHeadView rule={rule} place={place} isOpen={isOpen} isOff={isOff} />
+      {isOpen ? rule.violations.map((violation, index) => <ViolationView key={`${violation.location}-${violation.line}-${index}`} panel={panel} rule={rule} violation={violation} isOff={isOff} />) : null}
+    </section>
+  )
+}

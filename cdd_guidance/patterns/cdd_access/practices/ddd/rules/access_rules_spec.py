@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from expects import equal, expect, have_key
+from expects import contain, equal, expect, have_key
 from mamba import before, context, description, it
 
 from harness.graph.graph import Graph
@@ -82,6 +82,38 @@ with description("the cdd_access pattern rules"):
 
         with it("should run the e2e rule through the same graph"):
             expect(self.found).to(have_key("e2e-runs-the-whole-stack"))
+
+    with context("with a CDD-backed aggregate, which has no domain class of its own"):
+        with before.all:
+            self.found = _violations({
+                "src/kanban/ticket/ticket-routes.ts": "router.post('/x', async (req, res) => { res.json(req.body.title) })\n",
+                "src/kanban/ticket/ticket-node.ts": _REPAIRED_NODE,
+                "tests/kanban/x/helper.ts": "export class ExampleRepository {}\n",
+            })
+
+        with it("should still run the LERN rules on its folder"):
+            expect(self.found).to(have_key("posted-body-parsed-in-node"))
+
+        with it("should leave test folders out of the aggregates"):
+            expect(" ".join(sum(self.found.values(), []))).not_to(contain("Module 'x'"))
+
+    with context("with an API path, which is the server's address and not a browser page"):
+        with before.all:
+            self.found = _violations({
+                "src/kanban/ticket/ticket-routes.ts": "routes.get('/tickets', answer(() => ticket.list()))\n",
+                "src/kanban/ticket/ticket-node.ts": _REPAIRED_NODE,
+                "src/kanban/ticket/ticket-client.tsx": "export class TicketClient { load() { return this.api.get<Ticket>('/tickets') } }\n",
+            })
+
+        with it("should not ask for it in a paths module"):
+            expect(self.found).not_to(have_key("one-home-for-web-paths"))
+
+    with context("with a connection that starts a program by its file name"):
+        with before.all:
+            self.found = _violations({"src/cdd/cdd-connection-node.ts": "const PYTHON = join('.venv', 'python.exe')\n"})
+
+        with it("should not read the file name as a tool"):
+            expect(self.found).not_to(have_key("connection-only-carries"))
 
     with context("with an application that follows them"):
         with before.all:

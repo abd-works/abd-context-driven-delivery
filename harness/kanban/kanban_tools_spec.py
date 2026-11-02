@@ -1,6 +1,6 @@
 """The session board as tools an agent calls (cdd MCP), through the MCP server, organised by story.
 
-Each signature here has a test of the same name in `pane/hooks/register.test.tsx`."""
+A behavior the board app shares across its tiers keeps its sentence here, in `app/tests/kanban/**/*.spec.shared.ts`."""
 import json
 import os
 import re
@@ -16,6 +16,7 @@ from harness.installation.installer import Installer
 
 Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
+from harness.kanban.data import BacklogItemData, ColumnData, ReportRuleData, TicketData, ViolationData, WorkspaceData  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Session  # noqa: E402
 
@@ -200,17 +201,13 @@ with description("the board tools") as self:
                     source = report["rules"][0]["violations"][0]["source"]
                     expect((source[0], source[-1])).to(equal(({"number": 10, "text": "line 10"}, {"number": 16, "text": "line 16"})))
 
-            with it("should return exactly the fields ViolationJson names"):
-                contract = (Path(__file__).parent / "pane" / "types" / "index.d.ts").read_text(encoding="utf-8")
-                declared = contract[contract.index("export type ViolationJson"):].split("\n")[0]
+            with it("should return exactly the fields ViolationData names"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
-                expect(set(report["rules"][0]["violations"][0])).to(equal(set(re.findall(r"(\w+):", declared))))
+                expect(set(report["rules"][0]["violations"][0])).to(equal(set(ViolationData.__annotations__)))
 
-            with it("should return exactly the fields ReportRuleJson names"):
-                contract = (Path(__file__).parent / "pane" / "types" / "index.d.ts").read_text(encoding="utf-8")
-                declared = contract[contract.index("export type ReportRuleJson"):].split("\n")[0]
+            with it("should return exactly the fields ReportRuleData names"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
-                expect(set(report["rules"][0])).to(equal(set(re.findall(r"(\w+):", declared))))
+                expect(set(report["rules"][0])).to(equal(set(ReportRuleData.__annotations__)))
 
             with it("should count the violations of each rule"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
@@ -695,72 +692,31 @@ with description("the board tools") as self:
             schema = self.project.server.tools["ticket.move_next"].callable
             expect(list(__import__("inspect").signature(schema).parameters)).to(equal(["ticket"]))
 
-    # The contract in pane/types/index.d.ts is the only agreement between the two languages.
-    with context("whose JSON is compared with the mod's contract"):
+    # The shapes in data.py are the only agreement between the two languages: the language adapter is written from them.
+    with context("whose JSON is compared with the shapes in data.py"):
         with before.each:
             self.project.ticket("pet-visits", title="Pet visits")
             self.project.backlog_item("returns.md", "Returns and refunds")
-            self.contract = (Path(__file__).parent / "pane" / "types" / "index.d.ts").read_text(encoding="utf-8")
 
-        with it("should return exactly the fields TicketJson names"):
-            declared = self.contract[self.contract.index("export type TicketJson = {"):].split("\n}")[0]
-            expect(set(self.project.ticket_json("pet-visits"))).to(equal(set(re.findall(r"^  (\w+)\??:", declared, re.M))))
+        with it("should return exactly the fields TicketData names"):
+            expect(set(self.project.ticket_json("pet-visits"))).to(equal(set(TicketData.__annotations__)))
 
-        with it("should return exactly the fields WorkspaceJson names"):
+        with it("should return exactly the fields WorkspaceData names"):
             subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-            declared = self.contract[self.contract.index("export type WorkspaceJson"):].split("\n")[0]
             workspace = self.project.call("ticket.workspace", ticket="pet-visits")
-            expect(set(workspace)).to(equal(set(re.findall(r"(\w+):", declared))))
+            expect(set(workspace)).to(equal(set(WorkspaceData.__annotations__)))
 
-        with it("should return exactly the fields BacklogItemJson names"):
-            declared = self.contract[self.contract.index("export type BacklogItemJson"):].split("\n")[0]
-            expect(set(self.project.column("Backlog")["items"][0])).to(equal(set(re.findall(r"(\w+): string", declared))))
+        with it("should return exactly the fields BacklogItemData names"):
+            expect(set(self.project.column("Backlog")["items"][0])).to(equal(set(BacklogItemData.__annotations__)))
 
-        with it("should return only the fields ColumnJson names on a stage"):
-            declared = self.contract[self.contract.index("export type ColumnJson = {"):].split("\n}")[0]
-            expect(set(self.project.column("Discovery")) - set(re.findall(r"^  (\w+)\??:", declared, re.M))).to(equal(set()))
+        with it("should return only the fields ColumnData names on a stage"):
+            expect(set(self.project.column("Discovery")) - set(ColumnData.__annotations__)).to(equal(set()))
 
-    with context("whose signatures are compared with the plugin tests"):
-        with it("should give every tool behaviour the same signature in the plugin tests"):
+    with context("whose signatures are compared with the board app's shared behaviors"):
+        with it("should state every shared behavior here under the same sentence"):
             spec = Path(__file__).read_text(encoding="utf-8")
-            plugin = (Path(__file__).parent / "pane" / "hooks" / "register.test.tsx").read_text(encoding="utf-8").replace(chr(92) + "'", "'")
             signatures = set(re.findall(r'with it\("(should [^"]+)"\)', spec))
-            front_end = set(re.findall(r"test\('(should .+?)', async", plugin))
-            shared_only_in_python = {
-                "should give every tool behaviour the same signature in the plugin tests",
-                "should give every surface example the same signature in the plugin tests",
-                "should return exactly the fields TicketJson names",
-                "should return exactly the fields BacklogItemJson names",
-                "should return exactly the fields WorkspaceJson names",
-                "should list a rule two fidelities share once",
-                "should list only the files the ticket's branch changed",
-                "should leave the branch checked out as it was",
-                "should commit nothing on a branch that is not checked out",
-                "should name no fidelity on a practice's help",
-                "should give the folder of the reports for every fidelity",
-                "should say the ticket being left is on its branch",
-                "should return only the fields ColumnJson names on a stage",
-                "should return exactly the fields ViolationJson names",
-                "should return exactly the fields ReportRuleJson names",
-                "should leave a rule the practice does not describe without text",
-                "should name each tool after its object",
-                "should take the ticket's name on every ticket tool that acts on one",
-                "should leave the board read out of the session log",
-                "should save the choice to the ticket's session.json",
-                "should save that folder as the session's workpath",
-                "should leave the session working on the repository",
-                "should write the title and text to one markdown file",
-                "should say a ticket has no branch yet",
-                "should count the violations of each rule",
-                "should leave out the violations of other practices in the saved graph",
-                "should say the report has its saved graph",
-                "should still return the report's text",
-                "should leave the current session as it is",
-            }
-            expect(sorted(signatures - shared_only_in_python - front_end)).to(equal([]))
-
-        with it("should give every surface example the same signature in the plugin tests"):
-            surface = (Path(__file__).parent / "kanban_surface_heavy_spec.py").read_text(encoding="utf-8")
-            plugin = (Path(__file__).parent / "pane" / "hooks" / "register.test.tsx").read_text(encoding="utf-8").replace(chr(92) + "'", "'")
-            front_end = set(re.findall(r"test\('(should .+?)', async", plugin))
-            expect(sorted(set(re.findall(r'with it\("(should [^"]+)"\)', surface)) - front_end)).to(equal([]))
+            shared_files = (Path(__file__).parent / "app" / "tests" / "kanban").rglob("*.spec.shared.ts")
+            shared = {sentence for path in shared_files for sentence in re.findall(r"\bit\('(should .+?)',", path.read_text(encoding="utf-8"))}
+            only_on_the_page = {"should leave a stage holding fewer tickets than its limit within it"}
+            expect(sorted(shared - signatures - only_on_the_page)).to(equal([]))

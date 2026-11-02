@@ -9,6 +9,12 @@
 import { playwrightTier } from 'test-utils/behavior-test/behavior-playwright'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
 import { {Domain}PageDriver } from './{snake}.page-driver'
-import { {snake}Behavior } from './{snake}.spec.shared'
+import { {camel}Behavior } from './{snake}.spec.shared'
 
-itBehavesLike({snake}Behavior, playwrightTier(page => new {Domain}PageDriver(page)))
+itBehavesLike(
+  {camel}Behavior,
+  playwrightTier(async page => {
+    await page.route('**/api/**', route => route.fulfill({ json: {exampleAnswer} }))
+    return {Domain}PageDriver.fromPage(page)
+  }),
+)

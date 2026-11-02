@@ -8,6 +8,7 @@
     "start": "tsx packages/session-board/serve.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:server": "vitest run tests/",
     "test:surface": "playwright test"
   },
   "dependencies": {

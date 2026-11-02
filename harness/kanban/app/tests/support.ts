@@ -35,9 +35,9 @@ export class FakeChat {
   private readonly request: APIRequestContext
   private timer: ReturnType<typeof setInterval> | undefined
 
-  constructor(request: APIRequestContext, id: string) {
+  constructor(request: APIRequestContext, chat: string) {
     this.request = request
-    this.id = id
+    this.id = chat
   }
 
   private async poll(): Promise<void> {

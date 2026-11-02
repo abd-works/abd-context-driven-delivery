@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { {Domain}Node } from '@src/{boundedContext}/{aggregate}/{aggregate}-node'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
-import { {snake}Behavior, type {Domain}Driver } from './{snake}.spec.shared'
+import { {camel}Behavior, type {Domain}Driver } from './{snake}.spec.shared'
 
 class {Domain}NodeDriver implements {Domain}Driver {
   async {operation}({identity}: string): Promise<void> {
@@ -22,4 +22,11 @@ class {Domain}NodeDriver implements {Domain}Driver {
   }
 }
 
-itBehavesLike({snake}Behavior, { describe, it, before: beforeEach, expect, driver: () => new {Domain}NodeDriver() })
+let driver: {Domain}NodeDriver
+
+// One driver for each behavior, so one that keeps what an operation answered still has it when the `it` reads it.
+beforeEach(() => {
+  driver = new {Domain}NodeDriver()
+})
+
+itBehavesLike({camel}Behavior, { describe, it, before: beforeEach, expect, driver: () => driver })

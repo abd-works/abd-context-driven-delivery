@@ -6,9 +6,14 @@
  * file: tests/{epicSlug}/{subEpicSlug}/{snake}.behavior.e2e.ts
  * ```
  */
+import { test } from '@playwright/test'
+
 import { playwrightTier } from 'test-utils/behavior-test/behavior-playwright'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
 import { {Domain}PageDriver } from './{snake}.page-driver'
-import { {snake}Behavior } from './{snake}.spec.shared'
+import { {camel}Behavior } from './{snake}.spec.shared'
 
-itBehavesLike({snake}Behavior, playwrightTier(page => new {Domain}PageDriver(page)))
+// A real press really changes the store, so each behavior starts from the same throwaway data.
+test.beforeEach(() => {resetThrowawayStore}())
+
+itBehavesLike({camel}Behavior, playwrightTier(page => {Domain}PageDriver.fromPage(page)))
