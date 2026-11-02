@@ -1,0 +1,145 @@
+import { atom, read, update } from 'claude-code'
+import type { EngineInterface } from 'claude-code'
+
+import type { HealthViewJson, InstallJson, ServerHealthJson, ServerHealthReportJson } from '../../types'
+
+export const SERVER = 'cdd'
+export const REPORT_TOOL = 'server-health.report'
+export const RECONNECT_TRIES = 3
+const TOOL_PREFIX = `mcp__${SERVER}__`
+const RECONNECT_WAIT_MS = 2000
+const INSTALL_TIMEOUT_MS = 600000
+const FIRST_LOOK_WAIT_MS = 5000
+const ERROR_LINES_SHOWN = 1
+
+const serverHealth = atom({ plugin: 'cdd-board', key: 'serverHealth' } as const, {
+  connection: 'reconnecting',
+  report: null,
+  toolCount: 0,
+  problem: null,
+  attempt: 0,
+  isRestored: false,
+} as ServerHealthJson)
+const healthView = atom({ plugin: 'cdd-board', key: 'healthView' } as const, { isPinned: false, areDetailsOpen: false } as HealthViewJson)
+const install = atom({ plugin: 'cdd-board', key: 'install' } as const, { state: 'idle', error: null } as InstallJson)
+
+type Answer = Pick<ServerHealthJson, 'connection' | 'report' | 'problem'>
+
+export class ServerHealthClient {
+  constructor(private readonly json: ServerHealthReportJson | null) {}
+
+  get graphAppPort(): number | null {
+    return this.json?.graph_app_port ?? null
+  }
+
+  get isHookServerRunning(): boolean {
+    return this.json?.is_hook_server_running ?? false
+  }
+}
+
+export function currentServerHealth($: EngineInterface) {
+  return read($, serverHealth)
+}
+
+export function currentHealthView($: EngineInterface) {
+  return read($, healthView)
+}
+
+export function currentInstall($: EngineInterface) {
+  return read($, install)
+}
+
+// The server may still be connecting as the session starts, so the first look waits a moment.
+export function refreshHealthSoon($: EngineInterface): void {
+  $.clock.after(FIRST_LOOK_WAIT_MS, () => void refreshHealth($))
+}
+
+export async function refreshHealth($: EngineInterface): Promise<void> {
+  const { connection, attempt } = await read($, serverHealth)
+  if (connection === 'reconnecting' && attempt > 0) return
+  await recordAnswer($, await askServer($))
+}
+
+// A plugin can connect only servers its own manifest lists, and cdd is installed at user level, so this
+// asks cdd again and leaves Claude Code to dial it, which it does on a call to a server not yet connected.
+export async function reconnect($: EngineInterface, onRestored: () => Promise<void>, attempt = 1): Promise<void> {
+  await update($, serverHealth, health => ({ ...health, connection: 'reconnecting', attempt }))
+  const answer = await askServer($)
+  if (answer.connection === 'disconnected' && attempt < RECONNECT_TRIES) {
+    $.clock.after(RECONNECT_WAIT_MS, () => void reconnect($, onRestored, attempt + 1))
+    return
+  }
+  await recordAnswer($, answer)
+  if (answer.connection === 'connected') await onRestored()
+}
+
+export async function togglePin($: EngineInterface): Promise<void> {
+  await update($, healthView, view => ({ isPinned: !view.isPinned, areDetailsOpen: false }))
+}
+
+export async function openDetails($: EngineInterface): Promise<void> {
+  await update($, healthView, () => ({ isPinned: true, areDetailsOpen: true }))
+}
+
+export async function hideDetails($: EngineInterface): Promise<void> {
+  await update($, healthView, view => ({ ...view, areDetailsOpen: false }))
+}
+
+// The MCP host may be what is broken, so the install runs from here and not through a cdd tool.
+export async function runInstall($: EngineInterface): Promise<void> {
+  await update($, install, () => ({ state: 'running', error: null }))
+  try {
+    const { python, checkout } = await installTarget($)
+    const run = await $.process.run([python, 'scripts/install.py', '--ide', 'Claude'], { cwd: checkout, timeoutMs: INSTALL_TIMEOUT_MS })
+    await update($, install, () => (run.exitCode === 0 ? { state: 'installed', error: null } : { state: 'failed', error: lastLines(run.stderr) }))
+  } catch (failure) {
+    await update($, install, () => ({ state: 'failed', error: String(failure) }))
+  }
+}
+
+async function askServer($: EngineInterface): Promise<Answer> {
+  let result
+  try {
+    result = await $.mcp.call(SERVER, REPORT_TOOL, {})
+  } catch (failure) {
+    return { connection: 'disconnected', report: null, problem: String(failure) }
+  }
+  const text = result.content[0]?.text
+  const report = result.isError ? null : reportFrom(text)
+  if (report === null) return { connection: 'tools-missing', report: null, problem: text ?? `${REPORT_TOOL} sent back nothing` }
+  return { connection: 'connected', report, problem: null }
+}
+
+// A server from another checkout has no such tool, and answers in words: KeyError: 'server-health.report'.
+function reportFrom(text: string | undefined): ServerHealthReportJson | null {
+  if (text === undefined) return null
+  try {
+    return JSON.parse(text) as ServerHealthReportJson
+  } catch {
+    return null
+  }
+}
+
+async function recordAnswer($: EngineInterface, answer: Answer): Promise<void> {
+  const tools = await $.tool.list()
+  const toolCount = tools.filter(tool => tool.name.startsWith(TOOL_PREFIX)).length
+  await update($, serverHealth, health => {
+    const wasLost = health.connection === 'disconnected' || (health.connection === 'reconnecting' && health.attempt > 0)
+    return { ...answer, toolCount, attempt: 0, isRestored: answer.connection === 'connected' && (health.isRestored || wasLost) }
+  })
+}
+
+// The python that runs cdd has what the install needs. The session's own checkout comes first, because
+// when tools are missing, cdd is running from a different checkout.
+async function installTarget($: EngineInterface): Promise<{ python: string; checkout: string }> {
+  const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
+  const config = JSON.parse(await $.fs.read(`${home}/.claude.json`)) as { mcpServers?: Record<string, { command: string; args: string[] }> }
+  const entry = config.mcpServers?.[SERVER]
+  const cwd = await $.session.cwd()
+  const python = entry?.command ?? 'python'
+  if (await $.fs.exists(`${cwd}/scripts/install.py`)) return { python, checkout: cwd }
+  const host = entry?.args.find(arg => arg.endsWith('start_host.py'))
+  return { python, checkout: host ? host.replace(/[\\/]harness[\\/]mcp[\\/].*$/, '') : cwd }
+}
+
+const lastLines = (text: string): string => text.trim().split('\n').slice(-ERROR_LINES_SHOWN).join('\n')

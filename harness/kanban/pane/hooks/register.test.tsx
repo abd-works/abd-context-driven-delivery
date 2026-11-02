@@ -24,6 +24,7 @@ const BAND = {
   props: { hasSurvey: false, isWorking: false, maxRows: 3, bodyColumns: 120 },
 } as const
 
+const CDD_TOOLS = Array.from({ length: 116 }, (_, index) => ({ name: `mcp__cdd__tool_${index}`, description: '', mcp: true }))
 const DONE_ACTIONS = { generate: 'done', validate: 'done', review: 'done' }
 const NO_ACTIONS = { generate: 'to_do', validate: 'to_do', review: 'to_do' }
 
@@ -179,6 +180,9 @@ const engine = (on: any, board: unknown = boardOf()): Engine => {
     return { value: { text: '' } }
   })
   on('clock.now', () => ({ value: Date.parse('2026-10-31T05:04:00Z') }))
+  // A timer that never comes due: a test ends before one would fire.
+  on('clock.after', () => new Promise(() => undefined))
+  on('tool.list', () => ({ value: CDD_TOOLS }))
   on('mcp.call', (_: unknown, e: { tool: string; args: unknown }) => {
     stub.calls.push({ tool: e.tool, args: e.args })
     if (stub.serverLost) throw new Error('no connected MCP tool on a server named "cdd"')
@@ -2472,4 +2476,175 @@ test('should keep the sideways scrollbar on screen', async ($, on) => {
 test('should draw a card at the canvas width', async ($, on) => {
   const { ui } = await openBoard($, on)
   expect((await ui.find({ key: 'board-rows' }))?.props?.width).toBe(222)
+})
+
+// (E) Server Health Band
+
+const HEALTHY = { graph_app_port: 5173, is_hook_server_running: false }
+
+const healthEngine = (on: any) => {
+  const stub = engine(on)
+  stub.answers['server-health.report'] = HEALTHY
+  return stub
+}
+
+const mountHealthBand = async ($: any) => {
+  await $.prompt.submit({ text: 'look' })
+  return $.ui.mount({ ...BAND, surface: 'desktop', props: { ...BAND.props, scroll: { offset: 0, bodyRows: 3 }, view: {} } })
+}
+
+const expandedOf = async (ui: any) => {
+  const band = await ui.find({ key: 'server-health' })
+  return band?.children?.[0]
+}
+
+const pinned = async (ui: any) => {
+  await ui.press({ key: 'health-icon' })
+  return ui
+}
+
+test('should report the port the graph app answers on', async ($, on) => {
+  healthEngine(on)
+  await start($)
+  const ui = await pinned(await mountHealthBand($))
+
+  expect((await findText(ui, 'running :5173'))?.text).toBe('running :5173')
+  await ui.unmount()
+})
+
+test('should report no graph app port', async ($, on) => {
+  const stub = healthEngine(on)
+  stub.answers['server-health.report'] = { ...HEALTHY, graph_app_port: null }
+  await start($)
+  const ui = await pinned(await mountHealthBand($))
+
+  expect((await findText(ui, 'not running'))?.text).toBe('not running')
+  await ui.unmount()
+})
+
+test('should report the hook server is not running', async ($, on) => {
+  healthEngine(on)
+  await start($)
+  const ui = await pinned(await mountHealthBand($))
+
+  expect((await findText(ui, 'not installed'))?.text).toBe('not installed')
+  await ui.unmount()
+})
+
+test('connected draws one check mark until it is pinned', async ($, on) => {
+  healthEngine(on)
+  await start($)
+  const ui = await mountHealthBand($)
+
+  expect((await expandedOf(ui))?.props?.display).toBe('none')
+  await ui.unmount()
+})
+
+test('the expanded band reveals itself on hover', async ($, on) => {
+  healthEngine(on)
+  await start($)
+  const ui = await mountHealthBand($)
+
+  expect((await expandedOf(ui))?.hover?.display).toBe('flex')
+  await ui.unmount()
+})
+
+test('connected shows all five parts with the count of loaded tools', async ($, on) => {
+  healthEngine(on)
+  await start($)
+  const ui = await pinned(await mountHealthBand($))
+
+  expect((await findText(ui, '116 loaded'))?.text).toBe('116 loaded')
+  await ui.unmount()
+})
+
+test('a second press on the icon collapses the band', async ($, on) => {
+  healthEngine(on)
+  await start($)
+  const ui = await pinned(await mountHealthBand($))
+
+  await ui.press({ key: 'health-icon' })
+
+  expect((await expandedOf(ui))?.props?.display).toBe('none')
+  await ui.unmount()
+})
+
+test('a lost server shows Disconnected', async ($, on) => {
+  const stub = healthEngine(on)
+  await start($)
+  stub.serverLost = true
+  const ui = await pinned(await mountHealthBand($))
+
+  expect((await findText(ui, 'Disconnected'))?.text).toBe('Disconnected')
+  await ui.unmount()
+})
+
+test('a server from another checkout shows Tools missing with the count', async ($, on) => {
+  const stub = healthEngine(on)
+  stub.rawText['server-health.report'] = "KeyError: 'server-health.report'"
+  await start($)
+  const ui = await pinned(await mountHealthBand($))
+
+  expect((await findText(ui, /116 loaded, server-health.report/))?.text).toBe('116 loaded, server-health.report is not one of them.')
+  await ui.unmount()
+})
+
+test('Reconnect that succeeds says the MCP host is back', async ($, on) => {
+  const stub = healthEngine(on)
+  await start($)
+  stub.serverLost = true
+  const ui = await pinned(await mountHealthBand($))
+  stub.serverLost = false
+
+  await ui.press({ key: 'health-reconnect' })
+
+  expect((await findText(ui, /MCP host is back/))?.text).toBe('MCP host is back. Board refreshed.')
+  await ui.unmount()
+})
+
+test('Reconnect that succeeds reads the board again', async ($, on) => {
+  const stub = healthEngine(on)
+  await start($)
+  stub.serverLost = true
+  const ui = await pinned(await mountHealthBand($))
+  stub.serverLost = false
+  stub.calls.length = 0
+
+  await ui.press({ key: 'health-reconnect' })
+
+  expect(stub.calls.some(call => call.tool === 'board.show')).toBe(true)
+  await ui.unmount()
+})
+
+test('Reconnect on a server still lost shows the try it is on', async ($, on) => {
+  const stub = healthEngine(on)
+  await start($)
+  stub.serverLost = true
+  const ui = await pinned(await mountHealthBand($))
+
+  await ui.press({ key: 'health-reconnect' })
+
+  expect((await findText(ui, /Try 1 of 3/))?.text).toBe('Waiting for cdd to answer. Try 1 of 3.')
+  await ui.unmount()
+})
+
+test('Details lists the failing tool, the error and the fix', async ($, on) => {
+  const stub = healthEngine(on)
+  await start($)
+  stub.serverLost = true
+  const ui = await pinned(await mountHealthBand($))
+
+  await ui.press({ key: 'health-details' })
+
+  expect((await findText(ui, /Press Reconnect/))?.text).toBe('Press Reconnect. If that fails, press Run install.')
+  await ui.unmount()
+})
+
+test('the health band yields to a survey', async ($, on) => {
+  healthEngine(on)
+  await start($)
+  await $.prompt.submit({ text: 'look' })
+
+  // Beneath the plugins nothing draws, so a band that passed the survey through finds nothing to mount.
+  await expect($.ui.mount({ ...BAND, surface: 'desktop', props: { ...BAND.props, hasSurvey: true } })).rejects.toThrow('no implementation for ui.render')
 })

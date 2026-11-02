@@ -1,4 +1,19 @@
 // These types are exactly what the Python to_json() operations and MCP tools return, plus what the pane keeps for itself.
+export type ServerHealthReportJson = { graph_app_port: number | null; is_hook_server_running: boolean }
+
+export type ServerHealthJson = {
+  connection: 'connected' | 'reconnecting' | 'disconnected' | 'tools-missing'
+  report: ServerHealthReportJson | null
+  toolCount: number
+  problem: string | null
+  attempt: number
+  isRestored: boolean
+}
+
+export type HealthViewJson = { isPinned: boolean; areDetailsOpen: boolean }
+
+export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
+
 export type ActionStatesJson = { generate: string; validate: string; review: string }
 
 export type TicketJson = {
@@ -147,6 +162,9 @@ declare module 'claude-code' {
       sidePanels: Shaped<SidePanelJson[]>
       panelWidths: Record<string, number>
       serverFailure: string | null
+      serverHealth: ServerHealthJson
+      healthView: HealthViewJson
+      install: InstallJson
       cardOffset: number
     }
   }
