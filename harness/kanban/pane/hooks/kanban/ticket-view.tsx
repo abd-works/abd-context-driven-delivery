@@ -133,7 +133,7 @@ function CardButtonView(view: ViewContext, key: string, label: string, onPress: 
   const { Box, Button } = view.elements
   if (!view.hasPictures) return ActionButtonView(view, key, label, onPress)
   return (
-    <Box key={`box-${key}`} borderStyle="single" borderColor={BRAND.border} hover={{ backgroundColor: BRAND.raised }} paddingX={1} flexShrink={0}>
+    <Box key={`box-${key}`} borderStyle="single" borderColor={BRAND.border} hover={{ backgroundColor: BRAND.raised }} flexShrink={0}>
       <Button key={key} plain label={label} dimColor={!onPress} onPress={onPress ?? (() => undefined)} />
     </Box>
   )
@@ -145,7 +145,7 @@ function CardControlsView($: EngineInterface, view: ViewContext, ticket: TicketC
   const isActive = ticket.name === view.board.active
   const locked = isLocked(view, ticket.name)
   return (
-    <Box key={`${prefix}moves-${place}`} flexDirection="row" flexWrap="wrap" justifyContent="space-between" flexShrink={0} columnGap={1}>
+    <Box key={`${prefix}moves-${place}`} flexDirection="row" justifyContent="space-between" flexShrink={0}>
       {CardButtonView(view, `${prefix}previous-${place}`, '←', locked ? null : () => movePrevious($, ticket.name))}
       {CardButtonView(view, `${prefix}activate-${place}`, isActive ? 'Close' : 'Activate', ticket.isClosed ? null : () => openActivation($, ticket, isActive))}
       {CardButtonView(view, `${prefix}next-${place}`, '→', ticket.canMoveNext && !locked ? () => moveNext($, ticket.name) : null)}

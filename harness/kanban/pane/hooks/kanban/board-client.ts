@@ -247,7 +247,7 @@ export async function scrollRegion($: EngineInterface, row: number, by: number, 
   const layout = await read($, splitLayout)
   const shown = await read($, board)
   if (!shown) return
-  const region = row < HEADER_ROWS + regionRowsOf(bodyRows, layout).boardRows ? 'board' : 'details'
+  const region = layout.expanded ?? (row < HEADER_ROWS + regionRowsOf(bodyRows, layout).boardRows ? 'board' : 'details')
   const limit = scrollLimitsOf(shown, bodyRows, layout)[region]
   await update($, regionOffsets, offsets => ({ ...offsets, [region]: Math.min(Math.max(offsets[region] + by, 0), limit) }))
 }

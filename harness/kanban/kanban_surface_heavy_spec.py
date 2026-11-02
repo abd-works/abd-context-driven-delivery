@@ -6,7 +6,7 @@ specs press only what changes the view; the dialog is cancelled, because it woul
 import time
 
 from expects import be_above_or_equal, be_below_or_equal, be_empty, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 from harness.kanban.desktop_pane import DesktopPane
 
@@ -14,6 +14,10 @@ _SETTLE_SECONDS = 2
 _PANE_FOOTER_PIXELS = 160
 _SAME_LINE_PIXELS = 20
 _ACCENT = "#E5531A"
+_BAR_PIXELS = 50
+_BAR_WIDTH_PIXELS = 500
+_CARD_PIXELS = 300
+_MOVE_BUTTONS = {"←", "Activate", "Close", "→"}
 
 
 def _settled_press(pane, element):
@@ -48,6 +52,25 @@ with description("the session board on the desktop surface"):
             ]
             expect(overflowing).to(be_empty)
 
+        with it("should keep a card's move buttons on one line"):
+            wrapped = [
+                f"{move.name} at {move.top}, card's first move at {moves[0].top}"
+                for mark in self.pane.card_marks()
+                for moves in [[control for control in self.pane.controls_of_card(mark) if control.name in _MOVE_BUTTONS]]
+                for move in moves
+                if abs(move.top - moves[0].top) > _SAME_LINE_PIXELS
+            ]
+            expect(wrapped).to(be_empty)
+
+        with it("should keep the sideways scrollbar on screen"):
+            bars = [element for element in self.elements if element.kind == "Group" and element.height < _BAR_PIXELS and element.width > _BAR_WIDTH_PIXELS]
+            expect(max(bar.bottom for bar in bars)).to(be_below_or_equal(self.pane.window_bottom))
+
+        with it("should draw a card at the canvas width"):
+            mark = self.pane.card_marks()[0]
+            title = max((group.left for group in self.elements if group.kind == "Group" and group.left < mark.left and group.top <= mark.top + _BAR_PIXELS <= group.bottom), default=mark.left)
+            expect(mark.right - title).to(be_above_or_equal(_CARD_PIXELS))
+
     with context("with a card opened"):
         with before.all:
             self.mark = _opened_card(self.pane)
@@ -64,8 +87,11 @@ with description("the session board on the desktop surface"):
             buttons = [button for button in self.pane.named("list") if not button.is_offscreen]
             _settled_press(self.pane, buttons[-1])
 
+        with after.all:
+            _settled_press(self.pane, self.pane.named("×")[-1])
+
         with it("should open the files list beside the board"):
-            expect(self.pane.named("drawio") + self.pane.named("markdown") + self.pane.named("python")).not_to(be_empty)
+            expect([element for element in self.pane.elements() if element.kind == "Button" and "/" in element.name]).not_to(be_empty)
 
     with context("with the activation dialog open"):
         with before.all:

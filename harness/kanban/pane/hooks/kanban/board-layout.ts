@@ -10,7 +10,8 @@ const BOARD_SHARE = 0.6
 const MINIMUM_REGION_ROWS = 6
 
 // The canvas's column-grid never goes below 1488px, about this many cells, and scrolls sideways past that.
-const BOARD_MINIMUM_COLUMNS = 167
+// The canvas's 1488 pixels at the 6.7 pixels a column measures on the desktop surface.
+const BOARD_MINIMUM_COLUMNS = 222
 export const BOARD_SIDE_COLUMNS = 2
 const LIST_GAP_COLUMNS = 3
 
@@ -41,8 +42,12 @@ export function columnLeftOf(columns: ColumnJson[], column: ColumnJson, boardCol
   return before.reduce((left, shown) => left + columnWidthOf(shown, boardColumns, columns.length) + COLUMN_GAP, BOARD_SIDE_COLUMNS)
 }
 
+const SCROLLBAR_ROWS = 1
+
 export function regionRowsOf(bodyRows: number, layout: SplitLayoutJson): { boardRows: number; detailsRows: number } {
   const room = bodyRows - HEADER_ROWS
+  if (layout.expanded === 'board') return { boardRows: room - SCROLLBAR_ROWS, detailsRows: 0 }
+  if (layout.expanded === 'details') return { boardRows: 0, detailsRows: room - SCROLLBAR_ROWS }
   const largest = Math.max(room - MINIMUM_REGION_ROWS, MINIMUM_REGION_ROWS)
   const wanted = layout.boardRows ?? Math.round(room * BOARD_SHARE)
   const boardRows = Math.min(Math.max(wanted, MINIMUM_REGION_ROWS), largest)

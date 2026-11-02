@@ -1,6 +1,6 @@
 # Where the board pane differs from the canvas
 
-The canvas is the Board artifact at https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN. It is a web page, and the pane is a Claude Code mod drawn from the engine's element table (2.1.309). Everything not listed here matches the canvas, as far as the two have been compared: canvas lines 140-250, 325-440, 520-566, and 740-799 have been read only in part.
+The canvas is the Board artifact at https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN. It is a web page, and the pane is a Claude Code mod drawn from the engine's element table (2.1.309). This file lists what the engine cannot do. What it can do but the pane does not yet is in `.sessions/session-board/canvas-comparison.md`, measured against the running prototype.
 
 ## The engine cannot draw it
 
@@ -15,7 +15,7 @@ The canvas is the Board artifact at https://claude.ai/artifact/LGLk189R4aZ14bgwc
 | Card shadow | None | A Box has no shadow |
 | Dim overlay behind the dialog | Terminal: none | The terminal reads six-digit colours only, so it has no see-through colour |
 | Letter spacing on headings | None | Text has no spacing prop |
-| Exact pixel sizes and font sizes | Named sizes: caption, footnote, body, heading, title | Text takes a named size and a Box sizes in columns and rows |
+| Exact pixel sizes and font sizes | Named sizes: caption, footnote, body, heading, title; a Box's width and height in columns and rows, its padding and gaps in the surface's named steps | Text takes a named size. On desktop a number across is `ch` and down is `lh`, and only the steps `xs` to `xl` come near the canvas's 6 to 14px |
 | Orange main buttons (Activate, Run, Fix, Satisfy) | An orange Box around a plain Button on every surface with pictures; the terminal's own primary button there | A Button takes no background and a surface draws a primary Button in its own colours |
 | Bordered small buttons | The surface's native button | A Button can be primary, secondary, or plain, and the surface draws it |
 | Greyed-out disabled controls | Dimmed and does nothing | A Button has no disabled state |

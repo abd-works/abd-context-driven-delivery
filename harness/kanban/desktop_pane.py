@@ -76,7 +76,7 @@ class DesktopPane:
         ]
 
     def press(self, element: PaneElement) -> None:
-        self._run("press", "-Name", element.name, "-X", str(element.left), "-Y", str(element.top))
+        self._run("press", "-X", str(element.left), "-Y", str(element.top))
 
     def colour_at(self, left: int, top: int) -> str:
         return self._run("colour", "-X", str(left), "-Y", str(top)).strip()

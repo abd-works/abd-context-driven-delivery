@@ -777,7 +777,7 @@ test('a drag on the bar under the board moves it sideways', async ($, on) => {
 
   await ui.pointer({ type: 'down', x: 100, y: 0, button: 'left', in: 'board-scrollbar' })
 
-  expect((await ui.find({ key: 'board-rows' }))?.props?.marginLeft).toBe(-47)
+  expect((await ui.find({ key: 'board-rows' }))?.props?.marginLeft).toBe(-102)
   await ui.unmount()
 })
 
@@ -792,16 +792,16 @@ test('an expanded card is ready to generate, with its formats and Run', async ($
   await ui.unmount()
 })
 
-test('the pane is at least as tall as the room it is given on every layout', async ($, on) => {
+test('the pane fills the room it is given on every layout', async ($, on) => {
   const { ui } = await openBoard($, on)
 
   expect((await ui.find({ key: 'pane' }))?.props?.minHeight).toBe(40)
   expect((await ui.find({ key: 'pane-row' }))?.props?.flexGrow).toBe(1)
   await ui.press({ key: 'expand-board' })
-  expect((await ui.find({ key: 'main' }))?.props?.minHeight).toBe(40)
+  expect((await ui.find({ key: 'main' }))?.props?.height).toBe(40)
   await ui.press({ key: 'expand-board' })
   await ui.press({ key: 'expand-details' })
-  expect((await ui.find({ key: 'main' }))?.props?.minHeight).toBe(40)
+  expect((await ui.find({ key: 'main' }))?.props?.height).toBe(40)
   await ui.unmount()
 })
 
@@ -835,7 +835,7 @@ test('the wheel stops at the end of a tall card', async ($, on) => {
   await ui.unmount()
 })
 
-test('a card that fits rises to fit and leaves the wheel to the board', async ($, on) => {
+test('should show the whole opened card', async ($, on) => {
   const { ui } = await openBoard($, on)
 
   await ui.press({ key: 'expand-Discovery/sign-up' })
@@ -846,12 +846,18 @@ test('a card that fits rises to fit and leaves the wheel to the board', async ($
   await ui.unmount()
 })
 
-test('a closed card keeps its content inside its edge', async ($, on) => {
+test('should keep a card\'s controls inside the card', async ($, on) => {
   const { ui } = await openBoard($, on)
 
   expect((await ui.find({ key: 'card-Specification/pet-visits' }))?.props).toMatchObject({ overflow: 'hidden', minWidth: 0 })
-  expect((await ui.find({ key: 'moves-Specification/pet-visits' }))?.props?.flexWrap).toBe('wrap')
   expect((await ui.find({ key: 'card-files-Specification/pet-visits' }))?.props?.flexWrap).toBe('wrap')
+  await ui.unmount()
+})
+
+test('should keep a card\'s move buttons on one line', async ($, on) => {
+  const { ui } = await openBoard($, on)
+
+  expect((await ui.find({ key: 'moves-Specification/pet-visits' }))?.props?.flexWrap).toBeUndefined()
   await ui.unmount()
 })
 
@@ -886,7 +892,7 @@ test('a panel opens again at the width it was dragged to', async ($, on) => {
   await ui.unmount()
 })
 
-test('a person opens a card by its mark and finds Run, on every surface', async ($, on) => {
+test('should offer the action list and Run on an opened card', async ($, on) => {
   const stub = engine(on)
   stub.answers['ticket.files'] = FILES
   await start($)
@@ -940,7 +946,7 @@ test('a main button is solid orange with dark text on a surface with pictures', 
   await ui.unmount()
 })
 
-test('Activate in the dialog is the orange button', async ($, on) => {
+test('should draw the primary action in the accent colour', async ($, on) => {
   const stub = engine(on)
   stub.answers['ticket.workspace'] = { has_branch: true, has_worktree: false, leaving_has_branch: true }
   await start($)
@@ -2441,4 +2447,29 @@ test('an earlier version\'s stored board is declined', async ($, on) => {
 
   expect((await ui.find({ type: 'Text' }))?.text).toBe('No board yet: is the cdd MCP server connected?')
   await ui.unmount()
+})
+
+test('should fill the pane\'s height', async ($, on) => {
+  engine(on, boardOf({ active: 'pet-visits' }))
+  await start($)
+  const ui = await mount($)
+  expect((await ui.find({ key: 'pane' }))?.props?.minHeight).toBe(PANE.props.scroll.bodyRows)
+})
+
+test('should open the files list beside the board', async ($, on) => {
+  const { ui } = await openFilesList($, on)
+  expect(await ui.find({ key: 'pane-row' })).toBeTruthy()
+  expect(await ui.find({ key: 'panel-expand-files' })).toBeTruthy()
+})
+
+test('should keep the sideways scrollbar on screen', async ($, on) => {
+  const { ui } = await openBoard($, on)
+  await ui.press({ key: 'expand-board' })
+  expect((await ui.find({ key: 'main' }))?.props?.height).toBe(PANE.props.scroll.bodyRows)
+  expect(await ui.find({ key: 'columns-right' })).toBeTruthy()
+})
+
+test('should draw a card at the canvas width', async ($, on) => {
+  const { ui } = await openBoard($, on)
+  expect((await ui.find({ key: 'board-rows' }))?.props?.width).toBe(222)
 })

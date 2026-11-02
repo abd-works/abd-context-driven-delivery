@@ -304,21 +304,18 @@ function SplitView($: EngineInterface, view: ViewContext) {
   const { bodyRows, layout, regionOffsets } = view
   const header = HeaderView($, view)
   const width = mainColumnsOf(view)
-  // Expanded, a region takes its full height and the pane's own scrolling reaches all of it.
-  if (layout.expanded === 'board') {
+  // Expanded, a region fills the pane above the sideways bar, so the bar stays on screen however tall the region is.
+  if (layout.expanded) {
+    const isBoard = layout.expanded === 'board'
+    const { boardRows, detailsRows } = regionRowsOf(bodyRows, layout)
     return (
-      <Box key="main" flexDirection="column" width={width} minHeight={bodyRows} overflow="hidden">
+      <Box key="main" flexDirection="column" width={width} height={bodyRows} overflow="hidden">
         {header}
-        {WideRowsView(view, 'board-rows', 0, ColumnsView($, view))}
-        {SideScrollView($, view)}
-      </Box>
-    )
-  }
-  if (layout.expanded === 'details') {
-    return (
-      <Box key="main" flexDirection="column" width={width} minHeight={bodyRows} overflow="hidden">
-        {header}
-        {WideRowsView(view, 'details-rows', 0, DetailView($, view))}
+        <Box key="top" flexDirection="column" height={isBoard ? boardRows : detailsRows} flexShrink={0} overflow="hidden">
+          {isBoard
+            ? WideRowsView(view, 'board-rows', regionOffsets.board, ColumnsView($, view))
+            : WideRowsView(view, 'details-rows', regionOffsets.details, DetailView($, view))}
+        </Box>
         {SideScrollView($, view)}
       </Box>
     )

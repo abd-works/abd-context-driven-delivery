@@ -728,6 +728,7 @@ with description("the board tools") as self:
             front_end = set(re.findall(r"test\('(should .+?)', async", plugin))
             shared_only_in_python = {
                 "should give every tool behaviour the same signature in the plugin tests",
+                "should give every surface example the same signature in the plugin tests",
                 "should return exactly the fields TicketJson names",
                 "should return exactly the fields BacklogItemJson names",
                 "should return exactly the fields WorkspaceJson names",
@@ -757,3 +758,9 @@ with description("the board tools") as self:
                 "should leave the current session as it is",
             }
             expect(sorted(signatures - shared_only_in_python - front_end)).to(equal([]))
+
+        with it("should give every surface example the same signature in the plugin tests"):
+            surface = (Path(__file__).parent / "kanban_surface_heavy_spec.py").read_text(encoding="utf-8")
+            plugin = (Path(__file__).parent / "pane" / "hooks" / "register.test.tsx").read_text(encoding="utf-8").replace(chr(92) + "'", "'")
+            front_end = set(re.findall(r"test\('(should .+?)', async", plugin))
+            expect(sorted(set(re.findall(r'with it\("(should [^"]+)"\)', surface)) - front_end)).to(equal([]))

@@ -156,12 +156,11 @@ export const register: Register = on => {
     return BandView($, $.ui.resolve(e), e.surface !== SURFACE_WITHOUT_PICTURES, active, () => fillShowViolations($, active), () => fillSatisfy($, active))
   })
 
-  // A region clips its rows, so the engine's window cannot reach them: the pane moves them itself. Expanded, or with a
-  // panel beside it, the tree is as tall as it needs and the engine's window moves it.
+  // A region clips its rows, so the engine's window cannot reach them: the pane moves them itself. With a panel beside
+  // it, the tree is as tall as it needs and the engine's window moves it.
   on('ui.scroll', { requestId: PANE }, async ($, e, next) => {
     if (await scrollCard($, e.by, e.bodyRows)) return {}
-    const layout = await currentSplitLayout($)
-    if (layout.expanded || (await currentPanels($)).length) return next(e)
+    if ((await currentPanels($)).length) return next(e)
     await scrollRegion($, e.pointer?.row ?? 0, e.by, e.bodyRows)
     return {}
   })
