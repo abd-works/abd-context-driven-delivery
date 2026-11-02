@@ -23,6 +23,7 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
 )
 from harness.installation.files import FileInstallation, command
+from harness.installation.language_adapter import LanguageAdapterInstallation
 from harness.hooks.hooks import Hook
 from harness.markdown import markdown
 @noCatalog
@@ -76,7 +77,7 @@ class Installer:
             "FidelityGuidance",
         }
     )
-    _DEPLOYED_CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook", "agent")
+    _DEPLOYED_CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook", "agent", "language-adapter")
     _GREEN_SURFACE_CHANGE = 0.10
     _YELLOW_SURFACE_CHANGE = 0.50
     _DIAGNOSTICS_LOG = "diagnostics.json"
@@ -121,6 +122,7 @@ class Installer:
         self.ensure_import_path()
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook: Any = None
+        self._language_adapters = LanguageAdapterInstallation(self.ide, self.path, repo=self.repo)
         self._installed_paths: list[str] = []
         self._deployed_toolsets: list[str] = []
         self.diagnosis: list[str] = []
@@ -326,6 +328,7 @@ class Installer:
         for tool in toolset.tools.values():
             for installation in self.installations_for(tool):
                 installation.install(tool)
+        self._language_adapters.record(toolset)
 
     @command(name="clean")
     @agent_tool
@@ -457,6 +460,7 @@ class Installer:
         self._reset_channels()
         self._install_all(toolsets)
         self._install_installer_toolset()
+        self._language_adapters.write_all()
         self._install_agents()
         self._install_standing_rules()
         self._remove_legacy_underscore_skills()
@@ -515,6 +519,8 @@ class Installer:
 
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
+        self._language_adapters = LanguageAdapterInstallation(self.ide, self.path, repo=self.repo)
+        self._bind_install_tracker(self._language_adapters)
 
     def _install_installer_toolset(self) -> None:
         toolset = AgentToolSet.instantiate(self.TOOLSET_REF)
@@ -817,7 +823,12 @@ class Installer:
             "mcp": self._mcp_names(),
             "hook": self._hook_names(),
             "agent": self._markdown_names("agents", "*.md"),
+            "language-adapter": self._language_adapter_names(),
         }
+
+    def _language_adapter_names(self) -> list[str]:
+        folder = self.path / "language-adapters"
+        return sorted(path.relative_to(folder).as_posix() for path in folder.rglob("*.ts")) if folder.is_dir() else []
 
     def _markdown_names(self, folder_name: str, file_name: str) -> list[str]:
         folder = self.path / folder_name

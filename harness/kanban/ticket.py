@@ -10,7 +10,9 @@ from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.installation.destination import language_adapter
 from harness.kanban.board import Board, Card, Stage, name_of
+from harness.kanban.data import FileEntryData, FileTextData, ReportData, TicketData, WorkspaceData
 from harness.mcp.mcp_server import mcp
 from space.session import Session
 
@@ -52,6 +54,7 @@ class TicketFileError(ValueError):
         super().__init__(f"{path!r} is not a file in this repository")
 
 
+@language_adapter(language="typescript")
 @agent_toolset
 class Ticket(Card):
     """Show one work session as a unit of delivery and move it through the stages."""
@@ -247,7 +250,7 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def workspace(self) -> dict[str, bool]:
+    def workspace(self) -> WorkspaceData:
         """Say whether ticket already has its branch and its worktree, so activating it offers only what is missing, and whether the active ticket being left is on a branch of its own, so its work can be committed, pushed, and merged."""
         repo = self._board.repo
         active = self._board.active
@@ -268,14 +271,14 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def files(self, fidelities: list[str]) -> dict[str, dict[str, list[dict[str, Any]]]]:
+    def files(self, fidelities: list[str]) -> dict[str, dict[str, list[FileEntryData]]]:
         """List the files fidelities declare by format, each with its path from the project and whether it exists. A pattern lists the files this ticket worked on, not every match in the repository."""
         return {progress.slug: self._files_of(progress.fidelity) for progress in self.progress if progress.slug in fidelities}
 
     @mcp
     @agent_tool
     @noSessionLog
-    def read_file(self, path: str) -> dict[str, str]:
+    def read_file(self, path: str) -> FileTextData:
         """Return the text of path, a file in this repository."""
         target = self._repository_file(path)
         if target is None:
@@ -285,7 +288,7 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def report(self, fidelity: str) -> dict[str, Any]:
+    def report(self, fidelity: str) -> ReportData:
         """Return the latest validation report of fidelity, a slug such as stories-story_map: its path and text, and the rules broken on the nodes of the graph saved beside it, each with its description and each violation with its line and the source around it. has_saved_graph is false when the report has no saved graph, so no rules can be listed."""
         path = self.reports.get(fidelity, "")
         if not path:
@@ -301,7 +304,7 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def violations(self) -> dict[str, Any]:
+    def violations(self) -> ReportData:
         """Return the rules broken on every fidelity left with violations, each rule naming its fidelity, in the shape of ticket.report. path is the folder the reports sit in. A saved graph holds its whole practice's hits, so a rule two fidelities share is listed once. has_saved_graph is false when a report has no saved graph, so its rules are missing."""
         reports = [self.report(entry.slug) for entry in self.progress if entry.has_violations]
         rules = {self._rule_identity(rule): rule for report in reversed(reports) for rule in report["rules"]}
@@ -321,7 +324,7 @@ class Ticket(Card):
         named = " ".join(slug.replace("_", "-") for slug in fidelities)
         return [*filter(None, renders), f"/actions-generate {named} format={','.join(formats)}"]
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> TicketData:
         progress = self.progress
         upcoming = self.next
         return {

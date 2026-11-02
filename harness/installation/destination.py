@@ -9,6 +9,7 @@ InstallTracker = Callable[[Path], None]
 
 _NO_CATALOG_FLAG = "_no_catalog"
 _NO_DEPLOY_FLAG = "_no_deploy"
+_LANGUAGE_ADAPTERS_FLAG = "_language_adapters"
 
 
 def noCatalog(target: Any = None) -> Any:
@@ -41,6 +42,21 @@ def noDeploy(target: Any = None) -> Any:
     if target is None:
         return mark
     return mark(target)
+
+
+def language_adapter(*, language: str) -> Callable[[Any], Any]:
+    """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them."""
+
+    def mark(toolset: Any) -> Any:
+        setattr(toolset, _LANGUAGE_ADAPTERS_FLAG, (*languages_of(toolset), language))
+        return toolset
+
+    return mark
+
+
+def languages_of(toolset: Any) -> tuple[str, ...]:
+    """The languages a toolset's class is marked for."""
+    return tuple(getattr(toolset, _LANGUAGE_ADAPTERS_FLAG, ()))
 
 
 def omitted_from_catalog(obj: Any) -> bool:

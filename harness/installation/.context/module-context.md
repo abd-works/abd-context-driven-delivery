@@ -21,13 +21,17 @@
 
 - Writes skill, command, and rules markdown. Marks live on the member (`@skill`, `@command`, `@rules`).
 
+### LanguageAdapterInstallation
+
+- Writes typed code for a toolset marked `@language_adapter(language="typescript")` to `{install path}/language-adapters/typescript/`, in the folders its source sits in: its `to_json()` data, a class that reads it, and a class that calls its MCP tools. It records toolsets during the walk and writes them together, because their files import each other. The mark sits on the class, not a member, because the whole object is one file.
+
 Build order: `harness/installation` → `harness/mcp` → `harness/hooks`
 
 ---
 
 # installation
 - **Purpose:** Publish a toolset’s marked members into Cursor (or VS Code / Kilo) so the agent can invoke them as skills, MCP, hooks, commands, or rules.
-- **Seam (terms):** Installer, Destination, Installation, FileInstallation, Skill, Command, Rules
+- **Seam (terms):** Installer, Destination, Installation, FileInstallation, LanguageAdapterInstallation, Skill, Command, Rules
 - **Dependencies (one-way):** `harness/agent_tools`, `harness/mcp`, `harness/hooks`
 
 ## Constraint

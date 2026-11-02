@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.installation.destination import language_adapter
 from harness.kanban.board import Board, Card, Column, name_of
+from harness.kanban.data import BacklogItemData
 from harness.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
 from space.session import Session
@@ -21,6 +22,7 @@ class BacklogItemNotFoundError(LookupError):
         super().__init__(f"no backlog item titled {backlog_item!r} on the board")
 
 
+@language_adapter(language="typescript")
 @agent_toolset
 class BacklogItem(Card):
     """Hold an idea not yet started. Starting it opens a ticket for it."""
@@ -104,7 +106,7 @@ class BacklogItem(Card):
         """The Backlog is the first column, so an item has nowhere further back to go."""
         return self
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> BacklogItemData:
         return {**super().to_json(), "text": self.text, "path": str(self._path)}
 
     @property

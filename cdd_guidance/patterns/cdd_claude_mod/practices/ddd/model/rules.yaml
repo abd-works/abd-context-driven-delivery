@@ -20,7 +20,7 @@ clientRoot:
     - client-only-displays
     - actions-are-plain-functions
     - mirror-only-what-the-mod-uses
-    - contract-matches-to-json
+    - contract-comes-from-the-adapter
     - client-shapes-for-display
     - property-casing-transform
     - mcp-calls-only-on-the-client

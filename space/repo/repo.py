@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
+from harness.installation.destination import language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 from space.repo.latest_release import LatestRelease
@@ -26,9 +27,10 @@ class RepoConnectError(RuntimeError):
 
 
 _COMMAND_TIMEOUT_SECONDS = 10
-# Push, fetch, and pull wait on the network; local git commands should never need this long.
-_NETWORK_COMMAND_TIMEOUT_SECONDS = 180
-_NETWORK_COMMANDS = frozenset({"push", "fetch", "pull"})
+# Push, fetch, and pull wait on the network. Checkout, merge, and worktree rewrite the working
+# tree, and stopping one partway leaves a half-switched checkout with a stale index.lock.
+_LONG_COMMAND_TIMEOUT_SECONDS = 180
+_LONG_COMMANDS = frozenset({"push", "fetch", "pull", "checkout", "merge", "worktree"})
 
 
 class GhConnectError(RuntimeError):
@@ -838,6 +840,7 @@ class Project:
         )
 
 
+@language_adapter(language="typescript")
 @agent_toolset
 class Repo:
     """Local git clone with optional GitHub project + tickets."""
@@ -921,8 +924,8 @@ class Repo:
         if not found:
             raise RepoConnectError("Cannot connect git: `git` is not available.")
         timeout = timeout or (
-            _NETWORK_COMMAND_TIMEOUT_SECONDS
-            if args and args[0] in _NETWORK_COMMANDS
+            _LONG_COMMAND_TIMEOUT_SECONDS
+            if args and args[0] in _LONG_COMMANDS
             else _COMMAND_TIMEOUT_SECONDS
         )
         try:

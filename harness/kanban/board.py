@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.installation.destination import language_adapter
+from harness.kanban.data import BoardData, ColumnData, HelpData
 from harness.mcp.mcp_server import mcp
 from space.session import Session
 from space.work_state import WorkState
@@ -32,6 +34,7 @@ def name_of(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
 
 
+@language_adapter(language="typescript")
 @agent_toolset
 class Board:
     """Show every work session as a ticket on a kanban: Backlog, Discovery, Specification, Implementation, and Complete."""
@@ -131,7 +134,7 @@ class Board:
     @mcp
     @agent_tool
     @noSessionLog
-    def help(self, practice: str, fidelity: str = "") -> dict[str, Any]:
+    def help(self, practice: str, fidelity: str = "") -> HelpData:
         """Return the overview, guidance, and rules of practice, or of its fidelity when one is named, with the stage that fidelity belongs to and its page on the forge."""
         from harness.kanban.ticket import practice_key
 
@@ -150,7 +153,7 @@ class Board:
     def wip_limit(self, stage: str) -> int:
         return self._saved_wip_limits.get(stage, Session.default_wip)
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> BoardData:
         """Every column with its tickets or items: what the board pane and other IDEs read."""
         active = self.active
         return {
@@ -194,7 +197,7 @@ class Column:
     def cards(self) -> list[Card]:
         return [card for card in self._board.cards if card.column is self]
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> ColumnData:
         return {"name": self._name, "tickets": [card.to_json() for card in self.cards]}
 
 
@@ -204,7 +207,7 @@ class Backlog(Column):
     def __init__(self, board: Board) -> None:
         super().__init__("Backlog", board)
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> ColumnData:
         return {"name": self.name, "items": [card.to_json() for card in self.cards]}
 
 
@@ -253,7 +256,7 @@ class Stage(Column):
     def wip_limit(self) -> int:
         return self._board.wip_limit(self.name)
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> ColumnData:
         tickets = self.cards
         return {
             "name": self.name,

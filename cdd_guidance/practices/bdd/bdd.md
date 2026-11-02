@@ -101,7 +101,7 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md"
 ```
 
 Whenever you write or reshape describe / that / with / it-should specs, or code that is supported by these specifications. Follow these rules.
@@ -150,7 +150,7 @@ Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md"
 ```
 
 Whenever you name or re-nest describe/it signatures, change code that relies on those signatures, or change specifications that need this kind of rename. Follow these rules.
@@ -209,7 +209,7 @@ Fill the **realization** section of `templates/bdd-templates.{ext}` (`.py` / `.j
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java,**/*-sketch.md,**/*-realization.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md,**/*-realization.md"
 ```
 
 Whenever you add or change call graphs on BDD observations, or change production code those graphs describe. Follow these rules.
@@ -284,7 +284,7 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*Spec.java,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete production code supported by BDD specs, or the specs themselves. Follow these rules.
