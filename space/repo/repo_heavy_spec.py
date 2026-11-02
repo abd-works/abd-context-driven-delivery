@@ -677,6 +677,22 @@ with description("a git command that outlives its timeout"):
             expect(lambda: Repo._run_git_process(launcher, 1)).to(raise_error(subprocess.TimeoutExpired))
             expect(time.monotonic() - started).to(be_below(15))
 
+    with context("that rewrites the working tree"):
+        with it("should get the long limit so a slow checkout is not stopped partway"):
+            from unittest.mock import patch
+
+            with patch.object(Repo, "_run_git_process", return_value=(0, "", "")) as run:
+                Repo.git(".", "checkout", "main")
+            expect(run.call_args.args[1]).to(equal(180))
+
+    with context("that only reads the repository"):
+        with it("should keep the short limit so a hung git fails fast"):
+            from unittest.mock import patch
+
+            with patch.object(Repo, "_run_git_process", return_value=(0, "", "")) as run:
+                Repo.git(".", "status")
+            expect(run.call_args.args[1]).to(equal(10))
+
 
 def _git(root: Path, *args: str) -> str:
     return subprocess.run(
