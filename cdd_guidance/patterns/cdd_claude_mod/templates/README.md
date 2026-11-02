@@ -7,7 +7,7 @@ templates/
 └── {domain}/
     └── pane/
         ├── .claude-plugin/plugin.json    ← names the mod and its contract
-        ├── types/index.d.ts              ← {Object}Json and PluginState
+        ├── types/index.d.ts              ← PluginState; {Object}Data comes from the language adapter
         └── hooks/
             ├── hooks.json                ← names register.tsx
             ├── register.tsx              ← Boot: events only

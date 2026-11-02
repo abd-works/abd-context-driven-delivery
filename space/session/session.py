@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
+from harness.installation.destination import language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 from space.work_state import SESSIONS_FOLDER, WorkState
@@ -196,6 +197,7 @@ _PRACTICE_TYPES = {
 }
 
 
+@language_adapter(language="typescript")
 @agent_toolset
 class Session:
     """Process session — one in-memory current; new and switch open named sessions."""

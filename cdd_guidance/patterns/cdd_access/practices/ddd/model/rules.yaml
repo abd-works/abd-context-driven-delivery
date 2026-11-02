@@ -1,0 +1,19 @@
+# CDD access rule slugs for graph nodes (see cdd_access.md § Shared rules).
+accessRoute:
+  rules:
+    - routes-ask-the-object
+accessNode:
+  rules:
+    - one-class-per-object
+    - node-extends-the-adapter
+    - state-lives-behind-the-tool
+accessConnection:
+  rules:
+    - connection-only-carries
+    - text-that-is-not-json-is-a-failure
+accessHandWrittenTools:
+  rules:
+    - adapter-is-generated
+accessMarkedToolset:
+  rules:
+    - annotate-what-typescript-reads

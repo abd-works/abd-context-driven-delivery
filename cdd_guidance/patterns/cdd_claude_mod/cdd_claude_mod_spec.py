@@ -80,7 +80,7 @@ with description("a Claude Code mod pattern"):
             expect(len(list(self.rules))).to(equal(len(_RULE_SLUGS)))
 
         with it("should match a mod's hooks"):
-            expect(self.rules.matches("harness/kanban/pane/hooks/register.tsx")).to(be_true)
+            expect(self.rules.matches("harness/report/pane/hooks/register.tsx")).to(be_true)
 
         with it("should not match Python outside a mod"):
             expect(self.rules.matches("harness/kanban/board.py")).to(equal(False))
@@ -104,7 +104,7 @@ with description("a Claude Code mod pattern"):
 
         with it("should give the client constructor no $"):
             client = (_MODULE_DIR / "templates" / "{domain}/pane/hooks/{domain}/{object}-client.ts").read_text(encoding="utf-8")
-            expect(client).to(contain("constructor(private readonly json: {Object}Json) {}"))
+            expect(client).to(contain("constructor(private readonly json: {Object}Data) {}"))
 
         with it("should pass $ to the view, which is a plain function"):
             view = (_MODULE_DIR / "templates" / "{domain}/pane/hooks/{domain}/{screen}-view.tsx").read_text(encoding="utf-8")

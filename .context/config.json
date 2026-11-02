@@ -1,7 +1,8 @@
 {
   "guidelines": {
+    "cdd_access": "enabled",
     "cdd_claude_mod": "enabled",
-    "lern_domain_driven": "disabled",
+    "lern_domain_driven": "enabled",
     "mern_domain_driven": "disabled"
   },
   "practice_folders": {

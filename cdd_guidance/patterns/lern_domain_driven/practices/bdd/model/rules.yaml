@@ -1,0 +1,17 @@
+behaviorShared:
+  rules:
+    - shared-behavior-stays-tier-free
+behaviorDomain:
+  rules:
+    - tier-runs-shared-behavior
+behaviorServer:
+  rules:
+    - tier-runs-shared-behavior
+    - server-tier-calls-the-real-thing
+behaviorPlaywright:
+  rules:
+    - tier-runs-shared-behavior
+behaviorE2e:
+  rules:
+    - tier-runs-shared-behavior
+    - e2e-runs-the-whole-stack

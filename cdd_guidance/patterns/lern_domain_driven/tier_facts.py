@@ -30,6 +30,10 @@ _ROUTE_REGISTRATION = re.compile(r"\b(?:router|app)\.(?:get|post|put|patch|delet
 _CTX_CAST = re.compile(r"\bctx\.(\w+)\s+as\s+\w+")
 _GIVEN_START = re.compile(r"\bgiven\s*\(\s*(['\"`])(.*?)\1\s*,")
 _EXPECT = re.compile(r"\b(?:expect|assert)\s*\(")
+_TIER_REACH = re.compile(r"""from\s+['"][^'"]*-(?:node|client|routes)['"]|\bpage\.\w+\(|\bfetch\(|\bsupertest\b""")
+_RUNS_SHARED = re.compile(r"\bitBehavesLike\(")
+_STUB = re.compile(r"\bvi\.(?:mock|fn|spyOn|stubGlobal)\(|\bjest\.(?:mock|fn|spyOn)\(")
+_STUBBED_REQUEST = re.compile(r"\bpage\.route\(|\bcontext\.route\(")
 _PATHS_MODULE_SUFFIX = "-paths.ts"
 _TEST_SETUP_GLOBS = ("tests/**/vitest.setup.ts", "tests/**/repositories.ts", "tests/vitest.setup.ts")
 
@@ -109,6 +113,16 @@ def test_setup_text(root: Path) -> str:
             seen.add(path)
             parts.append(path.read_text(encoding="utf-8"))
     return "\n".join(parts)
+
+
+def behavior_file_facts(text: str) -> dict:
+    """What a LERN behavior file (shared or one tier) says about the tier it reaches and what it stubs."""
+    return {
+        "tier_reaches": _hits(_TIER_REACH, text),
+        "runs_shared_behavior": bool(_RUNS_SHARED.search(text)),
+        "stubs": _hits(_STUB, text),
+        "stubbed_requests": _hits(_STUBBED_REQUEST, text),
+    }
 
 
 def story_file_facts(text: str) -> dict:

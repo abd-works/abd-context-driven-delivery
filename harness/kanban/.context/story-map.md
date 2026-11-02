@@ -7,11 +7,11 @@ section: body
 
 # Story Map — Session Board
 
-**Sources / context:** `harness/kanban/board.py`; `harness/kanban/ticket.py`; `harness/kanban/backlog_item.py`; `harness/kanban/kanban_spec.py`; `harness/kanban/kanban_tools_spec.py`; `harness/kanban/pane/hooks/register.tsx`; `harness/kanban/pane/hooks/kanban/`; `harness/kanban/pane/hooks/register.test.tsx`; `harness/kanban/.context/module-context.md`; `harness/kanban/.context/kanban-model.md`; the Board Pane canvas, Version 72 (https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN, `project/Main.dc.html`) and its comment threads of 2026-10-31.
+**Sources / context:** `harness/kanban/board.py`; `harness/kanban/ticket.py`; `harness/kanban/backlog_item.py`; `harness/kanban/kanban_spec.py`; `harness/kanban/kanban_tools_spec.py`; `harness/kanban/app/`; `retired/harness/kanban/pane/`; `harness/kanban/.context/module-context.md`; `harness/kanban/.context/kanban-model.md`; the Board Pane canvas, Version 72 (https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN, `project/Main.dc.html`) and its comment threads of 2026-10-31.
 
 **Acceptance criteria:** A stack of cards on the story map is one Story. The top card is the Story and the cards under it are its acceptance criteria, listed under it here.
 
-**Evidence:** The line under each Story says where it stands. **Observed** means the code and specs do it today. Signatures in quotes are in `kanban_tools_spec.py`, `kanban_spec.py`, or `register.test.tsx`, which are organised by these stories. **Live** means it was also pressed in a real Claude Code terminal against the real cdd server. **Differs from the canvas** says where the pane could not do what the canvas does; `canvas-differences.md` lists all of it with the reasons.
+**Evidence:** The Board Pane is now the board app in `harness/kanban/app/`, and its tests are organised by these same stories. Evidence that names `register.test`, a surface limit, or a difference from the canvas records the retired pane in `retired/harness/kanban/`; the app draws what the canvas draws. The line under each Story says where it stands. **Observed** means the code and specs do it today. Signatures in quotes are in `kanban_tools_spec.py`, `kanban_spec.py`, or `register.test.tsx`, which are organised by these stories. **Live** means it was also pressed in a real Claude Code terminal against the real cdd server. **Differs from the canvas** says where the pane could not do what the canvas does; `canvas-differences.md` lists all of it with the reasons.
 
 **Actors:** Person, Board Pane, Claude Code.
 

@@ -1,7 +1,7 @@
 # harness/kanban
 
 - **Purpose:** Show every work session as a ticket on a kanban, placed by how far each of its fidelities has got through its stage's actions, and move tickets through the stages.
-- **Seam (terms):** Board, Column, Backlog, Stage, Ticket, FidelityProgress, BacklogItem, with `Board`, `Ticket`, and `BacklogItem` each its own toolset (the `cdd` MCP tools `board.show`, `board.set_wip_limit`, `board.help`, `ticket.new`, `ticket.move_next`, `ticket.move_previous`, `ticket.close`, `ticket.archive`, `ticket.activate`, `ticket.workspace`, `ticket.enable_practice`, `ticket.files`, `ticket.read_file`, `ticket.report`, `ticket.generate_commands`, `backlog-item.add`, `backlog-item.start`)
+- **Seam (terms):** Board, Column, Backlog, Stage, Ticket, FidelityProgress, BacklogItem, with `Board`, `Ticket`, and `BacklogItem` each its own toolset (the `cdd` MCP tools `board.show`, `board.set_wip_limit`, `board.help`, `ticket.new`, `ticket.move_next`, `ticket.move_previous`, `ticket.close`, `ticket.archive`, `ticket.activate`, `ticket.workspace`, `ticket.enable_practice`, `ticket.files`, `ticket.read_file`, `ticket.report`, `ticket.generate_commands`, `backlog-item.add`, `backlog-item.start`), and the language adapter `@language_adapter(language="typescript")` deploys from them
 - **Dependencies (one-way):** harness/guidance (PracticeGuidance, FidelityGuidance), harness/guidance_actions (GuidanceAction), cdd_guidance/actions (Generate, Validate, and the saved graph reader `validate.graph_json_reader`), space/repo (Repo), space/session (Session, PracticeSessionOutput)
 
 ## Constraint
@@ -10,6 +10,14 @@ Create a board on a repository, then read columns and tickets from it; everythin
 
 The classes, terms, and rules are in `harness/kanban/.context/kanban-model.md`; the behavior is `kanban_spec.py` and `kanban_tools_spec.py`, organised by story.
 
-## The board pane (Claude Code)
+## The board app
 
-`harness/kanban/pane/` is the `cdd-board` Claude Code plugin: a Board pane beside the chat, the active ticket on the status line, a band above the prompt when the active ticket has violations, toasts when a ticket moves or a fidelity is done, the active ticket in the system prompt, `/board`, and `/ticket next|previous|close|activate <ticket>`. It paints its own canvas in the abd.works engineering (dark) colors so those colors hold on either Claude Code theme. It follows `patterns-cdd-claude-mod`: `hooks/register.tsx` is Boot only, and `hooks/kanban/` holds a display-only client and plain-function actions for each object, the views, and the surface modules. It only draws: everything it shows comes from the `cdd` MCP tools, and it reads the board again after every `cdd` tool call and every prompt. Load it with `claude --plugin-dir harness/kanban/pane`. Check it with `claude plugin validate harness/kanban/pane` and `claude plugin test harness/kanban/pane`.
+`harness/kanban/app/` is the Session Board: a web app built in `patterns-lern-domain-driven` on the access in `patterns-cdd-access`, opened in the Claude desktop Browser pane. Each route asks a `{Object}Node`, which extends the `{Object}Tools` class the installer generates from these toolsets, so the app holds no rule and no copy of the board. Run `python scripts/install.py --ide Claude` first, because the app imports the language adapter from the install, then `npm install`, `npm run build`, and `npm start` in that folder. It listens on 127.0.0.1:8778 and answers only its own page and mod, because it can put prompts into a live chat. `BOARD_PROJECT` names the repository to show, and `BOARD_PORT` the port.
+
+Shapes the app reads are `TypedDict`s in `data.py`, so changing one and installing changes the TypeScript. Test anything that acts on a throwaway project with no real remote, because these tools really commit and push.
+
+## The chat mod (Claude Code)
+
+`harness/kanban/chat-mod/` is the `cdd-board` plugin: it registers a chat with the board app and passes its buttons into the chat, shows the active ticket on the status line, and adds it to the system prompt. It polls the app every second and holds no board logic. A fill waits for the end of a turn, because one made during a turn can report success and show nothing. Load it with `claude --plugin-dir harness/kanban/chat-mod`.
+
+The earlier board pane, its desktop test driver, and the list of what a pane could not draw are in `retired/harness/kanban/`.

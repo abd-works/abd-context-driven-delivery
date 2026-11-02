@@ -72,6 +72,12 @@ _ALL_RULE_SLUGS = (
     "no-expect-in-given",
     "outline-rows-loop-over-examples",
     "reset-every-repository",
+    "shared-behavior-stays-tier-free",
+    "tier-runs-shared-behavior",
+    "server-tier-calls-the-real-thing",
+    "e2e-runs-the-whole-stack",
+    "domain-tier-only-for-domain-logic",
+    "same-signature-across-languages",
 )
 
 with description("a LernDomainDriven generator"):

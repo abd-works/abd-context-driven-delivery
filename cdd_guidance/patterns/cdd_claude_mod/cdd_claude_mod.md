@@ -2,7 +2,7 @@
 
 Implementation fidelity for a **Claude Code mod that is a view of the CDD domain**. The story map, the module boundaries, and the canvas exist before this tool runs. The rules below are additive on top of what Stories, Clean Engineering, and BDD already enforce.
 
-**The domain is already in Python.** A mod owns none of it. A mod changes what a person sees beside the chat and what the agent is told, and it never changes what is true. The Kanban in `harness/kanban/pane/` is the worked example throughout this guide.
+**The domain is already in Python.** A mod owns none of it. A mod changes what a person sees beside the chat and what the agent is told, and it never changes what is true. The Kanban pane, now retired to `retired/harness/kanban/pane/`, is the worked example throughout this guide, and `harness/kanban/chat-mod/` is a small live one. A full screen belongs in a web app with `patterns-lern-domain-driven`, because a pane cannot scroll, lay out, or be tested as a page can. How every door reaches that domain is in `patterns-cdd-access`. A mod calls `$.mcp.call` itself, because a hooks module cannot hold a connection, and it takes its types from the language adapter the installer deploys.
 
 **No fidelity progression of its own.** Every run works one domain component through the layers below, Python first.
 
@@ -20,7 +20,7 @@ class Report:
 | Python | Mod |
 |---|---|
 | `class Report` | `ReportClient` in `report-client.ts`, `ReportView` in `report-view.tsx` |
-| `to_json()` | `ReportJson`, and one client property for each field a view paints |
+| `to_json()` | `ReportData` from the language adapter, and one client property for each field a view paints |
 | `@mcp @agent_tool def publish` | `publish($, report, audience)` exported beside the client, the MCP tool `report.publish`, and a control in the view |
 | `report: str` | The `ReportClient` the view is painting, which the action reads the identity from |
 | `audience: str` | An argument of `publish($, report, audience)`, and an input in the view |
@@ -32,7 +32,7 @@ Every domain component has the same pieces, and each piece has one job.
 | Domain | `harness/<domain>/*.py`, `space/<domain>/*.py` | The Python classes. Every rule and decision lives here, including how state is kept. |
 | Tool | `harness/<domain>/<object>.py` | The toolset named after the object, so its tools read `{object}.{operation}`. One `@mcp @agent_tool` operation per thing a person or agent does. Parses names, calls the domain, returns `to_json()`. |
 | Generated | `.mcp.json`, `.claude/skills/`, `.claude/commands/` | Written by the installer from the tool's annotations. Never edited. |
-| Contract | `pane/types/index.d.ts` | `{Object}Json`, the shape `to_json()` returns, plus `PluginState` for every atom. |
+| Contract | The language adapter, `@cdd/<source folders>/<object>` | `{Object}Data`, the shape `to_json()` returns, generated from Python and imported with `import type`. `pane/types/index.d.ts` declares only `PluginState` for every atom. |
 | Client | `pane/hooks/<domain>/<object>-client.ts` | `{Object}Client` and its actions. The class mirrors one Python object's properties for display and holds no `$`. Each action is a plain exported function in the same file, such as `moveNext($, ticket)`, that calls one tool through `$.mcp.call`. |
 | View | `pane/hooks/<domain>/<screen>-view.tsx` | `{Screen}View`. A plain function that takes `$` and a client, paints the client, and hands presses to the client's actions. Decides nothing. |
 | Surface module | `pane/hooks/<domain>/<part>.tsx` | A `ClientModule`, only for what a Button cannot do, such as a press anywhere on a card. |
@@ -135,7 +135,7 @@ This pattern answers the questions `patterns-lern-domain-driven` answers: where 
 | LERN | This pattern | Why it differs |
 |---|---|---|
 | `{Domain}` base class in TypeScript | The Python domain class | The domain exists. Copying it into TypeScript would give two places to change every rule. |
-| `{Domain}Client extends {Domain}` | `{Object}Client` mirrors what the mod displays, and plain functions beside it act | Two languages cannot share a base class, so `{Object}Json` is the agreement between them. `$` cannot be held by an object, so what needs it is a function. |
+| `{Domain}Client extends {Domain}` | `{Object}Client` mirrors what the mod displays, and plain functions beside it act | Two languages cannot share a base class, so `{Object}Data`, generated from the Python, is the agreement between them. `$` cannot be held by an object, so what needs it is a function. |
 | `{Domain}Node` | The Python domain class | It already runs on the server side. |
 | `{Domain}Repository`, `<aggregate>.json` | **None** | The mod has no store. It asks a tool, and how the domain keeps its state is the domain's decision. |
 | Express route file | `{Object}` toolset with `@mcp` | The MCP tool is the route, and its annotations generate the skills and commands. |
@@ -152,7 +152,7 @@ This pattern answers the questions `patterns-lern-domain-driven` answers: where 
 | Domain | `Board`, `Ticket`, `Stage`, `BacklogItem` over `Session`, `Repo`, `Graph` |
 | Tool | `ticket.move_next`, `ticket.move_previous`, `ticket.close`, `ticket.archive`, `ticket.new`, `board.show`, `backlog-item.start`, marked directly on `Ticket`, `Board`, and `BacklogItem`. `Ticket` holds a reference to its `Session`, which owns the session's files, so `Ticket.close` calls `Session.close` |
 | Generated | The `cdd` entry in `.mcp.json` and the `harness-kanban-*` skills |
-| Contract | `TicketJson`, `BoardJson`, `ColumnJson` in `pane/types/index.d.ts` |
+| Contract | `TicketData`, `BoardData`, `ColumnData` from the language adapter |
 | Client | `TicketClient` and its actions in `pane/hooks/kanban/ticket-client.ts`, `BoardClient` and its actions in `pane/hooks/kanban/board-client.ts` |
 | View | `pane/hooks/kanban/board-view.tsx`, `ticket-view.tsx`, and one file for each other screen |
 | Surface module | `pane/hooks/kanban/ticket-card.tsx`, `split-grip.tsx` |
@@ -183,7 +183,7 @@ One action, through every layer. A person presses the forward arrow on a ticket 
 
 ```ts
 export class TicketClient {
-  constructor(private readonly json: TicketJson) {}
+  constructor(private readonly json: TicketData) {}
 
   get name(): string {
     return this.json.name
@@ -270,7 +270,7 @@ The canvas and the story map are designed upstream by `ux` and `stories`. `gener
 1. Follow **session_guidance**. Start from the Python: name the classes this slice exposes, read their `.context/`, and list their `@mcp @agent_tool` operations, because that list decides the client's operations and the view's controls.
 2. Add any missing domain operation and its Mamba spec first. Specs first, small RED cycles.
 3. Add the `@mcp @agent_tool` operation on the `{Object}` toolset and its tool spec. Run `python scripts/install.py --ide Claude` so the generated skills, commands, and MCP entry follow.
-4. Update `pane/types/index.d.ts` to the shape `to_json()` returns.
+4. Annotate `to_json()` with a `TypedDict`, mark the class with `@language_adapter(language="typescript")`, and install, so `{Object}Data` follows.
 5. Add `{Object}Client` properties and operations for what this slice displays and does, then the view that paints them. Scaffold from `templates/`.
 6. Connect events in `register.tsx`.
 7. Run `claude plugin validate`, `tsc -p`, and `claude plugin test` on the mod folder, and Mamba on the Python specs.
@@ -291,7 +291,7 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 
 - **`domain-lives-in-python`** — Put every rule and decision in the Python domain class: what a state means, whether an action is allowed, what comes next. A rule written in the mod is lost to every other IDE and to the agent's own tools.
 - **`state-lives-behind-the-tool`** — Get every fact from an MCP tool, and keep no store, repository class, or cache in the mod. How the domain keeps its state is the domain's decision, and a second copy in the mod drifts from the real one.
-- **`pane-lives-beside-its-domain`** — Keep a mod in a `pane/` folder beside the Python it views, such as `harness/kanban/pane/`, so a change to the domain and its view is one reviewable change.
+- **`pane-lives-beside-its-domain`** — Keep a mod in a `pane/` folder beside the Python it views, such as `harness/<domain>/pane/`, so a change to the domain and its view is one reviewable change.
 - **`domain-folder-in-the-mod`** — Put each domain component's client, views, and surface modules in `pane/hooks/<domain>/`, with one `<object>-client.ts` for each client and kebab-case `<screen>-view.tsx`. One folder per component keeps `register.tsx` from becoming the whole mod.
 - **`boot-only-in-register`** — `register.tsx` connects events to clients and views and holds nothing else, so the file a reader opens first shows what the mod reacts to.
 
@@ -301,7 +301,7 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`client-only-displays`** — `{Object}Client` takes the JSON and nothing else, and exposes properties for display. `claude plugin validate` refuses `$` passed to a constructor or a method, so an object holding `$` never loads.
 - **`actions-are-plain-functions`** — Write each action as a plain function exported from the client's file, taking `$` first and the client it acts on next, such as `moveNext($, ticket)`, and write each view as a plain function that takes `$`. Use a `function` declaration, not a `const` holding an arrow function: past an import the engine follows `$` only into a function declaration, and it can then see every `$` call a press leads to.
 - **`mirror-only-what-the-mod-uses`** — Add a property only when a view paints it and an action only when a person or the agent triggers it. Everything else stays in Python, because each mirrored member is one more thing to keep in step.
-- **`contract-matches-to-json`** — `{Object}Json` in `pane/types/index.d.ts` states exactly what `to_json()` returns. It is the only agreement between the two languages, so a change to one side changes the other in the same commit.
+- **`contract-comes-from-the-adapter`** — Import `{Object}Data` from the language adapter with `import type`, and write no copy of it. It is generated from the Python, so a hand-kept type drifts from the real shape. A type import leaves nothing in the module the engine loads.
 - **`client-shapes-for-display`** — A client may format: labels, colours, ages, and addresses. If the line changes what is true or what may happen, it belongs in Python.
 - **`property-casing-transform`** — `snake_case` in Python and JSON, `camelCase` on the client. The client converts once, when it is built, so views never see two spellings.
 

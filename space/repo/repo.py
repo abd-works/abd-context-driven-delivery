@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
+from harness.installation.destination import language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 from space.repo.latest_release import LatestRelease
@@ -839,6 +840,7 @@ class Project:
         )
 
 
+@language_adapter(language="typescript")
 @agent_toolset
 class Repo:
     """Local git clone with optional GitHub project + tickets."""
