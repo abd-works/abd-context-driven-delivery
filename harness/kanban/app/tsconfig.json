@@ -23,6 +23,12 @@
       "@cdd/*": [
         "../../../.claude/language-adapters/typescript/*"
       ],
+      "react": [
+        "./node_modules/@types/react"
+      ],
+      "react/jsx-runtime": [
+        "./node_modules/@types/react/jsx-runtime"
+      ],
       "test-utils/*": [
         "./test-utils/*"
       ]

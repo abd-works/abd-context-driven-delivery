@@ -2,9 +2,9 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { join } from 'node:path'
 
 import type { CddConnection } from '@cdd/cdd-connection'
-import { backlogItemRoutes } from '@cdd/harness/kanban/backlog-item-node-adapter'
-import { boardRoutes } from '@cdd/harness/kanban/board-node-adapter'
-import { ticketRoutes } from '@cdd/harness/kanban/ticket-node-adapter'
+import { backlogItemRoutes } from '@cdd/harness/kanban/backlog-item'
+import { boardRoutes } from '@cdd/harness/kanban/board'
+import { ticketRoutes } from '@cdd/harness/kanban/ticket'
 import type { ChatsNode } from '@src/kanban/chat/chat-node'
 import { chatRoutes } from '@src/kanban/chat/chat-routes'
 import { cddRoutes } from '@src/session-board/cdd-routes'

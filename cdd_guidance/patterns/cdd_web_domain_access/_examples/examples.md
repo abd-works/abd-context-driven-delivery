@@ -21,8 +21,8 @@ app.use('/api', cddRoutes(cdd, [...boardRoutes, ...ticketRoutes, ...backlogItemR
 **Faulty.** A hand-written class wraps the generated adapter to parse requests the installer already reads.
 
 ```ts
-export class TicketNode extends TicketNodeAdapter {
-  moveToRequested(request: Request): Promise<TicketNodeAdapter> {
+export class TicketNode extends TicketAdapter {
+  moveToRequested(request: Request): Promise<TicketAdapter> {
     const { stage, done } = Destination.parse(request.body)
     return this.moveTo(stage, done)
   }

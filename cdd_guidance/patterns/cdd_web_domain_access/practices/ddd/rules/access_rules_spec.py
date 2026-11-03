@@ -9,7 +9,7 @@ from mamba import before, context, description, it
 from harness.graph.graph import Graph
 
 _FAULTY_ROUTE = "routes.post('/x', async () => { await cdd.call('ticket.move_next', {}) })\n"
-_FAULTY_NODE = "import { TicketNodeAdapter } from '@cdd/harness/kanban/ticket-node-adapter'\nimport { Low } from 'lowdb'\nexport class TicketNode extends TicketNodeAdapter {\n  go() { return this.cdd.call<string>('ticket.close', {}) }\n}\n"
+_FAULTY_NODE = "import { TicketAdapter } from '@cdd/harness/kanban/ticket'\nimport { Low } from 'lowdb'\nexport class TicketNode extends TicketAdapter {\n  go() { return this.cdd.call<string>('ticket.close', {}) }\n}\n"
 _FAULTY_CONNECTION = "export class CddConnectionNode {\n  call(tool: string) { return this.client.callTool({ name: tool }) }\n}\n"
 _FAULTY_ADAPTER = "import type { TicketData } from '@cdd/harness/kanban/ticket'\nexport class TicketAdapter {}\n"
 _REPAIRED_ROUTE = "app.use('/api', cddRoutes(cdd, [...ticketRoutes]))\n"

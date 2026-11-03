@@ -13,7 +13,7 @@ _REPO = Path(__file__).resolve().parents[2]
 Installer(repo=_REPO).ensure_import_path()
 
 from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
-from harness.installation.destination import identity_field_of, language_adapter, languages_of  # noqa: E402
+from harness.installation.destination import edited_fields_of, edits, identity_field_of, language_adapter, languages_of  # noqa: E402
 from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
     MissingIdentityError,
@@ -55,6 +55,13 @@ with description("a language adapter"):
 
             expect(identity_field_of(Named)).to(equal("name"))
 
+        with it("should name the fields an operation changes when its arguments are named differently"):
+            @edits("title")
+            def rename(new_title):
+                return new_title
+
+            expect(edited_fields_of(rename)).to(equal(("title",)))
+
         with context("that no mark names"):
             with it("should name no language"):
                 class Unmarked:
@@ -68,21 +75,20 @@ with description("a language adapter"):
             self.adapters = _install(self.install_path)
             self.root = self.install_path / _ADAPTERS
             self.ticket = (self.root / "harness/kanban/ticket.ts").read_text(encoding="utf-8")
-            self.ticket_node = (self.root / "harness/kanban/ticket-node-adapter.ts").read_text(encoding="utf-8")
             self.board = (self.root / "harness/kanban/board.ts").read_text(encoding="utf-8")
-            self.board_node = (self.root / "harness/kanban/board-node-adapter.ts").read_text(encoding="utf-8")
             self.backlog_item = (self.root / "harness/kanban/backlog-item.ts").read_text(encoding="utf-8")
 
-        with it("should mirror the folders the toolset's source sits in, with what only the server runs in its own file"):
-            written = sorted(path.relative_to(self.root).as_posix() for path in self.root.rglob("*.ts"))
+        with it("should mirror the folders the toolset's source sits in, with every generated class of an object in one file"):
+            written = sorted(path.relative_to(self.root).as_posix() for path in self.root.rglob("*.ts*"))
             expect(written).to(equal([
                 "cdd-connection.ts",
                 "cdd-shared.ts",
-                "harness/kanban/backlog-item-node-adapter.ts",
+                "cdd-views.tsx",
+                "harness/kanban/backlog-item-views.tsx",
                 "harness/kanban/backlog-item.ts",
-                "harness/kanban/board-node-adapter.ts",
+                "harness/kanban/board-views.tsx",
                 "harness/kanban/board.ts",
-                "harness/kanban/ticket-node-adapter.ts",
+                "harness/kanban/ticket-views.tsx",
                 "harness/kanban/ticket.ts",
             ]))
 
@@ -99,7 +105,7 @@ with description("a language adapter"):
             adapters.bind_tracker(tracked.append)
             adapters.record(AgentToolSet.instantiate("harness.kanban.ticket:Ticket"))
             adapters.write_all()
-            expect(sorted(path.name for path in tracked)).to(equal(["cdd-connection.ts", "cdd-shared.ts", "package.json", "ticket-node-adapter.ts", "ticket.ts"]))
+            expect(sorted(path.name for path in tracked)).to(equal(["cdd-connection.ts", "cdd-shared.ts", "cdd-views.tsx", "package.json", "ticket-views.tsx", "ticket.ts"]))
 
         with context("that has no mark"):
             with it("should write nothing"):
@@ -167,59 +173,62 @@ with description("a language adapter"):
             with it("should let its subtypes take on new state"):
                 expect(self.base).to(contain("protected changed(state: TicketData): this {"))
 
+            with it("should tell whatever is drawing it when it takes on new state"):
+                expect(self.base).to(contain("for (const listener of this.#listeners) listener()"))
+
             with it("should make no call, so nothing reaches a tool through the base itself"):
                 expect("call<" in self.base or "post<" in self.base).to(be_false)
 
         with description("its server adapter"):
             with it("should extend the shared base"):
-                expect(self.ticket_node).to(contain("export class TicketNodeAdapter extends Ticket {"))
+                expect(self.ticket).to(contain("export class TicketAdapter extends Ticket {"))
 
             with it("should call only its own object's tools, so no connector knows every tool"):
-                expect("board.show" in self.ticket_node).to(be_false)
+                expect("board.show" in self.ticket).to(be_false)
 
             with context("for an object loaded by its identity"):
                 with it("should hold the identity, so a caller never passes it again"):
-                    expect(self.ticket_node).to(contain("constructor(protected readonly cdd: CddConnection, protected readonly ticket: string, state: TicketData | null = null) {"))
+                    expect(self.ticket).to(contain("constructor(protected readonly cdd: CddConnection, protected readonly ticket: string, state: TicketData | null = null) {"))
 
                 with it("should send the identity under its Python name"):
-                    expect(self.ticket_node).to(contain("'ticket.move_next', { ticket: this.ticket }"))
+                    expect(self.ticket).to(contain("'ticket.move_next', { ticket: this.ticket }"))
 
                 with it("should build the adapter for the object a request names"):
-                    expect(self.ticket_node).to(contain("static fromRequest(cdd: CddConnection, request: CddRequest): TicketNodeAdapter {"))
+                    expect(self.ticket).to(contain("static fromRequest(cdd: CddConnection, request: CddRequest): TicketAdapter {"))
 
             with context("for an object with no identity"):
                 with it("should need only the connection"):
-                    expect(self.board_node).to(contain("constructor(protected readonly cdd: CddConnection, state: BoardData | null = null) {"))
+                    expect(self.board).to(contain("constructor(protected readonly cdd: CddConnection, state: BoardData | null = null) {"))
 
             with context("for an operation with its own arguments"):
                 with it("should type each argument from the published schema"):
-                    expect(self.ticket_node).to(contain("async enablePractice(practice: string, isEnabled: boolean): Promise<this> {"))
+                    expect(self.ticket).to(contain("async enablePractice(practice: string, isEnabled: boolean): Promise<this> {"))
 
                 with it("should mark an argument with a Python default as optional"):
-                    expect(self.ticket_node).to(contain("async close(leaving?: string[] | null): Promise<this> {"))
+                    expect(self.ticket).to(contain("async close(leaving?: string[] | null): Promise<this> {"))
 
                 with it("should send camelCase arguments under their Python names"):
-                    expect(self.ticket_node).to(contain("is_enabled: isEnabled"))
+                    expect(self.ticket).to(contain("is_enabled: isEnabled"))
 
             with context("for a result"):
                 with it("should take on the object's own state its tool returns"):
-                    expect(self.ticket_node).to(contain("return this.changed(await this.cdd.call<TicketData>('ticket.move_next'"))
+                    expect(self.ticket).to(contain("return this.changed(await this.cdd.call<TicketData>('ticket.move_next'"))
 
                 with it("should import another object it returns"):
-                    expect(self.ticket_node).to(contain("import type { BacklogItemData } from './backlog-item'"))
+                    expect(self.ticket).to(contain("import type { BacklogItemData } from './backlog-item'"))
 
                 with it("should leave a choice of objects as their data"):
-                    expect(self.ticket_node).to(contain("movePrevious(): Promise<TicketData | BacklogItemData>"))
+                    expect(self.ticket).to(contain("movePrevious(): Promise<TicketData | BacklogItemData>"))
 
                 with it("should type a shape Python declares"):
-                    expect(self.ticket_node).to(contain("report(fidelity: string): Promise<ReportData>"))
+                    expect(self.ticket).to(contain("report(fidelity: string): Promise<ReportData>"))
 
                 with it("should type a list of strings"):
-                    expect(self.ticket_node).to(contain("Promise<string[]>"))
+                    expect(self.ticket).to(contain("Promise<string[]>"))
 
             with context("for a class operation, which no loaded object runs"):
                 with it("should be a static operation that takes the connection and returns the new object's data"):
-                    expect(self.ticket_node).to(contain("static new(cdd: CddConnection, title: string, scope?: string, parent?: string, path?: string): Promise<TicketData>"))
+                    expect(self.ticket).to(contain("static new(cdd: CddConnection, title: string, scope?: string, parent?: string, path?: string): Promise<TicketData>"))
 
         with description("its browser client"):
             with it("should extend the shared base"):
@@ -247,17 +256,67 @@ with description("a language adapter"):
 
         with description("its routes"):
             with it("should give each tool one path under its object and identity"):
-                expect(self.ticket_node).to(contain("path: '/ticket/:ticket/move-next'"))
+                expect(self.ticket).to(contain("path: '/ticket/:ticket/move-next'"))
 
             with it("should run the tool through the server adapter for the object the path names"):
-                expect(self.ticket_node).to(contain("TicketNodeAdapter.fromRequest(cdd, request).moveNext()"))
+                expect(self.ticket).to(contain("TicketAdapter.fromRequest(cdd, request).moveNext()"))
 
             with it("should read the operation's arguments from the request, checked against the published schema"):
-                expect(self.ticket_node).to(contain('readArguments<{ practice: string; is_enabled: boolean }>(request, {"practice": {"type": "string"}, "is_enabled": {"type": "boolean"}}, ["practice", "is_enabled"])'))
+                expect(self.ticket).to(contain('readArguments<{ practice: string; is_enabled: boolean }>(request, {"practice": {"type": "string"}, "is_enabled": {"type": "boolean"}}, ["practice", "is_enabled"])'))
 
             with context("for an object no tool loads by name"):
                 with it("should leave the name out of the path"):
-                    expect(self.board_node).to(contain("path: '/board/show', run: (cdd, request) => new BoardNodeAdapter(cdd).show()"))
+                    expect(self.board).to(contain("path: '/board/show', run: (cdd, request) => new BoardAdapter(cdd).show()"))
+
+    with description("the generated views of a marked toolset"):
+        with before.all:
+            install_path = Path(tempfile.mkdtemp(prefix="language-adapter-views-"))
+            _install(install_path, ("harness.installation._examples.note:Note",))
+            root = install_path / _ADAPTERS
+            self.views = (root / "harness/installation/_examples/note-views.tsx").read_text(encoding="utf-8")
+            self.shared_views = (root / "cdd-views.tsx").read_text(encoding="utf-8")
+
+        with it("should take React from the application, the only package it imports"):
+            imports = [line for line in self.shared_views.splitlines() if line.startswith("import ") and " from '" in line]
+            expect(all(line.endswith("from 'react'") for line in imports)).to(be_true)
+
+        with it("should say which JSX it uses, since the install has no settings of its own"):
+            expect(self.views).to(contain("/** @jsxRuntime automatic @jsxImportSource react */"))
+
+        with it("should draw the object again whenever its client takes on new state"):
+            expect(self.views).to(contain("export function useNote<Client extends Note>(client: Client): Client {"))
+
+        with context("for a field an operation's argument of the same name changes"):
+            with it("should make it an input that saves through that operation"):
+                expect(self.views).to(contain('<EditableField label="Text" kind="text" value={note.text} onSave={value => note.updateText(value as string)} />'))
+
+        with context("for a field an operation marks with @edits"):
+            with it("should make it an input that saves through that operation"):
+                expect(self.views).to(contain("onSave={value => note.rename(value as string)}"))
+
+        with context("for a field no operation changes"):
+            with it("should show it read-only"):
+                expect(self.views).to(contain('<ReadOnlyField label="Is pinned" value={note.isPinned} />'))
+
+        with context("for an operation with no arguments of its own"):
+            with it("should draw a button"):
+                expect(self.views).to(contain('<OperationForm label="Pin" inputs={[]} onRun={() => note.pin()} />'))
+
+        with context("for an operation that answers with something other than the object"):
+            with it("should show its answer"):
+                expect(self.views).to(contain("showsResult onRun={() => note.wordCount()}"))
+
+        with context("for an operation that edits a field"):
+            with it("should not draw it again as a form"):
+                expect(self.views).to(contain("operations?: Partial<Record<'pin' | 'wordCount',"))
+
+        with context("for a field the page draws itself"):
+            with it("should draw the page's own field in its place"):
+                expect(self.views).to(contain("{fields.title ? fields.title(note) :"))
+
+        with context("for a class operation that answers with a new object"):
+            with it("should draw a form that creates it"):
+                expect(self.views).to(contain("export function NoteNewViewGenerated({ api, onCreated }: NoteNewViewProps): ReactNode {"))
 
     with description("a Python name"):
         with it("should become camelCase"):

@@ -11,6 +11,7 @@ _NO_CATALOG_FLAG = "_no_catalog"
 _NO_DEPLOY_FLAG = "_no_deploy"
 _LANGUAGE_ADAPTERS_FLAG = "_language_adapters"
 _IDENTITY_FLAG = "_language_adapter_identity"
+_EDITS_FLAG = "_language_adapter_edits"
 
 
 def noCatalog(target: Any = None) -> Any:
@@ -69,6 +70,25 @@ def languages_of(toolset: Any) -> tuple[str, ...]:
 def identity_field_of(toolset: Any) -> str:
     """The field of the toolset's data that names one object, or empty when its tools load none by name."""
     return str(getattr(toolset, _IDENTITY_FLAG, ""))
+
+
+def edits(*fields: str) -> Callable[[Any], Any]:
+    """Name the fields of the object's data this operation changes, when its argument names do not match them.
+
+    A generated view shows a field as an input only where an operation changes it, so this is how an operation whose
+    argument is called something else, such as `rename(new_title)`, still makes `title` editable.
+    """
+
+    def mark(operation: Any) -> Any:
+        setattr(operation, _EDITS_FLAG, fields)
+        return operation
+
+    return mark
+
+
+def edited_fields_of(operation: Any) -> tuple[str, ...]:
+    """The fields an operation's `@edits` mark names, or none."""
+    return tuple(getattr(operation, _EDITS_FLAG, ()))
 
 
 def omitted_from_catalog(obj: Any) -> bool:

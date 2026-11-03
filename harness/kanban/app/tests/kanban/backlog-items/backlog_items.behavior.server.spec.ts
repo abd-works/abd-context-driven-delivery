@@ -1,13 +1,12 @@
 /**
- * Runs the shared behavior on BacklogItemNodeAdapter, which calls the real cdd server on a throwaway project. Nothing is stubbed;
+ * Runs the shared behavior on BacklogItemAdapter, which calls the real cdd server on a throwaway project. Nothing is stubbed;
  * the results are checked from the object's side: what starting answered, and what the board shows.
  */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
-import { BacklogItemNodeAdapter } from '@cdd/harness/kanban/backlog-item-node-adapter'
-import { BoardNodeAdapter } from '@cdd/harness/kanban/board-node-adapter'
-import type { TicketData } from '@cdd/harness/kanban/ticket'
-import { TicketNodeAdapter } from '@cdd/harness/kanban/ticket-node-adapter'
+import { BacklogItemAdapter } from '@cdd/harness/kanban/backlog-item'
+import { BoardAdapter } from '@cdd/harness/kanban/board'
+import { TicketAdapter, type TicketData } from '@cdd/harness/kanban/ticket'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
 import { CddProject } from 'test-utils/behavior-test/cdd-project'
 
@@ -15,23 +14,23 @@ import { backlogItemsBehavior, type BacklogItemsDriver } from './backlog_items.s
 
 const project = new CddProject()
 
-class BacklogItemsNodeAdapterDriver implements BacklogItemsDriver {
+class BacklogItemsAdapterDriver implements BacklogItemsDriver {
   private readonly started = new Map<string, TicketData>()
 
   private async items() {
-    return (await new BoardNodeAdapter(project.cdd).show()).columns.flatMap(column => column.items ?? [])
+    return (await new BoardAdapter(project.cdd).show()).columns.flatMap(column => column.items ?? [])
   }
 
   async add(title: string, text: string): Promise<void> {
-    await BacklogItemNodeAdapter.add(project.cdd, title, text)
+    await BacklogItemAdapter.add(project.cdd, title, text)
   }
 
   async start(title: string): Promise<void> {
-    this.started.set(title, await new BacklogItemNodeAdapter(project.cdd, title).start())
+    this.started.set(title, await new BacklogItemAdapter(project.cdd, title).start())
   }
 
   async moveToBacklog(ticket: string): Promise<void> {
-    await new TicketNodeAdapter(project.cdd, ticket).movePrevious()
+    await new TicketAdapter(project.cdd, ticket).movePrevious()
   }
 
   async textOf(title: string): Promise<string> {
@@ -51,11 +50,11 @@ class BacklogItemsNodeAdapterDriver implements BacklogItemsDriver {
   }
 }
 
-let driver: BacklogItemsNodeAdapterDriver
+let driver: BacklogItemsAdapterDriver
 
 beforeEach(() => {
   project.reset()
-  driver = new BacklogItemsNodeAdapterDriver()
+  driver = new BacklogItemsAdapterDriver()
 })
 
 afterAll(() => project.close())

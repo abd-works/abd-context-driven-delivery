@@ -8,6 +8,8 @@ const resolved = (path: string): string => fileURLToPath(new URL(path, import.me
 export const aliases = {
   '@src': resolved('./src'),
   '@cdd': resolved('../../../.claude/language-adapters/typescript'),
+  // The generated views sit outside this package, so they reach React through this application's own copy.
+  react: resolved('./node_modules/react'),
   'test-utils': resolved('./test-utils'),
 }
 

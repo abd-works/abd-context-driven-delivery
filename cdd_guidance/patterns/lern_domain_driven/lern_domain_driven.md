@@ -228,12 +228,12 @@ An aggregate whose rules and state live in the Python CDD domain follows `patter
 | LERN file | For a CDD-backed aggregate |
 |---|---|
 | `<aggregate>.ts` | Optional: only types or logic the page needs that Python does not hold. `{Object}`, the shared base, is generated, and nothing uses it directly |
-| `<aggregate>-node.ts` | None: `{Object}NodeAdapter` is generated |
+| `<aggregate>-node.ts` | None: `{Object}Adapter` is generated |
 | `<aggregate>-routes.ts` | None: mount the generated `{object}Routes` once, with `cdd-routes.ts` from `patterns-cdd-web-domain-access` |
 | `<aggregate>-client.tsx` | `{Object}Client extends {Object}ClientGenerated`. A person acts on it; it does the page's work with the other page clients and calls up to the generated client to reach the routes |
 | `<aggregate>.json`, `{Domain}Repository` | None: the tool is the store |
 
-Its server tier drives `{Object}NodeAdapter` against a real cdd server on a throwaway project, where an aggregate this application owns drives `{Domain}Node`.
+Its server tier drives `{Object}Adapter` against a real cdd server on a throwaway project, where an aggregate this application owns drives `{Domain}Node`.
 
 The persistence rules (`one-json-store-per-aggregate`, `repository-owns-aggregate-lifecycle`, `one-repository-per-aggregate`, `node-repository-parses-on-read`, `reset-every-repository`) apply only to aggregates this application owns. The layout, navigation, naming, and testing rules apply to every aggregate.
 

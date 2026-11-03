@@ -1,12 +1,11 @@
 /**
- * Runs the shared behavior on TicketNodeAdapter, which calls the real cdd server on a throwaway project. Nothing is stubbed;
+ * Runs the shared behavior on TicketAdapter, which calls the real cdd server on a throwaway project. Nothing is stubbed;
  * the results are checked from the object's side: what a move answered, and what the board shows.
  */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
-import { BoardNodeAdapter } from '@cdd/harness/kanban/board-node-adapter'
-import type { TicketData } from '@cdd/harness/kanban/ticket'
-import { TicketNodeAdapter } from '@cdd/harness/kanban/ticket-node-adapter'
+import { BoardAdapter } from '@cdd/harness/kanban/board'
+import { TicketAdapter, type TicketData } from '@cdd/harness/kanban/ticket'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
 import { CddProject } from 'test-utils/behavior-test/cdd-project'
 
@@ -14,11 +13,11 @@ import { moveTicketBehavior, type MoveTicketDriver, type TicketPlace } from './m
 
 const project = new CddProject()
 
-class MoveTicketNodeNodeAdapterDriver implements MoveTicketDriver {
+class MoveTicketAdapterDriver implements MoveTicketDriver {
   private readonly moved = new Map<string, TicketData>()
 
-  private ticket(name: string): TicketNodeAdapter {
-    return new TicketNodeAdapter(project.cdd, name)
+  private ticket(name: string): TicketAdapter {
+    return new TicketAdapter(project.cdd, name)
   }
 
   async moveNext(ticket: string): Promise<void> {
@@ -39,7 +38,7 @@ class MoveTicketNodeNodeAdapterDriver implements MoveTicketDriver {
   }
 
   private async columns() {
-    return (await new BoardNodeAdapter(project.cdd).show()).columns
+    return (await new BoardAdapter(project.cdd).show()).columns
   }
 
   async isOnTheStages(ticket: string): Promise<boolean> {
@@ -52,11 +51,11 @@ class MoveTicketNodeNodeAdapterDriver implements MoveTicketDriver {
   }
 }
 
-let driver: MoveTicketNodeNodeAdapterDriver
+let driver: MoveTicketAdapterDriver
 
 beforeEach(() => {
   project.reset()
-  driver = new MoveTicketNodeNodeAdapterDriver()
+  driver = new MoveTicketAdapterDriver()
 })
 
 afterAll(() => project.close())

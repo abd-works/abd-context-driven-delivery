@@ -9,16 +9,16 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 | Generated | Where it runs | What it is |
 |---|---|---|
 | `{Object}` | Browser and server | The shared base: the object's state, its `camelCase` getters, `changed(data)`, which takes on new state, and `onChanged(listener)`, which tells a view when it did. It makes no call. **Nothing uses it directly**; code always works with one of its subtypes. |
-| `{Object}NodeAdapter extends {Object}` | Server | Each operation calls its MCP tool and takes on the state Python returns. |
+| `{Object}Adapter extends {Object}` | Server | Each operation calls its MCP tool and takes on the state Python returns. |
 | `{Object}ClientGenerated extends {Object}` | Browser | Each operation posts to its route and takes on the state the server returns. |
-| `{object}Routes` | Server | One route for each tool. Each reads the request against the tool's published schema and calls `{Object}NodeAdapter`. |
+| `{object}Routes` | Server | One route for each tool. Each reads the request against the tool's published schema and calls `{Object}Adapter`. |
 | `CddConnection` | Server | One per install. Starts one cdd server and carries calls to it. It knows no tool by name. |
 | `use{Object}(client)` | Browser | A React hook that re-renders a view whenever the client takes on new state. |
 | `{Object}ViewGenerated`, `{Object}NewViewGenerated` | Browser | Starting-point React views: the object with each field editable where a domain operation changes it and read-only elsewhere, its other operations as buttons and forms, and a form for each operation that creates one. **Never deployed as they are**; an application composes them, or copies one and changes it. |
 
 **What the application's pattern adds.** LERN mounts `{object}Routes` on its server, subclasses `{Object}ClientGenerated` for what only the page knows, such as selecting a card or showing a toast, and builds its pages from the generated views. That subclass is LERN's `{Domain}Client`; the pages, layout, and navigation are LERN's own. A Claude Code mod reaches the tools through `$.mcp.call`, as `patterns-cdd-claude-mod` describes. Nothing in the application calls a tool, parses a request for one, or writes a path to one.
 
-**No god connector.** Each domain object has its own classes that know its own tools. `TicketNodeAdapter` calls `ticket.move_next`, and `BoardNodeAdapter` calls `board.show`. One connection underneath carries the calls and knows no tool by name.
+**No god connector.** Each domain object has its own classes that know its own tools. `TicketAdapter` calls `ticket.move_next`, and `BoardAdapter` calls `board.show`. One connection underneath carries the calls and knows no tool by name.
 
 **Reach the end-user API, not the framework.** Practices, patterns, actions, and `space` are the CDD domain an application reaches. `harness/` is the framework that installs and serves them, so an application does not call into it. The graph is reached through the practices that read it, such as validate with `graph`; expose a graph tool directly only when an application's generation needs it and no practice gives it.
 
@@ -30,7 +30,7 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 | Tool | The same file, marked `@mcp @agent_tool` | One operation for each thing a person or agent does. The tool reads `{object}.{operation}`. |
 | Contract | `{Object}Data`, a `TypedDict` that `to_json()` is annotated with | The only agreement between the languages. The language adapter is written from it. |
 | Mark | `@language_adapter(language="typescript", identity="name")` on the class | Opts the toolset in to the language adapter for that language. `identity` names the field of `{Object}Data` that holds the object's name, so a browser object knows which object its routes act on. |
-| Language adapter | `<install path>/language-adapters/<language>/<source folders>/<object>.<ext>` | Generated: `{Object}Data`, `{Object}`, `{Object}NodeAdapter`, `{Object}ClientGenerated`, `{object}Routes`, `use{Object}`, and the starting-point views. |
+| Language adapter | `<install path>/language-adapters/<language>/<source folders>/<object>.<ext>` | Generated: `{Object}Data`, `{Object}`, `{Object}Adapter`, `{Object}ClientGenerated`, `{object}Routes`, `use{Object}`, and the starting-point views. |
 | Connection | `<install path>/language-adapters/<language>/cdd-connection.<ext>` | Generated: `CddConnection`, once per install. |
 
 ```mermaid
@@ -46,7 +46,7 @@ classDiagram
     +isDone
     #changed(data)
   }
-  class TicketNodeAdapter {
+  class TicketAdapter {
     <<generated>>
     +fromRequest(cdd, request)
     +moveNext()
@@ -67,12 +67,12 @@ classDiagram
     +select()
   }
 
-  Ticket <|-- TicketNodeAdapter
+  Ticket <|-- TicketAdapter
   Ticket <|-- TicketClientGenerated
   TicketClientGenerated <|-- TicketClient
   TicketClientGenerated ..> ticketRoutes : POST
-  ticketRoutes --> TicketNodeAdapter : asks
-  TicketNodeAdapter --> CddConnection : its own tools
+  ticketRoutes --> TicketAdapter : asks
+  TicketAdapter --> CddConnection : its own tools
   CddConnection --> TicketPython : MCP
 ```
 
@@ -83,7 +83,7 @@ sequenceDiagram
   participant Others as Other page clients
   participant Generated as TicketClientGenerated (browser)
   participant Route as ticketRoutes (server)
-  participant Node as TicketNodeAdapter (server)
+  participant Node as TicketAdapter (server)
   participant Connection as CddConnection (server)
   participant Python as Ticket (Python)
 
@@ -116,8 +116,8 @@ A person typing a slash command, an agent calling a tool, and a person pressing 
 |---|---|
 | Skill, action, or command | The agent calls the MCP tool |
 | Claude Code mod | `$.mcp.call`, typed by the language adapter, as `patterns-cdd-claude-mod` describes |
-| Web page | `{Object}ClientGenerated`, then `{object}Routes`, then `{Object}NodeAdapter` |
-| Server code | `{Object}NodeAdapter` |
+| Web page | `{Object}ClientGenerated`, then `{object}Routes`, then `{Object}Adapter` |
+| Server code | `{Object}Adapter` |
 
 ### One straight line
 
@@ -125,8 +125,8 @@ An operation reads the same from the page to the domain, so anyone can follow it
 
 | Browser | Route | Server | Tool | Domain |
 |---|---|---|---|---|
-| `TicketClientGenerated.moveNext()` | `POST /ticket/:ticket/move-next` | `TicketNodeAdapter.moveNext()` | `ticket.move_next` | `Ticket.move_next()` |
-| `TicketClientGenerated.enablePractice(practice, isEnabled)` | `POST /ticket/:ticket/enable-practice` | `TicketNodeAdapter.enablePractice(practice, isEnabled)` | `ticket.enable_practice` | `Ticket.enable_practice(practice, is_enabled)` |
+| `TicketClientGenerated.moveNext()` | `POST /ticket/:ticket/move-next` | `TicketAdapter.moveNext()` | `ticket.move_next` | `Ticket.move_next()` |
+| `TicketClientGenerated.enablePractice(practice, isEnabled)` | `POST /ticket/:ticket/enable-practice` | `TicketAdapter.enablePractice(practice, isEnabled)` | `ticket.enable_practice` | `Ticket.enable_practice(practice, is_enabled)` |
 
 The route is the tool's object, then the object's identity when the tool loads one, then the operation in kebab case. Every route is a `POST` with the operation's own arguments in the body, so both ends follow from the tool's name alone.
 
@@ -145,18 +145,18 @@ class Ticket(Card):
 .claude/language-adapters/typescript/
 ├── cdd-connection.ts            CddConnection, using only Node's own modules
 ├── cdd-shared.ts                what every object shares and a browser can load: reading a request, the page's API, the errors
+├── cdd-views.tsx                the inputs, buttons, and forms every generated view draws
 ├── harness/kanban/
-│   ├── ticket.ts                TicketData, Ticket, TicketClientGenerated
-│   ├── ticket-node-adapter.ts   TicketNodeAdapter, ticketRoutes
+│   ├── ticket.ts                every generated class: TicketData, Ticket, TicketClientGenerated, TicketAdapter, ticketRoutes
 │   ├── ticket-views.tsx         useTicket, TicketViewGenerated, TicketNewViewGenerated
 │   ├── board.ts
-│   └── board-node-adapter.ts
+│   └── board-views.tsx
 └── space/session/...
 ```
 
 The folders mirror the toolset's source. Only marked toolsets are written, so catalog pages, rules, and guidance prose never appear here. **Mark a toolset when an application needs its results as data.** A toolset that returns prompt text for an agent to follow, as the practices and actions do, gains little from a typed adapter, so it stays unmarked.
 
-Import it through the `@cdd` path alias, which points at the install. The install sits outside every application's packages, so the adapter imports no package: the connection speaks MCP with Node's own modules, the routes are plain data any server framework can mount, and the client posts through whatever `CddApi` the page hands it. The browser imports `<object>.ts`, which loads nothing from Node; only the server imports `<object>-node-adapter.ts`.
+Import it through the `@cdd` path alias, which points at the install. The install sits outside every application's packages, so the adapter imports no package: the connection speaks MCP with Node's own modules, the routes are plain data any server framework can mount, and the client posts through whatever `CddApi` the page hands it. Every generated class of an object sits in one `<object>.ts`. The browser and the server both import it, and it loads nothing of Node, because it takes the connection only as a type; only the server constructs a `CddConnection` and an `{Object}Adapter`. The views sit in their own `<object>-views.tsx`, because they need JSX and React, which the server has no reason to load.
 
 ```ts
 export class Ticket {
@@ -186,12 +186,12 @@ export class Ticket {
   }
 }
 
-export class TicketNodeAdapter extends Ticket {
+export class TicketAdapter extends Ticket {
   constructor(protected readonly cdd: CddConnection, protected readonly ticket: string, state: TicketData | null = null) {
     super(state)
   }
 
-  static fromRequest(cdd: CddConnection, request: CddRequest): TicketNodeAdapter { ... }
+  static fromRequest(cdd: CddConnection, request: CddRequest): TicketAdapter { ... }
 
   async moveTo(stage: string, done?: boolean): Promise<this> {
     return this.changed(await this.cdd.call<TicketData>('ticket.move_to', { ticket: this.ticket, stage, done }))
@@ -214,7 +214,7 @@ export class TicketClientGenerated extends Ticket {
 }
 
 export const ticketRoutes: CddRoute[] = [
-  { path: '/ticket/:ticket/move-to', run: (cdd, request) => { ... TicketNodeAdapter.fromRequest(cdd, request).moveTo(sent.stage, sent.done) } },
+  { path: '/ticket/:ticket/move-to', run: (cdd, request) => { ... TicketAdapter.fromRequest(cdd, request).moveTo(sent.stage, sent.done) } },
 ]
 ```
 
@@ -229,13 +229,13 @@ export const ticketRoutes: CddRoute[] = [
 
 The Python says enough to draw a working view of each object, so the installer writes one as a starting point. It is never a finished page: an application composes it into its own pages, or copies it into its own source and changes it completely. Pages, layout, navigation, and anything bespoke, such as the board's tiles and drag, are always the application's own.
 
-**A field is editable where a domain operation changes it.** The view never writes a field; every edit is an operation, because Python decides what a change means and whether it is allowed. An operation that loads the object and takes an argument with the same name as a field, such as `set_title(title)` or `update(title, text)`, makes that field an input, and saving calls the operation. Where the names differ, `@edits("title")` on the Python operation names the field it changes. A field no operation changes, such as `is_done`, `progress`, or `allowed_actions`, is shown read-only, because only Python decides it.
+**A field is editable where a domain operation changes it.** The view never writes a field; every edit is an operation, because Python decides what a change means and whether it is allowed. An operation that loads the object, answers with the object's own data, and takes an argument with the same name as a field, such as `update_text(text)`, makes that field an input, and saving calls the operation; any other argument it needs must itself be a field, which is sent as it stands. Where the names differ, `@edits("title")` from `harness.installation.destination`, placed directly on an operation with one argument such as `rename(new_title)`, names the field that argument changes. An operation that answers with something else, such as `BacklogItem.start(scope, path)` answering with a ticket, never edits a field, even where an argument shares a field's name. A field no operation changes, such as `is_done`, `progress`, or `allowed_actions`, is shown read-only, because only Python decides it.
 
 **The input follows the published type.** A string is a text field, a boolean a checkbox, a number a number field, and a list of strings a multi-select. An argument with a default is optional on the form. A nested field, such as a column's `wip_limit` inside the board, is reached through its operation's form rather than inline, unless `@edits` names it.
 
-**Every other operation is a button or a form.** An operation with no arguments of its own, such as `moveNext`, is a button; one with arguments, such as `moveTo(stage, done)`, is a small form built the same way. Each calls the client the view was given, so a page that hands in its own subclass, such as LERN's `TicketClient`, gets its page work, such as refreshing the board, on every action.
+**Every other operation is a button or a form.** An operation with no arguments of its own, such as `moveNext`, is a button; one with arguments, such as `moveTo(stage, done)`, is a small form built the same way. An operation that answers with something other than the object, such as `report(fidelity)`, shows its answer beneath the form. An operation the view already uses to edit a field is not drawn again as a form. Each calls the client the view was given, so a page that hands in its own subclass, such as LERN's `TicketClient`, gets its page work, such as refreshing the board, on every action.
 
-**An operation that creates the object gives a new-object form.** A class operation that returns the object's own data, such as `Ticket.new(title, scope, parent, path)` or `BacklogItem.add(title, text)`, becomes `{Object}NewViewGenerated`, which calls it with the API it is given.
+**An operation that creates the object gives a new-object form.** Each class operation that answers with the object's own data, such as `Ticket.new(title, scope, parent, path)` or `BacklogItem.add(title, text)`, becomes a form in `{Object}NewViewGenerated`, which calls it with the API it is given and hands the new object's data to `onCreated`.
 
 **`use{Object}(client)` keeps a view current.** The client takes on new state through `changed`, which tells its `onChanged` listeners; the hook subscribes and re-renders. Any view holding a client, generated or the application's own, uses it instead of keeping a second copy of the object's state.
 
@@ -254,7 +254,7 @@ export function TicketViewGenerated({ client, fields, operations }: TicketViewPr
 
 **An application changes a view by composing it, or by copying it.** React components are composed rather than subclassed, so each generated view takes props that replace any one field's rendering or any one operation's form, and a page wraps the view in its own layout. When that is not enough, the application copies the view into its own source and changes it freely. A copied view still calls the generated client, so its edits still go through domain operations; what a copy cannot do is make a field editable that no operation changes.
 
-**React comes from the application.** The install holds no packages, so the views import `react` through the application's own copy: one entry for `react` in the application's TypeScript `paths` and its bundler's aliases, beside `@cdd`. The views draw plain, unstyled elements with stable class names, so the application's stylesheet gives them their look.
+**React comes from the application.** The install holds no packages, so the views import `react` through the application's own copy: `react` and `react/jsx-runtime` in the application's TypeScript `paths`, pointing at its `@types/react`, and `react` in its bundler's aliases, beside `@cdd`. Each views file starts with `/** @jsxRuntime automatic @jsxImportSource react */`, because the install has no TypeScript settings of its own for the bundler to read. The views draw plain, unstyled elements with stable class names, such as `cdd-field` and `cdd-operation`, so the application's stylesheet gives them their look. The shared inputs, buttons, and forms they draw live in `cdd-views.tsx`.
 
 ### Python states the contract
 
@@ -264,7 +264,7 @@ export function TicketViewGenerated({ client, fields, operations }: TicketViewPr
 
 An application keeps no copy of what the domain owns. There is no repository, no store, and no cache for a CDD object, because a second copy drifts from the first and the agent changes state without telling the application. An adapter holds only the state its last call returned; to stay current, call again.
 
-**lowdb is for state CDD does not own.** A web app built in LERN still uses lowdb for what belongs to that app alone, such as a person's saved layout. For an aggregate backed by CDD, `{Object}NodeAdapter` takes the repository's place on the server.
+**lowdb is for state CDD does not own.** A web app built in LERN still uses lowdb for what belongs to that app alone, such as a person's saved layout. For an aggregate backed by CDD, `{Object}Adapter` takes the repository's place on the server.
 
 ### When a call fails
 
@@ -272,7 +272,7 @@ The MCP server answers a failed operation with plain text, such as `TicketNotFou
 
 ### Testing
 
-The Python domain keeps its own Mamba specs, and `{object}.{operation}` keeps its tool spec. An application's tests that call `{Object}NodeAdapter` run it against the real cdd server on a throwaway project, because a stubbed tool would still pass after the Python changed. A behavior both languages state keeps the same `should` sentence, so a sentence on one side only shows what is untested on the other. The generated routes and `{Object}ClientGenerated` are tested once, in the installer's specs, so an application tests its own subclass and not the paths between them.
+The Python domain keeps its own Mamba specs, and `{object}.{operation}` keeps its tool spec. An application's tests that call `{Object}Adapter` run it against the real cdd server on a throwaway project, because a stubbed tool would still pass after the Python changed. A behavior both languages state keeps the same `should` sentence, so a sentence on one side only shows what is untested on the other. The generated routes and `{Object}ClientGenerated` are tested once, in the installer's specs, so an application tests its own subclass and not the paths between them.
 
 ---
 
@@ -303,8 +303,8 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 
 ### One object, one set of generated classes
 
-- **`one-class-per-object`** — Each domain object has its own generated `{Object}NodeAdapter` and `{Object}ClientGenerated` that call only that object's tools. Code that calls a tool by name, or posts to a tool's route by hand, has skipped the object's typed operation and hides which object owns it.
-- **`adapter-is-generated`** — The installer writes `CddConnection`, `{Object}`, `{Object}NodeAdapter`, `{Object}ClientGenerated`, and `{object}Routes`, and nobody edits them or writes one by hand. Subclass `{Object}ClientGenerated` only for what the page alone knows, never to add a call, a route, or parsing. A hand-kept class drifts from Python, and the compiler then checks the wrong thing. The generated views are the exception: they only present what the client already does, so an application may copy one and change it.
+- **`one-class-per-object`** — Each domain object has its own generated `{Object}Adapter` and `{Object}ClientGenerated` that call only that object's tools. Code that calls a tool by name, or posts to a tool's route by hand, has skipped the object's typed operation and hides which object owns it.
+- **`adapter-is-generated`** — The installer writes `CddConnection`, `{Object}`, `{Object}Adapter`, `{Object}ClientGenerated`, and `{object}Routes`, and nobody edits them or writes one by hand. Subclass `{Object}ClientGenerated` only for what the page alone knows, never to add a call, a route, or parsing. A hand-kept class drifts from Python, and the compiler then checks the wrong thing. The generated views are the exception: they only present what the client already does, so an application may copy one and change it.
 - **`views-are-a-starting-point`** — Compose a generated view into the application's own page, or copy it into the application's source and change it; never ship one as the page itself. It knows the object's fields and operations but nothing about the page it sits on.
 - **`edits-go-through-operations`** — A view changes a field only by calling the domain operation that changes it, and shows a field no operation changes as read-only. A view that writes a field directly decides in the browser what only Python may decide.
 - **`views-share-the-client-state`** — A view reads its object through `use{Object}(client)` and keeps no copy of the object's state. A second copy shows the old state after an operation returns.
@@ -324,5 +324,5 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 
 ### Testing
 
-- **`test-the-adapter-against-real-cdd`** — Tests that call `{Object}NodeAdapter` run against a real cdd server on a throwaway project. A stubbed tool would pass after the Python changed.
+- **`test-the-adapter-against-real-cdd`** — Tests that call `{Object}Adapter` run against a real cdd server on a throwaway project. A stubbed tool would pass after the Python changed.
 - **`act-on-a-throwaway-project`** — Any test that moves, closes, or commits runs on a throwaway project with no real remote, because these tools really commit and push.
