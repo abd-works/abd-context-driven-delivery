@@ -80,8 +80,8 @@ def fill_working_copy(graph: Graph) -> None:
         _offer(graph.practice("ux"), ["UxMap", "Screen"])
     if _overlay_selected(graph, "lern_domain_driven"):
         _record_lern(graph, source, classes)
-    if _overlay_selected(graph, "cdd_access"):
-        _record_cdd_access(graph, source)
+    if _overlay_selected(graph, "cdd_web_domain_access"):
+        _record_cdd_web_domain_access(graph, source)
     _register_overlay_schema_catalog(graph)
     for practice in graph.practices.values():
         attach_rules(practice)
@@ -687,7 +687,6 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
 
 def _record_stories(practice, source: Path) -> None:
     from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
-    from cdd_guidance.practices.stories.model.story_model import StoryModel
     from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
     files: dict[str, str] = {}
@@ -706,9 +705,19 @@ def _record_stories(practice, source: Path) -> None:
     model = TypeScriptStoryModel("tests").load(files, on_file=lambda detail: report("parse", detail))
     if not model.epics:
         _report(graph, "stories · markdown")
-        model = StoryModel.load(source, on_file=lambda detail: report("markdown", detail))
+        model = _story_map_model(graph, source, lambda detail: report("markdown", detail))
     _report(graph, "stories · record")
     GraphStoryModel(model).record(practice, on_node=lambda detail: report("record", detail))
+
+
+def _story_map_model(graph: Graph, source: Path, on_file):
+    """The story maps under ``source``; with edited files, only the story maps among them."""
+    from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+    edited = graph.edited_files()
+    if edited is None:
+        return StoryModel.load(source, on_file=on_file)
+    return StoryModel.load_files(edited, source, on_file=on_file)
 
 
 def _gwt_phase(step) -> str:
@@ -895,35 +904,33 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
 _TEST_FOLDERS = ("tests/", "test-utils/")
 
 
-def _record_cdd_access(graph: Graph, root: Path) -> None:
-    """CDD access overlay: what reaches the domain from outside Python, each file carrying the facts its rules read."""
-    from cdd_guidance.patterns.cdd_access import access_facts
+def _record_cdd_web_domain_access(graph: Graph, root: Path) -> None:
+    """CDD web domain access overlay: what reaches the domain from outside Python, each file carrying the facts its rules read."""
+    from cdd_guidance.patterns.cdd_web_domain_access import access_facts
 
     if "ddd" not in graph.practices:
         return
     ddd = graph.practice("ddd")
     for file in scanned_files(root):
         text = file.read_text(encoding="utf-8", errors="replace")
-        recorded = _cdd_access_tier(file, text, access_facts)
+        recorded = _cdd_web_domain_access_tier(file, text, access_facts)
         if recorded is not None:
-            _cdd_access_node(ddd, root, file, *recorded)
+            _cdd_web_domain_access_node(ddd, root, file, *recorded)
 
 
-def _cdd_access_tier(file: Path, text: str, access_facts) -> tuple[str, dict] | None:
+def _cdd_web_domain_access_tier(file: Path, text: str, access_facts) -> tuple[str, dict] | None:
     if file.name.endswith("-routes.ts"):
         return "AccessRoute", access_facts.route_facts(text)
-    if file.name.endswith("-connection-node.ts"):
-        return "AccessConnection", access_facts.connection_facts(text)
+    if access_facts.is_hand_written_adapter(file.name, text):
+        return "AccessHandWrittenAdapter", {}
     if file.name.endswith("-node.ts"):
         return "AccessNode", access_facts.node_facts(text)
-    if file.name.endswith("-tools.ts"):
-        return "AccessHandWrittenTools", {}
     if file.suffix == ".py" and access_facts.is_marked(text):
         return "AccessMarkedToolset", access_facts.marked_toolset_facts(text)
     return None
 
 
-def _cdd_access_node(practice, root: Path, file: Path, semantic: str, facts: dict) -> None:
+def _cdd_web_domain_access_node(practice, root: Path, file: Path, semantic: str, facts: dict) -> None:
     relative = file.relative_to(root).as_posix()
     node_id = f"ddd:{semantic}:{relative}"
     start, end = _file_line_span(root, relative)

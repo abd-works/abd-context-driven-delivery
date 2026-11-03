@@ -1,4 +1,5 @@
-import { appendFileSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { appendFileSync, rmSync, writeFileSync } from 'node:fs'
 import { EOL } from 'node:os'
 import { join } from 'node:path'
 
@@ -6,7 +7,9 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 import { fixtureRoot } from '../test-utils/fixture-repo'
-import { BOARD_POST_HEADERS, card, FakeChat, openBoard, openCardOf, toast, turnOffActiveSessionOnly } from './support'
+import { BOARD_POST_HEADERS, card, FakeChat, openBoard, openCardOf, openTileBarOf, startBoard, toast, turnOffActiveSessionOnly } from './support'
+
+const BROKEN_BOARD_PORT = 8781
 
 // A spec per story that acts, each against the real server, the real cdd tools, and the throwaway repository.
 // The specs share that repository, so each works on its own ticket, and the session changes come last.
@@ -29,7 +32,7 @@ async function lastReceived(text: string): Promise<void> {
 
 test.beforeAll(async ({ playwright, baseURL }) => {
   const request = await playwright.request.newContext({ baseURL })
-  chat = new FakeChat(request, 'surface-chat')
+  chat = new FakeChat(request, 'surface-chat', 'Surface chat')
   await chat.start()
 })
 
@@ -42,17 +45,21 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.describe('Restrict Actions To Active Session', () => {
-  test('should disable what changes a ticket that is not active, and leave information open', async ({ page }) => {
+  // A move runs nothing in a chat, so only what runs in the session's chat waits for the ticket to be active.
+  test('should let a ticket that is not active be dragged, activated, and its files opened', async ({ page }) => {
     const billing = card(page, 'billing-report')
-    await expect(billing.getByRole('button', { name: 'Move Billing report to the next column' })).toBeDisabled()
+    await expect(billing).toHaveAttribute('draggable', 'true')
     await expect(billing.getByRole('button', { name: 'Activate' })).toBeEnabled()
     await billing.getByRole('button', { name: 'list' }).click()
     await expect(page.locator('[data-panel="files"]')).toBeVisible()
   })
 
-  test('should enable them with Active session only off', async ({ page }) => {
+  test('should keep its practice switches off until Active session only is turned off', async ({ page }) => {
+    await showTicket(page, 'billing-report')
+    const practiceSwitch = page.getByRole('switch', { name: 'Disable UX for Billing report' })
+    await expect(practiceSwitch).toBeDisabled()
     await turnOffActiveSessionOnly(page)
-    await expect(card(page, 'billing-report').getByRole('button', { name: 'Move Billing report to the next column' })).toBeEnabled()
+    await expect(practiceSwitch).toBeEnabled()
   })
 })
 
@@ -82,9 +89,14 @@ test.describe('Set Stage WIP Limit', () => {
 })
 
 test.describe('Send commands to a chat', () => {
+  test('should show a chat by the name its mod reports, and keep its id to send to', async ({ page }) => {
+    await waitForChat(page)
+    await expect(page.getByRole('option', { name: 'Surface chat' })).toHaveAttribute('value', 'surface-chat')
+  })
+
   test('should pick the only chat and say a fill is queued', async ({ page }) => {
     await waitForChat(page)
-    await page.getByRole('button', { name: 'Handoff' }).click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Handoff' }).first().click()
     await expect(toast(page, /^Queued for the prompt/)).toBeVisible()
     await lastReceived('Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.')
     expect(chat.received.at(-1)?.kind).toBe('fill')
@@ -93,9 +105,9 @@ test.describe('Send commands to a chat', () => {
   test('should hold a fill at the server until the turn ends', async ({ page }) => {
     await waitForChat(page)
     chat.isBusy = true
-    await expect(page.getByRole('option', { name: 'surface-chat (busy)' })).toBeAttached({ timeout: 8_000 })
+    await expect(page.getByRole('option', { name: 'Surface chat (busy)' })).toBeAttached({ timeout: 8_000 })
     const before = chat.received.length
-    await page.getByRole('button', { name: 'Split' }).click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Split' }).first().click()
     await expect(toast(page, 'It goes in when this turn ends.')).toBeVisible()
     expect(chat.received.length).toBe(before)
     chat.isBusy = false
@@ -107,8 +119,7 @@ test.describe('Send commands to a chat', () => {
 test.describe('Generate Fidelity Output', () => {
   test('should send the generate commands from Run on an opened card', async ({ page }) => {
     await waitForChat(page)
-    const opened = await openCardOf(page, 'checkout-flow')
-    const bar = opened.locator('.expansion').first()
+    const bar = await openTileBarOf(await openCardOf(page, 'checkout-flow'))
     await bar.getByRole('button', { name: /^diagram/ }).click()
     await bar.getByRole('button', { name: 'Run' }).click()
     await expect.poll(() => chat.received.map(command => command.text).join('\n')).toContain('/actions-generate')
@@ -124,16 +135,16 @@ test.describe('Send Sketch Iterate Or Document', () => {
     await tile.getByRole('combobox', { name: 'Action' }).selectOption('sketch')
     await tile.getByRole('button', { name: /^code|^diagram|^markdown/ }).first().click()
     await tile.getByRole('button', { name: 'Run' }).click()
-    await lastReceived('/actions-sketch stories-story-map')
+    await lastReceived('/actions-sketch stories-story-map session=.sessions/checkout-flow/session.json')
   })
 })
 
 test.describe('Open Practice Tile', () => {
-  test('should open a tile after a short hover, and close it on leaving', async ({ page }) => {
+  // Moving across the details grid would otherwise open bar after bar, so there a tile opens only on a press.
+  test('should leave a tile in the details closed while the pointer only rests on it', async ({ page }) => {
     const tile = page.locator('.details-body [data-tile="ddd-bounded_context"]')
     await tile.hover()
-    await expect(tile.locator('.expansion')).toBeVisible()
-    await page.locator('.board-header').hover()
+    await page.waitForTimeout(800)
     await expect(tile.locator('.expansion')).toHaveCount(0)
   })
 
@@ -144,6 +155,13 @@ test.describe('Open Practice Tile', () => {
     await page.locator('.board-header').hover()
     await page.waitForTimeout(400)
     await expect(tile.locator('.expansion')).toBeVisible()
+  })
+
+  test('should keep two pressed tiles open at once', async ({ page }) => {
+    const details = page.locator('.details-body')
+    await details.locator('[data-tile="ddd-bounded_context"]').getByRole('button', { name: 'bounded-context', exact: true }).click()
+    await details.locator('[data-tile="stories-story_map"]').getByRole('button', { name: 'story-map', exact: true }).click()
+    await expect(details.locator('[data-tile="ddd-bounded_context"] .expansion, [data-tile="stories-story_map"] .expansion')).toHaveCount(2)
   })
 })
 
@@ -168,9 +186,7 @@ test.describe('Expand Ticket', () => {
 
 test.describe('Display Ticket Details', () => {
   test('should show the ticket of a card pressed anywhere', async ({ page }) => {
-    const links = card(page, 'billing-report').locator('.card-files')
-    const box = (await links.boundingBox())!
-    await links.click({ position: { x: box.width - 2, y: box.height / 2 } })
+    await card(page, 'billing-report').getByRole('button', { name: 'Show Billing report' }).click({ position: { x: 4, y: 4 } })
     await expect(page.getByRole('heading', { name: 'Billing report' })).toBeVisible()
   })
 
@@ -184,7 +200,7 @@ test.describe('Choose Ticket Practices', () => {
   test('should turn a practice off, say where it was saved, and fade its tile', async ({ page }) => {
     await page.getByRole('switch', { name: 'Disable UX for Checkout flow' }).click()
     await expect(toast(page, 'UX off for Checkout flow · saved to .sessions/checkout-flow/session.json')).toBeVisible()
-    await expect(page.locator('.details-body [data-tile="ux-ia"]')).toHaveCSS('opacity', '0.2')
+    await expect(page.locator('.details-body [data-tile="ux-ia"]')).toHaveCSS('opacity', '0.12')
     await page.getByRole('button', { name: 'Hide practices not enabled' }).click()
     await expect(page.locator('.details-body [data-tile="ux-ia"]')).toHaveCount(0)
     await page.getByRole('button', { name: 'Show practices not enabled' }).click()
@@ -277,7 +293,7 @@ test.describe('Open Validation Report', () => {
   })
 
   test('should open a violation\'s file at its line in the Files panel', async ({ page }) => {
-    await page.getByRole('button', { name: 'Run next: fix violations' }).click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
     await page.locator('[data-panel="report"]').getByRole('button', { name: 'tests/story-map.md:6', exact: true }).click()
     const files = page.locator('[data-panel="files"]')
     await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
@@ -288,12 +304,12 @@ test.describe('Open Validation Report', () => {
 test.describe('Fix Report Violations', () => {
   test('should send Fix and Fix all to the chat', async ({ page }) => {
     await waitForChat(page)
-    await page.getByRole('button', { name: 'Run next: fix violations' }).click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
     const report = page.locator('[data-panel="report"]')
     await report.getByRole('button', { name: 'Fix tests/story-map.md:6' }).click()
-    await lastReceived('/actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format')
+    await lastReceived('/actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format session=.sessions/checkout-flow/session.json')
     await report.getByRole('button', { name: 'Fix all' }).click()
-    await lastReceived('/actions-satisfy stories-story-map rule verb-noun-format')
+    await lastReceived('/actions-satisfy stories-story-map rule verb-noun-format session=.sessions/checkout-flow/session.json')
   })
 })
 
@@ -302,7 +318,7 @@ test.describe('Satisfy Violations From Band', () => {
     await waitForChat(page)
     await expect(page.getByRole('status', { name: "Active ticket's violations" })).toContainText('checkout-flow · Discovery · violations: stories-story_map')
     await page.getByRole('button', { name: 'Satisfy' }).click()
-    await lastReceived('/actions-satisfy stories-story-map')
+    await lastReceived('/actions-satisfy stories-story-map session=.sessions/checkout-flow/session.json')
   })
 })
 
@@ -329,7 +345,7 @@ test.describe('List, browse, and view files', () => {
 
 test.describe('Refresh Board After Tool Calls', () => {
   test('should show a move made elsewhere with a toast', async ({ page, request }) => {
-    await request.post('/api/tickets/pricing-rules/move-next', { headers: BOARD_POST_HEADERS })
+    await request.post('/api/ticket/pricing-rules/move-next', { headers: BOARD_POST_HEADERS })
     await expect(toast(page, 'Pricing rules moved to Specification · Done')).toBeVisible({ timeout: 8_000 })
     await expect(column(page, 'Specification').locator('.card-list').nth(1).locator('[data-ticket="pricing-rules"]')).toBeVisible()
   })
@@ -345,27 +361,47 @@ test.describe('Refresh Board After Tool Calls', () => {
 })
 
 test.describe('Display Connected Status', () => {
-  test('should show a band when cdd is lost and drop it when cdd answers again', async ({ page }) => {
-    await page.route('**/api/board', route => route.fulfill({ status: 503, json: { error: 'The cdd server is not connected: test' } }))
-    await expect(page.locator('.band-failure')).toContainText('cdd is not connected', { timeout: 8_000 })
-    await expect(page.locator('.column-grid').first()).toBeVisible()
-    await page.unroute('**/api/board')
-    await expect(page.locator('.band-failure')).toHaveCount(0, { timeout: 8_000 })
+  // A board of its own, whose cdd cannot start because the program it names does not exist.
+  test('should show a band when cdd cannot be reached', async ({ page }) => {
+    const board = await startBoard(BROKEN_BOARD_PORT, { CDD_PYTHON: join(fixtureRoot, 'no-such-python.exe') })
+    try {
+      await page.goto(board.url)
+      await expect(page.locator('.band-failure')).toContainText('cdd is not connected', { timeout: 15_000 })
+    } finally {
+      board.stop()
+    }
   })
 
+  test('should show no band while cdd answers', async ({ page }) => {
+    await expect(page.locator('.column-grid').first()).toBeVisible()
+    await expect(page.locator('.band-failure')).toHaveCount(0)
+  })
+
+  // The file a violation names is gone, so ticket.read_file really refuses it.
   test('should show a tool failure in a toast', async ({ page }) => {
-    await page.route('**/api/tickets/checkout-flow/report*', route => route.fulfill({ status: 502, json: { error: 'cdd ticket.report failed: test' } }))
-    await page.getByRole('button', { name: 'Run next: fix violations' }).click()
-    await expect(toast(page, 'cdd ticket.report failed: test')).toBeVisible()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
+    const violation = page.locator('[data-panel="report"]').getByRole('button', { name: 'tests/story-map.md:6', exact: true })
+    await expect(violation).toBeVisible()
+    rmSync(join(fixtureRoot, 'tests', 'story-map.md'))
+    try {
+      await violation.click()
+      await expect(toast(page, /is not a file in this repository/)).toBeVisible()
+    } finally {
+      execFileSync('git', ['checkout', '--', 'tests/story-map.md'], { cwd: fixtureRoot })
+    }
   })
 })
 
-test.describe('Archive Ticket', () => {
-  test('should take a ticket off the board', async ({ page }) => {
-    await turnOffActiveSessionOnly(page)
-    await showTicket(page, 'pricing-rules')
-    await page.getByRole('button', { name: 'Archive' }).click()
-    await expect(card(page, 'pricing-rules')).toHaveCount(0)
+test.describe('Choose Session Root', () => {
+  // Choosing a root changes the shared fixture's session, so this only browses and cancels.
+  test("should open the roots from the details bar and browse the repository's folders for the session root", async ({ page }) => {
+    await page.locator('.details-bar').getByRole('button', { name: 'whole repository' }).click()
+    const roots = page.getByRole('dialog')
+    await expect(roots.getByRole('heading', { name: 'Roots of Checkout flow' })).toBeVisible()
+    await roots.getByRole('button', { name: 'Change the root of Session' }).click()
+    await expect(roots.getByRole('listitem').filter({ hasText: 'tests/' })).toBeVisible()
+    await roots.getByRole('button', { name: 'Cancel' }).click()
+    await expect(roots.getByRole('button', { name: 'Change the root of Stories' })).toBeVisible()
   })
 })
 

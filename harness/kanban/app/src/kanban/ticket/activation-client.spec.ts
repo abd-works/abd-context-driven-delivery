@@ -1,73 +1,84 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+
+import { BoardOnProject, ticketOn, type Asked } from 'test-utils/board-page-support'
 
 import { activationHeading } from './activation-client'
-import { boardJson, discovery, ticketJson } from 'test-utils/board-examples'
-import { pageOn } from 'test-utils/board-page-support'
 
-const CHECKED_OUT = { has_branch: false, has_worktree: false, leaving_has_branch: true }
+// checkout-flow is the active ticket; billing-report is the one a person switches to.
+const ACTIVE = 'checkout-flow'
+const CHOSEN = 'billing-report'
 
-function switchingPage() {
-  const active = ticketJson('sign-up', { title: 'Sign up' })
-  const chosen = ticketJson('pet-visits', { title: 'Pet visits' })
-  const { page, server } = pageOn(boardJson([discovery([active, chosen])], 'sign-up'))
-  server.answer('GET /api/tickets/pet-visits/workspace', CHECKED_OUT)
-  server.answer('GET /api/tickets/sign-up/workspace', CHECKED_OUT)
-  return { page, server, active: page.ticket(active), chosen: page.ticket(chosen) }
+let board: BoardOnProject
+
+beforeAll(async () => {
+  board = await BoardOnProject.start()
+  board.addOrigin()
+})
+
+beforeEach(() => board.reset())
+
+afterAll(() => board.close())
+
+// The active ticket works on a branch of its own, pushed to an origin, so leaving it can commit, push, and merge.
+async function switchingPage() {
+  board.checkOutBranch(ACTIVE)
+  const { page, asked } = await board.page()
+  return { page, asked, active: ticketOn(page, ACTIVE), chosen: ticketOn(page, CHOSEN) }
 }
+
+const activatePosts = (asked: Asked[]) => asked.filter(request => request.path === `/api/ticket/${CHOSEN}/activate`)
 
 describe('Activate Ticket', () => {
   it('should offer commit and push on leaving and open with merge off', async () => {
-    const { page, chosen } = switchingPage()
+    const { page, chosen } = await switchingPage()
     await page.activation.start(chosen, false)
     expect(page.store.state.activation?.leaving).toEqual(['commit', 'push'])
   })
 
   it('should offer a branch to a ticket that has none', async () => {
-    const { page, chosen } = switchingPage()
+    const { page, chosen } = await switchingPage()
     await page.activation.start(chosen, false)
     expect(page.store.state.activation?.opening).toEqual(['branch'])
   })
 
   it('should choose nothing to leave when the session has no branch', async () => {
-    const { page, server, chosen } = switchingPage()
-    server.answer('GET /api/tickets/pet-visits/workspace', { ...CHECKED_OUT, leaving_has_branch: false })
-    await page.activation.start(chosen, false)
+    const { page } = await board.page()
+    await page.activation.start(ticketOn(page, CHOSEN), false)
     expect(page.store.state.activation?.leaving).toEqual([])
   })
 
   it('should say what it switches from and to', async () => {
-    const { page, chosen } = switchingPage()
+    const { page, chosen } = await switchingPage()
     await page.activation.start(chosen, false)
-    expect(activationHeading(page.store.state.activation!)).toBe('Switch from Sign up to Pet visits')
+    expect(activationHeading(page.store.state.activation!)).toBe('Switch from Checkout flow to Billing report')
   })
 
   describe('that a person has confirmed with merge chosen', () => {
     async function confirmed() {
-      const { page, server, chosen } = switchingPage()
-      server.answer('POST /api/tickets/pet-visits/activate', ticketJson('pet-visits'))
+      const { page, asked, chosen } = await switchingPage()
       await page.activation.start(chosen, false)
       page.activation.toggleLeaving('merge')
       await page.activation.confirm()
-      return { page, server }
+      return { page, asked }
     }
 
     it('should send what was chosen', async () => {
-      const { server } = await confirmed()
-      expect(server.posted('/api/tickets/pet-visits/activate')[0]?.body).toEqual({ leaving: ['commit', 'push', 'merge'], opening: ['branch'] })
+      const { asked } = await confirmed()
+      expect(activatePosts(asked)[0]?.body).toEqual({ leaving: ['commit', 'push', 'merge'], opening: ['branch'] })
     })
 
     it('should report it', async () => {
       const { page } = await confirmed()
-      expect(page.store.state.toasts.at(-1)?.text).toBe('Sign up: committed, pushed, merged to main · Pet visits: branch created · Pet visits is now active')
+      expect(page.store.state.toasts.at(-1)?.text).toBe('Checkout flow: committed, pushed, merged to main · Billing report: branch created · Billing report is now active')
     })
   })
 
   describe('that a person has cancelled', () => {
     async function cancelled() {
-      const { page, server, chosen } = switchingPage()
+      const { page, asked, chosen } = await switchingPage()
       await page.activation.start(chosen, false)
       page.activation.cancel()
-      return { page, server }
+      return { page, asked }
     }
 
     it('should close the dialog', async () => {
@@ -76,34 +87,33 @@ describe('Activate Ticket', () => {
     })
 
     it('should send nothing', async () => {
-      const { server } = await cancelled()
-      expect(server.posted('/api/tickets/pet-visits/activate')).toEqual([])
+      const { asked } = await cancelled()
+      expect(activatePosts(asked)).toEqual([])
     })
   })
 })
 
 describe('Close Active Session', () => {
   async function closing() {
-    const { page, server, active } = switchingPage()
-    server.answer('POST /api/tickets/sign-up/close', ticketJson('sign-up', { title: 'Sign up', column: 'Complete' }))
+    const { page, asked, active } = await switchingPage()
     await page.activation.start(active, true)
-    return { page, server }
+    return { page, asked }
   }
 
   it('should ask what to do with its work', async () => {
     const { page } = await closing()
-    expect(activationHeading(page.store.state.activation!)).toBe('Close session Sign up')
+    expect(activationHeading(page.store.state.activation!)).toBe('Close session Checkout flow')
   })
 
   it('should send what to do with its work', async () => {
-    const { page, server } = await closing()
+    const { page, asked } = await closing()
     await page.activation.confirm()
-    expect(server.posted('/api/tickets/sign-up/close')[0]?.body).toEqual({ leaving: ['commit', 'push'] })
+    expect(asked.find(request => request.path === `/api/ticket/${ACTIVE}/close`)?.body).toEqual({ leaving: ['commit', 'push'] })
   })
 
   it('should select the ticket in Complete', async () => {
     const { page } = await closing()
     await page.activation.confirm()
-    expect(page.store.state.selected).toBe('Complete/sign-up')
+    expect(page.store.state.selected).toBe('Complete/checkout-flow')
   })
 })

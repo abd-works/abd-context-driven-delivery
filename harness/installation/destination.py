@@ -10,6 +10,8 @@ InstallTracker = Callable[[Path], None]
 _NO_CATALOG_FLAG = "_no_catalog"
 _NO_DEPLOY_FLAG = "_no_deploy"
 _LANGUAGE_ADAPTERS_FLAG = "_language_adapters"
+_IDENTITY_FLAG = "_language_adapter_identity"
+_EDITS_FLAG = "_language_adapter_edits"
 
 
 def noCatalog(target: Any = None) -> Any:
@@ -44,11 +46,17 @@ def noDeploy(target: Any = None) -> Any:
     return mark(target)
 
 
-def language_adapter(*, language: str) -> Callable[[Any], Any]:
-    """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them."""
+def language_adapter(*, language: str, identity: str = "") -> Callable[[Any], Any]:
+    """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them.
+
+    identity names the field of what `to_json()` returns that holds the object's name, so code holding only that data
+    knows which object its operations act on. An object its tools never load by name, such as the one board, has none.
+    """
 
     def mark(toolset: Any) -> Any:
         setattr(toolset, _LANGUAGE_ADAPTERS_FLAG, (*languages_of(toolset), language))
+        if identity:
+            setattr(toolset, _IDENTITY_FLAG, identity)
         return toolset
 
     return mark
@@ -57,6 +65,38 @@ def language_adapter(*, language: str) -> Callable[[Any], Any]:
 def languages_of(toolset: Any) -> tuple[str, ...]:
     """The languages a toolset's class is marked for."""
     return tuple(getattr(toolset, _LANGUAGE_ADAPTERS_FLAG, ()))
+
+
+def identity_field_of(toolset: Any) -> str:
+    """The field of the toolset's data that names one object, or empty when its tools load none by name."""
+    return str(getattr(toolset, _IDENTITY_FLAG, ""))
+
+
+def edits(*fields: str) -> Callable[[Any], Any]:
+    """Name the fields of the object's data this operation changes, when its argument names do not match them.
+
+    A generated view shows a field as an input only where an operation changes it, so this is how an operation whose
+    argument is called something else, such as `rename(new_title)`, still makes `title` editable.
+    """
+
+    def mark(operation: Any) -> Any:
+        setattr(operation, _EDITS_FLAG, fields)
+        return operation
+
+    return mark
+
+
+def edited_fields_of(operation: Any) -> tuple[str, ...]:
+    """The fields an operation's `@edits` mark names, or none."""
+    return tuple(getattr(operation, _EDITS_FLAG, ()))
+
+
+class SourceFile:
+    """Marks a data field that holds a path in the session's workspace: `path: Annotated[str, SourceFile]`.
+
+    A generated view draws a marked field as a link that opens the file in the shared source view, at the `line`, or
+    the `start_line` to `end_line` range, that the same data holds.
+    """
 
 
 def omitted_from_catalog(obj: Any) -> bool:

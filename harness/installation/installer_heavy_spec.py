@@ -1382,6 +1382,31 @@ with description("toolsets installed for Claude Code") as self:
             self.installer._claude_cli = lambda: None
             expect(self.installer._install_board_plugin()).to(equal("missing"))
 
+    with context("finding Claude Code in the desktop app"):
+        with before.each:
+            self.installer = Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT)
+            self.local = Path(tempfile.mkdtemp(prefix="cdd-local-app-data-"))
+            self.saved = {name: os.environ.get(name) for name in ("APPDATA", "LOCALAPPDATA")}
+            os.environ["APPDATA"] = str(self.local / "Roaming")
+            os.environ["LOCALAPPDATA"] = str(self.local)
+            for version in ("2.1.200", "2.1.309"):
+                found = self.local / "Claude-Data" / "claude_profile" / "claude-code" / version / "build" / "claude.exe"
+                found.parent.mkdir(parents=True)
+                found.write_text("", encoding="utf-8")
+
+        with after.each:
+            for name, value in self.saved.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+            shutil.rmtree(self.local, ignore_errors=True)
+
+        with context("that keeps it under a profile in its local data folder"):
+            with it("should use the newest version there"):
+                expected = self.local / "Claude-Data" / "claude_profile" / "claude-code" / "2.1.309" / "build" / "claude.exe"
+                expect(self.installer._claude_cli()).to(equal(str(expected)))
+
     with it("should install no hooks and leave the project's settings.json alone"):
         expect(self.settings).to(equal({"permissions": {"allow": ["Bash(ls)"]}}))
         expect((self.tree / "hooks.json").exists()).to(equal(False))

@@ -15,7 +15,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from expects import be_false, be_none, be_true, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 from partition.partition_index import PartitionIndex
 from partition.partition import Partition
@@ -23,6 +23,7 @@ from partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.markdown import Markdown
+from space.session.throwaway_project import ThrowawayProject
 from harness.agent_tools.agent_tools import AgentToolSet
 
 _KIT_DIR = Path(__file__).resolve().parent
@@ -414,7 +415,13 @@ with description("Partition verifying segment completeness"):
             expect("completeness: FAIL" in self._result).to(be_true)
 
 
-with description("a partition that is given files"):
+with description("a partition that is given files") as self:
+    with before.each:
+        self.throwaway = ThrowawayProject()
+
+    with after.each:
+        self.throwaway.close()
+
     with it("should name the file and leave the corpus out of the result"):
         folder = Path(tempfile.mkdtemp())
         corpus = folder / "corpus.md"

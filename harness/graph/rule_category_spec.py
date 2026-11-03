@@ -1,6 +1,5 @@
 """Rules attach to the node they check, and a violation filter keeps those hits on the graph."""
 
-import json
 import sys
 from pathlib import Path
 
@@ -84,7 +83,7 @@ with description("rule categories"):
                 self.practice.by_id[self.failure.node_id] = self.failure
                 self.practice.by_id[self.register.node_id] = self.register
                 self.practice.nodes["Operation"] = [self.failure, self.register]
-                returned = json.loads(self.graph.return_nodes())
+                returned = self.graph.return_nodes()
                 failure = next(node for node in returned if node["name"] == "failure")
                 expect([rule["status"] for rule in failure["rules"]]).to(equal(["violating"]))
                 expect("register" in [node["name"] for node in returned]).to(equal(False))

@@ -1,12 +1,14 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { CddConnectionNode } from '@src/cdd/cdd-connection-node'
-import { backlogItemRoutes } from '@src/kanban/backlog-item/backlog-item-routes'
-import { boardRoutes } from '@src/kanban/board/board-routes'
-import type { ChatsNode } from '@src/kanban/chat/chat-node'
-import { chatRoutes } from '@src/kanban/chat/chat-routes'
-import { ticketRoutes } from '@src/kanban/ticket/ticket-routes'
+import type { CddConnection } from '@cdd/cdd-connection'
+import { backlogItemRoutes } from '@cdd/harness/kanban/backlog-item'
+import { boardRoutes } from '@cdd/harness/kanban/board'
+import { ticketRoutes } from '@cdd/harness/kanban/ticket'
+import { chatRoutes } from '@cdd/tools/chat/chat'
+import { cddRoutes } from '@src/session-board/cdd-routes'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'
 
 // The header forces a preflight, which this server never answers, so a page on another site cannot post here.
@@ -22,11 +24,24 @@ const onlyThisMachine = (port: number) => (request: Request, _response: Response
   next(isLocalHost && !isForeignPost ? undefined : new HttpException(FORBIDDEN, 'Refused: this server answers only its own page and mod on this machine.'))
 }
 
-export function createApp(cdd: CddConnectionNode, chats: ChatsNode, port: number, staticRoot: string): Express {
+export function createApp(cdd: CddConnection, port: number, staticRoot: string): Express {
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
-  app.use('/api', boardRoutes(cdd), ticketRoutes(cdd), backlogItemRoutes(cdd), chatRoutes(chats))
+  // A cdd server keeps the code it started with, so a person restarts it to pick up changed Python. The next call starts
+  // a fresh one.
+  app.post('/api/cdd/restart', async (_request, response) => {
+    await cdd.close()
+    response.json({ is_restarted: true })
+  })
+  // The built page names its hashed script, so the text of index.html changes with every build. An open page compares it
+  // with the build it loaded and reloads itself on a new one.
+  app.get('/api/build', (_request, response) => {
+    const index = join(staticRoot, 'index.html')
+    const build = existsSync(index) ? createHash('sha256').update(readFileSync(index)).digest('hex') : ''
+    response.json({ build })
+  })
+  app.use('/api', cddRoutes(cdd, [...boardRoutes, ...ticketRoutes, ...backlogItemRoutes, ...chatRoutes]))
   app.use(express.static(staticRoot))
   app.get('*', (_request, response) => {
     response.sendFile(join(staticRoot, 'index.html'))

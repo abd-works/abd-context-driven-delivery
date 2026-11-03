@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { DragEvent, KeyboardEvent, ReactNode } from 'react'
 
+import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
 import { BacklogCardView, ComposerView } from '../backlog-item/backlog-item-view'
 import { TicketCardView } from '../ticket/ticket-card-view'
 import type { CardSpot } from '../ticket/ticket-card-view'
@@ -12,7 +13,7 @@ import { StageHeadView } from './stage-head-view'
 function WipLimitFieldView({ column }: { column: ColumnClient }) {
   const { page } = useBoard()
   const [text, setText] = useState(String(column.wipLimit))
-  const submit = () => void page.board.setWipLimit(column.name, text)
+  const submit = () => void page.board.submitWipLimit(column.name, text)
   const pressed = (event: KeyboardEvent) => {
     if (event.key === 'Enter') submit()
     if (event.key === 'Escape') page.layout.cancelLimit()
@@ -62,14 +63,68 @@ function EdgeColumnView({ column }: { column: ColumnClient }) {
       <EdgeHeadView column={column} />
       {column.isBacklog && state.draft.isOpen ? <ComposerView /> : null}
       <div className="card-lists is-single">
-        <div className="card-list">
+        <DropZoneView className="card-list" accepts={ticket => ticket.canDropOn(column.name)} onDrop={ticket => ticket.dropOn(column.name)}>
           {column.items.map(item => (
             <BacklogCardView key={item.path} item={item} />
           ))}
           <TicketListView tickets={column.tickets} spot="only" />
-        </div>
+        </DropZoneView>
       </div>
     </div>
+  )
+}
+
+type DropProps = {
+  accepts: (ticket: TicketClient) => boolean
+  onDrop: (ticket: TicketClient) => unknown
+  onItemDrop?: (item: BacklogItemClient) => unknown
+  className: string
+  children: ReactNode
+}
+
+// A list a dragged card can be dropped on. Only a list that would change where the card is accepts it, and only a list
+// given onItemDrop takes a backlog item.
+function DropZoneView({ accepts, onDrop, onItemDrop, className, children }: DropProps) {
+  const { page, state } = useBoard()
+  const [isOver, setOver] = useState(false)
+  // Read when each event arrives, not from the last drawing: a quick drag reaches the list before the page redraws.
+  const draggedNow = () => {
+    const address = page.store.state.dragged
+    const ticket = page.board.tickets.find(entry => entry.address === address)
+    const item = onItemDrop ? page.board.backlogItems.find(entry => entry.address === address) : undefined
+    return { ticket, item, isAccepted: (ticket !== undefined && accepts(ticket)) || item !== undefined }
+  }
+  const isAccepted = state.dragged !== null && draggedNow().isAccepted
+  const draggedOver = (event: DragEvent) => {
+    if (!draggedNow().isAccepted) return
+    event.preventDefault()
+    setOver(true)
+  }
+  const dropped = (event: DragEvent) => {
+    event.preventDefault()
+    setOver(false)
+    const { ticket, item, isAccepted: wasAccepted } = draggedNow()
+    page.store.change({ dragged: null })
+    if (item && onItemDrop) void onItemDrop(item)
+    else if (ticket && wasAccepted) void onDrop(ticket)
+  }
+  const shown = [className, isAccepted ? 'is-drop-zone' : '', isAccepted && isOver ? 'is-drop-over' : ''].filter(Boolean).join(' ')
+  return (
+    <div className={shown} onDragOver={draggedOver} onDragLeave={() => setOver(false)} onDrop={dropped}>
+      {children}
+    </div>
+  )
+}
+
+// Starting a backlog item opens it in the first stage's In progress, so only that list takes one.
+function StageListView({ column, done, children }: { column: ColumnClient; done: boolean; children: ReactNode }) {
+  const { page } = useBoard()
+  const accepts = (ticket: TicketClient) => !(ticket.column === column.name && ticket.isDone === done)
+  const startsItems = !done && page.board.stages[0]?.name === column.name
+  return (
+    <DropZoneView className="card-list" accepts={accepts} onDrop={ticket => ticket.moveTo(column.name, done)} onItemDrop={startsItems ? item => page.roots.openToStart(item) : undefined}>
+      {children}
+    </DropZoneView>
   )
 }
 
@@ -92,14 +147,14 @@ function StageColumnView({ column }: { column: ColumnClient }) {
         </StageHeadView>
       </div>
       <div className="card-lists">
-        <div className="card-list">
+        <StageListView column={column} done={false}>
           <span className="list-label">IN PROGRESS</span>
           <TicketListView tickets={column.inProgress} spot="left" />
-        </div>
-        <div className="card-list">
+        </StageListView>
+        <StageListView column={column} done>
           <span className="list-label">DONE</span>
           <TicketListView tickets={column.done} spot="right" />
-        </div>
+        </StageListView>
       </div>
     </div>
   )

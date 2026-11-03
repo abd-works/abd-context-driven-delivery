@@ -17,6 +17,15 @@ _GRAPH_PRACTICES = frozenset({"clean_engineering", "ddd", "stories", "bdd", "ux"
 REPORT_FOLDER = "validation-reports"
 REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 
+
+class PathsNotFoundError(FileNotFoundError):
+    """Raised when validate is named a path that is not there, or not under the session's root, where the graph reads."""
+
+    def __init__(self, unreadable: list[str], project: Path, session_root: Path) -> None:
+        named = "; ".join(f"{path}, read from {project}" for path in unreadable)
+        super().__init__(f"validate found no file under the session's root {session_root} at {named}. Name paths from the project's root, or absolute.")
+
+
 @agent_toolset
 class Validate(GuidanceAction):
     """Validate artifacts for provided context tools."""
@@ -35,8 +44,9 @@ class Validate(GuidanceAction):
         rule: one Rule to check. Omit it to walk each guidance's rules.
         graph: true for the workspace's saved graph (.context/graph.json), or path(s) to graph_return_nodes JSON
         or a saved graph.json. When set, append a graph-rule report for each guidance's practice and still run AI validation.
-        paths: the files or folders being edited (e.g. src/my-paradise/order.ts). For graph-backed guidance, the graph is
-        built from just these files as they are now and its rules run on them; the saved graph is not read or rebuilt."""
+        paths: the files or folders being edited, named from the project's root or absolute (e.g. src/my-paradise/order.ts).
+        For graph-backed guidance, the graph is built from just these files as they are now and its rules run on them;
+        the saved graph is not read or rebuilt. A path that is not there, or not under the session's root, is refused."""
         self._bind_guidance(guidance)
         sections: list[str] = [_VALIDATE_MARKDOWN]
         prefixes = self._workspace_relative(paths)
@@ -66,6 +76,16 @@ class Validate(GuidanceAction):
         saved = self._save_reports(report, graph_paths)
         where = ", ".join(str(path) for path in saved) if saved else str(self._session_path())
         return f"{report}\n\nValidation report for these artifacts: {where}"
+
+    def rules_of(self, guidance: GuidanceArg) -> str:
+        """The shared rules and the active fidelity's rules of each listed guidance, as text for another action to
+        follow. It checks nothing, so it saves no report and writes nothing to the session log, where a validate line
+        would tell the session board the work had been checked."""
+        self._bind_guidance(guidance)
+        return "\n\n".join(part for part in self.each(self._rules_text_of) if part)
+
+    def _rules_text_of(self, item) -> str:
+        return item if isinstance(item, str) else self._rules_for(item)
 
     def _save_reports(self, report: str, checked_graphs: list[Path]) -> list[Path]:
         """Save the report in the session for each listed guidance, so the board can link to it.
@@ -121,15 +141,18 @@ class Validate(GuidanceAction):
         return Path(graph.write_json(str(self._session_path() / "edited-graph.json")))
 
     def _workspace_relative(self, paths: list[str] | None) -> list[str]:
-        """Each path relative to the validate workspace, as graph node files are recorded."""
+        """Each named path as graph node files record it, relative to the session's root.
+
+        A relative path is read from the project's checkout, where the agent works and every path it sees starts. A
+        path that is not there, or not under the session's root, is refused: the graph would be built from nothing,
+        and its empty report would read as a clean validate."""
         workspace = self._validate_workspace()
-        relative: list[str] = []
-        for item in paths or []:
-            path = Path(item)
-            if path.is_absolute() and workspace in path.resolve().parents:
-                path = path.resolve().relative_to(workspace)
-            relative.append(path.as_posix())
-        return relative
+        project = self._project_checkout()
+        named = [(item, (project / item).resolve()) for item in paths or []]
+        unreadable = [item for item, path in named if not path.exists() or (path != workspace and workspace not in path.parents)]
+        if unreadable:
+            raise PathsNotFoundError(unreadable, project, workspace)
+        return [path.relative_to(workspace).as_posix() for _, path in named]
 
     def _graph_practices(self) -> list[str]:
         """Graph practices of the listed guidance (clean-engineering is clean_engineering); none for other guidance."""
@@ -149,6 +172,12 @@ class Validate(GuidanceAction):
         from space.session import Session
 
         return Path(Session.current().workpath).resolve()
+
+    def _project_checkout(self) -> Path:
+        from space.session import Session
+
+        session = Session.current()
+        return Path(session.repo_path or session.workpath).resolve()
 
     def _graph_json_report(
         self,
@@ -262,12 +291,17 @@ class Validate(GuidanceAction):
             synopsis.append(f"graph-rule … and {len(violations) - 40} more")
         for item in self.listed():
             session.log_validation(item, synopsis)
+        # This line is the call's validate line; the session board reads the latest one, so no clean line may follow.
+        self._logged_session_action = "validate"
 
     def _log_running_action(self, action: str) -> None:
-        if action == "validate":
-            self._log_validation_to_session()
+        if action != "validate":
+            super()._log_running_action(action)
             return
-        super()._log_running_action(action)
+        if self._logged_session_action == action:
+            return
+        self._logged_session_action = action
+        self._log_validation_to_session()
 
     def _log_validation_to_session(self) -> None:
         from space.session import Session

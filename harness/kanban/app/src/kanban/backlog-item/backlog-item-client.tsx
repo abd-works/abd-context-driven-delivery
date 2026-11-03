@@ -1,18 +1,17 @@
-import { BacklogItem, type BacklogItemData } from '@cdd/harness/kanban/backlog-item'
+import { BacklogItemClientGenerated, type BacklogItemData } from '@cdd/harness/kanban/backlog-item'
 import type { TicketData } from '@cdd/harness/kanban/ticket'
 
-import { pathPart } from '../board/board-api'
 import type { BoardPage } from '../board/board-page'
 import { EMPTY_DRAFT } from '../board/board-store'
 
 const ITEM_COLUMN = 'Backlog'
 
-export class BacklogItemClient extends BacklogItem {
+export class BacklogItemClient extends BacklogItemClientGenerated {
   constructor(
     json: BacklogItemData,
     private readonly page: BoardPage,
   ) {
-    super(json)
+    super(page.api, json)
   }
 
   get address(): string {
@@ -23,12 +22,13 @@ export class BacklogItemClient extends BacklogItem {
     this.page.board.select(this.address)
   }
 
-  async start(): Promise<void> {
-    const ticket = await this.page.api.post<TicketData>(`/backlog/${pathPart(this.title)}/start`)
+  override async start(scope?: string, path?: string): Promise<TicketData | null> {
+    const ticket = await super.start(scope, path)
     await this.page.reader.refresh()
-    if (!ticket) return
+    if (!ticket) return null
     this.page.ticket(ticket).select()
     this.page.store.toast(`${this.title} started in Discovery`)
+    return ticket
   }
 }
 
@@ -52,7 +52,7 @@ export class BacklogDraftClient {
     const { title, text } = this.page.store.state.draft
     if (!title.trim()) return
     this.cancel()
-    const added = await this.page.api.post<BacklogItemData>('/backlog', { title: title.trim(), text: text.trim() })
+    const added = await BacklogItemClientGenerated.add(this.page.api, title.trim(), text.trim())
     await this.page.reader.refresh()
     if (!added) return
     const item = this.page.item(added)

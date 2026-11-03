@@ -1,23 +1,20 @@
 # harness/kanban
+*Board* shows every work session in a repository as a *Ticket* on a kanban, so a person can see at a glance what each session has done and what it needs next. Its *Columns* are the *Backlog*, three *Stages* (Discovery, Specification, Implementation), and *Complete*. A *Stage* splits into In progress and Done and carries a WIP limit, set with `board.set_wip_limit`.
 
-- **Purpose:** Show every work session as a ticket on a kanban, placed by how far each of its fidelities has got through its stage's actions, and move tickets through the stages.
-- **Seam (terms):** Board, Column, Backlog, Stage, Ticket, FidelityProgress, BacklogItem, with `Board`, `Ticket`, and `BacklogItem` each its own toolset (the `cdd` MCP tools `board.show`, `board.set_wip_limit`, `board.help`, `ticket.new`, `ticket.move_next`, `ticket.move_previous`, `ticket.close`, `ticket.archive`, `ticket.activate`, `ticket.workspace`, `ticket.enable_practice`, `ticket.files`, `ticket.read_file`, `ticket.report`, `ticket.generate_commands`, `backlog-item.add`, `backlog-item.start`), and the language adapter `@language_adapter(language="typescript")` deploys from them
-- **Dependencies (one-way):** harness/guidance (PracticeGuidance, FidelityGuidance), harness/guidance_actions (GuidanceAction), cdd_guidance/actions (Generate, Validate, and the saved graph reader `validate.graph_json_reader`), space/repo (Repo), space/session (Session, PracticeSessionOutput)
+A *Ticket* is one session. It is placed by its *FidelityProgress*: which of Generate, Validate, and Review are done on each fidelity its stage requires. A person moves it on with `ticket.move_next`, back with `ticket.move_previous`, straight into a stage's In progress or Done with `ticket.move_to`, and off the stages with `ticket.close` or `ticket.archive`. `ticket.activate` makes it the session the agent works in.
+
+A *BacklogItem* is an idea that is not a session yet. `backlog-item.add` writes one, and `backlog-item.start` opens it as a ticket in Discovery and moves the item's file into the ticket's session folder, where the idea stays until it becomes lasting context.
+
+- **Purpose:** see every session's progress through the delivery stages, and move sessions through them, from an agent's tools or from the Session Board.
+- **Seam (terms):** Board, Column, Stage, Ticket, FidelityProgress, BacklogItem; the `cdd` MCP tools `board.*`, `ticket.*`, and `backlog-item.*`; `@language_adapter(language="typescript")` on `Board`, `Ticket`, and `BacklogItem`, so TypeScript reaches the same tools as typed objects
+- **Dependencies (one-way):** harness/guidance, harness/guidance_actions, cdd_guidance/actions (Generate, Validate, and the saved graph reader), space/repo, space/session
 
 ## Constraint
 
-Create a board on a repository, then read columns and tickets from it; everything is re-read from `.sessions/` when asked. Move a ticket only through `Ticket.move_next`, `Ticket.move_previous`, `Ticket.close`, and `Ticket.archive`, so every move is a log line or a folder move the ticket reads back. A ticket holds a reference to its `Session`, which owns the session's files, so `Ticket.close` calls `Session.close`. Store only what cannot be read from the work: a ticket's title, scope, lineage, and turned-off practices in its `session.json`, and the stages' WIP limits in `.sessions/_board.json`. Never store progress or column.
+Read a board from a repository; every column and ticket is read again from `.sessions/` each time it is asked for. Move a ticket only through `ticket.move_next`, `ticket.move_previous`, `ticket.move_to`, `ticket.close`, and `ticket.archive`, so every move is a line in the session log or a folder move that the ticket reads back.
 
-The classes, terms, and rules are in `harness/kanban/.context/kanban-model.md`; the behavior is `kanban_spec.py` and `kanban_tools_spec.py`, organised by story.
+Store only what cannot be read from the work: a ticket's title, scope, lineage, turned-off practices, and where a practice writes its output, in its `session.json`, and the WIP limits in `.sessions/_board.json`. Never store a ticket's progress or column; they come from the session log, so a move made by the agent and one made on the board give the same answer.
 
-## The board app
+Progress counts only actions recorded in the session log. A fidelity's files existing is shown on the files list, but it does not mark Generate done. Validate and Review are allowed once any action on a fidelity is recorded, as often as a person wants to check the same output again.
 
-`harness/kanban/app/` is the Session Board: a web app built in `patterns-lern-domain-driven` on the access in `patterns-cdd-access`, opened in the Claude desktop Browser pane. Each route asks a `{Object}Node`, which extends the `{Object}Tools` class the installer generates from these toolsets, so the app holds no rule and no copy of the board. Run `python scripts/install.py --ide Claude` first, because the app imports the language adapter from the install, then `npm install`, `npm run build`, and `npm start` in that folder. It listens on 127.0.0.1:8778 and answers only its own page and mod, because it can put prompts into a live chat. `BOARD_PROJECT` names the repository to show, and `BOARD_PORT` the port.
-
-Shapes the app reads are `TypedDict`s in `data.py`, so changing one and installing changes the TypeScript. Test anything that acts on a throwaway project with no real remote, because these tools really commit and push.
-
-## The chat mod (Claude Code)
-
-`harness/kanban/chat-mod/` is the `cdd-board` plugin: it registers a chat with the board app and passes its buttons into the chat, shows the active ticket on the status line, and adds it to the system prompt. It polls the app every second and holds no board logic. A fill waits for the end of a turn, because one made during a turn can report success and show nothing. Load it with `claude --plugin-dir harness/kanban/chat-mod`.
-
-The earlier board pane, its desktop test driver, and the list of what a pane could not draw are in `retired/harness/kanban/`.
+Never delete a backlog item's file: it is the only copy of the idea, so starting the item moves it instead.

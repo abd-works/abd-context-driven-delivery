@@ -15,12 +15,13 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.installation.destination import language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
-from space.work_state import SESSIONS_FOLDER, WorkState
+from space.work_state import SESSIONS_FOLDER, WorkState, checkout_holding, project_checkout
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
     from harness.guidance.guidance import PracticeGuidance
     from space.repo.repo import Repo
+    from tools.file_manager.file_manager import FileManager
 
 
 _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
@@ -218,6 +219,7 @@ class Session:
         self._opened: list[PracticeSessionOutput] = []
         self._injected: list[tuple[str, str, str, str]] = []
         self._chat: tuple[str, Path, str] | None = None
+        self._file_manager: FileManager | None = None
 
     @property
     def name(self) -> str:
@@ -227,6 +229,18 @@ class Session:
     @name.setter
     def name(self, value: str) -> None:
         self._session_name = (value or "").strip()
+
+    @property
+    def file_manager(self) -> FileManager:
+        """The session's file manager, held in memory, reading under the session's roots: the folder each practice works
+        in, as ``session.json`` records it or by the practice's default. A new one when those roots change."""
+        from tools.file_manager.file_manager import FileManager
+
+        workpath = Path(self.workpath or self.repo_from_session()).resolve()
+        roots = tuple(sorted({self.practice_root(self._guidance_for(name), name).resolve() for name in _PRACTICE_TYPES}))
+        if self._file_manager is None or self._file_manager.roots != roots:
+            self._file_manager = FileManager(workpath, roots)
+        return self._file_manager
 
     def to_mcp_result(self) -> dict:
         """JSON-safe snapshot for MCP tool results — name, paths, practice roots."""
@@ -260,7 +274,7 @@ class Session:
         """Reload in-memory session when repo ``.sessions/session.json`` current changed."""
         slot = cls._slot()
         repo = slot.repo_from_session(repo_path)
-        saved = cls._read_repo_current_name(repo)
+        saved = cls.active_name(repo)
         if slot.name == saved and slot.session_path is not None and slot.repo_path == repo:
             return
         cls._current = None
@@ -269,7 +283,8 @@ class Session:
         session.resolve(saved, repo if saved == _MAIN_SESSION_NAME else None, repo)
 
     @classmethod
-    def _read_repo_current_name(cls, repo_path: Path) -> str:
+    def active_name(cls, repo_path: Path) -> str:
+        """The session saved as open on ``repo_path``; main, which works on the whole repository, when none is named."""
         return WorkState(repo_path).session or _MAIN_SESSION_NAME
 
     @classmethod
@@ -278,8 +293,8 @@ class Session:
 
         Reads the project (``repo_path``, else ``CDD_PROJECT``), not a session held in memory."""
         slot = cls._slot()
-        repo = slot._repo_root_of(Path(repo_path)) if repo_path is not None else slot._env_repo()
-        return cls._session_folder(repo, cls._read_repo_current_name(repo))
+        repo = checkout_holding(repo_path) if repo_path is not None else project_checkout()
+        return cls._session_folder(repo, cls.active_name(repo))
 
     @classmethod
     @mcp
@@ -293,10 +308,10 @@ class Session:
     def repo_from_session(self, repo_path: Path | str | None = None) -> Path:
         """Repo that holds ``.sessions`` — the path already in hand, or the repo it sits in."""
         if repo_path is not None:
-            return self._repo_root_of(Path(repo_path))
+            return checkout_holding(repo_path)
         if self.repo_path is not None:
             return Path(self.repo_path).resolve()
-        return self._env_repo()
+        return project_checkout()
 
     @mcp
     @command(name="close-session")
@@ -394,6 +409,42 @@ class Session:
         merged = {**self.fields, **fields}
         (self.session_path / "session.json").write_text(json.dumps(merged), encoding="utf-8")
 
+    def change_workpath(self, workpath: Path) -> None:
+        """Work in ``workpath`` from now on: the folder this session's practices write under and its graph loads from.
+        A practice root a person chose is kept relative to the workpath, so each is saved again against the new one and
+        still names the same folder."""
+        base = Path(self.workpath or self.repo_path).resolve()
+        chosen = {practice: (base / output["root"]).resolve() for practice, output in self._output_overrides().items() if output.get("root")}
+        self.workpath = Path(workpath).resolve()
+        self._write_session_folder_json()
+        for practice, root in chosen.items():
+            self.choose_output_root(practice, root)
+
+    def choose_output_root(self, practice: str, root: Path) -> None:
+        """Write ``practice``'s files under ``root``, kept in ``session.json`` relative to the workpath like any output override."""
+        outputs = dict(self.fields.get("outputs", {}))
+        relative = os.path.relpath(Path(root).resolve(), Path(self.workpath or self.repo_path).resolve())
+        outputs[practice] = {**outputs.get(practice, {}), "root": Path(relative).as_posix()}
+        self.save_fields(outputs=outputs)
+
+    def forget_output_root(self, practice: str) -> None:
+        """Write ``practice``'s files under its default root again."""
+        outputs = dict(self.fields.get("outputs", {}))
+        kept = {key: value for key, value in outputs.get(practice, {}).items() if key != "root"}
+        self.save_fields(outputs={**outputs, practice: kept})
+
+    def has_chosen_output_root(self, practice: str) -> bool:
+        return bool(self._output_overrides().get(practice, {}).get("root"))
+
+    def practice_root(self, guidance: PracticeGuidance, practice: str = "") -> Path:
+        """The folder ``practice`` writes under: the root a person chose, or the workpath plus the practice's default
+        folder from ``.context/config.json`` or the practice itself. With no practice key, the guidance's own."""
+        practice = practice or self._practice_key_for_instance(guidance) or ""
+        chosen = self._output_overrides().get(practice, {}).get("root")
+        if chosen:
+            return (Path(self.workpath or self.repo_path).resolve() / chosen).resolve()
+        return Path(self._default_output_paths(guidance, practice)[0][0])
+
     def move_to(self, parent: Path) -> Session:
         """Move this session's folder under ``parent``, such as ``.sessions/closed/``."""
         parent.mkdir(parents=True, exist_ok=True)
@@ -431,11 +482,11 @@ class Session:
         Saves ``name`` as ``session`` there. Does not touch branches or worktrees."""
         slot = cls._slot()
         if repo_path is not None:
-            repo = slot._repo_root_of(Path(repo_path))
+            repo = checkout_holding(repo_path)
         elif workpath is not None:
-            repo = slot._repo_root_of(Path(workpath))
+            repo = checkout_holding(workpath)
         else:
-            repo = slot._env_repo()
+            repo = project_checkout()
         wanted = cls._session_name(name, repo)
         folder = Path(session_path) if session_path is not None else cls._session_folder(repo, wanted)
         if not (folder / "session.json").is_file():
@@ -540,7 +591,7 @@ class Session:
         """``session`` in repo/.sessions/session.json."""
         if self.repo_path is None:
             return _MAIN_SESSION_NAME
-        return WorkState(self.repo_path).session or _MAIN_SESSION_NAME
+        return type(self).active_name(self.repo_path)
 
     @saved_current_session.setter
     def saved_current_session(self, name: str) -> None:
@@ -648,10 +699,10 @@ class Session:
                 self.workpath = self._env_workpath()
         elif workpath is not None:
             self.workpath = Path(workpath).resolve()
-            self.repo_path = self._repo_root_of(self.workpath)
+            self.repo_path = checkout_holding(self.workpath)
             self.session_path = self._session_folder(self.repo_path, name)
         else:
-            self.repo_path = self._env_repo()
+            self.repo_path = project_checkout()
             self.session_path = self._session_folder(self.repo_path, name)
             stored = self._read_session_folder_json(self.session_path)
             if stored.get("workpath"):
@@ -1082,29 +1133,11 @@ class Session:
             return
         self._parent_folders = json.loads(path.read_text(encoding="utf-8"))
 
-    def _repo_root_of(self, path: Path) -> Path:
-        """The git checkout containing ``path``; ``path`` itself when it is not inside one."""
-        resolved = Path(path).resolve()
-        for candidate in (resolved, *resolved.parents):
-            if (candidate / ".git").exists():
-                return candidate
-        return resolved
-
     def _repo_holding(self, session_path: Path) -> Path:
         folder = Path(session_path).resolve().parent
         if folder.name in {SESSIONS_FOLDER, _LEGACY_REPO_SESSIONS_DIR}:
             return folder.parent
         return folder
-
-    def _env_repo(self) -> Path:
-        """Checkout of the project being worked on (``CDD_PROJECT``), else the cwd.
-
-        ``CDD_REPO`` names the CDD checkout that hosts the tools, not the project, so it never
-        picks the session."""
-        named = os.environ.get("CDD_PROJECT")
-        if named:
-            return self._repo_root_of(Path(named))
-        return Path.cwd().resolve()
 
     def _env_workpath(self) -> Path:
         named = os.environ.get("CDD_PROJECT")

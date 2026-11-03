@@ -140,7 +140,7 @@ with description("a graph"):
                     str(self.root),
                     {"clean_engineering": str(self.root)},
                 )
-                expect(message).to(equal("Loaded the saved graph."))
+                expect(message["message"]).to(equal("Loaded the saved graph."))
                 expect(_names(fresh)).to(contain("SavedCart"))
 
             with it("should keep other practices when saving a different load"):

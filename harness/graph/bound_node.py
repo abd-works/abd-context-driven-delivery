@@ -12,6 +12,9 @@ from typing import Iterable, Iterator, Optional
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.schema_edges import sync_schema_edges
 
+# The file a new model object names until a loader tells it which file it came from.
+NO_SOURCE_FILE = "."
+
 
 class BoundChildren(list):
     """The list callers already append to. Appending records the graph edge."""
@@ -103,13 +106,18 @@ class BoundNode(Node):
             semantic,
             _node_id(practice, semantic, name),
             name,
-            Source(".", sequential_order or 1, sequential_order or 1),
+            Source(NO_SOURCE_FILE, sequential_order or 1, sequential_order or 1),
         )
         self.sequential_order = sequential_order
         practice.node_types.add(semantic)
         practice.nodes.setdefault(semantic, []).append(self)
         practice.by_id[self.node_id] = self
         self._ready = False
+
+    @property
+    def has_source_file(self) -> bool:
+        """True once a loader has given this object the file it came from; until then its source only holds a placeholder."""
+        return str(getattr(self.source, "file", "") or "") not in ("", NO_SOURCE_FILE)
 
     @property
     def node(self) -> "BoundNode":

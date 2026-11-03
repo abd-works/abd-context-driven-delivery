@@ -12,6 +12,7 @@
 ### Destination
 
 - Put `@skill`, `@command`, `@rules`, `@mcp`, or `@Hook` on a member when that channel should receive it. Unmarked members stay in-process.
+- Put `@language_adapter(language="typescript")` on a toolset class when an application outside Python needs its `@mcp` operations as typed code, and name its `identity` when its tools load one object by name. It marks the class, not a member, because the installer writes the whole object as one file of code.
 
 ### Installation
 

@@ -8,6 +8,7 @@ import { ActivationClient } from '../ticket/activation-client'
 import { FilesPanelClient } from '../ticket/files-panel-client'
 import { OpenCardClient } from '../ticket/open-card-client'
 import { locationOf } from '../ticket/report-client'
+import { RootChoiceClient } from '../ticket/root-choice-client'
 import { TicketClient } from '../ticket/ticket-client'
 import { TileActionsClient } from '../ticket/tile-actions-client'
 import { TileClient } from '../ticket/tile-client'
@@ -18,9 +19,11 @@ import { BoardClient } from './board-client'
 import { BoardLayoutClient } from './board-layout-client'
 import { BoardReader } from './board-reader'
 import { BoardStore } from './board-store'
+import { BuildClient } from './build-client'
 import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
+const CDD_RESTART_PATH = '/cdd/restart'
 const NOT_READ_YET: BoardData = { project: '', active: null, columns: [] }
 
 // Everything the page's views act through, wired once.
@@ -30,12 +33,14 @@ export class BoardPage {
   readonly chat: ChatClient
   readonly panels: SidePanelClient
   readonly files: FilesPanelClient
+  readonly build: BuildClient
   readonly layout = new BoardLayoutClient(this.store)
   readonly reader = new BoardReader(this)
   readonly tiles = new TileClient(this)
   readonly tileActions = new TileActionsClient(this)
   readonly cards = new OpenCardClient(this)
   readonly activation = new ActivationClient(this)
+  readonly roots = new RootChoiceClient(this)
   readonly draft = new BacklogDraftClient(this)
 
   constructor(send?: Send) {
@@ -43,6 +48,7 @@ export class BoardPage {
     this.chat = new ChatClient(this.store, this.api)
     this.panels = new SidePanelClient(this.store, this.api)
     this.files = new FilesPanelClient(this.store, this.api)
+    this.build = new BuildClient(this.store, this.api)
   }
 
   get board(): BoardClient {
@@ -62,12 +68,25 @@ export class BoardPage {
   }
 
   // location names the file and its line.
-  fixViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
-    return this.chat.command(`/actions-satisfy ${guidanceSlug(rule.fidelity)} ${locationOf(violation)} rule ${rule.name}`)
+  fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData): Promise<void> {
+    return this.chat.command(this.actionCommandFor(ticket, `/actions-satisfy ${guidanceSlug(rule.fidelity)} ${locationOf(violation)} rule ${rule.name}`))
   }
 
-  fixRule(rule: ReportRuleData): Promise<void> {
-    return this.chat.command(`/actions-satisfy ${guidanceSlug(rule.fidelity)} rule ${rule.name}`)
+  fixRule(ticket: string, rule: ReportRuleData): Promise<void> {
+    return this.chat.command(this.actionCommandFor(ticket, `/actions-satisfy ${guidanceSlug(rule.fidelity)} rule ${rule.name}`))
+  }
+
+  // A report's fixes are for the ticket whose report it is, so they name that ticket's session.
+  private actionCommandFor(ticket: string, command: string): string {
+    return this.board.tickets.find(shown => shown.name === ticket)?.actionCommand(command) ?? command
+  }
+
+  // Stops the board's cdd server and reads the board again, which starts a fresh one on the code as it is now.
+  async restartCdd(): Promise<void> {
+    const restarted = await this.api.post<{ is_restarted: boolean }>(CDD_RESTART_PATH)
+    if (!restarted) return
+    await Promise.all([this.reader.refresh(), this.chat.refresh()])
+    if (!this.store.state.serverFailure) this.store.toast('cdd restarted on the current code')
   }
 
   openNewTicket(): Promise<void> {
@@ -76,8 +95,8 @@ export class BoardPage {
 
   start(): () => void {
     const stopBoard = this.reader.startPolling()
-    const chatTimer = setInterval(() => void this.chat.refresh(), CHAT_POLL_MILLISECONDS)
-    void this.chat.refresh()
+    const chatTimer = setInterval(() => void Promise.all([this.chat.refresh(), this.build.check()]), CHAT_POLL_MILLISECONDS)
+    void Promise.all([this.chat.refresh(), this.build.check()])
     return () => {
       stopBoard()
       clearInterval(chatTimer)

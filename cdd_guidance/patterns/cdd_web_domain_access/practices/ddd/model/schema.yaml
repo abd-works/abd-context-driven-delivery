@@ -1,0 +1,13 @@
+# CDD web domain access overlay on ddd. Extend only.
+accessRoute:
+  - is: class
+  - path: "src/{context}/{object}/{object}-routes"
+accessNode:
+  - is: class
+  - path: "src/{context}/{object}/{object}-node"
+accessHandWrittenAdapter:
+  - is: class
+  - path: "src/{context}/{object}/{object}-adapter"
+accessMarkedToolset:
+  - is: class
+  - path: "harness/{domain}/{object}"

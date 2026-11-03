@@ -314,11 +314,11 @@ with description("a graph"):
                     expect(self.graph.filter.node_types).to(contain("Package"))
 
                 with it("should return AccountCredentials"):
-                    returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
+                    returned = [node["name"] for node in self.graph.return_nodes()]
                     expect(returned).to(contain("AccountCredentials"))
 
                 with it("should return the account-credentials module"):
-                    returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
+                    returned = [node["name"] for node in self.graph.return_nodes()]
                     expect(returned).to(contain("account-credentials"))
 
                 with context("with operations selected"):
@@ -335,11 +335,11 @@ with description("a graph"):
                         expect("use-explicit-dependencies" in self.graph.filter.rules).to(equal(False))
 
                     with it("should return the failure operation"):
-                        returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
+                        returned = [node["name"] for node in self.graph.return_nodes()]
                         expect(returned).to(contain("failure"))
 
                     with it("should leave classes out of the operation results"):
-                        returned = {node["type"] for node in json.loads(self.graph.return_nodes())}
+                        returned = {node["type"] for node in self.graph.return_nodes()}
                         expect("OoadClass" in returned).to(equal(False))
 
                     with it("should attach the parameter rule to the operation that fails it"):
@@ -364,15 +364,15 @@ with description("a graph"):
                         self.violation_tree = self.graph.practice("clean_engineering").root_node.serialize()
 
                     with it("should return the operation that fails the rule"):
-                        returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
+                        returned = [node["name"] for node in self.graph.return_nodes()]
                         expect(returned).to(contain(_OVER_LIMIT))
 
                     with it("should leave the operation that passes the rule out"):
-                        returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
+                        returned = [node["name"] for node in self.graph.return_nodes()]
                         expect("register" in returned).to(equal(False))
 
                     with it("should attach the violation on the returned operation"):
-                        returned = json.loads(self.graph.return_nodes())
+                        returned = self.graph.return_nodes()
                         failure = next(node for node in returned if node["name"] == _OVER_LIMIT)
                         attached = [rule for rule in failure["rules"] if rule["name"] == "limit-operation-parameters"]
                         expect(len(attached)).to(equal(1))
@@ -418,7 +418,7 @@ with description("a graph"):
                         expect("invokes" in self.graph.filter.relationships).to(equal(False))
 
                     with it("should leave modules out of the class results"):
-                        returned = {node["type"] for node in json.loads(self.graph.return_nodes())}
+                        returned = {node["type"] for node in self.graph.return_nodes()}
                         expect("Module" in returned).to(equal(False))
 
         with context("with stories"):
@@ -715,10 +715,10 @@ with description("a graph"):
                     expect("OoadClass" in self.graph.filter.node_types).to(equal(False))
 
                 with it("should return the epic"):
-                    expect([node["name"] for node in json.loads(self.graph.return_nodes())]).to(contain("Onboard A Customer"))
+                    expect([node["name"] for node in self.graph.return_nodes()]).to(contain("Onboard A Customer"))
 
                 with it("should leave classes out of the results"):
-                    expect("OoadClass" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
+                    expect("OoadClass" in {node["type"] for node in self.graph.return_nodes()}).to(equal(False))
 
         with context("with domain-driven design"):
             with before.all:
@@ -832,10 +832,10 @@ with description("a graph"):
                     expect("Story" in self.graph.filter.node_types).to(equal(False))
 
                 with it("should return the bounded context"):
-                    expect([node["name"] for node in json.loads(self.graph.return_nodes())]).to(contain("bounded context"))
+                    expect([node["name"] for node in self.graph.return_nodes()]).to(contain("bounded context"))
 
                 with it("should leave stories out of the results"):
-                    expect("Story" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
+                    expect("Story" in {node["type"] for node in self.graph.return_nodes()}).to(equal(False))
 
                 with context("with entity roots selected"):
                     with before.all:
@@ -848,10 +848,10 @@ with description("a graph"):
                         expect("owns" in self.graph.filter.relationships).to(equal(False))
 
                     with it("should return AccountCredentials"):
-                        expect([node["name"] for node in json.loads(self.graph.return_nodes())]).to(contain("AccountCredentials"))
+                        expect([node["name"] for node in self.graph.return_nodes()]).to(contain("AccountCredentials"))
 
                     with it("should leave aggregates out of the entity root results"):
-                        expect("Aggregate" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
+                        expect("Aggregate" in {node["type"] for node in self.graph.return_nodes()}).to(equal(False))
 
                 with context("with aggregates selected"):
                     with before.all:
@@ -864,10 +864,10 @@ with description("a graph"):
                         expect("accesses" in self.graph.filter.relationships).to(equal(False))
 
                     with it("should return the account-credentials aggregate"):
-                        expect([node["name"] for node in json.loads(self.graph.return_nodes())]).to(contain("account-credentials"))
+                        expect([node["name"] for node in self.graph.return_nodes()]).to(contain("account-credentials"))
 
                     with it("should leave entity roots out of the aggregate results"):
-                        expect("EntityRoot" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
+                        expect("EntityRoot" in {node["type"] for node in self.graph.return_nodes()}).to(equal(False))
 
         with context("with behavior-driven development that has one story spec without describes"):
             with before.all:
@@ -899,7 +899,7 @@ with description("a graph"):
                     expect("OoadClass" in self.graph.filter.node_types).to(equal(False))
 
                 with it("should leave classes out of the results"):
-                    expect("OoadClass" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
+                    expect("OoadClass" in {node["type"] for node in self.graph.return_nodes()}).to(equal(False))
 
                 with context("with specs selected"):
                     with before.all:
@@ -912,7 +912,7 @@ with description("a graph"):
                         expect(self.graph.filter.relationships).to(equal(["owns"]))
 
                     with it("should leave descriptions out of the results"):
-                        expect("Description" in {node["type"] for node in json.loads(self.graph.return_nodes())}).to(equal(False))
+                        expect("Description" in {node["type"] for node in self.graph.return_nodes()}).to(equal(False))
 
         with context("with experience design that has no map"):
             with before.all:

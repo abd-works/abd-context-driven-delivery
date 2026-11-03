@@ -1,12 +1,11 @@
 /**
- * Runs the shared behavior on TicketNode, which calls the real cdd server on a throwaway project. Nothing is stubbed;
+ * Runs the shared behavior on TicketAdapter, which calls the real cdd server on a throwaway project. Nothing is stubbed;
  * the results are checked from the object's side: what a move answered, and what the board shows.
  */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
-import type { TicketData } from '@cdd/harness/kanban/ticket'
-import { BoardNode } from '@src/kanban/board/board-node'
-import { TicketNode } from '@src/kanban/ticket/ticket-node'
+import { BoardAdapter } from '@cdd/harness/kanban/board'
+import { TicketAdapter, type TicketData } from '@cdd/harness/kanban/ticket'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
 import { CddProject } from 'test-utils/behavior-test/cdd-project'
 
@@ -14,15 +13,19 @@ import { moveTicketBehavior, type MoveTicketDriver, type TicketPlace } from './m
 
 const project = new CddProject()
 
-class MoveTicketNodeDriver implements MoveTicketDriver {
+class MoveTicketAdapterDriver implements MoveTicketDriver {
   private readonly moved = new Map<string, TicketData>()
 
-  private ticket(name: string): TicketNode {
-    return new TicketNode(project.cdd, name)
+  private ticket(name: string): TicketAdapter {
+    return new TicketAdapter(project.cdd, name)
   }
 
   async moveNext(ticket: string): Promise<void> {
     this.moved.set(ticket, (await this.ticket(ticket).moveNext()).toJSON())
+  }
+
+  async dragTo(ticket: string, stage: string, done: boolean): Promise<void> {
+    this.moved.set(ticket, (await this.ticket(ticket).moveTo(stage, done)) as TicketData)
   }
 
   async movePrevious(ticket: string): Promise<void> {
@@ -35,7 +38,7 @@ class MoveTicketNodeDriver implements MoveTicketDriver {
   }
 
   private async columns() {
-    return (await new BoardNode(project.cdd).show()).columns
+    return (await new BoardAdapter(project.cdd).show()).columns
   }
 
   async isOnTheStages(ticket: string): Promise<boolean> {
@@ -48,11 +51,11 @@ class MoveTicketNodeDriver implements MoveTicketDriver {
   }
 }
 
-let driver: MoveTicketNodeDriver
+let driver: MoveTicketAdapterDriver
 
 beforeEach(() => {
   project.reset()
-  driver = new MoveTicketNodeDriver()
+  driver = new MoveTicketAdapterDriver()
 })
 
 afterAll(() => project.close())

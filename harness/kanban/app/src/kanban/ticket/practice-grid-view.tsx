@@ -28,7 +28,7 @@ function GridStageHeadView({ ticket, stage }: { ticket: TicketClient; stage: Col
   const spot = { ticket: ticket.name, stage, place, slugs: ticket.enabledSlugs(stage) }
   const isOpen = page.tiles.isOpen(ticket.name, place)
   return (
-    <StageHeadView stage={stage.name} onMouseEnter={() => page.tiles.hoverIn(spot)} onMouseLeave={() => page.tiles.hoverOut(place)}>
+    <StageHeadView stage={stage.name}>
       <button className="expand-mark" aria-label={`Actions for ${stage.name}`} aria-expanded={isOpen} onClick={() => void page.tiles.toggle(ticket, spot)}>
         {isOpen ? '▴' : '▾'}
       </button>
@@ -36,18 +36,24 @@ function GridStageHeadView({ ticket, stage }: { ticket: TicketClient; stage: Col
   )
 }
 
-// A stage head's bar sits under the heads in the stage's own column, so it holds every practice of that stage.
-function StageBarView({ ticket }: { ticket: TicketClient }) {
-  const { page, state } = useBoard()
-  const { tile } = state
-  const stage = page.board.stages.find(entry => tile?.ticket === ticket.name && tile.place === headPlace(entry.name))
-  if (!tile || !stage) return null
-  const place = headPlace(stage.name)
+// Each open stage head's bar sits under the heads in the stage's own column, so it holds every practice of that
+// stage. Bars of several stages share the one line, side by side.
+function StageBarsView({ ticket }: { ticket: TicketClient }) {
+  const { page } = useBoard()
+  // Each read of stages builds new clients, so every bar finds its stage by position in one list.
+  const stages = page.board.stages
+  const open = stages.flatMap((stage, index) => {
+    const tile = page.tiles.openOn(ticket.name, headPlace(stage.name))
+    return tile ? [{ stage, index, tile }] : []
+  })
+  if (!open.length) return null
   return (
     <div className="column-grid details-grid">
-      <div style={{ gridColumn: page.board.stages.indexOf(stage) + 2 }}>
-        <ActionBarView ticket={ticket} stage={stage} tile={tile} hasFileLinks onMouseEnter={() => page.tiles.hoverIn({ ticket: ticket.name, stage, place, slugs: tile.slugs })} onMouseLeave={() => page.tiles.hoverOut(place)} />
-      </div>
+      {open.map(({ stage, index, tile }) => (
+        <div key={stage.name} style={{ gridColumn: index + 2, gridRow: 1 }}>
+          <ActionBarView ticket={ticket} stage={stage} tile={tile} />
+        </div>
+      ))}
     </div>
   )
 }
@@ -57,8 +63,8 @@ function PracticeLabelView({ ticket, practice }: { ticket: TicketClient; practic
   const isOn = ticket.isEnabled(practice.key)
   const label = `${isOn ? 'Disable' : 'Enable'} ${practice.name} for ${ticket.title}`
   return (
-    <div className="practice-label" style={{ borderLeftColor: practice.color }}>
-      <button className="readme-link" style={{ opacity: isOn ? 1 : 0.5 }} onClick={() => void page.panels.openHelp(practice.key, '')}>
+    <div className={isOn ? 'practice-label' : 'practice-label is-off'} style={{ borderLeftColor: practice.color }}>
+      <button className="readme-link" onClick={() => void page.panels.openHelp(practice.key, '')}>
         {practice.name}
       </button>
       <input type="checkbox" role="switch" className="practice-switch" title={label} aria-label={label} checked={isOn} disabled={ticket.isLocked} onChange={() => void ticket.enablePractice(practice.key, !isOn)} />
@@ -73,7 +79,7 @@ function PracticeLineView({ ticket, practice }: { ticket: TicketClient; practice
       <PracticeLabelView ticket={ticket} practice={practice} />
       {page.board.stages.map(stage => {
         const slug = stage.workRequired.find(required => required.startsWith(practice.prefix))
-        return slug ? <TileView key={slug} ticket={ticket} stage={stage} slug={slug} hasPracticeChip={false} /> : <span key={stage.name} />
+        return slug ? <TileView key={slug} ticket={ticket} stage={stage} slug={slug} hasPracticeChip={false} opensOnHover={false} /> : <span key={stage.name} />
       })}
       <span />
     </div>
@@ -92,7 +98,7 @@ export function PracticeGridView({ ticket }: { ticket: TicketClient }) {
         ))}
         <span />
       </div>
-      <StageBarView ticket={ticket} />
+      <StageBarsView ticket={ticket} />
       {shown.map(practice => (
         <PracticeLineView key={practice.key} ticket={ticket} practice={practice} />
       ))}

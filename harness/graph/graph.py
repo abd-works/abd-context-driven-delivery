@@ -17,8 +17,24 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.agent_tools import agent_tool, agent_toolset
+from harness.agent_tools.agent_tools import tool_subject
+from harness.agent_tools.progress import report_progress
+from harness.installation.destination import language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
+from harness.graph.data import (
+    FilterChoicesData,
+    FilteredNodeData,
+    GraphData,
+    InventoryData,
+    LoadData,
+    MemberData,
+    OverlayData,
+    OverlaysData,
+    PracticeInventoryData,
+    SavedData,
+    SourceData,
+)
 from harness.graph.skipped_folders import SKIPPED_FOLDERS, scanned_files, skips_folder
 
 Display = str
@@ -87,6 +103,12 @@ def available_pattern_overlays() -> list[str]:
         if any(child.is_dir() and not child.name.startswith(".") for child in practices.iterdir()):
             found.append(entry.name)
     return found
+
+
+# The node kinds a source view opens a call into: classes, whose operations and properties it folds in place.
+_CLASS_KINDS = frozenset(
+    {"OoadClass", "Entity", "EntityRoot", "ValueObject", "Aggregate", "Repository", "DomainEvent", "DomainService", "Specification"}
+)
 
 
 class GraphFailure(Exception):
@@ -1001,9 +1023,12 @@ class PracticeGraph:
 
 
 
+@language_adapter(language="typescript")
 @agent_toolset
 class Graph:
     """One graph. Builders fill nodes, edges, and rules. The explorer reads the tree."""
+
+    _current: Graph | None = None
 
     def __init__(self) -> None:
         self._folder: Path | None = None
@@ -1012,17 +1037,18 @@ class Graph:
         self.practices: dict[str, PracticeGraph] = {}
         self.filter = Filter(self)
         self.overlays: list[str] = []
-        self._progress = None
 
-    def watch_progress(self, callback) -> None:
-        """The app host reports load progress through this callback."""
-        self._progress = callback
+    @classmethod
+    @tool_subject
+    def current(cls) -> Graph:
+        """The graph this process holds: one per cdd server, loaded and filtered by the calls made to it."""
+        if cls._current is None:
+            cls._current = cls()
+        return cls._current
 
-    def report_progress(self, message: str, step: str = "load") -> None:
-        """Tell the explorer which practice, file, node, or rule is in progress."""
-        if self._progress is None:
-            return
-        self._progress({"step": step, "message": message})
+    def report_progress(self, message: str) -> None:
+        """Tell whoever called the running tool which practice, file, node, or rule is in progress."""
+        report_progress(message)
 
     @property
     def folder(self) -> str:
@@ -1042,7 +1068,7 @@ class Graph:
         database: str | None = None,
         overlays: list[str] | None = None,
         force: bool = False,
-    ) -> str:
+    ) -> LoadData:
         """Open each practice on its source root and build the explorer tree.
 
         A saved graph in the folder's ``.context`` is used when it already holds
@@ -1058,13 +1084,13 @@ class Graph:
         if not force and self._saved_graph_is_current():
             self.report_progress("Loading the saved graph")
             self._load_saved_json()
-            return "Loaded the saved graph."
+            return {"message": "Loaded the saved graph."}
         self._scope = None
         self.report_progress("Scanning the folder")
         self._build_working_copy()
         self.report_progress("Saving the graph")
         self.save_json()
-        return "Loaded the working copies."
+        return {"message": "Loaded the working copies."}
 
     @mcp
     @command(name="load-files")
@@ -1075,7 +1101,7 @@ class Graph:
         practices: list[str],
         files: list[str],
         overlays: list[str] | None = None,
-    ) -> str:
+    ) -> LoadData:
         """Build each practice from only the given files and run its rules on them.
 
         ``files`` are files or folders, relative to ``folder`` or absolute; a folder
@@ -1088,7 +1114,7 @@ class Graph:
         self._scope = self._scoped_files(files)
         self.report_progress("Reading the edited files")
         self._build_working_copy()
-        return f"Loaded {len(self._scope)} edited files."
+        return {"message": f"Loaded {len(self._scope)} edited files."}
 
     def edited_files(self) -> list[Path] | None:
         """The files a ``load_files`` reads; ``None`` when the whole folder loads."""
@@ -1133,18 +1159,18 @@ class Graph:
 
     @mcp
     @agent_tool
-    def save_json(self) -> str:
+    def save_json(self) -> SavedData:
         """Write the serialized graph into the loaded folder's ``.context``.
 
         Practices already on disk that are not part of this load stay in the file.
         """
         folder = self._folder
         if folder is None:
-            return ""
+            return {"path": ""}
         path = self._graph_json_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(self._merged_graph_document(), separators=(",", ":")), encoding="utf-8")
-        return str(path)
+        return {"path": str(path)}
 
     def _build_working_copy(self) -> None:
         self.practices = {}
@@ -1348,21 +1374,101 @@ class Graph:
         for slug, hits in grouped.items():
             practice.apply_rules(slug, hits)
 
-    def set_overlays(self, overlays: list[str]) -> str:
-        """Apply pattern overlays and rebuild the explorer tree from the open folder."""
+    @mcp
+    @agent_tool
+    def set_overlays(self, overlays: list[str]) -> OverlaysData:
+        """Apply pattern overlays, folders holding practices/, and rebuild the explorer tree from the open folder; answer with the graph's inventory."""
         self.overlays = _normalize_overlay_list(list(overlays or []))
         if self._folder is not None and self._practice_roots:
             roots = {name: str(path) for name, path in self._practice_roots.items()}
             self.load_working_copy(str(self._folder), roots, database=str(self._folder), overlays=self.overlays)
         label = ", ".join(Path(item).name for item in self.overlays) if self.overlays else "none"
-        return f"Applied pattern overlays: {label}."
+        return {"message": f"Applied pattern overlays: {label}.", **self.inventory()}
 
-    def inventory(self) -> dict[str, dict]:
+    @mcp
+    @agent_tool
+    def overlay_of(self, folder: str) -> OverlayData:
+        """Return the pattern overlay folder holds: folder itself or the overlay root above it, which must hold practices/."""
+        root = resolve_overlay_root(folder)
+        if not (root / "practices").is_dir():
+            raise GraphFailure("overlay_of", f"Not an overlay root (missing practices/): {folder}")
+        return {"overlay": normalize_overlay(str(root))}
+
+    @mcp
+    @agent_tool
+    def inventory(self) -> InventoryData:
+        """Return each loaded practice's node and edge counts, node types, rules, and explorer tree, with the overlays applied and those available."""
+        return {"practices": self._practice_inventories(), "overlays": list(self.overlays), "available_overlays": available_pattern_overlays()}
+
+    @mcp
+    @agent_tool
+    def filter_choices(self, practices: list[str], node_types: list[str]) -> FilterChoicesData:
+        """Return the node types, relationships, and rules a filter offers once practices and node_types are chosen."""
+        self.filter.clear()
+        if practices:
+            self.filter.select_practices(practices)
+        if node_types:
+            self.filter.select_node_types(node_types)
+        offered: FilterChoicesData = {
+            "node_types": list(self.filter.node_types),
+            "relationships": list(self.filter.relationships),
+            "rules": list(self.filter.rules),
+        }
+        self.filter.clear()
+        return offered
+
+    @mcp
+    @agent_tool
+    def source(self, node_id: str) -> SourceData | None:
+        """Return the source of the node node_id: its file, text, and lines, with every class, operation, and property the loaded graph holds, so calls in it can be opened in place. None for an id with no source, such as a rule's row."""
+        node = self._node(node_id)
+        if node is None:
+            return None
+        return {
+            "node_id": node.node_id,
+            "name": node.name,
+            "type": node.type,
+            "file": node.source.file,
+            "text": node.source.text,
+            "start_line": node.source.start_line,
+            "end_line": node.source.end_line,
+            "members": self._members(),
+        }
+
+    def to_json(self) -> GraphData:
+        return {"folder": self.folder, "overlays": list(self.overlays)}
+
+    def _node(self, node_id: str) -> Node | None:
+        return next((practice.by_id[node_id] for practice in self.practices.values() if node_id in practice.by_id), None)
+
+    def _members(self) -> list[MemberData]:
+        wanted = _CLASS_KINDS | {"Operation", "Property"}
+        return [self._member(node) for practice in self.practices.values() for node in practice.by_id.values() if node.type in wanted]
+
+    def _member(self, node: Node) -> MemberData:
+        return {
+            "id": node.node_id,
+            "name": node.name,
+            "kind": node.type,
+            "owner": "" if node.type in _CLASS_KINDS else self._owner(node),
+            "text": node.source.text,
+            "file": node.source.file,
+            "start": node.source.start_line,
+            "end": node.source.end_line,
+        }
+
+    def _owner(self, node: Node) -> str:
+        parent = node.parent
+        while parent is not None and parent.type not in _CLASS_KINDS:
+            parent = parent.parent
+        return parent.name if parent is not None else ""
+
+    def _practice_inventories(self) -> dict[str, PracticeInventoryData]:
         """Node and edge counts for each loaded practice, taken from the graph."""
         from harness.graph.schema_rules import active_overlay_patterns, qualified_rule_labels
 
         patterns = active_overlay_patterns(tuple(self.overlays))
-        report: dict[str, dict] = {}
+        report: dict[str, PracticeInventoryData] = {}
         for name, practice in self.practices.items():
             report[name] = {
                 "node_counts": {type: practice.node_count(type) for type in practice.node_types},
@@ -1377,7 +1483,7 @@ class Graph:
     @mcp
     @agent_tool
     @skill(name="read-graph")
-    def return_nodes(self, filter: dict | None = None) -> str:
+    def return_nodes(self, filter: dict | None = None) -> list[FilteredNodeData]:
         """Return matching graph nodes as JSON, with ancestors, children, and relationships.
 
         filter keys: practice(s), type(s), name, rules, relationships;
@@ -1394,13 +1500,13 @@ class Graph:
             wanted["rules"] = list(self.filter.rules)
         if self.filter.relationships_selected:
             wanted["relationships"] = list(self.filter.relationships)
-        found: list[dict] = []
+        found: list[FilteredNodeData] = []
         seen: set[int] = set()
         for practice in self.practices.values():
             self._collect_nodes(practice.root_node, [], wanted, found, seen)
-        return json.dumps(found, indent=2)
+        return found
 
-    def _collect_nodes(self, node: Node, ancestors: list[str], wanted: dict, found: list[dict], seen: set[int]) -> None:
+    def _collect_nodes(self, node: Node, ancestors: list[str], wanted: dict, found: list[FilteredNodeData], seen: set[int]) -> None:
         if id(node) in seen:
             return
         seen.add(id(node))

@@ -2,7 +2,6 @@ import type { BoardStore } from './board-store'
 
 const BOARD_HEADER = 'X-CDD-Board'
 const API_ROOT = '/api'
-const CHAT_PATHS = '/chats'
 const NOT_CONNECTED = 503
 
 export type Send = (path: string, init?: RequestInit) => Promise<Response>
@@ -33,14 +32,14 @@ export class BoardApi {
       return null
     }
     const body = (await response.json().catch(() => null)) as (T & { error?: string }) | null
-    if (response.ok) return this.accepted(path, body)
+    if (response.ok) return this.accepted(body)
     this.refused(response.status, body?.error ?? `The server answered ${response.status}.`)
     return null
   }
 
-  // The chat routes never reach cdd, so their answers say nothing about whether cdd is back.
-  private accepted<T>(path: string, body: T): T {
-    if (!path.startsWith(CHAT_PATHS) && this.store.state.serverFailure) this.store.change({ serverFailure: null })
+  // Every route reaches cdd, so any answer says cdd is back.
+  private accepted<T>(body: T): T {
+    if (this.store.state.serverFailure) this.store.change({ serverFailure: null })
     return body
   }
 

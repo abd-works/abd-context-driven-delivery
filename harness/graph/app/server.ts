@@ -1,176 +1,60 @@
-import { spawn } from 'node:child_process';
-import { createInterface } from 'node:readline';
+import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import express from 'express';
+import express, { type Request, type Response } from 'express';
+
+import { CddConnection } from '@cdd/cdd-connection';
+import { CddRequestError, cddProgressRoutes, type CddRoute } from '@cdd/cdd-shared';
+import { graphRoutes } from '@cdd/harness/graph/graph';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const python = process.env.PYTHON || 'python';
-const PYTHON_TIMEOUT_MS = Number(process.env.GRAPH_PYTHON_TIMEOUT_MS || 10_800_000);
-const child = spawn(python, ['-u', path.join(here, 'host.py')], { stdio: ['pipe', 'pipe', 'inherit'] });
-const lines = createInterface({ input: child.stdout });
-const pending: Array<(line: string) => void> = [];
-const progressMessages: string[] = [];
-const resetProgressFor = new Set([
-  'load_working_copy',
-  'apply_overlays',
-]);
+const API_ROOT = '/api';
+const BAD_REQUEST = 400;
+const FAILED = 500;
 
-type PythonResponse = {
-  ok: boolean;
-  result?: unknown;
-  error?: string;
-  error_type?: string;
-  traceback?: string;
-  diagnosis?: string;
-  progress?: { step?: string; message?: string };
-};
+// One cdd server holds the graph; every route reaches it through this connection.
+const cdd = new CddConnection(process.env.CDD_PROJECT);
 
-function progressLine(payload: PythonResponse): string {
-  const step = payload.progress?.step || 'progress';
-  const message = payload.progress?.message || '';
-  return message ? `${step}: ${message}` : step;
+const textOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure));
+
+// What a person pastes to an agent: the operation, the folder it ran on, and what cdd answered.
+function diagnosis(route: CddRoute, request: Request, failure: unknown): string {
+  const body = (request.body ?? {}) as Record<string, unknown>;
+  const operation = route.path.split('/').pop()?.replace(/-/g, '_') ?? route.path;
+  const database = String(body.database || body.folder || 'the loaded graph');
+  return `I just encountered an error doing ${operation} on ${database}. Please diagnose and fix.\n\n${textOf(failure)}`;
 }
 
-lines.on('line', (line) => {
-  let payload: PythonResponse;
+async function answer(route: CddRoute, request: Request, response: Response): Promise<void> {
   try {
-    payload = JSON.parse(line) as PythonResponse;
-  } catch (error) {
-    const resolve = pending.shift();
-    if (resolve) {
-      const detail = error instanceof Error ? error.message : String(error);
-      resolve(
-        JSON.stringify({
-          ok: false,
-          error: `Host sent a line that is not JSON: ${line}`,
-          error_type: 'SyntaxError',
-          traceback: detail,
-          diagnosis: `The Python host wrote a line the server could not parse.\n\n${line}\n\n${detail}`,
-        }),
-      );
-    }
-    return;
-  }
-  if (payload.progress) {
-    progressMessages.push(progressLine(payload));
-    if (progressMessages.length > 2000) {
-      progressMessages.shift();
-    }
-    return;
-  }
-  const resolve = pending.shift();
-  if (resolve) {
-    resolve(line);
-  }
-});
-
-child.on('error', (error) => {
-  rejectAll(error);
-});
-
-child.on('exit', (code, signal) => {
-  if (code === 0 && !signal) {
-    return;
-  }
-  rejectAll(new Error(`Python host exited (code=${code ?? 'null'}, signal=${signal ?? 'null'})`));
-});
-
-function rejectAll(error: Error) {
-  while (pending.length > 0) {
-    const resolve = pending.shift();
-    if (resolve) {
-      resolve(JSON.stringify({ ok: false, error: error.message, error_type: error.name, traceback: error.stack }));
-    }
+    response.json((await route.run(cdd, request)) ?? null);
+  } catch (failure) {
+    const status = failure instanceof CddRequestError ? BAD_REQUEST : FAILED;
+    response.status(status).json({ error: textOf(failure), diagnosis: diagnosis(route, request, failure) });
   }
 }
 
-function operationName(body: unknown): string {
-  if (typeof body === 'object' && body !== null && 'operation' in body) {
-    return String((body as { operation: unknown }).operation);
-  }
-  return 'unknown';
-}
-
-function ask(body: unknown): Promise<unknown> {
-  const operation = operationName(body);
+// A folder dialog opens on this machine, which only the explorer's server can do; it is not a graph operation.
+function chooseFolder(title: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    let settled = false;
-    const timer = setTimeout(() => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      const index = pending.indexOf(onLine);
-      if (index >= 0) {
-        pending.splice(index, 1);
-      }
-      reject(new Error(`Python host timed out after ${PYTHON_TIMEOUT_MS}ms during ${operation}`));
-    }, PYTHON_TIMEOUT_MS);
-
-    function onLine(line: string) {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      try {
-        const payload = JSON.parse(line) as PythonResponse;
-        if (!payload.ok) {
-          const message =
-            payload.diagnosis ||
-            payload.traceback ||
-            `${payload.error_type ?? 'Error'}: ${payload.error ?? `operation ${operation} failed`}`;
-          reject(new Error(message));
-          return;
-        }
-        resolve(payload.result);
-      } catch (error) {
-        reject(error);
-      }
-    }
-
-    if (resetProgressFor.has(operation)) {
-      progressMessages.length = 0;
-    }
-    pending.push(onLine);
-    child.stdin.write(JSON.stringify(body) + '\n');
+    execFile(python, [path.join(here, 'choose_folder.py'), title], (failure, stdout) => (failure ? reject(failure) : resolve(stdout.trim())));
   });
 }
 
 const app = express();
 app.use(express.json());
 
-for (const operation of [
-  'load_working_copy',
-  'inventory',
-  'apply_overlays',
-  'return_nodes',
-  'filter_choices',
-  'source',
-  'choose_folder',
-  'choose_overlay_folder',
-]) {
-  app.post(`/api/${operation}`, async (request, response) => {
-    try {
-      const result = await ask({ operation, ...request.body });
-      response.json({ ok: true, result });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const traceback = error instanceof Error ? error.stack : undefined;
-      response.status(500).json({
-        ok: false,
-        error: message,
-        error_type: error instanceof Error ? error.name : 'Error',
-        traceback,
-        diagnosis: message,
-      });
-    }
-  });
+for (const route of [...graphRoutes, ...cddProgressRoutes]) {
+  app.post(`${API_ROOT}${route.path}`, (request, response) => void answer(route, request, response));
 }
 
-app.get('/api/progress', (_request, response) => {
-  response.json({ ok: true, messages: progressMessages });
+app.post(`${API_ROOT}/explorer/choose-folder`, async (request, response) => {
+  try {
+    response.json({ folder: await chooseFolder(String(request.body?.title ?? 'Select a folder')) });
+  } catch (failure) {
+    response.status(FAILED).json({ error: textOf(failure), diagnosis: textOf(failure) });
+  }
 });
 
 const explorerUi = process.env.EXPLORER_UI_URL || 'http://localhost:5173';

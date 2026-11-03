@@ -22,7 +22,7 @@ class BacklogItemNotFoundError(LookupError):
         super().__init__(f"no backlog item titled {backlog_item!r} on the board")
 
 
-@language_adapter(language="typescript")
+@language_adapter(language="typescript", identity="title")
 @agent_toolset
 class BacklogItem(Card):
     """Hold an idea not yet started. Starting it opens a ticket for it."""
@@ -49,8 +49,12 @@ class BacklogItem(Card):
 
     @classmethod
     def holding(cls, ticket: Ticket, board: Board) -> BacklogItem:
-        """The item a ticket moved back into the Backlog waits in; its ticket's folder sits beside it."""
-        return cls._written(board, ticket.name, ticket.title, "")
+        """The item a ticket moved back into the Backlog becomes: its own folder, history and all, with its idea file
+        inside. A ticket that never had an idea file gets one holding its title."""
+        path = Session.backlog_folder(board.repo_root) / ticket.name / f"{ticket.name}.md"
+        if not path.exists():
+            path.write_text(f"# {ticket.title}\n", encoding="utf-8")
+        return cls(path, board)
 
     @classmethod
     def _written(cls, board: Board, file_name: str, title: str, text: str) -> BacklogItem:
@@ -92,10 +96,12 @@ class BacklogItem(Card):
     @agent_tool
     @noSessionLog
     def start(self, scope: str = "feature", path: str = "") -> Ticket:
-        """Start the backlog item titled backlog_item: open a ticket for it in Discovery, or bring back the ticket that was moved here, with its work. scope is feature, story, or slice; path is the folder in the repository its session works on."""
+        """Start the backlog item titled backlog_item: open a ticket for it in Discovery, or bring back the ticket that was moved here, with its work. Its file goes into the ticket's session folder, text and all. scope is feature, story, or slice; path is the folder in the repository its session works on."""
         held = self._held_ticket_folder
         ticket = self._ticket_brought_back(held) if held.is_dir() else self._ticket_opened(scope, path)
-        self._path.unlink()
+        # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.
+        if self._path.exists():
+            ticket.keep(self._path)
         return ticket
 
     def move_next(self) -> Ticket:
@@ -107,11 +113,12 @@ class BacklogItem(Card):
         return self
 
     def to_json(self) -> BacklogItemData:
-        return {**super().to_json(), "text": self.text, "path": str(self._path)}
+        return {**super().to_json(), "text": self.text, "path": self._path.relative_to(self._board.repo_root).as_posix()}
 
+    # The ticket folder an item holds: the folder it is kept in, or a folder of its name beside it.
     @property
     def _held_ticket_folder(self) -> Path:
-        return self._path.with_suffix("")
+        return self._path.parent if self._path.parent.name == self._path.stem else self._path.with_suffix("")
 
     def _ticket_brought_back(self, held: Path) -> Ticket:
         session = Session.at(held, self._board.repo_root).reopen()

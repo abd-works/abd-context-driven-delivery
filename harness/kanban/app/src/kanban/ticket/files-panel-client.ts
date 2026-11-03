@@ -1,12 +1,12 @@
-import type { FileTextData } from '@cdd/harness/kanban/ticket'
+import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
 
 import type { BoardApi } from '../board/board-api'
-import { pathPart } from '../board/board-api'
 import { FORMAT_GROUPS } from '../board/board-brand'
 import type { BoardStore, FilesPanel, SidePanel } from '../board/board-store'
 import type { TicketFiles } from './ticket'
 
 const TAB_GROUPS = ['markdown', 'code', 'diagram']
+const SESSION_ENTRY = 'session'
 const TAB_ORDER = TAB_GROUPS.flatMap(label => FORMAT_GROUPS.find(group => group.label === label)?.formats ?? [])
 
 // One tab per format the fidelity offers, generated or not: a story map always shows its markdown and its diagram.
@@ -68,14 +68,32 @@ export class FilesPanelClient {
     this.store.change(state => ({ panels: state.panels.map(panel => (panel.kind === 'files' ? change(panel) : panel)) }))
   }
 
-  private read(ticket: string, slugs: string[]): Promise<TicketFiles | null> {
-    return this.api.post<TicketFiles>(`/tickets/${pathPart(ticket)}/files`, { fidelities: slugs })
+  // A session folder's files are shown as the files of one entry, so the list, folder, and tabs read them the same way.
+  private async read(ticket: string, slugs: string[], isSession: boolean): Promise<TicketFiles | null> {
+    const ticketTools = TicketClientGenerated.named(this.api, ticket)
+    if (!isSession) return ticketTools.files(slugs)
+    const entries = await ticketTools.sessionFiles()
+    return entries && { [SESSION_ENTRY]: { [SESSION_ENTRY]: entries } }
   }
 
   async openFiles(ticket: string, slugs: string[], mode: string): Promise<void> {
-    const files = await this.read(ticket, slugs)
+    await this.openPanel(ticket, slugs, mode, false)
+  }
+
+  async openSessionFolder(ticket: string): Promise<void> {
+    await this.openPanel(ticket, [SESSION_ENTRY], 'folder', true)
+  }
+
+  // The session folder, with one of its files open, such as its latest handoff.
+  async openSessionFile(ticket: string, path: string): Promise<void> {
+    await this.openPanel(ticket, [SESSION_ENTRY], 'folder', true)
+    await this.openTab(path)
+  }
+
+  private async openPanel(ticket: string, slugs: string[], mode: string, isSession: boolean): Promise<void> {
+    const files = await this.read(ticket, slugs, isSession)
     if (!files) return
-    this.show({ kind: 'files', ticket, slugs, files, mode, tabs: [], activeTab: '', texts: {}, lines: {}, isExpanded: false })
+    this.show({ kind: 'files', ticket, isSession, slugs, files, mode, tabs: [], activeTab: '', texts: {}, lines: {}, isExpanded: false })
     if (mode === 'files') await this.chooseMode(mode)
   }
 
@@ -90,7 +108,7 @@ export class FilesPanelClient {
 
   private async textOf(ticket: string, path: string, isOnDisk: boolean): Promise<string> {
     if (!isOnDisk) return ''
-    return (await this.api.get<FileTextData>(`/tickets/${pathPart(ticket)}/file?path=${pathPart(path)}`))?.text ?? ''
+    return (await TicketClientGenerated.named(this.api, ticket).readFile(path))?.text ?? ''
   }
 
   async openTab(path: string): Promise<void> {
@@ -123,7 +141,7 @@ export class FilesPanelClient {
   private async reloadFiles(): Promise<void> {
     const panel = this.panel
     if (!panel) return
-    const files = await this.read(panel.ticket, panel.slugs)
+    const files = await this.read(panel.ticket, panel.slugs, panel.isSession)
     if (files) this.change(entry => withFiles(entry, files))
   }
 

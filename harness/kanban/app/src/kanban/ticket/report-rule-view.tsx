@@ -28,9 +28,13 @@ function ViolationLocationView({ panel, rule, violation }: { panel: ReportPanel;
   )
 }
 
-function ViolationSourceView({ violation }: { violation: ViolationData }) {
+// The file and line head the block of source around them, the way a fenced code block names its file.
+function ViolationSourceView({ panel, rule, violation }: { panel: ReportPanel; rule: ReportRuleData; violation: ViolationData }) {
   return (
     <div className="violation-source">
+      <div className="source-fence">
+        <ViolationLocationView panel={panel} rule={rule} violation={violation} />
+      </div>
       {violation.source.map(entry => (
         <SourceLineView key={entry.number} violation={violation} entry={entry} />
       ))}
@@ -40,23 +44,24 @@ function ViolationSourceView({ violation }: { violation: ViolationData }) {
 
 function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; rule: ReportRuleData; violation: ViolationData; isOff: boolean }) {
   const { page } = useBoard()
+  const hasSource = violation.source.length > 0
   return (
     <article className="violation">
       <div className="violation-head">
         <div className="violation-words">
-          <ViolationLocationView panel={panel} rule={rule} violation={violation} />
+          {hasSource ? null : <ViolationLocationView panel={panel} rule={rule} violation={violation} />}
           <div className="violation-message">{violation.message}</div>
         </div>
-        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} onClick={() => void page.fixViolation(rule, violation)}>
+        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : 'Send this fix to the chat'} onClick={() => void page.fixViolation(panel.ticket, rule, violation)}>
           Fix
         </button>
       </div>
-      {violation.source.length ? <ViolationSourceView violation={violation} /> : null}
+      {hasSource ? <ViolationSourceView panel={panel} rule={rule} violation={violation} /> : null}
     </article>
   )
 }
 
-function RuleHeadView({ rule, place, isOpen, isOff }: { rule: ReportRuleData; place: string; isOpen: boolean; isOff: boolean }) {
+function RuleHeadView({ ticket, rule, place, isOpen, isOff }: { ticket: string; rule: ReportRuleData; place: string; isOpen: boolean; isOff: boolean }) {
   const { page } = useBoard()
   return (
     <div className="rule-head">
@@ -70,7 +75,7 @@ function RuleHeadView({ rule, place, isOpen, isOff }: { rule: ReportRuleData; pl
         </h2>
         <p>{rule.description}</p>
       </div>
-      <button className="ghost-button" disabled={isOff} onClick={() => void page.fixRule(rule)}>
+      <button className="ghost-button" disabled={isOff} onClick={() => void page.fixRule(ticket, rule)}>
         Fix all
       </button>
     </div>
@@ -82,7 +87,7 @@ export function RuleView({ panel, rule, isOff }: { panel: ReportPanel; rule: Rep
   const isOpen = !panel.closedRules.includes(place)
   return (
     <section className="report-rule">
-      <RuleHeadView rule={rule} place={place} isOpen={isOpen} isOff={isOff} />
+      <RuleHeadView ticket={panel.ticket} rule={rule} place={place} isOpen={isOpen} isOff={isOff} />
       {isOpen ? rule.violations.map((violation, index) => <ViolationView key={`${violation.location}-${violation.line}-${index}`} panel={panel} rule={rule} violation={violation} isOff={isOff} />) : null}
     </section>
   )

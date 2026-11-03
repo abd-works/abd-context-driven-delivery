@@ -9,6 +9,7 @@ export type TicketPlace = { column: string; isDone: boolean }
 export type MoveTicketDriver = {
   moveNext: (ticket: string) => Promise<void>
   movePrevious: (ticket: string) => Promise<void>
+  dragTo: (ticket: string, stage: string, done: boolean) => Promise<void>
   placeOf: (ticket: string) => Promise<TicketPlace>
   isOnTheStages: (ticket: string) => Promise<boolean>
   backlogTitles: () => Promise<string[]>
@@ -41,6 +42,26 @@ export const moveTicketBehavior = shareBehavior<MoveTicketDriver>(({ describe, i
         it('should show the ticket in progress in that stage', async () => {
           expect(await driver().placeOf('move-me')).toEqual({ column: 'Discovery', isDone: false })
         })
+      })
+    })
+
+    describe("that a person has dragged into a later stage's Done", () => {
+      before(() => driver().dragTo('move-me', 'Implementation', true))
+
+      it("should show the ticket in that stage's Done", async () => {
+        expect(await driver().placeOf('move-me')).toEqual({ column: 'Implementation', isDone: true })
+      })
+    })
+
+    describe('that a person has dragged into the Backlog from a later stage', () => {
+      before(() => driver().dragTo('pricing-rules', 'Backlog', false))
+
+      it("should show an item in the Backlog with the ticket's title", async () => {
+        expect(await driver().backlogTitles()).toContain('Pricing rules')
+      })
+
+      it("should take the ticket off the board's stages", async () => {
+        expect(await driver().isOnTheStages('pricing-rules')).toEqual(false)
       })
     })
 

@@ -1,6 +1,4 @@
-import type { ActionStatesData } from '@cdd/harness/kanban/ticket'
-
-import { ACTION_STANDINGS, fidelityOf, guidanceSlug, practiceOf } from '../board/board-brand'
+import { fidelityOf, guidanceSlug, practiceOf } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { ColumnClient } from '../board/column-client'
 import { CheckIcon } from '../board/icons'
@@ -9,32 +7,12 @@ import type { TicketClient } from './ticket-client'
 import { skillOf } from './ticket-client'
 import { cellPlace } from './tile-client'
 
-const ACTION_ORDER: (keyof ActionStatesData)[] = ['generate', 'validate', 'review']
-const OFF_LIGHT = 0.2
-const NOT_STARTED_LIGHT = 0.45
 const REVIEWED_EDGE_PIXELS = 7
 const EDGE_PIXELS = 3
 
-// Generate, Validate, and Review on one fidelity, each to do, in progress, or done.
-function ActionMarksView({ ticket, slug }: { ticket: TicketClient; slug: string }) {
-  const actions = ticket.actionsOf(slug)
-  return (
-    <span className="action-marks">
-      {ACTION_ORDER.map(action => {
-        const standing = ACTION_STANDINGS[actions[action]] ?? ACTION_STANDINGS.to_do!
-        return (
-          <span key={action} role="img" title={`${action}: ${standing.label}`} aria-label={`${action}: ${standing.label}`} style={{ color: standing.color }}>
-            {standing.mark}
-          </span>
-        )
-      })}
-    </span>
-  )
-}
-
-const lightOfWork = (ticket: TicketClient, stage: ColumnClient, slug: string): number => (ticket.stateOf(slug).key === 'not_started' && !ticket.isNext(stage, slug) ? NOT_STARTED_LIGHT : 1)
-
-type TileProps = { ticket: TicketClient; stage: ColumnClient; slug: string; hasPracticeChip: boolean }
+// opensOnHover: a hover opens the bar for a look on an opened card. The details grid opens one only on a press, so
+// moving the pointer across the grid does not open bar after bar.
+type TileProps = { ticket: TicketClient; stage: ColumnClient; slug: string; hasPracticeChip: boolean; opensOnHover: boolean }
 
 function TileNameView({ ticket, stage, slug }: TileProps) {
   const { page } = useBoard()
@@ -69,7 +47,6 @@ function TileHeadingView(props: TileProps) {
       {hasPracticeChip ? <span className="practice-chip" style={{ borderLeftColor: practice?.color }}>{practice?.name}</span> : null}
       <TileNameView {...props} />
       <span className="visually-hidden">{label}</span>
-      <ActionMarksView ticket={ticket} slug={slug} />
       {key === 'done' ? <CheckIcon /> : null}
       {key === 'violations' ? (
         <button className="violations-link" onClick={() => void page.panels.openReport(ticket.name, slug)}>
@@ -82,19 +59,19 @@ function TileHeadingView(props: TileProps) {
 }
 
 export function TileView(props: TileProps) {
-  const { ticket, stage, slug } = props
-  const { page, state } = useBoard()
+  const { ticket, stage, slug, opensOnHover } = props
+  const { page } = useBoard()
   const practice = practiceOf(slug)
   const isOn = ticket.isEnabled(practice?.key ?? '')
   const place = cellPlace(stage.name, slug)
   const { key } = ticket.stateOf(slug)
   const borderColor = key === 'violations' ? 'var(--violations)' : ticket.isNext(stage, slug) ? 'var(--accent)' : 'var(--border)'
-  const hover = isOn ? { onMouseEnter: () => page.tiles.hoverIn({ ticket: ticket.name, stage, place, slugs: [slug] }), onMouseLeave: () => page.tiles.hoverOut(place) } : {}
-  const open = isOn && page.tiles.isOpen(ticket.name, place) ? state.tile : null
+  const hover = isOn && opensOnHover ? { onMouseEnter: () => page.tiles.hoverIn({ ticket: ticket.name, stage, place, slugs: [slug] }), onMouseLeave: () => page.tiles.hoverOut(ticket.name, place) } : {}
+  const open = isOn ? page.tiles.openOn(ticket.name, place) : undefined
   return (
-    <div className="skill-cell" data-tile={slug} {...hover} style={{ opacity: isOn ? lightOfWork(ticket, stage, slug) : OFF_LIGHT, borderColor, borderLeftColor: practice?.color, borderLeftWidth: key === 'done' ? REVIEWED_EDGE_PIXELS : EDGE_PIXELS }}>
+    <div className="skill-cell" data-tile={slug} {...hover} style={{ opacity: ticket.lightOf(slug), borderColor, borderLeftColor: practice?.color, borderLeftWidth: key === 'done' ? REVIEWED_EDGE_PIXELS : EDGE_PIXELS }}>
       <TileHeadingView {...props} />
-      {open ? <ActionBarView ticket={ticket} stage={stage} tile={open} hasFileLinks /> : null}
+      {open ? <ActionBarView ticket={ticket} stage={stage} tile={open} /> : null}
     </div>
   )
 }

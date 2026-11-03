@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime
+from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -16,7 +16,7 @@ from harness.installation.destination import language_adapter
 from harness.kanban.data import BoardData, ColumnData, HelpData
 from harness.mcp.mcp_server import mcp
 from space.session import Session
-from space.work_state import WorkState
+from space.work_state import project_checkout
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
@@ -25,8 +25,25 @@ if TYPE_CHECKING:
     from space.repo.repo import Repo
 
 STAGE_NAMES = ("Discovery", "Specification", "Implementation")
+# What every fidelity goes through in its stage, named as the session log names them.
+STAGE_ACTIONS = ("generate", "validate", "review")
 FORGE = "https://forge.abdworks.net/abd-context-driven-delivery"
 FIDELITIES_WITHOUT_PAGE = ("ddd-model", "bdd-realization")
+UNCHOSEN_FOLDERS = frozenset({"node_modules", "__pycache__"})
+
+
+@cache
+def _every_practice() -> tuple[PracticeGuidance, ...]:
+    """The practices a board shows, built once per process: they do not change between tool calls, and building them
+    took about 30 ms on every call. A board that changes one, such as the fidelity a ticket reads files for, puts it
+    back before the call ends."""
+    from bdd.bdd import Bdd
+    from clean_engineering.clean_engineering import CleanEngineering
+    from ddd.ddd import Ddd
+    from stories.stories import Stories
+    from ux.ux import Ux
+
+    return (Stories(), Ddd(), Ux(), CleanEngineering(), Bdd())
 
 
 def name_of(title: str) -> str:
@@ -43,30 +60,24 @@ class Board:
     # Every ticket is in exactly one column; the board stores no ticket state.
 
     def __init__(self, repo_root: Path | str, practices: list[PracticeGuidance]) -> None:
-        self._work_state = WorkState(repo_root)
+        self._repo_root = Path(repo_root).resolve()
         self._practices = list(practices)
         self._columns = self._build_columns()
 
     @classmethod
     def load(cls, repo_root: Path | str) -> Board:
         """A board with every practice chosen."""
-        from bdd.bdd import Bdd
-        from clean_engineering.clean_engineering import CleanEngineering
-        from ddd.ddd import Ddd
-        from stories.stories import Stories
-        from ux.ux import Ux
-
-        return cls(repo_root, [Stories(), Ddd(), Ux(), CleanEngineering(), Bdd()])
+        return cls(repo_root, list(_every_practice()))
 
     @classmethod
     @tool_subject
     def current(cls) -> Board:
-        """The board of the project being worked on: `CDD_PROJECT`, else the current folder."""
-        return cls.load(Path(os.environ.get("CDD_PROJECT") or os.getcwd()).resolve())
+        """The board of the project being worked on, found the way sessions find it."""
+        return cls.load(project_checkout())
 
     @property
     def repo_root(self) -> Path:
-        return self._work_state.root
+        return self._repo_root
 
     @property
     def repo(self) -> Repo:
@@ -95,7 +106,11 @@ class Board:
         folder = Session.backlog_folder(self.repo_root)
         if not folder.is_dir():
             return []
-        return [BacklogItem(path, self) for path in sorted(folder.glob("*.md"))]
+        # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
+        # whole folder, history and all. A folder beside a file of its name is that file's ticket, not a second item.
+        files = list(folder.glob("*.md"))
+        kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
+        return [BacklogItem(path, self) for path in sorted([*files, *(path for path in kept if path.is_file())], key=lambda path: path.stem)]
 
     @property
     def cards(self) -> list[Card]:
@@ -103,8 +118,8 @@ class Board:
 
     @property
     def active(self) -> Ticket | None:
-        name = self._work_state.session
-        return self.ticket(name) if name else None
+        """The ticket of the session saved as open; none while main is, since main is not on the board."""
+        return self.ticket(Session.active_name(self.repo_root))
 
     def column(self, name: str) -> Column:
         return next(column for column in self._columns if column.name == name)
@@ -130,6 +145,15 @@ class Board:
         limits = {**self._saved_wip_limits, stage: limit}
         Session.board_file(self.repo_root).write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
         return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def folders(self, path: str = "") -> list[str]:
+        """List the folders inside path, a folder in the repository (its top when empty), as paths from the project, for a person choosing a root. Installed packages, caches, and hidden folders hold no one's work, so they are left out."""
+        parent = self.repo_root / path
+        found = [entry for entry in parent.iterdir() if entry.is_dir() and entry.name not in UNCHOSEN_FOLDERS and not entry.name.startswith(".")]
+        return sorted(entry.relative_to(self.repo_root).as_posix() for entry in found)
 
     @mcp
     @agent_tool
@@ -174,11 +198,7 @@ class Board:
         return f"{FORGE}/fidelities/{slug}.html"
 
     def _build_columns(self) -> list[Column]:
-        from generate.generate import Generate
-        from review.review import Review
-        from validate.validate import Validate
-
-        stages = [Stage(name, self, [Generate, Validate, Review]) for name in STAGE_NAMES]
+        stages = [Stage(name, self, list(STAGE_ACTIONS)) for name in STAGE_NAMES]
         return [Backlog(self), *stages, Column("Complete", self)]
 
 
@@ -214,12 +234,12 @@ class Backlog(Column):
 class Stage(Column):
     """*Stage* is a column where work is done: every chosen practice's fidelity for it goes through its actions."""
 
-    def __init__(self, name: str, board: Board, actions: list[type]) -> None:
+    def __init__(self, name: str, board: Board, actions: list[str]) -> None:
         super().__init__(name, board)
         self._actions = list(actions)
 
     @property
-    def actions(self) -> list[type]:
+    def actions(self) -> list[str]:
         return list(self._actions)
 
     @property

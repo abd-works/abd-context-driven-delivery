@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react'
+import type { DragEvent, FormEvent } from 'react'
 
 import { ageOf } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
@@ -27,22 +27,23 @@ export function ComposerView() {
   )
 }
 
+// A backlog item starts when it is dragged into Discovery's In progress.
 export function BacklogCardView({ item }: { item: BacklogItemClient }) {
   const { page, state } = useBoard()
   const isSelected = page.board.selectedItem?.title === item.title
+  const dragStarted = (event: DragEvent) => {
+    event.dataTransfer.setData('text/plain', item.title)
+    event.dataTransfer.effectAllowed = 'move'
+    page.store.change({ dragged: item.address })
+  }
+  const className = state.dragged === item.address ? 'ticket-card is-dragged' : 'ticket-card'
   return (
-    <div className="ticket-card" data-item={item.title} onClick={() => item.select()} style={{ borderColor: isSelected ? 'var(--text)' : 'var(--border)' }}>
-      <button className="card-hit" aria-label={`Show ${item.title}`} />
+    <div className={className} data-item={item.title} draggable onDragStart={dragStarted} onDragEnd={() => page.store.change({ dragged: null })} onClick={() => item.select()} style={{ borderColor: isSelected ? 'var(--text)' : 'var(--border)' }}>
+      {/* Chrome starts no drag on a button, and this one covers the card, so it carries the card's drag. */}
+      <button className="card-hit" aria-label={`Show ${item.title}`} draggable />
+      <span className="expand-mark card-mark" aria-hidden="true" />
       <div className="ticket-title">{item.title}</div>
       <div className="ticket-meta">{ageOf(state.now, item.lastActivity)}</div>
-      <div className="start-line">
-        <button className="action card-move" aria-label={`Move ${item.title} into Discovery`} title={`Move ${item.title} into Discovery`} onClick={event => {
-            event.stopPropagation()
-            void item.start()
-          }}>
-          →
-        </button>
-      </div>
     </div>
   )
 }
@@ -60,7 +61,7 @@ export function ItemBarView() {
         </div>
         {item.text ? <p className="item-text">{item.text}</p> : null}
       </div>
-      <button className="action primary" onClick={() => void item.start()}>
+      <button className="action primary" onClick={() => void page.roots.openToStart(item)}>
         Start
       </button>
     </div>

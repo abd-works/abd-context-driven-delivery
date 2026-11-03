@@ -18,7 +18,7 @@ class Bdd(PracticeGuidance):
     catalog_card = {
         "name": "Behavior-Driven Development",
         "label": "behavior-driven-development",
-        "family": "aad-fam-sdd",
+        "family": "aad-fam-bdd",
         "perspective": "bdd",
         "order": 40,
         "blurb": "Specify domain logic through behavioural, automated tests.",

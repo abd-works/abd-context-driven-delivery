@@ -95,9 +95,9 @@ default_format: python
 stage: specification
 outputs:
   root: tests
-  python: "{story_snake}_story.test.py"
-  typescript: "{story_snake}_story.test.ts"
-  markdown: "{story_snake}_story.test.md"
+  python: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.py"
+  typescript: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
+  markdown: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.md"
   realization: "{scope}-realization.md"
 ```
 

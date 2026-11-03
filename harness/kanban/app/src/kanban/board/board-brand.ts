@@ -4,7 +4,7 @@ export const PRACTICES = [
   { key: 'ddd', name: 'DDD', prefix: 'ddd-', color: '#6C5CE7' },
   { key: 'ux', name: 'UX', prefix: 'ux-', color: '#E84393' },
   { key: 'clean_engineering', name: 'CE', prefix: 'clean_engineering-', color: '#4FC3F7' },
-  { key: 'bdd', name: 'BDD', prefix: 'bdd-', color: '#6BCB77' },
+  { key: 'bdd', name: 'BDD', prefix: 'bdd-', color: '#00B894' },
 ]
 
 export type Practice = (typeof PRACTICES)[number]
@@ -21,7 +21,9 @@ export const STATES: Record<string, { label: string; color: string }> = {
 }
 
 // Each practice's colour lights up with progress: dim until started, then brighter, then full when reviewed.
-export const SEGMENT_LIGHT: Record<string, number> = { not_started: 0.2, in_progress: 0.8, violations: 1, done: 1 }
+// How bright a fidelity's segment and tile are: almost black when its practice is off for the ticket, then brighter as
+// its work goes from not started to started to done. Violations stay bright so they are seen.
+export const WORK_LIGHT: Record<string, number> = { off: 0.12, not_started: 0.35, in_progress: 0.7, violations: 1, done: 1 }
 
 export const ACTION_STANDINGS: Record<string, { mark: string; color: string; label: string }> = {
   done: { mark: '✓', color: 'var(--reviewed)', label: 'done' },
@@ -31,13 +33,11 @@ export const ACTION_STANDINGS: Record<string, { mark: string; color: string; lab
 
 export const STEP_FAILED = '✕'
 
-const EXAMPLES = 'https://forge.abdworks.net/abd-context-driven-delivery/examples'
-
 // What each stage covers, drawn as a shape that narrows and deepens along the board.
-export const STAGE_SCOPES: Record<string, { name: string; reach: string; covers: string; width: number; height: number; href: string }> = {
-  Discovery: { name: 'Whole solution', reach: 'wide / shallow', covers: 'outcomes · scope · boundaries', width: 36, height: 12, href: `${EXAMPLES}/discovery.html` },
-  Specification: { name: 'Sprint', reach: 'narrow / deeper', covers: 'behaviour · design · logic', width: 16, height: 22, href: `${EXAMPLES}/specification.html` },
-  Implementation: { name: 'Story', reach: 'narrowest / deep', covers: 'tests · code · interface', width: 11, height: 28, href: `${EXAMPLES}/implementation.html` },
+export const STAGE_SCOPES: Record<string, { name: string; reach: string; covers: string; width: number; height: number }> = {
+  Discovery: { name: 'Whole solution', reach: 'wide / shallow', covers: 'outcomes · scope · boundaries', width: 36, height: 12 },
+  Specification: { name: 'Sprint', reach: 'narrow / deeper', covers: 'behaviour · design · logic', width: 16, height: 22 },
+  Implementation: { name: 'Story', reach: 'narrowest / deep', covers: 'tests · code · interface', width: 11, height: 28 },
 }
 
 export const FORMAT_GROUPS = [

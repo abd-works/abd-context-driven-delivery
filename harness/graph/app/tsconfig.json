@@ -6,7 +6,32 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["vite/client"]
+    "types": [
+      "node",
+      "vite/client"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@cdd/*": [
+        "../../../.claude/language-adapters/typescript/*"
+      ],
+      "react": [
+        "./node_modules/@types/react"
+      ],
+      "react/jsx-runtime": [
+        "./node_modules/@types/react/jsx-runtime"
+      ],
+      "@monaco-editor/react": [
+        "./node_modules/@monaco-editor/react"
+      ]
+    }
   },
-  "include": ["*.ts", "*.tsx", "data-management", "filter", "graph", "source"]
+  "include": [
+    "*.ts",
+    "*.tsx",
+    "data-management",
+    "filter",
+    "graph",
+    "source"
+  ]
 }

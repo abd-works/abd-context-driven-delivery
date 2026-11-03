@@ -1,0 +1,15 @@
+# CDD web domain access rule slugs for graph nodes (see cdd_web_domain_access.md § Shared rules).
+accessRoute:
+  rules:
+    - one-class-per-object
+accessNode:
+  rules:
+    - one-class-per-object
+    - adapter-is-generated
+    - state-lives-behind-the-tool
+accessHandWrittenAdapter:
+  rules:
+    - adapter-is-generated
+accessMarkedToolset:
+  rules:
+    - annotate-what-typescript-reads

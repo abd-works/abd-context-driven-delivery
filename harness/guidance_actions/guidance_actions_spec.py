@@ -80,6 +80,43 @@ with description("GuidanceAction"):
         expect(type(listed[0]).__name__).to(equal("Stories"))
         expect(listed[0].fidelities.current.name).to(equal("scenarios"))
 
+    with it("should list each guidance slug in one string of slugs"):
+        from harness.guidance_actions import GuidanceAction
+
+        kit = GuidanceAction()
+        kit._bind_guidance("stories-story-map clean-engineering-modules format=markdown")
+        listed = kit.listed()
+        expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
+
+    with it("should give each guidance slug the format named in the same string"):
+        from harness.guidance_actions import GuidanceAction
+
+        kit = GuidanceAction()
+        kit._bind_guidance("ux-ia format=drawio")
+        expect([item.format for item in kit.listed()]).to(equal(["drawio"]))
+
+    # The session board names the ticket's session in every command it sends, so the agent works in that session.
+    with it("should still list the guidance slugs when the string names a session"):
+        from harness.guidance_actions import GuidanceAction
+
+        kit = GuidanceAction()
+        kit._bind_guidance("stories-story-map format=markdown session=.sessions/sign-up/session.json")
+        expect([type(item).__name__ for item in kit.listed()]).to(equal(["Stories"]))
+
+    with it("should keep the session the string names"):
+        from harness.guidance_actions import GuidanceAction
+
+        kit = GuidanceAction()
+        kit._bind_guidance("stories-story-map session=.sessions/sign-up/session.json")
+        expect(kit.named_session).to(equal(".sessions/sign-up/session.json"))
+
+    with it("should keep prose made of ordinary words as guidance text"):
+        from harness.guidance_actions import GuidanceAction
+
+        kit = GuidanceAction()
+        kit._bind_guidance("write the story map")
+        expect(kit.guidance_text()).to(equal("write the story map"))
+
     with it("should keep prose that contains a colon as guidance text"):
         from harness.guidance_actions import GuidanceAction
 

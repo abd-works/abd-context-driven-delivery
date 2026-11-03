@@ -24,9 +24,8 @@ export function StageHeadView({ stage, isOverLimit = false, onMouseEnter, onMous
   return (
     <div className={isOverLimit ? 'stage-head is-over-limit' : 'stage-head'} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <ScopeView stage={stage} />
-      <a className="stage-title" href={STAGE_SCOPES[stage]?.href}>
-        {stage}
-      </a>
+      {/* Plain text: a link to an example of a stage read as a link to this ticket's own work. */}
+      <span className="stage-title">{stage}</span>
       {children}
     </div>
   )

@@ -4,7 +4,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from expects import be_none, be_true, contain, equal, expect
+from expects import be, be_none, be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.installation.installer import Installer
@@ -13,13 +13,10 @@ Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from bdd.bdd import Bdd  # noqa: E402
 from ddd.ddd import Ddd  # noqa: E402
-from generate.generate import Generate  # noqa: E402
 from harness.kanban.board import Board, Card  # noqa: E402
 from harness.kanban.ticket import Ticket  # noqa: E402
-from review.review import Review  # noqa: E402
 from stories.stories import Stories  # noqa: E402
 from ux.ux import Ux  # noqa: E402
-from validate.validate import Validate  # noqa: E402
 
 
 class SessionsFolder:
@@ -61,7 +58,7 @@ with description("a board") as self:
     with after.each:
         os.environ.pop("CDD_PROJECT", None)
 
-    # (S) Board Pane --> Display Board
+    # (S) Board App --> Display Board
     with context("with Stories, DDD, and UX chosen"):
         with before.each:
             self.board = Board(SessionsFolder().project, [Stories(), Ddd(), Ux()])
@@ -74,7 +71,7 @@ with description("a board") as self:
             expect([fidelity.name for fidelity in self.discovery.work_required]).to(equal(["story_map", "bounded_context", "ia"]))
 
         with it("should give every stage Generate, Validate, and Review, in that order"):
-            expect([self.board.column(name).actions for name in ("Discovery", "Specification", "Implementation")]).to(equal([[Generate, Validate, Review]] * 3))
+            expect([self.board.column(name).actions for name in ("Discovery", "Specification", "Implementation")]).to(equal([["generate", "validate", "review"]] * 3))
 
     with context("with BDD chosen"):
         with before.each:
@@ -93,7 +90,26 @@ with description("a board") as self:
         with it("should choose every practice"):
             expect([type(practice).__name__ for practice in self.board.practices]).to(equal(["Stories", "Ddd", "Ux", "CleanEngineering", "Bdd"]))
 
-    # (S) Board Pane --> Display Ticket Card, Display Backlog Items As Tickets
+        with it("should share its practices with every other board loaded in the process, since they do not change between calls"):
+            expect(Board.load(SessionsFolder().project).practices[0]).to(be(self.board.practices[0]))
+
+    # (S) Person --> Open Board
+    with context("of a project named by a folder inside its checkout"):
+        with before.each:
+            self.checkout = SessionsFolder().project
+            (self.checkout / ".git").mkdir(exist_ok=True)
+            inside = self.checkout / "src" / "visits"
+            inside.mkdir(parents=True)
+            os.environ["CDD_PROJECT"] = str(inside)
+
+        with it("should show the board of the whole checkout, where sessions keep their folders"):
+            expect(Board.current().repo_root).to(equal(self.checkout.resolve()))
+
+    with context("with no session saved as open"):
+        with it("should have no active ticket, since main is not on the board"):
+            expect(Board(SessionsFolder().project, [Stories()]).active).to(be_none)
+
+    # (S) Board App --> Display Ticket Card, Display Backlog Items As Tickets
     with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
         with before.each:
             sessions = SessionsFolder()
@@ -166,7 +182,12 @@ with description("a backlog item") as self:
 
         with context("that has been started"):
             with before.each:
+                self.written = self.item_path.read_text(encoding="utf-8")
                 self.ticket = self.board.backlog_items[0].start("feature")
+
+            with it("should keep the item's file, text and all, in the new ticket's session folder"):
+                kept = self.sessions.root / "returns-and-refunds" / "returns-and-refunds.md"
+                expect(kept.read_text(encoding="utf-8")).to(equal(self.written))
 
             with it("should open a ticket in Discovery"):
                 expect(self.board.ticket("returns-and-refunds").column.name).to(equal("Discovery"))
@@ -174,6 +195,55 @@ with description("a backlog item") as self:
             with it("should name the item's file in the new ticket's session log"):
                 log = self.sessions.root / "returns-and-refunds" / "session.log"
                 expect(log.read_text(encoding="utf-8")).to(contain(str(self.item_path)))
+
+    # (S) Board App --> Display Backlog Items As Tickets
+    with context("that is kept as a folder holding a file of its own name"):
+        with before.each:
+            self.sessions = SessionsFolder()
+            folder = self.sessions.folder("_backlog/gift-cards")
+            (folder / "gift-cards.md").write_text("# Gift cards\n\nSell them at the till.\n", encoding="utf-8")
+            (folder / "session.log").write_text("2026-10-31T01:00:00Z generate /work stories story_map markdown stories no-chat\n", encoding="utf-8")
+            (folder / "session.json").write_text(json.dumps({"name": "gift-cards", "title": "Gift cards"}), encoding="utf-8")
+            self.board = Board(self.sessions.project, [Stories(), Ddd(), Ux()])
+
+        with it("should be in the Backlog under the heading of that file"):
+            expect([item.title for item in self.board.backlog_items]).to(equal(["Gift cards"]))
+
+        with it("should show the text of that file"):
+            expect(self.board.backlog_items[0].text).to(equal("Sell them at the till."))
+
+        with context("that has been started"):
+            with before.each:
+                self.ticket = self.board.backlog_items[0].start("feature")
+
+            with it("should bring its ticket back with the history in its session log"):
+                log = self.sessions.root / "gift-cards" / "session.log"
+                expect(log.read_text(encoding="utf-8")).to(contain("generate /work stories story_map"))
+
+            with it("should keep its file in the ticket's session folder"):
+                expect((self.sessions.root / "gift-cards" / "gift-cards.md").read_text(encoding="utf-8")).to(contain("Sell them at the till."))
+
+    # (S) Person --> Drag Ticket To A Stage
+    with context("that a ticket became when a person dragged it into the Backlog from a later stage"):
+        with before.each:
+            self.sessions = SessionsFolder()
+            folder = self.sessions.session("pet-visits", "move Specification", title="Pet visits")
+            (folder / "pet-visits.md").write_text("# Pet visits\n\nBook a vet visit online.\n", encoding="utf-8")
+            board = Board(self.sessions.project, [Stories(), Ddd(), Ux()])
+            board.ticket("pet-visits").move_to("Backlog")
+            self.board = Board(self.sessions.project, [Stories(), Ddd(), Ux()])
+
+        with it("should be in the Backlog"):
+            expect([item.title for item in self.board.backlog_items]).to(equal(["Pet visits"]))
+
+        with it("should keep the ticket's whole folder, its history included"):
+            expect((self.sessions.root / "_backlog" / "pet-visits" / "session.log").read_text(encoding="utf-8")).to(contain("move Specification"))
+
+        with it("should show the ticket's own idea file as its text"):
+            expect(self.board.backlog_items[0].text).to(equal("Book a vet visit online."))
+
+        with it("should be off the stages"):
+            expect(names(self.board.tickets)).to(equal([]))
 
 GENERATE_STORY_MAP = "generate /work, /work/docs stories story_map markdown stories no-chat"
 VALIDATE_STORY_MAP_WITH_VIOLATIONS = "validate Stories story_map graph-rule actor-named-in-step map.md:12 no-chat"
@@ -225,40 +295,40 @@ with description("a ticket") as self:
             expect((self.ticket.title, self.ticket.scope, self.ticket.lineage.name)).to(equal(("Pet visits", "feature", "pawplace")))
 
         with it("should name Generate on story_map as next"):
-            expect((self.ticket.next.slug, self.ticket.next.remaining_actions[0])).to(equal(("stories-story_map", Generate)))
+            expect((self.ticket.next.slug, self.ticket.next.remaining_actions[0])).to(equal(("stories-story_map", "generate")))
 
-    # (S) Board Pane --> Display Ticket Card, Place Ticket In Column
+    # (S) Board App --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):
         with it("should be in Specification"):
             ticket = ticket_with(["generate /work/ux ux mockup html ux no-chat"])
             expect(ticket.column.name).to(equal("Specification"))
 
-    # (S) Board Pane --> Display Fidelity Progress; (S) Person --> Generate Fidelity Output, Validate Fidelity, Review Fidelity
+    # (S) Board App --> Display Fidelity Progress; (S) Person --> Generate Fidelity Output, Validate Fidelity, Review Fidelity
     with context("with a fidelity generated"):
         with before.each:
             self.lines = [GENERATE_STORY_MAP]
 
         with it("should show Generate done and Validate and Review remaining for that fidelity"):
-            expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal([Validate, Review]))
+            expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal(["validate", "review"]))
 
         with context("with log lines whose paths hold spaces and commas"):
             with it("should still find the practice and fidelity by name"):
                 ticket = ticket_with(["generate C:\\My Work, D:\\other files stories story_map markdown stories no-chat"])
-                expect(story_map(ticket).done_actions).to(equal([Generate]))
+                expect(story_map(ticket).done_actions).to(equal(["generate"]))
 
         with context("that has a validate naming graph-rule violations"):
             with before.each:
                 self.lines.append(VALIDATE_STORY_MAP_WITH_VIOLATIONS)
 
             with it("should still need Validate for that fidelity"):
-                expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal([Validate, Review]))
+                expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal(["validate", "review"]))
 
         with context("that has a validate with no violations"):
             with before.each:
                 self.lines.append(VALIDATE_STORY_MAP)
 
             with it("should show Validate done for that fidelity"):
-                expect(story_map(ticket_with(self.lines)).done_actions).to(equal([Generate, Validate]))
+                expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "validate"]))
 
             with it("should match the practice's class name in the validate line to its folder name"):
                 expect([progress.slug for progress in ticket_with(self.lines).progress if progress.done_actions]).to(equal(["stories-story_map"]))
@@ -275,7 +345,7 @@ with description("a ticket") as self:
                 self.lines += [REVIEW_STORY_MAP, VALIDATE_STORY_MAP]
 
             with it("should not count the review"):
-                expect(story_map(ticket_with(self.lines)).done_actions).to(equal([Generate, Validate]))
+                expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "validate"]))
 
     # (S) Person --> Review Fidelity, Complete Stage Work; (S) Person --> Move Ticket
     with context("with every required fidelity in its stage done"):
@@ -327,6 +397,41 @@ with description("a ticket") as self:
 
             with it("should have no next"):
                 expect(self.ticket.next).to(be_none)
+
+    # (S) Person --> Run Next Step
+    with context("that a person has moved on with an earlier stage's fidelity still to review"):
+        with before.each:
+            self.ticket = ticket_with([GENERATE_STORY_MAP, VALIDATE_STORY_MAP])
+            self.ticket.move_to("Specification")
+
+        with it("should name Review on that fidelity as next"):
+            expect((self.ticket.next.slug, self.ticket.next_action)).to(equal(("stories-story_map", "review")))
+
+    # (S) Person --> Drag Ticket To A Stage
+    with context("that a person has dragged into a later stage's done part"):
+        with before.each:
+            self.ticket = ticket_with([GENERATE_STORY_MAP])
+            self.ticket.move_to("Implementation", done=True)
+
+        with it("should be done in that stage"):
+            expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Implementation", True)))
+
+    with context("that a person has dragged back into its own stage's in progress part"):
+        with before.each:
+            self.root, board = board_with(DISCOVERY_DONE)
+            self.ticket = board.ticket("pet-visits")
+            self.ticket.move_to("Discovery")
+
+        with it("should be in progress in that stage"):
+            expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", False)))
+
+    with context("that a person has dragged out of Complete"):
+        with before.each:
+            self.root, board = board_with([GENERATE_STORY_MAP])
+            self.moved = board.ticket("pet-visits").close().move_to("Specification")
+
+        with it("should be open again, in progress in that stage"):
+            expect((self.moved.column.name, self.moved.is_done)).to(equal(("Specification", False)))
 
     # (S) Person --> Choose Ticket Practices
     with context("with every practice but Stories turned off"):

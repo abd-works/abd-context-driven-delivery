@@ -1,6 +1,5 @@
-import type { TicketData, WorkspaceData } from '@cdd/harness/kanban/ticket'
+import { TicketClientGenerated, type WorkspaceData } from '@cdd/harness/kanban/ticket'
 
-import { pathPart } from '../board/board-api'
 import type { BoardPage } from '../board/board-page'
 import type { Activation } from '../board/board-store'
 import type { TicketClient } from './ticket-client'
@@ -43,7 +42,7 @@ export class ActivationClient {
 
   async start(ticket: TicketClient, isClosing: boolean): Promise<void> {
     ticket.select()
-    const found = await this.page.api.get<WorkspaceData>(`/tickets/${pathPart(ticket.name)}/workspace`)
+    const found = await ticket.workspace()
     const workspace = new WorkspaceClient(found ?? NO_WORKSPACE)
     const leavingTitle = isClosing ? ticket.title : (this.page.board.activeTicket?.title ?? '')
     this.show({
@@ -77,15 +76,15 @@ export class ActivationClient {
   }
 
   private async closeSession(open: Activation): Promise<void> {
-    const closed = await this.page.api.post<TicketData>(`/tickets/${pathPart(open.ticket)}/close`, { leaving: open.leaving })
+    const closed = await TicketClientGenerated.named(this.page.api, open.ticket).close(open.leaving)
     await this.page.reader.refresh()
     if (!closed) return
-    this.page.ticket(closed).select()
+    this.page.ticket(closed.toJSON()).select()
     this.page.store.toast(reportOf(open, `Session ${open.title} closed`, []))
   }
 
   private async activateSession(open: Activation): Promise<void> {
-    const activated = await this.page.api.post<TicketData>(`/tickets/${pathPart(open.ticket)}/activate`, { leaving: open.leaving, opening: open.opening })
+    const activated = await TicketClientGenerated.named(this.page.api, open.ticket).activate(open.leaving, open.opening)
     await this.page.reader.refresh()
     if (activated) this.page.store.toast(reportOf(open, `${open.title} is now active`, stepsOf(OPENED_STEPS, open.opening)))
   }

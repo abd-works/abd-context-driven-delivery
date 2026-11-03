@@ -11,6 +11,11 @@ class ActionStatesData(TypedDict):
     review: str
 
 
+class PracticeRootData(TypedDict):
+    root: str
+    is_chosen: bool
+
+
 class TicketData(TypedDict):
     title: str
     last_activity: str
@@ -19,13 +24,15 @@ class TicketData(TypedDict):
     parent: str
     column: str
     is_done: bool
-    can_move_next: bool
     next: str | None
     next_action: str
     handoff: str
     reports: dict[str, str]
     violation_counts: dict[str, int]
     practices: dict[str, bool]
+    root: str
+    practice_roots: dict[str, PracticeRootData]
+    session_file: str
     progress: dict[str, str]
     actions: dict[str, ActionStatesData]
     allowed_actions: dict[str, list[str]]

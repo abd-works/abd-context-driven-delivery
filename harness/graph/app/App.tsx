@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
-import { FilterClient, type FilterSelection, type GraphTree, type InventoryBundle, type PracticeInventory } from './filter/FilterClient';
+import type { CddProgress } from '@cdd/cdd-shared';
+import type { GraphTreeData, InventoryData, PracticeInventoryData, SourceData } from '@cdd/harness/graph/graph';
+import { nodeFilter, type FilterSelection } from './filter/filter-selection';
 import { FilterView } from './filter/FilterView';
 import { GraphClient } from './graph/GraphClient';
 import { GraphView } from './graph/GraphView';
 import { ruleHits, selectionForRule, type GraphSelection } from './graph/graph-selection';
-import { SourceClient, type SourceText } from './source/SourceClient';
 import { SourceView, type SourceRule } from './source/SourceView';
 import { normalizeInventoryBundle } from './inventory-bundle';
 import { lernNodeTypesFromCatalog, lernOverlayActive, overlayPathLabel } from './overlay-labels';
@@ -25,8 +26,6 @@ const EMPTY: FilterSelection = {
 };
 
 const graphs = new GraphClient();
-const filters = new FilterClient();
-const sources = new SourceClient();
 
 export function App() {
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? '');
@@ -34,8 +33,8 @@ export function App() {
   const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
-  const [trees, setTrees] = useState<GraphTree[]>([]);
-  const [catalog, setCatalog] = useState<Record<string, PracticeInventory>>({});
+  const [trees, setTrees] = useState<GraphTreeData[]>([]);
+  const [catalog, setCatalog] = useState<Record<string, PracticeInventoryData>>({});
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
   const [relationships, setRelationships] = useState<string[]>([]);
   const [rules, setRules] = useState<string[]>([]);
@@ -48,7 +47,7 @@ export function App() {
   const [selectedId, setSelectedId] = useState('');
   const [activeRule, setActiveRule] = useState('');
   const [violation, setViolation] = useState<ViolationFocus | null>(null);
-  const [source, setSource] = useState<SourceText | null>(null);
+  const [source, setSource] = useState<SourceData | null>(null);
   const loadGeneration = useRef(0);
   const loadingRef = useRef(false);
   loadingRef.current = loading;
@@ -76,15 +75,12 @@ export function App() {
     async function tick() {
       while (!stop) {
         try {
-          const response = await fetch('/api/progress');
-          const body = (await response.json()) as { messages?: string[] };
-          if (Array.isArray(body.messages) && body.messages.length > 0) {
-            setLoadingLog(body.messages);
+          const steps = (await graphs.api.post<CddProgress[]>('/cdd/progress', {})) ?? [];
+          const newest = steps[steps.length - 1]?.message;
+          if (newest) {
+            setLoadingLog((current) => (current[current.length - 1] === newest ? current : [...current, newest]));
             if (loadingRef.current) {
-              const last = body.messages[body.messages.length - 1].replace(/^load:\s*/, '');
-              if (last) {
-                setLoadingLabel(last);
-              }
+              setLoadingLabel(newest);
             }
           }
         } catch (cause) {
@@ -128,7 +124,7 @@ export function App() {
     setLoadingLog([]);
     setError('');
     try {
-      await graphs.load(trimmed, practiceRoots(trimmed), readSavedOverlays(), force);
+      await graphs.loadWorkingCopy(trimmed, practiceRoots(trimmed), trimmed, readSavedOverlays(), force);
       if (generation !== loadGeneration.current) {
         return;
       }
@@ -160,17 +156,17 @@ export function App() {
     setSelectedId(selection.nodeId);
     setActiveRule(selection.rule ?? '');
     setViolation(selection.violation ?? null);
-    const opened = await sources.open(selection.nodeId);
+    const opened = await graphs.source(selection.nodeId);
     setSource(opened?.text != null && opened.file != null ? opened : null);
   }
 
-  function adoptInventory(bundle: InventoryBundle, filter: FilterSelection) {
+  function adoptInventory(bundle: InventoryData, filter: FilterSelection) {
     setCatalog(bundle.practices);
     setAvailableOverlays(bundle.available_overlays ?? []);
     const overlays = bundle.overlays?.length ? bundle.overlays : filter.overlays;
     const merged = { ...filter, overlays };
     const shown = merged.practices.length ? merged.practices : Object.keys(bundle.practices);
-    setTrees(shown.map((name) => bundle.practices[name]?.tree).filter((tree): tree is GraphTree => Boolean(tree)));
+    setTrees(shown.map((name) => bundle.practices[name]?.tree).filter((tree): tree is GraphTreeData => Boolean(tree)));
     setNodeTypes(unique(shown.flatMap((name) => bundle.practices[name]?.node_types ?? [])));
     setRelationships(visibleRelationships(unique(shown.flatMap((name) => bundle.practices[name]?.edge_types ?? []))));
     setRules(unique(shown.flatMap((name) => bundle.practices[name]?.rules ?? [])));
@@ -188,7 +184,7 @@ export function App() {
     setLoadingLabel('Applying pattern overlays…');
     setError('');
     try {
-      const bundle = normalizeInventoryBundle(await filters.applyOverlays(overlays));
+      const bundle = normalizeInventoryBundle(await graphs.setOverlays(overlays));
       const scope = next.practices.length ? next.practices : Object.keys(bundle.practices);
       const refreshed = overlayFilterRefresh(selection, { ...next, practices: scope }, bundle.practices, bundle.overlays);
       adoptInventory(bundle, refreshed);
@@ -250,20 +246,20 @@ export function App() {
       setRelationships(visibleRelationships(listed(scope, practices, 'edge_types')));
       setRules(listed(scope, practices, 'rules'));
     } else if (nodeChanged) {
-      const choices = await filters.choices(next);
+      const choices = (await graphs.filterChoices(next.practices, next.node_types)) ?? { node_types: [], relationships: [], rules: [] };
       resolved = { ...next, relationships: choices.relationships, rules: choices.rules };
       setRelationships(visibleRelationships(choices.relationships));
       setRules(choices.rules);
     }
     setSelection(resolved);
-    const rows = await filters.nodes(resolved);
+    const rows = (await graphs.returnNodes(nodeFilter(resolved))) ?? [];
     const names = new Set(rows.map((row) => row.node_id));
     const bundle = normalizeInventoryBundle(await graphs.inventory());
     const shown = resolved.practices.length ? resolved.practices : Object.keys(bundle.practices);
     setTrees(
       shown
         .map((name) => keep(bundle.practices[name]?.tree, names, resolved.node_types, resolved.violations))
-        .filter((tree): tree is GraphTree => Boolean(tree)),
+        .filter((tree): tree is GraphTreeData => Boolean(tree)),
     );
   }
 
@@ -405,7 +401,7 @@ function joined(values: string[]): string {
 
 function listed(
   practices: string[],
-  catalog: Record<string, PracticeInventory>,
+  catalog: Record<string, PracticeInventoryData>,
   field: 'node_types' | 'edge_types' | 'rules',
 ): string[] {
   return unique(practices.flatMap((name) => catalog[name]?.[field] ?? []));
@@ -414,7 +410,7 @@ function listed(
 function overlayFilterRefresh(
   previous: FilterSelection,
   next: FilterSelection,
-  catalog: Record<string, PracticeInventory>,
+  catalog: Record<string, PracticeInventoryData>,
   activeOverlays: string[] = next.overlays,
 ): FilterSelection {
   const scope = next.practices.length ? next.practices : Object.keys(catalog);
@@ -469,7 +465,7 @@ function mergeNewCatalogItems(current: string[], available: string[]): string[] 
 function practiceSelection(
   previous: FilterSelection,
   next: FilterSelection,
-  catalog: Record<string, PracticeInventory>,
+  catalog: Record<string, PracticeInventoryData>,
 ): FilterSelection {
   const scope = next.practices.length ? next.practices : Object.keys(catalog);
   const nodes = listed(scope, catalog, 'node_types');
@@ -502,11 +498,11 @@ function mergeKept(current: string[], available: string[], added: string[]): str
 }
 
 function keep(
-  node: GraphTree | undefined,
+  node: GraphTreeData | undefined,
   ids: Set<string>,
   types: string[],
   violationsOnly = false,
-): GraphTree | null {
+): GraphTreeData | null {
   if (!node) {
     return null;
   }
@@ -514,7 +510,7 @@ function keep(
   const children = node.children
     .filter((child) => child.type !== 'rules')
     .map((child) => keep(child, ids, types, violationsOnly))
-    .filter((child): child is GraphTree => Boolean(child));
+    .filter((child): child is GraphTreeData => Boolean(child));
   const holder = node.type === node.name;
   if (holder) {
     return children.length > 0 ? { ...node, children } : null;
@@ -533,7 +529,7 @@ function keep(
   return { ...node, children: [...children, ...rules] };
 }
 
-function findNode(nodes: GraphTree[], id: string): GraphTree | null {
+function findNode(nodes: GraphTreeData[], id: string): GraphTreeData | null {
   for (const node of nodes) {
     if (node.node_id === id) {
       return node;
@@ -546,7 +542,7 @@ function findNode(nodes: GraphTree[], id: string): GraphTree | null {
   return null;
 }
 
-function rulesOn(node: GraphTree | null): SourceRule[] {
+function rulesOn(node: GraphTreeData | null): SourceRule[] {
   const holder = node?.children.find((child) => child.type === 'rules');
   return (holder?.children ?? []).map((rule) => ({
     name: rule.name,

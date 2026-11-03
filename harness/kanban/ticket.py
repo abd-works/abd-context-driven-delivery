@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import inspect
+import os
+import re
 from datetime import datetime, timezone
 from functools import cached_property
 from pathlib import Path
@@ -12,7 +14,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import language_adapter
 from harness.kanban.board import Board, Card, Stage, name_of
-from harness.kanban.data import FileEntryData, FileTextData, ReportData, TicketData, WorkspaceData
+from harness.kanban.data import FileEntryData, FileTextData, PracticeRootData, ReportData, TicketData, WorkspaceData
 from harness.mcp.mcp_server import mcp
 from space.session import Session
 
@@ -36,6 +38,9 @@ LEAVE_MERGE = "merge"
 MOVE_WORDS = (MOVED_INTO, OLDER_MOVED_INTO)
 OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
+BACKLOG_COLUMN = "Backlog"
+ALWAYS_ALLOWED = ("generate",)
+ONCE_THERE_IS_OUTPUT = ("validate", "review")
 SOURCE_LINES_BEFORE = 2
 SOURCE_LINES_AFTER = 4
 
@@ -47,6 +52,20 @@ class TicketNotFoundError(LookupError):
         super().__init__(f"no ticket named {ticket!r} on the board")
 
 
+class FidelityNotFoundError(LookupError):
+    """Raised when a tool names a fidelity, such as stories-story_map, that the ticket's practices do not have."""
+
+    def __init__(self, fidelity: str) -> None:
+        super().__init__(f"no fidelity named {fidelity!r} on this ticket")
+
+
+class NotAStageError(ValueError):
+    """Raised when a ticket is moved into a column that is not a stage, such as the Backlog or Complete."""
+
+    def __init__(self, stage: str) -> None:
+        super().__init__(f"{stage!r} is not a stage a ticket can be moved into")
+
+
 class TicketFileError(ValueError):
     """Raised when a tool asks for a file outside the ticket's repository."""
 
@@ -54,7 +73,7 @@ class TicketFileError(ValueError):
         super().__init__(f"{path!r} is not a file in this repository")
 
 
-@language_adapter(language="typescript")
+@language_adapter(language="typescript", identity="name")
 @agent_toolset
 class Ticket(Card):
     """Show one work session as a unit of delivery and move it through the stages."""
@@ -148,11 +167,13 @@ class Ticket(Card):
 
     @property
     def next(self) -> FidelityProgress | None:
-        """The first fidelity in its current stage that is not done; none when it is done or Complete."""
+        """The first fidelity not done in its current stage or a stage before it, earliest stage first, since later work
+        builds on it; none when it is done in its stage or Complete."""
         column = self.column
-        if self.is_done:
+        if self.is_done or column not in self._stages:
             return None
-        return next((progress for progress in self._enabled_progress if progress.stage is column and not progress.is_done), None)
+        reached = self._stages[: self._stages.index(column) + 1]
+        return next((progress for progress in self._enabled_progress if progress.stage in reached and not progress.is_done), None)
 
     @property
     def next_action(self) -> str:
@@ -160,7 +181,7 @@ class Ticket(Card):
         upcoming = self.next
         if upcoming is None:
             return ""
-        return "satisfy" if upcoming.has_violations else upcoming.remaining_actions[0].__name__.lower()
+        return "satisfy" if upcoming.has_violations else upcoming.remaining_actions[0]
 
     @property
     def last_activity(self) -> str:
@@ -217,6 +238,20 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
+    def move_to(self, stage: str, done: bool = False) -> Ticket | BacklogItem:
+        """Move ticket straight into stage's In progress, or its Done when done is true, whatever its work; dragging a card does this. Out of Complete it reopens first. Into the Backlog, from any column, it becomes a backlog item that keeps its whole folder."""
+        if stage == BACKLOG_COLUMN:
+            return self._to_backlog()
+        target = next((column for column in self._stages if column.name == stage), None)
+        if target is None:
+            raise NotAStageError(stage)
+        moved = self if isinstance(self.column, Stage) else Ticket(self._session.reopen(), self._board)
+        entered = moved if moved.column is target else moved._enter(target)
+        return entered._mark(MARKED_DONE if done else MARKED_IN_PROGRESS, target)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
         """Close ticket: its session ends, its folder moves to closed/, and it shows in Complete. leaving names what to do with its work first: commit, push, merge."""
         self._leave(leaving or [])
@@ -263,6 +298,62 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
+    def finish_review(self, fidelities: list[str]) -> Ticket:
+        """Record that a person has reviewed and approved fidelities, slugs such as stories-story_map, on ticket: one review line each in its session log. A review counts once its fidelity's latest Validate has passed, and a fidelity whose actions are all done is done in its stage."""
+        by_slug = {entry.slug: entry for entry in self.progress}
+        unknown = [slug for slug in fidelities if slug not in by_slug]
+        if unknown:
+            raise FidelityNotFoundError(unknown[0])
+        for slug in fidelities:
+            fidelity = by_slug[slug].fidelity
+            self.record(f"review {type(fidelity.practice_guidance).__name__} {fidelity.name}")
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def choose_root(self, path: str) -> Ticket:
+        """Make path, a folder in the repository, ticket's root: the folder its session works in and its graph loads from. An empty path is the whole repository."""
+        self._session.change_workpath(self._board.repo_root / path)
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def choose_practice_root(self, practice: str, path: str) -> Ticket:
+        """Write practice's files under path, a folder in the repository, for this ticket."""
+        self._session.choose_output_root(practice, self._board.repo_root / path)
+        return self
+
+    @property
+    def root(self) -> str:
+        """The folder the session works in, as a path from the project; empty for the whole repository."""
+        return self._from_repository(Path(self._session.workpath or self._board.repo_root))
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def use_default_practice_root(self, practice: str) -> Ticket:
+        """Write practice's files under its default root again: the ticket's root plus the practice's own folder."""
+        self._session.forget_output_root(practice)
+        return self
+
+    @property
+    def practice_roots(self) -> dict[str, PracticeRootData]:
+        """Where each practice writes, as a path from the project, and whether a person chose it or it is the default."""
+        guidances = {entry.practice: entry.fidelity.practice_guidance for entry in self.progress}
+        return {
+            practice: {"root": self._from_repository(self._session.practice_root(guidance, practice)), "is_chosen": self._session.has_chosen_output_root(practice)}
+            for practice, guidance in guidances.items()
+        }
+
+    def _from_repository(self, folder: Path) -> str:
+        relative = self._relative_to(self._board.repo_root.resolve(), str(folder.resolve()))
+        return "" if relative == "." else relative
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def enable_practice(self, practice: str, is_enabled: bool) -> Ticket:
         """Turn practice on or off for ticket, saved in its session.json."""
         self._session.practices[practice].enabled = is_enabled
@@ -274,6 +365,14 @@ class Ticket(Card):
     def files(self, fidelities: list[str]) -> dict[str, dict[str, list[FileEntryData]]]:
         """List the files fidelities declare by format, each with its path from the project and whether it exists. A pattern lists the files this ticket worked on, not every match in the repository."""
         return {progress.slug: self._files_of(progress.fidelity) for progress in self.progress if progress.slug in fidelities}
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def session_files(self) -> list[FileEntryData]:
+        """List every file in ticket's session folder, each with its path from the project: its log, handoffs, kept notes, and validation reports."""
+        files = sorted(path for path in self._folder.rglob("*") if path.is_file())
+        return [{"path": self._from_project(path), "exists": True} for path in files]
 
     @mcp
     @agent_tool
@@ -322,7 +421,14 @@ class Ticket(Card):
         """Return the commands that generate fidelities in formats. A format the same practice's earlier fidelity has no file in is rendered from that fidelity first."""
         renders = [self._render_command(slug, formats) for slug in fidelities]
         named = " ".join(slug.replace("_", "-") for slug in fidelities)
-        return [*filter(None, renders), f"/actions-generate {named} format={','.join(formats)}"]
+        commands = [*filter(None, renders), f"/actions-generate {named} format={','.join(formats)}"]
+        return [f"{command} session={self.session_file}" for command in commands]
+
+    @property
+    def session_file(self) -> str:
+        """Its session.json as a path from the project. Every command the board sends names it, because a command runs
+        in whichever chat it is sent to, and that chat's open session can be another."""
+        return self._from_project(self._folder / "session.json")
 
     def to_json(self) -> TicketData:
         progress = self.progress
@@ -334,17 +440,25 @@ class Ticket(Card):
             "parent": self._fields.get("parent", ""),
             "column": self.column.name,
             "is_done": self.is_done,
-            "can_move_next": self.column.name != "Complete",
             "next": upcoming.slug if upcoming else None,
             "next_action": self.next_action,
             "handoff": self.latest_handoff,
             "reports": self.reports,
             "violation_counts": self.violation_counts,
             "practices": self.practices,
+            "root": self.root,
+            "practice_roots": self.practice_roots,
+            "session_file": self.session_file,
             "progress": {entry.slug: entry.state for entry in progress},
             "actions": {entry.slug: entry.action_states for entry in progress},
-            "allowed_actions": {entry.slug: entry.allowed_actions for entry in progress},
+            "allowed_actions": {entry.slug: self._allowed_actions(entry) for entry in progress},
         }
+
+    def _allowed_actions(self, progress: FidelityProgress) -> list[str]:
+        """Generate always; Validate and Review as soon as any action on the fidelity is recorded, so a person can check
+        the same output again as often as they like. Files already on disk are listed by `files`, which the board reads
+        when a person opens the fidelity; reading them here would search the disk on every board read."""
+        return [*ALWAYS_ALLOWED, *ONCE_THERE_IS_OUTPUT] if progress.done_actions else list(ALWAYS_ALLOWED)
 
     @property
     def _folder(self) -> Path:
@@ -362,6 +476,13 @@ class Ticket(Card):
     def _enabled_progress(self) -> list[FidelityProgress]:
         practices = self.practices
         return [entry for entry in self.progress if practices[entry.practice]]
+
+    def keep(self, file: Path) -> Path:
+        """Move file into this ticket's session folder, where it stays with the ticket's work until it becomes lasting
+        context, such as part of a story map. A started backlog item's text is the only copy of the idea."""
+        kept = self._folder / file.name
+        file.replace(kept)
+        return kept
 
     def record(self, entry: str) -> None:
         """Append entry to the session log, timestamped."""
@@ -492,17 +613,18 @@ class Ticket(Card):
         """A declared path, or each file a pattern finds; a pattern that finds none stays as written, not yet there."""
         root = self._board.repo_root.resolve()
         relative = self._relative_to(root, declared)
-        if "*" not in relative:
+        pattern = _named_parts_as_wildcards(relative)
+        if "*" not in pattern:
             return [{"path": relative, "exists": (root / relative).exists()}]
-        # A session can work outside the repository, and glob takes no absolute pattern, so a path that stayed absolute searches from its drive.
-        start = Path(Path(relative).anchor or root)
-        found = sorted(path for path in start.glob(relative[len(Path(relative).anchor):]) if path.is_file())
+        # A session can work outside the repository, so a path that stayed absolute searches from its drive.
+        start = Path(Path(pattern).anchor or root)
+        found = _files_matching(start, pattern[len(Path(pattern).anchor):])
         return [{"path": self._relative_to(root, str(path)), "exists": True} for path in self._worked_on(found)] or [{"path": relative, "exists": False}]
 
     def _worked_on(self, found: list[Path]) -> list[Path]:
         """The files of a pattern that are this ticket's. A folder of its own holds only its work; on the whole repository, only what its branch changed is."""
         repo_root = self._board.repo_root.resolve()
-        if Path(self._session.workpath or repo_root).resolve() != repo_root:
+        if not found or Path(self._session.workpath or repo_root).resolve() != repo_root:
             return found
         return [path for path in found if path.resolve() in self._changed_on_branch]
 
@@ -521,7 +643,7 @@ class FidelityProgress:
 
     # validate is done only when its latest line names no graph-rule violations; review is done only after that
 
-    def __init__(self, fidelity: FidelityGuidance, stage: Stage, done_actions: list[type], has_violations: bool) -> None:
+    def __init__(self, fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool) -> None:
         self._fidelity = fidelity
         self._stage = stage
         self._done_actions = list(done_actions)
@@ -542,7 +664,7 @@ class FidelityProgress:
         done_verbs = {verb for _, verb in naming if verb == "generate"}
         done_verbs |= {"validate"} if validated else set()
         done_verbs |= {"review"} if reviewed else set()
-        done = [action for action in stage.actions if action.__name__.lower() in done_verbs]
+        done = [action for action in stage.actions if action in done_verbs]
         return cls(fidelity, stage, done, has_violations)
 
     @property
@@ -558,11 +680,11 @@ class FidelityProgress:
         return practice_key(self._fidelity.practice_guidance)
 
     @property
-    def done_actions(self) -> list[type]:
+    def done_actions(self) -> list[str]:
         return list(self._done_actions)
 
     @property
-    def remaining_actions(self) -> list[type]:
+    def remaining_actions(self) -> list[str]:
         return [action for action in self._stage.actions if action not in self._done_actions]
 
     @property
@@ -603,26 +725,56 @@ class FidelityProgress:
     @property
     def action_states(self) -> dict[str, str]:
         """Each action as to_do, in_progress, or done. A validate that left violations is in progress until they are fixed."""
-        states = {action.__name__.lower(): "done" if action in self._done_actions else "to_do" for action in self._stage.actions}
+        states = {action: "done" if action in self._done_actions else "to_do" for action in self._stage.actions}
         if self._has_violations:
             states["validate"] = "in_progress"
         return states
-
-    @property
-    def allowed_actions(self) -> list[str]:
-        """What can run now: Validate once generated, and Review only after a clean Validate."""
-        states = self.action_states
-        allowed = ["generate"]
-        if states["generate"] == "done":
-            allowed.append("validate")
-        if states["validate"] == "done":
-            allowed.append("review")
-        return allowed
 
 
 def practice_key(practice: PracticeGuidance) -> str:
     """A practice's folder name (`clean_engineering`): how action lines in the session log name it."""
     return Path(inspect.getfile(type(practice))).parent.name
+
+
+SKIPPED_FOLDERS = frozenset({"node_modules"})
+# Hidden folders hold tools and caches, but a module's .context folder holds its models and maps.
+SEARCHED_HIDDEN_FOLDERS = frozenset({".context"})
+
+
+def _files_matching(start: Path, pattern: str) -> list[Path]:
+    """The files under start that pattern names. Installed packages and hidden folders hold no fidelity's work, and
+    searching node_modules alone made a pattern take over a second."""
+    parts = pattern.split("/")
+    fixed = next((index for index, part in enumerate(parts) if set(part) & set("*?")), len(parts))
+    # The search starts at the deepest folder the pattern names outright, so a pattern under one folder never walks the drive.
+    base = start.joinpath(*parts[:fixed])
+    matching = _pattern_matcher("/".join(parts[fixed:]))
+    base_text = str(base)
+    found = []
+    for folder, folders, files in os.walk(base_text):
+        folders[:] = [name for name in folders if name not in SKIPPED_FOLDERS and (not name.startswith(".") or name in SEARCHED_HIDDEN_FOLDERS)]
+        # Plain strings here: building a Path for every file in the repository made the search take a second.
+        inside = folder[len(base_text):].strip("\\/").replace("\\", "/")
+        found += [Path(folder, name) for name in files if matching.fullmatch(f"{inside}/{name}" if inside else name)]
+    return sorted(found)
+
+
+NAMED_PART = re.compile(r"\{[^{}/]+\}")
+
+
+def _named_parts_as_wildcards(path: str) -> str:
+    """A declared path with its named parts, such as `{module}/{module}-model.md`, as a pattern. A named folder can be
+    a module several folders deep, so it matches folders at any depth; a named part of a file name matches within it."""
+    folders = re.sub(r"\{[^{}/]+\}/", "**/", path)
+    return NAMED_PART.sub("*", folders)
+
+
+def _pattern_matcher(pattern: str) -> re.Pattern[str]:
+    """A glob pattern as a regular expression over a path written with `/`: `**/` is any number of folders, `*` and `?`
+    stay inside one folder, the way Path.glob reads them."""
+    parts = re.split(r"(\*\*/|\*\*|\*|\?)", pattern)
+    wildcards = {"**/": "(?:.*/)?", "**": ".*", "*": "[^/]*", "?": "[^/]"}
+    return re.compile("".join(wildcards.get(part, re.escape(part)) for part in parts))
 
 
 def _words(line: str) -> list[str]:

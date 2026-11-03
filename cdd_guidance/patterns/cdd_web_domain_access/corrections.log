@@ -1,0 +1,13 @@
+Mistake: the rewrite merged everything into one `TicketAdapter` that returned plain `TicketData`, and kept a separate `Ticket` class beside it, so the diagram showed a language-adapter class returning another language-adapter class.
+Correction: decide first where calls are made. Every MCP call is made on the server, so the generated set is a shared `Ticket` base, `TicketNodeAdapter` on the server, a browser client, and the routes between them.
+Mistake: the table described the generated `Ticket` as what LERN calls `{Domain}`, as if code used it directly.
+Correction: `Ticket` is only the shared base. Nothing uses it directly; code always holds one of its subtypes.
+Mistake: the generated browser class was named `TicketClientAdapter`, though it never touches MCP.
+Correction: an adapter is what adapts MCP, and only `TicketNodeAdapter` does. The generated browser class is `TicketClientGenerated`, and the page's hand-written `TicketClient` extends it.
+Mistake: the sequence diagram had the page's `TicketClient` post to the routes itself.
+Correction: the person acts on `TicketClient`, which calls up to `TicketClientGenerated`, which posts to the routes; `TicketClient` then updates the other page clients.
+
+## The file manager reads under the session's roots, not a workspace
+
+Mistake: rooted `FileManager` at a "session workspace", then at the workpath plus chosen output roots, as if those were different things.
+Correction: the session's roots are its workpath, the folder each practice works in, as `session.json` records it or by the practice's default. The session's own folder under `.sessions/` is not one of them, and nothing loads files outside those roots.

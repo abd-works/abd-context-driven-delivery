@@ -31,6 +31,11 @@ from space.repo.repo import Commit, DefaultBranchError
 from space.session import Session
 
 
+def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":
+    """An operation whose return type names a class its module imports only for type checking, as a circular import
+    needs, in a module whose annotations are text (`from __future__ import annotations`)."""
+
+
 class JsonSchemaAnyOf:
     def sorted_types(self, schema: dict) -> list[str]:
         return sorted(variant["type"] for variant in schema["anyOf"])
@@ -40,6 +45,10 @@ with description("an MCP host input schema"):
 
     with before.each:
         self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
+
+    with context("that has been derived from an operation whose return type cannot be resolved"):
+        with it("should still advertise its boolean parameter as JSON Schema boolean"):
+            expect(self.host.input_schema_for_callable(_moved)["properties"]["done"]).to(equal({"type": "boolean"}))
 
     with context("that has been derived from a ParameterTypes echo operation"):
         with before.each:

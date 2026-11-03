@@ -1,10 +1,9 @@
 /**
- * Runs the shared behavior on BoardNode, which calls the real cdd server on a throwaway project. Nothing is stubbed.
+ * Runs the shared behavior on BoardAdapter, which calls the real cdd server on a throwaway project. Nothing is stubbed.
  */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
-import type { ColumnData } from '@cdd/harness/kanban/board'
-import { BoardNode } from '@src/kanban/board/board-node'
+import { BoardAdapter, type ColumnData } from '@cdd/harness/kanban/board'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
 import { CddProject } from 'test-utils/behavior-test/cdd-project'
 
@@ -12,8 +11,8 @@ import { wipLimitsBehavior, type WipLimitsDriver } from './wip_limits.spec.share
 
 const project = new CddProject()
 
-class WipLimitsNodeDriver implements WipLimitsDriver {
-  private readonly board = new BoardNode(project.cdd)
+class WipLimitsAdapterDriver implements WipLimitsDriver {
+  private readonly board = new BoardAdapter(project.cdd)
 
   private async stage(name: string): Promise<ColumnData> {
     return (await this.board.show()).columns.find(column => column.name === name)!
@@ -32,11 +31,11 @@ class WipLimitsNodeDriver implements WipLimitsDriver {
   }
 }
 
-let driver: WipLimitsNodeDriver
+let driver: WipLimitsAdapterDriver
 
 beforeEach(() => {
   project.reset()
-  driver = new WipLimitsNodeDriver()
+  driver = new WipLimitsAdapterDriver()
 })
 
 afterAll(() => project.close())

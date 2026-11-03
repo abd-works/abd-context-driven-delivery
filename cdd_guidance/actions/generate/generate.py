@@ -29,8 +29,9 @@ class Generate(GuidanceAction):
         return ""
 
     def _rules(self, guidance: GuidanceArg) -> str:
-        """Shared rules and the active fidelity's rules, inlined into generate."""
-        return Validate().validate(guidance)
+        """Shared rules and the active fidelity's rules, inlined into generate. Read without running Validate, because
+        nothing has been written yet to check."""
+        return Validate().rules_of(guidance)
 
     def _validate(self) -> Validate:
         """Validate as a tool, so its rules are injected again when it is called."""

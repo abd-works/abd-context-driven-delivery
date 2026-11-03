@@ -1,33 +1,31 @@
 import type { BacklogItemData } from '@cdd/harness/kanban/backlog-item'
-import { Ticket, type ActionStatesData, type TicketData } from '@cdd/harness/kanban/ticket'
+import { TicketClientGenerated, type ActionStatesData, type TicketData } from '@cdd/harness/kanban/ticket'
 
-import { pathPart } from '../board/board-api'
-import { guidanceSlug, PRACTICES, practiceOf, STATES } from '../board/board-brand'
+import { guidanceSlug, PRACTICES, practiceOf, STATES, WORK_LIGHT } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { ColumnClient } from '../board/column-client'
 
 const RUN_NEXT_COMMANDS: Record<string, string> = {
   validate: '/actions-validate',
-  review: '/actions:review:review',
   satisfy: '/actions-satisfy',
 }
+// Steps the board does itself rather than sending to a chat: fixing violations opens the report, and a review is the
+// person's own approval.
+const STEPS_WITHOUT_CHAT = ['satisfy', 'review']
 
 const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogItemData => !('column' in moved)
 
 // The practice's skill for a fidelity: `clean_engineering-code` is /practices-clean-engineering-clean-engineering-code.
 export const skillOf = (slug: string): string => `/practices-${guidanceSlug(practiceOf(slug)?.prefix ?? '')}${guidanceSlug(slug)}`
 
-// A ticket as the page knows it, with what a person can do to it.
-export class TicketClient extends Ticket {
+// A ticket as the page knows it, with what a person can do to it. Each operation reaches the ticket's tool through the
+// generated client it extends, then brings the rest of the page up to date.
+export class TicketClient extends TicketClientGenerated {
   constructor(
     json: TicketData,
     private readonly page: BoardPage,
   ) {
-    super(json)
-  }
-
-  private get path(): string {
-    return `/tickets/${pathPart(this.name)}`
+    super(page.api, json)
   }
 
   // A session can sit in closed/ under the name of an open one, so a column and name together say which ticket is meant.
@@ -48,7 +46,7 @@ export class TicketClient extends Ticket {
     return this.page.store.state.onlyActive && !this.isActive
   }
 
-  get violations(): string[] {
+  get violatedSlugs(): string[] {
     return Object.entries(this.progress)
       .filter(([, state]) => state === 'violations')
       .map(([slug]) => slug)
@@ -58,9 +56,13 @@ export class TicketClient extends Ticket {
     return this.isClosed ? '' : this.isDone ? 'done' : 'in progress'
   }
 
-  get place(): string {
-    const origin = this.scope && this.parent ? `${this.scope} of ${this.parent}` : this.scope
-    return [this.name, origin, this.column, this.standing].filter(Boolean).join(' · ')
+  // Where a split ticket came from: `story of epic`.
+  get origin(): string {
+    return this.scope && this.parent ? `${this.scope} of ${this.parent}` : this.scope
+  }
+
+  get stagePlace(): string {
+    return [this.column, this.standing].filter(Boolean).join(' · ')
   }
 
   get nextStepName(): string {
@@ -71,15 +73,33 @@ export class TicketClient extends Ticket {
     return this.next ? `Run next: ${this.nextStepName}` : 'Run next'
   }
 
-  get footer(): string {
-    const handoff = this.handoff ? `Latest handoff: ${this.handoff}` : 'No handoff yet'
-    const next = this.next ? ` · Next: ${this.next}, ${this.nextStepName}` : ''
-    return `${handoff}${next}${this.isLocked ? ' · Activate this session to run actions' : ''}`
+  // The run-next icon's tooltip names the step and the fidelity it runs on, since the icon itself cannot.
+  get runNextHint(): string {
+    if (this.isLocked) return 'Activate this session to run its next step'
+    if (!this.next) return 'Nothing to run next'
+    return `${this.runNextLabel} on ${guidanceSlug(this.next)}`
   }
 
-  get backLabel(): string {
-    const isFirst = this.column === 'Discovery' && !this.isDone
-    return `Move ${this.title} to ${isFirst ? 'the Backlog' : 'the previous column'}`
+  get nextNote(): string {
+    return this.next ? `Next: ${this.next}, ${this.nextStepName}` : ''
+  }
+
+  get lockNote(): string {
+    return this.isLocked ? 'Activate this session to run actions' : ''
+  }
+
+  // The Backlog takes any ticket, which keeps its whole folder there. Complete takes one from Implementation's Done, or
+  // the active ticket through its Close dialog, because closing it asks what to do with its work.
+  canDropOn(edge: string): boolean {
+    if (edge === 'Backlog') return true
+    if (edge === 'Complete') return this.isActive || (this.column === 'Implementation' && this.isDone)
+    return false
+  }
+
+  async dropOn(edge: string): Promise<void> {
+    if (edge === 'Backlog') await this.moveTo('Backlog', false)
+    else if (this.isActive) await this.page.activation.start(this, true)
+    else await this.moveNext()
   }
 
   isEnabled(practice: string): boolean {
@@ -89,6 +109,10 @@ export class TicketClient extends Ticket {
   stateOf(slug: string): { label: string; color: string; key: string } {
     const key = this.progress[slug] ?? 'not_started'
     return { ...STATES[key]!, key }
+  }
+
+  lightOf(slug: string): number {
+    return this.isEnabled(practiceOf(slug)?.key ?? '') ? WORK_LIGHT[this.stateOf(slug).key]! : WORK_LIGHT.off!
   }
 
   actionsOf(slug: string): ActionStatesData {
@@ -115,25 +139,39 @@ export class TicketClient extends Ticket {
   }
 
   isNext(stage: ColumnClient, slug: string): boolean {
-    return stage.name === this.column && this.next === slug
+    return this.next === slug && stage.workRequired.includes(slug)
   }
 
   select(): void {
     this.page.board.select(this.address)
   }
 
-  async moveNext(): Promise<void> {
-    const moved = await this.page.api.post<TicketData>(`${this.path}/move-next`)
-    await this.page.reader.refresh()
-    if (moved) await this.page.cards.follow(this.page.ticket(moved))
+  override async moveNext(): Promise<this | null> {
+    return this.followed(await super.moveNext())
   }
 
-  async movePrevious(): Promise<void> {
-    const moved = await this.page.api.post<TicketData | BacklogItemData>(`${this.path}/move-previous`)
+  override async moveTo(stage: string, done?: boolean): Promise<TicketData | BacklogItemData | null> {
+    return this.landed(await super.moveTo(stage, done))
+  }
+
+  // The card stays open on the ticket wherever it moved.
+  private async followed(moved: this | null): Promise<this | null> {
     await this.page.reader.refresh()
-    if (!moved) return
+    if (moved) await this.page.cards.follow(this.page.ticket(moved.toJSON()))
+    return moved
+  }
+
+  override async movePrevious(): Promise<TicketData | BacklogItemData | null> {
+    return this.landed(await super.movePrevious())
+  }
+
+  // A move can land the ticket on a stage, where the card follows it, or in the Backlog, where its item is selected.
+  private async landed(moved: TicketData | BacklogItemData | null): Promise<TicketData | BacklogItemData | null> {
+    await this.page.reader.refresh()
+    if (!moved) return null
     if (isBacklogItem(moved)) this.release(moved)
     else await this.page.cards.follow(this.page.ticket(moved))
+    return moved
   }
 
   // Moved to the Backlog, a ticket is off the board, so nothing stays open on it and its item is selected.
@@ -143,18 +181,25 @@ export class TicketClient extends Ticket {
     this.page.item(item).select()
   }
 
-  async archive(): Promise<void> {
-    await this.page.api.post(`${this.path}/archive`)
+  override async enablePractice(practice: string, isEnabled: boolean): Promise<this | null> {
+    const saved = await super.enablePractice(practice, isEnabled)
     await this.page.reader.refresh()
-  }
-
-  async enablePractice(practice: string, isEnabled: boolean): Promise<void> {
-    const saved = await this.page.api.post<TicketData>(`${this.path}/practice`, { practice, is_enabled: isEnabled })
-    await this.page.reader.refresh()
-    if (!saved) return
+    if (!saved) return null
     if (!isEnabled) this.page.cards.dropPractice(this.name, practice)
     const name = PRACTICES.find(entry => entry.key === practice)?.name ?? practice
     this.page.store.toast(`${name} ${isEnabled ? 'on' : 'off'} for ${this.title} · saved to .sessions/${this.name}/session.json`)
+    return saved
+  }
+
+  private async review(slug: string): Promise<void> {
+    await this.finishReview([slug])
+    await this.page.reader.refresh()
+  }
+
+  // A command runs in whichever chat it is sent to, whose open session can be another ticket's, so every action command
+  // names this ticket's session.json.
+  actionCommand(command: string): string {
+    return `${command} session=${this.sessionFile}`
   }
 
   fillSplit(): Promise<void> {
@@ -166,25 +211,30 @@ export class TicketClient extends Ticket {
   }
 
   fillSatisfy(): Promise<void> {
-    return this.page.chat.fill(`/actions-satisfy ${this.violations.map(guidanceSlug).join(' ')}`)
+    return this.page.chat.fill(this.actionCommand(`/actions-satisfy ${this.violatedSlugs.map(guidanceSlug).join(' ')}`))
   }
 
   fillShowViolations(): Promise<void> {
-    return this.page.chat.fill(`Show the violations on ${this.violations.map(guidanceSlug).join(' ')} for ticket ${this.name}.`)
+    return this.page.chat.fill(`Show the violations on ${this.violatedSlugs.map(guidanceSlug).join(' ')} for ticket ${this.name}.`)
   }
 
-  // Violations hold a ticket, so the step is to fix them from the report, which needs no chat.
   get canRunNext(): boolean {
     if (!this.next || this.isLocked) return false
-    return this.nextAction === 'satisfy' || this.page.chat.canSend
+    return STEPS_WITHOUT_CHAT.includes(this.nextAction) || this.page.chat.canSend
   }
 
   // Generate can take two commands, a render and then the generate, so it runs them where the others fill the prompt.
   async runNext(): Promise<void> {
     const slug = this.next ?? ''
     if (this.nextAction === 'satisfy') return this.page.panels.openReport(this.name, slug)
-    if (this.nextAction !== 'generate') return this.page.chat.fill(`${RUN_NEXT_COMMANDS[this.nextAction]} ${guidanceSlug(slug)}`)
-    const format = this.page.board.stageNamed(this.column)?.defaultFormats[slug]
+    if (this.nextAction === 'review') return this.review(slug)
+    if (this.nextAction !== 'generate') return this.page.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${guidanceSlug(slug)}`))
+    const format = this.stageRequiring(slug)?.defaultFormats[slug]
     await this.page.tileActions.runCommandsOf(this.name, [slug], format ? [format] : [])
+  }
+
+  // Run next can reach back to an earlier stage, so a fidelity's stage is the one that requires it, not the ticket's.
+  private stageRequiring(slug: string): ColumnClient | undefined {
+    return this.page.board.stages.find(stage => stage.workRequired.includes(slug))
   }
 }

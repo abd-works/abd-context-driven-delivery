@@ -15,40 +15,50 @@ function ExpandDetailsView() {
   )
 }
 
-function DetailsActionView({ label, isOff, onPress }: { label: string; isOff: boolean; onPress: () => unknown }) {
+function PlaceLinkView({ label, hint, isOff = false, onPress }: { label: string; hint: string; isOff?: boolean; onPress: () => unknown }) {
   return (
-    <button className="action" disabled={isOff} onClick={() => void onPress()}>
+    <button className="place-link" title={hint} disabled={isOff} onClick={() => void onPress()}>
       {label}
     </button>
   )
 }
 
-function TicketActionsView({ ticket }: { ticket: TicketClient }) {
-  const { page } = useBoard()
-  const cannotFill = ticket.isClosed || ticket.isLocked || !page.chat.canSend
-  return (
-    <div className="details-actions">
-      <DetailsActionView label={ticket.runNextLabel} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
-      <DetailsActionView label="Split" isOff={cannotFill} onPress={() => ticket.fillSplit()} />
-      <DetailsActionView label="Switch to" isOff={ticket.isActive || ticket.isClosed} onPress={() => page.activation.start(ticket, false)} />
-      <DetailsActionView label="Handoff" isOff={cannotFill} onPress={() => ticket.fillHandoff()} />
-      <DetailsActionView label="Close session" isOff={!ticket.isActive || ticket.isClosed} onPress={() => page.activation.start(ticket, true)} />
-      <DetailsActionView label="Archive" isOff={ticket.isLocked && !ticket.isClosed} onPress={() => ticket.archive()} />
-    </div>
-  )
-}
-
+// The ticket's place and notes, each a way in: its session folder, its stage's files, its latest handoff, its next step.
 function TicketBarView({ ticket }: { ticket: TicketClient }) {
+  const { page } = useBoard()
+  const stage = page.board.stageOf(ticket)
+  const stageSlugs = stage ? ticket.enabledSlugs(stage) : []
   return (
     <div className="details-bar-words">
       <div className="details-heading">
         <div className="details-title">
           <h2>{ticket.title}</h2>
-          <span className="details-place">{ticket.place}</span>
+          <span className="details-place">
+            <PlaceLinkView label={ticket.name} hint="Browse the session folder" onPress={() => page.files.openSessionFolder(ticket.name)} />
+            {ticket.origin ? ` · ${ticket.origin}` : ''}
+            {' · root '}
+            <PlaceLinkView label={ticket.root || 'whole repository'} hint="Choose the session's root and each practice's root" onPress={() => page.roots.openFor(ticket)} />
+            {' · '}
+            <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageSlugs.length} onPress={() => page.files.openFiles(ticket.name, stageSlugs, 'folder')} />
+          </span>
         </div>
-        <div className="details-place">{ticket.footer}</div>
+        <div className="details-place">
+          {ticket.handoff ? (
+            <>
+              Latest handoff: <PlaceLinkView label={ticket.handoff} hint="Open the handoff" onPress={() => page.files.openSessionFile(ticket.name, ticket.handoff)} />
+            </>
+          ) : (
+            'No handoff yet'
+          )}
+          {ticket.nextNote ? (
+            <>
+              {' · '}
+              <PlaceLinkView label={ticket.nextNote} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
+            </>
+          ) : null}
+          {ticket.lockNote ? ` · ${ticket.lockNote}` : ''}
+        </div>
       </div>
-      <TicketActionsView ticket={ticket} />
     </div>
   )
 }

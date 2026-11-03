@@ -607,11 +607,18 @@ class Installer:
 
     def _claude_cli(self) -> str | None:
         """The desktop app's newest Claude Code, else the one on PATH, which can be too old for the plugin."""
-        bundled = Path(os.environ.get("APPDATA") or Path.home()) / "Claude" / "claude-code"
-        versions = [path for path in bundled.glob("*/*/claude.exe") if re.fullmatch(r"[\d.]+", path.parent.parent.name)]
+        found = [path for folder in self._desktop_claude_code_folders() for path in folder.glob("*/*/claude.exe")]
+        versions = [path for path in found if re.fullmatch(r"[\d.]+", path.parent.parent.name)]
         if versions:
             return str(max(versions, key=lambda path: [int(part) for part in path.parent.parent.name.split(".")]))
         return shutil.which("claude")
+
+    def _desktop_claude_code_folders(self) -> list[Path]:
+        """Where the desktop app keeps its Claude Code: under `%APPDATA%\\Claude`, or under each profile in
+        `%LOCALAPPDATA%\\Claude-Data`. Neither is on PATH, so without these the plugin never installs."""
+        roaming = Path(os.environ.get("APPDATA") or Path.home()) / "Claude" / "claude-code"
+        local = Path(os.environ.get("LOCALAPPDATA") or Path.home())
+        return [roaming, *local.glob("Claude-Data/*/claude-code")]
 
     def _run_claude(self, claude: str, *args: str) -> str:
         try:

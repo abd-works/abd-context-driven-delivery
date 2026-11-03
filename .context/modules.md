@@ -482,6 +482,24 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Imp
 
 ---
 
+## tools/chat
+*Chat* lets an application send a command to a live Claude Code chat: a prompt to submit, text to put in the prompt box, or a slash command. Each chat checks in every second, says whether it is busy, and takes the commands waiting for it, so they reach it whether or not the sender is still open.
+
+- **Purpose:** Send commands to a live chat and list the chats that are connected.
+- **Seam (terms):** Chat, `chat.list`, `chat.send`, `chat.check_in`
+- **Dependencies (one-way):** none
+
+---
+
+## tools/chat-mod
+The *cdd-board* Claude Code mod connects a chat to the Session Board: it checks the chat in with *Chat*, runs the commands waiting for it, and shows the active ticket on the status line and in the system prompt.
+
+- **Purpose:** Let a person drive the agent from the board, and keep the chat aware of the active ticket.
+- **Seam (terms):** `cdd-board` plugin, `/board`
+- **Dependencies (one-way):** `tools/chat`, `harness/kanban`
+
+---
+
 ## space/handoff
 *Handoff* writes a resume document a fresh agent can continue from, in the project's current session folder (``.sessions/{session}/``, else ``.sessions/main/``).
 
