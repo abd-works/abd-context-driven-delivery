@@ -130,6 +130,7 @@ class Chat:
         state = self._state
         title, title_read = (_latest_title(self._transcript), self.clock()) if self.clock() - state.get("title_read", 0) > TITLE_READ_SECONDS else (state.get("title", ""), state["title_read"])
         self._write({"name": name, "title": title, "is_busy": is_busy, "seen": self.clock(), "title_read": title_read})
+        self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
 
     @mcp
@@ -210,6 +211,16 @@ class Chat:
             taken.append({"message": path.stem, "kind": command["kind"], "text": command["text"]})
         self._forget_old_messages()
         return taken
+
+    # The mod finishes what it runs, but a mod that reloads mid-turn forgets it, so a shown message the chat has been busy
+    # with is also done once the chat checks in idle.
+    def _finish_worked_on(self, is_busy: bool) -> None:
+        for path in self._sent_in(SHOWN):
+            sent = json.loads(path.read_text(encoding="utf-8"))
+            if is_busy and not sent.get("is_worked_on"):
+                path.write_text(json.dumps({**sent, "is_worked_on": True}), encoding="utf-8")
+            elif not is_busy and sent.get("is_worked_on"):
+                self._move(path, DONE)
 
     # Windows' clock repeats within a quick burst of sends, so the name moves past every one already sent; it still
     # sorts in the order sent.

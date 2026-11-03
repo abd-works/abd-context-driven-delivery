@@ -132,6 +132,25 @@ with description("a chat") as self:
                         with it("should show the command as done"):
                             expect(_states()).to(equal(["done"]))
 
+                    # A mod that reloads mid-turn forgets the commands it was running, so the chat's own check-ins finish them.
+                    with context("that the chat has worked on through a turn"):
+                        with before.each:
+                            Chat.load(CHAT).check_in(is_busy=True)
+
+                        with context("that has ended"):
+                            with before.each:
+                                Chat.load(CHAT).check_in(is_busy=False)
+
+                            with it("should show the command as done"):
+                                expect(_states()).to(equal(["done"]))
+
+                    with context("that the chat has not yet started a turn for"):
+                        with before.each:
+                            Chat.load(CHAT).check_in(is_busy=False)
+
+                        with it("should still show the command as shown"):
+                            expect(_states()).to(equal(["shown"]))
+
                 with context("that the chat could not show"):
                     with before.each:
                         Chat.load(CHAT).confirm(self.taken["message"], is_shown=False, reason="a Stop stands")

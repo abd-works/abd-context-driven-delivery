@@ -84,11 +84,23 @@ async function restartedCdd($: EngineInterface): Promise<string> {
   return result.isError ? `cdd.restart failed: ${result.content[0]?.text ?? 'no reason given'}` : ''
 }
 
+// The engine refuses a plugin's command in some states, such as after the person stopped the session and has typed
+// nothing since. The command then waits in the prompt box for the person to send, so it is never lost; once they send
+// it, its turn finishes it like any other.
+async function ranOrFilled($: EngineInterface, chat: string, command: ChatCommandData): Promise<string> {
+  const refusal = await ranCommand($, chat, command)
+  if (!refusal) return ''
+  const unfilled = await filled($, command.text).catch(reasonOf)
+  if (unfilled) return `${refusal}; ${unfilled}`
+  $.ui.toast(`The chat would not run ${command.text} (${refusal}), so it is in the prompt box: press Enter to send it`)
+  return ''
+}
+
 // Why the chat did not show the command, or nothing once it did.
 function shown($: EngineInterface, chat: string, command: ChatCommandData): Promise<string> {
   if (command.kind === 'fill') return filled($, command.text).catch(reasonOf)
   if (command.kind === 'restart_cdd') return restartedCdd($).catch(reasonOf)
-  return command.text.startsWith('/') ? ranCommand($, chat, command) : submitted($, command.text)
+  return command.text.startsWith('/') ? ranOrFilled($, chat, command) : submitted($, command.text)
 }
 
 // What a person reads for a message: a restart has no text of its own.
