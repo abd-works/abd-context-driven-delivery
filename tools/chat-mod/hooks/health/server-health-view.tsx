@@ -39,8 +39,8 @@ type Band = {
 const LOOKS = {
   connected: { glyph: '✓', color: BRAND.success, wash: SUCCESS_WASH, border: BRAND.success },
   reconnecting: { glyph: '⟳', color: BRAND.warning, wash: BRAND.raised, border: BRAND.border },
-  disconnected: { glyph: '⊘', color: BRAND.error, wash: BRAND.errorWash, border: BRAND.error },
-  'tools-missing': { glyph: '▲', color: BRAND.warning, wash: WARNING_WASH, border: BRAND.warning },
+  disconnected: { glyph: '✕', color: BRAND.error, wash: BRAND.errorWash, border: BRAND.error },
+  'tools-missing': { glyph: '!', color: BRAND.warning, wash: WARNING_WASH, border: BRAND.warning },
 }
 
 const runningOn = (port: number | null): string => (port === null ? 'not running' : `running :${port}`)
@@ -56,8 +56,8 @@ function partsOf({ report, toolCount }: ServerHealthJson): Part[] {
   ]
 }
 
-function headlineOf({ connection, attempt, toolCount, isRestored }: ServerHealthJson): { title: string; detail: string } {
-  if (connection === 'connected') return { title: 'Connected', detail: isRestored ? 'MCP host is back.' : '' }
+function headlineOf({ connection, attempt, toolCount }: ServerHealthJson): { title: string; detail: string } {
+  if (connection === 'connected') return { title: 'Connected', detail: '' }
   if (connection === 'disconnected') return { title: 'Disconnected', detail: `${SERVER} stopped.` }
   if (connection === 'tools-missing') return { title: 'Tools missing', detail: `${toolCount} loaded, ${REPORT_TOOL} is not one of them.` }
   if (attempt === 0) return { title: 'Connecting', detail: `Waiting for ${SERVER} to answer.` }
@@ -148,12 +148,12 @@ function ExpandedView(elements: ElementTable, band: Band) {
 }
 
 // The band is one icon until the pointer is over it or a click pins it, so it stays out of the way. The icon
-// is drawn below what it expands so it stays under the pointer as the band grows upward.
+// sits beside what it expands, so the pointer stays on it as the panel opens.
 export function ServerHealthBandView(elements: ElementTable, band: Band) {
   const { Box, Button, Text } = elements
   const look = LOOKS[band.health.connection]
   return (
-    <Box key="server-health" flexDirection="column">
+    <Box key="server-health" flexDirection="row" gap={1}>
       {ExpandedView(elements, band)}
       <Button key="health-icon" plain label={look.glyph} onPress={band.actions.togglePin}>
         <Text color={look.color}>{look.glyph}</Text>

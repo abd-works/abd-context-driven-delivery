@@ -78,21 +78,34 @@ function submitted($: EngineInterface, text: string): Promise<string> {
   return Promise.race([submitting, after($, SHOWN_WITHIN_MILLISECONDS, `the chat had not shown it ${SHOWN_WITHIN_MILLISECONDS / 1000} s after taking it`)])
 }
 
+// The chat's cdd server keeps the code it started with; cdd.restart reloads it in place, on the same connection.
+async function restartedCdd($: EngineInterface): Promise<string> {
+  const result = await $.mcp.call(SERVER, 'cdd.restart', {})
+  return result.isError ? `cdd.restart failed: ${result.content[0]?.text ?? 'no reason given'}` : ''
+}
+
 // Why the chat did not show the command, or nothing once it did.
 function shown($: EngineInterface, chat: string, command: ChatCommandData): Promise<string> {
   if (command.kind === 'fill') return filled($, command.text).catch(reasonOf)
+  if (command.kind === 'restart_cdd') return restartedCdd($).catch(reasonOf)
   return command.text.startsWith('/') ? ranCommand($, chat, command) : submitted($, command.text)
 }
 
+// What a person reads for a message: a restart has no text of its own.
+const labelOf = (command: ChatCommandData): string => (command.kind === 'restart_cdd' ? 'restart cdd' : command.text)
+
 // The board shows each message as shown or failed, so a message the chat could not take is never silent. A fill waits
-// for the person to send it, so only a command or a submit has work for the chat to finish.
+// for the person to send it, and a restart is over once cdd answers, so only a command or a submit has work for the chat
+// to finish.
 async function run($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
-  $.ui.toast(`Board message arrived: ${command.text}`)
-  if (command.kind !== 'fill') unfinished.set(command.message, turnsStarted)
+  const hasTurn = command.kind === 'command' || command.kind === 'submit'
+  $.ui.toast(`Board message arrived: ${labelOf(command)}`)
+  if (hasTurn) unfinished.set(command.message, turnsStarted)
   const reason = await shown($, chat, command)
-  $.ui.toast(reason ? `Board message failed: ${reason}: ${command.text}` : `Board sent: ${command.text}`)
+  $.ui.toast(reason ? `Board message failed: ${reason}: ${labelOf(command)}` : `Board sent: ${labelOf(command)}`)
   if (reason) unfinished.delete(command.message)
   await post($, chat, 'confirm', { message: command.message, is_shown: !reason, reason })
+  if (!reason && command.kind === 'restart_cdd') await post($, chat, 'finish', { message: command.message })
 }
 
 function post($: EngineInterface, chat: string, operation: string, body: object) {

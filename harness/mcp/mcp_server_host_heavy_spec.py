@@ -118,6 +118,15 @@ class StdioHostProbe:
         await anyio.sleep(_LINGER_SECONDS)
         return _text(await session.call_tool("cdd.ping", arguments={}))
 
+    async def increment_restart_then_read(self, session):
+        await session.call_tool("hosting-demo.increment", arguments={"step": 4})
+        await session.call_tool("cdd.restart", arguments={})
+        return _text(await session.call_tool("hosting-demo.read_count", arguments={}))
+
+    async def restart_then_ping(self, session):
+        await session.call_tool("cdd.restart", arguments={})
+        return _text(await session.call_tool("cdd.ping", arguments={}))
+
 
 async def _with_session(toolsets: str, action, seconds: float | None = None):
     timeout = None if seconds is None else timedelta(seconds=seconds)
@@ -136,6 +145,10 @@ with description("an MCP host over stdio"):
                 _with_session("", lambda session: session.list_tools())
             )
             expect([tool.name for tool in tools.tools]).to(contain("cdd.ping"))
+
+        with it("should expose the built-in restart tool"):
+            tools = _run_async(_with_session("", lambda session: session.list_tools()))
+            expect([tool.name for tool in tools.tools]).to(contain("cdd.restart"))
 
         with it("should answer cdd.ping with pong"):
             result = _run_async(
@@ -207,6 +220,13 @@ with description("an MCP host over stdio"):
                 expect(
                     _run_async(_with_session(_HOSTING_DEMO, StdioHostProbe().exercise))
                 ).to(equal("2"))
+
+        with context("that has been restarted"):
+            with it("should start its toolsets again on the code as it is now"):
+                expect(_run_async(_with_session(_HOSTING_DEMO, StdioHostProbe().increment_restart_then_read))).to(equal("0"))
+
+            with it("should keep answering on the same connection"):
+                expect(_run_async(_with_session(_HOSTING_DEMO, StdioHostProbe().restart_then_ping))).to(equal("pong"))
 
         with context("that has had a running tool call cancelled by the client"):
             with it("should keep answering later calls"):

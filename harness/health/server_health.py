@@ -10,6 +10,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.hooks.hook_daemon import HookDaemon
 from harness.hooks.hook_server import HookServer
+from harness.installation.destination import language_adapter
 from harness.mcp.mcp_server import mcp
 from scripts.instances import GRAPH_APP_PORTS
 
@@ -24,6 +25,7 @@ class ServerHealthData(TypedDict):
     is_hook_server_running: bool
 
 
+@language_adapter(language="typescript")
 @agent_toolset
 class ServerHealth:
     """Report the parts of CDD that run outside this MCP host, so a person can see what is up without opening a terminal."""

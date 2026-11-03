@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { ServerHealthData } from '@cdd/harness/health/server_health'
+import type { ServerHealthData } from '@cdd/harness/health/server-health'
 
 import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
 
@@ -20,7 +20,6 @@ const serverHealth = atom({ plugin: 'cdd-board', key: 'serverHealth' } as const,
   toolCount: 0,
   problem: null,
   attempt: 0,
-  isRestored: false,
 } as ServerHealthJson)
 const healthView = atom({ plugin: 'cdd-board', key: 'healthView' } as const, { isPinned: false, areDetailsOpen: false } as HealthViewJson)
 const install = atom({ plugin: 'cdd-board', key: 'install' } as const, { state: 'idle', error: null } as InstallJson)
@@ -129,10 +128,7 @@ function reportFrom(text: string | undefined): ServerHealthData | null {
 async function recordAnswer($: EngineInterface, answer: Answer): Promise<void> {
   const tools = await $.tool.list()
   const toolCount = tools.filter(tool => tool.name.startsWith(TOOL_PREFIX)).length
-  await update($, serverHealth, health => {
-    const wasLost = health.connection === 'disconnected' || (health.connection === 'reconnecting' && health.attempt > 0)
-    return { ...answer, toolCount, attempt: 0, isRestored: answer.connection === 'connected' && (health.isRestored || wasLost) }
-  })
+  await update($, serverHealth, () => ({ ...answer, toolCount, attempt: 0 }))
 }
 
 // The python that runs cdd has what the install needs. The session's own checkout comes first, because

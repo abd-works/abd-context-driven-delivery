@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import atexit
+import importlib
 import inspect
 import json
 import logging
@@ -23,11 +24,12 @@ from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
 from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
-from harness.agent_tools.progress import reporting_to
 from harness.installation.destination import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
+# Reloads the host's Python in place, so a chat picks up changed code without a new connection.
+BUILTIN_RESTART_TOOL = "cdd.restart"
 # Workspace diagnostics call ``serving_mcp_host().dispatch`` for many tools; that path
 # must not run on an anyio worker thread (deadlock / multi-minute stalls under stdio).
 _SYNC_DISPATCH_TOOLS = frozenset(
@@ -805,6 +807,8 @@ class McpServer:
         self._prompts: dict[str, McpPrompt] = {}
         self.exceptions: list[McpIllegitimateTool] = []
         self._started = False
+        self._toolset_refs: tuple[str, ...] = ()
+        self._constructor_context: dict[str, object] = {}
         from space.session import Session
 
         self.session = Session.current(self.project)
@@ -876,6 +880,8 @@ class McpServer:
         constructor_context: dict[str, object] | None = None,
     ) -> None:
         context = dict(constructor_context or {})
+        self._toolset_refs = tuple(toolset_refs)
+        self._constructor_context = context
         self.mcp_installations = []
         self._tools.clear()
         self._prompts.clear()
@@ -895,6 +901,27 @@ class McpServer:
                     self.skip(toolset.registration_name, error)
         self._started = True
 
+    def restarted(self) -> McpServer:
+        """A new runtime with the same toolsets, on the code as it is now. Every module from this checkout is imported
+        again, this one included, because a toolset enrolled by the old loader would keep the old classes."""
+        self._forget_checkout_modules()
+        fresh = importlib.import_module(__name__)
+        runtime = fresh.McpServer(repo=self.repo, project=self.project)
+        runtime.start(self._toolset_refs, constructor_context=self._constructor_context)
+        return runtime
+
+    def _forget_checkout_modules(self) -> None:
+        for name, module in list(sys.modules.items()):
+            if self._is_checkout_file(getattr(module, "__file__", None)):
+                del sys.modules[name]
+        importlib.invalidate_caches()
+
+    def _is_checkout_file(self, file: str | None) -> bool:
+        if not file:
+            return False
+        path = Path(file).resolve()
+        return self.repo in path.parents and self.venv not in path.parents
+
     def _enroll_toolset(self, toolset: Any) -> None:
         if getattr(toolset, "practice_guidance", "missing") is None:
             return
@@ -911,8 +938,9 @@ class McpServer:
         as_dots = name.replace("_", ".")
         if as_dots in self._tools or as_dots in self._prompts:
             return as_dots
-        if name == BUILTIN_PING_TOOL.replace(".", "_", 1):
-            return BUILTIN_PING_TOOL
+        for builtin in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
+            if name == builtin.replace(".", "_", 1):
+                return builtin
         for enrolled in (*self._tools, *self._prompts):
             if enrolled.replace(".", "_") == name or enrolled.replace(".", "_", 1) == name:
                 return enrolled
@@ -1088,7 +1116,12 @@ class McpHost:
                     name=BUILTIN_PING_TOOL,
                     description="Health check for the CDD MCP host process.",
                     inputSchema={"type": "object", "properties": {}},
-                )
+                ),
+                types.Tool(
+                    name=BUILTIN_RESTART_TOOL,
+                    description="Restart the CDD MCP host on the code as it is now: reload its Python and start its toolsets again, on the same connection.",
+                    inputSchema={"type": "object", "properties": {}},
+                ),
             ]
             tools.extend(
                 listed
@@ -1166,10 +1199,19 @@ class McpHost:
                     return self._content_blocks(
                         f"TimeoutError: {name} exceeded {timeout} seconds"
                     )
+            if resolved == BUILTIN_RESTART_TOOL:
+                await self._announce_tool_list_changed()
             return self._content_blocks(value)
         except Exception as error:
             logger.exception("MCP tool %s failed", name)
             return self._content_blocks(f"{type(error).__name__}: {error}")
+
+    async def _announce_tool_list_changed(self) -> None:
+        """A restart can add or drop tools, so the client is told to list them again."""
+        try:
+            await self._server.request_context.session.send_tool_list_changed()
+        except LookupError:
+            return
 
     def _progress_reporter(self) -> Callable[[str], None] | None:
         """Sends a tool's progress reports as notifications for its call, when the caller asked for them with a progress
@@ -1191,6 +1233,9 @@ class McpHost:
     def _dispatch_reporting(
         self, name: str, arguments: dict[str, object] | None, reporter: Callable[[str], None] | None
     ) -> object:
+        # Read from the module as it is now: a restart imports progress again, and tools report through the new one.
+        from harness.agent_tools.progress import reporting_to
+
         with reporting_to(reporter):
             return self.dispatch(name, arguments)
 
@@ -1243,6 +1288,8 @@ class McpHost:
                 return {"ping": "pong", "tool": resolved}
             if resolved == BUILTIN_PING_TOOL:
                 return self.ping()
+            if resolved == BUILTIN_RESTART_TOOL:
+                return self.restart()
             if resolved in self._runtime._prompts:
                 return self._runtime.invoke_prompt(resolved, args)
             return self._runtime.invoke_tool(resolved, args)
@@ -1254,7 +1301,7 @@ class McpHost:
 
     def _enrolled(self, name: str) -> bool:
         return (
-            name == BUILTIN_PING_TOOL
+            name in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL)
             or name in self._runtime._tools
             or name in self._runtime._prompts
         )
@@ -1277,7 +1324,7 @@ class McpHost:
             server_name="cdd",
             server_version="0.1.0",
             capabilities=self._server.get_capabilities(
-                notification_options=NotificationOptions(),
+                notification_options=NotificationOptions(tools_changed=True),
                 experimental_capabilities={},
             ),
         )
@@ -1305,12 +1352,23 @@ class McpHost:
     def ping(self) -> str:
         return "pong"
 
+    def restart(self) -> dict[str, Any]:
+        """Swap in a runtime on the code as it is now. The connection, and this host object holding it, stay."""
+        self._runtime = self._runtime.restarted()
+        sys.modules[__name__]._SERVING_MCP_HOST = self
+        return {
+            "is_restarted": True,
+            "tools": len(self._runtime.tools) + len(self._runtime.prompts),
+            "exceptions": [{"tool": item.tool, "reason": item.reason} for item in self._runtime.exceptions],
+        }
+
     def diagnose(self) -> dict[str, Any]:
         reply = self.ping()
         if reply != "pong":
             raise McpStandupFailed("diagnose", self, "MCP host ping failed")
         tools = [
             BUILTIN_PING_TOOL,
+            BUILTIN_RESTART_TOOL,
             *sorted(self._runtime.tools),
             *sorted(self._runtime.prompts),
         ]
