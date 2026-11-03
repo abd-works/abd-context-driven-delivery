@@ -4,15 +4,15 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Epic: Move Work Forward On Session Board
 # Sub-epic: Guide Work Through Practices
-# Map: ../../../story-map.md#s-person----run-action-across-practices
+# Map: ../../../story-map.md#s-person----send-action-to-stage-practices
 # Model: ../../../kanban-model.md
 # Realizations: ../../../session-board-realization.md
 
-# Story: Run Action Across Practices
+# Story: Send Action To Stage Practices
 # Actor: Person
-with story("Run Action Across Practices"):
+with story("Send Action To Stage Practices"):
     with scenario("Sketch every fidelity of a stage in one command"):
-        # Evidence: observed: tile-client.spec 'Run Action Across Practices' — 'should name every fidelity of the stage in one command'.
+        # Evidence: observed: tile-client.spec 'Send Action To Stage Practices' — 'should name every fidelity of the stage in one command'.
         with given("billing-report is the active [ticket](../../../kanban-model.md#ticket--card) in Discovery and a chat is connected"):
             pass
         with and_("the Discovery stage head's action bar is open"):

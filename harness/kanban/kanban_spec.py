@@ -398,7 +398,7 @@ with description("a ticket") as self:
             with it("should have no next"):
                 expect(self.ticket.next).to(be_none)
 
-    # (S) Person --> Run Next Step
+    # (S) Person --> Send Next Fidelity Action
     with context("that a person has moved on with an earlier stage's fidelity still to review"):
         with before.each:
             self.ticket = ticket_with([GENERATE_STORY_MAP, VALIDATE_STORY_MAP])

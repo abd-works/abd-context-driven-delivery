@@ -3,6 +3,20 @@ import type { TicketData } from '@cdd/harness/kanban/ticket'
 import type { ChatCommandData } from '@cdd/tools/chat/chat'
 import type { EngineInterface, Register } from 'claude-code'
 
+import {
+  currentHealthView,
+  currentInstall,
+  currentServerHealth,
+  hideDetails,
+  openDetails,
+  reconnect,
+  refreshHealth,
+  refreshHealthSoon,
+  runInstall,
+  togglePin,
+} from './health/server-health-client'
+import { ServerHealthBandView } from './health/server-health-view'
+
 // Connects this chat to cdd's chat tools, which the board sends commands through. The rules live in the cdd server.
 const PLUGIN = 'cdd-board'
 const SERVER = 'cdd'
@@ -133,9 +147,50 @@ async function readActive($: EngineInterface): Promise<void> {
   $.ui.status(found ? statusOf(found) : undefined)
 }
 
+const BOARD_APP = 'harness/kanban/app'
+const START_BY_HAND = `Start it with: npm install, npm run build, then npm start, in ${BOARD_APP}.`
+const STARTED_WITHIN_MILLISECONDS = 20_000
+const STARTED_CHECK_MILLISECONDS = 500
+
+const isBoardUp = ($: EngineInterface): Promise<boolean> =>
+  $.http
+    .fetch(`${BOARD_URL}/api/build`)
+    .then(answer => answer.ok)
+    .catch(() => false)
+
+async function boardAppFolder($: EngineInterface): Promise<string> {
+  const { exitCode, stdout } = await $.process.run(['git', 'rev-parse', '--show-toplevel'])
+  return exitCode === 0 ? `${stdout.trim()}/${BOARD_APP}` : ''
+}
+
+// The board lives as long as this chat's mod: leaving the loop, or the module unloading, ends the server.
+function startServer($: EngineInterface, folder: string): void {
+  void (async () => {
+    const server = $.process.spawn({ argv: ['node', '--import', 'tsx', 'packages/session-board/serve.ts'], cwd: folder })
+    for await (const { text } of server) $.ui.log(text, { to: 'debug' })
+  })().catch(error => $.ui.log(`The session board stopped: ${reasonOf(error)}`, { to: 'debug' }))
+}
+
+async function cameUp($: EngineInterface): Promise<boolean> {
+  for (let waited = 0; waited < STARTED_WITHIN_MILLISECONDS; waited += STARTED_CHECK_MILLISECONDS) {
+    if (await isBoardUp($)) return true
+    await after($, STARTED_CHECK_MILLISECONDS, '')
+  }
+  return false
+}
+
+// Starts the board when nothing answers on its port, so /board always ends with a board to open.
+async function openedBoard($: EngineInterface): Promise<string> {
+  if (await isBoardUp($)) return `The board is at ${BOARD_URL}.`
+  const folder = await boardAppFolder($)
+  if (!folder || !(await $.fs.exists(`${folder}/node_modules`)) || !(await $.fs.exists(`${folder}/dist`))) return `The board is not running and is not installed here. ${START_BY_HAND}`
+  startServer($, folder)
+  return (await cameUp($)) ? `Started the board at ${BOARD_URL}. It stops when this chat ends.` : `The board did not start within ${STARTED_WITHIN_MILLISECONDS / 1000} s. ${START_BY_HAND}`
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'board', description: 'Say where the CDD session board is' })
+    await $.command.register({ name: 'board', description: 'Open the CDD session board, starting it when it is not running' })
     const chat = await $.session.id()
     await readName($).catch(() => undefined)
     $.clock.every(CHECK_IN_MILLISECONDS, () => {
@@ -143,10 +198,11 @@ export const register: Register = on => {
       void checkIn($, chat).catch(() => undefined)
     })
     await readActive($)
+    refreshHealthSoon($)
     return next(e)
   })
 
-  on('command.run', { command: 'board' }, async () => ({ text: `The board is at ${BOARD_URL}. Start it with: npm start, in harness/kanban/app.` }))
+  on('command.run', { command: 'board' }, async $ => ({ text: await openedBoard($) }))
 
   on('turn.start', async ($, e, next) => {
     if (!e.agentId) {
@@ -164,8 +220,32 @@ export const register: Register = on => {
       for (const [message, turnsBefore] of [...unfinished]) if (turnsStarted > turnsBefore) await finish($, chat, message)
     }
     await readName($).catch(() => undefined)
-    await readActive($)
+    await Promise.all([readActive($), refreshHealth($)])
     return finished
+  })
+
+  on('prompt.submit', async ($, e, next) => {
+    await refreshHealth($)
+    return next(e)
+  })
+
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey) return next(e)
+    const actions = {
+      togglePin: () => togglePin($),
+      openDetails: () => openDetails($),
+      hideDetails: () => hideDetails($),
+      reconnect: () => reconnect($, () => readActive($)),
+      runInstall: () => runInstall($),
+    }
+    const band = {
+      health: await currentServerHealth($),
+      view: await currentHealthView($),
+      install: await currentInstall($),
+      columns: e.props.bodyColumns,
+      actions,
+    }
+    return ServerHealthBandView($.ui.resolve(e), band)
   })
 
   on('prompt.compose', async ($, e, next) => {

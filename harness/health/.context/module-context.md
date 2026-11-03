@@ -6,6 +6,6 @@
 
 ## Constraint
 
-This tool can only answer while the MCP host is up, so it reports the graph app and the hook server and nothing about the host itself. The server health band in `harness/kanban/pane/hooks/health/` works out that the MCP host is lost or that tools are missing from how its own calls fail, and counts the loaded tools from the session's tool list.
+This tool can only answer while the MCP host is up, so it reports the graph app and the hook server and nothing about the host itself. The server health band in `tools/chat-mod/hooks/health/` works out that the MCP host is lost or that tools are missing from how its own calls fail, and counts the loaded tools from the session's tool list.
 
-The band draws inside the `cdd-board` plugin rather than a plugin of its own because Claude Code keeps one band above the prompt, and a plugin that draws a tree there stops the next plugin from drawing. Both the health icon and the violations line have to show at once.
+The band is drawn by the `cdd-board` plugin in `tools/chat-mod`, which already runs in every chat.

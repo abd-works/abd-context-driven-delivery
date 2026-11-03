@@ -4,13 +4,13 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Epic: Move Work Forward On Session Board
 # Sub-epic: Guide Work Through Practices
-# Map: ../../../story-map.md#s-person----run-next-step
+# Map: ../../../story-map.md#s-person----send-next-fidelity-action
 # Model: ../../../kanban-model.md
 # Realizations: ../../../session-board-realization.md
 
-# Story: Run Next Step
+# Story: Send Next Fidelity Action
 # Actor: Person
-with story("Run Next Step"):
+with story("Send Next Fidelity Action"):
     with scenario("Generate the next fidelity in its default format"):
         # Evidence: observed: ticket-client.spec 'with generate next' — 'should ask for the commands of the default format', 'should send those commands in order'; 'should name the step that runs next'; kanban_tools_spec 'should name generate as the next action'.
         with given("billing-report is the active [ticket](../../../kanban-model.md#ticket--card) with nothing recorded and a chat is connected"):

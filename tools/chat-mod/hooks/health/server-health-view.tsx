@@ -1,8 +1,20 @@
 import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
 import { RECONNECT_TRIES, REPORT_TOOL, SERVER, ServerHealthClient } from './server-health-client'
-import { PrimaryButtonView } from '../kanban/action-button'
-import { BRAND } from '../kanban/brand'
-import type { ElementTable } from '../kanban/view-context'
+import type { EngineInterface } from 'claude-code'
+
+type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
+
+// The abd.works engineering colours, which hold on either Claude Code theme.
+const BRAND = {
+  raised: '#1B1B20',
+  border: '#2A2A2A',
+  text: '#E8E8ED',
+  muted: '#9B9BA8',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  errorWash: '#2F1414',
+}
 
 const COLUMNS = 5
 const SUCCESS_WASH = '#12261A'
@@ -20,7 +32,6 @@ type Band = {
   health: ServerHealthJson
   view: HealthViewJson
   install: InstallJson
-  hasPictures: boolean
   columns: number
   actions: Actions
 }
@@ -32,19 +43,21 @@ const LOOKS = {
   'tools-missing': { glyph: '▲', color: BRAND.warning, wash: WARNING_WASH, border: BRAND.warning },
 }
 
+const runningOn = (port: number | null): string => (port === null ? 'not running' : `running :${port}`)
+
 function partsOf({ report, toolCount }: ServerHealthJson): Part[] {
-  const { graphAppPort: port, isHookServerRunning: isHookRunning } = new ServerHealthClient(report)
+  const { kanbanAppPort, graphAppPort, isHookServerRunning: isHookRunning } = new ServerHealthClient(report)
   return [
     { label: 'MCP host', value: 'running', isUp: true },
     { label: 'Tools', value: `${toolCount} loaded`, isUp: true },
-    { label: 'Kanban app', value: 'live', isUp: true },
-    { label: 'Graph app', value: port === null ? 'not running' : `running :${port}`, isUp: port !== null },
+    { label: 'Kanban app', value: runningOn(kanbanAppPort), isUp: kanbanAppPort !== null },
+    { label: 'Graph app', value: runningOn(graphAppPort), isUp: graphAppPort !== null },
     { label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning },
   ]
 }
 
 function headlineOf({ connection, attempt, toolCount, isRestored }: ServerHealthJson): { title: string; detail: string } {
-  if (connection === 'connected') return { title: 'Connected', detail: isRestored ? 'MCP host is back. Board refreshed.' : '' }
+  if (connection === 'connected') return { title: 'Connected', detail: isRestored ? 'MCP host is back.' : '' }
   if (connection === 'disconnected') return { title: 'Disconnected', detail: `${SERVER} stopped.` }
   if (connection === 'tools-missing') return { title: 'Tools missing', detail: `${toolCount} loaded, ${REPORT_TOOL} is not one of them.` }
   if (attempt === 0) return { title: 'Connecting', detail: `Waiting for ${SERVER} to answer.` }
@@ -93,12 +106,7 @@ function DetailsView({ Box, Text }: ElementTable, health: ServerHealthJson, inst
   )
 }
 
-function ReconnectButtonView(elements: ElementTable, hasPictures: boolean, onPress: () => unknown) {
-  const { Button } = elements
-  return hasPictures ? PrimaryButtonView(elements, 'health-reconnect', 'Reconnect', onPress) : <Button key="health-reconnect" label="Reconnect" variant="primary" onPress={onPress} />
-}
-
-function ButtonsView(elements: ElementTable, { health, view, install, hasPictures, actions }: Band) {
+function ButtonsView(elements: ElementTable, { health, view, install, actions }: Band) {
   const { Box, Button } = elements
   const isDisconnected = health.connection === 'disconnected'
   if (!isDisconnected && health.connection !== 'tools-missing') return null
@@ -107,7 +115,7 @@ function ButtonsView(elements: ElementTable, { health, view, install, hasPicture
     <Box flexDirection="row" gap={1}>
       {view.areDetailsOpen ? <Button key="health-hide" label="Hide" onPress={actions.hideDetails} /> : <Button key="health-details" label="Details" onPress={actions.openDetails} />}
       {canInstall && (view.areDetailsOpen || !isDisconnected) ? <Button key="health-install" label="Run install" onPress={actions.runInstall} /> : null}
-      {isDisconnected ? ReconnectButtonView(elements, hasPictures, actions.reconnect) : null}
+      {isDisconnected ? <Button key="health-reconnect" label="Reconnect" variant="primary" onPress={actions.reconnect} /> : null}
     </Box>
   )
 }
@@ -141,18 +149,15 @@ function ExpandedView(elements: ElementTable, band: Band) {
 
 // The band is one icon until the pointer is over it or a click pins it, so it stays out of the way. The icon
 // is drawn below what it expands so it stays under the pointer as the band grows upward.
-export function ServerHealthBandView(elements: ElementTable, band: Band, violations: unknown) {
+export function ServerHealthBandView(elements: ElementTable, band: Band) {
   const { Box, Button, Text } = elements
   const look = LOOKS[band.health.connection]
   return (
-    <Box flexDirection="column">
-      <Box key="server-health" flexDirection="column">
-        {ExpandedView(elements, band)}
-        <Button key="health-icon" plain label={look.glyph} onPress={band.actions.togglePin}>
-          <Text color={look.color}>{look.glyph}</Text>
-        </Button>
-      </Box>
-      {violations}
+    <Box key="server-health" flexDirection="column">
+      {ExpandedView(elements, band)}
+      <Button key="health-icon" plain label={look.glyph} onPress={band.actions.togglePin}>
+        <Text color={look.color}>{look.glyph}</Text>
+      </Button>
     </Box>
   )
 }

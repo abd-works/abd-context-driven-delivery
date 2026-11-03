@@ -127,7 +127,7 @@ describe('Move Ticket', () => {
   })
 })
 
-describe('Run Next Step', () => {
+describe('Send Next Fidelity Action', () => {
   it('should name the step that runs next', async () => {
     const { page } = await board.page()
     expect(ticketOn(page, OTHER).runNextLabel).toBe('Run next: generate')

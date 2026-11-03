@@ -30,6 +30,10 @@ async function lastReceived(text: string): Promise<void> {
   await expect.poll(() => chat.received.map(command => command.text), { timeout: 8_000 }).toContain(text)
 }
 
+async function receivedContaining(words: string, count: number): Promise<void> {
+  await expect.poll(() => chat.received.filter(command => command.text.includes(words)).length, { timeout: 8_000 }).toBe(count)
+}
+
 test.beforeAll(async ({ playwright, baseURL }) => {
   const request = await playwright.request.newContext({ baseURL })
   chat = new FakeChat(request, 'surface-chat', 'Surface chat')
@@ -307,9 +311,9 @@ test.describe('Fix Report Violations', () => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
     const report = page.locator('[data-panel="report"]')
     await report.getByRole('button', { name: 'Fix tests/story-map.md:6' }).click()
-    await lastReceived('/actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format session=.sessions/checkout-flow/session.json')
+    await receivedContaining('of the stories-story-map rule.', 1)
     await report.getByRole('button', { name: 'Fix all' }).click()
-    await lastReceived('/actions-satisfy stories-story-map rule verb-noun-format session=.sessions/checkout-flow/session.json')
+    await receivedContaining('of the stories-story-map rule.', 2)
   })
 })
 

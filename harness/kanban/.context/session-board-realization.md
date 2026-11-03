@@ -42,10 +42,11 @@ Evidence: inferred: the 'board' command handler in tools/chat-mod/hooks/register
 
 ```realization
 Person -> Claude Code command.run('board')  [External: Claude Code]
-chat mod <- the board's address and how to start it
+chat mod -> board server start when it does not answer
+chat mod <- the board's address
 ```
 
-**Then** the chat answers The board is at http://127.0.0.1:8778. Start it with: npm start, in harness/kanban/app.
+**Then** the chat answers The board is at http://127.0.0.1:8778, and starts the board first when nothing answers on that port
 
 ---
 
@@ -1652,13 +1653,13 @@ Evidence: observed: story-actions.spec 'should keep its practice switches off un
 
 ---
 
-## Run Action Across Practices
+## Send Action To Stage Practices
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/run-action-across-practices/run_action_across_practices_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/send-action-to-stage-practices/send_action_to_stage_practices_story.test.py`
 
 ### Scenario: Sketch every fidelity of a stage in one command
 
-Evidence: observed: tile-client.spec 'Run Action Across Practices' — 'should name every fidelity of the stage in one command'.
+Evidence: observed: tile-client.spec 'Send Action To Stage Practices' — 'should name every fidelity of the stage in one command'.
 
 **Given** billing-report is the active [ticket](kanban-model.md#ticket--card) in Discovery and a chat is connected
 
@@ -1849,9 +1850,9 @@ Person -> Board.help('ddd', 'model')
 
 ---
 
-## Run Next Step
+## Send Next Fidelity Action
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/run-next-step/run_next_step_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/send-next-fidelity-action/send_next_fidelity_action_story.test.py`
 
 ### Scenario: Generate the next fidelity in its default format
 
@@ -2483,10 +2484,10 @@ Evidence: observed: side-panel-client.spec 'Fix Report Violations' — 'should s
 **When** the Person fixes that violation
 
 ```realization
-Board page -> Chat.send('command', '/actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format')
+Board page -> Chat.send('command', fix message: the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed)
 ```
 
-**Then** the chat receives the command /actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format
+**Then** the chat receives one message naming the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed, with instructions to fix it
 
 ### Scenario: Fix every violation of a rule
 
@@ -2497,10 +2498,10 @@ Evidence: observed: side-panel-client.spec 'should send Fix all for every violat
 **When** the Person fixes every violation of verb-noun-format
 
 ```realization
-Board page -> Chat.send('command', '/actions-satisfy stories-story-map rule verb-noun-format')
+Board page -> Chat.send('command', fix message: the verb-noun-format rule and every violation of it, each with its content)
 ```
 
-**Then** the chat receives the command /actions-satisfy stories-story-map rule verb-noun-format
+**Then** the chat receives one message with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them
 
 ### Scenario: Read an open report again after the fix
 

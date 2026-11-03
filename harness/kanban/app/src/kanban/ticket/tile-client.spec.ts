@@ -194,7 +194,7 @@ describe('Review Fidelity', () => {
   })
 })
 
-describe('Run Action Across Practices', () => {
+describe('Send Action To Stage Practices', () => {
   it('should name every fidelity of the stage in one command', async () => {
     const { page, chat } = await activeTicketPage()
     await page.tiles.open(spot(STAGE.workRequired, HEAD), true)

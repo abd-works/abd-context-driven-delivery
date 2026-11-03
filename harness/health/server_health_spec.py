@@ -1,6 +1,6 @@
 """Server health as the tool the band calls (cdd MCP), through the MCP server.
 
-Each signature here has a test of the same name in `kanban/pane/hooks/register.test.tsx`."""
+Each signature here has a test of the same name in `tools/chat-mod/hooks/register.test.ts`."""
 import json
 import os
 import shutil
@@ -38,7 +38,7 @@ with description("server health") as self:
             self.listener.bind(("127.0.0.1", 0))
             self.listener.listen()
             self.port = self.listener.getsockname()[1]
-            self.health = ServerHealth(self.root, graph_ports=(closed_port(), self.port))
+            self.health = ServerHealth(self.root, graph_ports=(closed_port(), self.port), kanban_ports=(closed_port(),))
 
         with after.each:
             self.listener.close()
@@ -48,8 +48,27 @@ with description("server health") as self:
 
     with context("with nothing listening on the graph app's ports"):
         with it("should report no graph app port"):
-            health = ServerHealth(self.root, graph_ports=(closed_port(),))
+            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(closed_port(),))
             expect(health.report().to_json()["graph_app_port"]).to(be_none)
+
+    with context("with the Kanban app listening on its port"):
+        with before.each:
+            self.listener = socket.socket()
+            self.listener.bind(("127.0.0.1", 0))
+            self.listener.listen()
+            self.port = self.listener.getsockname()[1]
+
+        with after.each:
+            self.listener.close()
+
+        with it("should report the port the Kanban app answers on"):
+            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(self.port,))
+            expect(health.report().to_json()["kanban_app_port"]).to(equal(self.port))
+
+    with context("with nothing listening on the Kanban app's port"):
+        with it("should report no Kanban app port"):
+            health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(closed_port(),))
+            expect(health.report().to_json()["kanban_app_port"]).to(be_none)
 
     with context("with no hook server state in the project"):
         with it("should report the hook server is not running"):
@@ -71,10 +90,10 @@ with description("server health") as self:
         with after.each:
             os.environ.pop("CDD_PROJECT", None)
 
-        with it("should answer the band's call with both parts"):
+        with it("should answer the band's call with every part"):
             result = self.server.invoke_tool("server-health.report", {})
             answer = json.loads(json.dumps(result, default=lambda value: value.to_json()))
-            expect(sorted(answer)).to(equal(["graph_app_port", "is_hook_server_running"]))
+            expect(sorted(answer)).to(equal(["graph_app_port", "is_hook_server_running", "kanban_app_port"]))
 
         with it("should leave the session log alone"):
             self.server.invoke_tool("server-health.report", {})

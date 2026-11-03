@@ -33,7 +33,8 @@ with story("Open Board"):
             pass
         with when("the Person asks the chat where the session board is"):
             # Person -> Claude Code command.run('board')  [External: Claude Code]
-            # chat mod <- the board's address and how to start it
+            # chat mod -> board server start when it does not answer
+            # chat mod <- the board's address
             pass
-        with then("the chat answers The board is at http://127.0.0.1:8778. Start it with: npm start, in harness/kanban/app."):
+        with then("the chat answers The board is at http://127.0.0.1:8778, and starts the board first when nothing answers on that port"):
             pass

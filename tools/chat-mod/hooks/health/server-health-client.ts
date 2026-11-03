@@ -1,7 +1,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { HealthViewJson, InstallJson, ServerHealthJson, ServerHealthReportJson } from '../../types'
+import type { ServerHealthData } from '@cdd/harness/health/server_health'
+
+import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
 
 export const SERVER = 'cdd'
 export const REPORT_TOOL = 'server-health.report'
@@ -26,7 +28,11 @@ const install = atom({ plugin: 'cdd-board', key: 'install' } as const, { state: 
 type Answer = Pick<ServerHealthJson, 'connection' | 'report' | 'problem'>
 
 export class ServerHealthClient {
-  constructor(private readonly json: ServerHealthReportJson | null) {}
+  constructor(private readonly json: ServerHealthData | null) {}
+
+  get kanbanAppPort(): number | null {
+    return this.json?.kanban_app_port ?? null
+  }
 
   get graphAppPort(): number | null {
     return this.json?.graph_app_port ?? null
@@ -111,10 +117,10 @@ async function askServer($: EngineInterface): Promise<Answer> {
 }
 
 // A server from another checkout has no such tool, and answers in words: KeyError: 'server-health.report'.
-function reportFrom(text: string | undefined): ServerHealthReportJson | null {
+function reportFrom(text: string | undefined): ServerHealthData | null {
   if (text === undefined) return null
   try {
-    return JSON.parse(text) as ServerHealthReportJson
+    return JSON.parse(text) as ServerHealthData
   } catch {
     return null
   }

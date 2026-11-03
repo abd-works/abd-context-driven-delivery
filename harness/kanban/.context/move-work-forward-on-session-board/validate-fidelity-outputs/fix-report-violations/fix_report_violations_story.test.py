@@ -18,18 +18,18 @@ with story("Fix Report Violations"):
         with and_("a chat is connected"):
             pass
         with when("the Person fixes that violation"):
-            # Board page -> Chat.send('command', '/actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format')
+            # Board page -> Chat.send('command', fix message: the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed)
             pass
-        with then("the chat receives the command /actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format"):
+        with then("the chat receives one message naming the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed, with instructions to fix it"):
             pass
     with scenario("Fix every violation of a rule"):
         # Evidence: observed: side-panel-client.spec 'should send Fix all for every violation of a rule'.
         with given("checkout-flow's story_map report lists verb-noun-format"):
             pass
         with when("the Person fixes every violation of verb-noun-format"):
-            # Board page -> Chat.send('command', '/actions-satisfy stories-story-map rule verb-noun-format')
+            # Board page -> Chat.send('command', fix message: the verb-noun-format rule and every violation of it, each with its content)
             pass
-        with then("the chat receives the command /actions-satisfy stories-story-map rule verb-noun-format"):
+        with then("the chat receives one message with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them"):
             pass
     with scenario("Read an open report again after the fix"):
         # Evidence: observed: side-panel-client.spec 'with a report and files open as the board changes' — 'should read the report again'.

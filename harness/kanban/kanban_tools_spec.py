@@ -618,7 +618,7 @@ with description("the board tools") as self:
                 with it("should bring the ticket back with its work"):
                     expect((self.started["name"], (self.project.sessions / "sign-up" / "session.json").is_file())).to(equal(("sign-up", True)))
 
-        # (S) Person --> Run Next Step
+        # (S) Person --> Send Next Fidelity Action
         with it("should name generate as the next action"):
             expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("generate"))
 
@@ -663,7 +663,7 @@ with description("the board tools") as self:
                 with it("should write no review for the others named with it"):
                     expect(self.project.ticket_json("sign-up")["actions"]["stories-story_map"]["review"]).to(equal("to_do"))
 
-    # (S) Person --> Run Next Step
+    # (S) Person --> Send Next Fidelity Action
     with context("with a ticket whose next fidelity has violations"):
         with before.each:
             self.project.ticket(
