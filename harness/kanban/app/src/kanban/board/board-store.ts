@@ -1,6 +1,7 @@
+import type { BacklogItemData } from '@cdd/harness/kanban/backlog-item'
 import type { BoardData, HelpData } from '@cdd/harness/kanban/board'
 
-import type { Chat } from '../chat/chat'
+import type { ChatData, ChatMessageData } from '@cdd/tools/chat/chat'
 import type { ReportClient } from '../ticket/report-client'
 import type { TicketFiles } from '../ticket/ticket'
 import type { WorkspaceClient } from '../ticket/workspace-client'
@@ -9,7 +10,7 @@ export type Toast = { id: number; text: string; isFailure: boolean }
 export type Region = 'board' | 'details'
 export type BacklogDraft = { isOpen: boolean; title: string; text: string }
 
-// An open action bar: on a tile, on a stage head, or across a whole opened card.
+// An open action bar: on a tile or on a stage head. One ticket and place hold at most one bar.
 export type Tile = { ticket: string; place: string; stage: string; slugs: string[]; action: string; picked: string[]; isPinned: boolean; files: TicketFiles }
 
 export type Activation = {
@@ -22,10 +23,20 @@ export type Activation = {
   workspace: WorkspaceClient
 }
 
+// The roots dialog: the ticket's root on top and each practice's root under it. Starting a backlog item asks for its root
+// first, so until it starts there is no ticket yet, only the item.
+export type RootChoice = {
+  ticket: string
+  startingItem: BacklogItemData | null
+  browsing: { target: string; path: string; folders: string[] } | null
+}
+
 export type ReportPanel = { kind: 'report'; ticket: string; fidelity: string; report: ReportClient; closedRules: string[]; isExpanded: boolean }
 export type FilesPanel = {
   kind: 'files'
   ticket: string
+  // A session folder's files, or the files of the fidelities in slugs.
+  isSession: boolean
   slugs: string[]
   files: TicketFiles
   mode: string
@@ -45,8 +56,9 @@ export type BoardState = {
   selected: string | null
   openCard: string | null
   dragged: string | null
-  tile: Tile | null
+  tiles: Tile[]
   activation: Activation | null
+  rootChoice: RootChoice | null
   draft: BacklogDraft
   panels: SidePanel[]
   panelWidths: Record<string, number>
@@ -56,8 +68,13 @@ export type BoardState = {
   hidesDisabled: boolean
   editingLimit: string | null
   toasts: Toast[]
-  chats: Chat[]
+  chats: ChatData[]
   targetChat: string | null
+  // The chat a person chose, kept while it is away so it is chosen again when it reconnects.
+  pickedChat: string | null
+  // The latest messages sent to the target chat, newest first, and whether the list of them is open.
+  messages: ChatMessageData[]
+  isMessagesOpen: boolean
 }
 
 export const EMPTY_DRAFT: BacklogDraft = { isOpen: false, title: '', text: '' }
@@ -66,7 +83,7 @@ const TOAST_MILLISECONDS = 3200
 const FAILURE_TOAST_MILLISECONDS = 6000
 const SAVED_KEY = 'cdd-session-board'
 
-type SavedLayout = Pick<BoardState, 'boardHeight' | 'panelWidths' | 'hidesDisabled'>
+type SavedLayout = Pick<BoardState, 'boardHeight' | 'panelWidths' | 'hidesDisabled' | 'pickedChat'>
 
 const initialState = (): BoardState => ({
   board: null,
@@ -75,8 +92,9 @@ const initialState = (): BoardState => ({
   selected: null,
   openCard: null,
   dragged: null,
-  tile: null,
+  tiles: [],
   activation: null,
+  rootChoice: null,
   draft: EMPTY_DRAFT,
   panels: [],
   panelWidths: {},
@@ -88,6 +106,9 @@ const initialState = (): BoardState => ({
   toasts: [],
   chats: [],
   targetChat: null,
+  pickedChat: null,
+  messages: [],
+  isMessagesOpen: false,
 })
 
 // Only conveniences are saved. Browser storage can be blocked or empty, and the page works the same without it.
@@ -99,9 +120,9 @@ function savedLayout(): Partial<SavedLayout> {
   }
 }
 
-function saveLayout({ boardHeight, panelWidths, hidesDisabled }: BoardState): void {
+function saveLayout({ boardHeight, panelWidths, hidesDisabled, pickedChat }: BoardState): void {
   try {
-    globalThis.localStorage?.setItem(SAVED_KEY, JSON.stringify({ boardHeight, panelWidths, hidesDisabled }))
+    globalThis.localStorage?.setItem(SAVED_KEY, JSON.stringify({ boardHeight, panelWidths, hidesDisabled, pickedChat }))
   } catch {
     // The layout simply is not remembered in this browser.
   }

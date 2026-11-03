@@ -67,6 +67,16 @@ class Validate(GuidanceAction):
         where = ", ".join(str(path) for path in saved) if saved else str(self._session_path())
         return f"{report}\n\nValidation report for these artifacts: {where}"
 
+    def rules_of(self, guidance: GuidanceArg) -> str:
+        """The shared rules and the active fidelity's rules of each listed guidance, as text for another action to
+        follow. It checks nothing, so it saves no report and writes nothing to the session log, where a validate line
+        would tell the session board the work had been checked."""
+        self._bind_guidance(guidance)
+        return "\n\n".join(part for part in self.each(self._rules_text_of) if part)
+
+    def _rules_text_of(self, item) -> str:
+        return item if isinstance(item, str) else self._rules_for(item)
+
     def _save_reports(self, report: str, checked_graphs: list[Path]) -> list[Path]:
         """Save the report in the session for each listed guidance, so the board can link to it.
 
@@ -262,12 +272,17 @@ class Validate(GuidanceAction):
             synopsis.append(f"graph-rule … and {len(violations) - 40} more")
         for item in self.listed():
             session.log_validation(item, synopsis)
+        # This line is the call's validate line; the session board reads the latest one, so no clean line may follow.
+        self._logged_session_action = "validate"
 
     def _log_running_action(self, action: str) -> None:
-        if action == "validate":
-            self._log_validation_to_session()
+        if action != "validate":
+            super()._log_running_action(action)
             return
-        super()._log_running_action(action)
+        if self._logged_session_action == action:
+            return
+        self._logged_session_action = action
+        self._log_validation_to_session()
 
     def _log_validation_to_session(self) -> None:
         from space.session import Session

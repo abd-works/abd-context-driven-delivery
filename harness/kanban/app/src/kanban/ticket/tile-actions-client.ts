@@ -60,7 +60,7 @@ export class TileActionsClient {
   }
 
   private save(tile: Tile, change: Partial<Tile>): void {
-    this.page.store.change(state => ({ tile: state.tile ? { ...state.tile, ...change, isPinned: true } : null }))
+    this.page.tiles.change(tile.ticket, tile.place, open => ({ ...open, ...change, isPinned: true }))
   }
 
   chooseAction(tile: Tile, action: string): void {
@@ -78,8 +78,8 @@ export class TileActionsClient {
   }
 
   // Validate and Review need something to look at: an action the ticket recorded, or files the bar found on disk.
-  private canSendFor(ticket: TicketClient, tile: Tile, action: string): boolean {
-    return !ticket.isLocked && this.chat.canSend && (allowsAll(ticket, tile, action) || hasFiles(tile))
+  private hasSomethingToCheck(ticket: TicketClient, tile: Tile, action: string): boolean {
+    return !ticket.isLocked && (allowsAll(ticket, tile, action) || hasFiles(tile))
   }
 
   barOf(ticket: TicketClient, stage: ColumnClient, tile: Tile): TileBar {
@@ -88,8 +88,9 @@ export class TileActionsClient {
       chips: chipsOf(stage, tile.slugs).map(chip => chipFaceOf(stage, tile, chip)),
       isLocked: ticket.isLocked,
       runOff: !this.canRun(ticket, stage, tile),
-      validateOff: !this.canSendFor(ticket, tile, 'validate'),
-      reviewOff: !this.canSendFor(ticket, tile, 'review'),
+      // Validate runs in the chat; a review is the person's own approval, so it needs no chat.
+      validateOff: !this.chat.canSend || !this.hasSomethingToCheck(ticket, tile, 'validate'),
+      reviewOff: !this.hasSomethingToCheck(ticket, tile, 'review'),
       validate,
       review: stepFaceOf(ticket.standingOf(tile.slugs, 'review'), 'Review'),
       reportSlug: tile.slugs.find(slug => ticket.reports[slug]),
@@ -104,18 +105,26 @@ export class TileActionsClient {
 
   // One command names every fidelity the bar acts on, so a stage's work stays a single turn.
   async run(tile: Tile, stage: ColumnClient): Promise<void> {
-    if (!ACTIONS_WITH_FORMATS.includes(tile.action)) return this.chat.command(`/actions-${tile.action} ${slugsOf(tile)}`)
+    if (!ACTIONS_WITH_FORMATS.includes(tile.action)) return this.sendFor(tile, `/actions-${tile.action} ${slugsOf(tile)}`)
     const formats = chosenFormats(stage, tile.slugs, tile.picked)
     this.save(tile, { picked: [] })
     if (tile.action === 'generate') await this.runCommandsOf(tile.ticket, tile.slugs, formats)
-    else await this.chat.command(`/actions-render ${slugsOf(tile)} format=${formats.join(',')}`)
+    else await this.sendFor(tile, `/actions-render ${slugsOf(tile)} format=${formats.join(',')}`)
   }
 
   validate(tile: Tile): Promise<void> {
-    return this.chat.command(`/actions-validate ${slugsOf(tile)}`)
+    return this.sendFor(tile, `/actions-validate ${slugsOf(tile)}`)
   }
 
-  review(tile: Tile): Promise<void> {
-    return this.chat.command(`/actions:review:review ${slugsOf(tile)}`)
+  // The tile's ticket names its own session in the command.
+  private sendFor(tile: Tile, command: string): Promise<void> {
+    const ticket = this.page.board.tickets.find(shown => shown.name === tile.ticket)
+    return this.chat.command(ticket ? ticket.actionCommand(command) : command)
+  }
+
+  // The ticket writes the review to its session log, and the board read after it shows the fidelity reviewed.
+  async review(tile: Tile): Promise<void> {
+    await TicketClientGenerated.named(this.page.api, tile.ticket).finishReview(tile.slugs)
+    await this.page.reader.refresh()
   }
 }

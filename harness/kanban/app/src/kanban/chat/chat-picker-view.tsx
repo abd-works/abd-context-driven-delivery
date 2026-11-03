@@ -12,7 +12,7 @@ export function ChatPickerView() {
           const shown = chat.name || chat.id
           return (
             <option key={chat.id} value={chat.id} title={chat.id}>
-              {chat.isBusy ? `${shown} (busy)` : shown}
+              {chat.is_busy ? `${shown} (busy)` : shown}
             </option>
           )
         })}

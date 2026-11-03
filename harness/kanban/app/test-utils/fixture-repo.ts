@@ -10,7 +10,7 @@ export const fixtureRoot = process.env.BOARD_FIXTURE_ROOT ?? join(tmpdir(), 'cdd
 // The server can still be reading a file when a spec resets, and Windows will not remove one that is open.
 const REMOVE_RETRIES = 20
 const REMOVE_RETRY_MILLISECONDS = 100
-const STAMP = '2026-11-01T10:00:00Z'
+export const STAMP = '2026-11-01T10:00:00Z'
 const STORY_MAP_FILE = 'tests/story-map.md'
 const STORY_MAP_TEXT = ['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n')
 
@@ -26,14 +26,14 @@ const STORY_MAP_GRAPH = {
 const generated = (practice: string, fidelity: string) => `${STAMP} generate /work ${practice} ${fidelity} markdown ${practice} no-chat`
 const validated = (practiceClass: string, fidelity: string) => `${STAMP} validate ${practiceClass} ${fidelity} no-chat`
 
-function writeInto(path: string, text: string): void {
+export function writeInto(path: string, text: string): void {
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(path, text, 'utf-8')
 }
 
-type Session = { name: string; title: string; log?: string[]; folder?: string }
+export type Session = { name: string; title: string; log?: string[]; folder?: string }
 
-function writeSession(root: string, { name, title, log = [], folder = name }: Session): void {
+export function writeSession(root: string, { name, title, log = [], folder = name }: Session): void {
   const session = join(root, '.sessions', folder)
   writeInto(join(session, 'session.json'), JSON.stringify({ name, title, scope: 'feature', workpath: root, repo_path: root }))
   writeInto(join(session, 'session.log'), log.map(line => `${line}\n`).join(''))

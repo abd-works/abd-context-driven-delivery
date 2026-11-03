@@ -84,6 +84,7 @@
 <h3>Destination</h3>
 <ul>
 <li>Put <code>@skill</code>, <code>@command</code>, <code>@rules</code>, <code>@mcp</code>, or <code>@Hook</code> on a member when that channel should receive it. Unmarked members stay in-process.</li>
+<li>Put <code>@language_adapter(language="typescript")</code> on a toolset class when an application outside Python needs its <code>@mcp</code> operations as typed code, and name its <code>identity</code> when its tools load one object by name. It marks the class, not a member, because the installer writes the whole object as one file of code.</li>
 </ul>
 <h3>Installation</h3>
 <ul>

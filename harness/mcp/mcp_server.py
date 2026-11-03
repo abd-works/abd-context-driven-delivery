@@ -23,6 +23,7 @@ from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
 from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
+from harness.agent_tools.progress import reporting_to
 from harness.installation.destination import Destination, Installation
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,8 @@ _CALL_TIMEOUT_SECONDS = 10
 # First graph builds walk the repo; cache hits must still finish under the default.
 _LONG_CALL_TIMEOUT_SECONDS = {
     "graph.load_working_copy": 600,
+    # Applying an overlay rebuilds the graph from the open folder.
+    "graph.set_overlays": 600,
     # Branch and worktree commands push and pull over the network.
     "repo.switch_branch": 600,
     "repo.close_branch": 600,
@@ -745,8 +748,11 @@ class McpPrompt:
 
     def invoke(self, arguments: dict[str, object] | None = None) -> object:
         payload = dict(arguments or {})
-        _log_mcp_operation_invocation(self._op, payload)
         tool = self._op.tool
+        # One action object serves every call while the server runs, so each call starts its own session line.
+        if hasattr(tool, "clear_session_action_log"):
+            tool.clear_session_action_log()
+        _log_mcp_operation_invocation(self._op, payload)
         name = self._op.operation
         if name == "instructions" and hasattr(tool, "instructions"):
             return tool.instructions
@@ -774,8 +780,11 @@ class McpPrompt:
         body = (expanded.instructions or "").strip()
         doc = (inspect.getdoc(member) or "").strip()
         if doc and doc not in body:
-            return f"{doc}\n\n{body}".strip() if body else doc
-        return body or self.prompt_text or doc
+            body = f"{doc}\n\n{body}".strip() if body else doc
+        reply = body or self.prompt_text or doc
+        # An action that works in a session says which one, so the agent knows its folders without looking for them.
+        session = getattr(tool, "session_context", "")
+        return f"{reply}\n\n{session}" if session else reply
 
 
 class McpServer:
@@ -956,7 +965,20 @@ class McpHost:
         try:
             return get_type_hints(function)
         except (NameError, TypeError, AttributeError):
-            return {}
+            return self._hints_one_by_one(function)
+
+    def _hints_one_by_one(self, function: Callable[..., object]) -> dict[str, Any]:
+        """Each annotation read on its own, so one naming a class imported only for type checking, as a return type
+        often does to break a circular import, leaves the parameters' types readable. One that cannot be read is left
+        out, the same as before."""
+        hints: dict[str, Any] = {}
+        module_names = getattr(function, "__globals__", {})
+        for name, annotation in getattr(function, "__annotations__", {}).items():
+            try:
+                hints[name] = eval(annotation, module_names) if isinstance(annotation, str) else annotation
+            except NameError:
+                continue
+        return hints
 
     def _is_schema_parameter(self, name: str, param: inspect.Parameter) -> bool:
         if name in {"self", "cls"}:
@@ -1134,10 +1156,11 @@ class McpHost:
                 timeout = _LONG_CALL_TIMEOUT_SECONDS.get(
                     resolved, _CALL_TIMEOUT_SECONDS
                 )
+                reporter = self._progress_reporter()
                 try:
                     with anyio.fail_after(timeout):
                         value = await anyio.to_thread.run_sync(
-                            self.dispatch, name, arguments
+                            self._dispatch_reporting, name, arguments, reporter
                         )
                 except TimeoutError:
                     return self._content_blocks(
@@ -1147,6 +1170,29 @@ class McpHost:
         except Exception as error:
             logger.exception("MCP tool %s failed", name)
             return self._content_blocks(f"{type(error).__name__}: {error}")
+
+    def _progress_reporter(self) -> Callable[[str], None] | None:
+        """Sends a tool's progress reports as notifications for its call, when the caller asked for them with a progress
+        token. The tool runs on a worker thread, so each report goes back through the event loop."""
+        try:
+            context = self._server.request_context
+        except LookupError:
+            return None
+        token = context.meta.progressToken if context.meta else None
+        if token is None:
+            return None
+        reported = iter(range(1, sys.maxsize))
+
+        def report(message: str) -> None:
+            anyio.from_thread.run(context.session.send_progress_notification, token, next(reported), None, message)
+
+        return report
+
+    def _dispatch_reporting(
+        self, name: str, arguments: dict[str, object] | None, reporter: Callable[[str], None] | None
+    ) -> object:
+        with reporting_to(reporter):
+            return self.dispatch(name, arguments)
 
     def _mcp_tool(self, tool: McpTool) -> types.Tool:
         return types.Tool(

@@ -1,56 +1,62 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
-import type { BacklogItemData } from '@cdd/harness/kanban/backlog-item'
-import { boardJson, discovery, ticketJson } from 'test-utils/board-examples'
-import { pageOn } from 'test-utils/board-page-support'
+import { BoardAdapter } from '@cdd/harness/kanban/board'
+import { BoardOnProject } from 'test-utils/board-page-support'
 
-const ITEM: BacklogItemData = { title: 'Sign up & pay', text: 'An idea.', path: '.sessions/_backlog/sign-up.md', last_activity: '' }
+const TITLE = 'Sign up & pay'
+
+let board: BoardOnProject
+
+beforeAll(async () => {
+  board = await BoardOnProject.start()
+})
+
+beforeEach(() => board.reset())
+
+afterAll(() => board.close())
 
 describe('Add Backlog Item', () => {
   it('should stay off with no title', async () => {
-    const { page, server } = pageOn(boardJson([discovery()]))
+    const { page, asked } = await board.page()
     page.draft.open()
     await page.draft.add()
-    expect(server.requests).toEqual([])
+    expect(asked).toEqual([])
   })
 
   describe('with a title and text typed', () => {
     async function added() {
-      const { page, server } = pageOn(boardJson([discovery()], null, [ITEM]))
-      server.answer('POST /api/backlog-item/add', ITEM)
+      const { page } = await board.page()
       page.draft.open()
-      page.draft.type('title', ' Sign up & pay ')
+      page.draft.type('title', ` ${TITLE} `)
       page.draft.type('text', 'An idea.')
       await page.draft.add()
-      return { page, server }
+      return page
     }
 
     it('should write the title and text', async () => {
-      const { server } = await added()
-      expect(server.posted('/api/backlog-item/add')[0]?.body).toEqual({ title: 'Sign up & pay', text: 'An idea.' })
+      await added()
+      const saved = await new BoardAdapter(board.project.cdd).show()
+      expect(saved.columns.flatMap(column => column.items ?? []).find(item => item.title === TITLE)?.text).toBe('An idea.')
     })
 
     it('should select the item', async () => {
-      const { page } = await added()
-      expect(page.store.state.selected).toBe('Backlog/Sign up & pay')
+      expect((await added()).store.state.selected).toBe(`Backlog/${TITLE}`)
     })
 
     it('should say so in a toast', async () => {
-      const { page } = await added()
-      expect(page.store.state.toasts.at(-1)?.text).toBe('Sign up & pay added to Backlog')
+      expect((await added()).store.state.toasts.at(-1)?.text).toBe(`${TITLE} added to Backlog`)
     })
 
     it('should close the form', async () => {
-      const { page } = await added()
-      expect(page.store.state.draft.isOpen).toBe(false)
+      expect((await added()).store.state.draft.isOpen).toBe(false)
     })
   })
 
   describe('Start Backlog Item', () => {
     async function started() {
-      const { page, server } = pageOn(boardJson([discovery()], null, [ITEM]))
-      server.answer('POST /api/backlog-item/Sign%20up%20%26%20pay/start', ticketJson('sign-up-pay'))
-      await page.item(ITEM).start()
+      board.write('.sessions/_backlog/sign-up-pay.md', `# ${TITLE}\n\nAn idea.\n`)
+      const { page } = await board.page()
+      await page.board.backlogItems.find(item => item.title === TITLE)!.start()
       return page
     }
 
@@ -59,7 +65,7 @@ describe('Add Backlog Item', () => {
     })
 
     it('should say so in a toast', async () => {
-      expect((await started()).store.state.toasts.at(-1)?.text).toBe('Sign up & pay started in Discovery')
+      expect((await started()).store.state.toasts.at(-1)?.text).toBe(`${TITLE} started in Discovery`)
     })
   })
 })

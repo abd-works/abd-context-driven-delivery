@@ -131,7 +131,7 @@ with description("a language adapter"):
                 expect(self.connection).to(contain("export class CddConnection {"))
 
             with it("should import only Node's own modules, so the install needs no package"):
-                imports = [line for line in self.connection.splitlines() if line.startswith("import ")]
+                imports = [line for line in self.connection.splitlines() if line.startswith("import ") and "from './" not in line]
                 expect(all("from 'node:" in line for line in imports)).to(be_true)
 
             with it("should start cdd from the checkout it was installed from"):
@@ -140,11 +140,24 @@ with description("a language adapter"):
             with it("should raise the text of an answer that is not JSON"):
                 expect(self.connection).to(contain("throw new CddToolError(tool, text)"))
 
+            with it("should give up on a call after ten minutes"):
+                expect(self.connection).to(contain("const LONGEST_TOOL_MILLISECONDS = 600_000"))
+
+            with it("should ask for the progress of every tool call under that call's own id"):
+                expect(self.connection).to(contain("_meta: { progressToken: id }"))
+
+            with it("should keep the newest step each running call reported"):
+                expect(self.connection).to(contain("progress(): CddProgress[] {"))
+
         with description("its shared code"):
             with it("should import only types, so a browser loads nothing of Node"):
                 shared = (self.root / "cdd-shared.ts").read_text(encoding="utf-8")
                 imports = [line for line in shared.splitlines() if line.startswith("import ")]
                 expect(all(line.startswith("import type ") for line in imports)).to(be_true)
+
+            with it("should answer the steps of the running calls at one shared route"):
+                shared = (self.root / "cdd-shared.ts").read_text(encoding="utf-8")
+                expect(shared).to(contain("{ path: '/cdd/progress', run: async cdd => cdd.progress() }"))
 
         with description("its data"):
             with it("should state what to_json returns, from the Python"):
@@ -159,6 +172,13 @@ with description("a language adapter"):
 
             with it("should state a nested shape in the file that uses it"):
                 expect(self.ticket).to(contain("export type ReportData = {"))
+
+            with context("with a field that takes one of a few named words"):
+                with it("should allow only those words"):
+                    install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
+                    _install(install_path, ("tools.chat.chat:Chat",))
+                    chat = (install_path / _ADAPTERS / "tools/chat/chat.ts").read_text(encoding="utf-8")
+                    expect(chat).to(contain("  state: 'waiting' | 'taken' | 'shown' | 'failed'\n"))
 
         with description("its shared base"):
             with before.all:
@@ -271,13 +291,15 @@ with description("a language adapter"):
     with description("the generated views of a marked toolset"):
         with before.all:
             install_path = Path(tempfile.mkdtemp(prefix="language-adapter-views-"))
-            _install(install_path, ("harness.installation._examples.note:Note",))
+            _install(install_path, ("harness.installation._examples.note:Note", "tools.file_manager.file_manager:FileManager"))
             root = install_path / _ADAPTERS
+            self.note = (root / "harness/installation/_examples/note.ts").read_text(encoding="utf-8")
             self.views = (root / "harness/installation/_examples/note-views.tsx").read_text(encoding="utf-8")
             self.shared_views = (root / "cdd-views.tsx").read_text(encoding="utf-8")
+            self.file_views = (root / "cdd-files.tsx").read_text(encoding="utf-8")
 
         with it("should take React from the application, the only package it imports"):
-            imports = [line for line in self.shared_views.splitlines() if line.startswith("import ") and " from '" in line]
+            imports = [line for line in self.shared_views.splitlines() if line.startswith("import ") and " from '" in line and "from './" not in line]
             expect(all(line.endswith("from 'react'") for line in imports)).to(be_true)
 
         with it("should say which JSX it uses, since the install has no settings of its own"):
@@ -317,6 +339,23 @@ with description("a language adapter"):
         with context("for a class operation that answers with a new object"):
             with it("should draw a form that creates it"):
                 expect(self.views).to(contain("export function NoteNewViewGenerated({ api, onCreated }: NoteNewViewProps): ReactNode {"))
+
+        with context("for a field Python marks as a source file"):
+            with it("should type it as the path it holds"):
+                expect(self.note).to(contain("  source: string\n"))
+
+            with it("should open it in the shared source view at the line the same data holds"):
+                expect(self.views).to(contain('<SourceField api={note.api} label="Source" path={note.source} line={note.line} />'))
+
+        with it("should show the newest step of each running call while a page waits"):
+            expect(self.shared_views).to(contain("export function ProgressViewGenerated("))
+
+        with description("the shared file views"):
+            with it("should read files through the file manager's generated client"):
+                expect(self.file_views).to(contain("from './tools/file_manager/file-manager'"))
+
+            with it("should take Monaco from the application"):
+                expect(self.file_views).to(contain("from '@monaco-editor/react'"))
 
     with description("a Python name"):
         with it("should become camelCase"):

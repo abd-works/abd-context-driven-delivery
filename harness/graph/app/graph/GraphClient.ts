@@ -1,31 +1,22 @@
-import { PythonCall } from '../python-call';
-import type { InventoryBundle } from '../filter/FilterClient';
+import { GraphClientGenerated } from '@cdd/harness/graph/graph';
 
-export class GraphClient {
-  constructor(private readonly python = new PythonCall()) {}
+import { GraphApi } from './graph-api';
 
-  chooseFolder(): Promise<string> {
-    return this.python.run('choose_folder');
+// The explorer's graph: the one the cdd server holds, with the folder dialogs only this page opens.
+export class GraphClient extends GraphClientGenerated {
+  constructor(api = new GraphApi()) {
+    super(api);
   }
 
-  chooseOverlayFolder(): Promise<string> {
-    return this.python.run('choose_overlay_folder');
+  async chooseFolder(title = 'Select a repo folder'): Promise<string> {
+    return (await this.api.post<{ folder: string }>('/explorer/choose-folder', { title }))?.folder ?? '';
   }
 
-  load(folder: string, practices: Record<string, string>, overlays?: string[], force = false): Promise<string> {
-    const body: Record<string, unknown> = {
-      folder,
-      practices,
-      database: folder,
-      overlays: overlays ?? [],
-    };
-    if (force) {
-      body.force = true;
+  async chooseOverlayFolder(): Promise<string> {
+    const folder = await this.chooseFolder('Select a pattern overlay folder (contains practices/)');
+    if (!folder) {
+      return '';
     }
-    return this.python.run('load_working_copy', body);
-  }
-
-  inventory(): Promise<InventoryBundle> {
-    return this.python.run('inventory');
+    return (await this.overlayOf(folder))?.overlay ?? '';
   }
 }

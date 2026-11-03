@@ -14,6 +14,7 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 | `{object}Routes` | Server | One route for each tool. Each reads the request against the tool's published schema and calls `{Object}Adapter`. |
 | `CddConnection` | Server | One per install. Starts one cdd server and carries calls to it. It knows no tool by name. |
 | `use{Object}(client)` | Browser | A React hook that re-renders a view whenever the client takes on new state. |
+| `FileListViewGenerated`, `SourceViewGenerated` | Browser | Shared default views over the session's file manager: a folder's files to pick from, and a file's text in Monaco with a line or range marked. Any field Python marks as a file opens in `SourceViewGenerated`. |
 | `{Object}ViewGenerated`, `{Object}NewViewGenerated` | Browser | Starting-point React views: the object with each field editable where a domain operation changes it and read-only elsewhere, its other operations as buttons and forms, and a form for each operation that creates one. **Never deployed as they are**; an application composes them, or copies one and changes it. |
 
 **What the application's pattern adds.** LERN mounts `{object}Routes` on its server, subclasses `{Object}ClientGenerated` for what only the page knows, such as selecting a card or showing a toast, and builds its pages from the generated views. That subclass is LERN's `{Domain}Client`; the pages, layout, and navigation are LERN's own. A Claude Code mod reaches the tools through `$.mcp.call`, as `patterns-cdd-claude-mod` describes. Nothing in the application calls a tool, parses a request for one, or writes a path to one.
@@ -256,6 +257,33 @@ export function TicketViewGenerated({ client, fields, operations }: TicketViewPr
 
 **React comes from the application.** The install holds no packages, so the views import `react` through the application's own copy: `react` and `react/jsx-runtime` in the application's TypeScript `paths`, pointing at its `@types/react`, and `react` in its bundler's aliases, beside `@cdd`. Each views file starts with `/** @jsxRuntime automatic @jsxImportSource react */`, because the install has no TypeScript settings of its own for the bundler to read. The views draw plain, unstyled elements with stable class names, such as `cdd-field` and `cdd-operation`, so the application's stylesheet gives them their look. The shared inputs, buttons, and forms they draw live in `cdd-views.tsx`.
 
+### Files: the session's file manager
+
+Every application ends up showing files: a ticket's outputs, a report's failing line, the source behind a graph node. The page cannot read the disk, so a tool reads it, and one shared tool does it for every application rather than a read operation on each object.
+
+**The file manager is `FileManager`, in `tools/file_manager/`, and the session owns it.** The session holds it in memory; nothing about it is written to the session's files, because it keeps no state of its own beyond the roots it reads. Its loader takes the current session's file manager, so a page names no root and no session to reach it, the same way it reaches the one board. Reading and listing files needs no git, which is why it belongs to the session and not to the repository.
+
+**It reads under the session's roots, and nowhere else.** The session's roots are its workpath: the folder each practice works in, as the session's `session.json` records it, or the practice's default folder when it records none. They are not the session's own folder under `.sessions/`. A page names a path from the workpath, so a root outside it reads back as `../reports/...`.
+
+| Operation | Answers with |
+|---|---|
+| `list(folder)` | `FolderData`: the folder's entries, each a name, its path, whether it is a folder, and its size |
+| `read(path)` | `FileTextData`: the file's path and text |
+
+Both refuse a path outside every root with `PathOutsideRootsError`, because the page is open to whatever a request names, and so an application never loads files from outside the session's roots. `FileManager` is marked for TypeScript, so the installer generates its adapter, its routes, and `FileManagerClientGenerated` like any other object's.
+
+**Two shared views come with it.** `FileListViewGenerated` lists a folder and opens what a person picks. `SourceViewGenerated` shows a file's text in Monaco, read-only, scrolled to a line or with a range of lines marked. As with every generated view, an application uses them, composes them, or ignores them; none writes its own file viewer.
+
+**Python marks which fields are files.** A field typed `Annotated[str, SourceFile]` in a `TypedDict` holds a path from the workpath, inside the session's roots. Where the same data has `line`, or `start_line` and `end_line`, the view takes them as the line or range to mark. A generated view draws a marked field as a link that opens `SourceViewGenerated` at that file, so a report's violation, a graph node's source, and a ticket's output all open the same way.
+
+```python
+class SourceLineData(TypedDict):
+    path: Annotated[str, SourceFile]
+    line: int | None
+```
+
+**Monaco comes from the application**, as React does: `@monaco-editor/react` in the application's TypeScript `paths` and its bundler's aliases. Only a views file that draws a file field, and the shared source view itself, import it, so an application with no file fields never needs Monaco.
+
 ### Python states the contract
 
 `{Object}Data` is a `TypedDict` the domain class annotates `to_json()` with, so the shape is written once, in Python, and every other language follows. A plain `dict[str, Any]` generates `Record<string, unknown>`, which the compiler cannot check. `NotRequired` becomes an optional field, and `str | None` a nullable one. Fields keep Python's `snake_case` in `{Object}Data`, because it states exactly what `to_json()` returns and some keys are data, such as a fidelity named `story_map`. The getters, operation names, and arguments are `camelCase`, and the adapters send arguments under their Python names.
@@ -265,6 +293,18 @@ export function TicketViewGenerated({ client, fields, operations }: TicketViewPr
 An application keeps no copy of what the domain owns. There is no repository, no store, and no cache for a CDD object, because a second copy drifts from the first and the agent changes state without telling the application. An adapter holds only the state its last call returned; to stay current, call again.
 
 **lowdb is for state CDD does not own.** A web app built in LERN still uses lowdb for what belongs to that app alone, such as a person's saved layout. For an aggregate backed by CDD, `{Object}Adapter` takes the repository's place on the server.
+
+### Long calls and progress
+
+**Every call finishes within ten minutes.** `CddConnection` stops waiting after ten minutes and raises `CddToolError`. An operation that needs longer is a defect in that operation, to fix in Python by doing less per call, not by raising the limit for one application.
+
+**An operation that takes more than a moment says what it is doing.** Loading a working copy into the graph can take minutes, and a person watching a page with no news cannot tell work from a hang. A Python operation reports its steps as it goes, and they reach the page as MCP progress notifications:
+
+1. `CddConnection` asks for progress on every tool call, under that call's own id, and keeps the newest step each running call has reported.
+2. The Python operation calls `report_progress(message)`, from `harness.agent_tools.progress`, at each step; the graph's own `report_progress` does so for every practice, file, and rule it loads. The MCP server turns each report into a progress notification for that call, and a report made outside a tool call goes nowhere.
+3. `cddProgressRoutes`, in `cdd-shared.ts`, answers `/cdd/progress` with those steps; the application mounts it beside its objects' routes. `ProgressViewGenerated` reads it while it is shown and draws the newest step of each running call, and nothing once they have finished.
+
+So no application keeps its own progress channel beside the tool.
 
 ### When a call fails
 
@@ -320,6 +360,9 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 ### Contract and failure
 
 - **`annotate-what-typescript-reads`** — Annotate `to_json()` and each MCP operation on a marked toolset with a `TypedDict`. A plain `dict[str, Any]` generates an open record, which the compiler cannot check.
+- **`calls-finish-in-ten-minutes`** — Keep every operation within the ten-minute limit, and fix one that needs longer instead of raising the limit. A page that waits longer than that looks broken, and a raised limit hides the slow operation.
+- **`report-progress-on-long-calls`** — An operation that takes more than a few seconds calls `report_progress` at each step, and the page shows them with `ProgressViewGenerated`. A page with no news looks the same as one that has stopped.
+- **`read-files-through-the-file-manager`** — Show a file through the session's `FileManager` and its source view, and mark a file field `Annotated[str, SourceFile]`. A read operation or a file viewer written for one object is a second copy of what every application shares.
 - **`fail-loud-on-mcp`** — When a call fails or the server is missing, show the person what failed and how to fix it. Drawing old state as if it were current misleads them into acting on it.
 
 ### Testing

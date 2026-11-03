@@ -28,7 +28,7 @@ test.describe('the session board on the page', () => {
       const overflowing = await page.locator('.ticket-card').evaluateAll(cards =>
         cards.flatMap(shown => {
           const right = shown.getBoundingClientRect().right
-          return [...shown.querySelectorAll('button:not(.card-hit)')].filter(control => control.getBoundingClientRect().right > right).map(control => control.textContent)
+          return [...shown.querySelectorAll('button:not(.card-hit)')].filter(control => control.getBoundingClientRect().right > right).map(control => control.getAttribute('aria-label'))
         }),
       )
       expect(overflowing).toEqual([])
@@ -79,7 +79,7 @@ test.describe('the session board on the page', () => {
       const region = await page.locator('.board-region').boundingBox()
       expect(opened!.y).toBeGreaterThanOrEqual(region!.y)
       expect(opened!.y + opened!.height).toBeLessThanOrEqual(region!.y + region!.height)
-      await expect(page.locator('.card-open .card-moves').getByRole('button', { name: 'Close' })).toBeVisible()
+      await expect(page.locator('.card-open .card-files').getByRole('button', { name: 'Close' })).toBeVisible()
     })
   })
 
@@ -117,13 +117,13 @@ test.describe('the session board on the page', () => {
       await expect(page.getByText('No chat connected: load the cdd-board mod in a chat to send commands')).toBeVisible()
       await expect(page.getByRole('button', { name: '+ Ticket' })).toBeDisabled()
       await expect(page.getByRole('button', { name: 'Satisfy' })).toBeDisabled()
-      await expect(page.getByRole('button', { name: 'Handoff' })).toBeDisabled()
+      await expect(card(page, 'checkout-flow').getByRole('button', { name: 'Handoff' }).first()).toBeDisabled()
     })
 
     test('should keep local actions working', async ({ page }) => {
       await page.getByRole('button', { name: 'Refresh' }).click()
       await expect(page.getByRole('button', { name: 'Refresh' })).toBeEnabled()
-      await page.getByRole('button', { name: 'Run next: fix violations' }).click()
+      await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
       await expect(page.locator('[data-panel="report"]')).toBeVisible()
     })
   })
@@ -139,7 +139,7 @@ test.describe('the session board on the page', () => {
     })
 
     test('should give an open panel the whole page, with no sideways scroll', async ({ page }) => {
-      await page.getByRole('button', { name: 'Run next: fix violations' }).click()
+      await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
       const panel = await page.locator('[data-panel="report"]').boundingBox()
       expect(panel!.x).toBe(0)
       expect(panel!.width).toBe(375)

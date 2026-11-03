@@ -55,7 +55,7 @@ with description("a graph"):
 
         with it("should return the operation that fails"):
             import json
-            returned = [node["name"] for node in json.loads(self.graph.return_nodes())]
+            returned = [node["name"] for node in self.graph.return_nodes()]
             expect(returned).to(equal(["failure"]))
 
     with context("with a relationship selected"):
@@ -86,7 +86,7 @@ with description("a graph"):
 
         with it("should return the nodes on the selected edge"):
             import json
-            returned = {node["name"] for node in json.loads(self.graph.return_nodes())}
+            returned = {node["name"] for node in self.graph.return_nodes()}
             expect(returned).to(equal({"account-credentials", "AccountCredentials"}))
 
     with context("with a query row that carries a stage"):

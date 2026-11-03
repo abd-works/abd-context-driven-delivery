@@ -1,5 +1,7 @@
 /** @jsxRuntime automatic @jsxImportSource react */
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+
+import type { CddApi, CddProgress } from './cdd-shared'
 
 // The input a published argument type draws: text, a number, a checkbox, one string per line, or JSON for anything else.
 export type InputKind = 'text' | 'number' | 'check' | 'list' | 'json'
@@ -94,5 +96,27 @@ export function OperationForm({
       <button type="submit">{label}</button>
       {result === undefined ? null : <pre className="cdd-result">{shown(result)}</pre>}
     </form>
+  )
+}
+
+const PROGRESS_MILLISECONDS = 1000
+
+// The newest step of each call still running. A page shows it while it waits on a long operation, so a person can
+// tell work from a hang; it shows nothing once the calls have finished.
+export function ProgressViewGenerated({ api, every = PROGRESS_MILLISECONDS }: { api: CddApi; every?: number }): ReactNode {
+  const [steps, setSteps] = useState<CddProgress[]>([])
+  useEffect(() => {
+    const timer = setInterval(() => void api.post<CddProgress[]>('/cdd/progress', {}).then(found => found && setSteps(found)), every)
+    return () => clearInterval(timer)
+  }, [api, every])
+  if (steps.length === 0) return null
+  return (
+    <ul className="cdd-progress">
+      {steps.map(step => (
+        <li key={step.tool}>
+          <span className="cdd-progress-tool">{step.tool}</span> <span className="cdd-progress-step">{step.message}</span>
+        </li>
+      ))}
+    </ul>
   )
 }

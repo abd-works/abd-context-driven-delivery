@@ -29,6 +29,9 @@ GUIDANCE_PARAMETER = (
 )
 _TOOLSET_REF = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 _GUIDANCE_SLUG = re.compile(r"^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$")
+_FORMAT_WORD = "format="
+# The session a command is for, as the session board names it: `session=.sessions/<name>/session.json`.
+_SESSION_WORD = "session="
 _SKIP_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
 PATHS_NOTE = (
     "paths: a file, a list of files, or a folder. Pass paths on an MCP call. "
@@ -83,6 +86,8 @@ class GuidanceAction:
         self._guidance_text: str | None = None
         self._tool_items: list = []
         self._logged_session_action: str | None = None
+        # The session.json a command named, a path from the project; empty when it named none.
+        self.named_session = ""
 
     def clear_session_action_log(self) -> None:
         self._logged_session_action = None
@@ -114,8 +119,7 @@ class GuidanceAction:
             self._tool_items = [bound]
             return
         if isinstance(guidance, str):
-            self._guidance_text = guidance
-            self._tool_items = []
+            self._bind_guidance_string(guidance)
             return
         self._guidance_text = None
         items = []
@@ -123,6 +127,34 @@ class GuidanceAction:
             bound = self._as_guidance_item(item)
             items.append(item if bound is None else bound)
         self._tool_items = items
+
+    def _bind_guidance_string(self, text: str) -> None:
+        """Agents on MCP often send several slugs, a ``format=`` word, and a ``session=`` word in one string; list the
+        slugs as Guidance and keep the session. Any other word keeps the whole string as text, so prose still runs once."""
+        refs = self._slug_words(text)
+        if refs:
+            self._guidance_text = None
+            self._tool_items = refs
+            self.named_session = next((word[len(_SESSION_WORD):] for word in text.split() if word.startswith(_SESSION_WORD)), "")
+            return
+        self._guidance_text = text
+        self._tool_items = []
+
+    def _slug_words(self, text: str) -> list:
+        words = [word for word in text.split() if not word.startswith(_SESSION_WORD)]
+        formats = [word[len(_FORMAT_WORD):].split(",")[0] for word in words if word.startswith(_FORMAT_WORD)]
+        slugs = [slug for word in words if not word.startswith(_FORMAT_WORD) for slug in word.split(",") if slug]
+        refs = [self._guidance_slug(slug) for slug in slugs]
+        if not refs or None in refs:
+            return []
+        if not formats or not formats[0]:
+            return refs
+        return [self._with_format(ref, formats[0]) for ref in refs]
+
+    def _with_format(self, ref: str | dict[str, Any], format: str) -> dict[str, Any]:
+        item = dict(ref) if isinstance(ref, dict) else {"toolset": ref}
+        item["format"] = format
+        return item
 
     def _as_guidance_item(self, item: Any) -> Any:
         if isinstance(item, dict):
@@ -206,6 +238,38 @@ class GuidanceAction:
         #     if not warning:
         #         warning = session.branch_warning()
         # return warning
+
+    @property
+    def session_context(self) -> str:
+        """The open session as an agent acting on this command needs it: its session.json, the root paths are
+        relative to, and where each listed practice writes. Without it the agent guesses where paths start and where
+        files go, and a guess under a moved root names folders that do not exist."""
+        from space.session import Session
+        from space.work_state import project_checkout
+
+        session = Session.current()
+        if self.named_session:
+            named = Path(self.named_session)
+            named = named if named.is_absolute() else Path(session.repo_path or project_checkout()) / named
+            session = Session.at(named.parent, Path(session.repo_path or project_checkout()))
+        if session.session_path is None:
+            return ""
+        session_json = Path(session.session_path) / "session.json"
+        root = Path(session.workpath or session.repo_path or Path.cwd()).resolve().as_posix()
+        practices = [item for item in self.listed() if not isinstance(item, str)]
+        writes = [f"- {item.slug}: {session.practice_root(item).as_posix()}" for item in practices]
+        stored = session_json.read_text(encoding="utf-8").strip() if session_json.is_file() else "{}"
+        return "\n".join([
+            "## Session",
+            "",
+            f"Session {session.name}, kept in {session_json.resolve().as_posix()}.",
+            f"Paths are relative to the session's root, {root}, unless they are absolute.",
+            *(["", "Where each listed practice writes:", *writes] if writes else []),
+            "",
+            "```json",
+            stored,
+            "```",
+        ])
 
     @agent_instructions
     def act_quickly(self) -> str:

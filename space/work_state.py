@@ -12,6 +12,24 @@ E2E_RESULTS_FOLDER = "e2e-test-results"
 _LEGACY_SESSION_KEY = "current"
 
 
+def checkout_holding(path: Path | str) -> Path:
+    """The git checkout containing ``path``; ``path`` itself when it is not inside one."""
+    resolved = Path(path).resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return resolved
+
+
+def project_checkout() -> Path:
+    """The checkout of the project being worked on: the one holding ``CDD_PROJECT``, else the current folder.
+
+    ``CDD_REPO`` names the CDD checkout that hosts the tools, not the project, so it never picks the project. Sessions,
+    the board, and every tool that finds ``.sessions/`` start here, so they all find the same one."""
+    named = os.environ.get("CDD_PROJECT")
+    return checkout_holding(named) if named else Path.cwd().resolve()
+
+
 class WorkState:
     """The open branch, worktree, and session, shared by the repo and session commands."""
 

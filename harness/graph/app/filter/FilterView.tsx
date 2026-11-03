@@ -1,4 +1,4 @@
-import type { FilterSelection } from './FilterClient';
+import type { FilterSelection } from './filter-selection';
 import { overlayCatalogLabel, overlayPathLabel } from '../overlay-labels';
 
 type FilterViewProps = {

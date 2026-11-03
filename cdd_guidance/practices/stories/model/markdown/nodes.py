@@ -22,7 +22,7 @@ from cdd_guidance.practices.clean_engineering.model.call_graph import (
 )
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryType, Epic
 from cdd_guidance.practices.stories.model.story_model import Background, StepType, Scenario, Step
-from cdd_guidance.practices.stories.model.source_location import SourceLocation
+from cdd_guidance.practices.stories.model.source_location import SourceLocation, path_from
 from cdd_guidance.practices.stories.model.markdown.links import DomainModelLinks, StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.story_model import StoryModel
 from cdd_guidance.practices.stories.model.story_model import Increment
@@ -873,8 +873,12 @@ class MarkdownStoryModel(StoryModel):
         return MarkdownIncrement(source.name, source.sequential_order)
 
     @classmethod
-    def from_workspace(cls, root: "Path", *, on_file=None) -> Optional["MarkdownStoryModel"]:
-        """Find story-map.md files under *root*, merge, and return; None if absent."""
+    def from_workspace(cls, root: "Path", *, on_file=None, project: Optional["Path"] = None) -> Optional["MarkdownStoryModel"]:
+        """Find story-map.md files under *root*, merge, and return; None if absent.
+
+        Each node names its file as a path from *project*, so a rule hit points at the file a reader opens;
+        without *project* the path is from *root*, or from the folder holding *root* when it is a file.
+        """
         root = Path(root).resolve()
         if root.is_file():
             candidates = [root]
@@ -886,18 +890,16 @@ class MarkdownStoryModel(StoryModel):
         if not candidates:
             return None
         merged = cls()
+        base = Path(project).resolve() if project is not None else (root.parent if root.is_file() else root)
         with merged.batch_schema_sync():
-            merged._read_workspace(root, candidates, on_file)
+            merged._read_workspace(root, candidates, base, on_file)
         if not merged.epics:
             return None
         return merged
 
-    def _read_workspace(self, root, candidates, on_file=None) -> None:
+    def _read_workspace(self, root, candidates, base, on_file=None) -> None:
         for md_path in candidates:
-            if root.is_file():
-                rel = root.name
-            else:
-                rel = str(md_path.relative_to(root)).replace("\\", "/")
+            rel = path_from(base, md_path)
             if on_file is not None:
                 on_file(rel)
             text = md_path.read_text(encoding="utf-8")
@@ -905,12 +907,12 @@ class MarkdownStoryModel(StoryModel):
                 parsed = type(self)().parse(text)
             except MarkdownParseError:
                 continue
+            # Stamp before merging: a second file's headings would otherwise land on the first file's epics.
+            parsed.attach_source_locations(text, rel)
             for epic in parsed.epics:
                 self.epics.append(epic)
-            self.attach_source_locations(text, rel)
-            if not getattr(self, "source", None):
-                from cdd_guidance.practices.stories.model.source_location import SourceLocation as _SL
-                self.source = _SL(rel, 1)
+            if not self.has_source_file:
+                self.source = SourceLocation(rel, 1)
         if not self.epics:
             return
         workspace = root.parent if root.is_file() else root

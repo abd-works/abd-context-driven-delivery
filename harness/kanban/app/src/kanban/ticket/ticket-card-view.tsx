@@ -4,6 +4,7 @@ import type { DragEvent, MouseEvent, RefObject } from 'react'
 import { ageOf, practiceOf } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { ColumnClient } from '../board/column-client'
+import { SessionActionIcon } from '../board/icons'
 import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
 import { skillOf } from './ticket-client'
@@ -35,12 +36,12 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
       {ticket.enabledSlugs(stage).map(slug => {
         const { key, label, color } = ticket.stateOf(slug)
         const skill = skillOf(slug)
-        const isOpen = state.tile?.ticket === ticket.name && state.tile.slugs.length === 1 && state.tile.slugs[0] === slug
+        const isOpen = state.tiles.some(tile => tile.ticket === ticket.name && tile.slugs.length === 1 && tile.slugs[0] === slug)
         const leave = () => onSkill('')
         const enter = () => onSkill(skill)
         const background = key === 'violations' ? color : practiceOf(slug)?.color
         return (
-          <button key={slug} className="segment-hit" title={skill} aria-label={`${skill}: ${label}`} aria-expanded={isOpen} onClick={withoutSelecting(() => page.cards.openSegment(ticket, stage, slug))} onMouseEnter={enter} onMouseLeave={leave} onFocus={enter} onBlur={leave}>
+          <button key={slug} className="segment-hit" title={label} aria-label={`${skill}: ${label}`} aria-expanded={isOpen} onClick={withoutSelecting(() => page.cards.openSegment(ticket, stage, slug))} onMouseEnter={enter} onMouseLeave={leave} onFocus={enter} onBlur={leave}>
             <span className="segment" style={{ background, opacity: ticket.lightOf(slug) }} />
           </button>
         )
@@ -65,7 +66,10 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
   return (
     <>
       <CardMarkView ticket={ticket} />
-      <div className="ticket-title">{ticket.title}</div>
+      <div className="ticket-title-line">
+        <div className="ticket-title">{ticket.title}</div>
+        <SplitActionView ticket={ticket} />
+      </div>
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
@@ -75,20 +79,42 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
         </button>
       ) : null}
       <div className="card-files">
+        <SessionActionsView ticket={ticket} />
         <FileViewsView ticket={ticket.name} slugs={ticket.enabledSlugs(stage)} />
       </div>
     </>
   )
 }
 
-function MoveRowView({ ticket }: { ticket: TicketClient }) {
-  const { page } = useBoard()
+function SessionActionView({ action, label, hint, isOff, onPress }: { action: string; label: string; hint: string; isOff: boolean; onPress: () => unknown }) {
   return (
-    <div className="card-moves">
-      <button className="action card-activate" disabled={ticket.isClosed} onClick={withoutSelecting(() => page.activation.start(ticket, ticket.isActive))}>
-        {ticket.isActive ? 'Close' : 'Activate'}
-      </button>
-    </div>
+    <button className="file-view" aria-label={label} title={hint} disabled={isOff} onClick={withoutSelecting(onPress)}>
+      <SessionActionIcon action={action} />
+    </button>
+  )
+}
+
+// Split and Handoff fill the chat's prompt, so they need a chat that can take a command.
+function useCannotFill(ticket: TicketClient): boolean {
+  const { page } = useBoard()
+  return ticket.isClosed || ticket.isLocked || !page.chat.canSend
+}
+
+function SplitActionView({ ticket }: { ticket: TicketClient }) {
+  return <SessionActionView action="split" label="Split" hint="Split into child tickets, one per story" isOff={useCannotFill(ticket)} onPress={() => ticket.fillSplit()} />
+}
+
+// What a card does for its session, as icons in its bottom-left corner.
+function SessionActionsView({ ticket }: { ticket: TicketClient }) {
+  const { page } = useBoard()
+  const cannotFill = useCannotFill(ticket)
+  const toggle = ticket.isActive ? { action: 'close', label: 'Close', hint: 'Close this session' } : { action: 'activate', label: 'Activate', hint: 'Activate this session' }
+  return (
+    <span className="file-views">
+      <SessionActionView action="next" label={ticket.runNextLabel} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
+      <SessionActionView action="handoff" label="Handoff" hint="Write a handoff for this session" isOff={cannotFill} onPress={() => ticket.fillHandoff()} />
+      <SessionActionView action={toggle.action} label={toggle.label} hint={toggle.hint} isOff={ticket.isClosed} onPress={() => page.activation.start(ticket, ticket.isActive)} />
+    </span>
   )
 }
 
@@ -119,19 +145,22 @@ function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: Co
   const { state } = useBoard()
   const card = useRef<HTMLDivElement>(null)
   const { opensLeft, ...place } = openCardPlace(ticket, spot)
-  const openTile = state.tile?.ticket === ticket.name ? state.tile.place : ''
+  // The card scrolls back into view whenever one of its bars opens or closes, since the card grows or shrinks with it.
+  const openPlaces = state.tiles
+    .filter(tile => tile.ticket === ticket.name)
+    .map(tile => tile.place)
+    .join(' ')
   // Braces matter: newer browsers return a promise from scrollIntoView, and React would call it as the effect's cleanup.
   useEffect(() => {
     card.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-  }, [openTile])
+  }, [openPlaces])
   useColumnsReachOpenCard(card)
   return (
     <div ref={card} className={opensLeft ? 'card-open grows-left' : 'card-open'} data-open-card={ticket.name} style={{ ...place, borderColor: borderColorOf(ticket), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}>
       <CardFaceView ticket={ticket} stage={stage} />
       {ticket.enabledSlugs(stage).map(slug => (
-        <TileView key={slug} ticket={ticket} stage={stage} slug={slug} hasPracticeChip />
+        <TileView key={slug} ticket={ticket} stage={stage} slug={slug} hasPracticeChip opensOnHover />
       ))}
-      <MoveRowView ticket={ticket} />
     </div>
   )
 }
@@ -143,20 +172,22 @@ export function TicketCardView({ ticket, spot }: { ticket: TicketClient; spot: C
   const stage = page.board.stageOf(ticket)
   const isSelected = page.board.selectedTicket?.address === ticket.address
   if (!stage) return null
-  // A locked ticket cannot use its arrows, so it cannot be dragged either; an open card is being worked, not moved.
-  const isDraggable = !ticket.isLocked && state.openCard !== ticket.name
+  // Every card drags, locked or not: Active session only keeps commands to the active session's chat, and a move runs
+  // nothing in a chat. An opened card closes when the drag ends.
+  const isDraggable = true
   const dragStarted = (event: DragEvent) => {
     event.dataTransfer.setData('text/plain', ticket.name)
     event.dataTransfer.effectAllowed = 'move'
     page.store.change({ dragged: ticket.address })
   }
+  const dragEnded = () => page.store.change(current => ({ dragged: null, openCard: current.openCard === ticket.name ? null : current.openCard }))
   return (
     <div
       className={['ticket-card', ticket.isActive ? 'is-active' : '', state.dragged === ticket.address ? 'is-dragged' : ''].filter(Boolean).join(' ')}
       data-ticket={ticket.name}
       draggable={isDraggable}
       onDragStart={dragStarted}
-      onDragEnd={() => page.store.change({ dragged: null })}
+      onDragEnd={dragEnded}
       onClick={() => ticket.select()}
       style={{ borderColor: borderColorOf(ticket, isSelected), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}
     >
@@ -164,7 +195,6 @@ export function TicketCardView({ ticket, spot }: { ticket: TicketClient; spot: C
       <button className="card-hit" aria-label={`Show ${ticket.title}`} draggable={isDraggable} />
       <CardFaceView ticket={ticket} stage={stage} />
       {state.openCard === ticket.name ? <OpenCardView ticket={ticket} stage={stage} spot={spot} /> : null}
-      <MoveRowView ticket={ticket} />
     </div>
   )
 }

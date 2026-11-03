@@ -4,7 +4,7 @@
  */
 import { expect, type Locator, type Page } from '@playwright/test'
 
-import { BY_ITS_TITLE, card, openBoard, turnOffActiveSessionOnly } from '../../support'
+import { card, dragCard, openBoard, turnOffActiveSessionOnly } from '../../support'
 import type { BacklogItemsDriver } from './backlog_items.spec.shared'
 
 // A segment names its skill and the state of that fidelity's work, as `/practices-stories-stories-story-map: in progress`.
@@ -39,13 +39,17 @@ export class BacklogItemsPageDriver implements BacklogItemsDriver {
     await expect(this.item(title)).toBeVisible()
   }
 
+  // A person starts an item by dragging it into Discovery's In progress, then chooses the folder its session works in.
   async start(title: string): Promise<void> {
-    await this.page.getByRole('button', { name: `Move ${title} into Discovery` }).click()
+    await dragCard(this.page, this.item(title), this.page.locator('[data-column="Discovery"] .card-list').first())
+    const roots = this.page.getByRole('dialog')
+    await roots.getByRole('button', { name: 'Use whole repository' }).click()
+    await roots.getByRole('button', { name: 'Done' }).click()
     await expect(this.ticketTitled(title)).toBeVisible()
   }
 
   async moveToBacklog(ticket: string): Promise<void> {
-    await card(this.page, ticket).dragTo(this.page.locator('[data-column="Backlog"] .card-list'), { sourcePosition: BY_ITS_TITLE })
+    await dragCard(this.page, card(this.page, ticket), this.page.locator('[data-column="Backlog"] .card-list'))
     await expect(card(this.page, ticket)).toHaveCount(0)
   }
 

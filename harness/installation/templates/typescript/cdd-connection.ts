@@ -3,6 +3,8 @@ import { delimiter, join } from 'node:path'
 import { createInterface } from 'node:readline'
 import type { Readable, Writable } from 'node:stream'
 
+import type { CddProgress } from './cdd-shared'
+
 // Written by the installer from the checkout and the Python it ran with.
 const SOURCE_ROOT = __SOURCE_ROOT__
 const PYTHON = __PYTHON__
@@ -25,8 +27,8 @@ export class CddNotConnectedError extends Error {
 }
 
 type Server = ChildProcessByStdio<Writable, Readable, null>
-type Reply = { id?: number; method?: string; result?: unknown; error?: { message?: string } }
-type Waiting = { label: string; resolve: (result: unknown) => void; reject: (failure: Error) => void; timer: ReturnType<typeof setTimeout> }
+type Reply = { id?: number; method?: string; params?: { progressToken?: number; message?: string }; result?: unknown; error?: { message?: string } }
+type Waiting = { server: Server; label: string; resolve: (result: unknown) => void; reject: (failure: Error) => void; timer: ReturnType<typeof setTimeout>; step?: string }
 type ToolResult = { content?: { text?: string }[]; isError?: boolean }
 
 const pythonPathOf = (root: string): string =>
@@ -47,6 +49,11 @@ export class CddConnection {
     const text = result.content?.[0]?.text
     if (result.isError || text === undefined) throw new CddToolError(tool, text ?? 'no result')
     return this.parsed<Result>(tool, text)
+  }
+
+  // The newest step each running call has reported, for a page waiting on one; a finished call reports nothing.
+  progress(): CddProgress[] {
+    return [...this.waiting.values()].flatMap(waiting => (waiting.step ? [{ tool: waiting.label, message: waiting.step }] : []))
   }
 
   async close(): Promise<void> {
@@ -82,8 +89,10 @@ export class CddConnection {
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => this.settled(id)?.reject(new CddToolError(label, 'timed out')), LONGEST_TOOL_MILLISECONDS)
-      this.waiting.set(id, { label, resolve, reject, timer })
-      this.send(server, { jsonrpc: '2.0', id, method, params })
+      this.waiting.set(id, { server, label, resolve, reject, timer })
+      // Every tool call asks for progress under its own id, so a report finds the call it belongs to.
+      const sent = method === 'tools/call' ? { ...params, _meta: { progressToken: id } } : params
+      this.send(server, { jsonrpc: '2.0', id, method, params: sent })
     })
   }
 
@@ -94,11 +103,17 @@ export class CddConnection {
   // The server's own requests and notifications carry a method, and only replies settle a call.
   private received(line: string): void {
     const reply = this.replyIn(line)
+    if (reply?.method === 'notifications/progress') return this.reported(reply)
     if (!reply || reply.method !== undefined || reply.id === undefined) return
     const waiting = this.settled(reply.id)
     if (!waiting) return
     if (reply.error) waiting.reject(new CddToolError(waiting.label, reply.error.message ?? 'no message'))
     else waiting.resolve(reply.result)
+  }
+
+  private reported(notification: Reply): void {
+    const waiting = this.waiting.get(notification.params?.progressToken ?? -1)
+    if (waiting && notification.params?.message) waiting.step = notification.params.message
   }
 
   private replyIn(line: string): Reply | null {
@@ -116,9 +131,12 @@ export class CddConnection {
     return waiting
   }
 
+  // Only the calls sent to the server that stopped fail: after a restart, a closed server exits while its replacement is
+  // already answering.
   private stopped(server: Server, detail: string): void {
     void this.server?.then(current => (current === server ? (this.server = null) : null), () => null)
-    for (const id of [...this.waiting.keys()]) this.settled(id)?.reject(new CddNotConnectedError(detail))
+    const sentToIt = [...this.waiting].filter(([, waiting]) => waiting.server === server).map(([id]) => id)
+    for (const id of sentToIt) this.settled(id)?.reject(new CddNotConnectedError(detail))
   }
 
   // The server sends a failed operation's error as plain text, and every successful operation as JSON.

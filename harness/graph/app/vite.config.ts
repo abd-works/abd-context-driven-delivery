@@ -1,6 +1,16 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vitest/config';
+
+const resolved = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
+
+// The generated graph classes and views sit in the install, outside this package, so they take React and Monaco from here.
+const aliases = {
+  '@cdd': resolved('../../../.claude/language-adapters/typescript'),
+  react: resolved('./node_modules/react'),
+  '@monaco-editor/react': resolved('./node_modules/@monaco-editor/react'),
+};
 
 function ping(): Plugin {
   return {
@@ -32,6 +42,7 @@ function ping(): Plugin {
 
 export default defineConfig({
   plugins: [react(), ping()],
+  resolve: { alias: aliases },
   test: {
     environment: 'jsdom',
   },

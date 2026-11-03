@@ -10,7 +10,9 @@ import { cellPlace } from './tile-client'
 const REVIEWED_EDGE_PIXELS = 7
 const EDGE_PIXELS = 3
 
-type TileProps = { ticket: TicketClient; stage: ColumnClient; slug: string; hasPracticeChip: boolean }
+// opensOnHover: a hover opens the bar for a look on an opened card. The details grid opens one only on a press, so
+// moving the pointer across the grid does not open bar after bar.
+type TileProps = { ticket: TicketClient; stage: ColumnClient; slug: string; hasPracticeChip: boolean; opensOnHover: boolean }
 
 function TileNameView({ ticket, stage, slug }: TileProps) {
   const { page } = useBoard()
@@ -57,15 +59,15 @@ function TileHeadingView(props: TileProps) {
 }
 
 export function TileView(props: TileProps) {
-  const { ticket, stage, slug } = props
-  const { page, state } = useBoard()
+  const { ticket, stage, slug, opensOnHover } = props
+  const { page } = useBoard()
   const practice = practiceOf(slug)
   const isOn = ticket.isEnabled(practice?.key ?? '')
   const place = cellPlace(stage.name, slug)
   const { key } = ticket.stateOf(slug)
   const borderColor = key === 'violations' ? 'var(--violations)' : ticket.isNext(stage, slug) ? 'var(--accent)' : 'var(--border)'
-  const hover = isOn ? { onMouseEnter: () => page.tiles.hoverIn({ ticket: ticket.name, stage, place, slugs: [slug] }), onMouseLeave: () => page.tiles.hoverOut(place) } : {}
-  const open = isOn && page.tiles.isOpen(ticket.name, place) ? state.tile : null
+  const hover = isOn && opensOnHover ? { onMouseEnter: () => page.tiles.hoverIn({ ticket: ticket.name, stage, place, slugs: [slug] }), onMouseLeave: () => page.tiles.hoverOut(ticket.name, place) } : {}
+  const open = isOn ? page.tiles.openOn(ticket.name, place) : undefined
   return (
     <div className="skill-cell" data-tile={slug} {...hover} style={{ opacity: ticket.lightOf(slug), borderColor, borderLeftColor: practice?.color, borderLeftWidth: key === 'done' ? REVIEWED_EDGE_PIXELS : EDGE_PIXELS }}>
       <TileHeadingView {...props} />

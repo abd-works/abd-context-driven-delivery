@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -22,3 +23,11 @@ class SourceLocation:
         if start > 0:
             return f"{self.file}:{start}"
         return self.file
+
+
+def path_from(base: Path, path: Path) -> str:
+    """*path* as a path from *base*, the way a node names its file; its bare name when it sits outside *base*."""
+    resolved = Path(path).resolve()
+    if base != resolved and base not in resolved.parents:
+        return resolved.name
+    return resolved.relative_to(base).as_posix()

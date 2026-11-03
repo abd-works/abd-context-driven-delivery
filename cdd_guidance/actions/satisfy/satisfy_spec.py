@@ -11,13 +11,20 @@ from harness.installation.bootstrap import ensure_import_path
 ensure_import_path(_REPO_ROOT)
 
 from expects import contain, expect
-from mamba import description, it
+from mamba import after, before, description, it
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from satisfy.satisfy import Satisfy
+from space.session.throwaway_project import ThrowawayProject
 
 
-with description("satisfy on practice guidance"):
+with description("satisfy on practice guidance") as self:
+    with before.each:
+        self.throwaway = ThrowawayProject()
+
+    with after.each:
+        self.throwaway.close()
+
     with it("should return validate rules and generate-fixes instructions without error"):
         practice = CleanEngineering(fidelity="code", format="python")
         text = Satisfy().satisfy([practice])

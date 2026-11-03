@@ -10,6 +10,12 @@ export type CddApi = { post<Result>(path: string, body: Record<string, unknown>)
 // One tool's route, as plain data any server framework can mount.
 export type CddRoute = { path: string; run: (cdd: CddConnection, request: CddRequest) => Promise<unknown> }
 
+// The newest step a running call has reported, such as which file a long load is reading.
+export type CddProgress = { tool: string; message: string }
+
+// What the running calls are doing, for a page waiting on one. Mount it beside the objects' routes.
+export const cddProgressRoutes: CddRoute[] = [{ path: '/cdd/progress', run: async cdd => cdd.progress() }]
+
 // The part of a tool's published JSON Schema that says what one argument may be.
 export type ArgumentSchema = { type?: string; items?: ArgumentSchema; anyOf?: ArgumentSchema[] }
 

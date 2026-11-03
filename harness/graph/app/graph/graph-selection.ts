@@ -1,4 +1,4 @@
-import type { GraphTree, RuleHit } from '../filter/FilterClient';
+import type { GraphTreeData, RuleHitData } from '@cdd/harness/graph/graph';
 import type { ViolationFocus } from '../source/violation-prompt';
 
 export type GraphSelection = {
@@ -7,7 +7,7 @@ export type GraphSelection = {
   violation?: ViolationFocus;
 };
 
-export function ruleHits(node: { violation?: string; violations?: RuleHit[] }): RuleHit[] {
+export function ruleHits(node: { violation?: string; violations?: RuleHitData[] }): RuleHitData[] {
   if (node.violations?.length) {
     return node.violations;
   }
@@ -17,7 +17,7 @@ export function ruleHits(node: { violation?: string; violations?: RuleHit[] }): 
   return [];
 }
 
-export function selectionForRule(ownerId: string, node: GraphTree): GraphSelection {
+export function selectionForRule(ownerId: string, node: GraphTreeData): GraphSelection {
   const hits = ruleHits(node);
   const first = hits[0];
   const violating = node.status === 'violating' && hits.length > 0;

@@ -62,6 +62,36 @@ with description("Stories"):
         with it("should retain fidelity scenarios"):
             expect(self.stories.fidelities.current.fidelity).to(equal("scenarios"))
 
+        # Generate tells the agent to save story tests at the declared path, so a file saved there below its story map
+        # must be one validate reads back onto its Story, or every generated test goes unchecked.
+        with context("with a story test saved at its declared Python path below the story map"):
+            with before.each:
+                import tempfile
+
+                from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+                self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
+                (self.root / "story-map.md").write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
+                names = {"{epic}": "move-work-on-board", "{sub-epic}": "display-board", "{story}": "open-board", "{story_snake}": "open_board"}
+                self.filled = self.stories.fidelities.current.output_files["python"]
+                for name, value in names.items():
+                    self.filled = self.filled.replace(name, value)
+                story_test = self.root / self.filled
+                story_test.parent.mkdir(parents=True)
+                story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
+                self.model = StoryModel.load_files([str(story_test)], self.root)
+
+            with after.each:
+                import shutil
+
+                shutil.rmtree(self.root, ignore_errors=True)
+
+            with it("should sit in epic, sub-epic, and story folders"):
+                expect(self.filled).to(equal("move-work-on-board/display-board/open-board/open_board_story.test.py"))
+
+            with it("should give its scenarios to the Story of the same name on the map"):
+                expect([len(story.scenarios) for story in self.model.every_story()]).to(equal([1]))
+
     with context("that is constructed with fidelity acceptance_tests"):
         with it("should default format to python"):
             expect(Stories(fidelity="acceptance_tests").format).to(equal("python"))

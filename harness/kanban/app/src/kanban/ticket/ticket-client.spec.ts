@@ -1,36 +1,62 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
-import { boardJson, discovery, ticketJson } from 'test-utils/board-examples'
-import { pageOn, withChat } from 'test-utils/board-page-support'
+import { BoardOnProject, ticketOn } from 'test-utils/board-page-support'
+
 import { skillOf } from './ticket-client'
 
+// checkout-flow is the active ticket, held by a violation on its story map; billing-report has nothing recorded yet.
+const ACTIVE = 'checkout-flow'
+const OTHER = 'billing-report'
+
+let board: BoardOnProject
+
+beforeAll(async () => {
+  board = await BoardOnProject.start()
+})
+
+beforeEach(() => board.reset())
+
+afterAll(() => board.close())
+
 describe('Restrict Actions To Active Session', () => {
-  it('should lock a ticket that is not the active session', () => {
-    const { page } = pageOn(boardJson([discovery([ticketJson('other')])], 'sign-up'))
-    expect(page.ticket(ticketJson('other')).isLocked).toBe(true)
+  it('should lock a ticket that is not the active session', async () => {
+    const { page } = await board.page()
+    expect(ticketOn(page, OTHER).isLocked).toBe(true)
   })
 
-  it('should leave the active ticket open', () => {
-    const { page } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
-    expect(page.ticket(ticketJson('sign-up')).isLocked).toBe(false)
+  it('should leave the active ticket open', async () => {
+    const { page } = await board.page()
+    expect(ticketOn(page, ACTIVE).isLocked).toBe(false)
   })
 
-  it('should unlock every ticket with Active session only off', () => {
-    const { page } = pageOn(boardJson([discovery([ticketJson('other')])], 'sign-up'))
+  it('should unlock every ticket with Active session only off', async () => {
+    const { page } = await board.page()
     page.layout.toggleOnlyActive()
-    expect(page.ticket(ticketJson('other')).isLocked).toBe(false)
+    expect(ticketOn(page, OTHER).isLocked).toBe(false)
   })
 })
 
 describe('Display Ticket Details', () => {
-  it('should say what next and that another session must be activated', () => {
-    const { page } = pageOn(boardJson([discovery([ticketJson('other')])], 'sign-up'))
-    expect(page.ticket(ticketJson('other')).footer).toBe('No handoff yet · Next: stories-story_map, generate · Activate this session to run actions')
+  it('should say what runs next', async () => {
+    const { page } = await board.page()
+    expect(ticketOn(page, OTHER).nextNote).toBe('Next: stories-story_map, generate')
   })
 
-  it('should name a split ticket by its parent', () => {
-    const { page } = pageOn(boardJson([discovery()]))
-    expect(page.ticket(ticketJson('child', { scope: 'story', parent: 'epic' })).place).toBe('child · story of epic · Discovery · in progress')
+  it('should say another session must be activated to run it', async () => {
+    const { page } = await board.page()
+    expect(ticketOn(page, OTHER).lockNote).toBe('Activate this session to run actions')
+  })
+
+  it('should name a split ticket by its parent', async () => {
+    board.write('.sessions/child/session.json', JSON.stringify({ name: 'child', title: 'Child', scope: 'story', parent: 'epic', workpath: board.root, repo_path: board.root }))
+    board.write('.sessions/child/session.log', '')
+    const { page } = await board.page()
+    expect(ticketOn(page, 'child').origin).toBe('story of epic')
+  })
+
+  it("should name the ticket's stage and how far it has got there", async () => {
+    const { page } = await board.page()
+    expect(ticketOn(page, OTHER).stagePlace).toBe('Discovery · in progress')
   })
 
   it('should keep a practice with two words in its skill', () => {
@@ -38,27 +64,45 @@ describe('Display Ticket Details', () => {
   })
 })
 
+describe('Review Fidelity', () => {
+  describe('with a story map that has passed validate', () => {
+    async function validated() {
+      board.logOn(OTHER, 'generate /work stories story_map markdown stories', 'validate Stories story_map')
+      const { page } = await board.page()
+      page.layout.toggleOnlyActive()
+      return page
+    }
+
+    it('should offer the review with no chat connected, since it is the person\'s own approval', async () => {
+      expect(ticketOn(await validated(), OTHER).canRunNext).toBe(true)
+    })
+
+    it('should show the review done once Run next records it', async () => {
+      const page = await validated()
+      await ticketOn(page, OTHER).runNext()
+      expect(ticketOn(page, OTHER).actionsOf('stories-story_map').review).toBe('done')
+    })
+  })
+})
+
 describe('Move Ticket', () => {
   it('should read the board again and select the ticket where it landed', async () => {
-    const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
-    server.answer('POST /api/ticket/sign-up/move-next', ticketJson('sign-up', { column: 'Specification' }))
-    await page.ticket(ticketJson('sign-up')).moveNext()
-    expect(page.store.state.selected).toBe('Specification/sign-up')
+    const { page } = await board.page()
+    await ticketOn(page, 'ready-to-move').moveNext()
+    expect(page.store.state.selected).toBe('Specification/ready-to-move')
   })
 
   it('should select a dragged ticket in the stage it was dropped on', async () => {
-    const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
-    server.answer('POST /api/ticket/sign-up/move-to', ticketJson('sign-up', { column: 'Implementation' }))
-    await page.ticket(ticketJson('sign-up')).moveTo('Implementation', true)
-    expect(page.store.state.selected).toBe('Implementation/sign-up')
+    const { page } = await board.page()
+    await ticketOn(page, 'move-me').moveTo('Implementation', true)
+    expect(page.store.state.selected).toBe('Implementation/move-me')
   })
 
   describe('that a person has moved to the Backlog', () => {
     async function moved() {
-      const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
-      page.store.change({ openCard: 'sign-up' })
-      server.answer('POST /api/ticket/sign-up/move-previous', { title: 'sign-up', text: '', path: 'x.md', last_activity: '' })
-      await page.ticket(ticketJson('sign-up')).movePrevious()
+      const { page } = await board.page()
+      page.store.change({ openCard: 'back-to-backlog' })
+      await ticketOn(page, 'back-to-backlog').movePrevious()
       return page
     }
 
@@ -67,121 +111,136 @@ describe('Move Ticket', () => {
     })
 
     it('should select its item', async () => {
-      expect((await moved()).store.state.selected).toBe('Backlog/sign-up')
+      expect((await moved()).store.state.selected).toBe('Backlog/Back to backlog')
     })
   })
 
-  it("should let a ticket in progress in Discovery be dropped on the Backlog", () => {
-    const { page } = pageOn(boardJson([discovery()]))
-    expect(page.ticket(ticketJson('sign-up')).canDropOn('Backlog')).toBe(true)
+  it('should let a ticket in any column be dropped on the Backlog', async () => {
+    const { page } = await board.page()
+    await ticketOn(page, 'almost-shipped').dropOn('Backlog')
+    expect(page.board.backlogItems.map(item => item.title)).toContain('Almost shipped')
   })
 
-  it("should keep a ticket done in Discovery off the Backlog", () => {
-    const { page } = pageOn(boardJson([discovery()]))
-    expect(page.ticket(ticketJson('sign-up', { is_done: true })).canDropOn('Backlog')).toBe(false)
-  })
-
-  it('should let only the active ticket, or one done in Implementation, be dropped on Complete', () => {
-    const { page } = pageOn(boardJson([discovery()], 'sign-up'))
-    expect([page.ticket(ticketJson('sign-up')).canDropOn('Complete'), page.ticket(ticketJson('other')).canDropOn('Complete')]).toEqual([true, false])
+  it('should let only the active ticket, or one done in Implementation, be dropped on Complete', async () => {
+    const { page } = await board.page()
+    expect([ticketOn(page, ACTIVE).canDropOn('Complete'), ticketOn(page, 'almost-shipped').canDropOn('Complete'), ticketOn(page, OTHER).canDropOn('Complete')]).toEqual([true, true, false])
   })
 })
 
 describe('Run Next Step', () => {
-  it('should name the step that runs next', () => {
-    const { page } = pageOn(boardJson([discovery()]))
-    expect(page.ticket(ticketJson('sign-up')).runNextLabel).toBe('Run next: generate')
+  it('should name the step that runs next', async () => {
+    const { page } = await board.page()
+    expect(ticketOn(page, OTHER).runNextLabel).toBe('Run next: generate')
   })
 
-  it('should say fix violations on held violations', () => {
-    const { page } = pageOn(boardJson([discovery()]))
-    expect(page.ticket(ticketJson('sign-up', { next_action: 'satisfy' })).runNextLabel).toBe('Run next: fix violations')
+  it('should say fix violations on held violations', async () => {
+    const { page } = await board.page()
+    expect(ticketOn(page, ACTIVE).runNextLabel).toBe('Run next: fix violations')
   })
 
   describe('with generate next', () => {
     async function ran() {
-      const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
-      withChat(page, server)
-      server.answer('POST /api/ticket/sign-up/generate-commands', ['/actions-render a', '/actions-generate b'])
-      await page.ticket(ticketJson('sign-up')).runNext()
-      return server
+      board.activate(OTHER)
+      const { page, asked } = await board.page()
+      const chat = await board.connectChat(page)
+      await ticketOn(page, OTHER).runNext()
+      return { asked, chat }
     }
 
     it('should ask for the commands of the default format', async () => {
-      expect((await ran()).posted('/api/ticket/sign-up/generate-commands')[0]?.body).toEqual({ fidelities: ['stories-story_map'], formats: ['markdown'] })
+      const { asked } = await ran()
+      expect(asked.find(request => request.path === `/api/ticket/${OTHER}/generate-commands`)?.body).toEqual({ fidelities: ['stories-story_map'], formats: ['markdown'] })
     })
 
     it('should send those commands in order', async () => {
-      expect((await ran()).posted('/api/chats/chat-1/commands').map(request => request.body)).toEqual([
-        { kind: 'command', text: '/actions-render a' },
-        { kind: 'command', text: '/actions-generate b' },
-      ])
+      const { chat } = await ran()
+      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json' }])
+    })
+  })
+
+  // Run next reaches back to an earlier stage's unfinished fidelity, whose default format is that stage's, not the
+  // ticket's own.
+  describe('with generate next on a fidelity of a stage the ticket has moved past', () => {
+    async function ran() {
+      board.logOn(OTHER, 'move Specification')
+      board.activate(OTHER)
+      const { page } = await board.page()
+      const chat = await board.connectChat(page)
+      await ticketOn(page, OTHER).runNext()
+      return { page, chat }
+    }
+
+    it("should generate it in its own stage's default format", async () => {
+      const { chat } = await ran()
+      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json' }])
+    })
+
+    it('should mark its tile as the next one', async () => {
+      const { page } = await ran()
+      const discovery = page.board.stageNamed('Discovery')!
+      expect(ticketOn(page, OTHER).isNext(discovery, 'stories-story_map')).toBe(true)
     })
   })
 
   it('should fill the prompt on validate', async () => {
-    const { page, server } = pageOn(boardJson([discovery()], 'sign-up'))
-    withChat(page, server)
-    await page.ticket(ticketJson('sign-up', { next_action: 'validate' })).runNext()
-    expect(server.posted('/api/chats/chat-1/commands')[0]?.body).toEqual({ kind: 'fill', text: '/actions-validate stories-story-map' })
+    board.activate('back-to-backlog')
+    const { page } = await board.page()
+    const chat = await board.connectChat(page)
+    await ticketOn(page, 'back-to-backlog').runNext()
+    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: '/actions-validate stories-story-map session=.sessions/back-to-backlog/session.json' }])
   })
 
   describe('with violations held and no chat connected', () => {
-    function heldPage() {
-      const { page, server } = pageOn(boardJson([discovery()], 'sign-up'))
-      server.answer('POST /api/ticket/sign-up/report {"fidelity":"stories-story_map"}', { path: 'r.md', text: '', rules: [], has_saved_graph: true })
-      return { page, ticket: page.ticket(ticketJson('sign-up', { next_action: 'satisfy' })) }
-    }
-
-    it('should still offer Run next', () => {
-      expect(heldPage().ticket.canRunNext).toBe(true)
+    it('should still offer Run next', async () => {
+      const { page } = await board.page()
+      expect(ticketOn(page, ACTIVE).canRunNext).toBe(true)
     })
 
     it('should open the report', async () => {
-      const { page, ticket } = heldPage()
-      await ticket.runNext()
+      const { page } = await board.page()
+      await ticketOn(page, ACTIVE).runNext()
       expect(page.store.state.panels.map(panel => panel.kind)).toEqual(['report'])
     })
   })
 
-  it('should stay off with no chat to send to', () => {
-    const { page } = pageOn(boardJson([discovery()], 'sign-up'))
-    expect(page.ticket(ticketJson('sign-up')).canRunNext).toBe(false)
+  it('should stay off with no chat to send to', async () => {
+    board.activate(OTHER)
+    const { page } = await board.page()
+    expect(ticketOn(page, OTHER).canRunNext).toBe(false)
   })
 })
 
 describe('Choose Ticket Practices', () => {
   async function turnedOff() {
-    const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up', { title: 'Sign up' })])], 'sign-up'))
-    server.answer('POST /api/ticket/sign-up/enable-practice', ticketJson('sign-up', { title: 'Sign up' }))
-    page.store.change({ tile: { ticket: 'sign-up', place: 'cell-Discovery-ddd-bounded_context', stage: 'Discovery', slugs: ['ddd-bounded_context'], action: 'generate', picked: [], isPinned: true, files: {} } })
-    await page.ticket(ticketJson('sign-up', { title: 'Sign up' })).enablePractice('ddd', false)
+    const { page } = await board.page()
+    page.store.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded_context', stage: 'Discovery', slugs: ['ddd-bounded_context'], action: 'generate', picked: [], isPinned: true, files: {} }] })
+    await ticketOn(page, ACTIVE).enablePractice('ddd', false)
     return page
   }
 
   it('should let go of the tile of a practice turned off', async () => {
-    expect((await turnedOff()).store.state.tile).toBeNull()
+    expect((await turnedOff()).store.state.tiles).toEqual([])
   })
 
   it('should say so and where it was saved', async () => {
-    expect((await turnedOff()).store.state.toasts[0]?.text).toBe('DDD off for Sign up · saved to .sessions/sign-up/session.json')
+    expect((await turnedOff()).store.state.toasts[0]?.text).toBe('DDD off for Checkout flow · saved to .sessions/checkout-flow/session.json')
   })
 })
 
 describe('Write Ticket Handoff', () => {
   it('should fill the prompt with the handoff command', async () => {
-    const { page, server } = pageOn(boardJson([discovery()], 'sign-up'))
-    withChat(page, server)
-    await page.ticket(ticketJson('sign-up')).fillHandoff()
-    expect(server.posted('/api/chats/chat-1/commands')[0]?.body).toEqual({ kind: 'fill', text: 'Write a handoff for ticket sign-up with /space-handoff-handoff-session.' })
+    const { page } = await board.page()
+    const chat = await board.connectChat(page)
+    await ticketOn(page, ACTIVE).fillHandoff()
+    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.' }])
   })
 })
 
 describe('Satisfy Violations From Band', () => {
   it('should fill the prompt with the fidelities that have violations', async () => {
-    const { page, server } = pageOn(boardJson([discovery()], 'sign-up'))
-    withChat(page, server)
-    await page.ticket(ticketJson('sign-up', { progress: { 'stories-story_map': 'violations' } })).fillSatisfy()
-    expect(server.posted('/api/chats/chat-1/commands')[0]?.body).toEqual({ kind: 'fill', text: '/actions-satisfy stories-story-map' })
+    const { page } = await board.page()
+    const chat = await board.connectChat(page)
+    await ticketOn(page, ACTIVE).fillSatisfy()
+    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: '/actions-satisfy stories-story-map session=.sessions/checkout-flow/session.json' }])
   })
 })

@@ -154,8 +154,8 @@ default_format: python
 stage: specification
 outputs:
   root: src
-  python: "{module}/{module}-model.py"
-  typescript: "{module}/{module}-model.ts"
+  python: "{module}/"
+  typescript: "{module}/"
   markdown: "{module}/{module}-model.md"
 ```
 

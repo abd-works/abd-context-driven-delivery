@@ -53,6 +53,18 @@ export const moveTicketBehavior = shareBehavior<MoveTicketDriver>(({ describe, i
       })
     })
 
+    describe('that a person has dragged into the Backlog from a later stage', () => {
+      before(() => driver().dragTo('pricing-rules', 'Backlog', false))
+
+      it("should show an item in the Backlog with the ticket's title", async () => {
+        expect(await driver().backlogTitles()).toContain('Pricing rules')
+      })
+
+      it("should take the ticket off the board's stages", async () => {
+        expect(await driver().isOnTheStages('pricing-rules')).toEqual(false)
+      })
+    })
+
     describe('that a person has moved back to the previous column', () => {
       before(() => driver().movePrevious('pricing-rules'))
 

@@ -25,7 +25,7 @@ class MoveTicketAdapterDriver implements MoveTicketDriver {
   }
 
   async dragTo(ticket: string, stage: string, done: boolean): Promise<void> {
-    this.moved.set(ticket, (await this.ticket(ticket).moveTo(stage, done)).toJSON())
+    this.moved.set(ticket, (await this.ticket(ticket).moveTo(stage, done)) as TicketData)
   }
 
   async movePrevious(ticket: string): Promise<void> {

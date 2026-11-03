@@ -70,11 +70,12 @@ function ValidateLineView({ ticket, tile, bar }: { ticket: TicketClient; tile: T
         validate
       </button>
       <StepMarkView step={bar.validate} />
-      {bar.validate.text ? <span className="step-text">{bar.validate.text}</span> : null}
       {reportSlug ? (
         <button className={bar.hasViolations ? 'violations-link' : 'report-link'} onClick={() => void page.panels.openReport(ticket.name, reportSlug)}>
-          report
+          {bar.hasViolations ? `${bar.validate.text} found` : 'report'}
         </button>
+      ) : bar.validate.text ? (
+        <span className="step-text">{bar.validate.text}</span>
       ) : null}
     </div>
   )
@@ -99,7 +100,7 @@ export function ActionBarView({ ticket, stage, tile, onMouseEnter, onMouseLeave 
   const { page } = useBoard()
   const bar = page.tileActions.barOf(ticket, stage, tile)
   return (
-    <div className="expansion" data-bar={tile.place} onClick={() => page.tiles.pin()} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div className="expansion" data-bar={tile.place} onClick={() => page.tiles.pin(tile.ticket, tile.place)} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <div className="bar-line bar-files">
         <FileViewsView ticket={ticket.name} slugs={tile.slugs} />
       </div>

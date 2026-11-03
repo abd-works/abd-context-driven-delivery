@@ -1,8 +1,8 @@
-import type { InventoryBundle, PracticeInventory } from './filter/FilterClient';
+import type { InventoryData, PracticeInventoryData } from '@cdd/harness/graph/graph';
 
-export function normalizeInventoryBundle(raw: unknown): InventoryBundle {
+export function normalizeInventoryBundle(raw: unknown): InventoryData {
   if (raw && typeof raw === 'object' && 'practices' in raw) {
-    const bundle = raw as InventoryBundle;
+    const bundle = raw as InventoryData;
     return {
       practices: bundle.practices ?? {},
       overlays: bundle.overlays ?? [],
@@ -10,7 +10,7 @@ export function normalizeInventoryBundle(raw: unknown): InventoryBundle {
     };
   }
   return {
-    practices: (raw ?? {}) as Record<string, PracticeInventory>,
+    practices: (raw ?? {}) as Record<string, PracticeInventoryData>,
     overlays: [],
     available_overlays: [],
   };

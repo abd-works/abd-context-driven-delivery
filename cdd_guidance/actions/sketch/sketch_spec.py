@@ -14,14 +14,21 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.modules.pop("sketch", None)
 
 from expects import be_true, contain, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
+from space.session.throwaway_project import ThrowawayProject
 from sketch import Sketch
 from harness.agent_tools.agent_tools import AgentToolSet
 
 
-with description("Sketch toolset"):
+with description("Sketch toolset") as self:
+    with before.each:
+        self.throwaway = ThrowawayProject()
+
+    with after.each:
+        self.throwaway.close()
+
     with context("manifest signature"):
         with it("exposes find_template, save_sketch, list_sketches as tools"):
             sig = Sketch.manifest.signature

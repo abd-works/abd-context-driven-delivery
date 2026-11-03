@@ -14,27 +14,27 @@
                         <mxGeometry x="-1020" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Display Board" link="story-map.md#s-board-pane----display-board" id="s-board-pane----display-board">
+                <UserObject label="Display Board" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-960" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Display Connected Status" link="story-map.md#s-board-pane----display-board" id="s-board-pane----display-board/display-connected-status">
+                <UserObject label="Display Connected Status" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board/display-connected-status">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-960" y="509" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Draw Board Columns" link="story-map.md#s-board-pane----display-board" id="s-board-pane----display-board/draw-board-columns">
+                <UserObject label="Draw Board Columns" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board/draw-board-columns">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-960" y="561" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Refresh Board After Tool Calls" link="story-map.md#s-board-pane----display-board" id="s-board-pane----display-board/refresh-board-after-tool-calls">
+                <UserObject label="Refresh Board After Tool Calls" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board/refresh-board-after-tool-calls">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-960" y="613" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Announce Ticket Changes" link="story-map.md#s-board-pane----display-board" id="s-board-pane----display-board/announce-ticket-changes">
+                <UserObject label="Announce Ticket Changes" link="story-map.md#s-board-app----display-board" id="s-board-app----display-board/announce-ticket-changes">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-960" y="665" width="50" height="50" as="geometry"/>
                     </mxCell>
@@ -54,42 +54,42 @@
                         <mxGeometry x="-900" y="561" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Display Backlog Items As Tickets" link="story-map.md#s-board-pane----display-backlog-items-as-tickets" id="s-board-pane----display-backlog-items-as-tickets">
+                <UserObject label="Display Backlog Items As Tickets" link="story-map.md#s-board-app----display-backlog-items-as-tickets" id="s-board-app----display-backlog-items-as-tickets">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-840" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Display Ticket Card" link="story-map.md#s-board-pane----display-ticket-card" id="s-board-pane----display-ticket-card">
+                <UserObject label="Display Ticket Card" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-780" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Display Sessions As Tickets" link="story-map.md#s-board-pane----display-ticket-card" id="s-board-pane----display-ticket-card/display-sessions-as-tickets">
+                <UserObject label="Display Sessions As Tickets" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card/display-sessions-as-tickets">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-780" y="509" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Place Ticket In Column" link="story-map.md#s-board-pane----display-ticket-card" id="s-board-pane----display-ticket-card/place-ticket-in-column">
+                <UserObject label="Place Ticket In Column" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card/place-ticket-in-column">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-780" y="561" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Display Active Ticket" link="story-map.md#s-board-pane----display-ticket-card" id="s-board-pane----display-ticket-card/display-active-ticket">
+                <UserObject label="Display Active Ticket" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card/display-active-ticket">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-780" y="613" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Show Active Ticket On Status Line" link="story-map.md#s-board-pane----display-ticket-card" id="s-board-pane----display-ticket-card/show-active-ticket-on-status-line">
+                <UserObject label="Show Active Ticket On Status Line" link="story-map.md#s-board-app----display-ticket-card" id="s-board-app----display-ticket-card/show-active-ticket-on-status-line">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-780" y="665" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Display Ticket Details" link="story-map.md#s-board-pane----display-ticket-details" id="s-board-pane----display-ticket-details">
+                <UserObject label="Display Ticket Details" link="story-map.md#s-board-app----display-ticket-details" id="s-board-app----display-ticket-details">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-720" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Expand Ticket" link="story-map.md#s-board-pane----display-ticket-details" id="s-board-pane----display-ticket-details/expand-ticket">
+                <UserObject label="Expand Ticket" link="story-map.md#s-board-app----display-ticket-details" id="s-board-app----display-ticket-details/expand-ticket">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="-720" y="509" width="50" height="50" as="geometry"/>
                     </mxCell>
@@ -124,7 +124,7 @@
                         <mxGeometry x="-600" y="665" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Tickets" link="story-map.md#e-tickets" id="e-tickets">
+                <UserObject label="Steer Ticket Sessions" link="story-map.md#e-steer-ticket-sessions" id="e-steer-ticket-sessions">
                     <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
                         <mxGeometry x="-520" y="380" width="590" height="60" as="geometry"/>
                     </mxCell>
@@ -194,17 +194,17 @@
                         <mxGeometry x="-40" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Display Latest Handoff" link="story-map.md#s-board-pane----display-latest-handoff" id="s-board-pane----display-latest-handoff">
+                <UserObject label="Display Latest Handoff" link="story-map.md#s-board-app----display-latest-handoff" id="s-board-app----display-latest-handoff">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="20" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Practices" link="story-map.md#e-practices" id="e-practices">
+                <UserObject label="Guide Work Through Practices" link="story-map.md#e-guide-work-through-practices" id="e-guide-work-through-practices">
                     <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
                         <mxGeometry x="100" y="380" width="470" height="60" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Display Fidelity Progress" link="story-map.md#s-board-pane----display-fidelity-progress" id="s-board-pane----display-fidelity-progress">
+                <UserObject label="Display Fidelity Progress" link="story-map.md#s-board-app----display-fidelity-progress" id="s-board-app----display-fidelity-progress">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="100" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
@@ -229,7 +229,7 @@
                         <mxGeometry x="340" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Add Active Ticket To System Prompt" link="story-map.md#s-board-pane----add-active-ticket-to-system-prompt" id="s-board-pane----add-active-ticket-to-system-prompt">
+                <UserObject label="Add Active Ticket To System Prompt" link="story-map.md#s-board-app----add-active-ticket-to-system-prompt" id="s-board-app----add-active-ticket-to-system-prompt">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="400" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
@@ -249,7 +249,7 @@
                         <mxGeometry x="520" y="509" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Generate" link="story-map.md#e-generate" id="e-generate">
+                <UserObject label="Generate Fidelity Outputs" link="story-map.md#e-generate-fidelity-outputs" id="e-generate-fidelity-outputs">
                     <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
                         <mxGeometry x="600" y="380" width="290" height="60" as="geometry"/>
                     </mxCell>
@@ -279,7 +279,7 @@
                         <mxGeometry x="840" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Validate" link="story-map.md#e-validate" id="e-validate">
+                <UserObject label="Validate Fidelity Outputs" link="story-map.md#e-validate-fidelity-outputs" id="e-validate-fidelity-outputs">
                     <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
                         <mxGeometry x="920" y="380" width="290" height="60" as="geometry"/>
                     </mxCell>
@@ -314,7 +314,7 @@
                         <mxGeometry x="1160" y="509" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Review" link="story-map.md#e-review" id="e-review">
+                <UserObject label="Review Fidelity Outputs" link="story-map.md#e-review-fidelity-outputs" id="e-review-fidelity-outputs">
                     <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
                         <mxGeometry x="1240" y="380" width="230" height="60" as="geometry"/>
                     </mxCell>

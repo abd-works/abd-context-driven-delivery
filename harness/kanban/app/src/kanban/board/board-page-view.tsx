@@ -2,6 +2,7 @@ import { Component, useEffect } from 'react'
 import type { ReactNode } from 'react'
 
 import { ActivationView } from '../ticket/activation-view'
+import { RootChoiceView } from '../ticket/root-choice-view'
 import { DetailsView } from '../ticket/details-view'
 import type { TicketClient } from '../ticket/ticket-client'
 import { BoardColumnsView } from './board-columns-view'
@@ -103,6 +104,7 @@ function PageBodyView() {
         <SidePanelsView />
       </div>
       <ActivationView />
+      <RootChoiceView />
       <ToastsView />
     </div>
   )

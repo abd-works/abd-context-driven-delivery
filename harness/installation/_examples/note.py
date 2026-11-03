@@ -5,11 +5,11 @@ It lives under `_examples/`, which the install scan skips, so it never reaches a
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Annotated, TypedDict
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
-from harness.installation.destination import edits, language_adapter
+from harness.installation.destination import SourceFile, edits, language_adapter
 from harness.mcp.mcp_server import mcp
 
 
@@ -18,6 +18,8 @@ class NoteData(TypedDict):
     title: str
     text: str
     is_pinned: bool
+    source: Annotated[str, SourceFile]
+    line: int | None
 
 
 @language_adapter(language="typescript", identity="name")
@@ -72,4 +74,4 @@ class Note:
         return len(self._text.split())
 
     def to_json(self) -> NoteData:
-        return {"name": self._name, "title": self._title, "text": self._text, "is_pinned": self._is_pinned}
+        return {"name": self._name, "title": self._title, "text": self._text, "is_pinned": self._is_pinned, "source": "notes/note.md", "line": 1}

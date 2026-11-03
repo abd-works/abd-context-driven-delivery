@@ -687,7 +687,6 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
 
 def _record_stories(practice, source: Path) -> None:
     from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
-    from cdd_guidance.practices.stories.model.story_model import StoryModel
     from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
     files: dict[str, str] = {}
@@ -706,9 +705,19 @@ def _record_stories(practice, source: Path) -> None:
     model = TypeScriptStoryModel("tests").load(files, on_file=lambda detail: report("parse", detail))
     if not model.epics:
         _report(graph, "stories · markdown")
-        model = StoryModel.load(source, on_file=lambda detail: report("markdown", detail))
+        model = _story_map_model(graph, source, lambda detail: report("markdown", detail))
     _report(graph, "stories · record")
     GraphStoryModel(model).record(practice, on_node=lambda detail: report("record", detail))
+
+
+def _story_map_model(graph: Graph, source: Path, on_file):
+    """The story maps under ``source``; with edited files, only the story maps among them."""
+    from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+    edited = graph.edited_files()
+    if edited is None:
+        return StoryModel.load(source, on_file=on_file)
+    return StoryModel.load_files(edited, source, on_file=on_file)
 
 
 def _gwt_phase(step) -> str:

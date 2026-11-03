@@ -4,7 +4,7 @@
  */
 import { expect, type Locator, type Page } from '@playwright/test'
 
-import { BY_ITS_TITLE, card, openBoard, turnOffActiveSessionOnly } from '../../support'
+import { card, dragCard, openBoard, turnOffActiveSessionOnly } from '../../support'
 import type { MoveTicketDriver, TicketPlace } from './move_ticket.spec.shared'
 
 const STAGES = ['Discovery', 'Specification', 'Implementation']
@@ -58,7 +58,7 @@ export class MoveTicketPageDriver implements MoveTicketDriver {
   // The page reads the board again after a drop, so a step ends once the card has moved.
   private async drag(ticket: string, target: (place: TicketPlace) => TicketPlace): Promise<void> {
     const before = (await this.whereIs(ticket))!
-    await card(this.page, ticket).dragTo(this.listAt(target(before)), { sourcePosition: BY_ITS_TITLE })
+    await dragCard(this.page, card(this.page, ticket), this.listAt(target(before)))
     await expect.poll(() => this.whereIs(ticket)).not.toEqual(before)
   }
 

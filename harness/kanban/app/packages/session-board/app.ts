@@ -5,8 +5,7 @@ import type { CddConnection } from '@cdd/cdd-connection'
 import { backlogItemRoutes } from '@cdd/harness/kanban/backlog-item'
 import { boardRoutes } from '@cdd/harness/kanban/board'
 import { ticketRoutes } from '@cdd/harness/kanban/ticket'
-import type { ChatsNode } from '@src/kanban/chat/chat-node'
-import { chatRoutes } from '@src/kanban/chat/chat-routes'
+import { chatRoutes } from '@cdd/tools/chat/chat'
 import { cddRoutes } from '@src/session-board/cdd-routes'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'
 
@@ -23,11 +22,17 @@ const onlyThisMachine = (port: number) => (request: Request, _response: Response
   next(isLocalHost && !isForeignPost ? undefined : new HttpException(FORBIDDEN, 'Refused: this server answers only its own page and mod on this machine.'))
 }
 
-export function createApp(cdd: CddConnection, chats: ChatsNode, port: number, staticRoot: string): Express {
+export function createApp(cdd: CddConnection, port: number, staticRoot: string): Express {
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
-  app.use('/api', cddRoutes(cdd, [...boardRoutes, ...ticketRoutes, ...backlogItemRoutes]), chatRoutes(chats))
+  // A cdd server keeps the code it started with, so a person restarts it to pick up changed Python. The next call starts
+  // a fresh one.
+  app.post('/api/cdd/restart', async (_request, response) => {
+    await cdd.close()
+    response.json({ is_restarted: true })
+  })
+  app.use('/api', cddRoutes(cdd, [...boardRoutes, ...ticketRoutes, ...backlogItemRoutes, ...chatRoutes]))
   app.use(express.static(staticRoot))
   app.get('*', (_request, response) => {
     response.sendFile(join(staticRoot, 'index.html'))

@@ -91,6 +91,14 @@ def edited_fields_of(operation: Any) -> tuple[str, ...]:
     return tuple(getattr(operation, _EDITS_FLAG, ()))
 
 
+class SourceFile:
+    """Marks a data field that holds a path in the session's workspace: `path: Annotated[str, SourceFile]`.
+
+    A generated view draws a marked field as a link that opens the file in the shared source view, at the `line`, or
+    the `start_line` to `end_line` range, that the same data holds.
+    """
+
+
 def omitted_from_catalog(obj: Any) -> bool:
     """True when ``obj`` or its underlying function carries ``@noCatalog``."""
     if getattr(obj, _NO_CATALOG_FLAG, False):

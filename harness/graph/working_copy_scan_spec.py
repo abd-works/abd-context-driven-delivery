@@ -1,6 +1,5 @@
 """A working copy scan reads source, not build output, test-run output, or dot-folders."""
 
-import json
 import os
 import shutil
 import sys
@@ -22,6 +21,47 @@ from graph import Graph
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"
 _WITHIN_LIMIT = "export class {name} {{\n  open(a: string): void {{}}\n}}\n"
 _CARD = "# {name}\n\n- **Purpose:** {name}.\n- **Seam (terms):** `{cls}`\n\n## Constraint\n\nCallers go through `{cls}`.\n"
+_STORY_MAP = (
+    "# Story Map — Board\n\n"
+    "# (E) Move Work On Board\n\n"
+    "## (E) Display Board\n\n"
+    "### (S) Person --> Open Board\n\n"
+    "### (S) Board Pane --> Draw Columns\n"
+)
+_OTHER_STORY_MAP = "# (E) Ship Parcels\n\n## (E) Pack Parcels\n\n### (S) Packer --> Pack Parcel\n"
+# One sub-epic's story test, in its epic's folder below the story map: every Story of the sub-epic in one file.
+_STORY_TEST = (
+    "from story_test import and_, but_, given, scenario, story, then, when\n"
+    "\n"
+    "# Epic: Display Board\n"
+    "\n"
+    "# Story: Open Board\n"
+    'with story("Open Board"):\n'
+    '    with scenario("Open the board from a chat"):\n'
+    '        with given("the board is running"):\n'
+    "            pass\n"
+    '        with when("the Person opens the board"):\n'
+    "            pass\n"
+    '        with then("the board shows its columns"):\n'
+    "            pass\n"
+    "\n"
+    "# Story: Draw Columns\n"
+    'with story("Draw Columns"):\n'
+    '    with scenario("Draw the five columns"):\n'
+    '        with when("the Board Pane reads the board"):\n'
+    "            pass\n"
+    '        with then("it draws Backlog, Discovery, Specification, Implementation, and Complete"):\n'
+    "            pass\n"
+)
+_STORY_TEST_PATH = "board/.context/move-work-on-board/display_board_story.test.py"
+_STORY_MAP_DIAGRAM = (
+    '<mxfile><diagram name="Story Map"><mxGraphModel><root>\n'
+    '<mxCell id="0"/>\n<mxCell id="1" parent="0"/>\n'
+    '<mxCell id="e1" value="Move Work On Board" style="epic;" parent="1" vertex="1"><mxGeometry x="0" y="0" width="200" height="60" as="geometry"/></mxCell>\n'
+    '<mxCell id="e2" value="Display Board" style="subepic:0;" parent="1" vertex="1"><mxGeometry x="0" y="80" width="200" height="60" as="geometry"/></mxCell>\n'
+    '<mxCell id="s1" value="Open Board" style="story:user;" parent="1" vertex="1"><mxGeometry x="0" y="160" width="50" height="50" as="geometry"/></mxCell>\n'
+    "</root></mxGraphModel></diagram></mxfile>\n"
+)
 
 
 def _write(root: Path, relative: str, text: str) -> None:
@@ -41,7 +81,16 @@ def _working_copy() -> Path:
     _write(root, "playwright-report/data/report.js", _OVER_LIMIT.format(name="ReportBundle"))
     _write(root, "packages/app/dist/bundle.js", _OVER_LIMIT.format(name="DistBundle"))
     _write(root, ".claude/worktrees/copy/src/orders/order.ts", _OVER_LIMIT.format(name="WorktreeOrder"))
+    _write(root, "board/.context/story-map.md", _STORY_MAP)
+    _write(root, "board/.context/story-map.drawio", _STORY_MAP_DIAGRAM)
+    _write(root, "parcels/.context/story-map.md", _OTHER_STORY_MAP)
+    _write(root, _STORY_TEST_PATH, _STORY_TEST)
     return root
+
+
+def _story_nodes(graph: Graph, name: str) -> list:
+    practice = graph.practice("stories")
+    return [node for node in practice.by_id.values() if node.name == name]
 
 
 def _class_names(graph: Graph) -> list[str]:
@@ -80,26 +129,22 @@ with description("a working copy scan") as self:
             expect(_module_names(self.graph)).to(equal(["billing", "orders"]))
 
         with it("should pass named-seam-and-constraint on a modules.md card"):
-            returned = json.loads(self.graph.return_nodes({"types": ["Module"], "name": "orders"}))
+            returned = self.graph.return_nodes({"types": ["Module"], "name": "orders"})
             rows = [rule for node in returned for rule in node["rules"] if rule["name"] == "named-seam-and-constraint"]
             expect(len(rows)).to(be_above(0))
             expect({rule["status"] for rule in rows}).to(equal({"passing"}))
 
     with context("returning violations"):
         with it("should return only failing rule rows when the filter asks for violations"):
-            returned = json.loads(self.graph.return_nodes({"practice": "clean_engineering", "violations": True}))
+            returned = self.graph.return_nodes({"practice": "clean_engineering", "violations": True})
             expect(len(returned)).to(be_above(0))
             statuses = {rule["status"] for node in returned for rule in node["rules"]}
             expect(statuses).to(equal({"violating"}))
 
         with it("should keep only nodes under the given path"):
-            returned = json.loads(
-                self.graph.return_nodes({"practice": "clean_engineering", "violations": True, "paths": ["src/billing"]})
-            )
+            returned = self.graph.return_nodes({"practice": "clean_engineering", "violations": True, "paths": ["src/billing"]})
             expect("place" in [node["name"] for node in returned]).to(equal(False))
-            returned = json.loads(
-                self.graph.return_nodes({"practice": "clean_engineering", "violations": True, "paths": ["src/orders"]})
-            )
+            returned = self.graph.return_nodes({"practice": "clean_engineering", "violations": True, "paths": ["src/orders"]})
             expect([node["name"] for node in returned]).to(contain("place"))
 
     with context("limited to the edited files"):
@@ -116,11 +161,65 @@ with description("a working copy scan") as self:
             expect(_module_names(self.scoped)).to(equal(["billing", "orders"]))
 
         with it("should run the rules on those files"):
-            returned = json.loads(self.scoped.return_nodes({"practice": "clean_engineering", "violations": True}))
+            returned = self.scoped.return_nodes({"practice": "clean_engineering", "violations": True})
             expect([node["name"] for node in returned]).to(contain("place"))
 
         with it("should leave the saved graph alone"):
             expect(self.saved.stat().st_mtime).to(equal(self.saved_stamp))
+
+    with context("limited to an edited story map markdown file"):
+        with before.all:
+            self.story_map = Graph()
+            self.story_map.load_files(str(self.root), ["stories"], ["board/.context/story-map.md"])
+
+        with it("should keep the story map's path from the folder on each story"):
+            expect([node.source.file for node in _story_nodes(self.story_map, "Draw Columns")]).to(
+                equal(["board/.context/story-map.md"])
+            )
+
+        with it("should keep the line the story's heading sits on"):
+            expect([node.source.start_line for node in _story_nodes(self.story_map, "Draw Columns")]).to(equal([9]))
+
+        with it("should keep the line the sub-epic's heading sits on"):
+            expect([node.source.start_line for node in _story_nodes(self.story_map, "Display Board")]).to(equal([5]))
+
+        with it("should read only that story map"):
+            expect(_story_nodes(self.story_map, "Pack Parcel")).to(equal([]))
+
+    with context("limited to an edited story map diagram"):
+        with before.all:
+            self.diagram = Graph()
+            self.diagram.load_files(str(self.root), ["stories"], ["board/.context/story-map.drawio"])
+
+        with it("should keep the diagram's path from the folder on each story"):
+            expect([node.source.file for node in _story_nodes(self.diagram, "Open Board")]).to(
+                equal(["board/.context/story-map.drawio"])
+            )
+
+        with it("should keep the line the story's cell sits on"):
+            expect([node.source.start_line for node in _story_nodes(self.diagram, "Open Board")]).to(equal([6]))
+
+    # A sub-epic's story test holds its Stories' scenarios; the story map above it says which epic each Story sits under.
+    with context("limited to an edited Python story test"):
+        with before.all:
+            self.story_test = Graph()
+            self.story_test.load_files(str(self.root), ["stories"], [_STORY_TEST_PATH])
+            self.scenarios = _story_nodes(self.story_test, "Open the board from a chat")
+
+        with it("should read its scenario under the story of the same name on the story map in a folder above it"):
+            expect(len(self.scenarios)).to(equal(1))
+
+        with it("should read the scenarios of every story in the file"):
+            expect(len(_story_nodes(self.story_test, "Draw the five columns"))).to(equal(1))
+
+        with it("should keep the story test's path on the scenario"):
+            expect([node.source.file for node in self.scenarios]).to(equal([_STORY_TEST_PATH]))
+
+        with it("should keep the line the scenario opens on"):
+            expect([node.source.start_line for node in self.scenarios]).to(equal([7]))
+
+        with it("should count the scenario on its story"):
+            expect([node.get_fact("scenario_count") for node in _story_nodes(self.story_test, "Open Board")]).to(equal([1]))
 
     with context("loaded with a relative practice root"):
         with before.all:
