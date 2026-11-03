@@ -1,4 +1,4 @@
-"""CDD access rules — read the facts recorded on each access node."""
+"""CDD web domain access rules — read the facts recorded on each access node."""
 
 from __future__ import annotations
 

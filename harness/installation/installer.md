@@ -12,7 +12,7 @@ Use slash **`/install`** (command — not a skill, not MCP). Deployed **commands
 
 Every full install also re-deploys the Installer toolset last so the slash commands stay current.
 
-A toolset marked ``@language_adapter(language="typescript")`` also gets typed code under ``{install_path}/language-adapters/typescript/``, in the folders its source sits in: its data, a class that reads it, and a class that calls its MCP tools. `clean` removes these with the rest of the install, and `patterns-cdd-access` says how applications use them.
+A toolset marked ``@language_adapter(language="typescript")`` also gets typed code under ``{install_path}/language-adapters/typescript/``, in the folders its source sits in: its data, a class that reads it, and a class that calls its MCP tools. `clean` removes these with the rest of the install, and `patterns-cdd-web-domain-access` says how applications use them.
 
 When install runs **inside** the live MCP host process, the installer skips a second `McpHost.standup()` and skips `ensure_mcp_host()` so it does not reload every toolset or rewrite Cursor `mcp.json` during an unrelated tool request.
 

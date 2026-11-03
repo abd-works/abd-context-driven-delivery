@@ -1,4 +1,4 @@
-# CDD access templates
+# CDD web domain access templates
 
 What an application writes for a domain object reached from TypeScript. Replace `{Object}` and `{object}` with the Python class, such as `Ticket` and `ticket`, `{context}` with the bounded context folder, `{source folders}` with the folders the Python sits in, and `{Page}` with the page object that wires the page's clients.
 

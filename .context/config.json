@@ -1,6 +1,6 @@
 {
   "guidelines": {
-    "cdd_access": "enabled",
+    "cdd_web_domain_access": "enabled",
     "cdd_claude_mod": "enabled",
     "lern_domain_driven": "enabled",
     "mern_domain_driven": "disabled"

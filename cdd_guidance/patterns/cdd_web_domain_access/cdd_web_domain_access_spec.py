@@ -1,4 +1,4 @@
-"""The CDD access pattern: guidance, rules, and templates."""
+"""The CDD web domain access pattern: guidance, rules, and templates."""
 
 import re
 from pathlib import Path
@@ -6,11 +6,11 @@ from pathlib import Path
 from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.patterns.cdd_access.cdd_access import CddAccess
+from cdd_guidance.patterns.cdd_web_domain_access.cdd_web_domain_access import CddWebDomainAccess
 from harness.guidance.rule import RulesCollection
 
 _MODULE_DIR = Path(__file__).resolve().parent
-_MARKDOWN = (_MODULE_DIR / "cdd_access.md").read_text(encoding="utf-8")
+_MARKDOWN = (_MODULE_DIR / "cdd_web_domain_access.md").read_text(encoding="utf-8")
 _RULE_SLUGS = re.findall(r"^- \*\*`([a-z0-9-]+)`\*\*", _MARKDOWN, re.M)
 _TEMPLATES = (
     "src/cdd/cdd-routes.ts",
@@ -18,16 +18,16 @@ _TEMPLATES = (
 )
 
 
-with description("a CDD access pattern"):
+with description("a CDD web domain access pattern"):
     with context("that has been constructed"):
         with before.all:
-            self.pattern = CddAccess()
+            self.pattern = CddWebDomainAccess()
 
         with it("should default format to typescript"):
             expect(self.pattern.format).to(equal("typescript"))
 
-        with it("should key context_index on cdd_access"):
-            expect(self.pattern.pattern).to(equal("cdd_access"))
+        with it("should key context_index on cdd_web_domain_access"):
+            expect(self.pattern.pattern).to(equal("cdd_web_domain_access"))
 
     with context("whose guidance has been read"):
         with it("should keep the domain in Python"):
@@ -51,7 +51,7 @@ with description("a CDD access pattern"):
 
     with context("whose rules collection injects on matching paths"):
         with before.all:
-            self.rules = CddAccess().rules
+            self.rules = CddWebDomainAccess().rules
 
         with it("should load shared rules as a RulesCollection"):
             expect(self.rules).to(be_a(RulesCollection))

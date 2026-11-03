@@ -1,4 +1,4 @@
-"""The CDD access rules, proven through the graph a validate run loads, so a rule the schema does not allow cannot pass."""
+"""The CDD web domain access rules, proven through the graph a validate run loads, so a rule the schema does not allow cannot pass."""
 
 import tempfile
 from pathlib import Path
@@ -31,7 +31,7 @@ def _violations(files):
     _write(root, files)
     graph = Graph()
     roots = {name: str(root) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
-    graph.load_working_copy(str(root), roots, database=str(root), overlays=["cdd_access", "lern_domain_driven"], force=True)
+    graph.load_working_copy(str(root), roots, database=str(root), overlays=["cdd_web_domain_access", "lern_domain_driven"], force=True)
     found = {}
     for practice in ("ddd", "bdd"):
         for node in graph.practice(practice).by_id.values():
@@ -40,7 +40,7 @@ def _violations(files):
     return found
 
 
-with description("the cdd_access pattern rules"):
+with description("the cdd_web_domain_access pattern rules"):
     with context("with an application that breaks them"):
         with before.all:
             self.found = _violations({

@@ -1,4 +1,4 @@
-"""CDD access facts — read once from each file while the overlay records its nodes; the rules read them and open no file."""
+"""CDD web domain access facts — read once from each file while the overlay records its nodes; the rules read them and open no file."""
 
 from __future__ import annotations
 

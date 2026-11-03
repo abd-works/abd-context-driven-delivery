@@ -80,8 +80,8 @@ def fill_working_copy(graph: Graph) -> None:
         _offer(graph.practice("ux"), ["UxMap", "Screen"])
     if _overlay_selected(graph, "lern_domain_driven"):
         _record_lern(graph, source, classes)
-    if _overlay_selected(graph, "cdd_access"):
-        _record_cdd_access(graph, source)
+    if _overlay_selected(graph, "cdd_web_domain_access"):
+        _record_cdd_web_domain_access(graph, source)
     _register_overlay_schema_catalog(graph)
     for practice in graph.practices.values():
         attach_rules(practice)
@@ -895,21 +895,21 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
 _TEST_FOLDERS = ("tests/", "test-utils/")
 
 
-def _record_cdd_access(graph: Graph, root: Path) -> None:
-    """CDD access overlay: what reaches the domain from outside Python, each file carrying the facts its rules read."""
-    from cdd_guidance.patterns.cdd_access import access_facts
+def _record_cdd_web_domain_access(graph: Graph, root: Path) -> None:
+    """CDD web domain access overlay: what reaches the domain from outside Python, each file carrying the facts its rules read."""
+    from cdd_guidance.patterns.cdd_web_domain_access import access_facts
 
     if "ddd" not in graph.practices:
         return
     ddd = graph.practice("ddd")
     for file in scanned_files(root):
         text = file.read_text(encoding="utf-8", errors="replace")
-        recorded = _cdd_access_tier(file, text, access_facts)
+        recorded = _cdd_web_domain_access_tier(file, text, access_facts)
         if recorded is not None:
-            _cdd_access_node(ddd, root, file, *recorded)
+            _cdd_web_domain_access_node(ddd, root, file, *recorded)
 
 
-def _cdd_access_tier(file: Path, text: str, access_facts) -> tuple[str, dict] | None:
+def _cdd_web_domain_access_tier(file: Path, text: str, access_facts) -> tuple[str, dict] | None:
     if file.name.endswith("-routes.ts"):
         return "AccessRoute", access_facts.route_facts(text)
     if access_facts.is_hand_written_adapter(file.name, text):
@@ -921,7 +921,7 @@ def _cdd_access_tier(file: Path, text: str, access_facts) -> tuple[str, dict] | 
     return None
 
 
-def _cdd_access_node(practice, root: Path, file: Path, semantic: str, facts: dict) -> None:
+def _cdd_web_domain_access_node(practice, root: Path, file: Path, semantic: str, facts: dict) -> None:
     relative = file.relative_to(root).as_posix()
     node_id = f"ddd:{semantic}:{relative}"
     start, end = _file_line_span(root, relative)

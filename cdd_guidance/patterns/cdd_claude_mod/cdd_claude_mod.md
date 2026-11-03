@@ -2,7 +2,7 @@
 
 Implementation fidelity for a **Claude Code mod that is a view of the CDD domain**. The story map, the module boundaries, and the canvas exist before this tool runs. The rules below are additive on top of what Stories, Clean Engineering, and BDD already enforce.
 
-**The domain is already in Python.** A mod owns none of it. A mod changes what a person sees beside the chat and what the agent is told, and it never changes what is true. The Kanban pane, now retired to `retired/harness/kanban/pane/`, is the worked example throughout this guide, and `harness/kanban/chat-mod/` is a small live one. A full screen belongs in a web app with `patterns-lern-domain-driven`, because a pane cannot scroll, lay out, or be tested as a page can. How every door reaches that domain is in `patterns-cdd-access`. A mod calls `$.mcp.call` itself, because a hooks module cannot hold a connection, and it takes its types from the language adapter the installer deploys.
+**The domain is already in Python.** A mod owns none of it. A mod changes what a person sees beside the chat and what the agent is told, and it never changes what is true. The Kanban pane, now retired to `retired/harness/kanban/pane/`, is the worked example throughout this guide, and `harness/kanban/chat-mod/` is a small live one. A full screen belongs in a web app with `patterns-lern-domain-driven`, because a pane cannot scroll, lay out, or be tested as a page can. How every door reaches that domain is in `patterns-cdd-web-domain-access`. A mod calls `$.mcp.call` itself, because a hooks module cannot hold a connection, and it takes its types from the language adapter the installer deploys.
 
 **No fidelity progression of its own.** Every run works one domain component through the layers below, Python first.
 

@@ -1,4 +1,4 @@
-# CDD access rule slugs for graph nodes (see cdd_access.md § Shared rules).
+# CDD web domain access rule slugs for graph nodes (see cdd_web_domain_access.md § Shared rules).
 accessRoute:
   rules:
     - one-class-per-object

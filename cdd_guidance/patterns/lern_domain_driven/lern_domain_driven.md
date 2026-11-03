@@ -223,13 +223,13 @@ in § Shared rules) — then keep that choice for the slice.
 
 ### CDD-backed aggregates
 
-An aggregate whose rules and state live in the Python CDD domain follows `patterns-cdd-access`. The installer generates its domain classes, its server adapter, its routes, and the browser class that posts to them, imported through `@cdd/*`, so this project does not rewrite the domain or write a route for it. Every MCP call is made on the server.
+An aggregate whose rules and state live in the Python CDD domain follows `patterns-cdd-web-domain-access`. The installer generates its domain classes, its server adapter, its routes, and the browser class that posts to them, imported through `@cdd/*`, so this project does not rewrite the domain or write a route for it. Every MCP call is made on the server.
 
 | LERN file | For a CDD-backed aggregate |
 |---|---|
 | `<aggregate>.ts` | Optional: only types or logic the page needs that Python does not hold. `{Object}`, the shared base, is generated, and nothing uses it directly |
 | `<aggregate>-node.ts` | None: `{Object}NodeAdapter` is generated |
-| `<aggregate>-routes.ts` | None: mount the generated `{object}Routes` once, with `cdd-routes.ts` from `patterns-cdd-access` |
+| `<aggregate>-routes.ts` | None: mount the generated `{object}Routes` once, with `cdd-routes.ts` from `patterns-cdd-web-domain-access` |
 | `<aggregate>-client.tsx` | `{Object}Client extends {Object}ClientGenerated`. A person acts on it; it does the page's work with the other page clients and calls up to the generated client to reach the routes |
 | `<aggregate>.json`, `{Domain}Repository` | None: the tool is the store |
 

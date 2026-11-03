@@ -1,6 +1,6 @@
-"""CDD access graph rules on the DDD practice — loaded when the cdd_access overlay is active."""
+"""CDD web domain access graph rules on the DDD practice — loaded when the cdd_web_domain_access overlay is active."""
 
-from cdd_guidance.patterns.cdd_access.practices.ddd.rules.access_rules import (
+from cdd_guidance.patterns.cdd_web_domain_access.practices.ddd.rules.access_rules import (
     AdapterIsGenerated,
     AnnotateWhatTypeScriptReads,
     OneClassPerObject,

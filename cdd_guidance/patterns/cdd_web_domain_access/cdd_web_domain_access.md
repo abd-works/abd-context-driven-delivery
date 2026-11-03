@@ -8,13 +8,15 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 
 | Generated | Where it runs | What it is |
 |---|---|---|
-| `{Object}` | Browser and server | The shared base: the object's state, its `camelCase` getters, and `changed(data)`, which takes on new state. It makes no call. **Nothing uses it directly**; code always works with one of its subtypes. |
+| `{Object}` | Browser and server | The shared base: the object's state, its `camelCase` getters, `changed(data)`, which takes on new state, and `onChanged(listener)`, which tells a view when it did. It makes no call. **Nothing uses it directly**; code always works with one of its subtypes. |
 | `{Object}NodeAdapter extends {Object}` | Server | Each operation calls its MCP tool and takes on the state Python returns. |
 | `{Object}ClientGenerated extends {Object}` | Browser | Each operation posts to its route and takes on the state the server returns. |
 | `{object}Routes` | Server | One route for each tool. Each reads the request against the tool's published schema and calls `{Object}NodeAdapter`. |
 | `CddConnection` | Server | One per install. Starts one cdd server and carries calls to it. It knows no tool by name. |
+| `use{Object}(client)` | Browser | A React hook that re-renders a view whenever the client takes on new state. |
+| `{Object}ViewGenerated`, `{Object}NewViewGenerated` | Browser | Starting-point React views: the object with each field editable where a domain operation changes it and read-only elsewhere, its other operations as buttons and forms, and a form for each operation that creates one. **Never deployed as they are**; an application composes them, or copies one and changes it. |
 
-**What the application's pattern adds.** LERN mounts `{object}Routes` on its server, and subclasses `{Object}ClientGenerated` for what only the page knows, such as selecting a card or showing a toast. That subclass is LERN's `{Domain}Client`. A Claude Code mod reaches the tools through `$.mcp.call`, as `patterns-cdd-claude-mod` describes. Nothing in the application calls a tool, parses a request for one, or writes a path to one.
+**What the application's pattern adds.** LERN mounts `{object}Routes` on its server, subclasses `{Object}ClientGenerated` for what only the page knows, such as selecting a card or showing a toast, and builds its pages from the generated views. That subclass is LERN's `{Domain}Client`; the pages, layout, and navigation are LERN's own. A Claude Code mod reaches the tools through `$.mcp.call`, as `patterns-cdd-claude-mod` describes. Nothing in the application calls a tool, parses a request for one, or writes a path to one.
 
 **No god connector.** Each domain object has its own classes that know its own tools. `TicketNodeAdapter` calls `ticket.move_next`, and `BoardNodeAdapter` calls `board.show`. One connection underneath carries the calls and knows no tool by name.
 
@@ -28,7 +30,7 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 | Tool | The same file, marked `@mcp @agent_tool` | One operation for each thing a person or agent does. The tool reads `{object}.{operation}`. |
 | Contract | `{Object}Data`, a `TypedDict` that `to_json()` is annotated with | The only agreement between the languages. The language adapter is written from it. |
 | Mark | `@language_adapter(language="typescript", identity="name")` on the class | Opts the toolset in to the language adapter for that language. `identity` names the field of `{Object}Data` that holds the object's name, so a browser object knows which object its routes act on. |
-| Language adapter | `<install path>/language-adapters/<language>/<source folders>/<object>.<ext>` | Generated: `{Object}Data`, `{Object}`, `{Object}NodeAdapter`, `{Object}ClientGenerated`, and `{object}Routes`. |
+| Language adapter | `<install path>/language-adapters/<language>/<source folders>/<object>.<ext>` | Generated: `{Object}Data`, `{Object}`, `{Object}NodeAdapter`, `{Object}ClientGenerated`, `{object}Routes`, `use{Object}`, and the starting-point views. |
 | Connection | `<install path>/language-adapters/<language>/cdd-connection.<ext>` | Generated: `CddConnection`, once per install. |
 
 ```mermaid
@@ -146,6 +148,7 @@ class Ticket(Card):
 ├── harness/kanban/
 │   ├── ticket.ts                TicketData, Ticket, TicketClientGenerated
 │   ├── ticket-node-adapter.ts   TicketNodeAdapter, ticketRoutes
+│   ├── ticket-views.tsx         useTicket, TicketViewGenerated, TicketNewViewGenerated
 │   ├── board.ts
 │   └── board-node-adapter.ts
 └── space/session/...
@@ -222,6 +225,37 @@ export const ticketRoutes: CddRoute[] = [
 - Page code that knows only a name builds `{Object}ClientGenerated.named(api, name)` and acts on that object before it has read it.
 - An object without `identity`, such as the one board, has routes with no name in them.
 
+### Generated views
+
+The Python says enough to draw a working view of each object, so the installer writes one as a starting point. It is never a finished page: an application composes it into its own pages, or copies it into its own source and changes it completely. Pages, layout, navigation, and anything bespoke, such as the board's tiles and drag, are always the application's own.
+
+**A field is editable where a domain operation changes it.** The view never writes a field; every edit is an operation, because Python decides what a change means and whether it is allowed. An operation that loads the object and takes an argument with the same name as a field, such as `set_title(title)` or `update(title, text)`, makes that field an input, and saving calls the operation. Where the names differ, `@edits("title")` on the Python operation names the field it changes. A field no operation changes, such as `is_done`, `progress`, or `allowed_actions`, is shown read-only, because only Python decides it.
+
+**The input follows the published type.** A string is a text field, a boolean a checkbox, a number a number field, and a list of strings a multi-select. An argument with a default is optional on the form. A nested field, such as a column's `wip_limit` inside the board, is reached through its operation's form rather than inline, unless `@edits` names it.
+
+**Every other operation is a button or a form.** An operation with no arguments of its own, such as `moveNext`, is a button; one with arguments, such as `moveTo(stage, done)`, is a small form built the same way. Each calls the client the view was given, so a page that hands in its own subclass, such as LERN's `TicketClient`, gets its page work, such as refreshing the board, on every action.
+
+**An operation that creates the object gives a new-object form.** A class operation that returns the object's own data, such as `Ticket.new(title, scope, parent, path)` or `BacklogItem.add(title, text)`, becomes `{Object}NewViewGenerated`, which calls it with the API it is given.
+
+**`use{Object}(client)` keeps a view current.** The client takes on new state through `changed`, which tells its `onChanged` listeners; the hook subscribes and re-renders. Any view holding a client, generated or the application's own, uses it instead of keeping a second copy of the object's state.
+
+```tsx
+export function TicketViewGenerated({ client, fields, operations }: TicketViewProps) {
+  const ticket = useTicket(client)
+  return (
+    <section>
+      {fields?.title?.(ticket) ?? <TextField label="Title" value={ticket.title} onSave={title => client.setTitle(title)} />}
+      {fields?.column?.(ticket) ?? <ReadOnlyField label="Column" value={ticket.column} />}
+      {operations?.moveNext?.(ticket) ?? <OperationButton label="Move next" onRun={() => client.moveNext()} />}
+    </section>
+  )
+}
+```
+
+**An application changes a view by composing it, or by copying it.** React components are composed rather than subclassed, so each generated view takes props that replace any one field's rendering or any one operation's form, and a page wraps the view in its own layout. When that is not enough, the application copies the view into its own source and changes it freely. A copied view still calls the generated client, so its edits still go through domain operations; what a copy cannot do is make a field editable that no operation changes.
+
+**React comes from the application.** The install holds no packages, so the views import `react` through the application's own copy: one entry for `react` in the application's TypeScript `paths` and its bundler's aliases, beside `@cdd`. The views draw plain, unstyled elements with stable class names, so the application's stylesheet gives them their look.
+
 ### Python states the contract
 
 `{Object}Data` is a `TypedDict` the domain class annotates `to_json()` with, so the shape is written once, in Python, and every other language follows. A plain `dict[str, Any]` generates `Record<string, unknown>`, which the compiler cannot check. `NotRequired` becomes an optional field, and `str | None` a nullable one. Fields keep Python's `snake_case` in `{Object}Data`, because it states exactly what `to_json()` returns and some keys are data, such as a fidelity named `story_map`. The getters, operation names, and arguments are `camelCase`, and the adapters send arguments under their Python names.
@@ -247,15 +281,15 @@ The Python domain keeps its own Mamba specs, and `{object}.{operation}` keeps it
 1. Follow **session_guidance**. Start from the Python: name the classes this slice exposes, read their `.context/`, and list their `@mcp @agent_tool` operations.
 2. Add any missing domain operation and its Mamba spec first. Annotate `to_json()` and each operation's result with a `TypedDict`, and mark the class with `@language_adapter(language=..., identity=...)`: the application's language, such as `"typescript"`, and the field of `{Object}Data` that names the object.
 3. Run `python scripts/install.py --ide Claude`. The language adapter follows, with the skills, commands, and MCP entry.
-4. Point the `@cdd/*` path alias at `<install path>/language-adapters/typescript/`.
-5. Construct one `CddConnection` on the application's server and mount every `{object}Routes` on it. Subclass `{Object}ClientGenerated` for what only the page knows. The application's pattern says where each lives.
+4. Point the `@cdd/*` path alias at `<install path>/language-adapters/typescript/`, and alias `react` to the application's own copy so the generated views resolve it.
+5. Construct one `CddConnection` on the application's server and mount every `{object}Routes` on it. Subclass `{Object}ClientGenerated` for what only the page knows, and build pages by composing the generated views, or copying one and changing it. The application's pattern says where each lives.
 6. Run the type-check, the tests, and validate. If validate fails, fix and validate again until it passes.
 
 ## Shared rules
 
 ```yaml
 alwaysApply: false
-globs: "**/*-routes.ts,**/*-node.ts,**/*-client.tsx,**/*-tools.ts,**/*-adapter.ts,**/cdd-connection*.ts"
+globs: "**/*-routes.ts,**/*-node.ts,**/*-client.tsx,**/*-view.tsx,**/*-tools.ts,**/*-adapter.ts,**/cdd-connection*.ts"
 ```
 
 Whenever you create, alter, or delete code outside Python that reaches the CDD domain, or the MCP tools it calls. Follow these rules.
@@ -270,7 +304,10 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 ### One object, one set of generated classes
 
 - **`one-class-per-object`** — Each domain object has its own generated `{Object}NodeAdapter` and `{Object}ClientGenerated` that call only that object's tools. Code that calls a tool by name, or posts to a tool's route by hand, has skipped the object's typed operation and hides which object owns it.
-- **`adapter-is-generated`** — The installer writes `CddConnection`, `{Object}`, `{Object}NodeAdapter`, `{Object}ClientGenerated`, and `{object}Routes`, and nobody edits them or writes one by hand. Subclass `{Object}ClientGenerated` only for what the page alone knows, never to add a call, a route, or parsing. A hand-kept class drifts from Python, and the compiler then checks the wrong thing.
+- **`adapter-is-generated`** — The installer writes `CddConnection`, `{Object}`, `{Object}NodeAdapter`, `{Object}ClientGenerated`, and `{object}Routes`, and nobody edits them or writes one by hand. Subclass `{Object}ClientGenerated` only for what the page alone knows, never to add a call, a route, or parsing. A hand-kept class drifts from Python, and the compiler then checks the wrong thing. The generated views are the exception: they only present what the client already does, so an application may copy one and change it.
+- **`views-are-a-starting-point`** — Compose a generated view into the application's own page, or copy it into the application's source and change it; never ship one as the page itself. It knows the object's fields and operations but nothing about the page it sits on.
+- **`edits-go-through-operations`** — A view changes a field only by calling the domain operation that changes it, and shows a field no operation changes as read-only. A view that writes a field directly decides in the browser what only Python may decide.
+- **`views-share-the-client-state`** — A view reads its object through `use{Object}(client)` and keeps no copy of the object's state. A second copy shows the old state after an operation returns.
 - **`mark-toolsets-that-return-data`** — Mark a toolset with `@language_adapter` when an application needs its results as data, and name its `identity` when a tool loads one object. Marking one that returns prompt text adds an adapter nobody can type.
 
 ### One line from adapter to domain

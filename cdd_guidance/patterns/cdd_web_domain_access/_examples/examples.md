@@ -1,4 +1,4 @@
-# CDD access examples
+# CDD web domain access examples
 
 ## `one-class-per-object`
 

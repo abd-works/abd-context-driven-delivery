@@ -1,4 +1,4 @@
-# CDD access overlay on ddd. Extend only.
+# CDD web domain access overlay on ddd. Extend only.
 accessRoute:
   - is: class
   - path: "src/{context}/{object}/{object}-routes"
