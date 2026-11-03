@@ -41,6 +41,19 @@ export class ChatClient {
     void this.readMessages()
   }
 
+  // A message the chat took but did not show goes back in its queue, and the chat takes it again.
+  async resend(message: string): Promise<void> {
+    const { targetChat } = this.store.state
+    if (!targetChat || !(await ChatClientGenerated.named(this.api, targetChat).resend(message))) return
+    await this.readMessages()
+  }
+
+  async remove(message: string): Promise<void> {
+    const { targetChat } = this.store.state
+    if (!targetChat || !(await ChatClientGenerated.named(this.api, targetChat).remove(message))) return
+    await this.readMessages()
+  }
+
   toggleMessages(): void {
     this.store.change({ isMessagesOpen: !this.store.state.isMessagesOpen })
   }

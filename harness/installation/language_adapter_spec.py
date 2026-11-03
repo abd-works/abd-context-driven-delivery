@@ -178,7 +178,7 @@ with description("a language adapter"):
                     install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
                     _install(install_path, ("tools.chat.chat:Chat",))
                     chat = (install_path / _ADAPTERS / "tools/chat/chat.ts").read_text(encoding="utf-8")
-                    expect(chat).to(contain("  state: 'waiting' | 'taken' | 'shown' | 'failed'\n"))
+                    expect(chat).to(contain("  state: 'waiting' | 'taken' | 'shown' | 'done' | 'failed'\n"))
 
         with description("its shared base"):
             with before.all:

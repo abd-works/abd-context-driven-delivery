@@ -241,9 +241,9 @@ class GuidanceAction:
 
     @property
     def session_context(self) -> str:
-        """The open session as an agent acting on this command needs it: its session.json, the root paths are
-        relative to, and where each listed practice writes. Without it the agent guesses where paths start and where
-        files go, and a guess under a moved root names folders that do not exist."""
+        """The open session as an agent acting on this command needs it: its session.json, the project root paths
+        are named from, the session's root, and where each listed practice writes. The agent works from the project's
+        checkout, so every path it sees starts there; told nothing, it guesses where files go under a moved root."""
         from space.session import Session
         from space.work_state import project_checkout
 
@@ -256,6 +256,7 @@ class GuidanceAction:
             return ""
         session_json = Path(session.session_path) / "session.json"
         root = Path(session.workpath or session.repo_path or Path.cwd()).resolve().as_posix()
+        project = Path(session.repo_path or project_checkout()).resolve().as_posix()
         practices = [item for item in self.listed() if not isinstance(item, str)]
         writes = [f"- {item.slug}: {session.practice_root(item).as_posix()}" for item in practices]
         stored = session_json.read_text(encoding="utf-8").strip() if session_json.is_file() else "{}"
@@ -263,7 +264,8 @@ class GuidanceAction:
             "## Session",
             "",
             f"Session {session.name}, kept in {session_json.resolve().as_posix()}.",
-            f"Paths are relative to the session's root, {root}, unless they are absolute.",
+            f"Name paths from the project's root, {project}, or absolute.",
+            f"The session's root is {root}.",
             *(["", "Where each listed practice writes:", *writes] if writes else []),
             "",
             "```json",

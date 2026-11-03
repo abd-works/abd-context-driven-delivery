@@ -100,7 +100,27 @@ export class TestChat {
     private readonly name: string,
   ) {}
 
-  async checkIn(isBusy = false): Promise<ChatCommandData[]> {
+  // What the chat was given, as a person reads it.
+  async checkIn(isBusy = false): Promise<Pick<ChatCommandData, 'kind' | 'text'>[]> {
+    return (await this.take(isBusy)).map(({ kind, text }) => ({ kind, text }))
+  }
+
+  // Takes the next command and says the chat could not show it, as the mod does when the chat drops it.
+  async refuseNext(reason: string): Promise<void> {
+    const [command] = await this.take(false)
+    if (command) await ChatClientGenerated.named(this.board.api, this.id).confirm(command.message, false, reason)
+  }
+
+  // Takes the next command, shows it, and finishes working on it, as the mod does once the chat's turn ends.
+  async finishNext(): Promise<void> {
+    const [command] = await this.take(false)
+    if (!command) return
+    const chat = ChatClientGenerated.named(this.board.api, this.id)
+    await chat.confirm(command.message, true)
+    await chat.finish(command.message)
+  }
+
+  private async take(isBusy: boolean): Promise<ChatCommandData[]> {
     return (await ChatClientGenerated.named(this.board.api, this.id).checkIn(isBusy, this.name)) ?? []
   }
 }

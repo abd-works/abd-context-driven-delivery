@@ -13,7 +13,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 import shutil
 import tempfile
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
@@ -23,7 +23,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
 from validate.graph_json_reader import violations_from_graph_json_files
-from validate.validate import Validate
+from validate.validate import PathsNotFoundError, Validate
 
 
 _SAMPLE = _REPO_ROOT / "harness" / "graph" / "_examples" / "input"
@@ -132,6 +132,7 @@ with description("a validate action on practice guidance") as self:
             self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
             self.session = Path(tempfile.mkdtemp(prefix="cdd-validate-session-"))
             self.action._validate_workspace = lambda: self.folder
+            self.action._project_checkout = lambda: self.folder
             self.action._session_path = lambda: self.session
 
         with after.each:
@@ -158,6 +159,7 @@ with description("a validate action on practice guidance") as self:
             _write(self.folder, "src/billing/invoice.ts", _OVER_LIMIT.format(name="Invoice"))
             self.session = Path(tempfile.mkdtemp(prefix="cdd-validate-session-"))
             self.action._validate_workspace = lambda: self.folder
+            self.action._project_checkout = lambda: self.folder
             self.action._session_path = lambda: self.session
 
         with after.each:
@@ -183,6 +185,7 @@ with description("a validate action on practice guidance") as self:
             _write(self.folder, "board/.context/story-map.md", _STORY_MAP)
             self.session = Path(tempfile.mkdtemp(prefix="cdd-validate-session-"))
             self.action._validate_workspace = lambda: self.folder
+            self.action._project_checkout = lambda: self.folder
             self.action._session_path = lambda: self.session
 
         with after.each:
@@ -210,10 +213,42 @@ with description("a validate action on practice guidance") as self:
             with it("should name its violations on that line"):
                 expect(self.validate_lines[-1]).to(contain(" graph-rule "))
 
+        # An agent works from the project's checkout, so every path it sees starts there, not at the session's root.
+        with context("in a session whose root is a folder of the project"):
+            with before.each:
+                self.action._validate_workspace = lambda: self.folder / "board"
+
+            with it("should read a path named from the project's root"):
+                report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
+                expect(report).to(contain("Board Stuff"))
+
+            with it("should report the violation at its path from the session's root"):
+                report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
+                expect(report).to(contain("[.context/story-map.md]("))
+
+            with it("should read an absolute path"):
+                report = self.action.validate(guidance=["stories-story-map"], paths=[str(self.folder / "board/.context/story-map.md")])
+                expect(report).to(contain("Board Stuff"))
+
+        # A graph built from nothing reports no violations, which reads as a clean validate.
+        with context("that is named by a path that is not there"):
+            with it("should refuse, naming the path and the root it was read from"):
+                expect(lambda: self.action.validate(guidance=["stories-story-map"], paths=["board/.context/missing.md"])).to(
+                    raise_error(PathsNotFoundError, contain(f"board/.context/missing.md, read from {self.folder}"))
+                )
+
+            with it("should save no report"):
+                try:
+                    self.action.validate(guidance=["stories-story-map"], paths=["board/.context/missing.md"])
+                except PathsNotFoundError:
+                    pass
+                expect((self.session / "validation-reports").exists()).to(equal(False))
+
     with context("with edited files of a working copy that every graph practice reads"):
         with before.each:
             self.session = Path(tempfile.mkdtemp(prefix="cdd-validate-session-"))
             self.action._validate_workspace = lambda: _SAMPLE
+            self.action._project_checkout = lambda: _SAMPLE
             self.action._session_path = lambda: self.session
 
         with after.each:

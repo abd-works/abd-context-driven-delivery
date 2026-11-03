@@ -14,7 +14,7 @@ import sys
 import types
 from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
-from typing import Annotated, Any, NotRequired, Union, get_args, get_origin, get_type_hints, is_typeddict
+from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints, is_typeddict
 
 from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
 from harness.installation.destination import Installation, SourceFile, edited_fields_of, identity_field_of, languages_of
@@ -340,6 +340,8 @@ class TypeScriptToolset:
         if is_typeddict(hint):
             return self._shape_reference(hint)
         origin = get_origin(hint)
+        if origin is Literal:
+            return " | ".join(json.dumps(word).replace('"', "'") for word in get_args(hint))
         if origin in (Union, types.UnionType):
             return " | ".join(self._hint_type(option) for option in get_args(hint))
         if origin is list:

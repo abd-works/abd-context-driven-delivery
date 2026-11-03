@@ -50,7 +50,18 @@ a:hover { color: #C64514; }
 .chat-message:last-child { border-bottom: 0; }
 .chat-message-head { display: flex; gap: 8px; font: 10px var(--mono); color: var(--muted); text-transform: uppercase; }
 .chat-message-time { margin-left: auto; text-transform: none; }
-.chat-message.is-waiting .chat-message-state { color: var(--progress); }
+.chat-message.is-waiting .chat-message-state, .chat-message.is-taken .chat-message-state { color: var(--progress); }
+.chat-message.is-shown .chat-message-state { color: var(--progress); }
+.chat-message.is-done .chat-message-state { color: var(--reviewed); }
+.chat-message-state { display: inline-flex; align-items: center; gap: 5px; }
+.progress-wheel { display: inline-block; flex-shrink: 0; width: 10px; height: 10px; margin-right: 5px; border: 2px solid var(--border); border-top-color: var(--progress); border-radius: 50%; animation: progress-wheel-turn .8s linear infinite; vertical-align: -1px; }
+.chat-message-state > .progress-wheel { margin-right: 0; }
+@keyframes progress-wheel-turn { to { transform: rotate(360deg); } }
+.chat-message.is-failed .chat-message-state, .chat-message-reason { color: var(--violations); }
+.chat-message-reason { margin-top: 3px; font: 11px var(--mono); }
+.chat-message-button { padding: 0 6px; background: none; color: var(--text); border: 1px solid var(--border); border-radius: 3px; font: 10px var(--mono); text-transform: none; cursor: pointer; }
+.chat-message-button:hover { border-color: var(--accent); color: var(--accent); }
+.chat-messages > .action.is-failing { border-color: var(--violations); color: var(--violations); }
 .chat-message-text { display: block; margin-top: 3px; font: 11px var(--mono); color: var(--text); white-space: pre-wrap; word-break: break-word; }
 .chat-message-empty { padding: 8px; font: 11px var(--mono); color: var(--muted); }
 @container (max-width: 900px) {

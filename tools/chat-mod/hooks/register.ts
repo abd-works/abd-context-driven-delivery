@@ -17,25 +17,80 @@ let isBusy = false
 let chatName = ''
 let active: TicketData | undefined
 
-// Every command the board sends shows in the chat: a command or a submit arrives as the person's own message, the
-// same as typing it, so the transcript always holds what ran; a fill shows in the prompt box.
-async function run($: EngineInterface, command: ChatCommandData): Promise<void> {
-  $.ui.toast(`Board sent: ${command.text}`)
-  // Adds to the box, so a draft the person is typing stays.
-  if (command.kind === 'fill') await $.prompt.fill({ text: command.text, mode: 'append' })
-  else void $.prompt.submit({ text: command.text, asUser: true })
+// The engine queues a plugin's prompt until the chat is idle; one still queued this long after an idle chat took it is
+// not coming, and the board says so instead of showing it as taken forever.
+const SHOWN_WITHIN_MILLISECONDS = 20_000
+// A slash command resolves only once it has finished, which for a skill takes minutes; the engine refuses one it cannot
+// run straight away, so one not refused by now is running.
+const REFUSED_WITHIN_MILLISECONDS = 3_000
+
+const after = ($: EngineInterface, milliseconds: number, answer: string): Promise<string> => new Promise(resolve => $.clock.after(milliseconds, () => resolve(answer)))
+
+const reasonOf = (error: unknown): string => (error instanceof Error ? error.message : String(error))
+
+// Messages the chat showed and is still working on, each with the turns started before it arrived; a message is done
+// when a turn that started after it ends, not the turn the chat was already in.
+const unfinished = new Map<string, number>()
+// Counts the chat's own turns, so a command that returned without starting one is known to be done.
+let turnsStarted = 0
+
+// A slash command runs as if the person typed it, its line in the transcript; the engine refuses a submitted prompt
+// that starts with a slash.
+function ranCommand($: EngineInterface, chat: string, command: ChatCommandData): Promise<string> {
+  const [name = '', ...words] = command.text.slice(1).split(' ')
+  const turnsBefore = turnsStarted
+  const running = $.command.run({ command: name, args: words.join(' ') }).then(() => '', reasonOf)
+  // A command that printed its line and started no turn, such as /board, is done once it returns.
+  void running.then(reason => {
+    if (!reason && turnsStarted === turnsBefore && !isBusy) void finish($, chat, command.message)
+  })
+  return Promise.race([running, after($, REFUSED_WITHIN_MILLISECONDS, '')])
+}
+
+async function finish($: EngineInterface, chat: string, message: string): Promise<void> {
+  if (!unfinished.delete(message)) return
+  await post($, chat, 'finish', { message })
+}
+
+// Adds to the box, so a draft the person is typing stays.
+async function filled($: EngineInterface, text: string): Promise<string> {
+  const answer = await $.prompt.fill({ text, mode: 'append' })
+  return answer.isFilled ? '' : `the prompt box did not take it (${answer.refusal ?? 'refused by a hook'})`
+}
+
+// Any other text arrives as the person's own message, the same as typing it.
+function submitted($: EngineInterface, text: string): Promise<string> {
+  const submitting = $.prompt.submit({ text, asUser: true }).then(answer => (answer.drop === undefined ? '' : `the chat dropped it: ${answer.drop || 'no reason given'}`), reasonOf)
+  return Promise.race([submitting, after($, SHOWN_WITHIN_MILLISECONDS, `the chat had not shown it ${SHOWN_WITHIN_MILLISECONDS / 1000} s after taking it`)])
+}
+
+// Why the chat did not show the command, or nothing once it did.
+function shown($: EngineInterface, chat: string, command: ChatCommandData): Promise<string> {
+  if (command.kind === 'fill') return filled($, command.text).catch(reasonOf)
+  return command.text.startsWith('/') ? ranCommand($, chat, command) : submitted($, command.text)
+}
+
+// The board shows each message as shown or failed, so a message the chat could not take is never silent. A fill waits
+// for the person to send it, so only a command or a submit has work for the chat to finish.
+async function run($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
+  $.ui.toast(`Board message arrived: ${command.text}`)
+  if (command.kind !== 'fill') unfinished.set(command.message, turnsStarted)
+  const reason = await shown($, chat, command)
+  $.ui.toast(reason ? `Board message failed: ${reason}: ${command.text}` : `Board sent: ${command.text}`)
+  if (reason) unfinished.delete(command.message)
+  await post($, chat, 'confirm', { message: command.message, is_shown: !reason, reason })
+}
+
+function post($: EngineInterface, chat: string, operation: string, body: object) {
+  return $.http.fetch(`${BOARD_URL}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers: BOARD_HEADERS, body: JSON.stringify(body) })
 }
 
 // Checks in through the board's own cdd server, which runs chat.check_in. A chat's cdd server keeps the code it started
 // with, so one started before the chat tools existed could never check in; the board always runs the current code.
 async function checkIn($: EngineInterface, chat: string): Promise<void> {
-  const answer = await $.http.fetch(`${BOARD_URL}/api/chat/${encodeURIComponent(chat)}/check-in`, {
-    method: 'POST',
-    headers: BOARD_HEADERS,
-    body: JSON.stringify({ is_busy: isBusy, name: chatName }),
-  })
+  const answer = await post($, chat, 'check-in', { is_busy: isBusy, name: chatName })
   if (!answer.ok) return
-  for (const command of JSON.parse(answer.text) as ChatCommandData[]) await run($, command)
+  for (const command of JSON.parse(answer.text) as ChatCommandData[]) await run($, chat, command)
 }
 
 // A compacted chat opens with its summary, not with anything the person typed, so that message names nothing.
@@ -94,13 +149,20 @@ export const register: Register = on => {
   on('command.run', { command: 'board' }, async () => ({ text: `The board is at ${BOARD_URL}. Start it with: npm start, in harness/kanban/app.` }))
 
   on('turn.start', async ($, e, next) => {
-    if (!e.agentId) isBusy = true
+    if (!e.agentId) {
+      isBusy = true
+      turnsStarted += 1
+    }
     return next(e)
   })
 
   on('turn.complete', async ($, e, next) => {
     const finished = await next(e)
-    if (!e.agentId) isBusy = false
+    if (!e.agentId) {
+      isBusy = false
+      const chat = await $.session.id()
+      for (const [message, turnsBefore] of [...unfinished]) if (turnsStarted > turnsBefore) await finish($, chat, message)
+    }
     await readName($).catch(() => undefined)
     await readActive($)
     return finished

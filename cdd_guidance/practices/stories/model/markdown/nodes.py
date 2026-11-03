@@ -41,6 +41,7 @@ def _outline_depth(match: "re.Match") -> int:
         return len(marks) - 1
     return len(match.group("indent")) // 4
 _OUTLINE_ESTIMATE_PATTERN = re.compile(r"^(\s*)\*\s+(\S.+)$")
+_EVIDENCE_LABEL = re.compile(r"\b(Observed|Inferred|Intended):", re.IGNORECASE)
 
 
 # -- MarkdownIncrement ---------------------------------------------------------
@@ -1434,6 +1435,7 @@ class MarkdownStoryModel(StoryModel):
         self._story_map = MarkdownStoryModel()
         self._current_epic = None
         self._sub_epic_stack = []
+        self._current_outline_story: Optional[MarkdownStory] = None
         for raw in lines:
             if not raw.strip():
                 continue
@@ -1444,6 +1446,7 @@ class MarkdownStoryModel(StoryModel):
                 continue
             if self._accept_outline_estimate():
                 continue
+            self._accept_outline_evidence()
         return self._story_map
 
     def _accept_outline_epic(self) -> bool:
@@ -1452,6 +1455,7 @@ class MarkdownStoryModel(StoryModel):
             return False
         indent = _outline_depth(match)
         name = self.strip_backticks(match.group("name"))
+        self._current_outline_story = None
         if indent <= 0:
             self._current_epic = MarkdownEpic(name, len(self._story_map.epics) + 1)
             self._story_map.epics.append(self._current_epic)
@@ -1485,7 +1489,17 @@ class MarkdownStoryModel(StoryModel):
         if actor:
             story.actors = [actor]
         parent.stories.append(story)
+        self._current_outline_story = story
         return True
+
+    def _accept_outline_evidence(self) -> None:
+        """Record the Observed, Inferred, or Intended labels written in the lines under a story heading."""
+        if self._current_outline_story is None:
+            return
+        evidence = self._current_outline_story.evidence
+        for label in _EVIDENCE_LABEL.findall(self._raw_line):
+            if label.lower() not in evidence:
+                evidence.append(label.lower())
 
     def _split_outline_story(self, raw_text: str) -> tuple[str, str]:
         if "-->" not in raw_text:

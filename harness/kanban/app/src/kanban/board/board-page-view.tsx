@@ -94,8 +94,12 @@ function MainView() {
 }
 
 function PageBodyView() {
-  const { page } = useBoard()
+  const { page, state } = useBoard()
   useEffect(() => page.start(), [page])
+  // A page left open across a rebuild loads the new build, so it never shows the old code.
+  useEffect(() => {
+    if (state.isNewBuild) globalThis.location.reload()
+  }, [state.isNewBuild])
   return (
     <div className="board-root">
       <BandsView />

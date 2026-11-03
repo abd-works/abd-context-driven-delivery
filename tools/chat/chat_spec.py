@@ -99,6 +99,17 @@ with description("a chat") as self:
             with it("should show the command waiting among its messages"):
                 expect(Chat.load(CHAT).messages()[0]).to(have_keys({"kind": "command", "text": "/actions-validate stories-story-map", "sent_at": 1000.0, "state": "waiting", "reason": ""}))
 
+            # (S) Person --> Remove Chat Message
+            with context("that a person has removed"):
+                with before.each:
+                    Chat.load(CHAT).remove(Chat.load(CHAT).messages()[0]["message"])
+
+                with it("should no longer show it"):
+                    expect(Chat.load(CHAT).messages()).to(be_empty)
+
+                with it("should give the chat nothing at its next check-in"):
+                    expect(Chat.load(CHAT).check_in(is_busy=True)).to(be_empty)
+
             with context("that the chat has taken"):
                 with before.each:
                     self.taken = Chat.load(CHAT).check_in(is_busy=True)[0]
@@ -113,6 +124,14 @@ with description("a chat") as self:
                     with it("should show the command as shown in the chat"):
                         expect(_states()).to(equal(["shown"]))
 
+                    # (S) Chat --> Finish Chat Command
+                    with context("that has finished running"):
+                        with before.each:
+                            Chat.load(CHAT).finish(self.taken["message"])
+
+                        with it("should show the command as done"):
+                            expect(_states()).to(equal(["done"]))
+
                 with context("that the chat could not show"):
                     with before.each:
                         Chat.load(CHAT).confirm(self.taken["message"], is_shown=False, reason="a Stop stands")
@@ -122,6 +141,20 @@ with description("a chat") as self:
 
                     with it("should say why"):
                         expect(Chat.load(CHAT).messages()[0]["reason"]).to(equal("a Stop stands"))
+
+                    # (S) Person --> Resend Chat Message
+                    with context("that a person has resent"):
+                        with before.each:
+                            Chat.load(CHAT).resend(self.taken["message"])
+
+                        with it("should show the command waiting again"):
+                            expect(_states()).to(equal(["waiting"]))
+
+                        with it("should let go of why it failed"):
+                            expect(Chat.load(CHAT).messages()[0]["reason"]).to(equal(""))
+
+                        with it("should give the command to the chat at its next check-in"):
+                            expect(_said(Chat.load(CHAT).check_in(is_busy=True))).to(equal([("command", "/actions-validate stories-story-map")]))
 
             with context("that is followed by more messages than the chat keeps"):
                 with before.each:

@@ -24,13 +24,14 @@ STATE_FILE = "chat.json"
 WAITING = "waiting"
 TAKEN = "taken"
 SHOWN = "shown"
+DONE = "done"
 FAILED = "failed"
-MESSAGE_STATES = (WAITING, TAKEN, SHOWN, FAILED)
+MESSAGE_STATES = (WAITING, TAKEN, SHOWN, DONE, FAILED)
 # The board shows a chat's latest messages; older ones are not worth keeping.
 KEPT_MESSAGES = 20
 
 CommandKind = Literal["submit", "fill", "command"]
-MessageState = Literal["waiting", "taken", "shown", "failed"]
+MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
 
 
 class ChatData(TypedDict):
@@ -46,6 +47,7 @@ class ChatCommandData(TypedDict):
 
 
 class ChatMessageData(TypedDict):
+    message: str
     kind: str
     text: str
     sent_at: float
@@ -143,6 +145,38 @@ class Chat:
         self._move(taken, SHOWN if is_shown else FAILED)
         return self.to_json()
 
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def finish(self, message: str) -> ChatData:
+        """Say chat has finished working on a message it showed, as its cdd-board mod does once the chat's turn has ended."""
+        shown = self._folder / SHOWN / f"{message}.json"
+        if shown.is_file():
+            self._move(shown, DONE)
+        return self.to_json()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def resend(self, message: str) -> ChatData:
+        """Put a message chat took but did not show back in its queue, so the chat takes it again at its next check-in."""
+        for state in (TAKEN, FAILED):
+            unshown = self._folder / state / f"{message}.json"
+            if unshown.is_file():
+                sent = json.loads(unshown.read_text(encoding="utf-8"))
+                unshown.write_text(json.dumps({key: value for key, value in sent.items() if key != "reason"}), encoding="utf-8")
+                self._move(unshown, WAITING)
+        return self.to_json()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def remove(self, message: str) -> ChatData:
+        """Remove a message sent to chat, whatever its state; one still waiting is never given to the chat."""
+        for state in MESSAGE_STATES:
+            (self._folder / state / f"{message}.json").unlink(missing_ok=True)
+        return self.to_json()
+
     @property
     def id(self) -> str:
         return self._folder.name
@@ -193,13 +227,13 @@ class Chat:
         path.replace(folder / path.name)
 
     def _forget_old_messages(self) -> None:
-        handled = sorted((path for state in (TAKEN, SHOWN, FAILED) for path in self._sent_in(state)), key=lambda path: path.name)
+        handled = sorted((path for state in (TAKEN, SHOWN, DONE, FAILED) for path in self._sent_in(state)), key=lambda path: path.name)
         for path in handled[:-KEPT_MESSAGES]:
             path.unlink()
 
     def _message(self, path: Path, state: MessageState) -> ChatMessageData:
         sent = json.loads(path.read_text(encoding="utf-8"))
-        return {"kind": sent["kind"], "text": sent["text"], "sent_at": sent.get("sent_at", 0.0), "state": state, "reason": sent.get("reason", "")}
+        return {"message": path.stem, "kind": sent["kind"], "text": sent["text"], "sent_at": sent.get("sent_at", 0.0), "state": state, "reason": sent.get("reason", "")}
 
     # The app writes a chat's transcript under the folder of the project the chat started in.
     @property

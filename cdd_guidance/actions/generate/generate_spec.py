@@ -123,8 +123,8 @@ with description("a generate action on practice guidance") as self:
             with it("should name the session's session.json"):
                 expect(self.reply).to(contain((self.project / ".sessions" / "alpha" / "session.json").resolve().as_posix()))
 
-            with it("should say paths are relative to the session's root"):
-                expect(self.reply).to(contain(f"Paths are relative to the session's root, {self.project.resolve().as_posix()}"))
+            with it("should say paths are named from the project's root"):
+                expect(self.reply).to(contain(f"Name paths from the project's root, {self.project.resolve().as_posix()}, or absolute."))
 
             with it("should give the session.json the session works from"):
                 expect(self.reply).to(contain('"name": "alpha"'))
@@ -144,8 +144,8 @@ with description("a generate action on practice guidance") as self:
             with it("should describe that session, not the one open"):
                 expect(self.reply).to(contain((self.project / ".sessions" / "beta" / "session.json").resolve().as_posix()))
 
-            with it("should say paths are relative to that session's root"):
-                expect(self.reply).to(contain(f"Paths are relative to the session's root, {(self.project / 'src').resolve().as_posix()}"))
+            with it("should name that session's root"):
+                expect(self.reply).to(contain(f"The session's root is {(self.project / 'src').resolve().as_posix()}"))
 
         with context("that the same cdd server has already generated once"):
             with before.each:

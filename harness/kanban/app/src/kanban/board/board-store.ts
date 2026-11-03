@@ -75,6 +75,8 @@ export type BoardState = {
   // The latest messages sent to the target chat, newest first, and whether the list of them is open.
   messages: ChatMessageData[]
   isMessagesOpen: boolean
+  // The server serves a newer build than the page was loaded from.
+  isNewBuild: boolean
 }
 
 export const EMPTY_DRAFT: BacklogDraft = { isOpen: false, title: '', text: '' }
@@ -109,6 +111,7 @@ const initialState = (): BoardState => ({
   pickedChat: null,
   messages: [],
   isMessagesOpen: false,
+  isNewBuild: false,
 })
 
 // Only conveniences are saved. Browser storage can be blocked or empty, and the page works the same without it.

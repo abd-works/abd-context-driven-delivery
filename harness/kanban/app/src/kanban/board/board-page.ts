@@ -19,6 +19,7 @@ import { BoardClient } from './board-client'
 import { BoardLayoutClient } from './board-layout-client'
 import { BoardReader } from './board-reader'
 import { BoardStore } from './board-store'
+import { BuildClient } from './build-client'
 import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
@@ -32,6 +33,7 @@ export class BoardPage {
   readonly chat: ChatClient
   readonly panels: SidePanelClient
   readonly files: FilesPanelClient
+  readonly build: BuildClient
   readonly layout = new BoardLayoutClient(this.store)
   readonly reader = new BoardReader(this)
   readonly tiles = new TileClient(this)
@@ -46,6 +48,7 @@ export class BoardPage {
     this.chat = new ChatClient(this.store, this.api)
     this.panels = new SidePanelClient(this.store, this.api)
     this.files = new FilesPanelClient(this.store, this.api)
+    this.build = new BuildClient(this.store, this.api)
   }
 
   get board(): BoardClient {
@@ -92,8 +95,8 @@ export class BoardPage {
 
   start(): () => void {
     const stopBoard = this.reader.startPolling()
-    const chatTimer = setInterval(() => void this.chat.refresh(), CHAT_POLL_MILLISECONDS)
-    void this.chat.refresh()
+    const chatTimer = setInterval(() => void Promise.all([this.chat.refresh(), this.build.check()]), CHAT_POLL_MILLISECONDS)
+    void Promise.all([this.chat.refresh(), this.build.check()])
     return () => {
       stopBoard()
       clearInterval(chatTimer)

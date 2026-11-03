@@ -103,14 +103,43 @@ describe('Send commands to a chat', () => {
 
     it('should show a message as waiting until the chat takes it', async () => {
       const { page } = await sent()
-      expect(page.store.state.messages.map(message => message.is_waiting)).toEqual([true, true])
+      expect(page.store.state.messages.map(message => message.state)).toEqual(['waiting', 'waiting'])
     })
 
-    it('should show a message as delivered once the chat has taken it', async () => {
+    it('should show a message as taken, not yet shown, once the chat has taken it', async () => {
       const { page, chat } = await sent()
       await chat.checkIn()
       await page.chat.refresh()
-      expect(page.store.state.messages.map(message => message.is_waiting)).toEqual([false, false])
+      expect(page.store.state.messages.map(message => message.state)).toEqual(['taken', 'taken'])
+    })
+
+    it('should say why the chat could not show a message', async () => {
+      const { page, chat } = await sent()
+      await chat.refuseNext('the chat dropped it: a Stop stands')
+      await page.chat.refresh()
+      expect(page.store.state.messages.find(message => message.state === 'failed')?.reason).toBe('the chat dropped it: a Stop stands')
+    })
+
+    it('should show a message as done once the chat has finished working on it', async () => {
+      const { page, chat } = await sent()
+      await chat.finishNext()
+      await page.chat.refresh()
+      expect(page.store.state.messages.find(message => message.text === '/actions-validate a')?.state).toBe('done')
+    })
+
+    it('should put a message the chat did not show back in its queue when a person resends it', async () => {
+      const { page, chat } = await sent()
+      await chat.refuseNext('the chat dropped it')
+      await page.chat.refresh()
+      const failed = page.store.state.messages.find(message => message.state === 'failed')!
+      await page.chat.resend(failed.message)
+      expect(page.store.state.messages.find(message => message.message === failed.message)?.state).toBe('waiting')
+    })
+
+    it('should no longer show a message a person removes', async () => {
+      const { page } = await sent()
+      await page.chat.remove(page.store.state.messages[0]!.message)
+      expect(page.store.state.messages.map(message => message.text)).toEqual(['/actions-validate a'])
     })
   })
 

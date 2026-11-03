@@ -1,4 +1,6 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import type { CddConnection } from '@cdd/cdd-connection'
@@ -31,6 +33,13 @@ export function createApp(cdd: CddConnection, port: number, staticRoot: string):
   app.post('/api/cdd/restart', async (_request, response) => {
     await cdd.close()
     response.json({ is_restarted: true })
+  })
+  // The built page names its hashed script, so the text of index.html changes with every build. An open page compares it
+  // with the build it loaded and reloads itself on a new one.
+  app.get('/api/build', (_request, response) => {
+    const index = join(staticRoot, 'index.html')
+    const build = existsSync(index) ? createHash('sha256').update(readFileSync(index)).digest('hex') : ''
+    response.json({ build })
   })
   app.use('/api', cddRoutes(cdd, [...boardRoutes, ...ticketRoutes, ...backlogItemRoutes, ...chatRoutes]))
   app.use(express.static(staticRoot))
