@@ -1,8 +1,7 @@
 import type { BacklogItemData } from '@cdd/harness/kanban/backlog-item'
-import { Ticket, type ActionStatesData, type TicketData } from '@cdd/harness/kanban/ticket'
+import { TicketClientGenerated, type ActionStatesData, type TicketData } from '@cdd/harness/kanban/ticket'
 
-import { pathPart } from '../board/board-api'
-import { guidanceSlug, PRACTICES, practiceOf, STATES } from '../board/board-brand'
+import { guidanceSlug, PRACTICES, practiceOf, STATES, WORK_LIGHT } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { ColumnClient } from '../board/column-client'
 
@@ -17,17 +16,14 @@ const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogIte
 // The practice's skill for a fidelity: `clean_engineering-code` is /practices-clean-engineering-clean-engineering-code.
 export const skillOf = (slug: string): string => `/practices-${guidanceSlug(practiceOf(slug)?.prefix ?? '')}${guidanceSlug(slug)}`
 
-// A ticket as the page knows it, with what a person can do to it.
-export class TicketClient extends Ticket {
+// A ticket as the page knows it, with what a person can do to it. Each operation reaches the ticket's tool through the
+// generated client it extends, then brings the rest of the page up to date.
+export class TicketClient extends TicketClientGenerated {
   constructor(
     json: TicketData,
     private readonly page: BoardPage,
   ) {
-    super(json)
-  }
-
-  private get path(): string {
-    return `/tickets/${pathPart(this.name)}`
+    super(page.api, json)
   }
 
   // A session can sit in closed/ under the name of an open one, so a column and name together say which ticket is meant.
@@ -48,7 +44,7 @@ export class TicketClient extends Ticket {
     return this.page.store.state.onlyActive && !this.isActive
   }
 
-  get violations(): string[] {
+  get violatedSlugs(): string[] {
     return Object.entries(this.progress)
       .filter(([, state]) => state === 'violations')
       .map(([slug]) => slug)
@@ -77,9 +73,19 @@ export class TicketClient extends Ticket {
     return `${handoff}${next}${this.isLocked ? ' · Activate this session to run actions' : ''}`
   }
 
-  get backLabel(): string {
-    const isFirst = this.column === 'Discovery' && !this.isDone
-    return `Move ${this.title} to ${isFirst ? 'the Backlog' : 'the previous column'}`
+  // The Backlog and Complete take a dropped card only where a move there means something: back to the Backlog from
+  // Discovery's In progress, and into Complete from Implementation's Done, or the active ticket through its Close dialog,
+  // because closing it asks what to do with its work.
+  canDropOn(edge: string): boolean {
+    if (edge === 'Backlog') return this.column === 'Discovery' && !this.isDone
+    if (edge === 'Complete') return this.isActive || (this.column === 'Implementation' && this.isDone)
+    return false
+  }
+
+  async dropOn(edge: string): Promise<void> {
+    if (edge === 'Backlog') await this.movePrevious()
+    else if (this.isActive) await this.page.activation.start(this, true)
+    else await this.moveNext()
   }
 
   isEnabled(practice: string): boolean {
@@ -89,6 +95,10 @@ export class TicketClient extends Ticket {
   stateOf(slug: string): { label: string; color: string; key: string } {
     const key = this.progress[slug] ?? 'not_started'
     return { ...STATES[key]!, key }
+  }
+
+  lightOf(slug: string): number {
+    return this.isEnabled(practiceOf(slug)?.key ?? '') ? WORK_LIGHT[this.stateOf(slug).key]! : WORK_LIGHT.off!
   }
 
   actionsOf(slug: string): ActionStatesData {
@@ -122,18 +132,28 @@ export class TicketClient extends Ticket {
     this.page.board.select(this.address)
   }
 
-  async moveNext(): Promise<void> {
-    const moved = await this.page.api.post<TicketData>(`${this.path}/move-next`)
-    await this.page.reader.refresh()
-    if (moved) await this.page.cards.follow(this.page.ticket(moved))
+  override async moveNext(): Promise<this | null> {
+    return this.followed(await super.moveNext())
   }
 
-  async movePrevious(): Promise<void> {
-    const moved = await this.page.api.post<TicketData | BacklogItemData>(`${this.path}/move-previous`)
+  override async moveTo(stage: string, done?: boolean): Promise<this | null> {
+    return this.followed(await super.moveTo(stage, done))
+  }
+
+  // The card stays open on the ticket wherever it moved.
+  private async followed(moved: this | null): Promise<this | null> {
     await this.page.reader.refresh()
-    if (!moved) return
+    if (moved) await this.page.cards.follow(this.page.ticket(moved.toJSON()))
+    return moved
+  }
+
+  override async movePrevious(): Promise<TicketData | BacklogItemData | null> {
+    const moved = await super.movePrevious()
+    await this.page.reader.refresh()
+    if (!moved) return null
     if (isBacklogItem(moved)) this.release(moved)
     else await this.page.cards.follow(this.page.ticket(moved))
+    return moved
   }
 
   // Moved to the Backlog, a ticket is off the board, so nothing stays open on it and its item is selected.
@@ -143,18 +163,20 @@ export class TicketClient extends Ticket {
     this.page.item(item).select()
   }
 
-  async archive(): Promise<void> {
-    await this.page.api.post(`${this.path}/archive`)
+  override async archive(): Promise<this | null> {
+    const archived = await super.archive()
     await this.page.reader.refresh()
+    return archived
   }
 
-  async enablePractice(practice: string, isEnabled: boolean): Promise<void> {
-    const saved = await this.page.api.post<TicketData>(`${this.path}/practice`, { practice, is_enabled: isEnabled })
+  override async enablePractice(practice: string, isEnabled: boolean): Promise<this | null> {
+    const saved = await super.enablePractice(practice, isEnabled)
     await this.page.reader.refresh()
-    if (!saved) return
+    if (!saved) return null
     if (!isEnabled) this.page.cards.dropPractice(this.name, practice)
     const name = PRACTICES.find(entry => entry.key === practice)?.name ?? practice
     this.page.store.toast(`${name} ${isEnabled ? 'on' : 'off'} for ${this.title} · saved to .sessions/${this.name}/session.json`)
+    return saved
   }
 
   fillSplit(): Promise<void> {
@@ -166,11 +188,11 @@ export class TicketClient extends Ticket {
   }
 
   fillSatisfy(): Promise<void> {
-    return this.page.chat.fill(`/actions-satisfy ${this.violations.map(guidanceSlug).join(' ')}`)
+    return this.page.chat.fill(`/actions-satisfy ${this.violatedSlugs.map(guidanceSlug).join(' ')}`)
   }
 
   fillShowViolations(): Promise<void> {
-    return this.page.chat.fill(`Show the violations on ${this.violations.map(guidanceSlug).join(' ')} for ticket ${this.name}.`)
+    return this.page.chat.fill(`Show the violations on ${this.violatedSlugs.map(guidanceSlug).join(' ')} for ticket ${this.name}.`)
   }
 
   // Violations hold a ticket, so the step is to fix them from the report, which needs no chat.

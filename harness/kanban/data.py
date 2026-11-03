@@ -19,7 +19,6 @@ class TicketData(TypedDict):
     parent: str
     column: str
     is_done: bool
-    can_move_next: bool
     next: str | None
     next_action: str
     handoff: str

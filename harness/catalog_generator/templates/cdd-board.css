@@ -46,8 +46,8 @@
 }
 
 .foundry-board-grid--cdd .foundry-practice-col__card.foundry-perspective-label--bdd {
-  border-left-color: var(--fam-sdd, #6bcb77);
-  color: var(--fam-sdd, #6bcb77);
+  border-left-color: var(--fam-bdd, #00b894);
+  color: var(--fam-bdd, #00b894);
 }
 
 .foundry-board-grid--cdd .kb-col-head {
@@ -356,7 +356,7 @@ html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-qu
 .foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--sdd { border-left-color: var(--fam-sdd, #6bcb77); }
 .foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--arc { border-left-color: var(--fam-arc, #4fc3f7); }
 .foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--uxd { border-left-color: var(--fam-uxd, #e84393); }
-.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--bdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--bdd { border-left-color: var(--fam-bdd, #00b894); }
 .foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__row--ddd { border-left-color: var(--fam-ddd, #6c5ce7); }
 
 .foundry-kanban-surface.is-tour-spec-focus .kb-col[data-stage="spec"] > .tour-stage-detail .foundry-tour-spec-box__name {
@@ -503,7 +503,7 @@ html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-qu
 .foundry-tour-spec-box__row--sdd { border-left-color: var(--fam-sdd, #6bcb77); }
 .foundry-tour-spec-box__row--arc { border-left-color: var(--fam-arc, #4fc3f7); }
 .foundry-tour-spec-box__row--uxd { border-left-color: var(--fam-uxd, #e84393); }
-.foundry-tour-spec-box__row--bdd { border-left-color: var(--fam-sdd, #6bcb77); }
+.foundry-tour-spec-box__row--bdd { border-left-color: var(--fam-bdd, #00b894); }
 .foundry-tour-spec-box__row--ddd { border-left-color: var(--fam-ddd, #6c5ce7); }
 
 .foundry-tour-spec-box__name {

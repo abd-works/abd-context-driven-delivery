@@ -12,7 +12,6 @@ export const ticketJson = (name: string, change: Partial<TicketData> = {}): Tick
   parent: '',
   column: 'Discovery',
   is_done: false,
-  can_move_next: true,
   next: 'stories-story_map',
   next_action: 'generate',
   last_activity: '2026-11-01T10:00:00Z',

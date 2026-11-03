@@ -10,7 +10,10 @@ const POLL_MILLISECONDS = 1000
 
 type Command = { kind: 'submit' | 'fill' | 'command'; text: string }
 
+const NAME_CHARACTERS = 48
+
 let isBusy = false
+let chatName = ''
 let active: TicketData | undefined
 
 const post = ($: EngineInterface, path: string, body: unknown) =>
@@ -27,9 +30,18 @@ async function run($: EngineInterface, command: Command): Promise<void> {
 }
 
 async function poll($: EngineInterface, chat: string): Promise<void> {
-  const response = await post($, `/api/chats/${encodeURIComponent(chat)}/next`, { is_busy: isBusy })
+  const response = await post($, `/api/chats/${encodeURIComponent(chat)}/next`, { is_busy: isBusy, name: chatName })
   const command = JSON.parse(response.text) as Command | null
   if (command) await run($, command)
+}
+
+// A mod cannot read the title the app shows for a chat, so the board names it by its folder and the first thing the
+// person typed. The board keeps sending to the chat's id; the name is only what a person reads in its picker.
+async function readName($: EngineInterface): Promise<void> {
+  const folder = (await $.session.cwd()).split(/[\\/]/).filter(Boolean).at(-1) ?? ''
+  const opening = (await $.session.messages()).find(message => message.role === 'user')?.text.replace(/\s+/g, ' ').trim() ?? ''
+  const words = opening.length > NAME_CHARACTERS ? `${opening.slice(0, NAME_CHARACTERS)}…` : opening
+  chatName = [folder, words].filter(Boolean).join(' · ')
 }
 
 const statusOf = (ticket: TicketData): string => {
@@ -55,6 +67,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'board', description: 'Say where the CDD session board is' })
     const chat = await $.session.id()
+    await readName($).catch(() => undefined)
     $.clock.every(POLL_MILLISECONDS, () => {
       // The board app may not be running; the next poll tries again.
       void poll($, chat).catch(() => undefined)
@@ -73,6 +86,7 @@ export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
     const finished = await next(e)
     if (!e.agentId) isBusy = false
+    await readName($).catch(() => undefined)
     await readActive($)
     return finished
   })

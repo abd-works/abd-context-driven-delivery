@@ -4,7 +4,7 @@
  */
 import { expect, type Locator, type Page } from '@playwright/test'
 
-import { card, openBoard, turnOffActiveSessionOnly } from '../../support'
+import { BY_ITS_TITLE, card, openBoard, turnOffActiveSessionOnly } from '../../support'
 import type { BacklogItemsDriver } from './backlog_items.spec.shared'
 
 // A segment names its skill and the state of that fidelity's work, as `/practices-stories-stories-story-map: in progress`.
@@ -45,7 +45,7 @@ export class BacklogItemsPageDriver implements BacklogItemsDriver {
   }
 
   async moveToBacklog(ticket: string): Promise<void> {
-    await card(this.page, ticket).locator('.card-moves .card-move').first().click()
+    await card(this.page, ticket).dragTo(this.page.locator('[data-column="Backlog"] .card-list'), { sourcePosition: BY_ITS_TITLE })
     await expect(card(this.page, ticket)).toHaveCount(0)
   }
 

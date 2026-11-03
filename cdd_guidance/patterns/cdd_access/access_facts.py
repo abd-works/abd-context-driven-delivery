@@ -6,11 +6,10 @@ import re
 
 _TOOL_CALL = re.compile(r"\.call(?:<[^>]*>)?\(")
 _ADAPTER_IMPORT = re.compile(r"""from\s+['"]@cdd/""")
-_EXTENDS_TOOLS = re.compile(r"\bclass\s+\w+Node\s+extends\s+\w+Tools\b")
+_EXTENDS_ADAPTER = re.compile(r"\bclass\s+\w+\s+extends\s+\w+(?:Adapter|Tools)\b")
 _STORE_IMPORT = re.compile(r"""from\s+['"]lowdb[^'"]*['"]""")
-_NAMED_TOOL = re.compile(r"""['"][a-z][a-z-]*\.(?!exe\b|py\b|ts\b|js\b|json\b)[a-z_]+['"]""")
-_PARSE = re.compile(r"\bJSON\.parse\(")
-_TRY_OPENING = re.compile(r"\btry\s*\{")
+# File names an application would give its own copy of what the installer generates.
+_HAND_WRITTEN_ADAPTER = re.compile(r"(?:-adapter|-tools|-connection-node|^cdd-connection)\.ts$")
 _MARK = re.compile(r"@language_adapter\(")
 _OPEN_RESULT = re.compile(r"def\s+(\w+)\(self[^)]*\)\s*->\s*dict\[str,\s*Any\]")
 _OPERATION_MARK = "@mcp"
@@ -34,22 +33,16 @@ def node_facts(text: str) -> dict:
     return {
         "tool_calls": _hits(_TOOL_CALL, text),
         "reaches_cdd": reaches_cdd,
-        "extends_tools": bool(_EXTENDS_TOOLS.search(text)),
+        "extends_adapter": bool(_EXTENDS_ADAPTER.search(text)),
         "store_imports": _hits(_STORE_IMPORT, text) if reaches_cdd else [],
     }
 
 
-def connection_facts(text: str) -> dict:
-    return {
-        "named_tools": _hits(_NAMED_TOOL, text),
-        "bare_parses": [[_line_of(text, match.start()), match.group(0)] for match in _PARSE.finditer(text) if not _guarded(text, match.start())],
-    }
-
-
-def _guarded(text: str, index: int) -> bool:
-    """Whether a `try {` opens on the lines just above the parse."""
-    above = text[:index].rsplit("\n", 3)[-3:]
-    return bool(_TRY_OPENING.search("\n".join(above)))
+def is_hand_written_adapter(file_name: str, text: str) -> bool:
+    """A file named like generated code that reaches cdd; an adapter for anything else is the application's own port."""
+    if not _HAND_WRITTEN_ADAPTER.search(file_name):
+        return False
+    return file_name.startswith("cdd-connection") or bool(_ADAPTER_IMPORT.search(text) or _TOOL_CALL.search(text))
 
 
 def is_marked(text: str) -> bool:

@@ -22,7 +22,7 @@ class BacklogItemNotFoundError(LookupError):
         super().__init__(f"no backlog item titled {backlog_item!r} on the board")
 
 
-@language_adapter(language="typescript")
+@language_adapter(language="typescript", identity="title")
 @agent_toolset
 class BacklogItem(Card):
     """Hold an idea not yet started. Starting it opens a ticket for it."""
@@ -107,7 +107,7 @@ class BacklogItem(Card):
         return self
 
     def to_json(self) -> BacklogItemData:
-        return {**super().to_json(), "text": self.text, "path": str(self._path)}
+        return {**super().to_json(), "text": self.text, "path": self._path.relative_to(self._board.repo_root).as_posix()}
 
     @property
     def _held_ticket_folder(self) -> Path:

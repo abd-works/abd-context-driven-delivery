@@ -10,6 +10,7 @@ InstallTracker = Callable[[Path], None]
 _NO_CATALOG_FLAG = "_no_catalog"
 _NO_DEPLOY_FLAG = "_no_deploy"
 _LANGUAGE_ADAPTERS_FLAG = "_language_adapters"
+_IDENTITY_FLAG = "_language_adapter_identity"
 
 
 def noCatalog(target: Any = None) -> Any:
@@ -44,11 +45,17 @@ def noDeploy(target: Any = None) -> Any:
     return mark(target)
 
 
-def language_adapter(*, language: str) -> Callable[[Any], Any]:
-    """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them."""
+def language_adapter(*, language: str, identity: str = "") -> Callable[[Any], Any]:
+    """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them.
+
+    identity names the field of what `to_json()` returns that holds the object's name, so code holding only that data
+    knows which object its operations act on. An object its tools never load by name, such as the one board, has none.
+    """
 
     def mark(toolset: Any) -> Any:
         setattr(toolset, _LANGUAGE_ADAPTERS_FLAG, (*languages_of(toolset), language))
+        if identity:
+            setattr(toolset, _IDENTITY_FLAG, identity)
         return toolset
 
     return mark
@@ -57,6 +64,11 @@ def language_adapter(*, language: str) -> Callable[[Any], Any]:
 def languages_of(toolset: Any) -> tuple[str, ...]:
     """The languages a toolset's class is marked for."""
     return tuple(getattr(toolset, _LANGUAGE_ADAPTERS_FLAG, ()))
+
+
+def identity_field_of(toolset: Any) -> str:
+    """The field of the toolset's data that names one object, or empty when its tools load none by name."""
+    return str(getattr(toolset, _IDENTITY_FLAG, ""))
 
 
 def omitted_from_catalog(obj: Any) -> bool:

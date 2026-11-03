@@ -1,9 +1,9 @@
-import { pathPart } from '../board/board-api'
+import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
+
 import { ACTION_STANDINGS, countOf, guidanceSlug, STEP_FAILED } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
-import { CARD_MENU } from './open-card-client'
 import type { TicketClient } from './ticket-client'
 import { chipDoneCount, chipOfferedCount, chipsOf, chosenFormats } from './tile-formats'
 import type { FormatChip } from './tile-formats'
@@ -20,7 +20,6 @@ export type TileBar = {
   runOff: boolean
   validateOff: boolean
   reviewOff: boolean
-  generate: StepFace
   validate: StepFace
   review: StepFace
   reportSlug: string | undefined
@@ -50,6 +49,8 @@ function validateFaceOf(ticket: TicketClient, tile: Tile): StepFace {
 
 const allowsAll = (ticket: TicketClient, tile: Tile, action: string): boolean => tile.slugs.length > 0 && tile.slugs.every(slug => ticket.allows(slug, action))
 
+const hasFiles = (tile: Tile): boolean => Object.values(tile.files).some(formats => Object.values(formats).some(entries => entries.some(entry => entry.exists)))
+
 // What an open action bar offers, and what its controls send to the chat.
 export class TileActionsClient {
   constructor(private readonly page: BoardPage) {}
@@ -59,9 +60,7 @@ export class TileActionsClient {
   }
 
   private save(tile: Tile, change: Partial<Tile>): void {
-    const { store } = this.page
-    if (tile.place === CARD_MENU) store.change(state => ({ cardMenu: state.cardMenu ? { ...state.cardMenu, ...change } : null }))
-    else store.change(state => ({ tile: state.tile ? { ...state.tile, ...change, isPinned: true } : null }))
+    this.page.store.change(state => ({ tile: state.tile ? { ...state.tile, ...change, isPinned: true } : null }))
   }
 
   chooseAction(tile: Tile, action: string): void {
@@ -78,8 +77,9 @@ export class TileActionsClient {
     return tile.action !== 'render' || chipsOf(stage, tile.slugs).some(chip => chipDoneCount(tile.files, tile.slugs, chip) > 0)
   }
 
+  // Validate and Review need something to look at: an action the ticket recorded, or files the bar found on disk.
   private canSendFor(ticket: TicketClient, tile: Tile, action: string): boolean {
-    return !ticket.isLocked && this.chat.canSend && allowsAll(ticket, tile, action)
+    return !ticket.isLocked && this.chat.canSend && (allowsAll(ticket, tile, action) || hasFiles(tile))
   }
 
   barOf(ticket: TicketClient, stage: ColumnClient, tile: Tile): TileBar {
@@ -90,7 +90,6 @@ export class TileActionsClient {
       runOff: !this.canRun(ticket, stage, tile),
       validateOff: !this.canSendFor(ticket, tile, 'validate'),
       reviewOff: !this.canSendFor(ticket, tile, 'review'),
-      generate: stepFaceOf(ticket.standingOf(tile.slugs, 'generate'), 'Generate'),
       validate,
       review: stepFaceOf(ticket.standingOf(tile.slugs, 'review'), 'Review'),
       reportSlug: tile.slugs.find(slug => ticket.reports[slug]),
@@ -99,7 +98,7 @@ export class TileActionsClient {
   }
 
   async runCommandsOf(ticket: string, fidelities: string[], formats: string[]): Promise<void> {
-    const commands = await this.page.api.post<string[]>(`/tickets/${pathPart(ticket)}/generate-commands`, { fidelities, formats })
+    const commands = await TicketClientGenerated.named(this.page.api, ticket).generateCommands(fidelities, formats)
     for (const command of commands ?? []) await this.chat.command(command)
   }
 

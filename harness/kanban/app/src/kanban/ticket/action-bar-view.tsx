@@ -3,6 +3,7 @@ import { useBoard } from '../board/board-context'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
 import { FormatIcon } from '../board/icons'
+import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
 import type { ChipFace, StepFace, TileBar } from './tile-actions-client'
 
@@ -52,7 +53,6 @@ function RunLineView({ tile, stage, bar }: { tile: Tile; stage: ColumnClient; ba
         <FormatChipView key={chip.label} tile={tile} chip={chip} isOff={bar.isLocked} />
       ))}
       <span className="bar-run">
-        <StepMarkView step={bar.generate} />
         <button className="action primary step-control small" disabled={bar.runOff} onClick={() => void page.tileActions.run(tile, stage)}>
           Run
         </button>
@@ -80,7 +80,7 @@ function ValidateLineView({ ticket, tile, bar }: { ticket: TicketClient; tile: T
   )
 }
 
-function ReviewLineView({ ticket, tile, bar, hasFileLinks }: { ticket: TicketClient; tile: Tile; bar: TileBar; hasFileLinks: boolean }) {
+function ReviewLineView({ tile, bar }: { tile: Tile; bar: TileBar }) {
   const { page } = useBoard()
   return (
     <div className="bar-line wide-gap">
@@ -88,30 +88,24 @@ function ReviewLineView({ ticket, tile, bar, hasFileLinks }: { ticket: TicketCli
         review
       </button>
       <StepMarkView step={bar.review} />
-      {hasFileLinks ? (
-        <span className="bar-files">
-          {['list', 'folder', 'files'].map(mode => (
-            <button key={mode} className="extra-action" onClick={() => void page.files.openFiles(ticket.name, tile.slugs, mode)}>
-              {mode}
-            </button>
-          ))}
-        </span>
-      ) : null}
     </div>
   )
 }
 
-type ActionBarProps = { ticket: TicketClient; stage: ColumnClient; tile: Tile; hasFileLinks: boolean; onMouseEnter?: () => void; onMouseLeave?: () => void }
+type ActionBarProps = { ticket: TicketClient; stage: ColumnClient; tile: Tile; onMouseEnter?: () => void; onMouseLeave?: () => void }
 
-// What a person does on an open tile: pick an action and formats, run it, validate, review, and look at the files.
-export function ActionBarView({ ticket, stage, tile, hasFileLinks, onMouseEnter, onMouseLeave }: ActionBarProps) {
+// What a person does on an open tile: look at its files, pick an action and formats, run it, validate, and review.
+export function ActionBarView({ ticket, stage, tile, onMouseEnter, onMouseLeave }: ActionBarProps) {
   const { page } = useBoard()
   const bar = page.tileActions.barOf(ticket, stage, tile)
   return (
     <div className="expansion" data-bar={tile.place} onClick={() => page.tiles.pin()} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+      <div className="bar-line bar-files">
+        <FileViewsView ticket={ticket.name} slugs={tile.slugs} />
+      </div>
       <RunLineView tile={tile} stage={stage} bar={bar} />
       <ValidateLineView ticket={ticket} tile={tile} bar={bar} />
-      <ReviewLineView ticket={ticket} tile={tile} bar={bar} hasFileLinks={hasFileLinks} />
+      <ReviewLineView tile={tile} bar={bar} />
     </div>
   )
 }

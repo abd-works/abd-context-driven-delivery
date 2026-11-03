@@ -5,12 +5,15 @@ from __future__ import annotations
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.installation.files import Command
+from harness.mcp.mcp_server import Mcp
 
 
 @agent_toolset
 class Review(GuidanceAction):
     """Record that a person has reviewed and approved guidance."""
 
+    # The slash command only reaches Python through MCP; without it, an approval is never written to the session log.
+    @Mcp
     @Command
     @agent_instructions
     def review(self, guidance: GuidanceArg) -> str:

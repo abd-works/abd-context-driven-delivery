@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+﻿import { describe, expect, it } from 'vitest'
 
 import { boardJson, discovery } from 'test-utils/board-examples'
 import { pageOn, withChat } from 'test-utils/board-page-support'
@@ -6,7 +6,7 @@ import { pageOn, withChat } from 'test-utils/board-page-support'
 describe('Send commands to a chat', () => {
   it('should choose the only chat connected', async () => {
     const { page, server } = pageOn(boardJson([discovery()]))
-    server.answer('GET /api/chats', [{ id: 'chat-1', isBusy: false }])
+    server.answer('GET /api/chats', [{ id: 'chat-1', name: '', isBusy: false }])
     await page.chat.refresh()
     expect(page.store.state.targetChat).toBe('chat-1')
   })
@@ -14,8 +14,8 @@ describe('Send commands to a chat', () => {
   it('should choose none among several', async () => {
     const { page, server } = pageOn(boardJson([discovery()]))
     server.answer('GET /api/chats', [
-      { id: 'chat-1', isBusy: false },
-      { id: 'chat-2', isBusy: false },
+      { id: 'chat-1', name: '', isBusy: false },
+      { id: 'chat-2', name: '', isBusy: false },
     ])
     await page.chat.refresh()
     expect(page.chat.canSend).toBe(false)
@@ -24,8 +24,8 @@ describe('Send commands to a chat', () => {
   it('should send once a person picks one of several', async () => {
     const { page, server } = pageOn(boardJson([discovery()]))
     server.answer('GET /api/chats', [
-      { id: 'chat-1', isBusy: false },
-      { id: 'chat-2', isBusy: false },
+      { id: 'chat-1', name: '', isBusy: false },
+      { id: 'chat-2', name: '', isBusy: false },
     ])
     await page.chat.refresh()
     page.chat.choose('chat-2')
@@ -35,8 +35,8 @@ describe('Send commands to a chat', () => {
   it('should keep a picked chat while it stays connected', async () => {
     const { page, server } = pageOn(boardJson([discovery()]))
     server.answer('GET /api/chats', [
-      { id: 'chat-1', isBusy: false },
-      { id: 'chat-2', isBusy: true },
+      { id: 'chat-1', name: '', isBusy: false },
+      { id: 'chat-2', name: '', isBusy: true },
     ])
     page.chat.choose('chat-2')
     await page.chat.refresh()
@@ -73,7 +73,7 @@ describe('Send commands to a chat', () => {
 
   it('should say a fill waits for the turn to end while the chat is busy', async () => {
     const { page, server } = pageOn(boardJson([discovery()]))
-    withChat(page, server, { id: 'chat-1', isBusy: true })
+    withChat(page, server, { id: 'chat-1', name: '', isBusy: true })
     await page.chat.fill('Split this')
     expect(page.store.state.toasts[0]?.text).toContain('It goes in when this turn ends.')
   })

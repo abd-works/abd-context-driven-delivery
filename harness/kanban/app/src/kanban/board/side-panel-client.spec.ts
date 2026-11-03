@@ -19,9 +19,9 @@ const REPORT: ReportData = {
 
 function panelsPage() {
   const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
-  server.answer('POST /api/tickets/sign-up/files', FILES)
-  server.answer('GET /api/tickets/sign-up/file?path=tests%2Fstory-map.md', { path: 'tests/story-map.md', text: '# Map' })
-  server.answer(`GET /api/tickets/sign-up/report?fidelity=${SLUG}`, REPORT)
+  server.answer('POST /api/ticket/sign-up/files', FILES)
+  server.answer('POST /api/ticket/sign-up/read-file {"path":"tests/story-map.md"}', { path: 'tests/story-map.md', text: '# Map' })
+  server.answer(`POST /api/ticket/sign-up/report {"fidelity":"${SLUG}"}`, REPORT)
   return { page, server }
 }
 
@@ -37,7 +37,7 @@ describe('List Ticket Files', () => {
   describe('with a list that cannot be read', () => {
     async function refused() {
       const { page, server } = panelsPage()
-      server.answer('POST /api/tickets/sign-up/files', { error: 'cdd ticket.files failed: no' }, 502)
+      server.answer('POST /api/ticket/sign-up/files', { error: 'cdd ticket.files failed: no' }, 502)
       await page.files.openFiles('sign-up', [SLUG], 'list')
       return page
     }
@@ -90,7 +90,7 @@ describe('View Files', () => {
   describe('with a violation in a file its fidelity does not declare', () => {
     async function opened() {
       const { page, server } = panelsPage()
-      server.answer('GET /api/tickets/sign-up/file?path=src%2Fother.py', { path: 'src/other.py', text: 'x' })
+      server.answer('POST /api/ticket/sign-up/read-file {"path":"src/other.py"}', { path: 'src/other.py', text: 'x' })
       await page.files.openFileAtLine('sign-up', SLUG, 'src/other.py', FAILING_LINE)
       return page
     }
@@ -114,9 +114,9 @@ describe('Open Validation Report', () => {
 
   it('should show every fidelity\'s violations with no fidelity named', async () => {
     const { page, server } = panelsPage()
-    server.answer('GET /api/tickets/sign-up/violations', REPORT)
+    server.answer('POST /api/ticket/sign-up/violations', REPORT)
     await page.panels.openReport('sign-up', '')
-    expect(server.requests.at(-1)?.path).toBe('/api/tickets/sign-up/violations')
+    expect(server.requests.at(-1)?.path).toBe('/api/ticket/sign-up/violations')
   })
 })
 
@@ -142,9 +142,9 @@ describe('Refresh Board After Tool Calls', () => {
       const { page, server } = panelsPage()
       await page.panels.openReport('sign-up', SLUG)
       await page.files.openFiles('sign-up', [SLUG], 'list')
-      server.answer(`GET /api/tickets/sign-up/report?fidelity=${SLUG}`, { ...REPORT, rules: [] })
-      server.answer('POST /api/tickets/sign-up/files', { [SLUG]: { markdown: [{ path: 'new.md', exists: true }] } })
-      server.answer('GET /api/board', boardJson([discovery([ticketJson('sign-up', { last_activity: '2026-11-02T10:00:00Z' })])], 'sign-up'))
+      server.answer(`POST /api/ticket/sign-up/report {"fidelity":"${SLUG}"}`, { ...REPORT, rules: [] })
+      server.answer('POST /api/ticket/sign-up/files', { [SLUG]: { markdown: [{ path: 'new.md', exists: true }] } })
+      server.answer('POST /api/board/show', boardJson([discovery([ticketJson('sign-up', { last_activity: '2026-11-02T10:00:00Z' })])], 'sign-up'))
       await page.reader.refresh()
       return page
     }

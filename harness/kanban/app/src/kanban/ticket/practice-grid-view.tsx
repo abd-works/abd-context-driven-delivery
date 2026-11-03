@@ -40,13 +40,16 @@ function GridStageHeadView({ ticket, stage }: { ticket: TicketClient; stage: Col
 function StageBarView({ ticket }: { ticket: TicketClient }) {
   const { page, state } = useBoard()
   const { tile } = state
-  const stage = page.board.stages.find(entry => tile?.ticket === ticket.name && tile.place === headPlace(entry.name))
+  const stages = page.board.stages
+  // Each read of stages builds new clients, so the bar finds its stage by position in one list.
+  const index = stages.findIndex(entry => tile?.ticket === ticket.name && tile.place === headPlace(entry.name))
+  const stage = stages[index]
   if (!tile || !stage) return null
   const place = headPlace(stage.name)
   return (
     <div className="column-grid details-grid">
-      <div style={{ gridColumn: page.board.stages.indexOf(stage) + 2 }}>
-        <ActionBarView ticket={ticket} stage={stage} tile={tile} hasFileLinks onMouseEnter={() => page.tiles.hoverIn({ ticket: ticket.name, stage, place, slugs: tile.slugs })} onMouseLeave={() => page.tiles.hoverOut(place)} />
+      <div style={{ gridColumn: index + 2 }}>
+        <ActionBarView ticket={ticket} stage={stage} tile={tile} onMouseEnter={() => page.tiles.hoverIn({ ticket: ticket.name, stage, place, slugs: tile.slugs })} onMouseLeave={() => page.tiles.hoverOut(place)} />
       </div>
     </div>
   )

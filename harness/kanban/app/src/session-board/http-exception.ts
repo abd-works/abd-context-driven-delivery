@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from 'express'
 import { ZodError } from 'zod'
 
-import { CddNotConnectedError, CddToolError } from '../cdd/cdd-connection-node'
+import { CddNotConnectedError, CddToolError } from '@cdd/cdd-connection'
+import { CddRequestError } from '@cdd/cdd-shared'
 
 const BAD_REQUEST = 400
 const INTERNAL_ERROR = 500
@@ -20,7 +21,7 @@ export class HttpException extends Error {
 
 const statusOf = (failure: unknown): number => {
   if (failure instanceof HttpException) return failure.status
-  if (failure instanceof ZodError) return BAD_REQUEST
+  if (failure instanceof ZodError || failure instanceof CddRequestError) return BAD_REQUEST
   if (failure instanceof CddNotConnectedError) return SERVICE_UNAVAILABLE
   if (failure instanceof CddToolError) return BAD_GATEWAY
   return INTERNAL_ERROR

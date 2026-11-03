@@ -44,8 +44,8 @@ export type BoardState = {
   now: number
   selected: string | null
   openCard: string | null
+  dragged: string | null
   tile: Tile | null
-  cardMenu: Tile | null
   activation: Activation | null
   draft: BacklogDraft
   panels: SidePanel[]
@@ -74,8 +74,8 @@ const initialState = (): BoardState => ({
   now: Date.now(),
   selected: null,
   openCard: null,
+  dragged: null,
   tile: null,
-  cardMenu: null,
   activation: null,
   draft: EMPTY_DRAFT,
   panels: [],

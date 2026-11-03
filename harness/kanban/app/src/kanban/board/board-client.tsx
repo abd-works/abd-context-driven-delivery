@@ -1,4 +1,4 @@
-import { Board, type BoardData } from '@cdd/harness/kanban/board'
+import { BoardClientGenerated, type BoardData } from '@cdd/harness/kanban/board'
 
 import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
 import type { TicketClient } from '../ticket/ticket-client'
@@ -21,12 +21,12 @@ const limitFrom = (text: string): number | null => {
 }
 
 // One read of the board, with what the page works out from it. Each read is a new client, built from the store.
-export class BoardClient extends Board {
+export class BoardClient extends BoardClientGenerated {
   constructor(
     data: BoardData,
     private readonly page: BoardPage,
   ) {
-    super(data)
+    super(page.api, data)
   }
 
   get shownColumns(): ColumnClient[] {
@@ -80,11 +80,12 @@ export class BoardClient extends Board {
     this.page.store.change({ selected: address })
   }
 
-  async setWipLimit(stage: string, text: string): Promise<void> {
+  // What a person typed becomes a limit only when it is a whole number of at least one.
+  async submitWipLimit(stage: string, text: string): Promise<void> {
     this.page.layout.cancelLimit()
     const limit = limitFrom(text)
     if (!limit) return
-    await this.page.api.post('/board/wip-limit', { stage, limit })
+    await this.setWipLimit(stage, limit)
     await this.page.reader.refresh()
   }
 

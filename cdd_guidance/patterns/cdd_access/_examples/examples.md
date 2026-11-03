@@ -10,33 +10,38 @@ routes.post('/tickets/:ticket/move-next', async (request, response) => {
 })
 ```
 
-**Repaired.** The route asks the object, whose adapter class knows its own tool.
+**Repaired.** The application mounts the routes the installer generates, and each runs its object's own adapter.
 
 ```ts
-routes.post('/tickets/:ticket/move-next', async (request, response, next) => {
-  await TicketNode.fromRequest(cdd, request).moveNext().then(result => response.json(result), next)
-})
+app.use('/api', cddRoutes(cdd, [...boardRoutes, ...ticketRoutes, ...backlogItemRoutes]))
 ```
 
-## `text-that-is-not-json-is-a-failure`
+## `adapter-is-generated`
 
-**Faulty.** A failed operation's plain text becomes a syntax error, and the real reason is lost.
-
-```ts
-return JSON.parse(text) as T
-```
-
-**Repaired.** Text that is not JSON is the failure, and it carries the real reason.
+**Faulty.** A hand-written class wraps the generated adapter to parse requests the installer already reads.
 
 ```ts
-try {
-  return JSON.parse(text) as T
-} catch {
-  throw new CddToolError(tool, text)
+export class TicketNode extends TicketNodeAdapter {
+  moveToRequested(request: Request): Promise<TicketNodeAdapter> {
+    const { stage, done } = Destination.parse(request.body)
+    return this.moveTo(stage, done)
+  }
 }
 ```
 
-## `lowdb-only-for-what-cdd-does-not-own`
+**Repaired.** The generated route reads the arguments against the tool's schema, and the page's subclass adds only what the page knows.
+
+```ts
+export class TicketClient extends TicketClientGenerated {
+  override async moveTo(stage: string, done?: boolean): Promise<this | null> {
+    const moved = await super.moveTo(stage, done)
+    await this.page.reader.refresh()
+    return moved
+  }
+}
+```
+
+## `state-lives-behind-the-tool`
 
 **Faulty.** The app keeps its own copy of tickets, which goes stale when the agent moves one.
 
@@ -44,7 +49,7 @@ try {
 export class TicketRepositoryNode extends TicketRepository {}
 ```
 
-**Repaired.** Tickets are read through their tool. lowdb holds only what this app alone owns.
+**Repaired.** Tickets are read through their adapter. lowdb holds only what this app alone owns.
 
 ```ts
 export class BoardLayoutRepositoryNode extends BoardLayoutRepository {}

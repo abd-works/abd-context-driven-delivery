@@ -223,15 +223,17 @@ in § Shared rules) — then keep that choice for the slice.
 
 ### CDD-backed aggregates
 
-An aggregate whose rules and state live in the Python CDD domain follows `patterns-cdd-access`. Its core comes from the language adapter the installer deploys, imported through `@cdd/*`, so this project does not rewrite the domain.
+An aggregate whose rules and state live in the Python CDD domain follows `patterns-cdd-access`. The installer generates its domain classes, its server adapter, its routes, and the browser class that posts to them, imported through `@cdd/*`, so this project does not rewrite the domain or write a route for it. Every MCP call is made on the server.
 
 | LERN file | For a CDD-backed aggregate |
 |---|---|
-| `<aggregate>.ts` | Optional: only logic the browser and server share that Python does not hold. `{Object}` and `{Object}Data` come from the language adapter |
-| `<aggregate>-node.ts` | `{Object}Node extends {Object}Tools`, from the language adapter |
-| `<aggregate>-client.tsx` | `{Object}Client extends {Object}`, from the language adapter |
-| `<aggregate>-routes.ts` | Unchanged: routes ask the node |
+| `<aggregate>.ts` | Optional: only types or logic the page needs that Python does not hold. `{Object}`, the shared base, is generated, and nothing uses it directly |
+| `<aggregate>-node.ts` | None: `{Object}NodeAdapter` is generated |
+| `<aggregate>-routes.ts` | None: mount the generated `{object}Routes` once, with `cdd-routes.ts` from `patterns-cdd-access` |
+| `<aggregate>-client.tsx` | `{Object}Client extends {Object}ClientGenerated`. A person acts on it; it does the page's work with the other page clients and calls up to the generated client to reach the routes |
 | `<aggregate>.json`, `{Domain}Repository` | None: the tool is the store |
+
+Its server tier drives `{Object}NodeAdapter` against a real cdd server on a throwaway project, where an aggregate this application owns drives `{Domain}Node`.
 
 The persistence rules (`one-json-store-per-aggregate`, `repository-owns-aggregate-lifecycle`, `one-repository-per-aggregate`, `node-repository-parses-on-read`, `reset-every-repository`) apply only to aggregates this application owns. The layout, navigation, naming, and testing rules apply to every aggregate.
 

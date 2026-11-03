@@ -30,9 +30,10 @@ export class ExampleApi {
   private async answer(route: Route): Promise<void> {
     const request = route.request()
     const address = addressOf(request)
-    if (address === 'GET /api/board') return route.fulfill({ json: this.board })
+    if (address === 'POST /api/board/show') return route.fulfill({ json: this.board })
     if (address === 'GET /api/chats') return route.fulfill({ json: [] })
-    const example = this.answers[address]
+    // An example keyed by the JSON it was sent wins, because one route reads different things for different arguments.
+    const example = this.answers[`${address} ${request.postData() ?? ''}`] ?? this.answers[address]
     if (!example) return route.fulfill({ status: NOT_FOUND, json: { error: `no example for ${address}` } })
     const { body, board } = typeof example === 'function' ? example(request.postDataJSON() as Record<string, unknown>) : example
     this.board = board ?? this.board

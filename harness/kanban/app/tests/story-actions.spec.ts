@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 import { fixtureRoot } from '../test-utils/fixture-repo'
-import { BOARD_POST_HEADERS, card, FakeChat, openBoard, openCardOf, toast, turnOffActiveSessionOnly } from './support'
+import { BOARD_POST_HEADERS, card, FakeChat, openBoard, openCardOf, openTileBarOf, toast, turnOffActiveSessionOnly } from './support'
 
 // A spec per story that acts, each against the real server, the real cdd tools, and the throwaway repository.
 // The specs share that repository, so each works on its own ticket, and the session changes come last.
@@ -29,7 +29,7 @@ async function lastReceived(text: string): Promise<void> {
 
 test.beforeAll(async ({ playwright, baseURL }) => {
   const request = await playwright.request.newContext({ baseURL })
-  chat = new FakeChat(request, 'surface-chat')
+  chat = new FakeChat(request, 'surface-chat', 'Surface chat')
   await chat.start()
 })
 
@@ -44,7 +44,7 @@ test.beforeEach(async ({ page }) => {
 test.describe('Restrict Actions To Active Session', () => {
   test('should disable what changes a ticket that is not active, and leave information open', async ({ page }) => {
     const billing = card(page, 'billing-report')
-    await expect(billing.getByRole('button', { name: 'Move Billing report to the next column' })).toBeDisabled()
+    await expect(billing).toHaveAttribute('draggable', 'false')
     await expect(billing.getByRole('button', { name: 'Activate' })).toBeEnabled()
     await billing.getByRole('button', { name: 'list' }).click()
     await expect(page.locator('[data-panel="files"]')).toBeVisible()
@@ -52,7 +52,7 @@ test.describe('Restrict Actions To Active Session', () => {
 
   test('should enable them with Active session only off', async ({ page }) => {
     await turnOffActiveSessionOnly(page)
-    await expect(card(page, 'billing-report').getByRole('button', { name: 'Move Billing report to the next column' })).toBeEnabled()
+    await expect(card(page, 'billing-report')).toHaveAttribute('draggable', 'true')
   })
 })
 
@@ -82,6 +82,11 @@ test.describe('Set Stage WIP Limit', () => {
 })
 
 test.describe('Send commands to a chat', () => {
+  test('should show a chat by the name its mod reports, and keep its id to send to', async ({ page }) => {
+    await waitForChat(page)
+    await expect(page.getByRole('option', { name: 'Surface chat' })).toHaveAttribute('value', 'surface-chat')
+  })
+
   test('should pick the only chat and say a fill is queued', async ({ page }) => {
     await waitForChat(page)
     await page.getByRole('button', { name: 'Handoff' }).click()
@@ -93,7 +98,7 @@ test.describe('Send commands to a chat', () => {
   test('should hold a fill at the server until the turn ends', async ({ page }) => {
     await waitForChat(page)
     chat.isBusy = true
-    await expect(page.getByRole('option', { name: 'surface-chat (busy)' })).toBeAttached({ timeout: 8_000 })
+    await expect(page.getByRole('option', { name: 'Surface chat (busy)' })).toBeAttached({ timeout: 8_000 })
     const before = chat.received.length
     await page.getByRole('button', { name: 'Split' }).click()
     await expect(toast(page, 'It goes in when this turn ends.')).toBeVisible()
@@ -107,8 +112,7 @@ test.describe('Send commands to a chat', () => {
 test.describe('Generate Fidelity Output', () => {
   test('should send the generate commands from Run on an opened card', async ({ page }) => {
     await waitForChat(page)
-    const opened = await openCardOf(page, 'checkout-flow')
-    const bar = opened.locator('.expansion').first()
+    const bar = await openTileBarOf(await openCardOf(page, 'checkout-flow'))
     await bar.getByRole('button', { name: /^diagram/ }).click()
     await bar.getByRole('button', { name: 'Run' }).click()
     await expect.poll(() => chat.received.map(command => command.text).join('\n')).toContain('/actions-generate')
@@ -170,7 +174,7 @@ test.describe('Display Ticket Details', () => {
   test('should show the ticket of a card pressed anywhere', async ({ page }) => {
     const links = card(page, 'billing-report').locator('.card-files')
     const box = (await links.boundingBox())!
-    await links.click({ position: { x: box.width - 2, y: box.height / 2 } })
+    await links.click({ position: { x: 2, y: box.height / 2 } })
     await expect(page.getByRole('heading', { name: 'Billing report' })).toBeVisible()
   })
 
@@ -184,7 +188,7 @@ test.describe('Choose Ticket Practices', () => {
   test('should turn a practice off, say where it was saved, and fade its tile', async ({ page }) => {
     await page.getByRole('switch', { name: 'Disable UX for Checkout flow' }).click()
     await expect(toast(page, 'UX off for Checkout flow · saved to .sessions/checkout-flow/session.json')).toBeVisible()
-    await expect(page.locator('.details-body [data-tile="ux-ia"]')).toHaveCSS('opacity', '0.2')
+    await expect(page.locator('.details-body [data-tile="ux-ia"]')).toHaveCSS('opacity', '0.12')
     await page.getByRole('button', { name: 'Hide practices not enabled' }).click()
     await expect(page.locator('.details-body [data-tile="ux-ia"]')).toHaveCount(0)
     await page.getByRole('button', { name: 'Show practices not enabled' }).click()
@@ -329,7 +333,7 @@ test.describe('List, browse, and view files', () => {
 
 test.describe('Refresh Board After Tool Calls', () => {
   test('should show a move made elsewhere with a toast', async ({ page, request }) => {
-    await request.post('/api/tickets/pricing-rules/move-next', { headers: BOARD_POST_HEADERS })
+    await request.post('/api/ticket/pricing-rules/move-next', { headers: BOARD_POST_HEADERS })
     await expect(toast(page, 'Pricing rules moved to Specification · Done')).toBeVisible({ timeout: 8_000 })
     await expect(column(page, 'Specification').locator('.card-list').nth(1).locator('[data-ticket="pricing-rules"]')).toBeVisible()
   })
@@ -346,15 +350,15 @@ test.describe('Refresh Board After Tool Calls', () => {
 
 test.describe('Display Connected Status', () => {
   test('should show a band when cdd is lost and drop it when cdd answers again', async ({ page }) => {
-    await page.route('**/api/board', route => route.fulfill({ status: 503, json: { error: 'The cdd server is not connected: test' } }))
+    await page.route('**/api/board/show', route => route.fulfill({ status: 503, json: { error: 'The cdd server is not connected: test' } }))
     await expect(page.locator('.band-failure')).toContainText('cdd is not connected', { timeout: 8_000 })
     await expect(page.locator('.column-grid').first()).toBeVisible()
-    await page.unroute('**/api/board')
+    await page.unroute('**/api/board/show')
     await expect(page.locator('.band-failure')).toHaveCount(0, { timeout: 8_000 })
   })
 
   test('should show a tool failure in a toast', async ({ page }) => {
-    await page.route('**/api/tickets/checkout-flow/report*', route => route.fulfill({ status: 502, json: { error: 'cdd ticket.report failed: test' } }))
+    await page.route('**/api/ticket/checkout-flow/report', route => route.fulfill({ status: 502, json: { error: 'cdd ticket.report failed: test' } }))
     await page.getByRole('button', { name: 'Run next: fix violations' }).click()
     await expect(toast(page, 'cdd ticket.report failed: test')).toBeVisible()
   })

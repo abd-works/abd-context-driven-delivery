@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from expects import be_false, be_true, contain, equal, expect, have_key, match
+from expects import be_false, be_true, contain, equal, expect, have_key, match, start_with
 from mamba import after, before, context, description, it
 
 from harness.installation.installer import Installer
@@ -335,6 +335,14 @@ with description("the board tools") as self:
             with it("should leave the ticket off the board"):
                 expect(json.dumps(self.project.call("board.show"))).not_to(contain("pet-visits"))
 
+        # (S) Person --> Drag Ticket To A Stage
+        with context("that drags a ticket into a later stage's Done"):
+            with before.each:
+                self.moved = self.project.call("ticket.move_to", ticket="pet-visits", stage="Implementation", done=True)
+
+            with it("should show the ticket in that stage's Done"):
+                expect((self.moved["column"], self.moved["is_done"])).to(equal(("Implementation", True)))
+
         # (S) Person --> Move Ticket, a ticket that is done in Discovery
         with context("that moves a ticket to the next column"):
             with before.each:
@@ -494,6 +502,9 @@ with description("the board tools") as self:
             with it("should show an item in the Backlog with the ticket's title"):
                 expect(self.moved["title"]).to(equal("Sign up"))
 
+            with it("should give the item's path from the project"):
+                expect(self.moved["path"]).to(start_with(".sessions/"))
+
             with it("should take the ticket off the board's stages"):
                 expect(self.project.tickets_in("Discovery")).to(equal([]))
 
@@ -525,8 +536,8 @@ with description("the board tools") as self:
         with it("should name satisfy as the next action"):
             expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("satisfy"))
 
-        with it("should not allow Review until Validate is clean"):
-            expect(self.project.ticket_json("sign-up")["allowed_actions"]["stories-story_map"]).not_to(contain("review"))
+        with it("should allow Validate and Review again on the same output"):
+            expect(self.project.ticket_json("sign-up")["allowed_actions"]["stories-story_map"]).to(equal(["generate", "validate", "review"]))
 
         # (S) Person --> Open Validation Report
         with context("with that fidelity's report saved with its graph"):
@@ -683,7 +694,7 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.set_wip_limit", "board.help",
-                "ticket.new", "ticket.move_next", "ticket.move_previous", "ticket.close", "ticket.archive", "ticket.activate",
+                "ticket.new", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.activate",
                 "ticket.workspace", "ticket.enable_practice", "ticket.files", "ticket.read_file", "ticket.report", "ticket.violations", "ticket.generate_commands",
                 "backlog-item.add", "backlog-item.start",
             }))

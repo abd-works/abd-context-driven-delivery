@@ -1,4 +1,5 @@
-import { pathPart } from '../board/board-api'
+import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
+
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
@@ -29,20 +30,24 @@ export class TileClient {
   }
 
   private readFiles(ticket: string, slugs: string[]): Promise<TicketFiles | null> {
-    return this.page.api.post<TicketFiles>(`/tickets/${pathPart(ticket)}/files`, { fidelities: slugs })
+    return TicketClientGenerated.named(this.page.api, ticket).files(slugs)
   }
 
-  async started(spot: TileSpot, isPinned: boolean): Promise<Tile> {
-    const { ticket, stage, place, slugs } = spot
-    const files = (await this.readFiles(ticket, slugs)) ?? {}
-    return { ticket, place, stage: stage.name, slugs, action: DEFAULT_ACTION, picked: defaultPicks(stage, slugs, files), isPinned, files }
-  }
-
-  // Only the latest open wins, so a slow read for a tile the pointer has left cannot replace the one under it.
+  // The bar shows at once and its files fill in when they are read, because reading them can take a second. Only the
+  // latest open takes the files, so a slow read for a tile the pointer has left cannot change the one under it.
   async open(spot: TileSpot, isPinned: boolean): Promise<void> {
     const order = ++this.opening
-    const tile = await this.started(spot, isPinned)
-    if (order === this.opening) this.store.change({ tile })
+    const { ticket, stage, place, slugs } = spot
+    const shown: Tile = { ticket, place, stage: stage.name, slugs, action: DEFAULT_ACTION, picked: defaultPicks(stage, slugs, {}), isPinned, files: {} }
+    this.store.change({ tile: shown })
+    const files = (await this.readFiles(ticket, slugs)) ?? {}
+    if (order !== this.opening) return
+    this.store.change(state => (state.tile?.place === place && state.tile.ticket === ticket ? { tile: this.withFiles(state.tile, shown, files, stage) } : {}))
+  }
+
+  // A person's own choice of formats stays; until they make one, the defaults follow what is already generated.
+  private withFiles(tile: Tile, shown: Tile, files: TicketFiles, stage: ColumnClient): Tile {
+    return { ...tile, files, picked: tile.picked === shown.picked ? defaultPicks(stage, tile.slugs, files) : tile.picked }
   }
 
   isOpen(ticket: string, place: string): boolean {
@@ -86,9 +91,8 @@ export class TileClient {
 
   // What a bar shows was generated can change under it, so it is read again with the board.
   async reload(): Promise<void> {
-    const { tile, cardMenu } = this.store.state
+    const { tile } = this.store.state
     if (tile) await this.reloadFiles(tile, files => this.store.change(state => ({ tile: state.tile?.place === tile.place ? { ...state.tile, files } : state.tile })))
-    if (cardMenu) await this.reloadFiles(cardMenu, files => this.store.change(state => ({ cardMenu: state.cardMenu ? { ...state.cardMenu, files } : null })))
   }
 
   private async reloadFiles(tile: Tile, keep: (files: TicketFiles) => void): Promise<void> {

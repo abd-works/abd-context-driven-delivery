@@ -29,7 +29,7 @@ const REPORT: ReportData = {
 export const BOARD_WITH_REPORT = boardHolding([checkoutFlow], [], 'checkout-flow')
 
 export const FILE_ANSWERS: ExampleAnswers = {
-  'POST /api/tickets/checkout-flow/files': { body: { [SLUG]: { markdown: [{ path: STORY_MAP, exists: true }], drawio: [{ path: 'tests/story-map.drawio', exists: false }] } } },
-  'GET /api/tickets/checkout-flow/file?path=tests%2Fstory-map.md': { body: { path: STORY_MAP, text: '# Check Out Order' } },
-  'GET /api/tickets/checkout-flow/report?fidelity=stories-story_map': { body: REPORT },
+  'POST /api/ticket/checkout-flow/files': { body: { [SLUG]: { markdown: [{ path: STORY_MAP, exists: true }], drawio: [{ path: 'tests/story-map.drawio', exists: false }] } } },
+  'POST /api/ticket/checkout-flow/read-file {"path":"tests/story-map.md"}': { body: { path: STORY_MAP, text: '# Check Out Order' } },
+  'POST /api/ticket/checkout-flow/report {"fidelity":"stories-story_map"}': { body: REPORT },
 }

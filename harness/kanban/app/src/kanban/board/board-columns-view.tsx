@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { DragEvent, KeyboardEvent, ReactNode } from 'react'
 
 import { BacklogCardView, ComposerView } from '../backlog-item/backlog-item-view'
 import { TicketCardView } from '../ticket/ticket-card-view'
@@ -12,7 +12,7 @@ import { StageHeadView } from './stage-head-view'
 function WipLimitFieldView({ column }: { column: ColumnClient }) {
   const { page } = useBoard()
   const [text, setText] = useState(String(column.wipLimit))
-  const submit = () => void page.board.setWipLimit(column.name, text)
+  const submit = () => void page.board.submitWipLimit(column.name, text)
   const pressed = (event: KeyboardEvent) => {
     if (event.key === 'Enter') submit()
     if (event.key === 'Escape') page.layout.cancelLimit()
@@ -62,14 +62,50 @@ function EdgeColumnView({ column }: { column: ColumnClient }) {
       <EdgeHeadView column={column} />
       {column.isBacklog && state.draft.isOpen ? <ComposerView /> : null}
       <div className="card-lists is-single">
-        <div className="card-list">
+        <DropZoneView className="card-list" accepts={ticket => ticket.canDropOn(column.name)} onDrop={ticket => ticket.dropOn(column.name)}>
           {column.items.map(item => (
             <BacklogCardView key={item.path} item={item} />
           ))}
           <TicketListView tickets={column.tickets} spot="only" />
-        </div>
+        </DropZoneView>
       </div>
     </div>
+  )
+}
+
+type DropProps = { accepts: (ticket: TicketClient) => boolean; onDrop: (ticket: TicketClient) => unknown; className: string; children: ReactNode }
+
+// A list a dragged card can be dropped on. Only a list that would change where the card is accepts it.
+function DropZoneView({ accepts, onDrop, className, children }: DropProps) {
+  const { page, state } = useBoard()
+  const [isOver, setOver] = useState(false)
+  const dragged = page.board.tickets.find(ticket => ticket.address === state.dragged)
+  const isAccepted = dragged !== undefined && accepts(dragged)
+  const draggedOver = (event: DragEvent) => {
+    if (!isAccepted) return
+    event.preventDefault()
+    setOver(true)
+  }
+  const dropped = (event: DragEvent) => {
+    event.preventDefault()
+    setOver(false)
+    page.store.change({ dragged: null })
+    if (dragged && isAccepted) void onDrop(dragged)
+  }
+  const shown = [className, isAccepted ? 'is-drop-zone' : '', isAccepted && isOver ? 'is-drop-over' : ''].filter(Boolean).join(' ')
+  return (
+    <div className={shown} onDragOver={draggedOver} onDragLeave={() => setOver(false)} onDrop={dropped}>
+      {children}
+    </div>
+  )
+}
+
+function StageListView({ column, done, children }: { column: ColumnClient; done: boolean; children: ReactNode }) {
+  const accepts = (ticket: TicketClient) => !(ticket.column === column.name && ticket.isDone === done)
+  return (
+    <DropZoneView className="card-list" accepts={accepts} onDrop={ticket => ticket.moveTo(column.name, done)}>
+      {children}
+    </DropZoneView>
   )
 }
 
@@ -92,14 +128,14 @@ function StageColumnView({ column }: { column: ColumnClient }) {
         </StageHeadView>
       </div>
       <div className="card-lists">
-        <div className="card-list">
+        <StageListView column={column} done={false}>
           <span className="list-label">IN PROGRESS</span>
           <TicketListView tickets={column.inProgress} spot="left" />
-        </div>
-        <div className="card-list">
+        </StageListView>
+        <StageListView column={column} done>
           <span className="list-label">DONE</span>
           <TicketListView tickets={column.done} spot="right" />
-        </div>
+        </StageListView>
       </div>
     </div>
   )

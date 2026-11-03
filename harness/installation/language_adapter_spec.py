@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from expects import be_false, be_true, contain, equal, expect
+from expects import be_false, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.installation.installer import Installer
@@ -13,11 +13,18 @@ _REPO = Path(__file__).resolve().parents[2]
 Installer(repo=_REPO).ensure_import_path()
 
 from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
-from harness.installation.destination import language_adapter, languages_of  # noqa: E402
-from harness.installation.language_adapter import LanguageAdapterInstallation, camel_case, schema_type  # noqa: E402
+from harness.installation.destination import identity_field_of, language_adapter, languages_of  # noqa: E402
+from harness.installation.language_adapter import (  # noqa: E402
+    LanguageAdapterInstallation,
+    MissingIdentityError,
+    argument_schema,
+    camel_case,
+    schema_type,
+)
 
 _KANBAN = ("harness.kanban.board:Board", "harness.kanban.ticket:Ticket", "harness.kanban.backlog_item:BacklogItem")
 _ADAPTERS = "language-adapters/typescript"
+_IDENTITY_FLAG = "_language_adapter_identity"
 
 
 def _install(install_path, references=_KANBAN):
@@ -28,6 +35,10 @@ def _install(install_path, references=_KANBAN):
     return adapters
 
 
+def _between(text, start, end):
+    return text[text.index(start) : text.index(end)]
+
+
 with description("a language adapter"):
     with description("a toolset marked for a language"):
         with it("should name that language"):
@@ -36,6 +47,13 @@ with description("a language adapter"):
                 pass
 
             expect(languages_of(Marked)).to(equal(("typescript",)))
+
+        with it("should name the field of its data that holds an object's name"):
+            @language_adapter(language="typescript", identity="name")
+            class Named:
+                pass
+
+            expect(identity_field_of(Named)).to(equal("name"))
 
         with context("that no mark names"):
             with it("should name no language"):
@@ -50,11 +68,23 @@ with description("a language adapter"):
             self.adapters = _install(self.install_path)
             self.root = self.install_path / _ADAPTERS
             self.ticket = (self.root / "harness/kanban/ticket.ts").read_text(encoding="utf-8")
+            self.ticket_node = (self.root / "harness/kanban/ticket-node-adapter.ts").read_text(encoding="utf-8")
             self.board = (self.root / "harness/kanban/board.ts").read_text(encoding="utf-8")
+            self.board_node = (self.root / "harness/kanban/board-node-adapter.ts").read_text(encoding="utf-8")
+            self.backlog_item = (self.root / "harness/kanban/backlog-item.ts").read_text(encoding="utf-8")
 
-        with it("should mirror the folders the toolset's source sits in"):
+        with it("should mirror the folders the toolset's source sits in, with what only the server runs in its own file"):
             written = sorted(path.relative_to(self.root).as_posix() for path in self.root.rglob("*.ts"))
-            expect(written).to(equal(["cdd-connection.ts", "harness/kanban/backlog-item.ts", "harness/kanban/board.ts", "harness/kanban/ticket.ts"]))
+            expect(written).to(equal([
+                "cdd-connection.ts",
+                "cdd-shared.ts",
+                "harness/kanban/backlog-item-node-adapter.ts",
+                "harness/kanban/backlog-item.ts",
+                "harness/kanban/board-node-adapter.ts",
+                "harness/kanban/board.ts",
+                "harness/kanban/ticket-node-adapter.ts",
+                "harness/kanban/ticket.ts",
+            ]))
 
         with it("should declare ES modules, so Node loads the files wherever the install sits"):
             manifest = json.loads((self.root / "package.json").read_text(encoding="utf-8"))
@@ -69,7 +99,7 @@ with description("a language adapter"):
             adapters.bind_tracker(tracked.append)
             adapters.record(AgentToolSet.instantiate("harness.kanban.ticket:Ticket"))
             adapters.write_all()
-            expect(sorted(path.name for path in tracked)).to(equal(["cdd-connection.ts", "package.json", "ticket.ts"]))
+            expect(sorted(path.name for path in tracked)).to(equal(["cdd-connection.ts", "cdd-shared.ts", "package.json", "ticket-node-adapter.ts", "ticket.ts"]))
 
         with context("that has no mark"):
             with it("should write nothing"):
@@ -77,11 +107,38 @@ with description("a language adapter"):
                 _install(install_path, ("tools.echo.echo:Echo",))
                 expect((install_path / _ADAPTERS).exists()).to(be_false)
 
+        with context("whose tools load one object by name, with no identity on its mark"):
+            with it("should refuse, because a browser object could not say which object its routes act on"):
+                ticket_class = type(AgentToolSet.instantiate("harness.kanban.ticket:Ticket"))
+                named = getattr(ticket_class, _IDENTITY_FLAG)
+                delattr(ticket_class, _IDENTITY_FLAG)
+                try:
+                    expect(lambda: _install(Path(tempfile.mkdtemp(prefix="language-adapter-")))).to(raise_error(MissingIdentityError))
+                finally:
+                    setattr(ticket_class, _IDENTITY_FLAG, named)
+
         with description("its connection"):
-            with it("should state only what a connection must do, so the adapter needs no package"):
-                connection = (self.root / "cdd-connection.ts").read_text(encoding="utf-8")
-                expect(connection).to(contain("call<Result>(tool: string, args: Record<string, unknown>): Promise<Result>"))
-                expect("import " in connection).to(be_false)
+            with before.all:
+                self.connection = (self.root / "cdd-connection.ts").read_text(encoding="utf-8")
+
+            with it("should be one class that carries every call"):
+                expect(self.connection).to(contain("export class CddConnection {"))
+
+            with it("should import only Node's own modules, so the install needs no package"):
+                imports = [line for line in self.connection.splitlines() if line.startswith("import ")]
+                expect(all("from 'node:" in line for line in imports)).to(be_true)
+
+            with it("should start cdd from the checkout it was installed from"):
+                expect(self.connection).to(contain(f"const SOURCE_ROOT = {json.dumps(str(_REPO))}"))
+
+            with it("should raise the text of an answer that is not JSON"):
+                expect(self.connection).to(contain("throw new CddToolError(tool, text)"))
+
+        with description("its shared code"):
+            with it("should import only types, so a browser loads nothing of Node"):
+                shared = (self.root / "cdd-shared.ts").read_text(encoding="utf-8")
+                imports = [line for line in shared.splitlines() if line.startswith("import ")]
+                expect(all(line.startswith("import type ") for line in imports)).to(be_true)
 
         with description("its data"):
             with it("should state what to_json returns, from the Python"):
@@ -97,64 +154,119 @@ with description("a language adapter"):
             with it("should state a nested shape in the file that uses it"):
                 expect(self.ticket).to(contain("export type ReportData = {"))
 
-        with description("its structure"):
+        with description("its shared base"):
+            with before.all:
+                self.base = _between(self.ticket, "export class Ticket {", "export class TicketClientGenerated")
+
             with it("should read each field in camelCase"):
-                expect(self.ticket).to(contain("get isDone(): boolean {\n    return this.data.is_done\n  }"))
+                expect(self.base).to(contain("get isDone(): boolean {\n    return this.#read().is_done\n  }"))
 
             with it("should serialize back to exactly what Python sent"):
-                expect(self.ticket).to(contain("toJSON(): TicketData {\n    return this.data\n  }"))
+                expect(self.base).to(contain("toJSON(): TicketData {\n    return this.#read()\n  }"))
 
-        with description("its tools"):
-            with it("should give each object its own class, so no connector knows every tool"):
-                expect(self.ticket).to(contain("export class TicketTools {"))
-                expect("board.show" in self.ticket).to(be_false)
+            with it("should let its subtypes take on new state"):
+                expect(self.base).to(contain("protected changed(state: TicketData): this {"))
+
+            with it("should make no call, so nothing reaches a tool through the base itself"):
+                expect("call<" in self.base or "post<" in self.base).to(be_false)
+
+        with description("its server adapter"):
+            with it("should extend the shared base"):
+                expect(self.ticket_node).to(contain("export class TicketNodeAdapter extends Ticket {"))
+
+            with it("should call only its own object's tools, so no connector knows every tool"):
+                expect("board.show" in self.ticket_node).to(be_false)
 
             with context("for an object loaded by its identity"):
                 with it("should hold the identity, so a caller never passes it again"):
-                    expect(self.ticket).to(contain("constructor(protected readonly cdd: CddConnection, protected readonly ticket: string) {}"))
+                    expect(self.ticket_node).to(contain("constructor(protected readonly cdd: CddConnection, protected readonly ticket: string, state: TicketData | null = null) {"))
 
                 with it("should send the identity under its Python name"):
-                    expect(self.ticket).to(contain("'ticket.move_next', { ticket: this.ticket }"))
+                    expect(self.ticket_node).to(contain("'ticket.move_next', { ticket: this.ticket }"))
+
+                with it("should build the adapter for the object a request names"):
+                    expect(self.ticket_node).to(contain("static fromRequest(cdd: CddConnection, request: CddRequest): TicketNodeAdapter {"))
 
             with context("for an object with no identity"):
                 with it("should need only the connection"):
-                    expect(self.board).to(contain("constructor(protected readonly cdd: CddConnection) {}"))
+                    expect(self.board_node).to(contain("constructor(protected readonly cdd: CddConnection, state: BoardData | null = null) {"))
 
             with context("for an operation with its own arguments"):
                 with it("should type each argument from the published schema"):
-                    expect(self.ticket).to(contain("enablePractice(practice: string, isEnabled: boolean): Promise<Ticket>"))
+                    expect(self.ticket_node).to(contain("async enablePractice(practice: string, isEnabled: boolean): Promise<this> {"))
 
                 with it("should mark an argument with a Python default as optional"):
-                    expect(self.ticket).to(contain("close(leaving?: string[] | null): Promise<Ticket>"))
+                    expect(self.ticket_node).to(contain("async close(leaving?: string[] | null): Promise<this> {"))
 
                 with it("should send camelCase arguments under their Python names"):
-                    expect(self.ticket).to(contain("is_enabled: isEnabled"))
+                    expect(self.ticket_node).to(contain("is_enabled: isEnabled"))
 
             with context("for a result"):
-                with it("should wrap one object in its class"):
-                    expect(self.ticket).to(contain("return new Ticket(await this.cdd.call<TicketData>("))
+                with it("should take on the object's own state its tool returns"):
+                    expect(self.ticket_node).to(contain("return this.changed(await this.cdd.call<TicketData>('ticket.move_next'"))
 
                 with it("should import another object it returns"):
-                    expect(self.ticket).to(contain("import type { BacklogItemData } from './backlog-item'"))
+                    expect(self.ticket_node).to(contain("import type { BacklogItemData } from './backlog-item'"))
 
                 with it("should leave a choice of objects as their data"):
-                    expect(self.ticket).to(contain("movePrevious(): Promise<TicketData | BacklogItemData>"))
+                    expect(self.ticket_node).to(contain("movePrevious(): Promise<TicketData | BacklogItemData>"))
 
                 with it("should type a shape Python declares"):
-                    expect(self.ticket).to(contain("report(fidelity: string): Promise<ReportData>"))
+                    expect(self.ticket_node).to(contain("report(fidelity: string): Promise<ReportData>"))
 
                 with it("should type a list of strings"):
-                    expect(self.ticket).to(contain("Promise<string[]>"))
+                    expect(self.ticket_node).to(contain("Promise<string[]>"))
 
             with context("for a class operation, which no loaded object runs"):
-                with it("should be a static operation that takes the connection"):
-                    expect(self.ticket).to(contain("static async new(cdd: CddConnection, title: string, scope?: string, parent?: string, path?: string): Promise<Ticket>"))
+                with it("should be a static operation that takes the connection and returns the new object's data"):
+                    expect(self.ticket_node).to(contain("static new(cdd: CddConnection, title: string, scope?: string, parent?: string, path?: string): Promise<TicketData>"))
+
+        with description("its browser client"):
+            with it("should extend the shared base"):
+                expect(self.ticket).to(contain("export class TicketClientGenerated extends Ticket {"))
+
+            with it("should take its identity from the field the mark names"):
+                expect(self.ticket).to(contain("protected readonly ticket: string = state?.name ?? ''"))
+
+            with it("should post to its object's route, with the name safe in the path"):
+                expect(self.ticket).to(contain("this.api.post<TicketData>(`/ticket/${encodeURIComponent(this.ticket)}/move-next`, {})"))
+
+            with it("should send arguments under their Python names"):
+                expect(self.ticket).to(contain("{ practice, is_enabled: isEnabled }"))
+
+            with it("should keep its state when the page has already shown a failure"):
+                expect(self.ticket).to(contain("return state ? this.changed(state) : null"))
+
+            with context("for page code that knows only an object's name"):
+                with it("should act on that object before it has read it"):
+                    expect(self.ticket).to(contain("static named(api: CddApi, ticket: string): TicketClientGenerated {"))
+
+            with context("for a class operation"):
+                with it("should post with the API it is given and return the new object's data"):
+                    expect(self.backlog_item).to(contain("static add(api: CddApi, title: string, text?: string): Promise<BacklogItemData | null> {"))
+
+        with description("its routes"):
+            with it("should give each tool one path under its object and identity"):
+                expect(self.ticket_node).to(contain("path: '/ticket/:ticket/move-next'"))
+
+            with it("should run the tool through the server adapter for the object the path names"):
+                expect(self.ticket_node).to(contain("TicketNodeAdapter.fromRequest(cdd, request).moveNext()"))
+
+            with it("should read the operation's arguments from the request, checked against the published schema"):
+                expect(self.ticket_node).to(contain('readArguments<{ practice: string; is_enabled: boolean }>(request, {"practice": {"type": "string"}, "is_enabled": {"type": "boolean"}}, ["practice", "is_enabled"])'))
+
+            with context("for an object no tool loads by name"):
+                with it("should leave the name out of the path"):
+                    expect(self.board_node).to(contain("path: '/board/show', run: (cdd, request) => new BoardNodeAdapter(cdd).show()"))
 
     with description("a Python name"):
         with it("should become camelCase"):
             expect(camel_case("set_wip_limit")).to(equal("setWipLimit"))
 
     with description("a published schema"):
+        with it("should keep only what checking a sent value needs"):
+            expect(argument_schema({"type": "string", "title": "Stage", "default": ""})).to(equal({"type": "string"}))
+
         with it("should become a TypeScript array"):
             expect(schema_type({"type": "array", "items": {"type": "string"}})).to(equal("string[]"))
 

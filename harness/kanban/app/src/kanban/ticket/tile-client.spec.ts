@@ -4,7 +4,6 @@ import { boardJson, discovery, DISCOVERY_SLUGS, ticketJson } from 'test-utils/bo
 import { pageOn, stageOn, withChat } from 'test-utils/board-page-support'
 
 import type { TicketFiles } from './ticket'
-import { CARD_MENU } from './open-card-client'
 import { cellPlace } from './tile-client'
 import { chipsOf, chosenFormats, defaultPicks } from './tile-formats'
 
@@ -18,7 +17,7 @@ function activeTicketPage(files: TicketFiles = NOTHING_MADE) {
   const json = ticketJson('sign-up')
   const { page, server } = pageOn(boardJson([discovery([json])], 'sign-up'))
   withChat(page, server)
-  server.answer('POST /api/tickets/sign-up/files', files)
+  server.answer('POST /api/ticket/sign-up/files', files)
   return { page, server, ticket: page.ticket(json) }
 }
 
@@ -72,7 +71,7 @@ describe('Choose Action And Formats', () => {
     const json = ticketJson('other')
     const { page, server } = pageOn(boardJson([discovery([json])], 'sign-up'))
     withChat(page, server)
-    server.answer('POST /api/tickets/other/files', NOTHING_MADE)
+    server.answer('POST /api/ticket/other/files', NOTHING_MADE)
     await page.tiles.open({ ticket: 'other', stage: STAGE, place: PLACE, slugs: [SLUG] }, true)
     expect(page.tileActions.barOf(page.ticket(json), STAGE, page.store.state.tile!).runOff).toBe(true)
   })
@@ -85,10 +84,24 @@ describe('Choose Action And Formats', () => {
   })
 })
 
+describe('Validate Fidelity', () => {
+  it('should allow Validate on files already there, with nothing recorded yet', async () => {
+    const { page, ticket } = activeTicketPage(MARKDOWN_MADE)
+    await page.tiles.open({ ticket: 'sign-up', stage: STAGE, place: PLACE, slugs: [SLUG] }, true)
+    expect(page.tileActions.barOf(ticket, STAGE, page.store.state.tile!).validateOff).toBe(false)
+  })
+
+  it('should keep Validate off with no files and nothing recorded', async () => {
+    const { page, ticket } = activeTicketPage()
+    await page.tiles.open({ ticket: 'sign-up', stage: STAGE, place: PLACE, slugs: [SLUG] }, true)
+    expect(page.tileActions.barOf(ticket, STAGE, page.store.state.tile!).validateOff).toBe(true)
+  })
+})
+
 describe('Generate Fidelity Output', () => {
   async function ran() {
     const { page, server } = activeTicketPage()
-    server.answer('POST /api/tickets/sign-up/generate-commands', ['/actions-generate stories-story-map format=markdown'])
+    server.answer('POST /api/ticket/sign-up/generate-commands', ['/actions-generate stories-story-map format=markdown'])
     await page.tiles.open({ ticket: 'sign-up', stage: STAGE, place: PLACE, slugs: [SLUG] }, true)
     await page.tileActions.run(page.store.state.tile!, STAGE)
     return { page, server }
@@ -175,6 +188,18 @@ describe('Open Practice Tile', () => {
     expect(page.store.state.tile?.place).toBe(PLACE)
   })
 
+  it('should show the bar before its files are read', () => {
+    const { page } = activeTicketPage()
+    void page.tiles.open({ ticket: 'sign-up', stage: STAGE, place: PLACE, slugs: [SLUG] }, true)
+    expect(page.store.state.tile?.place).toBe(PLACE)
+  })
+
+  it('should pick formats from the files once they are read', async () => {
+    const { page } = activeTicketPage(MARKDOWN_MADE)
+    await page.tiles.open({ ticket: 'sign-up', stage: STAGE, place: PLACE, slugs: [SLUG] }, true)
+    expect(page.store.state.tile?.picked).toEqual([])
+  })
+
   it('should close it on leaving', async () => {
     const { page } = activeTicketPage()
     await page.tiles.open({ ticket: 'sign-up', stage: STAGE, place: PLACE, slugs: [SLUG] }, false)
@@ -208,18 +233,18 @@ describe('Open Practice Tile', () => {
 })
 
 describe('Expand Ticket', () => {
-  it('should open with its action bar over all its fidelities', async () => {
+  it('should open with its tiles only, each opening its own action bar', async () => {
     const { page, ticket } = activeTicketPage()
-    await page.cards.toggle(ticket, STAGE)
-    expect(page.store.state.cardMenu).toMatchObject({ place: CARD_MENU, slugs: DISCOVERY_SLUGS })
+    page.cards.toggle(ticket)
+    expect(page.store.state.tile).toBeNull()
   })
 
   it('should expand only one card at a time', async () => {
     const other = ticketJson('other')
     const { page, server, ticket } = activeTicketPage()
-    server.answer('POST /api/tickets/other/files', NOTHING_MADE)
-    await page.cards.toggle(ticket, STAGE)
-    await page.cards.toggle(page.ticket(other), STAGE)
+    server.answer('POST /api/ticket/other/files', NOTHING_MADE)
+    page.cards.toggle(ticket)
+    page.cards.toggle(page.ticket(other))
     expect(page.store.state.openCard).toBe('other')
   })
 
@@ -251,8 +276,8 @@ describe('Refresh Board After Tool Calls', () => {
   it('should read an open bar\'s files again when the board changes', async () => {
     const { page, server } = activeTicketPage()
     await page.tiles.open({ ticket: 'sign-up', stage: STAGE, place: PLACE, slugs: [SLUG] }, true)
-    server.answer('POST /api/tickets/sign-up/files', MARKDOWN_MADE)
-    server.answer('GET /api/board', boardJson([discovery([ticketJson('sign-up', { last_activity: '2026-11-02T10:00:00Z' })])], 'sign-up'))
+    server.answer('POST /api/ticket/sign-up/files', MARKDOWN_MADE)
+    server.answer('POST /api/board/show', boardJson([discovery([ticketJson('sign-up', { last_activity: '2026-11-02T10:00:00Z' })])], 'sign-up'))
     await page.reader.refresh()
     expect(page.store.state.tile?.files).toEqual(MARKDOWN_MADE)
   })

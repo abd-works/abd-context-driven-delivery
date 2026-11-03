@@ -13,9 +13,8 @@ _MODULE_DIR = Path(__file__).resolve().parent
 _MARKDOWN = (_MODULE_DIR / "cdd_access.md").read_text(encoding="utf-8")
 _RULE_SLUGS = re.findall(r"^- \*\*`([a-z0-9-]+)`\*\*", _MARKDOWN, re.M)
 _TEMPLATES = (
-    "src/cdd/cdd-connection-node.ts",
-    "src/{context}/{object}/{object}-node.ts",
-    "src/{context}/{object}/{object}-routes.ts",
+    "src/cdd/cdd-routes.ts",
+    "src/{context}/{object}/{object}-client.tsx",
 )
 
 
@@ -34,11 +33,14 @@ with description("a CDD access pattern"):
         with it("should keep the domain in Python"):
             expect(_MARKDOWN).to(contain("The domain, its rules, and its state stay in Python"))
 
-        with it("should give each object its own class, with no god connector"):
-            expect(_MARKDOWN).to(contain("Each domain object has its own class"))
+        with it("should make every MCP call on the server"):
+            expect(_MARKDOWN).to(contain("**Every MCP call is made on the server.**"))
+
+        with it("should give each object its own classes, with no god connector"):
+            expect(_MARKDOWN).to(contain("Each domain object has its own classes"))
 
         with it("should name every layer from the domain to the connection"):
-            for layer in ("| Domain |", "| Tool |", "| Contract |", "| Mark |", "| Language adapter |", "| Connection |", "| Node |", "| Client |"):
+            for layer in ("| Domain |", "| Tool |", "| Contract |", "| Mark |", "| Language adapter |", "| Connection |"):
                 expect(_MARKDOWN).to(contain(layer))
 
         with it("should deploy the adapter as an installer channel"):

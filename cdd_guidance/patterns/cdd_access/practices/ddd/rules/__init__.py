@@ -3,21 +3,13 @@
 from cdd_guidance.patterns.cdd_access.practices.ddd.rules.access_rules import (
     AdapterIsGenerated,
     AnnotateWhatTypeScriptReads,
-    ConnectionOnlyCarries,
-    NodeExtendsTheAdapter,
     OneClassPerObject,
-    RoutesAskTheObject,
     StateLivesBehindTheTool,
-    TextThatIsNotJsonIsAFailure,
 )
 
 RULES: tuple = (
-    RoutesAskTheObject(),
     OneClassPerObject(),
-    NodeExtendsTheAdapter(),
     StateLivesBehindTheTool(),
-    ConnectionOnlyCarries(),
-    TextThatIsNotJsonIsAFailure(),
     AdapterIsGenerated(),
     AnnotateWhatTypeScriptReads(),
 )

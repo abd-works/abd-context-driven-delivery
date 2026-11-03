@@ -41,16 +41,23 @@ describe('Display Ticket Details', () => {
 describe('Move Ticket', () => {
   it('should read the board again and select the ticket where it landed', async () => {
     const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
-    server.answer('POST /api/tickets/sign-up/move-next', ticketJson('sign-up', { column: 'Specification' }))
+    server.answer('POST /api/ticket/sign-up/move-next', ticketJson('sign-up', { column: 'Specification' }))
     await page.ticket(ticketJson('sign-up')).moveNext()
     expect(page.store.state.selected).toBe('Specification/sign-up')
+  })
+
+  it('should select a dragged ticket in the stage it was dropped on', async () => {
+    const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
+    server.answer('POST /api/ticket/sign-up/move-to', ticketJson('sign-up', { column: 'Implementation' }))
+    await page.ticket(ticketJson('sign-up')).moveTo('Implementation', true)
+    expect(page.store.state.selected).toBe('Implementation/sign-up')
   })
 
   describe('that a person has moved to the Backlog', () => {
     async function moved() {
       const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
       page.store.change({ openCard: 'sign-up' })
-      server.answer('POST /api/tickets/sign-up/move-previous', { title: 'sign-up', text: '', path: 'x.md', last_activity: '' })
+      server.answer('POST /api/ticket/sign-up/move-previous', { title: 'sign-up', text: '', path: 'x.md', last_activity: '' })
       await page.ticket(ticketJson('sign-up')).movePrevious()
       return page
     }
@@ -64,14 +71,19 @@ describe('Move Ticket', () => {
     })
   })
 
-  it('should say the back arrow on Discovery goes to the Backlog', () => {
+  it("should let a ticket in progress in Discovery be dropped on the Backlog", () => {
     const { page } = pageOn(boardJson([discovery()]))
-    expect(page.ticket(ticketJson('sign-up')).backLabel).toBe('Move sign-up to the Backlog')
+    expect(page.ticket(ticketJson('sign-up')).canDropOn('Backlog')).toBe(true)
   })
 
-  it('should say the back arrow from Discovery Done stays on the board', () => {
+  it("should keep a ticket done in Discovery off the Backlog", () => {
     const { page } = pageOn(boardJson([discovery()]))
-    expect(page.ticket(ticketJson('sign-up', { is_done: true })).backLabel).toBe('Move sign-up to the previous column')
+    expect(page.ticket(ticketJson('sign-up', { is_done: true })).canDropOn('Backlog')).toBe(false)
+  })
+
+  it('should let only the active ticket, or one done in Implementation, be dropped on Complete', () => {
+    const { page } = pageOn(boardJson([discovery()], 'sign-up'))
+    expect([page.ticket(ticketJson('sign-up')).canDropOn('Complete'), page.ticket(ticketJson('other')).canDropOn('Complete')]).toEqual([true, false])
   })
 })
 
@@ -90,13 +102,13 @@ describe('Run Next Step', () => {
     async function ran() {
       const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up')])], 'sign-up'))
       withChat(page, server)
-      server.answer('POST /api/tickets/sign-up/generate-commands', ['/actions-render a', '/actions-generate b'])
+      server.answer('POST /api/ticket/sign-up/generate-commands', ['/actions-render a', '/actions-generate b'])
       await page.ticket(ticketJson('sign-up')).runNext()
       return server
     }
 
     it('should ask for the commands of the default format', async () => {
-      expect((await ran()).posted('/api/tickets/sign-up/generate-commands')[0]?.body).toEqual({ fidelities: ['stories-story_map'], formats: ['markdown'] })
+      expect((await ran()).posted('/api/ticket/sign-up/generate-commands')[0]?.body).toEqual({ fidelities: ['stories-story_map'], formats: ['markdown'] })
     })
 
     it('should send those commands in order', async () => {
@@ -117,7 +129,7 @@ describe('Run Next Step', () => {
   describe('with violations held and no chat connected', () => {
     function heldPage() {
       const { page, server } = pageOn(boardJson([discovery()], 'sign-up'))
-      server.answer('GET /api/tickets/sign-up/report?fidelity=stories-story_map', { path: 'r.md', text: '', rules: [], has_saved_graph: true })
+      server.answer('POST /api/ticket/sign-up/report {"fidelity":"stories-story_map"}', { path: 'r.md', text: '', rules: [], has_saved_graph: true })
       return { page, ticket: page.ticket(ticketJson('sign-up', { next_action: 'satisfy' })) }
     }
 
@@ -141,7 +153,7 @@ describe('Run Next Step', () => {
 describe('Choose Ticket Practices', () => {
   async function turnedOff() {
     const { page, server } = pageOn(boardJson([discovery([ticketJson('sign-up', { title: 'Sign up' })])], 'sign-up'))
-    server.answer('POST /api/tickets/sign-up/practice', ticketJson('sign-up'))
+    server.answer('POST /api/ticket/sign-up/enable-practice', ticketJson('sign-up', { title: 'Sign up' }))
     page.store.change({ tile: { ticket: 'sign-up', place: 'cell-Discovery-ddd-bounded_context', stage: 'Discovery', slugs: ['ddd-bounded_context'], action: 'generate', picked: [], isPinned: true, files: {} } })
     await page.ticket(ticketJson('sign-up', { title: 'Sign up' })).enablePractice('ddd', false)
     return page

@@ -1,9 +1,8 @@
-import type { HelpData } from '@cdd/harness/kanban/board'
-import type { ReportData } from '@cdd/harness/kanban/ticket'
+import { BoardClientGenerated } from '@cdd/harness/kanban/board'
+import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
 
 import { ReportClient } from '../ticket/report-client'
 import type { BoardApi } from './board-api'
-import { pathPart } from './board-api'
 import type { BoardStore, ReportPanel, SidePanel } from './board-store'
 
 const DEFAULT_WIDTH = 640
@@ -41,8 +40,8 @@ export class SidePanelClient {
   }
 
   private async readReport(ticket: string, fidelity: string): Promise<ReportClient | null> {
-    const path = `/tickets/${pathPart(ticket)}`
-    const report = await this.api.get<ReportData>(fidelity ? `${path}/report?fidelity=${pathPart(fidelity)}` : `${path}/violations`)
+    const named = TicketClientGenerated.named(this.api, ticket)
+    const report = await (fidelity ? named.report(fidelity) : named.violations())
     return report ? new ReportClient(report) : null
   }
 
@@ -61,7 +60,7 @@ export class SidePanelClient {
   }
 
   async openHelp(practice: string, fidelity: string): Promise<void> {
-    const help = await this.api.get<HelpData>(`/board/help?practice=${pathPart(practice)}&fidelity=${pathPart(fidelity)}`)
+    const help = await new BoardClientGenerated(this.api).help(practice, fidelity)
     if (help) this.show({ kind: 'help', help, isExpanded: false })
   }
 

@@ -33,6 +33,7 @@ export function BacklogCardView({ item }: { item: BacklogItemClient }) {
   return (
     <div className="ticket-card" data-item={item.title} onClick={() => item.select()} style={{ borderColor: isSelected ? 'var(--text)' : 'var(--border)' }}>
       <button className="card-hit" aria-label={`Show ${item.title}`} />
+      <span className="expand-mark card-mark" aria-hidden="true" />
       <div className="ticket-title">{item.title}</div>
       <div className="ticket-meta">{ageOf(state.now, item.lastActivity)}</div>
       <div className="start-line">

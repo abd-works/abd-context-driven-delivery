@@ -12,7 +12,7 @@ const announcementsOf = (before: BoardData, after: BoardData): string[] => pageO
 describe('Display Board', () => {
   describe('Display Connected Status', () => {
     it('should show a band when the board read answers that cdd is not connected', async () => {
-      const server = new FakeServer().answer('GET /api/board', { error: 'The cdd server is not connected: spawn failed' }, 503)
+      const server = new FakeServer().answer('POST /api/board/show', { error: 'The cdd server is not connected: spawn failed' }, 503)
       const page = new BoardPage(server.send)
       await page.reader.refresh()
       expect(page.store.state.serverFailure).toBe('The cdd server is not connected: spawn failed')
@@ -42,7 +42,7 @@ describe('Display Board', () => {
 
     describe('with a tool failing', () => {
       async function failed() {
-        const server = new FakeServer().answer('GET /api/board', { error: 'cdd board.show failed: bad' }, 502)
+        const server = new FakeServer().answer('POST /api/board/show', { error: 'cdd board.show failed: bad' }, 502)
         const page = new BoardPage(server.send)
         await page.reader.refresh()
         return page
@@ -108,7 +108,7 @@ describe('Display Board', () => {
 
     it('should raise nothing on the first read', async () => {
       const { page, server } = pageOn(null)
-      server.answer('GET /api/board', boardJson([discovery([ticketJson('sign-up')])]))
+      server.answer('POST /api/board/show', boardJson([discovery([ticketJson('sign-up')])]))
       await page.reader.refresh()
       expect(page.store.state.toasts).toEqual([])
     })
@@ -155,29 +155,29 @@ describe('Arrange Board And Details', () => {
 describe('Set Stage WIP Limit', () => {
   it('should save a whole number', async () => {
     const { page, server } = pageOn(boardJson([discovery()]))
-    server.answer('POST /api/board/wip-limit', {})
-    await page.board.setWipLimit('Discovery', '4')
-    expect(server.posted('/api/board/wip-limit')[0]?.body).toEqual({ stage: 'Discovery', limit: 4 })
+    server.answer('POST /api/board/set-wip-limit', {})
+    await page.board.submitWipLimit('Discovery', '4')
+    expect(server.posted('/api/board/set-wip-limit')[0]?.body).toEqual({ stage: 'Discovery', limit: 4 })
   })
 
   it('should read the board again', async () => {
     const { page, server } = pageOn(boardJson([discovery()]))
-    server.answer('POST /api/board/wip-limit', {})
-    await page.board.setWipLimit('Discovery', '4')
-    expect(server.requests.at(-1)?.path).toBe('/api/board')
+    server.answer('POST /api/board/set-wip-limit', {})
+    await page.board.submitWipLimit('Discovery', '4')
+    expect(server.requests.at(-1)?.path).toBe('/api/board/show')
   })
 
   it('should change nothing for a limit that is not a number', async () => {
     const { page, server } = pageOn(boardJson([discovery()]))
-    await page.board.setWipLimit('Discovery', 'many')
+    await page.board.submitWipLimit('Discovery', 'many')
     expect(server.requests).toEqual([])
   })
 
   it('should send the header the server asks of a page on this machine', async () => {
     const { page, server } = pageOn(boardJson([discovery()]))
-    server.answer('POST /api/board/wip-limit', {})
-    await page.board.setWipLimit('Discovery', '4')
-    expect(server.posted('/api/board/wip-limit')[0]?.headers['X-CDD-Board']).toBe('1')
+    server.answer('POST /api/board/set-wip-limit', {})
+    await page.board.submitWipLimit('Discovery', '4')
+    expect(server.posted('/api/board/set-wip-limit')[0]?.headers['X-CDD-Board']).toBe('1')
   })
 })
 

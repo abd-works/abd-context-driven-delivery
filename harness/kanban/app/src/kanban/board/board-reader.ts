@@ -15,10 +15,10 @@ export class BoardReader {
   // Reads can overlap with a move's own read, so a slower, older answer never replaces a newer one.
   async refresh(): Promise<void> {
     const order = ++this.reads
-    const shown = await this.page.api.get<BoardData>('/board')
+    const shown = await this.page.board.show()
     if (!shown || order < this.latestApplied) return
     this.latestApplied = order
-    await this.apply(shown)
+    await this.apply(shown.toJSON())
   }
 
   private async apply(shown: BoardData): Promise<void> {

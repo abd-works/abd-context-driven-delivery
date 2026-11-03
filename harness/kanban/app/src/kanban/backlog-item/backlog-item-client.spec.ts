@@ -17,7 +17,7 @@ describe('Add Backlog Item', () => {
   describe('with a title and text typed', () => {
     async function added() {
       const { page, server } = pageOn(boardJson([discovery()], null, [ITEM]))
-      server.answer('POST /api/backlog', ITEM)
+      server.answer('POST /api/backlog-item/add', ITEM)
       page.draft.open()
       page.draft.type('title', ' Sign up & pay ')
       page.draft.type('text', 'An idea.')
@@ -27,7 +27,7 @@ describe('Add Backlog Item', () => {
 
     it('should write the title and text', async () => {
       const { server } = await added()
-      expect(server.posted('/api/backlog')[0]?.body).toEqual({ title: 'Sign up & pay', text: 'An idea.' })
+      expect(server.posted('/api/backlog-item/add')[0]?.body).toEqual({ title: 'Sign up & pay', text: 'An idea.' })
     })
 
     it('should select the item', async () => {
@@ -49,7 +49,7 @@ describe('Add Backlog Item', () => {
   describe('Start Backlog Item', () => {
     async function started() {
       const { page, server } = pageOn(boardJson([discovery()], null, [ITEM]))
-      server.answer('POST /api/backlog/Sign%20up%20%26%20pay/start', ticketJson('sign-up-pay'))
+      server.answer('POST /api/backlog-item/Sign%20up%20%26%20pay/start', ticketJson('sign-up-pay'))
       await page.item(ITEM).start()
       return page
     }

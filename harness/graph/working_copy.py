@@ -912,12 +912,10 @@ def _record_cdd_access(graph: Graph, root: Path) -> None:
 def _cdd_access_tier(file: Path, text: str, access_facts) -> tuple[str, dict] | None:
     if file.name.endswith("-routes.ts"):
         return "AccessRoute", access_facts.route_facts(text)
-    if file.name.endswith("-connection-node.ts"):
-        return "AccessConnection", access_facts.connection_facts(text)
+    if access_facts.is_hand_written_adapter(file.name, text):
+        return "AccessHandWrittenAdapter", {}
     if file.name.endswith("-node.ts"):
         return "AccessNode", access_facts.node_facts(text)
-    if file.name.endswith("-tools.ts"):
-        return "AccessHandWrittenTools", {}
     if file.suffix == ".py" and access_facts.is_marked(text):
         return "AccessMarkedToolset", access_facts.marked_toolset_facts(text)
     return None

@@ -328,6 +328,32 @@ with description("a ticket") as self:
             with it("should have no next"):
                 expect(self.ticket.next).to(be_none)
 
+    # (S) Person --> Drag Ticket To A Stage
+    with context("that a person has dragged into a later stage's done part"):
+        with before.each:
+            self.ticket = ticket_with([GENERATE_STORY_MAP])
+            self.ticket.move_to("Implementation", done=True)
+
+        with it("should be done in that stage"):
+            expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Implementation", True)))
+
+    with context("that a person has dragged back into its own stage's in progress part"):
+        with before.each:
+            self.root, board = board_with(DISCOVERY_DONE)
+            self.ticket = board.ticket("pet-visits")
+            self.ticket.move_to("Discovery")
+
+        with it("should be in progress in that stage"):
+            expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", False)))
+
+    with context("that a person has dragged out of Complete"):
+        with before.each:
+            self.root, board = board_with([GENERATE_STORY_MAP])
+            self.moved = board.ticket("pet-visits").close().move_to("Specification")
+
+        with it("should be open again, in progress in that stage"):
+            expect((self.moved.column.name, self.moved.is_done)).to(equal(("Specification", False)))
+
     # (S) Person --> Choose Ticket Practices
     with context("with every practice but Stories turned off"):
         with before.each:

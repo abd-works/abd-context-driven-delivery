@@ -1,12 +1,13 @@
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
 import { join } from 'node:path'
 
-import type { CddConnectionNode } from '@src/cdd/cdd-connection-node'
-import { backlogItemRoutes } from '@src/kanban/backlog-item/backlog-item-routes'
-import { boardRoutes } from '@src/kanban/board/board-routes'
+import type { CddConnection } from '@cdd/cdd-connection'
+import { backlogItemRoutes } from '@cdd/harness/kanban/backlog-item-node-adapter'
+import { boardRoutes } from '@cdd/harness/kanban/board-node-adapter'
+import { ticketRoutes } from '@cdd/harness/kanban/ticket-node-adapter'
 import type { ChatsNode } from '@src/kanban/chat/chat-node'
 import { chatRoutes } from '@src/kanban/chat/chat-routes'
-import { ticketRoutes } from '@src/kanban/ticket/ticket-routes'
+import { cddRoutes } from '@src/session-board/cdd-routes'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'
 
 // The header forces a preflight, which this server never answers, so a page on another site cannot post here.
@@ -22,11 +23,11 @@ const onlyThisMachine = (port: number) => (request: Request, _response: Response
   next(isLocalHost && !isForeignPost ? undefined : new HttpException(FORBIDDEN, 'Refused: this server answers only its own page and mod on this machine.'))
 }
 
-export function createApp(cdd: CddConnectionNode, chats: ChatsNode, port: number, staticRoot: string): Express {
+export function createApp(cdd: CddConnection, chats: ChatsNode, port: number, staticRoot: string): Express {
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
-  app.use('/api', boardRoutes(cdd), ticketRoutes(cdd), backlogItemRoutes(cdd), chatRoutes(chats))
+  app.use('/api', cddRoutes(cdd, [...boardRoutes, ...ticketRoutes, ...backlogItemRoutes]), chatRoutes(chats))
   app.use(express.static(staticRoot))
   app.get('*', (_request, response) => {
     response.sendFile(join(staticRoot, 'index.html'))

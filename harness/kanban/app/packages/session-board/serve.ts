@@ -1,7 +1,7 @@
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { CddConnectionNode, locateCdd } from '@src/cdd/cdd-connection-node'
+import { CddConnection } from '@cdd/cdd-connection'
 import { ChatsNode } from '@src/kanban/chat/chat-node'
 
 import { createApp } from './app'
@@ -11,9 +11,9 @@ const HOST = '127.0.0.1'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const appRoot = resolve(here, '..', '..')
-const sourceRoot = resolve(appRoot, '..', '..', '..')
 const port = Number(process.env.BOARD_PORT ?? DEFAULT_PORT)
-const cdd = new CddConnectionNode(locateCdd(sourceRoot, process.env))
+// The board's project defaults to the checkout cdd was installed from.
+const cdd = new CddConnection(process.env.BOARD_PROJECT)
 const app = createApp(cdd, new ChatsNode(), port, join(appRoot, 'dist'))
 
 const server = app.listen(port, HOST, () => {

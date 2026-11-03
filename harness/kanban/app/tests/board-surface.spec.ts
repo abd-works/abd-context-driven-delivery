@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { ACCENT, card, openBoard, openCardOf } from './support'
+import { ACCENT, card, openBoard, openCard, openCardOf, openTileBarOf } from './support'
 
 // The signatures carried over from kanban_surface_heavy_spec.py: the surface measured where it landed. These press only
 // what changes the view, and this file sorts first, before any spec connects a chat.
@@ -9,6 +9,7 @@ const PAGE_FOOTER_PIXELS = 160
 // The canvas's stage is 24fr of 1488px with 10px gaps, and a stage's card is half of what the stage leaves inside.
 const CANVAS_STAGE_PIXELS = 347
 const CANVAS_CARD_PIXELS = 157
+const CANVAS_HEADER_PIXELS = 58
 
 test.describe('the session board on the page', () => {
   test.beforeEach(async ({ page }) => {
@@ -62,10 +63,15 @@ test.describe('the session board on the page', () => {
       await openCardOf(page, 'checkout-flow')
     })
 
-    test('should offer the action list and Run on an opened card', async ({ page }) => {
-      const bar = page.locator('.card-open .expansion')
-      await expect(bar.getByRole('combobox', { name: 'Action' })).toBeVisible()
-      await expect(bar.getByRole('button', { name: 'Run' })).toBeVisible()
+    test('should show its tiles with no action bar until a tile is pressed', async ({ page }) => {
+      await expect(page.locator('.card-open .expansion')).toHaveCount(0)
+    })
+
+    test.describe('with a tile pressed on it', () => {
+      test('should offer the action list and Run in that tile', async ({ page }) => {
+        const bar = await openTileBarOf(openCard(page, 'checkout-flow'))
+        await expect(bar.getByRole('combobox', { name: 'Action' })).toBeVisible()
+      })
     })
 
     test('should show the whole opened card', async ({ page }) => {
@@ -85,6 +91,13 @@ test.describe('the session board on the page', () => {
       const board = await page.locator('.board-main').boundingBox()
       const beside = await panel.boundingBox()
       expect(beside!.x).toBeGreaterThanOrEqual(board!.x + board!.width - 1)
+    })
+
+    test('should keep the header on one line', async ({ page }) => {
+      await card(page, 'checkout-flow').getByRole('button', { name: 'list' }).first().click()
+      await expect(page.locator('[data-panel="files"]')).toBeVisible()
+      const header = await page.locator('.board-header').boundingBox()
+      expect(header!.height).toBeLessThanOrEqual(CANVAS_HEADER_PIXELS)
     })
   })
 

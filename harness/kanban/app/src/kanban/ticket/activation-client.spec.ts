@@ -10,8 +10,8 @@ function switchingPage() {
   const active = ticketJson('sign-up', { title: 'Sign up' })
   const chosen = ticketJson('pet-visits', { title: 'Pet visits' })
   const { page, server } = pageOn(boardJson([discovery([active, chosen])], 'sign-up'))
-  server.answer('GET /api/tickets/pet-visits/workspace', CHECKED_OUT)
-  server.answer('GET /api/tickets/sign-up/workspace', CHECKED_OUT)
+  server.answer('POST /api/ticket/pet-visits/workspace', CHECKED_OUT)
+  server.answer('POST /api/ticket/sign-up/workspace', CHECKED_OUT)
   return { page, server, active: page.ticket(active), chosen: page.ticket(chosen) }
 }
 
@@ -30,7 +30,7 @@ describe('Activate Ticket', () => {
 
   it('should choose nothing to leave when the session has no branch', async () => {
     const { page, server, chosen } = switchingPage()
-    server.answer('GET /api/tickets/pet-visits/workspace', { ...CHECKED_OUT, leaving_has_branch: false })
+    server.answer('POST /api/ticket/pet-visits/workspace', { ...CHECKED_OUT, leaving_has_branch: false })
     await page.activation.start(chosen, false)
     expect(page.store.state.activation?.leaving).toEqual([])
   })
@@ -44,7 +44,7 @@ describe('Activate Ticket', () => {
   describe('that a person has confirmed with merge chosen', () => {
     async function confirmed() {
       const { page, server, chosen } = switchingPage()
-      server.answer('POST /api/tickets/pet-visits/activate', ticketJson('pet-visits'))
+      server.answer('POST /api/ticket/pet-visits/activate', ticketJson('pet-visits'))
       await page.activation.start(chosen, false)
       page.activation.toggleLeaving('merge')
       await page.activation.confirm()
@@ -53,7 +53,7 @@ describe('Activate Ticket', () => {
 
     it('should send what was chosen', async () => {
       const { server } = await confirmed()
-      expect(server.posted('/api/tickets/pet-visits/activate')[0]?.body).toEqual({ leaving: ['commit', 'push', 'merge'], opening: ['branch'] })
+      expect(server.posted('/api/ticket/pet-visits/activate')[0]?.body).toEqual({ leaving: ['commit', 'push', 'merge'], opening: ['branch'] })
     })
 
     it('should report it', async () => {
@@ -77,7 +77,7 @@ describe('Activate Ticket', () => {
 
     it('should send nothing', async () => {
       const { server } = await cancelled()
-      expect(server.posted('/api/tickets/pet-visits/activate')).toEqual([])
+      expect(server.posted('/api/ticket/pet-visits/activate')).toEqual([])
     })
   })
 })
@@ -85,7 +85,7 @@ describe('Activate Ticket', () => {
 describe('Close Active Session', () => {
   async function closing() {
     const { page, server, active } = switchingPage()
-    server.answer('POST /api/tickets/sign-up/close', ticketJson('sign-up', { title: 'Sign up', column: 'Complete' }))
+    server.answer('POST /api/ticket/sign-up/close', ticketJson('sign-up', { title: 'Sign up', column: 'Complete' }))
     await page.activation.start(active, true)
     return { page, server }
   }
@@ -98,7 +98,7 @@ describe('Close Active Session', () => {
   it('should send what to do with its work', async () => {
     const { page, server } = await closing()
     await page.activation.confirm()
-    expect(server.posted('/api/tickets/sign-up/close')[0]?.body).toEqual({ leaving: ['commit', 'push'] })
+    expect(server.posted('/api/ticket/sign-up/close')[0]?.body).toEqual({ leaving: ['commit', 'push'] })
   })
 
   it('should select the ticket in Complete', async () => {

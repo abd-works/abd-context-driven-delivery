@@ -1,9 +1,9 @@
 /**
- * Runs the shared behavior on TicketNode, which calls the real cdd server on a throwaway project. Nothing is stubbed.
+ * Runs the shared behavior on TicketNodeAdapter, which calls the real cdd server on a throwaway project. Nothing is stubbed.
  */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
-import { TicketNode } from '@src/kanban/ticket/ticket-node'
+import { TicketNodeAdapter } from '@cdd/harness/kanban/ticket-node-adapter'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
 import { CddProject } from 'test-utils/behavior-test/cdd-project'
 
@@ -11,9 +11,9 @@ import { filesAndReportsBehavior, type FilesAndReportsDriver } from './files_and
 
 const project = new CddProject()
 
-class FilesAndReportsNodeDriver implements FilesAndReportsDriver {
-  private ticket(name: string): TicketNode {
-    return new TicketNode(project.cdd, name)
+class FilesAndReportsNodeAdapterDriver implements FilesAndReportsDriver {
+  private ticket(name: string): TicketNodeAdapter {
+    return new TicketNodeAdapter(project.cdd, name)
   }
 
   async generatedFilesOf(ticket: string, fidelity: string): Promise<string[]> {
@@ -41,11 +41,11 @@ class FilesAndReportsNodeDriver implements FilesAndReportsDriver {
   }
 }
 
-let driver: FilesAndReportsNodeDriver
+let driver: FilesAndReportsNodeAdapterDriver
 
 beforeEach(() => {
   project.reset()
-  driver = new FilesAndReportsNodeDriver()
+  driver = new FilesAndReportsNodeAdapterDriver()
 })
 
 afterAll(() => project.close())

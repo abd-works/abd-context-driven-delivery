@@ -9,10 +9,10 @@ from mamba import before, context, description, it
 from harness.graph.graph import Graph
 
 _FAULTY_ROUTE = "routes.post('/x', async () => { await cdd.call('ticket.move_next', {}) })\n"
-_FAULTY_NODE = "import { TicketTools } from '@cdd/harness/kanban/ticket'\nimport { Low } from 'lowdb'\nexport class TicketNode {\n  go() { return this.cdd.call<string>('ticket.close', {}) }\n}\n"
-_REPAIRED_NODE = "import { TicketTools } from '@cdd/harness/kanban/ticket'\nexport class TicketNode extends TicketTools {}\n"
-_FAULTY_CONNECTION = "export class CddConnectionNode {\n  show() { return this.call('board.show', {}) }\n  read(text: string) { return JSON.parse(text) }\n}\n"
-_REPAIRED_CONNECTION = "export class CddConnectionNode {\n  read(text: string) {\n    try {\n      return JSON.parse(text)\n    } catch {\n      throw new CddToolError(text)\n    }\n  }\n}\n"
+_FAULTY_NODE = "import { TicketNodeAdapter } from '@cdd/harness/kanban/ticket-node-adapter'\nimport { Low } from 'lowdb'\nexport class TicketNode extends TicketNodeAdapter {\n  go() { return this.cdd.call<string>('ticket.close', {}) }\n}\n"
+_FAULTY_CONNECTION = "export class CddConnectionNode {\n  call(tool: string) { return this.client.callTool({ name: tool }) }\n}\n"
+_FAULTY_ADAPTER = "import type { TicketData } from '@cdd/harness/kanban/ticket'\nexport class TicketAdapter {}\n"
+_REPAIRED_ROUTE = "app.use('/api', cddRoutes(cdd, [...ticketRoutes]))\n"
 _FAULTY_PYTHON = "@language_adapter(language=\"typescript\")\n@agent_toolset\nclass Thing:\n    @mcp\n    @agent_tool\n    def show(self) -> dict[str, Any]:\n        return {}\n\n    def to_json(self) -> dict[str, Any]:\n        return {}\n"
 _FAULTY_SHARED = "import { TicketNode } from '@src/kanban/ticket/ticket-node'\n"
 _FAULTY_E2E = "itBehavesLike(a, b)\nawait page.route('x', y)\n"
@@ -46,33 +46,21 @@ with description("the cdd_access pattern rules"):
             self.found = _violations({
                 "src/kanban/ticket/ticket-routes.ts": _FAULTY_ROUTE,
                 "src/kanban/ticket/ticket-node.ts": _FAULTY_NODE,
+                "src/kanban/ticket/ticket-adapter.ts": _FAULTY_ADAPTER,
                 "src/cdd/cdd-connection-node.ts": _FAULTY_CONNECTION,
-                "src/kanban/ticket/ticket-tools.ts": "export class TicketTools {}\n",
                 "harness/thing/thing.py": _FAULTY_PYTHON,
                 "tests/kanban/x/x.spec.shared.ts": _FAULTY_SHARED,
                 "tests/kanban/x/x.behavior.e2e.ts": _FAULTY_E2E,
             })
 
-        with it("should flag a route that calls a tool itself"):
-            expect(self.found).to(have_key("routes-ask-the-object"))
-
-        with it("should flag a node that calls a tool itself"):
-            expect(self.found).to(have_key("one-class-per-object"))
-
-        with it("should flag a node that does not extend the adapter"):
-            expect(self.found).to(have_key("node-extends-the-adapter"))
+        with it("should flag a route and a node that call a tool themselves"):
+            expect(len(self.found["one-class-per-object"])).to(equal(2))
 
         with it("should flag a store for what the tool owns"):
             expect(self.found).to(have_key("state-lives-behind-the-tool"))
 
-        with it("should flag a connection that names a tool"):
-            expect(self.found).to(have_key("connection-only-carries"))
-
-        with it("should flag a connection that parses blindly"):
-            expect(self.found).to(have_key("text-that-is-not-json-is-a-failure"))
-
-        with it("should flag a tools class written by hand"):
-            expect(self.found).to(have_key("adapter-is-generated"))
+        with it("should flag a node that extends a generated adapter, an adapter written by hand, and a connection written by hand"):
+            expect(len(self.found["adapter-is-generated"])).to(equal(3))
 
         with it("should flag an open result on a marked toolset"):
             expect(self.found).to(have_key("annotate-what-typescript-reads"))
@@ -87,7 +75,6 @@ with description("the cdd_access pattern rules"):
         with before.all:
             self.found = _violations({
                 "src/kanban/ticket/ticket-routes.ts": "router.post('/x', async (req, res) => { res.json(req.body.title) })\n",
-                "src/kanban/ticket/ticket-node.ts": _REPAIRED_NODE,
                 "tests/kanban/x/helper.ts": "export class ExampleRepository {}\n",
             })
 
@@ -101,28 +88,26 @@ with description("the cdd_access pattern rules"):
         with before.all:
             self.found = _violations({
                 "src/kanban/ticket/ticket-routes.ts": "routes.get('/tickets', answer(() => ticket.list()))\n",
-                "src/kanban/ticket/ticket-node.ts": _REPAIRED_NODE,
                 "src/kanban/ticket/ticket-client.tsx": "export class TicketClient { load() { return this.api.get<Ticket>('/tickets') } }\n",
             })
 
         with it("should not ask for it in a paths module"):
             expect(self.found).not_to(have_key("one-home-for-web-paths"))
 
-    with context("with a connection that starts a program by its file name"):
+    with context("with an adapter that is the application's own port to another system"):
         with before.all:
-            self.found = _violations({"src/cdd/cdd-connection-node.ts": "const PYTHON = join('.venv', 'python.exe')\n"})
+            self.found = _violations({"src/payment/stripe-adapter.ts": "import Stripe from 'stripe'\nexport class StripeAdapter {}\n"})
 
-        with it("should not read the file name as a tool"):
-            expect(self.found).not_to(have_key("connection-only-carries"))
+        with it("should not read it as a copy of a generated adapter"):
+            expect(self.found).not_to(have_key("adapter-is-generated"))
 
     with context("with an application that follows them"):
         with before.all:
             self.found = _violations({
-                "src/kanban/ticket/ticket-routes.ts": "routes.post('/x', async () => { await TicketNode.fromRequest(cdd, request).moveNext() })\n",
-                "src/kanban/ticket/ticket-node.ts": _REPAIRED_NODE,
-                "src/cdd/cdd-connection-node.ts": _REPAIRED_CONNECTION,
+                "src/kanban/ticket/ticket-routes.ts": _REPAIRED_ROUTE,
+                "src/kanban/ticket/ticket-client.tsx": "import type { TicketData } from '@cdd/harness/kanban/ticket'\nexport class TicketClient {}\n",
             })
 
         with it("should find no access rule broken"):
-            broken = {"routes-ask-the-object", "one-class-per-object", "node-extends-the-adapter", "connection-only-carries", "text-that-is-not-json-is-a-failure"}
+            broken = {"one-class-per-object", "adapter-is-generated", "state-lives-behind-the-tool"}
             expect(broken & set(self.found)).to(equal(set()))

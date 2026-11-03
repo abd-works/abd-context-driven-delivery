@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { Component, useEffect } from 'react'
+import type { ReactNode } from 'react'
 
 import { ActivationView } from '../ticket/activation-view'
 import { DetailsView } from '../ticket/details-view'
@@ -25,7 +26,7 @@ function ViolationsBandView({ ticket }: { ticket: TicketClient }) {
   return (
     <div className="band" role="status" aria-label="Active ticket's violations">
       <span className="band-words">
-        {ticket.name} · {ticket.column} · violations: {ticket.violations.join(', ')}
+        {ticket.name} · {ticket.column} · violations: {ticket.violatedSlugs.join(', ')}
       </span>
       <button className="action" disabled={isOff} onClick={() => void ticket.fillShowViolations()}>
         Show
@@ -43,7 +44,7 @@ function BandsView() {
   return (
     <>
       {state.serverFailure ? <ServerBandView failure={state.serverFailure} hasBoard={state.board !== null} /> : null}
-      {active?.violations.length ? <ViolationsBandView ticket={active} /> : null}
+      {active?.violatedSlugs.length ? <ViolationsBandView ticket={active} /> : null}
     </>
   )
 }
@@ -107,10 +108,33 @@ function PageBodyView() {
   )
 }
 
+// A view that throws would otherwise leave an empty black page, so the person sees what broke and can read the board again.
+class PageFailureView extends Component<{ children: ReactNode }, { failure: string }> {
+  state = { failure: '' }
+
+  static getDerivedStateFromError(error: unknown) {
+    return { failure: error instanceof Error ? error.message : String(error) }
+  }
+
+  render() {
+    if (!this.state.failure) return this.props.children
+    return (
+      <div className="band band-failure" role="alert">
+        The board page failed: {this.state.failure}
+        <button className="action" onClick={() => location.reload()}>
+          Reload
+        </button>
+      </div>
+    )
+  }
+}
+
 export function BoardPageView({ page }: { page: BoardPage }) {
   return (
-    <BoardContext.Provider value={page}>
-      <PageBodyView />
-    </BoardContext.Provider>
+    <PageFailureView>
+      <BoardContext.Provider value={page}>
+        <PageBodyView />
+      </BoardContext.Provider>
+    </PageFailureView>
   )
 }

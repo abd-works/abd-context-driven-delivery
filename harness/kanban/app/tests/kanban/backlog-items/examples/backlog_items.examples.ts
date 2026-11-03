@@ -10,8 +10,8 @@ const startedSearch = placedTicket('search-the-catalog', 'Discovery', { title: '
 export const BOARD_BEFORE_ITEMS = boardHolding([backToBacklog], [searchItem])
 
 export const ITEM_ANSWERS: ExampleAnswers = {
-  'POST /api/backlog': { body: giftCards, board: boardHolding([backToBacklog], [searchItem, giftCards]) },
-  'POST /api/backlog/Search%20the%20catalog/start': { body: startedSearch, board: boardHolding([backToBacklog, startedSearch]) },
-  'POST /api/tickets/back-to-backlog/move-previous': { body: heldItem, board: boardHolding([], [searchItem, heldItem]) },
-  'POST /api/backlog/Back%20to%20backlog/start': { body: backToBacklog, board: boardHolding([backToBacklog], [searchItem]) },
+  'POST /api/backlog-item/add': { body: giftCards, board: boardHolding([backToBacklog], [searchItem, giftCards]) },
+  'POST /api/backlog-item/Search%20the%20catalog/start': { body: startedSearch, board: boardHolding([backToBacklog, startedSearch]) },
+  'POST /api/ticket/back-to-backlog/move-previous': { body: heldItem, board: boardHolding([], [searchItem, heldItem]) },
+  'POST /api/backlog-item/Back%20to%20backlog/start': { body: backToBacklog, board: boardHolding([backToBacklog], [searchItem]) },
 }

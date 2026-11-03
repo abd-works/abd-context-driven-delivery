@@ -1,6 +1,7 @@
 """CddAccess generator - how anything outside Python reaches the CDD domain.
-The domain stays in Python. Skills, actions, and commands reach it through MCP tools, and a TypeScript server reaches
-those same tools through the language adapter the installer deploys. See harness/kanban/app for the worked example."""
+The domain stays in Python. Skills, actions, and commands reach it through MCP tools, and code in any other language
+reaches those same tools through the language adapter the installer deploys for it. TypeScript is the first
+implementation; see harness/kanban/app for the worked example."""
 
 from __future__ import annotations
 

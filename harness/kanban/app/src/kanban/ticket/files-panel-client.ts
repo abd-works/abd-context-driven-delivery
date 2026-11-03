@@ -1,7 +1,6 @@
-import type { FileTextData } from '@cdd/harness/kanban/ticket'
+import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
 
 import type { BoardApi } from '../board/board-api'
-import { pathPart } from '../board/board-api'
 import { FORMAT_GROUPS } from '../board/board-brand'
 import type { BoardStore, FilesPanel, SidePanel } from '../board/board-store'
 import type { TicketFiles } from './ticket'
@@ -69,7 +68,7 @@ export class FilesPanelClient {
   }
 
   private read(ticket: string, slugs: string[]): Promise<TicketFiles | null> {
-    return this.api.post<TicketFiles>(`/tickets/${pathPart(ticket)}/files`, { fidelities: slugs })
+    return TicketClientGenerated.named(this.api, ticket).files(slugs)
   }
 
   async openFiles(ticket: string, slugs: string[], mode: string): Promise<void> {
@@ -90,7 +89,7 @@ export class FilesPanelClient {
 
   private async textOf(ticket: string, path: string, isOnDisk: boolean): Promise<string> {
     if (!isOnDisk) return ''
-    return (await this.api.get<FileTextData>(`/tickets/${pathPart(ticket)}/file?path=${pathPart(path)}`))?.text ?? ''
+    return (await TicketClientGenerated.named(this.api, ticket).readFile(path))?.text ?? ''
   }
 
   async openTab(path: string): Promise<void> {

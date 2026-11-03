@@ -12,5 +12,5 @@ const limited: BoardData = {
 }
 
 export const LIMIT_ANSWERS: ExampleAnswers = {
-  'POST /api/board/wip-limit': { body: limited, board: limited },
+  'POST /api/board/set-wip-limit': { body: limited, board: limited },
 }

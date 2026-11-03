@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import inspect
+import os
+import re
 from datetime import datetime, timezone
 from functools import cached_property
 from pathlib import Path
@@ -36,6 +38,8 @@ LEAVE_MERGE = "merge"
 MOVE_WORDS = (MOVED_INTO, OLDER_MOVED_INTO)
 OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
+ALWAYS_ALLOWED = ("generate",)
+ONCE_THERE_IS_OUTPUT = ("validate", "review")
 SOURCE_LINES_BEFORE = 2
 SOURCE_LINES_AFTER = 4
 
@@ -47,6 +51,13 @@ class TicketNotFoundError(LookupError):
         super().__init__(f"no ticket named {ticket!r} on the board")
 
 
+class NotAStageError(ValueError):
+    """Raised when a ticket is moved into a column that is not a stage, such as the Backlog or Complete."""
+
+    def __init__(self, stage: str) -> None:
+        super().__init__(f"{stage!r} is not a stage a ticket can be moved into")
+
+
 class TicketFileError(ValueError):
     """Raised when a tool asks for a file outside the ticket's repository."""
 
@@ -54,7 +65,7 @@ class TicketFileError(ValueError):
         super().__init__(f"{path!r} is not a file in this repository")
 
 
-@language_adapter(language="typescript")
+@language_adapter(language="typescript", identity="name")
 @agent_toolset
 class Ticket(Card):
     """Show one work session as a unit of delivery and move it through the stages."""
@@ -217,6 +228,18 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
+    def move_to(self, stage: str, done: bool = False) -> Ticket:
+        """Move ticket straight into stage's In progress, or its Done when done is true, whatever its work; dragging a card does this. Out of Complete it reopens first."""
+        target = next((column for column in self._stages if column.name == stage), None)
+        if target is None:
+            raise NotAStageError(stage)
+        moved = self if isinstance(self.column, Stage) else Ticket(self._session.reopen(), self._board)
+        entered = moved if moved.column is target else moved._enter(target)
+        return entered._mark(MARKED_DONE if done else MARKED_IN_PROGRESS, target)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
         """Close ticket: its session ends, its folder moves to closed/, and it shows in Complete. leaving names what to do with its work first: commit, push, merge."""
         self._leave(leaving or [])
@@ -334,7 +357,6 @@ class Ticket(Card):
             "parent": self._fields.get("parent", ""),
             "column": self.column.name,
             "is_done": self.is_done,
-            "can_move_next": self.column.name != "Complete",
             "next": upcoming.slug if upcoming else None,
             "next_action": self.next_action,
             "handoff": self.latest_handoff,
@@ -343,8 +365,14 @@ class Ticket(Card):
             "practices": self.practices,
             "progress": {entry.slug: entry.state for entry in progress},
             "actions": {entry.slug: entry.action_states for entry in progress},
-            "allowed_actions": {entry.slug: entry.allowed_actions for entry in progress},
+            "allowed_actions": {entry.slug: self._allowed_actions(entry) for entry in progress},
         }
+
+    def _allowed_actions(self, progress: FidelityProgress) -> list[str]:
+        """Generate always; Validate and Review as soon as any action on the fidelity is recorded, so a person can check
+        the same output again as often as they like. Files already on disk are listed by `files`, which the board reads
+        when a person opens the fidelity; reading them here would search the disk on every board read."""
+        return [*ALWAYS_ALLOWED, *ONCE_THERE_IS_OUTPUT] if progress.done_actions else list(ALWAYS_ALLOWED)
 
     @property
     def _folder(self) -> Path:
@@ -494,15 +522,15 @@ class Ticket(Card):
         relative = self._relative_to(root, declared)
         if "*" not in relative:
             return [{"path": relative, "exists": (root / relative).exists()}]
-        # A session can work outside the repository, and glob takes no absolute pattern, so a path that stayed absolute searches from its drive.
+        # A session can work outside the repository, so a path that stayed absolute searches from its drive.
         start = Path(Path(relative).anchor or root)
-        found = sorted(path for path in start.glob(relative[len(Path(relative).anchor):]) if path.is_file())
+        found = _files_matching(start, relative[len(Path(relative).anchor):])
         return [{"path": self._relative_to(root, str(path)), "exists": True} for path in self._worked_on(found)] or [{"path": relative, "exists": False}]
 
     def _worked_on(self, found: list[Path]) -> list[Path]:
         """The files of a pattern that are this ticket's. A folder of its own holds only its work; on the whole repository, only what its branch changed is."""
         repo_root = self._board.repo_root.resolve()
-        if Path(self._session.workpath or repo_root).resolve() != repo_root:
+        if not found or Path(self._session.workpath or repo_root).resolve() != repo_root:
             return found
         return [path for path in found if path.resolve() in self._changed_on_branch]
 
@@ -608,21 +636,39 @@ class FidelityProgress:
             states["validate"] = "in_progress"
         return states
 
-    @property
-    def allowed_actions(self) -> list[str]:
-        """What can run now: Validate once generated, and Review only after a clean Validate."""
-        states = self.action_states
-        allowed = ["generate"]
-        if states["generate"] == "done":
-            allowed.append("validate")
-        if states["validate"] == "done":
-            allowed.append("review")
-        return allowed
-
 
 def practice_key(practice: PracticeGuidance) -> str:
     """A practice's folder name (`clean_engineering`): how action lines in the session log name it."""
     return Path(inspect.getfile(type(practice))).parent.name
+
+
+SKIPPED_FOLDERS = frozenset({"node_modules"})
+
+
+def _files_matching(start: Path, pattern: str) -> list[Path]:
+    """The files under start that pattern names. Installed packages and hidden folders hold no fidelity's work, and
+    searching node_modules alone made a pattern take over a second."""
+    parts = pattern.split("/")
+    fixed = next((index for index, part in enumerate(parts) if set(part) & set("*?")), len(parts))
+    # The search starts at the deepest folder the pattern names outright, so a pattern under one folder never walks the drive.
+    base = start.joinpath(*parts[:fixed])
+    matching = _pattern_matcher("/".join(parts[fixed:]))
+    base_text = str(base)
+    found = []
+    for folder, folders, files in os.walk(base_text):
+        folders[:] = [name for name in folders if name not in SKIPPED_FOLDERS and not name.startswith(".")]
+        # Plain strings here: building a Path for every file in the repository made the search take a second.
+        inside = folder[len(base_text):].strip("\\/").replace("\\", "/")
+        found += [Path(folder, name) for name in files if matching.fullmatch(f"{inside}/{name}" if inside else name)]
+    return sorted(found)
+
+
+def _pattern_matcher(pattern: str) -> re.Pattern[str]:
+    """A glob pattern as a regular expression over a path written with `/`: `**/` is any number of folders, `*` and `?`
+    stay inside one folder, the way Path.glob reads them."""
+    parts = re.split(r"(\*\*/|\*\*|\*|\?)", pattern)
+    wildcards = {"**/": "(?:.*/)?", "**": ".*", "*": "[^/]*", "?": "[^/]"}
+    return re.compile("".join(wildcards.get(part, re.escape(part)) for part in parts))
 
 
 def _words(line: str) -> list[str]:

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { MouseEvent } from 'react'
+import type { DragEvent, MouseEvent, RefObject } from 'react'
 
-import { ageOf, practiceOf, SEGMENT_LIGHT } from '../board/board-brand'
+import { ageOf, practiceOf } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { ColumnClient } from '../board/column-client'
-import { ActionBarView } from './action-bar-view'
+import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
 import { skillOf } from './ticket-client'
 import { TileView } from './tile-view'
@@ -41,7 +41,7 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
         const background = key === 'violations' ? color : practiceOf(slug)?.color
         return (
           <button key={slug} className="segment-hit" title={skill} aria-label={`${skill}: ${label}`} aria-expanded={isOpen} onClick={withoutSelecting(() => page.cards.openSegment(ticket, stage, slug))} onMouseEnter={enter} onMouseLeave={leave} onFocus={enter} onBlur={leave}>
-            <span className="segment" style={{ background, opacity: SEGMENT_LIGHT[key] }} />
+            <span className="segment" style={{ background, opacity: ticket.lightOf(slug) }} />
           </button>
         )
       })}
@@ -49,24 +49,11 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
   )
 }
 
-function FileLinksView({ ticket, slugs }: { ticket: TicketClient; slugs: string[] }) {
-  const { page } = useBoard()
-  return (
-    <div className="card-files">
-      {['list', 'folder', 'files'].map(mode => (
-        <button key={mode} className="extra-action" onClick={withoutSelecting(() => page.files.openFiles(ticket.name, slugs, mode))}>
-          {mode}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function CardMarkView({ ticket, stage }: { ticket: TicketClient; stage: ColumnClient }) {
+function CardMarkView({ ticket }: { ticket: TicketClient }) {
   const { page, state } = useBoard()
   const isOpen = state.openCard === ticket.name
   return (
-    <button className="expand-mark card-mark" aria-label={`Actions for ${ticket.title}`} aria-expanded={isOpen} onClick={withoutSelecting(() => page.cards.toggle(ticket, stage))}>
+    <button className="expand-mark card-mark" aria-label={`Actions for ${ticket.title}`} aria-expanded={isOpen} onClick={withoutSelecting(() => page.cards.toggle(ticket))}>
       {isOpen ? '▴' : '▾'}
     </button>
   )
@@ -77,17 +64,19 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
   const [skill, setSkill] = useState('')
   return (
     <>
-      <CardMarkView ticket={ticket} stage={stage} />
+      <CardMarkView ticket={ticket} />
       <div className="ticket-title">{ticket.title}</div>
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
-      {ticket.violations.length ? (
+      {ticket.violatedSlugs.length ? (
         <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket.name, ''))}>
           violations
         </button>
       ) : null}
-      <FileLinksView ticket={ticket} slugs={ticket.enabledSlugs(stage)} />
+      <div className="card-files">
+        <FileViewsView ticket={ticket.name} slugs={ticket.enabledSlugs(stage)} />
+      </div>
     </>
   )
 }
@@ -96,17 +85,33 @@ function MoveRowView({ ticket }: { ticket: TicketClient }) {
   const { page } = useBoard()
   return (
     <div className="card-moves">
-      <button className="action card-move" title={ticket.backLabel} aria-label={ticket.backLabel} disabled={ticket.isLocked} onClick={withoutSelecting(() => ticket.movePrevious())}>
-        ←
-      </button>
       <button className="action card-activate" disabled={ticket.isClosed} onClick={withoutSelecting(() => page.activation.start(ticket, ticket.isActive))}>
         {ticket.isActive ? 'Close' : 'Activate'}
       </button>
-      <button className="action card-move" aria-label={`Move ${ticket.title} to the next column`} disabled={ticket.isLocked || !ticket.canMoveNext} onClick={withoutSelecting(() => ticket.moveNext())}>
-        →
-      </button>
     </div>
   )
+}
+
+const ROOM_BELOW_OPEN_CARD = 8
+
+// The open card floats over the board, so the columns would stop short of it. Every column grows to reach its bottom
+// while it is open, and they stay the same height as each other because the grid stretches them all.
+function useColumnsReachOpenCard(card: RefObject<HTMLDivElement | null>): void {
+  useEffect(() => {
+    const open = card.current
+    const grid = open?.closest<HTMLElement>('.column-grid')
+    if (!open || !grid) return
+    const reach = () => {
+      grid.style.minHeight = `${open.getBoundingClientRect().bottom - grid.getBoundingClientRect().top + ROOM_BELOW_OPEN_CARD}px`
+    }
+    const watcher = new ResizeObserver(reach)
+    watcher.observe(open)
+    reach()
+    return () => {
+      watcher.disconnect()
+      grid.style.minHeight = ''
+    }
+  }, [card])
 }
 
 // An open card shows the same tiles as the details, so a ticket can be worked from either place.
@@ -114,12 +119,15 @@ function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: Co
   const { state } = useBoard()
   const card = useRef<HTMLDivElement>(null)
   const { opensLeft, ...place } = openCardPlace(ticket, spot)
-  const hasBar = state.cardMenu?.ticket === ticket.name
-  useEffect(() => card.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' }), [hasBar])
+  const openTile = state.tile?.ticket === ticket.name ? state.tile.place : ''
+  // Braces matter: newer browsers return a promise from scrollIntoView, and React would call it as the effect's cleanup.
+  useEffect(() => {
+    card.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [openTile])
+  useColumnsReachOpenCard(card)
   return (
     <div ref={card} className={opensLeft ? 'card-open grows-left' : 'card-open'} data-open-card={ticket.name} style={{ ...place, borderColor: borderColorOf(ticket), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}>
       <CardFaceView ticket={ticket} stage={stage} />
-      {state.cardMenu?.ticket === ticket.name ? <ActionBarView ticket={ticket} stage={stage} tile={state.cardMenu} hasFileLinks={false} /> : null}
       {ticket.enabledSlugs(stage).map(slug => (
         <TileView key={slug} ticket={ticket} stage={stage} slug={slug} hasPracticeChip />
       ))}
@@ -135,9 +143,25 @@ export function TicketCardView({ ticket, spot }: { ticket: TicketClient; spot: C
   const stage = page.board.stageOf(ticket)
   const isSelected = page.board.selectedTicket?.address === ticket.address
   if (!stage) return null
+  // A locked ticket cannot use its arrows, so it cannot be dragged either; an open card is being worked, not moved.
+  const isDraggable = !ticket.isLocked && state.openCard !== ticket.name
+  const dragStarted = (event: DragEvent) => {
+    event.dataTransfer.setData('text/plain', ticket.name)
+    event.dataTransfer.effectAllowed = 'move'
+    page.store.change({ dragged: ticket.address })
+  }
   return (
-    <div className="ticket-card" data-ticket={ticket.name} onClick={() => ticket.select()} style={{ borderColor: borderColorOf(ticket, isSelected), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}>
-      <button className="card-hit" aria-label={`Show ${ticket.title}`} />
+    <div
+      className={['ticket-card', ticket.isActive ? 'is-active' : '', state.dragged === ticket.address ? 'is-dragged' : ''].filter(Boolean).join(' ')}
+      data-ticket={ticket.name}
+      draggable={isDraggable}
+      onDragStart={dragStarted}
+      onDragEnd={() => page.store.change({ dragged: null })}
+      onClick={() => ticket.select()}
+      style={{ borderColor: borderColorOf(ticket, isSelected), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}
+    >
+      {/* Chrome starts no drag on a button, and this one covers the card, so it carries the card's drag. */}
+      <button className="card-hit" aria-label={`Show ${ticket.title}`} draggable={isDraggable} />
       <CardFaceView ticket={ticket} stage={stage} />
       {state.openCard === ticket.name ? <OpenCardView ticket={ticket} stage={stage} spot={spot} /> : null}
       <MoveRowView ticket={ticket} />

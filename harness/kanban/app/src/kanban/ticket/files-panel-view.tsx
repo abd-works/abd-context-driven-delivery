@@ -79,7 +79,10 @@ function FileTabView({ panel, path }: { panel: FilesPanel; path: string }) {
 // A file opened from a violation shows its failing line, in the middle of the panel.
 function FileLinesView({ text, marked }: { text: string; marked: number }) {
   const line = useRef<HTMLDivElement>(null)
-  useEffect(() => line.current?.scrollIntoView({ block: 'center' }), [marked, text])
+  // Braces matter: newer browsers return a promise from scrollIntoView, and React would call it as the effect's cleanup.
+  useEffect(() => {
+    line.current?.scrollIntoView({ block: 'center' })
+  }, [marked, text])
   const lines = text ? text.split('\n') : NOT_GENERATED
   return (
     <div className="file-lines">

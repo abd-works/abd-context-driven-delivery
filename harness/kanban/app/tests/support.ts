@@ -12,6 +12,9 @@ export async function openBoard(page: Page): Promise<void> {
 
 export const card = (page: Page, ticket: string): Locator => page.locator(`.ticket-card[data-ticket="${ticket}"]`)
 
+// A person grabs a card by its title; a drag cannot start on the buttons further down it.
+export const BY_ITS_TITLE = { x: 24, y: 14 }
+
 export const openCard = (page: Page, ticket: string): Locator => page.locator(`[data-open-card="${ticket}"]`)
 
 export const toast = (page: Page, text: string | RegExp): Locator => page.locator('.toast').filter({ hasText: text })
@@ -19,8 +22,16 @@ export const toast = (page: Page, text: string | RegExp): Locator => page.locato
 export async function openCardOf(page: Page, ticket: string): Promise<Locator> {
   await card(page, ticket).locator('.card-mark').first().click()
   const opened = openCard(page, ticket)
-  await expect(opened.locator('.expansion').first()).toBeVisible()
+  await expect(opened).toBeVisible()
   return opened
+}
+
+// An opened card shows its tiles only; pressing a tile's name opens that tile's action bar.
+export async function openTileBarOf(opened: Locator): Promise<Locator> {
+  await opened.locator('.tile-name').first().click()
+  const bar = opened.locator('.expansion').first()
+  await expect(bar).toBeVisible()
+  return bar
 }
 
 export async function turnOffActiveSessionOnly(page: Page): Promise<void> {
@@ -32,16 +43,18 @@ export class FakeChat {
   readonly received: { kind: string; text: string }[] = []
   isBusy = false
   readonly id: string
+  readonly name: string
   private readonly request: APIRequestContext
   private timer: ReturnType<typeof setInterval> | undefined
 
-  constructor(request: APIRequestContext, chat: string) {
+  constructor(request: APIRequestContext, chat: string, name: string) {
     this.request = request
     this.id = chat
+    this.name = name
   }
 
   private async poll(): Promise<void> {
-    const answer = await this.request.post(`/api/chats/${this.id}/next`, { headers: BOARD_POST_HEADERS, data: { is_busy: this.isBusy } })
+    const answer = await this.request.post(`/api/chats/${this.id}/next`, { headers: BOARD_POST_HEADERS, data: { is_busy: this.isBusy, name: this.name } })
     const command = (await answer.json()) as { kind: string; text: string } | null
     if (command) this.received.push(command)
   }

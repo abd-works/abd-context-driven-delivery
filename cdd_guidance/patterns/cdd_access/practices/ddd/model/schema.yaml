@@ -2,16 +2,12 @@
 accessRoute:
   - is: class
   - path: "src/{context}/{object}/{object}-routes"
-  - asks: accessNode
 accessNode:
   - is: class
   - path: "src/{context}/{object}/{object}-node"
-accessConnection:
+accessHandWrittenAdapter:
   - is: class
-  - path: "src/cdd/cdd-connection-node"
-accessHandWrittenTools:
-  - is: class
-  - path: "src/{context}/{object}/{object}-tools"
+  - path: "src/{context}/{object}/{object}-adapter"
 accessMarkedToolset:
   - is: class
   - path: "harness/{domain}/{object}"
