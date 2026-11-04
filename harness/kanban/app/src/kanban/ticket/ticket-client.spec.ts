@@ -254,3 +254,67 @@ describe('Close Active Session', () => {
     expect(ticketOn(page, ACTIVE).column).toBe('Discovery')
   })
 })
+
+// A ticket's chat is the chat working in the ticket's worktree, so a person clicking the ticket sends to it.
+describe('Open Ticket Chat', () => {
+  describe("with a chat working in the ticket's worktree", () => {
+    async function clicked() {
+      const { page } = await board.page()
+      await board.connectChat(page, 'other-chat')
+      const worktree = board.openWorktree(ACTIVE)
+      await board.chat('ticket-chat', 'abd · first words', worktree).checkIn()
+      await page.chat.refresh()
+      await page.reader.refresh()
+      await ticketOn(page, ACTIVE).choose()
+      return page
+    }
+
+    it("should send the board's commands to that chat", async () => {
+      expect((await clicked()).store.state.targetChat).toBe('ticket-chat')
+    })
+
+    it('should name that chat by the ticket', async () => {
+      const page = await clicked()
+      const chat = page.store.state.chats.find(entry => entry.id === 'ticket-chat')!
+      expect(page.chatName(chat)).toBe(ACTIVE)
+    })
+  })
+
+  describe("with no chat working in the ticket's worktree", () => {
+    async function clicked(times = 1) {
+      const { page } = await board.page()
+      const other = await board.connectChat(page, 'other-chat')
+      const worktree = board.openWorktree(ACTIVE)
+      await page.reader.refresh()
+      for (let click = 0; click < times; click++) await ticketOn(page, ACTIVE).choose()
+      return { worktree, received: await other.checkIn() }
+    }
+
+    it("should ask the connected chat to start a chat titled with the ticket's name in its worktree", async () => {
+      const { worktree, received } = await clicked()
+      expect(received).toEqual([{ kind: 'submit', text: expect.stringContaining(`titled "${ACTIVE}" working in ${worktree}`) }])
+    })
+
+    it('should ask only once while that chat starts', async () => {
+      expect((await clicked(2)).received).toHaveLength(1)
+    })
+  })
+
+  describe('with a ticket that has no worktree yet', () => {
+    it('should ask for its worktree to be opened first', async () => {
+      const { page } = await board.page()
+      const other = await board.connectChat(page, 'other-chat')
+      await ticketOn(page, ACTIVE).choose()
+      const [asked] = await other.checkIn()
+      expect(asked?.text).toContain(`repo.switch_worktree name=${ACTIVE}`)
+    })
+  })
+
+  describe('with no chat connected', () => {
+    it("should say a chat has to be opened in the ticket's worktree", async () => {
+      const { page } = await board.page()
+      await ticketOn(page, ACTIVE).choose()
+      expect(page.store.state.toasts.at(-1)?.text).toContain(`Open a chat for ${ACTIVE}`)
+    })
+  })
+})

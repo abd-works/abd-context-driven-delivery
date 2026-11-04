@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from space.repo import Repo, TicketState
+from space.repo import Repo, ProjectTicketState
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool
 from workspace.legacy.workspace import WorkSession, Workspace
@@ -196,7 +196,7 @@ class Plan:
         for field_name, field_value in fields.items():
             setattr(turn, field_name, field_value)
         if not hasattr(turn, "state") or turn.state is None:  # type: ignore[attr-defined]
-            turn.state = TicketState.backlog()  # type: ignore[attr-defined]
+            turn.state = ProjectTicketState.backlog()  # type: ignore[attr-defined]
         if not hasattr(turn, "judge_checkpoint"):
             turn.judge_checkpoint = None  # type: ignore[attr-defined]
         if not hasattr(turn, "hil_check"):
@@ -678,7 +678,7 @@ class PlanExecution:
         turns = self._plan.turns
         if turns:
             first = turns[0]
-            first.state = TicketState.in_progress()  # type: ignore[attr-defined]
+            first.state = ProjectTicketState.in_progress()  # type: ignore[attr-defined]
             session.open_turn = first
         return session
 
@@ -726,7 +726,7 @@ class PlanExecution:
         turn = self._open_turn()
         if session is None or turn is None:
             return None
-        turn.state = TicketState.done()  # type: ignore[attr-defined]
+        turn.state = ProjectTicketState.done()  # type: ignore[attr-defined]
         turn.finish(
             prompt=getattr(turn, "prompt", ""),
             result=getattr(turn, "result", ""),
@@ -755,7 +755,7 @@ class PlanExecution:
         idx = turns.index(current) if current in turns else -1
         nxt = turns[idx + 1] if 0 <= idx < len(turns) - 1 else None
         if nxt is not None:
-            nxt.state = TicketState.in_progress()  # type: ignore[attr-defined]
+            nxt.state = ProjectTicketState.in_progress()  # type: ignore[attr-defined]
             session.open_turn = nxt
         else:
             session.open_turn = None

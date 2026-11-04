@@ -14,9 +14,11 @@ Every full install also re-deploys the Installer toolset last so the slash comma
 
 A toolset marked ``@language_adapter(language="typescript")`` also gets typed code under ``{install_path}/language-adapters/typescript/``, in the folders its source sits in: its data, a class that reads it, and a class that calls its MCP tools. `clean` removes these with the rest of the install, and `patterns-cdd-web-domain-access` says how applications use them.
 
-When install runs **inside** the live MCP host process, the installer skips a second `McpHost.standup()` and skips `ensure_mcp_host()` so it does not reload every toolset or rewrite Cursor `mcp.json` during an unrelated tool request.
+Every chat in every project talks to **one cdd server**, installed once under `~/.cdd/`. Install writes the IDE's user-level `cdd` entry as that server's URL, starts the server when none answers, and pins it to this checkout's current commit only on the very first install. A later install from any worktree leaves the serving code alone, so it never repoints every open chat at that worktree. To change what serves every chat, say so: `python scripts/install.py --pin-runtime` serves this checkout's current commit, and `python scripts/install.py --serve-from-checkout` serves this checkout as it is on disk, for working on CDD itself; after editing Python there, `cdd.restart` reloads it for every chat.
 
-**After install finishes, read the diagnostic report back to the user.** `install` always runs `diagnose_after_install` (install-channel counts and runtime status only) and appends to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **mcp host**, **hook server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install in the shell, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.
+When install runs **inside** the cdd server itself, the installer skips a second `McpHost.standup()` and the server start, so it does not reload every toolset during an unrelated tool request.
+
+**After install finishes, read the diagnostic report back to the user.** `install` always runs `diagnose_after_install` (install-channel counts and runtime status only) and appends to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **cdd server**, **hook server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install in the shell, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.
 
 ## Clean
 
@@ -24,7 +26,7 @@ Remove files written by the previous install for this IDE path. Slash **`/clean`
 
 ## Diagnose Install
 
-Compare this install with the last entry in `diagnostics.json` on the install path. Report green, yellow, or red, each channel as previous -> current (delta), every new or deleted item, whether the MCP host and hook server are running, and which hook events and handler operations are registered on the install path.
+Compare this install with the last entry in `diagnostics.json` on the install path. Report green, yellow, or red, each channel as previous -> current (delta), every new or deleted item, whether the cdd server and hook server are running, and which hook events and handler operations are registered on the install path.
 
 `diagnose_after_install` is the last install step. It runs `diagnose_install` and appends one install section to `diagnostics.json`.
 

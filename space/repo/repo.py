@@ -85,7 +85,7 @@ class DirtyBranchSwitchError(RuntimeError):
         )
 
 
-class TicketNotFoundError(LookupError):
+class ProjectTicketNotFoundError(LookupError):
     """Raised when a GitHub issue reference does not resolve."""
 
 
@@ -188,29 +188,29 @@ class Commit:
 
 
 @dataclass
-class TicketState:
+class ProjectTicketState:
     name: str
 
     @classmethod
-    def backlog(cls) -> TicketState:
+    def backlog(cls) -> ProjectTicketState:
         return cls(DEFAULT_PROJECT_STATES[0])
 
     @classmethod
-    def in_progress(cls) -> TicketState:
+    def in_progress(cls) -> ProjectTicketState:
         return cls(DEFAULT_PROJECT_STATES[1])
 
     @classmethod
-    def done(cls) -> TicketState:
+    def done(cls) -> ProjectTicketState:
         return cls(DEFAULT_PROJECT_STATES[2])
 
 
 @dataclass
-class Ticket:
+class ProjectTicket:
     number: int
     title: str
     body: str
     url: str = ""
-    state: TicketState | None = None
+    state: ProjectTicketState | None = None
     issue_type: str = ""
     labels: list[str] = field(default_factory=list)
     data: dict[str, str] = field(default_factory=dict)
@@ -218,13 +218,13 @@ class Ticket:
     sub_issue_numbers: list[int] = field(default_factory=list)
     _repo: Repo | None = field(default=None, repr=False, compare=False)
 
-    def bind_repo(self, repo: Repo) -> Ticket:
+    def bind_repo(self, repo: Repo) -> ProjectTicket:
         self._repo = repo
         return self
 
     def _require_repo(self, operation: str) -> Repo:
         if self._repo is None:
-            raise RuntimeError(f"Ticket.{operation} requires a repo")
+            raise RuntimeError(f"ProjectTicket.{operation} requires a repo")
         return self._repo
 
     @property
@@ -235,14 +235,14 @@ class Ticket:
         repo = self._require_repo("close")
         if repo.in_memory:
             if not repo.has_ticket(self.number):
-                raise TicketNotFoundError(f"GitHub issue not found: {self.number}")
+                raise ProjectTicketNotFoundError(f"GitHub issue not found: {self.number}")
             repo.mark_closed(self.number)
             self.data["closed"] = "true"
             return
         repo.run_gh("issue", "close", str(self.number))
         self.data["closed"] = "true"
 
-    def update(self, *, title: str | None = None, body: str | None = None) -> Ticket:
+    def update(self, *, title: str | None = None, body: str | None = None) -> ProjectTicket:
         """Update supplied issue fields while leaving omitted fields unchanged."""
         repo = self._require_repo("update")
         arguments = ["issue", "edit", str(self.number)]
@@ -258,7 +258,7 @@ class Ticket:
         self.body = body if body is not None else self.body
         return self
 
-    def comment(self, body: str) -> Ticket:
+    def comment(self, body: str) -> ProjectTicket:
         """Add a comment to this issue."""
         repo = self._require_repo("comment")
         if repo.in_memory:
@@ -267,7 +267,7 @@ class Ticket:
         repo.run_gh("issue", "comment", str(self.number), "--body-file", "-", stdin=body)
         return self
 
-    def add_child(self, child: Ticket) -> Ticket:
+    def add_child(self, child: ProjectTicket) -> ProjectTicket:
         """Attach an existing issue as a direct sub-issue of this issue."""
         repo = self._require_repo("add_child")
         if child.number not in self.sub_issue_numbers:
@@ -288,7 +288,7 @@ class Ticket:
         )
         return child
 
-    def add_label(self, name: str) -> Ticket:
+    def add_label(self, name: str) -> ProjectTicket:
         """Put a label on this issue (sidebar chip). Empty name is a no-op."""
         label = (name or "").strip()
         if not label:
@@ -302,7 +302,7 @@ class Ticket:
         repo.run_gh("issue", "edit", str(self.number), "--add-label", label)
         return self
 
-    def remove_label(self, name: str) -> Ticket:
+    def remove_label(self, name: str) -> ProjectTicket:
         """Take a label off this issue. Empty or absent name is a quiet no-op."""
         label = (name or "").strip()
         if not label:
@@ -315,12 +315,12 @@ class Ticket:
         repo.run_gh("issue", "edit", str(self.number), "--remove-label", label)
         return self
 
-    def add_theme(self, theme: str) -> Ticket:
+    def add_theme(self, theme: str) -> ProjectTicket:
         """Apply theme on the issue label and the project board Theme field."""
         self.add_label(issue_theme_label(theme))
         return self.write_project_theme(theme)
 
-    def write_project_theme(self, theme: str) -> Ticket:
+    def write_project_theme(self, theme: str) -> ProjectTicket:
         """Write the GitHub project board Theme single-select field for this issue."""
         slug = theme_slug(theme)
         if not slug:
@@ -345,7 +345,7 @@ class Ticket:
             raise GhConnectError("Could not add issue to project.")
         return item_id
 
-    def write_type(self, name: str) -> Ticket:
+    def write_type(self, name: str) -> ProjectTicket:
         """Apply a GitHub issue Type name (org type). Mapping lives on WorkTicket."""
         text = (name or "").strip()
         if not text:
@@ -357,7 +357,7 @@ class Ticket:
         repo.run_gh("issue", "edit", str(self.number), "--type", text)
         return self
 
-    def set_status(self, state_name: str) -> Ticket:
+    def set_status(self, state_name: str) -> ProjectTicket:
         repo = self._require_repo("set_status")
         project = repo.project
         if project is None:
@@ -477,23 +477,23 @@ class Project:
         self._repo = repo
         self.owner = owner
         self.number = number
-        self.states = [TicketState(name) for name in DEFAULT_PROJECT_STATES]
+        self.states = [ProjectTicketState(name) for name in DEFAULT_PROJECT_STATES]
         self.text_field_name = "Ultimate Parent"
 
     def refresh_states(self) -> list[str]:
         """Load Status column names from GitHub and replace the in-memory state list."""
         names = self.status_option_names()
         if names:
-            self.states = [TicketState(name) for name in names]
+            self.states = [ProjectTicketState(name) for name in names]
         return names
 
-    def state_named(self, name: str) -> TicketState:
+    def state_named(self, name: str) -> ProjectTicketState:
         options = self.status_option_names()
         resolved = self.github_status_option(name, options)
         candidates = options or [state.name for state in self.states]
         for state_name in candidates:
             if state_name.lower() == resolved.lower():
-                return TicketState(state_name)
+                return ProjectTicketState(state_name)
         raise ValueError(
             f"unknown project state: {name!r}; board columns: {candidates}"
         )
@@ -864,7 +864,7 @@ class Repo:
         self._owner = owner
         self._repo_name = repo_name
         self._project: Project | None = None
-        self._tickets: dict[int, Ticket] = {}
+        self._tickets: dict[int, ProjectTicket] = {}
         self._ticket_project_state: dict[int, str] = {}
         self._ticket_project_theme: dict[int, str] = {}
         self._ticket_project_fields: dict[int, dict[str, str]] = {}
@@ -883,7 +883,7 @@ class Repo:
         return self._memory
 
     @property
-    def tickets(self) -> dict[int, Ticket]:
+    def tickets(self) -> dict[int, ProjectTicket]:
         return dict(self._tickets)
 
     def has_ticket(self, number: int) -> bool:
@@ -900,6 +900,16 @@ class Repo:
             if (candidate / ".git").exists():
                 return candidate
         return None
+
+    @property
+    def is_clone(self) -> bool:
+        """Whether git works here: a .git folder holding a HEAD, or the .git file of a linked worktree. A .git folder with
+        nothing in it only marks a project's root."""
+        root = self.find_root()
+        if root is None:
+            return False
+        marker = root / ".git"
+        return marker.is_file() or (marker / "HEAD").is_file()
 
     @classmethod
     def open(cls, start: str | Path) -> Repo:
@@ -961,6 +971,8 @@ class Repo:
             stderr=subprocess.PIPE,
             text=True,
             encoding="utf-8",
+            # The cdd server runs without a console, so on Windows each git it starts would open a window of its own.
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         try:
             stdout, stderr = process.communicate(timeout=timeout)
@@ -1677,27 +1689,27 @@ class Repo:
                 found.append(payload)
         return found
 
-    def ticket(self, ref: str) -> Ticket | None:
+    def ticket(self, ref: str) -> ProjectTicket | None:
         if self.in_memory:
             return self._memory_ticket(ref)
         return self._github_ticket(ref)
 
-    def _memory_ticket(self, ref: str) -> Ticket | None:
-        number = Ticket.from_number(ref)
+    def _memory_ticket(self, ref: str) -> ProjectTicket | None:
+        number = ProjectTicket.from_number(ref)
         ticket = self._tickets.get(number)
         if ticket is None:
             return None
         ticket.bind_repo(self)
         state_name = self._ticket_project_state.get(number)
         if state_name:
-            ticket.state = TicketState(state_name)
+            ticket.state = ProjectTicketState(state_name)
         ticket.data["closed"] = "true" if number in self._closed_tickets else "false"
         ticket.sub_issue_numbers = list(self._ticket_children.get(number, []))
         ticket.parent_number = self._ticket_parents.get(number)
         return ticket
 
-    def _github_ticket(self, ref: str) -> Ticket | None:
-        number = Ticket.from_number(ref)
+    def _github_ticket(self, ref: str) -> ProjectTicket | None:
+        number = ProjectTicket.from_number(ref)
         try:
             raw = self.run_gh(
                 "issue",
@@ -1716,11 +1728,11 @@ class Repo:
             return None
         return self._ticket_from_payload(payload)
 
-    def create_ticket(self, title: str, body: str) -> Ticket:
+    def create_ticket(self, title: str, body: str) -> ProjectTicket:
         if self.in_memory:
             number = (max(self._tickets.keys(), default=0) + 1) if self._tickets else 1
             owner, repo_name = self.owner_repo()
-            ticket = Ticket(
+            ticket = ProjectTicket(
                 number=number,
                 title=title,
                 body=body,
@@ -1761,14 +1773,14 @@ class Repo:
     ) -> str:
         owner, repo = self.owner_repo()
         trailers = {
-            "GitHub-Issue": Ticket.github_ref(owner, repo, issue_number),
+            "GitHub-Issue": ProjectTicket.github_ref(owner, repo, issue_number),
             "Workflow-State": workflow_state,
         }
         if reviewed_by.strip():
             trailers["Reviewed-By"] = reviewed_by.strip()
         return Commit.format(subject, trailers)
 
-    def _ticket_from_payload(self, payload: dict[str, Any]) -> Ticket:
+    def _ticket_from_payload(self, payload: dict[str, Any]) -> ProjectTicket:
         number = int(payload["number"])
         parent_data = payload.get("parent")
         parent_number = (
@@ -1784,7 +1796,7 @@ class Repo:
             for item in sub_issues_data
             if isinstance(item, dict) and item.get("number")
         ]
-        ticket = Ticket(
+        ticket = ProjectTicket(
             number=number,
             title=str(payload.get("title") or ""),
             body=str(payload.get("body") or ""),
@@ -1978,7 +1990,7 @@ class Repo:
         """Switch the main clone to a branch, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.switch_branch``."""
+        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.switch_branch``."""
         return ""
 
     @command(name="close-branch")
@@ -1987,7 +1999,7 @@ class Repo:
         """Close a branch: commit, push, merge into main, push main, delete the branch.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.close_branch``."""
+        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.close_branch``."""
         return ""
 
     @command(name="switch-worktree")
@@ -1996,7 +2008,7 @@ class Repo:
         """Open the sibling worktree for a branch other than main, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.switch_worktree``."""
+        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.switch_worktree``."""
         return ""
 
     @command(name="close-worktree")
@@ -2004,7 +2016,7 @@ class Repo:
     def close_worktree_command(self) -> str:
         """Close the open worktree: commit, push its branch, remove the folder. The branch stays open.
 
-        Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.close_worktree``."""
+        Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.close_worktree``."""
         return ""
 
     @agent_tool
@@ -2049,7 +2061,7 @@ class Repo:
 
         If the working tree is clean, say so and do not call ``repo.push_commit``.
         Otherwise call MCP ``repo.push_commit`` with the full message (subject plus body when useful)
-        and ``repo_path`` set to the project's checkout (``CDD_PROJECT``, else the current working directory).
+        and ``repo_path`` set to the project's checkout (the project the calling chat works on).
         """
         return ""
 

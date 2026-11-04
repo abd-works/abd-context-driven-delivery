@@ -33,7 +33,7 @@ with description("schema rules on a node"):
         expect(self.operation.rules).to(be_a(GraphRulesCollection))
 
     with it("should list limit-operation-parameters for an operation"):
-        expect(self.operation.rules.slugs()).to(contain("limit-operation-parameters"))
+        expect(self.operation.rules.slugs).to(contain("limit-operation-parameters"))
 
     with it("should expose a specific rule by slug"):
         rule = self.operation.rules["limit-operation-parameters"]
@@ -45,6 +45,20 @@ with description("schema rules on a node"):
         expect(self.operation.rules["limit-operation-parameters"].violations).to(
             contain("too many parameters")
         )
+
+    with it("should say the rule is failing once it holds a violation"):
+        self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
+        expect(self.operation.rules["limit-operation-parameters"].is_failing).to(equal(True))
+
+    with it("should place a recorded violation at the node's source"):
+        self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
+        hit = self.operation.rules["limit-operation-parameters"].hits[0]
+        source = self.operation.source
+        expect((hit["file"], hit["start"], hit["end"])).to(equal((source.file, source.start_line, source.end_line)))
+
+    with it("should list a recorded violation with its rule"):
+        self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
+        expect(self.operation.rules.violations).to(contain(("limit-operation-parameters", "too many parameters")))
 
     with it("should hang slug, prose body, and executable flag on each node rule"):
         rule = self.operation.rules["limit-operation-parameters"]

@@ -63,7 +63,7 @@ with story("Move Ticket"):
             # Person -> Ticket.move_to('Backlog')
             # Ticket -> Session.close()
             # Ticket -> Session.move_to_backlog()
-            # Ticket -> BacklogItem.holding(ticket, board)
+            # Ticket -> BacklogItem.from_ticket(ticket, board)
             # BacklogItem -> .sessions/_backlog/back-to-backlog/back-to-backlog.md: # Back to backlog
             # Ticket <- BacklogItem Back to backlog
             pass

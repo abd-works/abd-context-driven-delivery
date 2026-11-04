@@ -10,7 +10,6 @@ import stat
 import subprocess
 import sys
 import tempfile
-import time
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -435,7 +434,7 @@ class Installer:
 
         Installer-only refresh (``/install`` and ``/clean`` without walking the catalog): ``python scripts/install.py --self`` from this repo — not MCP.
 
-        When install finishes, read ``.cursor/diagnostics.json`` (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, mcp host, hook server, hooks registered."""
+        When install finishes, read ``.cursor/diagnostics.json`` (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, cdd server, hook server, hooks registered."""
         return self._install_run(toolsets, replace)
 
     def install_self(self, *, replace: bool = False) -> Any:
@@ -471,8 +470,6 @@ class Installer:
         self._prune_empty_skill_dirs()
         self._save_state()
         self._standup_channels()
-        if not self._mcp_host_is_this_process():
-            self.ensure_mcp_host()
         self.diagnosis = self.diagnose_after_install()
         for report in self.diagnosis:
             if report.startswith("!"):
@@ -541,9 +538,8 @@ class Installer:
                 raise RuntimeError(f"install failed for {item}") from error
 
     def _standup_channels(self) -> None:
-        # Installing via MCP runs inside the live stdio host. A second McpHost.standup()
-        # reloads every toolset and ensure_mcp_host() can rewrite user mcp.json mid-request;
-        # Cursor may drop the in-flight tool call (chat looks "hung" for tens of seconds).
+        # Installing via MCP runs inside the cdd server itself. A second McpHost.standup() reloads every toolset
+        # mid-request, and the server is already running, so neither runs then.
         if not self._mcp_host_is_this_process():
             self._mcp.standup()
             self._print_channel_notice(self._mcp.diagnose())
@@ -553,13 +549,13 @@ class Installer:
             self.ensure_runtimes()
 
     def ensure_runtimes(self) -> dict[str, Any]:
-        """Start the hook daemon and MCP host; fail if either stays down."""
+        """Start the hook daemon and the cdd server; fail if either stays down."""
         if self.ide == "Claude":
             return {"hook": "not installed", "mcp": self._ensure_mcp_runtime(), "board": self._install_board_plugin()}
         hook_pid = self._ensure_hook_runtime()
         mcp = self._ensure_mcp_runtime()
         print(
-            f"hook server pid={hook_pid} mcp host={mcp}",
+            f"hook server pid={hook_pid} cdd server={mcp}",
             file=sys.stderr,
         )
         return {"hook": "running", "mcp": mcp}
@@ -577,18 +573,7 @@ class Installer:
     def _ensure_mcp_runtime(self) -> str:
         from harness.mcp.mcp_server import McpInstallation
 
-        installation = McpInstallation(self.ide, self.path, repo=self.repo)
-        status = installation.ensure_cursor_host()
-        if self.ide == "Claude":
-            return status
-        if installation.cursor_host_is_running():
-            return "running"
-        deadline = time.time() + 20
-        while time.time() < deadline:
-            if installation.cursor_host_is_running():
-                return "running"
-            time.sleep(0.25)
-        raise RuntimeError(f"install failed: MCP host is not running ({status})")
+        return McpInstallation(self.ide, self.path, repo=self.repo).ensure_server()
 
     def _install_board_plugin(self) -> str:
         """Install the ``cdd-board`` plugin from this checkout at user level, for every project.
@@ -882,14 +867,14 @@ class Installer:
         )
 
     def _mcp_host_is_this_process(self) -> bool:
-        from harness.mcp.mcp_server import HostPid
+        from harness.mcp.mcp_server import serving_mcp_host
 
-        return HostPid.from_ide(self._mcp.pid_folder).is_this_process
+        return serving_mcp_host() is not None
 
     def _mcp_host_is_running(self) -> bool:
         from harness.mcp.mcp_server import McpInstallation
 
-        return McpInstallation(self.ide, self.path, repo=self.repo).cursor_host_is_running()
+        return McpInstallation(self.ide, self.path, repo=self.repo).server_is_running()
 
     def _hook_server_status(self) -> tuple[bool, int | None]:
         from harness.hooks.hook_daemon import HookDaemon
@@ -935,7 +920,7 @@ class Installer:
         events = self._registered_hook_events()
         operations = self._registered_hook_operations()
         lines = [
-            f"mcp host: {mcp}",
+            f"cdd server: {mcp}",
             f"hook server: {hook}",
         ]
         if events:
@@ -973,20 +958,21 @@ class Installer:
         self.runtime_instructions
         return str(self.diagnose_install_instructions).strip()
 
-    def ensure_mcp_host(self, payload: dict[str, Any] | None = None) -> str:
+    def ensure_mcp_server(self, payload: dict[str, Any] | None = None) -> str:
+        """Start the one cdd server when none answers. Cursor and VS Code connect to its URL and cannot start it."""
         from harness.mcp.mcp_server import McpInstallation
 
-        return McpInstallation(self.ide, self.path, repo=self.repo).ensure_cursor_host()
+        return McpInstallation(self.ide, self.path, repo=self.repo).ensure_server()
 
     @Hook("sessionStart")
-    def ensure_mcp_host_on_session_start(self, payload: dict[str, Any] | None = None) -> str:
-        return self.ensure_mcp_host(payload)
+    def ensure_mcp_server_on_session_start(self, payload: dict[str, Any] | None = None) -> str:
+        return self.ensure_mcp_server(payload)
 
     @Hook("afterAgentResponse")
-    def ensure_mcp_host_after_agent_response(
+    def ensure_mcp_server_after_agent_response(
         self, payload: dict[str, Any] | None = None
     ) -> str:
-        return self.ensure_mcp_host(payload)
+        return self.ensure_mcp_server(payload)
 
 
 __all__ = ["Installation", "Installer"]

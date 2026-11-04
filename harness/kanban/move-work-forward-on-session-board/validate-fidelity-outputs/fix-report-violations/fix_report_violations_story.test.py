@@ -23,25 +23,25 @@ with story("Fix Report Violations"):
         with then("the chat receives one message naming the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed, with instructions to fix it"):
             pass
     with scenario("Fix every violation of a rule"):
-        # Evidence: observed: side-panel-client.spec 'should send Fix all for every violation of a rule'.
+        # Evidence: observed: side-panel-client.spec 'should ask the chat to fix all violations of that rule found in the report it names'.
         with given("checkout-flow's story_map report lists verb-noun-format"):
             pass
         with when("the Person fixes every violation of verb-noun-format"):
-            # Board page -> Chat.send('command', fix message: the verb-noun-format rule and every violation of it, each with its content)
+            # Board page -> Chat.send('command', 'Fix all violations of verb-noun-format found in this report: <report path>')
             pass
-        with then("the chat receives one message with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them"):
+        with then("the chat receives Fix all violations of verb-noun-format found in this report, naming checkout-flow's story_map report"):
             pass
     with scenario("Fix every violation in the report"):
-        # Evidence: observed: side-panel-client.spec 'with Fix all pressed on the whole report' — 'should send one message to the chat', 'should name every rule the report breaks', 'should give every violation of every rule'.
+        # Evidence: observed: side-panel-client.spec 'with Fix all pressed on the whole report' — 'should send one message to the chat', 'should ask the chat to fix all violations found in the report it names'.
         with given("checkout-flow's report lists violations of verb-noun-format and do-not-invent-requirements"):
             pass
         with and_("a chat is connected"):
             pass
         with when("the Person fixes every violation in the report"):
-            # Person -> BoardPage.fixReport('checkout-flow', every rule in the report)
-            # Board page -> Chat.send('command', fix message: each rule with every violation of it, each with its content)
+            # Person -> BoardPage.fixReport('checkout-flow', the open report)
+            # Board page -> Chat.send('command', 'Fix all violations found in this report: <report path>')
             pass
-        with then("the chat receives one message naming each rule with every violation of it, each at its file and line with the content that failed, and instructions to fix them all"):
+        with then("the chat receives Fix all violations found in this report, naming checkout-flow's report"):
             pass
     with scenario("Read an open report again after the fix"):
         # Evidence: observed: side-panel-client.spec 'with a report and files open as the board changes' — 'should read the report again'.

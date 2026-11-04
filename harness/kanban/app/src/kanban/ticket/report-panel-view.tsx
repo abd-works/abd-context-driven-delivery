@@ -34,11 +34,12 @@ export function ReportStatsView({ panel }: { panel: ReportPanel }) {
 function ReportStandingView({ panel }: { panel: ReportPanel }) {
   const { report } = panel
   if (!report.path) return <p className="panel-note">No validation report yet.</p>
+  // The raw text stands in for the rules only when none could be read from it; otherwise it pushes them out of view.
   if (!report.hasSavedGraph) {
     return (
       <>
         <p className="panel-warning">This report has no saved graph, so its rules are only in the report file.</p>
-        <pre className="report-text">{report.text}</pre>
+        {report.rules.length ? null : <pre className="report-text">{report.text}</pre>}
       </>
     )
   }
@@ -53,7 +54,7 @@ export function ReportPanelBodyView({ panel }: { panel: ReportPanel }) {
     <div className="panel-body report-body" key={state.board?.project}>
       <ReportStandingView panel={panel} />
       {panel.report.rules.length ? (
-        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : 'Send every violation in this report to the chat in one command'} onClick={() => void page.fixReport(panel.ticket, panel.report.rules)}>
+        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : 'Ask the chat to fix all violations found in this report'} onClick={() => void page.fixReport(panel.ticket, panel.report)}>
           Fix all violations
         </button>
       ) : null}

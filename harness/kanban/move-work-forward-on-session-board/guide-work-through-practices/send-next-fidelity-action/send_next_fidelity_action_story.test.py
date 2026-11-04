@@ -12,7 +12,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Actor: Person
 #
 # Acceptance criteria:
-# - Name Next Fidelity: the button names the step that runs next. Observed: `Ticket.next`, `Ticket.next_action`.
+# - Name Next Fidelity: the button names the step that runs next. Observed: `Ticket.next_fidelity`, `Ticket.next_action`.
 # - Run next steps through generate, validate, and review for each practice in order. Observed: `Ticket.next_action`.
 # - Run next holds on fix violations until they are fixed, and says "fix violations". Observed.
 with story("Send Next Fidelity Action"):
@@ -75,7 +75,7 @@ with story("Send Next Fidelity Action"):
         with and_("a person has moved pet-visits into Specification"):
             pass
         with when("the session board reads pet-visits"):
-            # Ticket -> Ticket.next
+            # Ticket -> Ticket.next_fidelity
             # Ticket <- the first fidelity not done in Specification or an earlier stage: stories-story_map
             pass
         with then("Run next reads Run next: review on stories-story_map"):
@@ -96,7 +96,7 @@ with story("Send Next Fidelity Action"):
         with given("every Discovery fidelity of pet-visits is reviewed"):
             pass
         with when("the session board reads pet-visits"):
-            # Ticket -> Ticket.next <- none
+            # Ticket -> Ticket.next_fidelity <- none
             pass
         with then("Run next says Nothing to run next"):
             pass

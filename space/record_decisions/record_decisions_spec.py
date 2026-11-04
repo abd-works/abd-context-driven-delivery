@@ -16,6 +16,7 @@ from mamba import before, context, description, it
 
 from space.record_decisions.record_decisions import RecordDecisions
 from space.session.session import Session
+from space.session.throwaway_project import ProjectCall
 from harness.agent_tools.agent_tools import AgentInstructions
 
 
@@ -26,7 +27,8 @@ def _rd():
 def _open_session(root: Path) -> Path:
     work = root / "work"
     work.mkdir(parents=True, exist_ok=True)
-    Session._current = None
+    Session.forget_current()
+    ProjectCall(root)
     Session.new("decisions", work, root)
     return work
 
@@ -40,6 +42,9 @@ def _expanded(action_name: str) -> str:
 
 
 with description("a RecordDecisions toolset"):
+    with after.each:
+        ProjectCall.close_all()
+
     with context("when read_cdr_format is called"):
         with it("should return the CDR format content as a string"):
             result = _rd().read_cdr_format()
@@ -60,7 +65,7 @@ with description("a RecordDecisions toolset"):
                     _open_session(Path(tmpdir))
                     result = _rd().list_cdrs()
                     expect(result).to(equal(""))
-                    Session._current = None
+                    Session.forget_current()
 
         with context("with an empty .context/cdr directory"):
             with it("should return empty string"):
@@ -69,7 +74,7 @@ with description("a RecordDecisions toolset"):
                     (work / ".context" / "cdr").mkdir(parents=True)
                     result = _rd().list_cdrs()
                     expect(result).to(equal(""))
-                    Session._current = None
+                    Session.forget_current()
 
         with context("with .context/cdr containing CDR files"):
             with it("should return newline-separated paths sorted by filename"):
@@ -82,7 +87,7 @@ with description("a RecordDecisions toolset"):
                     result = _rd().list_cdrs()
                     lines = result.splitlines()
                     expect(len(lines)).to(equal(2))
-                    Session._current = None
+                    Session.forget_current()
 
             with it("should sort filenames so lower numbers appear first"):
                 with tempfile.TemporaryDirectory() as tmpdir:
@@ -94,7 +99,7 @@ with description("a RecordDecisions toolset"):
                     result = _rd().list_cdrs()
                     lines = result.splitlines()
                     expect("0001-foo.md" in lines[0]).to(equal(True))
-                    Session._current = None
+                    Session.forget_current()
 
     with context("when write_cdr is called"):
         with it("should read the record from a file when paths is set"):
@@ -105,7 +110,7 @@ with description("a RecordDecisions toolset"):
                 source.write_text("# From file\n\nKept on disk.", encoding="utf-8")
                 written = Path(_rd().write_cdr("from-file", paths=str(source)))
                 expect(written.read_text(encoding="utf-8")).to(equal("# From file\n\nKept on disk.\n"))
-                Session._current = None
+                Session.forget_current()
 
         with it("should write a file at the session workpath .context/cdr/NNNN-slug.md"):
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -115,7 +120,7 @@ with description("a RecordDecisions toolset"):
                 files = list(cdr_dir.glob("*.md"))
                 expect(len(files)).to(equal(1))
                 expect(files[0].name).to(equal("0001-my-decision.md"))
-                Session._current = None
+                Session.forget_current()
 
         with it("should create the .context/cdr directory lazily"):
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -123,7 +128,7 @@ with description("a RecordDecisions toolset"):
                 cdr_dir = work / ".context" / "cdr"
                 _rd().write_cdr("lazy-dir", "# Lazy\n\nCreated lazily.")
                 expect(cdr_dir.is_dir()).to(equal(True))
-                Session._current = None
+                Session.forget_current()
 
         with it("should return the resolved path as a string"):
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -131,7 +136,7 @@ with description("a RecordDecisions toolset"):
                 result = _rd().write_cdr("result-path", "# Result\n\nContent.")
                 expect(result).to(be_a(str))
                 expect("result-path" in result).to(equal(True))
-                Session._current = None
+                Session.forget_current()
 
         with it("should number sequentially after existing CDR files"):
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -145,7 +150,7 @@ with description("a RecordDecisions toolset"):
                 files = sorted(cdr_dir.glob("*.md"))
                 expect(len(files)).to(equal(3))
                 expect(files[2].name).to(equal("0003-third.md"))
-                Session._current = None
+                Session.forget_current()
 
         with it("should strip trailing whitespace and append a newline to content"):
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -155,7 +160,7 @@ with description("a RecordDecisions toolset"):
                 written = Path(path).read_text(encoding="utf-8")
                 expect(written.endswith("\n")).to(equal(True))
                 expect(written.rstrip()).to(equal("# Clean\n\nBody."))
-                Session._current = None
+                Session.forget_current()
 
     with context("whose record_decisions_session action is expanded"):
         with it("should mention read_cdr_format in its prose"):

@@ -89,12 +89,22 @@ def invoke_request_for_path(command: str | Path, *, repo_root: Path) -> dict:
 
 
 def stage_invoke_commands(repo_root: Path) -> None:
+    """Deploy the car skills into ``repo_root/.cursor``. The install also writes the user-level MCP entry and starts the
+    cdd server, so both go to a throwaway home and ``~/.cdd`` that are removed afterwards."""
     from harness.installation.installer import Installer
     from harness.agent_tools.agent_tools import AgentToolSet
+    from harness.mcp.spec_support import SpecServer, UserHome
 
     car = AgentToolSet.instantiate(CAR)
     car_story = AgentToolSet.instantiate("cdd_guidance.actions._examples.car_story.car_story:CarStory")
-    Installer("Cursor", path=repo_root / ".cursor").install([car, car_story], replace=False)
+    home, server = UserHome(), SpecServer()
+    home.enter()
+    server.install()
+    try:
+        Installer("Cursor", path=repo_root / ".cursor").install([car, car_story], replace=False)
+    finally:
+        server.stop()
+        home.leave()
 
 
 def ensure_invoke_staged(repo_root: Path) -> None:

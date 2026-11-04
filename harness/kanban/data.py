@@ -30,7 +30,8 @@ class TicketData(TypedDict):
     reports: dict[str, str]
     violation_counts: dict[str, int]
     practices: dict[str, bool]
-    root: str
+    workpath: str
+    worktree: str
     practice_roots: dict[str, PracticeRootData]
     session_file: str
     progress: dict[str, str]

@@ -7,7 +7,7 @@ section: body
 
 # Story Map — Chat Band
 
-**Sources / context:** `harness/kanban/.context/story-map.md` (the Session Board map this one follows, story for story); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md` (option B, the stage strip); `harness/chat-ui/design/StageStrip.dc.html` (Claude Design canvas version 48, board "B · Stage strip with action bar"); `harness/chat-ui/pane/.context/module-context.md` and `harness/chat-ui/pane/hooks/register.ts` (the `cdd-board` plugin and `/board`); `harness/chat-ui/pane/hooks/health/server-health-view.tsx` and `server-health-client.ts` (the server health band that works today); `harness/kanban/ticket.py` (`ticket.new`, `ticket.activate`, `ticket.close`, `ticket.files`, `ticket.read_file`, `ticket.finish_review`, `ticket.move_next`).
+**Sources / context:** `harness/kanban/.context/story-map.md` (the Session Board map this one follows, story for story); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md` (option B, the stage strip); `harness/chat-ui/design/StageStrip.dc.html` (Claude Design canvas version 48, board "B · Stage strip with action bar"); `harness/chat-ui/pane/.context/module-context.md` and `harness/chat-ui/pane/hooks/register.ts` (the `cdd-board` plugin and `/board`); `harness/chat-ui/pane/hooks/health/server-health-view.tsx` and `server-health-client.ts` (the server health band that works today); `harness/kanban/ticket.py` (`ticket.create`, `ticket.activate`, `ticket.close`, `ticket.files`, `ticket.read_file`, `ticket.finish_review`, `ticket.move_next`).
 
 **Evidence:** The chat band is a smaller view of the Session Board, so each Story mirrors a board Story and calls the same `ticket.*` tools. The band has no tickets: a person in the chat works in a session, so where the board's Story says ticket, the band's says session (confirmed by the person on 2026-11-04). The line under each Story names the board Story it mirrors and what the band does differently. Those Stories are **Inferred**: the canvas and the CDR describe them, and no code or spec does them yet. The Stories under Check CDD Server Health are **Observed**: the server health band in `harness/chat-ui/pane/hooks/health/` does them today, as the chat band's leftmost part.
 
@@ -57,7 +57,7 @@ Mirrors Open Board: clicking a dot opens `/board` on that session and fidelity (
 
 ### (S) Person --> Create New Session
 
-Mirrors Open Ticket Session: a field in the session list box names a new session, which `ticket.new` creates; the activation dialog then opens it (CDR "Session name and session list").
+Mirrors Open Ticket Session: a field in the session list box names a new session, which `ticket.create` creates; the activation dialog then opens it (CDR "Session name and session list").
 
 ### (S) Person --> Open Session
 

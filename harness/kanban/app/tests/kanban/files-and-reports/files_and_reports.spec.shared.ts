@@ -14,7 +14,7 @@ export type FilesAndReportsDriver = {
 
 const TICKET = 'checkout-flow'
 const FIDELITY = 'stories-story_map'
-const STORY_MAP = 'tests/story-map.md'
+const STORY_MAP = '.context/story-map.md'
 
 export const filesAndReportsBehavior = shareBehavior<FilesAndReportsDriver>(({ describe, it, expect, driver }) => {
   describe('a ticket', () => {

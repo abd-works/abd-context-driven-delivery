@@ -671,12 +671,12 @@ class Node:
 
     @property
     def failed_rules(self) -> list[str]:
-        return self.rules.failed_slugs()
+        return self.rules.failed_slugs
 
     @property
     def passing_rules(self) -> list[str]:
         """Rules that apply to this node and did not fail."""
-        return self.rules.passing_slugs()
+        return self.rules.passing_slugs
 
     @staticmethod
     def fact(row: Tuple) -> dict | None:
@@ -831,7 +831,7 @@ class Node:
         if selected is None:
             selected = list(graph.filter.rules) if graph else []
         rows: list[dict] = []
-        for slug in self.rules.slugs():
+        for slug in self.rules.slugs:
             entry = self.rules.entries.get(slug)
             hits = [dict(hit) for hit in getattr(entry, "hits", []) or []]
             if hits:
@@ -1008,7 +1008,7 @@ class PracticeGraph:
             node = self.registered(node_id)
             if node is None:
                 continue
-            existing = [message for s, message in node.rules.violations() if s == slug]
+            existing = [message for s, message in node.rules.violations if s == slug]
             if violation in existing:
                 continue
             node.rules.record_violation(slug, violation)
@@ -1215,7 +1215,7 @@ class Graph:
             "root_facts": encode_node_data(practice.root_node.data),
             "nodes": [self._node_row(node) for node in nodes],
             "edges": [self._edge_row(edge) for edge in edges],
-            "rules": [[slug, node.node_id, message] for node in nodes for slug, message in node.rules.violations()],
+            "rules": [[slug, node.node_id, message] for node in nodes for slug, message in node.rules.violations],
         }
 
     def _node_row(self, node: Node) -> list:

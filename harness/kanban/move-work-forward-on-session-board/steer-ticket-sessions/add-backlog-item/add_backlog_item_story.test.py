@@ -19,7 +19,7 @@ with story("Add Backlog Item"):
         with given("the Backlog [column](../../../.context/kanban-model.md#column) has no [backlog item](../../../.context/kanban-model.md#backlogitem--card) titled Gift cards"):
             pass
         with when("the Person adds the backlog item Gift cards with the text Sell gift cards."):
-            # Person -> BacklogItem.add('Gift cards', 'Sell gift cards.')
+            # Person -> BacklogItem.create('Gift cards', 'Sell gift cards.')
             # BacklogItem -> .sessions/_backlog/gift-cards.md: # Gift cards / Sell gift cards.
             # BacklogItem <- BacklogItem Gift cards
             # Board page -> Board.show()
@@ -44,7 +44,7 @@ with story("Add Backlog Item"):
         with and_("no [backlog item](../../../.context/kanban-model.md#backlogitem--card) is written"):
             pass
     with scenario("Start a backlog item in a chosen folder"):
-        # Evidence: observed: root-choice-client.spec 'with a backlog item a person has asked to start' — 'should browse the top of the repository for its root before it starts', 'should not start it yet', 'should open its ticket with that folder as its root', 'should stay open on the new ticket's roots'; backlog-item-client.spec 'should say so in a toast'.
+        # Evidence: observed: root-choice-client.spec 'with a backlog item a person has asked to start' — 'should browse the top of the repository for its workpath before it starts', 'should not start it yet', 'should open its ticket with that folder as its workpath', 'should stay open on the new ticket's roots'; backlog-item-client.spec 'should say so in a toast'.
         with given("the [backlog item](../../../.context/kanban-model.md#backlogitem--card) Gift cards is in the Backlog"):
             pass
         with and_("the [repository](../../../.context/kanban-model.md#repo) has the folders src/billing and src/visits"):
@@ -59,10 +59,10 @@ with story("Add Backlog Item"):
             pass
         with when("the Person chooses src/visits as its root"):
             # Person -> BacklogItem.start(path='src/visits')
-            # BacklogItem -> Ticket.new('Gift cards', 'feature', '', 'src/visits')
-            # Ticket -> Session.new('gift-cards', <repo>/src/visits, <repo>, fields, is_current=False)
+            # BacklogItem -> Ticket.create('Gift cards', 'feature', '', 'src/visits')
+            # Ticket -> Session.new('gift-cards', <repo>/src/visits, <repo>, is_current=False, title, scope, parent)
             # BacklogItem -> Ticket.record('backlog .sessions/_backlog/gift-cards.md')
-            # BacklogItem -> Ticket.keep(gift-cards.md)
+            # BacklogItem -> Session.keep_file(gift-cards.md)
             # BacklogItem <- Ticket gift-cards
             pass
         with then("the [ticket](../../../.context/kanban-model.md#ticket--card) gift-cards is In progress in Discovery with root src/visits"):
@@ -77,9 +77,9 @@ with story("Add Backlog Item"):
             pass
         with when("the Person starts Returns and refunds on the whole repository"):
             # Person -> BacklogItem.start(scope='feature')
-            # BacklogItem -> Ticket.new('Returns and refunds', 'feature', '', '')
+            # BacklogItem -> Ticket.create('Returns and refunds', 'feature', '', '')
             # BacklogItem -> Ticket.record('backlog <path of returns-and-refunds.md>')
-            # BacklogItem -> Ticket.keep(returns-and-refunds.md)
+            # BacklogItem -> Session.keep_file(returns-and-refunds.md)
             pass
         with then("the [ticket](../../../.context/kanban-model.md#ticket--card) returns-and-refunds is In progress in Discovery"):
             pass
@@ -97,7 +97,7 @@ with story("Add Backlog Item"):
             pass
         with when("the Person starts Sign up"):
             # Person -> BacklogItem.start()
-            # BacklogItem -> Session.at(.sessions/_backlog/sign-up, repo).reopen()
+            # BacklogItem -> Session.load(.sessions/_backlog/sign-up, repo).reopen()
             # BacklogItem <- Ticket sign-up
             pass
         with then("sign-up is back on the board with its session log and session.json"):

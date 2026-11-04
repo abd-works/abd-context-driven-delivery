@@ -35,7 +35,7 @@ def _violations(files):
     found = {}
     for practice in ("ddd", "bdd"):
         for node in graph.practice(practice).by_id.values():
-            for slug, message in node.rules.violations():
+            for slug, message in node.rules.violations:
                 found.setdefault(slug, []).append(message)
     return found
 

@@ -292,48 +292,6 @@ class PingReport:
         return 0 if report.get("ok") else 1
 
 
-class McpPing:
-    """Ping the CDD stdio host. Keep one process; stop the rest."""
-
-    def __init__(self, repo: Path | str | None = None) -> None:
-        self.processes = RepoProcesses(repo)
-
-    def run(self) -> int:
-        found = self._hosts()
-        keeper, stopped = self.processes.collapse(found, self._recorded_pid())
-        alive = keeper is not None and self.processes.alive(keeper)
-        return PingReport().emit(
-            {
-                "ok": alive,
-                "ping": "pong" if alive else "down",
-                "pid": keeper,
-                "instances": len(found),
-                "stopped": stopped,
-            }
-        )
-
-    def _hosts(self) -> list[int]:
-        return [item.pid for item in self.processes.roots(self.processes.matching(self._is_host))]
-
-    def _is_host(self, command: str) -> bool:
-        folded = command.casefold().replace("\\", "/")
-        if not self.processes.in_repo(command) or "discover_host.py" in folded:
-            return False
-        if "start_host.py" in folded:
-            return True
-        return re.search(r"(^|\s)-m\s+harness\.mcp(\s|$)", folded) is not None
-
-    def _recorded_pid(self) -> int | None:
-        path = self.processes.repo / ".cursor" / "mcp-host.pid"
-        if not path.is_file():
-            return None
-        try:
-            pid = int(path.read_text(encoding="utf-8").strip())
-        except ValueError:
-            return None
-        return pid if pid > 0 else None
-
-
 class HookPing:
     """Ping the hook daemon. Keep the published process; stop the rest."""
 

@@ -147,6 +147,12 @@ export class TicketClient extends TicketClientGenerated {
     this.page.board.select(this.address)
   }
 
+  // A person clicking the ticket: it opens in the details, and the board's commands go to its chat.
+  async choose(): Promise<void> {
+    this.select()
+    await this.page.chat.openFor(this.name, this.worktree)
+  }
+
   override async moveNext(): Promise<this | null> {
     return this.followed(await super.moveNext())
   }
@@ -204,7 +210,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   fillSplit(): Promise<void> {
-    return this.page.chat.fill(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.new with parent ${this.name} for each story.`)
+    return this.page.chat.fill(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.create with parent ${this.name} for each story.`)
   }
 
   // Closing ends the chat's session and leaves the ticket where it is; moving it into Complete is what completes it.

@@ -36,13 +36,3 @@ with story("Mark Ticket Done In Stage"):
             pass
         with then("ready-to-move shows In progress in Discovery"):
             pass
-    with scenario("Read a done mark from a log written before moves were named move"):
-        # Evidence: observed: kanban_spec 'with a session log written before moves were named move' — 'should still be in the stage the log names', 'should still be marked done there'.
-        with given("pet-visits' session log has pull Specification then done Specification"):
-            pass
-        with when("the session board reads pet-visits"):
-            # Ticket -> Ticket.column <- Specification
-            # Ticket -> Ticket.is_done <- true
-            pass
-        with then("pet-visits shows in Specification's Done"):
-            pass

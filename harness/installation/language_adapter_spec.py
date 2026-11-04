@@ -248,7 +248,7 @@ with description("a language adapter"):
 
             with context("for a class operation, which no loaded object runs"):
                 with it("should be a static operation that takes the connection and returns the new object's data"):
-                    expect(self.ticket).to(contain("static new(cdd: CddConnection, title: string, scope?: string, parent?: string, path?: string): Promise<TicketData>"))
+                    expect(self.ticket).to(contain("static create(cdd: CddConnection, title: string, scope?: string, parent?: string, path?: string): Promise<TicketData>"))
 
         with description("its browser client"):
             with it("should extend the shared base"):
@@ -272,7 +272,7 @@ with description("a language adapter"):
 
             with context("for a class operation"):
                 with it("should post with the API it is given and return the new object's data"):
-                    expect(self.backlog_item).to(contain("static add(api: CddApi, title: string, text?: string): Promise<BacklogItemData | null> {"))
+                    expect(self.backlog_item).to(contain("static create(api: CddApi, title: string, text?: string): Promise<BacklogItemData | null> {"))
 
         with description("its routes"):
             with it("should give each tool one path under its object and identity"):

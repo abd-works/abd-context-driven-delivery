@@ -235,15 +235,15 @@ Property name is the match. **File:** `{name}.md` beside the class. **Section:**
 ---
 
 ## harness/mcp
-*Mcp* marks a member `@mcp` and runs a stdio host so Cursor can call it. *McpInstallation* writes the config; *McpServer* and *McpHost* run the process.
+*Mcp* marks a member `@mcp` so every chat can call it through the one cdd server. *McpInstallation* writes the IDE's `cdd` entry; *McpServer* and *McpHost* answer calls, one set of toolsets per project; *McpDaemon* runs the process and *CddHome* is its install folder, `~/.cdd/`.
 
-- **Purpose:** Mark a member `@mcp` and run a stdio host so Cursor can call it.
-- **Seam (terms):** Mcp, McpInstallation, McpServer, McpHost
+- **Purpose:** Mark a member `@mcp` and run the one cdd server that every chat, in every project, calls it through.
+- **Seam (terms):** Mcp, McpInstallation, McpServer, McpHost, McpDaemon, CddHome
 - **Dependencies (one-way):** `installation`, `harness/agent_tools`
 
 ## Constraint
 
-Cursor starts `python -m harness.mcp`. `cdd.ping` is always listed. Only members marked `@mcp` enroll.
+One server process answers every chat over HTTP at `127.0.0.1:47800/mcp`; no IDE starts a copy of its own. Each request names its project in the `X-CDD-Project` header. `cdd.ping` and `cdd.restart` are always listed. Only members marked `@mcp` enroll.
 
 ---
 

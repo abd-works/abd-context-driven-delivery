@@ -14,7 +14,7 @@ from harness.installation.installer import Installer
 
 Installer(repo=_REPO_ROOT).ensure_import_path()
 
-from expects import be_true, contain, equal, expect, have_key, raise_error
+from expects import be_true, contain, equal, expect, have_key, raise_error, start_with
 from mamba import after, before, context, description, it
 from harness.guidance.fixtures.agentic_ops.agentic_ops import (
     SampleAgenticOps,
@@ -28,7 +28,8 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.hooks.hooks import Hook
 from harness.mcp.mcp_server import McpServer
-from harness.mcp.spec_support import StdioMcpHost, UserHome
+from harness.mcp.mcp_daemon import McpDaemon
+from harness.mcp.spec_support import SpecServer, ThrowawayMachine, UserHome
 
 
 
@@ -134,6 +135,13 @@ def _skill_tool(name: str):
 # (E) Install CDD Tools
 # (E) Install Agent Toolset
 with description("an agent toolset") as self:
+    with before.all:
+        self.machine = ThrowawayMachine()
+        self.machine.enter()
+
+    with after.all:
+        self.machine.leave()
+
     with context("with operations annotated for installation"):
         # (S) Installer --> Generate skills and commands from Agent Toolset
         with context("that are annotated as skills and commands"):
@@ -238,14 +246,12 @@ with description("an agent toolset") as self:
 
                 # (S) Installer --> Configure and Start MCP Host Session
                 with context("with mcp.json on the tree"):
-                    with it("should list a stdio host that discovers toolsets from the workspace"):
-                        text = (self.tree / "mcp.json").read_text(encoding="utf-8")
-                        expect(text).to(contain("python"))
-                        expect(text).to(contain("start_host.py"))
-                        expect(text).not_to(contain("--toolsets"))
-                        expect(text).to(contain("PYTHONPATH"))
+                    with it("should name the one cdd server by its URL, with no command or toolsets to start"):
+                        server = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]["cdd"]
+                        expect(server["url"]).to(equal(McpDaemon().url))
+                        expect(sorted(server)).to(equal(["headers", "url"]))
 
-                    with it("should publish the stdio server as cdd"):
+                    with it("should publish the server as cdd"):
                         data = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))
                         expect(data["mcpServers"]).to(have_key("cdd"))
 
@@ -459,7 +465,7 @@ with description("an agent toolset") as self:
                     with before.each:
                         Installer(ide="Cursor", path=self.tree).clean()
 
-                    with it("should keep the MCP manifest so Cursor can respawn the host"):
+                    with it("should keep the MCP manifest so Cursor stays connected to the cdd server"):
                         expect((self.tree / "mcp.json").is_file()).to(equal(True))
 
             # (S) Installer --> Install MCP to User Project Specific Location
@@ -509,11 +515,9 @@ with description("an agent toolset") as self:
                     else:
                         self._user_mcp.write_text(self._user_mcp_before, encoding="utf-8")
 
-                with it("should set cwd and CDD_PROJECT to the project root on project mcp.json"):
+                with it("should name the project root on every request from the project mcp.json"):
                     data = json.loads((self.cursor / "mcp.json").read_text(encoding="utf-8"))
-                    server = data["mcpServers"]["cdd"]
-                    expect(server["cwd"]).to(equal(str(self.project)))
-                    expect(server["env"]["CDD_PROJECT"]).to(equal(str(self.project)))
+                    expect(data["mcpServers"]["cdd"]["headers"]).to(equal({"X-CDD-Project": str(self.project.resolve())}))
 
                 with it("should leave the user Cursor mcp.json unchanged"):
                     data = json.loads(self._user_mcp.read_text(encoding="utf-8"))
@@ -608,7 +612,7 @@ with description("an agent toolset") as self:
                         report = self.installer.diagnose_install()
                         expect(report).to(contain("installed"))
                         expect(report).to(contain("skill 1 -> 1 (delta 0)"))
-                        expect(report).to(contain("mcp host:"))
+                        expect(report).to(contain("cdd server:"))
                         expect(report).to(contain("hook server:"))
                         expect(report).to(contain("hooks registered (events):"))
 
@@ -674,18 +678,19 @@ with description("an agent toolset") as self:
             with context("whose install standup has finished on the IDE path"):
                 with before.each:
                     self.home = UserHome()
-                    self.host = StdioMcpHost(self.home.enter() / ".cursor")
-                    self.host.start()
+                    self.home.enter()
+                    self.server = SpecServer()
+                    self.server.install()
 
                 with after.each:
-                    self.host.stop()
+                    self.server.stop()
                     self.home.leave()
 
-                with it("should leave hook and mcp hosts answering"):
+                with it("should leave the hook server and the cdd server answering"):
                     installer = Installer(ide="Cursor", path=_REPO_ROOT / ".cursor", repo=_REPO_ROOT)
                     status = installer.ensure_runtimes()
                     expect(status["hook"]).to(equal("running"))
-                    expect(status["mcp"]).to(equal("running"))
+                    expect(status["mcp"]).to(start_with("running"))
 
             with context("that resolves deploy imports and toolsets from the repo catalog"):
                 with before.each:
@@ -741,6 +746,13 @@ with description("an agent toolset") as self:
 # (E) Install CDD Tools
 # (E) Install Practice Guidance Class
 with description("a practice guidance class") as self:
+    with before.all:
+        self.machine = ThrowawayMachine()
+        self.machine.enter()
+
+    with after.all:
+        self.machine.leave()
+
     # (S) Installer --> Deploy Practice guidance instructions
     with context("with instructions"):
         with before.each:
@@ -1141,6 +1153,13 @@ with description("a practice guidance class") as self:
 # (E) Install Action Classes
 # (S) Installer --> Install Lifecycle actions
 with description("lifecycle actions annotated for installation") as self:
+    with before.all:
+        self.machine = ThrowawayMachine()
+        self.machine.enter()
+
+    with after.all:
+        self.machine.leave()
+
     with context("that has been installed to Cursor"):
         with context("with operations annotated as skills"):
             with context("with only a single skill operation"):
@@ -1284,6 +1303,13 @@ with description("lifecycle actions annotated for installation") as self:
                     expect("validate.createRule" in names).to(equal(False))
 
 with description("guidance agents"):
+    with before.all:
+        self.machine = ThrowawayMachine()
+        self.machine.enter()
+
+    with after.all:
+        self.machine.leave()
+
     with it("should install the agents from cdd_guidance/agents"):
         tree = Path(tempfile.mkdtemp())
         try:
@@ -1296,6 +1322,13 @@ with description("guidance agents"):
             shutil.rmtree(tree, ignore_errors=True)
 
 with description("an operation annotated as a Cursor hook"):
+    with before.all:
+        self.machine = ThrowawayMachine()
+        self.machine.enter()
+
+    with after.all:
+        self.machine.leave()
+
 
     with context("that names a documented Cursor event"):
         with it("should store that event on the member"):
@@ -1318,6 +1351,13 @@ with description("an operation annotated as a Cursor hook"):
 
 # (S) Installer --> Install for Claude Code
 with description("toolsets installed for Claude Code") as self:
+    with before.all:
+        self.machine = ThrowawayMachine()
+        self.machine.enter()
+
+    with after.all:
+        self.machine.leave()
+
     with before.each:
         self._branch_tmp = tempfile.mkdtemp()
         self.project = Path(self._branch_tmp)
@@ -1353,7 +1393,7 @@ with description("toolsets installed for Claude Code") as self:
         servers = json.loads((self.project / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]
         expect(servers).to(have_key("other"))
         expect(servers["cdd"]).not_to(have_key("cwd"))
-        expect(servers["cdd"]["env"]["CDD_IDE_PATH"]).to(equal(str(self.tree.resolve())))
+        expect(servers["cdd"]["headers"]).to(equal({"X-CDD-Project": str(self.project.resolve())}))
         expect((self.tree / "mcp.json").exists()).to(equal(False))
 
     with context("installing the board plugin"):
@@ -1423,6 +1463,13 @@ with description("toolsets installed for Claude Code") as self:
 
 
 with description("Repo branch commands installed into Cursor") as self:
+    with before.all:
+        self.machine = ThrowawayMachine()
+        self.machine.enter()
+
+    with after.all:
+        self.machine.leave()
+
     with before.each:
         self._tmp = tempfile.mkdtemp()
         self.tree = Path(self._tmp)

@@ -24,7 +24,7 @@ def attach_rules(practice) -> None:
 
     def schema_slugs_for(node) -> frozenset[str]:
         if hasattr(node, "_rules") and node._rules is not None:
-            return frozenset(node._rules.slugs())
+            return frozenset(node._rules.slugs)
         overlays = tuple(node.practice.graph.overlays) if node.practice.graph else ()
         return frozenset(slugs_for_type(node.practice.name, node.type, active_overlay_patterns(overlays)))
 

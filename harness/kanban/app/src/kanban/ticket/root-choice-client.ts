@@ -58,7 +58,7 @@ export class RootChoiceClient {
     if (this.choice?.startingItem) return this.start(browsing.path)
     const ticket = this.ticket
     if (!ticket) return
-    if (browsing.target === TICKET_ROOT) await ticket.chooseRoot(browsing.path)
+    if (browsing.target === TICKET_ROOT) await ticket.chooseWorkpath(browsing.path)
     else await ticket.choosePracticeRoot(browsing.target, browsing.path)
     await this.page.reader.refresh()
     this.change({ browsing: null })

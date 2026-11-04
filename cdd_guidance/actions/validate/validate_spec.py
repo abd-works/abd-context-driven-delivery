@@ -221,7 +221,17 @@ with description("a validate action on practice guidance") as self:
         # The session board lists the agent's judgment beside the graph's hits only when it is written in this shape.
         with it("should tell the agent to write its judgment under the judged file, one heading per failed rule"):
             report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
-            expect(report).to(contain("## Judgment — `path/of/the/judged/file.md`\n\n   ### `rule-slug` — Fail\n   - story-map.md:86"))
+            expect(report).to(contain("## Judgment — `harness/kanban/.context/story-map.md`\n\n   ### `rule-slug` — Fail\n   - story-map.md:86"))
+
+        # The board opens a finding's file in this project, so a path anywhere else cannot be opened.
+        with it("should tell the agent to name the judged file by its path from the project's root"):
+            report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
+            expect(report).to(contain("as a path from the project's root"))
+
+        # The board opens each finding at one line, so a range or a second place would be lost.
+        with it("should tell the agent to give each finding one file and one line"):
+            report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
+            expect(report).to(contain("a finding at two places is two bullets"))
 
         # The session board reads a fidelity's latest validate line, so a second, clean line would hide the violations.
         with context("that has been validated"):

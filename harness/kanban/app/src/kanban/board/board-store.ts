@@ -23,7 +23,7 @@ export type Activation = {
   workspace: WorkspaceClient
 }
 
-// The roots dialog: the ticket's root on top and each practice's root under it. Starting a backlog item asks for its root
+// The roots dialog: the ticket's workpath on top and each practice's practice root under it. Starting a backlog item asks for its workpath
 // first, so until it starts there is no ticket yet, only the item.
 export type RootChoice = {
   ticket: string
@@ -72,6 +72,8 @@ export type BoardState = {
   targetChat: string | null
   // The chat a person chose, kept while it is away so it is chosen again when it reconnects.
   pickedChat: string | null
+  // When each ticket's chat was asked to start, by ticket name, so a person clicking again does not ask twice.
+  startingChats: Record<string, number>
   // The latest messages sent to the target chat, newest first, and whether the list of them is open.
   messages: ChatMessageData[]
   isMessagesOpen: boolean
@@ -109,6 +111,7 @@ const initialState = (): BoardState => ({
   chats: [],
   targetChat: null,
   pickedChat: null,
+  startingChats: {},
   messages: [],
   isMessagesOpen: false,
   isNewBuild: false,

@@ -10,6 +10,9 @@ const sourceOf = (violation: ViolationData): string[] =>
 
 const errorOf = (violation: ViolationData): string[] => [`${locationOf(violation)}: ${violation.message}`, ...sourceOf(violation)]
 
+// A fix in one format alone leaves the fidelity's other formats still breaking the rule, so every fix asks for all of them.
+const EVERY_FORMAT = 'Fix every format of the fidelity: its documents, its diagrams, and its code.'
+
 // The agent fixes from the report's own words, so it needs no second validate to find out what failed.
 function fixPrompt(rule: ReportRuleData, violations: ViolationData[]): string {
   const slug = guidanceSlug(rule.fidelity)
@@ -20,30 +23,17 @@ function fixPrompt(rule: ReportRuleData, violations: ViolationData[]): string {
     `${rule.name}: ${rule.description}`,
     ...errors,
     '',
-    `Change each file so the content marked > follows the rule, and change nothing the errors do not name. Then validate ${slug} with rule ${rule.name} on the files you changed.`,
+    `Change each file so the content marked > follows the rule, and change nothing the errors do not name. ${EVERY_FORMAT} Then validate ${slug} with rule ${rule.name} on the files you changed.`,
   ].join('\n')
 }
 
 export const fixViolationPrompt = (rule: ReportRuleData, violation: ViolationData): string => fixPrompt(rule, [violation])
 
-export const fixRulePrompt = (rule: ReportRuleData): string => fixPrompt(rule, rule.violations)
+export const fixRulePrompt = (report: ReportClient, rule: ReportRuleData): string =>
+  `Fix all violations of ${rule.name} found in this report: ${report.path}. ${EVERY_FORMAT}`
 
-// Every violation in one message, grouped under its rule, so one command clears the whole report.
-export function fixReportPrompt(rules: ReportRuleData[]): string {
-  const count = rules.reduce((total, rule) => total + rule.violations.length, 0)
-  const slugs = [...new Set(rules.map(rule => guidanceSlug(rule.fidelity)))]
-  const sections = rules.flatMap(rule => [
-    '',
-    `${rule.name}: ${rule.description}`,
-    ...rule.violations.flatMap((violation, index) => ['', `${index + 1}. ${errorOf(violation).join('\n')}`]),
-  ])
-  return [
-    `Fix these ${count} violations of ${rules.length} rules.`,
-    ...sections,
-    '',
-    `Change each file so the content marked > follows its rule, and change nothing the errors do not name. Then validate ${slugs.join(' ')} on the files you changed.`,
-  ].join('\n')
-}
+// The report already holds every violation, so the chat reads it there rather than from a copy in the message.
+export const fixReportPrompt = (report: ReportClient): string => `Fix all violations found in this report: ${report.path}. ${EVERY_FORMAT}`
 
 // A report as the side panel reads it. ReportData has no generated class, because Python returns it as a plain result.
 export class ReportClient {

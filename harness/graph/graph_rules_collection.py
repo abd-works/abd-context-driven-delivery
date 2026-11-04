@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterator
+from typing import Any
 
 from harness.guidance.rule import Rule, RulesCollection
 from harness.graph.practice_rule import PracticeGraphRule
@@ -51,78 +51,64 @@ class GraphRule(PracticeGraphRule, Rule):
     def violations(self) -> list[str]:
         return list(self._violations)
 
-    def record(self, message: str, file: str = "", start: int = 0, end: int = 0) -> None:
+    def record(self, message: str, source: Any = None) -> None:
+        """Keep message as a violation of this rule at source, the node's place in its file; a hit with no source has
+        no file or lines."""
         text = (message or "").strip()
         if text and text not in self._violations:
             self._violations.append(text)
-            self.hits.append(
-                {"message": text, "file": file, "start": int(start or 0), "end": int(end or 0)}
-            )
+            self.hits.append({
+                "message": text,
+                "file": getattr(source, "file", "") or "",
+                "start": int(getattr(source, "start_line", 0) or 0),
+                "end": int(getattr(source, "end_line", 0) or 0),
+            })
 
     def clear_violations(self) -> None:
         self._violations.clear()
         self.hits.clear()
 
-    def failing(self) -> bool:
+    @property
+    def is_failing(self) -> bool:
         return bool(self._violations)
 
 
 class GraphRulesCollection(RulesCollection):
     """Schema rules for one node. Violations live on each GraphRule entry."""
 
-    def __init__(
-        self,
-        node: Any,
-        entries: dict[str, GraphRule] | None = None,
-        parent: Any = None,
-    ) -> None:
-        super().__init__(entries, parent=parent)
+    def __init__(self, node: Any, entries: dict[str, GraphRule] | None = None) -> None:
+        super().__init__(entries)
         self.node = node
 
+    @property
     def slugs(self) -> list[str]:
         return list(self.entries.keys())
 
+    @property
     def violations(self) -> list[tuple[str, str]]:
-        hits: list[tuple[str, str]] = []
-        for rule in self.graph_rules():
-            for message in rule.violations:
-                hits.append((rule.slug, message))
-        return hits
+        """Each violation on this node as its rule's slug and its message."""
+        return [(rule.slug, message) for rule in self.graph_rules for message in rule.violations]
 
+    @property
     def failed_slugs(self) -> list[str]:
-        found: list[str] = []
-        for slug, _message in self.violations():
-            if slug not in found:
-                found.append(slug)
-        return found
+        return list(dict.fromkeys(slug for slug, _message in self.violations))
 
+    @property
     def passing_slugs(self) -> list[str]:
-        failed = set(self.failed_slugs())
-        return [slug for slug in self.slugs() if slug not in failed]
+        failed = set(self.failed_slugs)
+        return [slug for slug in self.slugs if slug not in failed]
 
-    def graph_rules(self) -> Iterator[GraphRule]:
-        for value in self.entries.values():
-            if isinstance(value, GraphRule):
-                yield value
+    @property
+    def graph_rules(self) -> list[GraphRule]:
+        return [value for value in self.entries.values() if isinstance(value, GraphRule)]
 
-    def record_violation(
-        self,
-        slug: str,
-        message: str,
-        file: str | None = None,
-        start: int | None = None,
-        end: int | None = None,
-    ) -> None:
+    def record_violation(self, slug: str, message: str) -> None:
+        """Keep message as a violation of the rule slug, at this node's source. A slug this node has no rule for
+        records nothing, since the rule does not apply to it."""
         entry = self.entries.get(slug)
-        if not isinstance(entry, GraphRule):
-            return
-        source = getattr(self.node, "source", None)
-        if file is None and source is not None:
-            file = source.file
-            start = source.start_line
-            end = source.end_line
-        entry.record(message, file or "", int(start or 0), int(end or 0))
+        if isinstance(entry, GraphRule):
+            entry.record(message, getattr(self.node, "source", None))
 
     def clear_violations(self) -> None:
-        for rule in self.graph_rules():
+        for rule in self.graph_rules:
             rule.clear_violations()

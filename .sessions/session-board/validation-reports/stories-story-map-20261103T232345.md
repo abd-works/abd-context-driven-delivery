@@ -115,16 +115,16 @@ Every Story and acceptance criterion traces to code, a spec, or a canvas comment
 - story-map.md:41 `Arrange Board And Details` and story-map.md:247 `Satisfy Violations From Band` say only "Observed." with no source. Several acceptance criteria do the same (lines 34, 36, 37, 45, 46, 58–60, 69–71, 83–86, 104, 122, 123, 133, 159, 187, 188, 199, 273). The header points to `session-board-behavior.md` for spec signatures, which partly covers this, but the line itself names nothing.
 - story-map.md:137 `Split Ticket Into Child Tickets` is labelled Observed while saying "No spec presses Split." By the header's own definition (Observed = code and specs do it), the pressing of Split is Inferred; the parts the specs do cover (the parent is recorded) are Observed. Say which is which.
 
-### `verb-noun-format` — Warn
+### `verb-noun-format` — Fail
 All names are base-form verb + noun. The sub-epic `Display Board And Details For Repo` (line 22) names something the Board App does, not a goal the Person is reaching; a goal such as "See Work On Session Board" fits the rule better. The other sub-epics (Steer Ticket Sessions, Guide Work Through Practices, Generate/Validate/Review Fidelity Outputs) name goals.
 
-### `story-name-captures-system-mechanic` — Warn
+### `story-name-captures-system-mechanic` — Fail
 Most Story names give the operation and the thing it acts on (Set Stage WIP Limit, Move Ticket, Save Validation Report, Send Action To Stage Practices). Weaker ones:
 - `View Files` (line 263): "Files" does not say which files; the Story is about the fidelity's output files in format tabs. E.g. "View Fidelity Output Files".
 - `Send Sketch Iterate Or Document` (line 223): names three commands joined by "Or" instead of the one thing being sent. E.g. "Send Exploration Action".
 - `Arrange Board And Details` / `Arrange Side Panel` (lines 39, 77): "Arrange" is broad; the acceptance criteria show it means resize and expand. Acceptable, but "Resize ..." would be more exact.
 
-### `four-to-nine-children` — Warn
+### `four-to-nine-children` — Fail
 Top epic 6, Display Board And Details For Repo 8, Guide Work Through Practices 8, Generate Fidelity Outputs 5, Validate Fidelity Outputs 5, Review Fidelity Outputs 4 — all inside the band. `Steer Ticket Sessions` has 10 Stories (lines 90–149): warn. Moving the handoff pair (Write Ticket Handoff, Display Latest Handoff) or the backlog Story elsewhere would bring it back inside the band.
 
 ### `story-scenarios-one-to-four` — Pass
@@ -133,7 +133,7 @@ Every linked story file has between 1 and 7 `scenario` blocks (fewest: Archive T
 ### `branch-on-mechanical-uniqueness` — Pass
 Separate mechanics have separate Stories (Generate, Render, Validate, Review; Move vs Mark Done In Stage). Send Sketch Iterate Or Document puts three commands that share one mechanic, filling and sending a command from a tile, in one Story, which is what the rule asks for.
 
-### `right-size-story-nodes` — Warn
+### `right-size-story-nodes` — Fail
 - story-map.md:61 `Show Active Ticket On Status Line` is an acceptance criterion of `Display Ticket Card`, but it happens at a different boundary: the chat's status line, through `statusOf` in `tools/chat-mod/hooks/register.ts`, not the board card. It is its own observable interaction, like `Add Active Ticket To System Prompt` (line 177), and belongs beside it as a Story.
 - story-map.md:207 `Resolve Fidelity Output Paths` is an internal call made by `Generate` (`Session.fidelity_outputs`). It has its own spec and a caller, so it stands, but check whether it is a callee boundary in its own right or a step inside Generate Fidelity Output.
 

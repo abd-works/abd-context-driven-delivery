@@ -109,13 +109,13 @@ Stamp `@agent_toolset` when you want the agent (and install) to see the class; d
 ---
 
 # harness/mcp
-- **Purpose:** Mark a member `@mcp` and run a stdio host so Cursor can call it as an MCP tool or prompt.
-- **Seam (terms):** Mcp, McpInstallation, McpServer, McpHost
+- **Purpose:** Mark a member `@mcp` and run the one cdd server every chat calls it through, as an MCP tool or prompt.
+- **Seam (terms):** Mcp, McpInstallation, McpServer, McpHost, McpDaemon, CddHome
 - **Dependencies (one-way):** `installation`, `harness/agent_tools`
 
 ## Constraint
 
-Cursor starts `python -m harness.mcp` or `harness/mcp/scripts/start_host.py`. `cdd.ping` is always listed. Only members marked `@mcp` enroll. Do not put this folder on `PYTHONPATH` as top-level `mcp`.
+One `python -m harness.mcp` process, installed from `~/.cdd/`, answers every chat over HTTP; each request names its project in the `X-CDD-Project` header. `cdd.ping` and `cdd.restart` are always listed. Only members marked `@mcp` enroll. Do not put this folder on `PYTHONPATH` as top-level `mcp`.
 
 ---
 

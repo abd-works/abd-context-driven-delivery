@@ -38,7 +38,7 @@ describe('Choose Session Root', () => {
       expect(Object.keys(page.roots.ticket!.practiceRoots)).toContain('stories')
     })
 
-    describe('that a person browses into a folder for the session root', () => {
+    describe('that a person browses into a folder for the session workpath', () => {
       async function browsed() {
         const page = await openedFor(TICKET)
         await page.roots.browse(TICKET_ROOT, 'src')
@@ -63,8 +63,8 @@ describe('Choose Session Root', () => {
           return page
         }
 
-        it("should make it the ticket's root", async () => {
-          expect(ticketOn(await used(), TICKET).root).toBe('src/visits')
+        it("should make it the ticket's workpath", async () => {
+          expect(ticketOn(await used(), TICKET).workpath).toBe('src/visits')
         })
 
         it('should go back to the list of roots', async () => {
@@ -103,7 +103,7 @@ describe('Choose Session Root', () => {
       return page
     }
 
-    it('should browse the top of the repository for its root before it starts', async () => {
+    it('should browse the top of the repository for its workpath before it starts', async () => {
       expect(browsing(await asked())?.path).toBe('')
     })
 
@@ -119,8 +119,8 @@ describe('Choose Session Root', () => {
         return page
       }
 
-      it('should open its ticket with that folder as its root', async () => {
-        expect(ticketOn(await started(), 'gift-cards').root).toBe('src/visits')
+      it('should open its ticket with that folder as its workpath', async () => {
+        expect(ticketOn(await started(), 'gift-cards').workpath).toBe('src/visits')
       })
 
       it("should stay open on the new ticket's roots, so its practices' roots can be set", async () => {

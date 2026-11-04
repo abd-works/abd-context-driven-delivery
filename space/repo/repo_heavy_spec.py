@@ -22,7 +22,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.mcp.mcp_server import McpHost
-from space.repo import TicketNotFoundError
+from space.repo import ProjectTicketNotFoundError
 from space.repo.repo import (
     Branch,
     BranchInWorktreeError,
@@ -35,21 +35,21 @@ from space.repo.repo import (
     NoOpenWorktreeError,
     Project,
     Repo,
-    Ticket,
-    TicketState,
+    ProjectTicket,
+    ProjectTicketState,
     issue_theme_label,
 )
 from space.work_state import WorkState
 
 
-with description("a Ticket"):
+with description("a ProjectTicket"):
     with it("should parse github issue references"):
-        expect(Ticket.from_number("87")).to(equal(87))
-        expect(Ticket.from_number("#87")).to(equal(87))
-        expect(Ticket.from_number("demo-org/demo-repo#87")).to(equal(87))
+        expect(ProjectTicket.from_number("87")).to(equal(87))
+        expect(ProjectTicket.from_number("#87")).to(equal(87))
+        expect(ProjectTicket.from_number("demo-org/demo-repo#87")).to(equal(87))
 
     with it("should format its github ref"):
-        expect(Ticket.github_ref("demo-org", "demo-repo", 87)).to(
+        expect(ProjectTicket.github_ref("demo-org", "demo-repo", 87)).to(
             equal("demo-org/demo-repo#87")
         )
 
@@ -152,8 +152,8 @@ with description("a Repo ticket lifecycle"):
         expect(self.ticket.closed).to(be_true)
 
     with it("should refuse closing unknown tickets"):
-        missing = Ticket(number=999, title="", body="", _repo=self.repo)
-        expect(lambda: missing.close()).to(raise_error(TicketNotFoundError))
+        missing = ProjectTicket(number=999, title="", body="", _repo=self.repo)
+        expect(lambda: missing.close()).to(raise_error(ProjectTicketNotFoundError))
 
     with it("should put a theme label and project Theme on the ticket"):
         expect(issue_theme_label("CLI agent")).to(equal("theme:cli-agent"))

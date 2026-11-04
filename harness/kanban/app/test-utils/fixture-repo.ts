@@ -11,7 +11,8 @@ export const fixtureRoot = process.env.BOARD_FIXTURE_ROOT ?? join(tmpdir(), 'cdd
 const REMOVE_RETRIES = 20
 const REMOVE_RETRY_MILLISECONDS = 100
 export const STAMP = '2026-11-01T10:00:00Z'
-const STORY_MAP_FILE = 'tests/story-map.md'
+const STORY_MAP_FILE = '.context/story-map.md'
+const SOURCE_FILE = 'app/checkout/order.py'
 const STORY_MAP_TEXT = ['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n')
 
 const STORY_MAP_GRAPH = {
@@ -79,6 +80,8 @@ export function createFixtureRepo(root: string): void {
   rmSync(root, { recursive: true, force: true })
   mkdirSync(root, { recursive: true })
   writeInto(join(root, STORY_MAP_FILE), STORY_MAP_TEXT)
+  // A folder of code, so a person choosing a root has a folder to pick: the story map's .context is hidden from that list.
+  writeInto(join(root, SOURCE_FILE), '')
   writeInto(join(root, '.gitignore'), '.sessions/\n')
   commitAll(root)
   writeSessions(root)

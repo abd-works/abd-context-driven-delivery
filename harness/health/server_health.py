@@ -1,7 +1,6 @@
 """The running parts of CDD that a person needs to see are up: the Kanban app, the graph app, and the hook server."""
 from __future__ import annotations
 
-import os
 import socket
 from pathlib import Path
 from typing import TypedDict
@@ -46,8 +45,10 @@ class ServerHealth:
     @classmethod
     @tool_subject
     def current(cls) -> ServerHealth:
-        """The health of the project being worked on: `CDD_PROJECT`, else the current folder."""
-        return cls(Path(os.environ.get("CDD_PROJECT") or os.getcwd()))
+        """The health of the project being worked on."""
+        from space.work_state import project_checkout
+
+        return cls(project_checkout())
 
     @mcp
     @agent_tool
