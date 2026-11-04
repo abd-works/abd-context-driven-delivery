@@ -1,6 +1,6 @@
 """Server health as the tool the band calls (cdd MCP), through the MCP server.
 
-Each signature here has a test of the same name in `tools/chat-mod/hooks/register.test.ts`."""
+Each signature here has a test of the same name in `harness/chat-ui/pane/hooks/register.test.ts`."""
 import json
 import os
 import shutil
