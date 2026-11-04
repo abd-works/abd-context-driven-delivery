@@ -36,11 +36,11 @@ with story("View Fidelity Files"):
         with then("the files panel shows the list"):
             pass
     with scenario("Refuse a file outside the repository"):
-        # Evidence: inferred: TicketFileError in Ticket.read_file; no spec reads a path outside the repository.
+        # Evidence: observed: kanban_tools_spec 'should refuse a file outside the repository, naming the path and the ticket'.
         with given("checkout-flow's repository is the project folder"):
             pass
         with when("a file outside the repository is asked for"):
-            # Person -> Ticket.read_file('../secrets.txt') <- TicketFileError
+            # Person -> Ticket.read_file('../secrets.txt') <- FileOutsideRepositoryError
             pass
         with then("the board says ../secrets.txt is not a file in this repository"):
             pass

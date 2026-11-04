@@ -19,8 +19,8 @@ with story("Open Ticket Session"):
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card)"):
             pass
         with when("the Person opens a new ticket titled Pet visits"):
-            # Person -> Ticket.new('Pet visits', 'feature')
-            # Ticket -> Session.new('pet-visits', <repo>, <repo>, {title, scope, parent}, is_current=False)
+            # Person -> Ticket.create('Pet visits', 'feature')
+            # Ticket -> Session.new('pet-visits', <repo>, <repo>, is_current=False, title, scope, parent)
             # Ticket <- Ticket pet-visits
             pass
         with then("pet-visits is In progress in Discovery, titled Pet visits"):
@@ -34,9 +34,9 @@ with story("Open Ticket Session"):
         with given("a chat is connected to the session board"):
             pass
         with when("the Person asks for a new ticket from the board's header"):
-            # Board page -> Chat.send('fill', 'Open a new ticket with ticket.new, titled: ')
+            # Board page -> Chat.send('fill', 'Open a new ticket with ticket.create, titled: ')
             pass
-        with then("the chat's prompt holds Open a new ticket with ticket.new, titled: for the Person to finish"):
+        with then("the chat's prompt holds Open a new ticket with ticket.create, titled: for the Person to finish"):
             pass
     with scenario("Keep + Ticket off with no chat"):
         # Evidence: observed: tests/board-surface.spec.ts 'with no chat connected' shows + Ticket off.
@@ -52,32 +52,32 @@ with story("Open Ticket Session"):
         with given("the [repository](../../../.context/kanban-model.md#repo) has the folder src/billing"):
             pass
         with when("the Person opens a ticket titled Billing report on src/billing"):
-            # Person -> Ticket.new('Billing report', 'feature', '', 'src/billing')
-            # Ticket -> Session.new('billing-report', <repo>/src/billing, <repo>, fields, is_current=False)
+            # Person -> Ticket.create('Billing report', 'feature', '', 'src/billing')
+            # Ticket -> Session.new('billing-report', <repo>/src/billing, <repo>, is_current=False, title, scope, parent)
             pass
         with then("billing-report's [session](../../../.context/kanban-model.md#session) works in src/billing"):
             pass
-        with and_("the details show its root as src/billing"):
+        with and_("the details show its workpath as src/billing"):
             pass
-    with scenario("Choose a ticket's root"):
-        # Evidence: observed: root-choice-client.spec 'that a person browses into a folder for the session root' — 'should list the folders inside it', 'should make it the ticket's root'; kanban_tools_spec 'should keep the folder as the session's work folder'.
+    with scenario("Choose a ticket's workpath"):
+        # Evidence: observed: root-choice-client.spec 'that a person browses into a folder for the session workpath' — 'should list the folders inside it', 'should make it the ticket's workpath'; kanban_tools_spec 'should keep the folder as the session's work folder'.
         with given("checkout-flow works on the whole [repository](../../../.context/kanban-model.md#repo)"):
             pass
         with and_("the repository has src/billing and src/visits under src"):
             pass
-        with when("the Person browses src for checkout-flow's root"):
+        with when("the Person browses src for checkout-flow's workpath"):
             # Person -> Board.folders('src')
             # Board <- src/billing, src/visits
             pass
         with then("the roots dialog lists src/billing and src/visits"):
             pass
-        with when("the Person chooses src/visits as checkout-flow's root"):
-            # Person -> Ticket.choose_root('src/visits')
-            # Ticket -> Session.change_workpath(<repo>/src/visits)
+        with when("the Person chooses src/visits as checkout-flow's workpath"):
+            # Person -> Ticket.choose_workpath('src/visits')
+            # Ticket -> Session.choose_workpath(<repo>/src/visits)
             pass
-        with then("checkout-flow's root reads src/visits"):
+        with then("checkout-flow's workpath reads src/visits"):
             pass
-        with and_("each practice's default root sits under src/visits"):
+        with and_("each practice's default practice root sits under src/visits"):
             pass
     with scenario("Choose one practice's root and go back to its default"):
         # Evidence: observed: root-choice-client.spec 'that a person chooses a folder for one practice's root' — 'should show it as that practice's chosen root', 'and then goes back to its default'; kanban_tools_spec 'should leave every other practice on its default root'.
@@ -85,7 +85,7 @@ with story("Open Ticket Session"):
             pass
         with when("the Person chooses src/billing for checkout-flow's Stories root"):
             # Person -> Ticket.choose_practice_root('stories', 'src/billing')
-            # Ticket -> Session.choose_output_root('stories', <repo>/src/billing)
+            # Ticket -> Session.choose_practice_root('stories', <repo>/src/billing)
             pass
         with then("the Stories root reads src/billing, chosen by the Person"):
             pass
@@ -93,7 +93,7 @@ with story("Open Ticket Session"):
             pass
         with when("the Person puts Stories back on its default root"):
             # Person -> Ticket.use_default_practice_root('stories')
-            # Ticket -> Session.forget_output_root('stories')
+            # Ticket -> Session.use_default_practice_root('stories')
             pass
         with then("the Stories root is the default again"):
             pass

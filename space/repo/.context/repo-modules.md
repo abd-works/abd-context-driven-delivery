@@ -5,15 +5,15 @@
 *Repo* is the root of a local git clone. It owns branches, the current HEAD, optional
 GitHub project linkage, and tickets (issues). *Branch* names a line of development;
 *Commit* records a snapshot with an open metadata map (trailers, notes payload).
-*Project* is the repository's GitHub Project board; *Ticket* is a GitHub issue with
-a kanban *TicketState* (Backlog / In Progress / Done). *ResearchTag* is research/flow
-metadata on that *Ticket*, stored git-primary (notes and trailers), not a second issue identity.
+*Project* is the repository's GitHub Project board; *ProjectTicket* is a GitHub issue with
+a kanban *ProjectTicketState* (Backlog / In Progress / Done). *ResearchTag* is research/flow
+metadata on that *ProjectTicket*, stored git-primary (notes and trailers), not a second issue identity.
 
 ### repo
 
 - Holds clone root path, default branch name, and optional attached *Project*
 - Opens via filesystem (`Repo.open`) or in-memory for tests (`Repo.memory`)
-- Creates and resolves *Ticket* references; formats workflow commit trailers
+- Creates and resolves *ProjectTicket* references; formats workflow commit trailers
 - **Invariant:** git notes and commit trailers are the canonical association surface — not parallel session yaml indexes
 
 ### branch
@@ -28,26 +28,26 @@ metadata on that *Ticket*, stored git-primary (notes and trailers), not a second
 
 ### project
 
-- GitHub Project scoped to owner + number; defines *TicketState* columns
+- GitHub Project scoped to owner + number; defines *ProjectTicketState* columns
 - Links onto the current repository (`gh project link`) so the board shows on the repo Projects tab
 - Adds tickets to the board and moves them between states
 
-### ticket
+### project ticket
 
-- GitHub issue identity (`number`, `title`, `body`, `url`) plus optional *TicketState*
+- GitHub issue identity (`number`, `title`, `body`, `url`) plus optional *ProjectTicketState*
 - Open `data` map for extension (e.g. closed flag in memory mode)
-- Holds *ResearchTag*s and notes; flow is *TicketState* plus git trailers/notes — not extra kanban columns
+- Holds *ResearchTag*s and notes; flow is *ProjectTicketState* plus git trailers/notes — not extra kanban columns
 - **Invariant:** ticket identity remains GitHub issue `#`; tags/notes/flow do not mint a parallel store
 
 ### researchtag
 
-- Research or session-flow label associated with a *Ticket* on the existing git API
+- Research or session-flow label associated with a *ProjectTicket* on the existing git API
 - **Invariant:** canonical association is git notes and commit trailers, not session yaml indexes
 
 ### ticket_state
 
 - Named kanban column — default set: Backlog, In Progress, Done
-- **Invariant:** project state names must match a defined *TicketState* on the attached *Project*
+- **Invariant:** project state names must match a defined *ProjectTicketState* on the attached *Project*
 - GitHub Status field may use `Todo` for workflow `Backlog`; exact option name wins, then the synonym map
 
 ## Modules
@@ -57,8 +57,8 @@ Build order: `git` → (`workspace` shim | `workflow`)
 ---
 
 # space/git
-- **Purpose:** OO git + GitHub domain for CDD workspace sessions and workflow commands. Callers manage research tags, notes, and ticket/session flow on the existing Repo / Project / Ticket / TicketState graph — git-primary notes and trailers, not a second ticket store.
-- **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, Git, ResearchTag
+- **Purpose:** OO git + GitHub domain for CDD workspace sessions and workflow commands. Callers manage research tags, notes, and ticket/session flow on the existing Repo / Project / ProjectTicket / ProjectTicketState graph — git-primary notes and trailers, not a second ticket store.
+- **Seam (terms):** Repo, Branch, Commit, Project, ProjectTicket, ProjectTicketState, Git, ResearchTag
 - **Dependencies (one-way):** `tools.tool`; consumed by `workspace`, `workflow`
 
 ## Repo
@@ -92,8 +92,8 @@ push_to(branch): None
 has_stash(): bool
 is_linked_worktree(): bool
 primary_root(): Path
-ticket(ref): Ticket | None
-create_ticket(title, body): Ticket
+ticket(ref): ProjectTicket | None
+create_ticket(title, body): ProjectTicket
 attach_project(owner, number): Project
 workflow_commit_message(subject, issue_number, workflow_state, reviewed_by): str
 note(sha, payload): None
@@ -131,35 +131,35 @@ Project(repo, owner, number)
 ------
 owner: str
 number: int
-states: list[TicketState]
+states: list[ProjectTicketState]
 ----
-state_named(name): TicketState
+state_named(name): ProjectTicketState
 link_repository(): None
 
-## Ticket
+## ProjectTicket
 
-Ticket(number, title, body, url, state, data)
+ProjectTicket(number, title, body, url, state, data)
 ------
 number: int
 title: str
 body: str
 url: str
-state: TicketState | None
+state: ProjectTicketState | None
 data: dict
 ----
 closed: bool
 parse_number(ref): int
 github_ref(owner, repo, number): str
-set_status(state_name): Ticket
-write_type(name): Ticket
+set_status(state_name): ProjectTicket
+write_type(name): ProjectTicket
 close(): None
 
-## TicketState
+## ProjectTicketState
 
-TicketState(name)
+ProjectTicketState(name)
 ------
 name: str
 ----
-backlog(): TicketState
-in_progress(): TicketState
-done(): TicketState
+backlog(): ProjectTicketState
+in_progress(): ProjectTicketState
+done(): ProjectTicketState

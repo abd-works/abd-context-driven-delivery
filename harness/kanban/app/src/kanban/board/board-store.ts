@@ -23,7 +23,7 @@ export type Activation = {
   workspace: WorkspaceClient
 }
 
-// The roots dialog: the ticket's root on top and each practice's root under it. Starting a backlog item asks for its root
+// The roots dialog: the ticket's workpath on top and each practice's practice root under it. Starting a backlog item asks for its workpath
 // first, so until it starts there is no ticket yet, only the item.
 export type RootChoice = {
   ticket: string

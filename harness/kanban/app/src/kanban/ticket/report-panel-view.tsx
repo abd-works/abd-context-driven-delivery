@@ -34,11 +34,12 @@ export function ReportStatsView({ panel }: { panel: ReportPanel }) {
 function ReportStandingView({ panel }: { panel: ReportPanel }) {
   const { report } = panel
   if (!report.path) return <p className="panel-note">No validation report yet.</p>
+  // The raw text stands in for the rules only when none could be read from it; otherwise it pushes them out of view.
   if (!report.hasSavedGraph) {
     return (
       <>
         <p className="panel-warning">This report has no saved graph, so its rules are only in the report file.</p>
-        <pre className="report-text">{report.text}</pre>
+        {report.rules.length ? null : <pre className="report-text">{report.text}</pre>}
       </>
     )
   }

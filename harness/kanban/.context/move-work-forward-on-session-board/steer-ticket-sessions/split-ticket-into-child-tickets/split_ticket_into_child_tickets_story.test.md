@@ -6,7 +6,7 @@
 
 *Given* checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card) and a chat is connected
 *When* the Person splits checkout-flow into child tickets
-*Then* the chat's prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.new with parent checkout-flow for each story.
+*Then* the chat's prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story.
 *When* the chat opens a child ticket Enter card details with parent checkout-flow
 *Then* enter-card-details is In progress in Discovery
 *And* its details read enter-card-details · story of checkout-flow

@@ -93,7 +93,7 @@ export class BoardPage {
   }
 
   openNewTicket(): Promise<void> {
-    return this.chat.fill('Open a new ticket with ticket.new, titled: ')
+    return this.chat.fill('Open a new ticket with ticket.create, titled: ')
   }
 
   start(): () => void {

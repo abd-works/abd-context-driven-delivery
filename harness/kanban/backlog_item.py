@@ -8,7 +8,7 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import language_adapter
-from harness.kanban.board import Board, Card, Column
+from harness.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 from harness.kanban.data import BacklogItemData
 from harness.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
@@ -43,26 +43,27 @@ class BacklogItem(Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def add(cls, title: str, text: str = "") -> BacklogItem:
+    def create(cls, title: str, text: str = "") -> BacklogItem:
         """Add an idea to the Backlog: one markdown file, with title as its heading and text under it."""
-        return cls._written(Board.current(), name_of(title), title, text)
+        board = Board.current()
+        item = cls(Session.backlog_folder(board.repo.root) / f"{name_of(title)}.md", board)
+        item._write(title, text)
+        return item
 
     @classmethod
-    def holding(cls, ticket: Ticket, board: Board) -> BacklogItem:
+    def from_ticket(cls, ticket: Ticket, board: Board) -> BacklogItem:
         """The item a ticket moved back into the Backlog becomes: its own folder, history and all, with its idea file
-        inside. A ticket that never had an idea file gets one holding its title."""
-        path = Session.backlog_folder(board.repo_root) / ticket.name / f"{ticket.name}.md"
-        if not path.exists():
-            path.write_text(f"# {ticket.title}\n", encoding="utf-8")
-        return cls(path, board)
+        inside."""
+        return cls(Session.backlog_folder(board.repo.root) / ticket.name / f"{ticket.name}.md", board)
 
-    @classmethod
-    def _written(cls, board: Board, file_name: str, title: str, text: str) -> BacklogItem:
-        folder = Session.backlog_folder(board.repo_root)
-        folder.mkdir(parents=True, exist_ok=True)
-        path = folder / f"{file_name}.md"
-        path.write_text(f"# {title}\n\n{text}\n".rstrip() + "\n", encoding="utf-8")
-        return cls(path, board)
+    def write_if_missing(self, title: str) -> None:
+        """Give an item whose ticket never had an idea file one holding title, so it shows in the Backlog."""
+        if not self._path.exists():
+            self._write(title, "")
+
+    def _write(self, title: str, text: str) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text(f"# {title}\n\n{text}\n".rstrip() + "\n", encoding="utf-8")
 
     @property
     def path(self) -> Path:
@@ -78,7 +79,7 @@ class BacklogItem(Card):
 
     @property
     def column(self) -> Column:
-        return self._board.column("Backlog")
+        return self._board.column(BACKLOG_COLUMN)
 
     @property
     def text(self) -> str:
@@ -97,11 +98,11 @@ class BacklogItem(Card):
     @noSessionLog
     def start(self, scope: str = "feature", path: str = "") -> Ticket:
         """Start the backlog item titled backlog_item: open a ticket for it in Discovery, or bring back the ticket that was moved here, with its work. Its file goes into the ticket's session folder, text and all. scope is feature, story, or slice; path is the folder in the repository its session works on."""
-        held = self._held_ticket_folder
-        ticket = self._ticket_brought_back(held) if held.is_dir() else self._ticket_opened(scope, path)
+        kept_folder = self._held_ticket_folder
+        ticket = self._ticket_brought_back(kept_folder) if kept_folder.is_dir() else self._ticket_opened(scope, path)
         # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.
         if self._path.exists():
-            ticket.keep(self._path)
+            ticket.keep_file(self._path)
         return ticket
 
     def move_next(self) -> Ticket:
@@ -113,18 +114,18 @@ class BacklogItem(Card):
         return self
 
     def to_json(self) -> BacklogItemData:
-        return {**super().to_json(), "text": self.text, "path": self._path.relative_to(self._board.repo_root).as_posix()}
+        return {**super().to_json(), "text": self.text, "path": self._path.relative_to(self._board.repo.root).as_posix()}
 
     # The ticket folder an item holds: the folder it is kept in, or a folder of its name beside it.
     @property
     def _held_ticket_folder(self) -> Path:
         return self._path.parent if self._path.parent.name == self._path.stem else self._path.with_suffix("")
 
-    def _ticket_brought_back(self, held: Path) -> Ticket:
-        session = Session.at(held, self._board.repo_root).reopen()
+    def _ticket_brought_back(self, kept_folder: Path) -> Ticket:
+        session = Session.load(kept_folder, self._board.repo.root).reopen()
         return Ticket(session, self._board)
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
-        ticket = Ticket.new(self.title, scope, "", path)
+        ticket = Ticket.create(self.title, scope, "", path)
         ticket.record(f"backlog {self._path}")
         return ticket

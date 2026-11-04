@@ -29,6 +29,8 @@ afterAll(() => board.close())
 const filesPanel = (page: BoardPage) => page.store.state.panels.find(panel => panel.kind === 'files') as FilesPanel
 const reportPanel = (page: BoardPage) => page.store.state.panels.find(panel => panel.kind === 'report') as ReportPanel
 
+const EVERY_FORMAT = 'Fix every format of the fidelity: its documents, its diagrams, and its code.'
+
 async function brokenRule(page: BoardPage): Promise<ReportRuleData> {
   await page.panels.openReport(TICKET, SLUG)
   return reportPanel(page).report.rules[0]!
@@ -192,6 +194,11 @@ describe('Fix Report Violations', () => {
     it("should name the ticket's session", async () => {
       expect((await sent()).commands[0]!.text).toContain(SESSION)
     })
+
+    // A fix in one format alone leaves the fidelity's other formats still breaking the rule.
+    it('should ask for the fix in every format of the fidelity', async () => {
+      expect((await sent()).commands[0]!.text).toContain(EVERY_FORMAT)
+    })
   })
 
   describe('with Fix all pressed on a rule', () => {
@@ -203,6 +210,15 @@ describe('Fix Report Violations', () => {
       await page.fixRule(TICKET, report, rule)
       const [command] = await chat.checkIn()
       expect(command!.text).toContain(`Fix all violations of ${rule.name} found in this report: ${report.path}`)
+    })
+
+    it('should ask for the fixes in every format of the fidelity', async () => {
+      const { page } = await board.page()
+      const chat = await board.connectChat(page)
+      const rule = await brokenRule(page)
+      await page.fixRule(TICKET, reportPanel(page).report, rule)
+      const [command] = await chat.checkIn()
+      expect(command!.text).toContain(EVERY_FORMAT)
     })
   })
 
@@ -224,6 +240,10 @@ describe('Fix Report Violations', () => {
     it('should ask the chat to fix all violations found in the report it names', async () => {
       const { report, commands } = await sent()
       expect(commands[0]!.text).toContain(`Fix all violations found in this report: ${report.path}`)
+    })
+
+    it('should ask for the fixes in every format of the fidelity', async () => {
+      expect((await sent()).commands[0]!.text).toContain(EVERY_FORMAT)
     })
   })
 })

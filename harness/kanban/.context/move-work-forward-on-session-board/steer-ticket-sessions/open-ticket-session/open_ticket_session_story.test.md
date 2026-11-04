@@ -14,7 +14,7 @@
 
 *Given* a chat is connected to the session board
 *When* the Person asks for a new ticket from the board's header
-*Then* the chat's prompt holds Open a new ticket with ticket.new, titled: for the Person to finish
+*Then* the chat's prompt holds Open a new ticket with ticket.create, titled: for the Person to finish
 
 #### Scenario: Keep + Ticket off with no chat
 
@@ -27,17 +27,17 @@
 *Given* the [repository](../../../kanban-model.md#repo) has the folder src/billing
 *When* the Person opens a ticket titled Billing report on src/billing
 *Then* billing-report's [session](../../../kanban-model.md#session) works in src/billing
-*And* the details show its root as src/billing
+*And* the details show its workpath as src/billing
 
-#### Scenario: Choose a ticket's root
+#### Scenario: Choose a ticket's workpath
 
 *Given* checkout-flow works on the whole [repository](../../../kanban-model.md#repo)
 *And* the repository has src/billing and src/visits under src
-*When* the Person browses src for checkout-flow's root
+*When* the Person browses src for checkout-flow's workpath
 *Then* the roots dialog lists src/billing and src/visits
-*When* the Person chooses src/visits as checkout-flow's root
-*Then* checkout-flow's root reads src/visits
-*And* each practice's default root sits under src/visits
+*When* the Person chooses src/visits as checkout-flow's workpath
+*Then* checkout-flow's workpath reads src/visits
+*And* each practice's default practice root sits under src/visits
 
 #### Scenario: Choose one practice's root and go back to its default
 

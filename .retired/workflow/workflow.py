@@ -7,7 +7,7 @@ import re
 
 import yaml
 
-from space.repo import Repo, Ticket, TicketNotFoundError
+from space.repo import Repo, ProjectTicket, ProjectTicketNotFoundError
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 from harness.agent_tools import agent_instructions, agent_toolset, subAgent
@@ -458,10 +458,10 @@ class Workflow:
         self.update_ticket(ticket="", workspace=workspace)
         self.update_ticket_labels(ticket="", workspace=workspace)
         self.align_child_tickets_to_parent(parent="", workspace=workspace)
-        return "Ticket request completed."
+        return "ProjectTicket request completed."
 
     def parse_ticket(self, ticket: str) -> int:
-        return Ticket.from_number(ticket)
+        return ProjectTicket.from_number(ticket)
 
     def session_name_for_issue(self, title: str, number: int) -> str:
         return self._session_name_from_issue(title, number)
@@ -477,7 +477,7 @@ class Workflow:
         repo = self._repo(workspace)
         return repo.workflow_commit_message(
             subject,
-            Ticket.from_number(ticket),
+            ProjectTicket.from_number(ticket),
             workflow_state,
             reviewed_by=reviewed_by,
         )
@@ -486,7 +486,7 @@ class Workflow:
         repo = self._repo(workspace)
         issue = repo.ticket(ticket)
         if issue is None:
-            raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
+            raise ProjectTicketNotFoundError(f"GitHub issue not found: {ticket}")
         return {
             "number": issue.number,
             "title": issue.title,
@@ -594,7 +594,7 @@ class Workflow:
             "ultimate_parent": ultimate_parent.title,
         }
 
-    def _ticket_ancestors(self, repo: Repo, issue: Ticket) -> list[Ticket]:
+    def _ticket_ancestors(self, repo: Repo, issue: ProjectTicket) -> list[ProjectTicket]:
         ancestors = [issue]
         seen = {issue.number}
         while ancestors[-1].parent_number is not None:
@@ -643,10 +643,10 @@ class Workflow:
             "archived": "yes",
         }
 
-    def _require_ticket(self, repo: Repo, ticket: str) -> Ticket:
+    def _require_ticket(self, repo: Repo, ticket: str) -> ProjectTicket:
         issue = repo.ticket(ticket)
         if issue is None:
-            raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
+            raise ProjectTicketNotFoundError(f"GitHub issue not found: {ticket}")
         return issue
 
     @agent_tool
@@ -729,7 +729,7 @@ class Workflow:
     def _align_child_tickets_for_parent(
         self,
         project,
-        parent_issue: Ticket,
+        parent_issue: ProjectTicket,
         workspace: str,
         statuses_by_number: dict[int, str],
     ) -> list[dict[str, object]]:
@@ -808,7 +808,7 @@ class Workflow:
         repo = self._repo(workspace)
         issue = repo.ticket(ticket)
         if issue is None:
-            raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
+            raise ProjectTicketNotFoundError(f"GitHub issue not found: {ticket}")
         self._ensure_project(repo, repo_root)
         issue.set_status(status)
         return status
@@ -826,7 +826,7 @@ class Workflow:
         repo = self._repo(workspace)
         issue = repo.ticket(ticket)
         if issue is None:
-            raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
+            raise ProjectTicketNotFoundError(f"GitHub issue not found: {ticket}")
         session_folder = repo_root / ".sessions" / session_name
         session_folder.mkdir(parents=True, exist_ok=True)
         target = session_folder / filename
@@ -845,7 +845,7 @@ class Workflow:
         repo = self._repo(workspace)
         issue = repo.ticket(ticket)
         if issue is None:
-            raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
+            raise ProjectTicketNotFoundError(f"GitHub issue not found: {ticket}")
         session_name = self._session_name_from_issue(issue.title, issue.number)
         ws = self._workspace(workspace)
         git = repo if self._repo_override is not None else None
@@ -902,7 +902,7 @@ class Workflow:
         if ticket.strip():
             message = self._repo(workspace).workflow_commit_message(
                 subject,
-                Ticket.from_number(ticket),
+                ProjectTicket.from_number(ticket),
                 "done",
                 reviewed_by=reviewed_by,
             )
@@ -912,6 +912,6 @@ class Workflow:
     def close_ticket(self, ticket: str, workspace: str = "") -> str:
         issue = self._repo(workspace).ticket(ticket)
         if issue is None:
-            raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
+            raise ProjectTicketNotFoundError(f"GitHub issue not found: {ticket}")
         issue.close()
         return f"closed {ticket}"

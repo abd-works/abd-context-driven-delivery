@@ -25,7 +25,7 @@ from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
 from harness.mcp.mcp_server import McpServer
 from space.session import Session
-from space.session.session import OutputRootInContextError, SessionNameRequiredError
+from space.session.session import PracticeRootInContextError, SessionNameRequiredError
 from space.session.throwaway_project import ProjectCall
 from space.work_state import WorkState
 
@@ -849,7 +849,7 @@ with description("a practice"):
 
         with context("with a practice turned off"):
             with before.each:
-                self.session.practices["ddd"].enabled = False
+                self.session.enable_practice("ddd", False)
 
             with it("should leave that practice out of the active practices"):
                 expect([practice.name for practice in self.session.active_practices]).to(equal(["stories", "clean_engineering", "bdd", "ux"]))
@@ -859,7 +859,7 @@ with description("a practice"):
                 expect(saved["practices"]["ddd"]["enabled"]).to(equal(False))
 
             with it("should read as turned off from the same folder later"):
-                later = Session.at(self.session.session_path, self.repo)
+                later = Session.load(self.session.session_path, self.repo)
                 expect(later.practices["ddd"].enabled).to(equal(False))
 
         with it("should leave the other practices unopened"):
@@ -899,11 +899,31 @@ with description("a practice"):
                     outputs = self.session.fidelity_outputs(self.guidance)
                     expect(outputs["markdown"]).to(equal([(self.work / "docs/stories/.context/story-map.md").resolve().as_posix()]))
 
+            with context("that a person chooses a folder as the practice's root"):
+                with it("should return the practice root it saved"):
+                    expect(self.session.choose_practice_root("stories", self.work / "docs")).to(equal((self.work / "docs").resolve()))
+
+                with it("should say the practice root is chosen"):
+                    self.session.choose_practice_root("stories", self.work / "docs")
+                    expect(self.session.has_chosen_practice_root("stories")).to(equal(True))
+
+                with context("that is then put back to the default"):
+                    with it("should say the practice root is not chosen"):
+                        self.session.choose_practice_root("stories", self.work / "docs")
+                        self.session.use_default_practice_root("stories")
+                        expect(self.session.has_chosen_practice_root("stories")).to(equal(False))
+
             with context("that a person chooses a .context folder as the practice's root"):
                 with it("should refuse it, since the practice's documents already go in its root's .context"):
-                    expect(lambda: self.session.choose_output_root("stories", self.work / ".context")).to(
-                        raise_error(OutputRootInContextError)
+                    expect(lambda: self.session.choose_practice_root("stories", self.work / ".context")).to(
+                        raise_error(PracticeRootInContextError)
                     )
+
+                with it("should name the practice and the folder it refused"):
+                    try:
+                        self.session.choose_practice_root("stories", self.work / ".context")
+                    except PracticeRootInContextError as refused:
+                        expect((refused.practice, refused.root)).to(equal(("stories", self.work / ".context")))
 
             with context("with session.json naming a root folder for the fidelity too"):
                 with before.each:
@@ -983,7 +1003,7 @@ with description("a practice"):
                 self.opened = self.session.practice("bdd")
 
             with it("should keep each set on that practice"):
-                expect(len(self.opened.output_paths)).to(equal(2))
+                expect(len(self.opened.to_mcp_result()["output_paths"])).to(equal(2))
 
     with context("that a practice has not been invoked"):
         with before.each:
@@ -1185,15 +1205,15 @@ with description("a session read for a board") as self:
         self.repo = Path(tempfile.mkdtemp(prefix="session-board-"))
         (self.repo / ".git").mkdir()
         Session.new("alpha", self.repo, self.repo)
-        Session.new("beta", self.repo, self.repo, {"title": "Beta"}, is_current=False)
-        self.beta = Session.at(self.repo / ".sessions" / "beta", self.repo)
+        Session.new("beta", self.repo, self.repo, is_current=False, title="Beta")
+        self.beta = Session.load(self.repo / ".sessions" / "beta", self.repo)
 
     with context("that was opened without becoming current"):
         with it("should leave the current session as it was"):
             expect(Session.current(self.repo).name).to(equal("alpha"))
 
-        with it("should keep the fields it was opened with"):
-            expect(self.beta.fields["title"]).to(equal("Beta"))
+        with it("should keep the title it was opened with"):
+            expect(self.beta.title).to(equal("Beta"))
 
     with context("that is not the current session and has closed"):
         with before.each:
@@ -1204,7 +1224,19 @@ with description("a session read for a board") as self:
 
     with context("that has moved to another folder"):
         with before.each:
-            self.moved = self.beta.move_to(self.repo / ".sessions" / "closed")
+            self.moved = self.beta.move_folder_to(self.repo / ".sessions" / "closed")
 
-        with it("should keep its log and fields in the new folder"):
-            expect(self.moved.fields["title"]).to(equal("Beta"))
+        with it("should keep its log and title in the new folder"):
+            expect(self.moved.title).to(equal("Beta"))
+
+    with context("that keeps a file a person wrote, such as a started backlog item's idea"):
+        with before.each:
+            self.idea = self.repo / "gift-cards.md"
+            self.idea.write_text("# Gift cards\n", encoding="utf-8")
+            self.kept = self.beta.keep_file(self.idea)
+
+        with it("should hold the file in its session folder"):
+            expect(self.kept).to(equal(self.beta.session_path / "gift-cards.md"))
+
+        with it("should leave nothing where the file was"):
+            expect(self.idea.exists()).to(equal(False))

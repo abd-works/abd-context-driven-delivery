@@ -80,5 +80,5 @@ class Generate(GuidanceAction):
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:
-        """Apply fixes implied by the latest validate report before considering generate done. Override on the practice when generate must close those gaps in the same pass."""
+        """Apply fixes implied by the latest validate report before considering generate done, in every format of the fidelity: its documents, its diagrams, and its code, so they still mirror each other. Override on the practice when generate must close those gaps in the same pass."""
         return ""

@@ -144,7 +144,7 @@ def nodes_in(graph: Graph, practice: str, scope: list[str]) -> set[str]:
 
 
 def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str]]:
-    return {(slug, node.node_id) for node in _practice_nodes(graph, practice, scope) for slug, _ in node.rules.violations()}
+    return {(slug, node.node_id) for node in _practice_nodes(graph, practice, scope) for slug, _ in node.rules.violations}
 
 
 def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str, str]]:

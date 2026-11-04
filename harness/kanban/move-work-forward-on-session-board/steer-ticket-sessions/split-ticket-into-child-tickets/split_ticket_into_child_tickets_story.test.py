@@ -16,13 +16,13 @@ with story("Split Ticket Into Child Tickets"):
         with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card) and a chat is connected"):
             pass
         with when("the Person splits checkout-flow into child tickets"):
-            # Board page -> Chat.send('fill', 'Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.new with parent checkout-flow for each story.')
+            # Board page -> Chat.send('fill', 'Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story.')
             pass
-        with then("the chat's prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.new with parent checkout-flow for each story."):
+        with then("the chat's prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story."):
             pass
         with when("the chat opens a child ticket Enter card details with parent checkout-flow"):
-            # Agent -> Ticket.new('Enter card details', 'story', 'checkout-flow')
-            # Ticket -> Session.new('enter-card-details', <repo>, <repo>, {parent: checkout-flow}, is_current=False)
+            # Agent -> Ticket.create('Enter card details', 'story', 'checkout-flow')
+            # Ticket -> Session.new('enter-card-details', <repo>, <repo>, is_current=False, parent=checkout-flow)
             pass
         with then("enter-card-details is In progress in Discovery"):
             pass

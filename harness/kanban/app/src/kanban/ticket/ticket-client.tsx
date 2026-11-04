@@ -204,7 +204,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   fillSplit(): Promise<void> {
-    return this.page.chat.fill(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.new with parent ${this.name} for each story.`)
+    return this.page.chat.fill(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.create with parent ${this.name} for each story.`)
   }
 
   // Closing ends the chat's session and leaves the ticket where it is; moving it into Complete is what completes it.

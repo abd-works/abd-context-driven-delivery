@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from space.repo.repo import Repo, Ticket
+from space.repo.repo import Repo, ProjectTicket
 
 
 @dataclass
 class _CreatedWork:
-    ticket: Ticket
+    ticket: ProjectTicket
 
     def as_dict(self, project_status: str = "") -> dict[str, str | int]:
         return {

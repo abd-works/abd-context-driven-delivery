@@ -19,7 +19,7 @@ with story("Choose Ticket Practices"):
             pass
         with when("the Person turns DDD off for checkout-flow"):
             # Person -> Ticket.enable_practice('ddd', False)
-            # Ticket -> PracticeSessionOutput.enabled = False
+            # Ticket -> Session.enable_practice('ddd', False)
             # PracticeSessionOutput -> .sessions/checkout-flow/session.json practices
             pass
         with then("a toast says DDD off for Checkout flow · saved to .sessions/checkout-flow/session.json"):

@@ -52,7 +52,7 @@ export class BacklogDraftClient {
     const { title, text } = this.page.store.state.draft
     if (!title.trim()) return
     this.cancel()
-    const added = await BacklogItemClientGenerated.add(this.page.api, title.trim(), text.trim())
+    const added = await BacklogItemClientGenerated.create(this.page.api, title.trim(), text.trim())
     await this.page.reader.refresh()
     if (!added) return
     const item = this.page.item(added)

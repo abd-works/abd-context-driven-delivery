@@ -236,7 +236,7 @@ The Python says enough to draw a working view of each object, so the installer w
 
 **Every other operation is a button or a form.** An operation with no arguments of its own, such as `moveNext`, is a button; one with arguments, such as `moveTo(stage, done)`, is a small form built the same way. An operation that answers with something other than the object, such as `report(fidelity)`, shows its answer beneath the form. An operation the view already uses to edit a field is not drawn again as a form. Each calls the client the view was given, so a page that hands in its own subclass, such as LERN's `TicketClient`, gets its page work, such as refreshing the board, on every action.
 
-**An operation that creates the object gives a new-object form.** Each class operation that answers with the object's own data, such as `Ticket.new(title, scope, parent, path)` or `BacklogItem.add(title, text)`, becomes a form in `{Object}NewViewGenerated`, which calls it with the API it is given and hands the new object's data to `onCreated`.
+**An operation that creates the object gives a new-object form.** Each class operation that answers with the object's own data, such as `Ticket.create(title, scope, parent, path)` or `BacklogItem.create(title, text)`, becomes a form in `{Object}NewViewGenerated`, which calls it with the API it is given and hands the new object's data to `onCreated`.
 
 **`use{Object}(client)` keeps a view current.** The client takes on new state through `changed`, which tells its `onChanged` listeners; the hook subscribes and re-renders. Any view holding a client, generated or the application's own, uses it instead of keeping a second copy of the object's state.
 

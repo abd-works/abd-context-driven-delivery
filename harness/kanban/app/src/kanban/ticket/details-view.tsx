@@ -37,7 +37,7 @@ function TicketBarView({ ticket }: { ticket: TicketClient }) {
             <PlaceLinkView label={ticket.name} hint="Browse the session folder" onPress={() => page.files.openSessionFolder(ticket.name)} />
             {ticket.origin ? ` · ${ticket.origin}` : ''}
             {' · root '}
-            <PlaceLinkView label={ticket.root || 'whole repository'} hint="Choose the session's root and each practice's root" onPress={() => page.roots.openFor(ticket)} />
+            <PlaceLinkView label={ticket.workpath || 'whole repository'} hint="Choose the session's workpath and each practice's practice root" onPress={() => page.roots.openFor(ticket)} />
             {' · '}
             <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageSlugs.length} onPress={() => page.files.openFiles(ticket.name, stageSlugs, 'folder')} />
           </span>

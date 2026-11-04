@@ -29181,3 +29181,50 @@ cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no fil
 2026-11-04T17:18:46Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
 2026-11-04T17:18:47Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
 2026-11-04T17:29:18Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:33:22Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:33:52Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:42:00Z graph.return_nodes TypeError: 'bool' object is not iterable
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1506, in return_nodes
+    self._collect_nodes(practice.root_node, [], wanted, found, seen)
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1530, in _collect_nodes
+    self._collect_nodes(child, chain, wanted, found, seen)
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1530, in _collect_nodes
+    self._collect_nodes(child, chain, wanted, found, seen)
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1530, in _collect_nodes
+    self._collect_nodes(child, chain, wanted, found, seen)
+  [Previous line repeated 4 more times]
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1514, in _collect_nodes
+    if self._node_matches(node, wanted):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1546, in _node_matches
+    if relationships and not self._on_relationship(node, relationships):
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1573, in _on_relationship
+    for kind in kinds:
+                ^^^^^
+TypeError: 'bool' object is not iterable
+2026-11-04T17:42:00Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:44:37Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:44:38Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:44:38Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:44:39Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:44:39Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:46:27Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:46:27Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:47:36Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

@@ -4,7 +4,7 @@
 
 **Git** (`space/git/`): object-oriented domain for a local git clone plus
 GitHub workflow surfaces. Models **Repo → Branch → Commit** for version control and
-**Repo → Project → Ticket → TicketState** for kanban/issue workflow. Tickets also
+**Repo → Project → ProjectTicket → ProjectTicketState** for kanban/issue workflow. Tickets also
 carry **research tags**, **notes**, and **flow** on that same graph (git notes and
 commit trailers) — not a parallel yaml ticket index. Callers use domain objects, not
 a subprocess helper module.
@@ -18,14 +18,14 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 
 ## Seam
 
-`space.repo.repo:Repo` — chaining slash `/branch {name}` and `/worktree {name}` (MCP `repo.branch`, `repo.worktree`); skill `/branch-create` and slash `/new-branch` (MCP `repo.new_branch`); `/switch-branch`, `/close-branch`, `/new-worktree`, `/switch-worktree`, `/close-worktree` (instruction commands → matching `repo.*` MCP tools); skill `/branch-switch` (MCP `repo.branch_switch`). Branch primitives never add worktrees. `/push` (slash instructions → MCP `repo.push_commit`). Workflow board moves stay on `tools/workflow`. Seam terms: Repo, Branch, Commit, Project, Ticket, TicketState, ResearchTag.
+`space.repo.repo:Repo` — chaining slash `/branch {name}` and `/worktree {name}` (MCP `repo.branch`, `repo.worktree`); skill `/branch-create` and slash `/new-branch` (MCP `repo.new_branch`); `/switch-branch`, `/close-branch`, `/new-worktree`, `/switch-worktree`, `/close-worktree` (instruction commands → matching `repo.*` MCP tools); skill `/branch-switch` (MCP `repo.branch_switch`). Branch primitives never add worktrees. `/push` (slash instructions → MCP `repo.push_commit`). Workflow board moves stay on `tools/workflow`. Seam terms: Repo, Branch, Commit, Project, ProjectTicket, ProjectTicketState, ResearchTag.
 
 ## Constraint
 
-- Callers depend on **domain types** (`Repo`, `Branch`, `Project`, `Ticket`, …).
+- Callers depend on **domain types** (`Repo`, `Branch`, `Project`, `ProjectTicket`, …).
 - **Git-primary** for provenance: commit message trailers (`GitHub-Issue:`, `Workflow-State:`)
   and git notes (`refs/notes/eval-mistakes` and ticket/research notes) — not parallel yaml indexes.
-  Research tags, ticket notes, and flow live on Ticket / Project / TicketState (Backlog / In Progress / Done only).
+  Research tags, ticket notes, and flow live on ProjectTicket / Project / ProjectTicketState (Backlog / In Progress / Done only).
 - **Workflow** orchestrates; **Repo** executes git/gh — do not embed ticket or merge policy
   inside `Repo` beyond thin wrappers.
 - `Repo.memory()` is for **tests and dry runs** — production paths use `Repo.open()`.
@@ -43,12 +43,12 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `Project.state_named(name)` — column on the board (any live Status option)
 - `Project.refresh_states()` / `Project.status_option_names()` — hydrate columns from GitHub
 - `GH_PROJECT_SCOPES_HINT` — `gh auth refresh -h github.com -s read:project,project` when board API calls fail
-- `Ticket.set_status(state)` / `Ticket.parse_number(ref)` / `Ticket.github_ref(...)` / `Ticket.close()`
-- `Ticket.add_label(name)` / `Ticket.add_theme(theme)` / `issue_theme_label(theme)` — issue-sidebar `theme:<slug>` (filter/group; not a Status column)
-- `Ticket.write_type(name)` — apply an org issue Type name (WorkTicket owns defect / small change / feature mapping)
+- `ProjectTicket.set_status(state)` / `ProjectTicket.parse_number(ref)` / `ProjectTicket.github_ref(...)` / `ProjectTicket.close()`
+- `ProjectTicket.add_label(name)` / `ProjectTicket.add_theme(theme)` / `issue_theme_label(theme)` — issue-sidebar `theme:<slug>` (filter/group; not a Status column)
+- `ProjectTicket.write_type(name)` — apply an org issue Type name (WorkTicket owns defect / small change / feature mapping)
 - `Repo.list_issue_types()` / `Repo.ensure_issue_type(name, description=, color=)` — org issue types for the repo owner
-- `Ticket` — `number`, `title`, `body`, `url`, `state`, `issue_type`, `labels`, open `data` map
-- `TicketState` — column name (`Backlog`, `In Progress`, `Done`)
+- `ProjectTicket` — `number`, `title`, `body`, `url`, `state`, `issue_type`, `labels`, open `data` map
+- `ProjectTicketState` — column name (`Backlog`, `In Progress`, `Done`)
 - `Project.github_status_option(state_name, option_names)` / `Project.github_theme_option(theme, option_names)` — exact GitHub field match first, then Status aliases (`Backlog` ↔ `Todo`)
 - `Repo.ticket(ref)` / `Repo.create_ticket(title, body)`
 - `Repo.workflow_commit_message(subject, issue_number, workflow_state, reviewed_by=...)`
@@ -75,7 +75,7 @@ stores branches, commits, tickets, project status, and notes in plain dicts/list
 public API as CLI-backed `Repo.open()`. Commit trailers are parsed into `Commit.data`;
 workflow helpers format `GitHub-Issue:` and `Workflow-State:` lines. Project status maps
 to GitHub Projects via `gh project link` / `item-add` / `item-edit` when not in memory mode.
-`Ticket.set_status` sends the live Status option to gh (workflow `Backlog` → GitHub `Todo` when
+`ProjectTicket.set_status` sends the live Status option to gh (workflow `Backlog` → GitHub `Todo` when
 that is the board option). Memory mode still records the workflow name (`Backlog`).
 
 ## Rationale

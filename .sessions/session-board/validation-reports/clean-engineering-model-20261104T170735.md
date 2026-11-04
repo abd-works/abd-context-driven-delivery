@@ -221,7 +221,7 @@ Evaluate the current context against this rule (one-canonical-model-document):
 - kanban-model.md:263 `Ticket.record(entry: str)`: callers write raw log text, so the log line format leaks to every caller.
 
 ### `use-property-not-accessor` — Fail
-- kanban-model.md:631-635 `GraphRulesCollection.slugs()`, `violations()`, `failed_slugs()`, `passing_slugs()`: they take no parameters and are derived from state, so they should be properties.
+- kanban-model.md:631 `GraphRulesCollection.slugs()` (lines 631-635), `violations()`, `failed_slugs()`, `passing_slugs()`: they take no parameters and are derived from state, so they should be properties.
 - kanban-model.md:656 `GraphRule.failing()`: also derived and parameterless, so it should be a property.
 - kanban-model.md:98 `Board.wip_limit(stage)`: it duplicates `Stage.wip_limit` (:146), which is already a property.
 
@@ -262,9 +262,9 @@ Evaluate the current context against this rule (one-canonical-model-document):
 - kanban-model.md:260 `Ticket.report -> Graph.write_json`: the ticket talks to the graph directly, bypassing the session that owns the practice graphs (:454).
 
 ### `no-redundant-relationship-paths` — Fail
-- kanban-model.md:71-72 `Board.repo_root` and `Board.repo`: `Repo.root` (:343) already gives the root.
+- kanban-model.md:71 `Board.repo_root` and `Board.repo` (lines 71-72): `Repo.root` (:343) already gives the root.
 - kanban-model.md:74 `Board.practices`, :135 `Stage.practices`, :180 `Ticket.practices`: three paths to the practices.
-- kanban-model.md:277-278 `FidelityProgress.stage` and `practice`: the fidelity already knows its stage (:512) and its practice.
+- kanban-model.md:277 `FidelityProgress.stage` and `practice` (lines 277-278): the fidelity already knows its stage (:512) and its practice.
 - kanban-model.md:175 `Ticket.name`, :198 `root`: copies of what the session the ticket holds (:174) already says.
 
 ### `use-intention-revealing-names` — Fail

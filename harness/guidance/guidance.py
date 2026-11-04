@@ -186,6 +186,12 @@ class PracticeGuidance(Guidance):
         """Shared rules as a collection."""
 
     @property
+    def key(self) -> str:
+        """The practice's folder name, such as `clean_engineering`: how session log action lines and session.json name
+        the practice."""
+        return Path(inspect.getfile(type(self))).parent.name
+
+    @property
     def context_index_key(self) -> str:
         return AssetLocator(self, "").class_file_directory().name
 

@@ -285,7 +285,7 @@ class GuidanceAction:
         if self.named_session:
             named = Path(self.named_session)
             named = named if named.is_absolute() else Path(session.repo_path or project_checkout()) / named
-            session = Session.at(named.parent, Path(session.repo_path or project_checkout()))
+            session = Session.load(named.parent, Path(session.repo_path or project_checkout()))
         if session.session_path is None:
             return ""
         session_json = Path(session.session_path) / "session.json"

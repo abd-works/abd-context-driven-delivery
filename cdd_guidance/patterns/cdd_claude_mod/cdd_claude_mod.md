@@ -150,7 +150,7 @@ This pattern answers the questions `patterns-lern-domain-driven` answers: where 
 | Layer | In the Kanban |
 |---|---|
 | Domain | `Board`, `Ticket`, `Stage`, `BacklogItem` over `Session`, `Repo`, `Graph` |
-| Tool | `ticket.move_next`, `ticket.move_previous`, `ticket.close`, `ticket.archive`, `ticket.new`, `board.show`, `backlog-item.start`, marked directly on `Ticket`, `Board`, and `BacklogItem`. `Ticket` holds a reference to its `Session`, which owns the session's files, so `Ticket.close` calls `Session.close` |
+| Tool | `ticket.move_next`, `ticket.move_previous`, `ticket.close`, `ticket.archive`, `ticket.create`, `board.show`, `backlog-item.start`, marked directly on `Ticket`, `Board`, and `BacklogItem`. `Ticket` holds a reference to its `Session`, which owns the session's files, so `Ticket.close` calls `Session.close` |
 | Generated | The `cdd` entry in `.mcp.json` and the `harness-kanban-*` skills |
 | Contract | `TicketData`, `BoardData`, `ColumnData` from the language adapter |
 | Client | `TicketClient` and its actions in `pane/hooks/kanban/ticket-client.ts`, `BoardClient` and its actions in `pane/hooks/kanban/board-client.ts` |

@@ -194,7 +194,7 @@ Observed: on generate, Run next sends the commands of `ticket.generate_commands`
 
 **Acceptance criteria:**
 
-- Name Next Fidelity: the button names the step that runs next. Observed: `Ticket.next`, `Ticket.next_action`.
+- Name Next Fidelity: the button names the step that runs next. Observed: `Ticket.next_fidelity`, `Ticket.next_action`.
 - Run next steps through generate, validate, and review for each practice in order. Observed: `Ticket.next_action`.
 - Run next holds on fix violations until they are fixed, and says "fix violations". Observed.
 
