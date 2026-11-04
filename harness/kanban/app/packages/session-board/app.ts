@@ -28,11 +28,10 @@ export function createApp(cdd: CddConnection, port: number, staticRoot: string):
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
-  // A cdd server keeps the code it started with, so a person restarts it to pick up changed Python. The next call starts
-  // a fresh one.
+  // The one cdd server keeps the code it started with, so a person restarts it to pick up changed Python. It reloads in
+  // place, so every chat connected to it gets the new code too.
   app.post('/api/cdd/restart', async (_request, response) => {
-    await cdd.close()
-    response.json({ is_restarted: true })
+    response.json(await cdd.call<{ is_restarted: boolean }>('cdd.restart', {}))
   })
   // The built page names its hashed script, so the text of index.html changes with every build. An open page compares it
   // with the build it loaded and reloads itself on a new one.

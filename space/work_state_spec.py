@@ -5,6 +5,7 @@ import shutil
 import stat
 import sys
 import tempfile
+import threading
 from pathlib import Path
 
 from expects import equal, expect
@@ -14,7 +15,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from space.work_state import WorkState
+from space.work_state import WorkState, project_checkout, working_on
 
 
 with description("a repo's work state"):
@@ -55,3 +56,44 @@ with description("a repo's work state"):
                 expect(WorkState(self.root).release_folder("main-release")).to(
                     equal(self.root.resolve() / ".sessions" / "main-release")
                 )
+
+
+with description("the project being worked on"):
+    with before.each:
+        self.first = Path(tempfile.mkdtemp())
+        self.second = Path(tempfile.mkdtemp())
+        for project in (self.first, self.second):
+            (project / ".git").mkdir()
+            (project / "docs").mkdir()
+
+    with after.each:
+        shutil.rmtree(self.first, ignore_errors=True)
+        shutil.rmtree(self.second, ignore_errors=True)
+
+    with context("that a call names a folder inside a project"):
+        with it("should be the checkout holding that folder"):
+            with working_on(self.first / "docs"):
+                expect(project_checkout()).to(equal(self.first.resolve()))
+
+    with context("that the call has finished"):
+        with it("should no longer be the project that call named"):
+            with working_on(self.first):
+                pass
+            expect(project_checkout()).not_to(equal(self.first.resolve()))
+
+    with context("that two calls work on different projects at the same time"):
+        with it("should give each call its own project"):
+            seen: dict[str, Path] = {}
+            both_inside = threading.Barrier(2)
+
+            def look(name: str, project: Path) -> None:
+                with working_on(project):
+                    both_inside.wait(timeout=5)
+                    seen[name] = project_checkout()
+
+            calls = [threading.Thread(target=look, args=item) for item in (("first", self.first), ("second", self.second))]
+            for call in calls:
+                call.start()
+            for call in calls:
+                call.join()
+            expect(seen).to(equal({"first": self.first.resolve(), "second": self.second.resolve()}))

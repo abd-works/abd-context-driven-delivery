@@ -20,7 +20,8 @@ from mamba import after, before, context, description, it
 
 from harness.installation.installer import Installer
 from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
-from harness.mcp.mcp_server import HostPid, McpHost, McpInstallation
+from harness.mcp.mcp_daemon import McpDaemon
+from harness.mcp.mcp_server import McpHost, McpInstallation
 from harness.mcp.spec_support import UserHome
 from cdd_guidance.actions.iterate.iterate import Iterate
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
@@ -29,6 +30,7 @@ from harness.mcp._examples.illegitimate_name.illegitimate_name import (
 )
 from space.repo.repo import Commit, DefaultBranchError
 from space.session import Session
+from space.work_state import working_on
 
 
 def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":
@@ -324,17 +326,17 @@ with description("an MCP host input schema"):
 with description("an MCP host tool result") as self:
     with context("that is a named session"):
         with before.each:
-            Session._current = None
+            Session.forget_current()
             self.repo = Path(tempfile.mkdtemp())
             self.work = self.repo / "work"
             self.work.mkdir()
             Session.new("alpha", self.work, self.repo)
             self.host = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo))
-            self.blocks = self.host._content_blocks(Session.current())
+            self.blocks = self.host._content_blocks(Session.current(self.repo))
             self.payload = json.loads(self.blocks[0].text)
 
         with after.each:
-            Session._current = None
+            Session.forget_current()
 
         with it("should expose the session name as JSON"):
             expect(self.payload["name"]).to(equal("alpha"))
@@ -365,24 +367,9 @@ with description("an MCP host tool result") as self:
 
 
 with description("an MCP host") as self:
-    with context("whose stdio session has crashed"):
+    with context("that has stood up over this checkout's toolsets"):
         with before.each:
-            self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
-            self.sessions = []
-
-            async def crash_once():
-                self.sessions.append("started")
-                if len(self.sessions) == 1:
-                    raise RuntimeError("stdio session crashed")
-
-            self.host.run_stdio = crash_once
-
-        with it("should end the process so the client opens a new connection"):
-            expect(self.host.run).to(raise_error(RuntimeError))
-
-    with context("that has stood up without a manifest file"):
-        with before.each:
-            self.host = McpHost.standup(Path("no-such-mcp.json"), repo=_REPO_ROOT)
+            self.host = McpHost.standup(repo=_REPO_ROOT)
 
         with it("should answer ping with pong"):
             expect(self.host.diagnose()["ping"]).to(equal("pong"))
@@ -438,7 +425,7 @@ with description("an MCP host") as self:
                 )
                 expect(str(result)).not_to(equal(""))
             finally:
-                Session._current = None
+                Session.forget_current()
                 shutil.rmtree(repo, ignore_errors=True)
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):
@@ -487,7 +474,7 @@ with description("an MCP host") as self:
             self._tmp = tempfile.mkdtemp()
             self.tree = Path(self._tmp)
             Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
-            self.host = McpHost.standup(self.tree / "mcp.json", repo=_REPO_ROOT)
+            self.host = McpHost.standup(repo=_REPO_ROOT)
 
         with after.each:
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -495,8 +482,41 @@ with description("an MCP host") as self:
         with it("should enroll published operations by collecting the repo"):
             expect(self.host.diagnose()["tools"]).to(contain("generate.generate"))
 
-        with it("should not bake toolset refs into mcp.json"):
-            expect(self.host.refs_from_manifest(self.tree / "mcp.json")).to(equal(()))
+        with it("should name the server by its URL, with no command or toolsets to start"):
+            entry = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]["cdd"]
+            expect(sorted(entry)).to(equal(["headers", "url"]))
+
+    with context("that is serving two projects"):
+        with before.each:
+            self.host = McpHost.from_refs(
+                ("harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo",),
+                repo=str(_REPO_ROOT),
+                project=str(_REPO_ROOT),
+            )
+            self.first = Path(tempfile.mkdtemp(prefix="mcp-host-first-"))
+            self.second = Path(tempfile.mkdtemp(prefix="mcp-host-second-"))
+            with working_on(self.first):
+                self.host.dispatch("hosting-demo.increment", {"step": 3})
+
+        with after.each:
+            shutil.rmtree(self.first, ignore_errors=True)
+            shutil.rmtree(self.second, ignore_errors=True)
+
+        with it("should keep one project's toolset state for that project"):
+            with working_on(self.first):
+                expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(3))
+
+        with it("should start the other project's toolsets fresh"):
+            with working_on(self.second):
+                expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
+
+        with context("that has been restarted"):
+            with before.each:
+                self.host.dispatch("cdd.restart", {})
+
+            with it("should start every project's toolsets again on the code as it is now"):
+                with working_on(self.first):
+                    expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
 
 
 with description("an MCP host tool ping") as self:
@@ -556,13 +576,11 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with it("should keep the user's other servers"):
             expect("miro-mcp" in self.servers).to(equal(True))
 
-        with it("should name the open project rather than this checkout"):
-            expect(self.servers["cdd"]["cwd"]).to(equal("."))
-            expect(self.servers["cdd"]["env"]["CDD_PROJECT"]).to(equal("."))
+        with it("should point at the one cdd server"):
+            expect(self.servers["cdd"]["url"]).to(equal(McpDaemon().url))
 
-        with it("should keep the host pid beside the user config"):
-            expect(self.installation.pid_folder).to(equal(self.root / ".cursor"))
-            expect(self.servers["cdd"]["env"]["CDD_IDE_PATH"]).to(equal(str(self.root / ".cursor")))
+        with it("should name the open project on every request"):
+            expect(self.servers["cdd"]["headers"]).to(equal({"X-CDD-Project": "${workspaceFolder}"}))
 
     with context("for Claude Code"):
         with before.each:
@@ -579,12 +597,26 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with it("should keep Claude Code's own state in that file"):
             expect(self.data["projects"]).to(equal({"x": {}}))
 
-        with it("should leave out cwd, which Claude Code does not read"):
-            expect("cwd" in self.data["mcpServers"]["cdd"]).to(equal(False))
-            expect(self.data["mcpServers"]["cdd"]["env"]["CDD_PROJECT"]).to(equal("."))
+        with it("should point at the one cdd server over HTTP"):
+            expect(self.data["mcpServers"]["cdd"]["url"]).to(equal(McpDaemon().url))
 
-        with it("should pin the installed checkout, whichever project is open"):
-            expect(self.data["mcpServers"]["cdd"]["env"]["CDD_REPO"]).to(equal(str(_REPO_ROOT)))
+        with it("should name the chat's folder through the connect script in ~/.cdd"):
+            expect(self.data["mcpServers"]["cdd"]["headersHelper"]).to(contain(str(self.root / ".cdd" / "connect.py")))
+
+        with it("should name no checkout, so every chat talks to the same server"):
+            expect(sorted(self.data["mcpServers"]["cdd"])).to(equal(["headersHelper", "type", "url"]))
+
+        with context("that is installed again from another checkout"):
+            with before.each:
+                self.written = self.config.read_text(encoding="utf-8")
+                again = McpInstallation("Claude", self.root / "other" / ".claude", repo=self.root / "other")
+                again._is_temp_path = lambda path: False
+                for tool in SampleMcpOps().tools.values():
+                    again.record_operation(tool)
+                again.write_mcp_manifest()
+
+            with it("should leave ~/.claude.json as it was, so open chats keep their connection"):
+                expect(self.config.read_text(encoding="utf-8")).to(equal(self.written))
 
         with context("with a cdd server in the project's .mcp.json"):
             with before.each:
@@ -608,9 +640,6 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 self.installation.write_mcp_manifest()
                 saved = json.loads(self.project_config.read_text(encoding="utf-8"))
                 expect(saved).to(equal({"mcpServers": {"other": {"command": "other"}}}))
-
-        with it("should keep the host pid in ~/.claude"):
-            expect(self.installation.pid_folder).to(equal(self.root / ".claude"))
 
         with it("should allow the cdd tools in ~/.claude/settings.json"):
             settings = json.loads((self.root / ".claude" / "settings.json").read_text(encoding="utf-8"))
@@ -641,118 +670,22 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with it("should write the cdd server under servers in the user mcp.json"):
             expect(self.installation.manifest_path).to(equal(self.config))
             servers = json.loads(self.config.read_text(encoding="utf-8"))["servers"]
-            expect(servers["cdd"]["env"]["CDD_PROJECT"]).to(equal("${workspaceFolder}"))
+            expect(servers["cdd"]["headers"]).to(equal({"X-CDD-Project": "${workspaceFolder}"}))
 
     with context("into a temp install tree"):
+        with before.each:
+            self.tree = Path(tempfile.mkdtemp())
+            self.installation = McpInstallation("Cursor", self.tree, repo=_REPO_ROOT)
+            for tool in SampleMcpOps().tools.values():
+                self.installation.record_operation(tool)
+            self.installation.write_mcp_manifest()
+
+        with after.each:
+            shutil.rmtree(self.tree, ignore_errors=True)
+
         with it("should keep mcp.json in that tree"):
-            tree = Path(tempfile.mkdtemp())
-            try:
-                installation = McpInstallation("Cursor", tree, repo=_REPO_ROOT)
-                expect(installation.manifest_path).to(equal(tree / "mcp.json"))
-                expect(installation.pid_folder).to(equal(tree))
-            finally:
-                shutil.rmtree(tree, ignore_errors=True)
+            expect(self.installation.manifest_path).to(equal(self.tree / "mcp.json"))
 
-
-with description("an MCP host Cursor has stopped spawning") as self:
-    with before.each:
-        self._user_mcp = Path.home() / ".cursor" / "mcp.json"
-        self._user_mcp_before = (
-            self._user_mcp.read_text(encoding="utf-8") if self._user_mcp.is_file() else None
-        )
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-        Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install([SampleMcpOps()])
-        self.mcp = McpInstallation("Cursor", self.tree, repo=_REPO_ROOT)
-        nudge = self.tree / "mcp-host-nudge"
-        if nudge.is_file():
-            nudge.unlink()
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("with no live host process"):
-        with it("should rewrite mcp.json so Cursor respawns stdio"):
-            expect(self.mcp.ensure_cursor_host()).to(equal("nudged"))
-
-        with it("should bump the project mcp.json Cursor reads from the repo"):
-            self.mcp.ensure_cursor_host()
-            expect((self.tree / "mcp.json").read_text(encoding="utf-8")).to(
-                contain("CDD_HOST_NUDGE")
-            )
-
-        with it("should leave the user Cursor mcp.json unchanged"):
-            self.mcp.ensure_cursor_host()
-            after = (
-                self._user_mcp.read_text(encoding="utf-8")
-                if self._user_mcp.is_file()
-                else None
-            )
-            expect(after).to(equal(self._user_mcp_before))
-
-    with context("with a live host process"):
-        with before.each:
-            (self.tree / "mcp-host.pid").write_text(str(os.getpid()), encoding="utf-8")
-
-        with it("should leave the running host alone"):
-            expect(self.mcp.ensure_cursor_host()).to(equal("running"))
-
-
-with description("the MCP host pid file") as self:
-    with before.each:
-        self._tmp = tempfile.mkdtemp()
-        self.tree = Path(self._tmp)
-
-    with after.each:
-        shutil.rmtree(self._tmp, ignore_errors=True)
-
-    with context("that names the process reading it"):
-        with before.each:
-            (self.tree / "mcp-host.pid").write_text(str(os.getpid()), encoding="utf-8")
-
-        with it("should report that reader as the host itself"):
-            expect(HostPid.from_ide(self.tree).is_this_process).to(equal(True))
-
-    with context("that names a different process"):
-        with before.each:
-            (self.tree / "mcp-host.pid").write_text(str(os.getppid()), encoding="utf-8")
-
-        with it("should report the reader as a process other than the host"):
-            expect(HostPid.from_ide(self.tree).is_this_process).to(equal(False))
-
-    with context("that already names a live host when another host claims it"):
-        with before.each:
-            (self.tree / "mcp-host.pid").write_text(str(os.getppid()), encoding="utf-8")
-            HostPid.from_ide(self.tree).claim()
-
-        with after.each:
-            os.environ.pop("CDD_MCP_HOST_PID", None)
-
-        with it("should keep naming the host that was already serving"):
-            recorded = (self.tree / "mcp-host.pid").read_text(encoding="utf-8").strip()
-            expect(recorded).to(equal(str(os.getppid())))
-
-    with context("that a sibling host has deleted after this process claimed it"):
-        with before.each:
-            self.host_pid = HostPid.from_ide(self.tree)
-            self.host_pid.claim()
-            (self.tree / "mcp-host.pid").unlink()
-
-        with after.each:
-            os.environ.pop("CDD_MCP_HOST_PID", None)
-
-        with it("should still report the claiming process as the host itself"):
-            expect(self.host_pid.is_this_process).to(equal(True))
-
-    with context("that claimed the host after a sibling deleted its pid file"):
-        with before.each:
-            self.mcp = McpInstallation("Cursor", self.tree, repo=_REPO_ROOT)
-            HostPid.from_ide(self.tree).claim()
-            (self.tree / "mcp-host.pid").unlink()
-
-        with after.each:
-            os.environ.pop("CDD_MCP_HOST_PID", None)
-
-        with it("should report the MCP host as running for install standup"):
-            expect(self.mcp.cursor_host_is_running()).to(equal(True))
-
+        with it("should name that tree as the project"):
+            entry = json.loads((self.tree / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]["cdd"]
+            expect(entry["headers"]).to(equal({"X-CDD-Project": str(self.tree.resolve())}))

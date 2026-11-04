@@ -54,7 +54,7 @@ def main() -> int:
     transcript = Path(args.transcript).resolve()
     line_numbers = _transcript_line_count(transcript)
     workpath = _REPO / "space"
-    Session._current = None
+    Session.forget_current()
     Session.switch(args.session, workpath=workpath, repo_path=_REPO)
     session = Session.current()
 

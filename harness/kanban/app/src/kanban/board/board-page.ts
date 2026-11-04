@@ -79,15 +79,13 @@ export class BoardPage {
     return this.board.tickets.find(shown => shown.name === ticket)?.actionCommand(command) ?? command
   }
 
-  // Stops the board's cdd server and reads the board again, which starts a fresh one on the code as it is now, then asks
-  // every connected chat to restart its own.
+  // Restarts the one cdd server every chat and the board share on the code as it is now, then reads the board again.
   async restartCdd(): Promise<void> {
     const restarted = await this.api.post<{ is_restarted: boolean }>(CDD_RESTART_PATH)
     if (!restarted) return
     await Promise.all([this.reader.refresh(), this.chat.refresh()])
     if (this.store.state.serverFailure) return
     this.store.toast('cdd restarted on the current code')
-    await this.chat.restartCdd()
   }
 
   openNewTicket(): Promise<void> {

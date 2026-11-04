@@ -1,16 +1,11 @@
 """MCP tools diagnostics — ping and invoke workspace toolsets (space, harness, tools)."""
 import asyncio
 import json
-import os
 import shutil
 import sys
 import tempfile
 import time
-from datetime import timedelta
 from pathlib import Path
-
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -25,6 +20,7 @@ from mamba import description, it
 
 from harness.agent_tools.agent_tools_diagnostics import AgentToolsDiagnostics
 from harness.mcp.mcp_server import McpHost, McpOperationDefinition
+from harness.mcp.spec_support import SpecServer
 from harness.agent_tools.agent_tools_probe import (
     AGENT_TOOLS_PROBE_SECTION,
     agent_tools_toolset_ref,
@@ -35,42 +31,24 @@ from harness.agent_tools.agent_tools_probe import (
 _AGENT_TOOLS_DIAGNOSTICS_REF = (
     "harness.agent_tools.agent_tools_diagnostics:AgentToolsDiagnostics"
 )
-_VENV_PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
-_PYTHON = _VENV_PYTHON if _VENV_PYTHON.is_file() else Path(sys.executable)
+_DIAGNOSTICS_SECONDS = 150
 
 
-def _stdio_params(toolsets: str) -> StdioServerParameters:
-    return StdioServerParameters(
-        command=str(_PYTHON),
-        args=["-m", "harness.mcp", "--toolsets", toolsets],
-        cwd=str(_REPO_ROOT),
-        env={
-            **os.environ,
-            "PYTHONPYCACHEPREFIX": str(_REPO_ROOT / ".pycache"),
-            "CDD_REPO": str(_REPO_ROOT),
-            "CDD_PROJECT": str(_REPO_ROOT),
-        },
-    )
+def _call_agent_tools_diagnostics() -> tuple[float, str]:
+    """Run the diagnostics tool through a real cdd server, as a chat working on this checkout does."""
+    server = SpecServer((_AGENT_TOOLS_DIAGNOSTICS_REF,))
+    server.start()
+    try:
+        return asyncio.run(_timed_diagnostics(server))
+    finally:
+        server.stop()
 
 
-async def _call_agent_tools_diagnostics_stdio() -> tuple[float, str]:
-    async with stdio_client(_stdio_params(_AGENT_TOOLS_DIAGNOSTICS_REF)) as (
-        read_stream,
-        write_stream,
-    ):
-        async with ClientSession(
-            read_stream,
-            write_stream,
-            read_timeout_seconds=timedelta(seconds=150),
-        ) as session:
-            await session.initialize()
-            started = time.perf_counter()
-            result = await session.call_tool(
-                "agent-tools-diagnostics.agent_tools_diagnostics",
-                arguments={},
-            )
-            elapsed = time.perf_counter() - started
-            return elapsed, result.content[0].text
+async def _timed_diagnostics(server: SpecServer) -> tuple[float, str]:
+    async with server.chat(_REPO_ROOT, _DIAGNOSTICS_SECONDS) as session:
+        started = time.perf_counter()
+        result = await session.call_tool("agent-tools-diagnostics.agent_tools_diagnostics", arguments={})
+        return time.perf_counter() - started, result.content[0].text
 
 
 def _installer(
@@ -120,11 +98,10 @@ with description("mcp tools diagnostics"):
         expect(tool.kind).to(equal("tool"))
         expect(McpOperationDefinition.from_tool(tool).kind).to(equal("tool"))
 
-    with it("should complete agent-tools-diagnostics over stdio MCP within two minutes"):
-        elapsed, text = asyncio.run(_call_agent_tools_diagnostics_stdio())
+    with it("should complete agent-tools-diagnostics through the cdd server within two minutes"):
+        elapsed, text = _call_agent_tools_diagnostics()
         expect(elapsed < 120.0).to(equal(True))
         expect("green" in text.split("\n")[0]).to(equal(True))
-        expect("deferred on the stdio host" in text).to(equal(False))
         expect("invoke:" in text).to(equal(True))
 
     with it("should never publish nested diagnostics tools as workspace probe targets"):

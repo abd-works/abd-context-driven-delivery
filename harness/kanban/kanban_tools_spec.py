@@ -144,11 +144,11 @@ class ProjectTools:
 
 with description("the board tools") as self:
     with before.each:
-        Session._current = None
+        Session.forget_current()
         self.project = ProjectTools()
 
     with after.each:
-        Session._current = None
+        Session.forget_current()
         os.environ.pop("CDD_PROJECT", None)
 
     # (E) See Work On Session Board

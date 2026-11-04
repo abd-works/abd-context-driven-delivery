@@ -1,16 +1,16 @@
 """MCP mark, install, and runtime — one destination packager."""
 from __future__ import annotations
 
-import atexit
 import importlib
 import inspect
 import json
 import logging
 import os
 import re
+import socket
 import sys
 import tempfile
-import time
+import threading
 import types as py_types
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -21,27 +21,22 @@ import anyio
 import mcp.types as types
 from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
-from mcp.server.stdio import stdio_server
 
 from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
 from harness.installation.destination import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
-# Reloads the host's Python in place, so a chat picks up changed code without a new connection.
+# Reloads the server's Python in place, so every chat picks up changed code without a new connection.
 BUILTIN_RESTART_TOOL = "cdd.restart"
 # Workspace diagnostics call ``serving_mcp_host().dispatch`` for many tools; that path
-# must not run on an anyio worker thread (deadlock / multi-minute stalls under stdio).
+# must not run on an anyio worker thread (deadlock / multi-minute stalls).
 _SYNC_DISPATCH_TOOLS = frozenset(
     {
         "agent-tools-diagnostics.agent_tools_diagnostics",
         "guidance-diagnostics.guidance_diagnostics",
     }
 )
-HOST_PID_NAME = "mcp-host.pid"
-NUDGE_NAME = "mcp-host-nudge"
-NUDGE_MIN_SECONDS = 5.0
-HOST_PROCESS_ENV = "CDD_MCP_HOST_PID"
 _CALL_TIMEOUT_SECONDS = 10
 # First graph builds walk the repo; cache hits must still finish under the default.
 _LONG_CALL_TIMEOUT_SECONDS = {
@@ -60,7 +55,7 @@ _UNION_ORIGINS = {Union, py_types.UnionType}
 
 
 def serving_mcp_host() -> Any:
-    """The stdio ``McpHost`` currently serving MCP requests in this process, if any."""
+    """The ``McpHost`` currently serving MCP requests in this process, if any."""
     return _SERVING_MCP_HOST
 _ARRAY_ORIGINS = {list, tuple, Sequence}
 _OBJECT_ORIGINS = {dict, Mapping}
@@ -79,239 +74,6 @@ class Mcp(Destination):
 
 mcp = Mcp
 
-
-class HostPid:
-    """The MCP host pid file under an IDE path."""
-
-    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-
-    def __init__(self, pid_file: Path | str) -> None:
-        self._path = Path(pid_file)
-
-    @classmethod
-    def from_ide(cls, ide_path: Path | str) -> HostPid:
-        return cls(Path(ide_path) / HOST_PID_NAME)
-
-    def is_running(self) -> bool:
-        pid = self._read_pid()
-        if pid is None:
-            return False
-        return self._process_is_running(pid)
-
-    @property
-    def is_this_process(self) -> bool:
-        """A sibling host can delete the pid file, so a serving host trusts its own mark."""
-        if os.environ.get(HOST_PROCESS_ENV) == str(os.getpid()):
-            return True
-        return self._read_pid() == os.getpid()
-
-    def claim(self) -> None:
-        """Leave a live host's claim alone — taking it over means this process's exit
-        erases the record of a host that is still serving."""
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        os.environ[HOST_PROCESS_ENV] = str(os.getpid())
-        if self.is_running():
-            return
-        self._path.write_text(str(os.getpid()), encoding="utf-8")
-        atexit.register(self._release_this_pid)
-
-    def release(self, pid: int | None = None) -> None:
-        expected = str(pid if pid is not None else os.getpid())
-        try:
-            if self._path.is_file() and self._path.read_text(encoding="utf-8").strip() == expected:
-                self._path.unlink()
-        except OSError:
-            return
-
-    def _release_this_pid(self) -> None:
-        self.release(os.getpid())
-
-    def _read_pid(self) -> int | None:
-        if not self._path.is_file():
-            return None
-        try:
-            pid = int(self._path.read_text(encoding="utf-8").strip())
-        except (OSError, ValueError):
-            return None
-        if pid <= 0:
-            return None
-        return pid
-
-    def _process_is_running(self, pid: int) -> bool:
-        if os.name == "nt":
-            return self._windows_process_is_running(pid)
-        return self._posix_process_is_running(pid)
-
-    def _windows_process_is_running(self, pid: int) -> bool:
-        import ctypes
-
-        handle = ctypes.windll.kernel32.OpenProcess(
-            self.PROCESS_QUERY_LIMITED_INFORMATION, False, pid
-        )
-        if not handle:
-            return False
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
-
-    def _posix_process_is_running(self, pid: int) -> bool:
-        try:
-            os.kill(pid, 0)
-        except PermissionError:
-            return True
-        except OSError:
-            return False
-        return True
-
-
-class CursorMcpJson:
-    """User- and project-level Cursor mcp.json entries for the CDD stdio host."""
-
-    def user_cursor_mcp_json(self) -> Path:
-        return Path.home() / ".cursor" / "mcp.json"
-
-    def cdd_stdio_names(self, servers: Mapping[str, Any]) -> list[str]:
-        names: list[str] = []
-        for name, spec in servers.items():
-            if not isinstance(spec, dict):
-                continue
-            blob = " ".join(str(item) for item in spec.get("args") or [])
-            if "start_host.py" not in blob and "harness.mcp" not in blob:
-                continue
-            if name == "cdd" or str(name).startswith("cdd"):
-                names.append(str(name))
-        return names
-
-    def server_identity(self, spec: Mapping[str, Any]) -> tuple:
-        env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
-        return (
-            spec.get("command"),
-            tuple(str(item) for item in spec.get("args") or []),
-            spec.get("cwd"),
-            tuple(sorted((key, env[key]) for key in env if key != "CDD_HOST_NUDGE")),
-        )
-
-    def start_host_script(self, spec: Mapping[str, Any]) -> Path | None:
-        for item in spec.get("args") or []:
-            text = str(item)
-            if text.endswith("start_host.py"):
-                return Path(text)
-        return None
-
-    def host_repo(self, spec: Mapping[str, Any]) -> str:
-        env = spec.get("env") if isinstance(spec.get("env"), dict) else {}
-        fallback = str(env.get("CDD_REPO") or spec.get("cwd") or "")
-        script = self.start_host_script(spec)
-        if script is None:
-            return fallback
-        try:
-            return str(script.resolve().parents[3])
-        except (IndexError, OSError) as error:
-            logger.debug("start_host script %s has no checkout parents: %s", script, error)
-            return fallback
-
-    def touch_mcp_manifest(self, path: Path, *, bump_env: bool = False) -> None:
-        if not path.is_file():
-            return
-        text = path.read_text(encoding="utf-8")
-        if "start_host.py" not in text and "harness.mcp" not in text:
-            return
-        if not bump_env:
-            path.write_text(text, encoding="utf-8")
-            return
-        self._rewrite_nudge(path, text)
-
-    def _rewrite_nudge(self, path: Path, text: str) -> None:
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError:
-            path.write_text(text, encoding="utf-8")
-            return
-        servers = data.get("mcpServers") or data.get("servers") or {}
-        if not self._nudge_cdd_servers(servers):
-            path.write_text(text, encoding="utf-8")
-            return
-        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-
-    def _nudge_cdd_servers(self, servers: Mapping[str, Any]) -> bool:
-        changed = False
-        for spec in servers.values():
-            if self._nudge_spec(spec):
-                changed = True
-        return changed
-
-    def _nudge_spec(self, spec: object) -> bool:
-        if not isinstance(spec, dict):
-            return False
-        blob = " ".join(str(item) for item in spec.get("args") or [])
-        if "start_host.py" not in blob and "harness.mcp" not in blob:
-            return False
-        env = spec.setdefault("env", {})
-        if not isinstance(env, dict):
-            return False
-        env["CDD_HOST_NUDGE"] = str(time.time())
-        return True
-
-    def sync_user_cursor_server(self, server: Mapping[str, Any], *, canonical: bool = False) -> bool:
-        """Point user-level Cursor mcp.json at this checkout. Returns True if rewritten.
-
-        A temp-path install must not replace a same-repo host (that is how SampleMcpOps
-        wiped the real tool list). Same-repo toolset updates require the repo ``.cursor``.
-        """
-        data = self._mcp_document(self.user_cursor_mcp_json())
-        if data is None:
-            if not canonical:
-                return False
-            data = {"mcpServers": {}}
-        servers = data["mcpServers"]
-        if not self.cdd_stdio_names(servers):
-            if not canonical:
-                return False
-            self._rewrite_user_cdd_server(data, server)
-            return True
-        if not canonical and self._same_repo_scripts_exist(servers, server):
-            return False
-        if self._user_host_matches(servers, server):
-            return False
-        self._rewrite_user_cdd_server(data, server)
-        return True
-
-    def _mcp_document(self, path: Path) -> dict[str, Any] | None:
-        if not path.is_file():
-            return None
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return None
-        if not isinstance(data.get("mcpServers"), dict):
-            return None
-        return data
-
-    def _same_repo_scripts_exist(self, servers: Mapping[str, Any], server: Mapping[str, Any]) -> bool:
-        this_repo = self.host_repo(server)
-        stale = self.cdd_stdio_names(servers)
-        if not any(self.host_repo(servers[name]) == this_repo for name in stale):
-            return False
-        scripts = [self.start_host_script(servers[name]) for name in stale]
-        return bool(scripts) and all(script is not None and script.is_file() for script in scripts)
-
-    def _user_host_matches(self, servers: Mapping[str, Any], server: Mapping[str, Any]) -> bool:
-        identity = self.server_identity(server)
-        return all(
-            self.server_identity(servers[name]) == identity
-            for name in self.cdd_stdio_names(servers)
-        )
-
-    def _rewrite_user_cdd_server(self, data: dict[str, Any], server: Mapping[str, Any]) -> None:
-        servers = data["mcpServers"]
-        for name in self.cdd_stdio_names(servers):
-            servers.pop(name, None)
-        spec = dict(server)
-        env = dict(spec.get("env") or {})
-        env["CDD_HOST_NUDGE"] = str(time.time())
-        spec["env"] = env
-        servers["cdd"] = spec
-        data["mcpServers"] = servers
-        self.user_cursor_mcp_json().write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 class McpStandupFailed(Exception):
     """The MCP host could not stand up or failed diagnose."""
@@ -389,7 +151,7 @@ class UserMcpConfig:
 
     @property
     def folder(self) -> Path | None:
-        """Holds the host pid and nudge; ``None`` for an IDE with no user-level MCP config."""
+        """The IDE's user settings folder; ``None`` for an IDE with no user-level MCP config."""
         if self.ide == "Cursor":
             return Path.home() / ".cursor"
         if self.ide == "Claude":
@@ -411,8 +173,8 @@ class UserMcpConfig:
 
     @property
     def project_folder(self) -> str:
-        """The open project as the IDE spells it inside a user-level server entry."""
-        return "${workspaceFolder}" if self.ide == "VS Code" else "."
+        """The open project as Cursor and VS Code spell it inside a user-level server entry."""
+        return "${workspaceFolder}"
 
     def _vscode_user_folder(self) -> Path:
         if sys.platform == "win32":
@@ -475,28 +237,21 @@ class McpInstallation(Installation):
             return self._project_root() / ".mcp.json"
         return self.path / "mcp.json"
 
-    @property
-    def pid_folder(self) -> Path:
-        """Where the serving host leaves its pid: beside the MCP config it was started from."""
-        user = self.user_config
-        return user.folder if user is not None else Path(self.path)
-
     def write_mcp_manifest(self) -> None:
         if not self.mcp_operations:
             return
         dest = self.manifest_path
         dest.parent.mkdir(parents=True, exist_ok=True)
-        manifest = self._stdio_manifest()
-        if self.ide == "Claude" or self.user_config is not None:
-            manifest = self._merged_with_other_servers(dest, manifest)
-        text = json.dumps(manifest, indent=2) + "\n"
         if self.ide == "Claude" and self.user_config is not None:
             self.allow_cdd_tools(self.user_config.folder / "settings.json")
             self.drop_project_cdd_server()
-        if dest.is_file() and dest.read_text(encoding="utf-8") == text:
+        manifest = self._server_manifest()
+        if self._has_cdd_entry(dest, manifest):
             self.track_write(dest)
             return
-        dest.write_text(text, encoding="utf-8")
+        if self.ide == "Claude" or self.user_config is not None:
+            manifest = self._merged_with_other_servers(dest, manifest)
+        dest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         self.track_write(dest)
 
     def allow_cdd_tools(self, settings: Path) -> None:
@@ -533,38 +288,35 @@ class McpInstallation(Installation):
         else:
             project_config.unlink()
 
-    def _stdio_manifest(self) -> dict[str, Any]:
-        from harness.installation.installer import Installer
+    def _server_manifest(self) -> dict[str, Any]:
+        """The one ``cdd`` entry: the shared server's URL plus how each request names its project. A user-level entry
+        serves every project, so it names the open one; a temp install tree names its own."""
+        from harness.mcp.mcp_daemon import PROJECT_HEADER, McpDaemon
 
-        repo = self.repo or Path(__file__).resolve().parents[2]
-        project = self._project_root()
-        host = repo / "harness" / "mcp" / "scripts" / "start_host.py"
-        server: dict[str, Any] = {
-            "type": "stdio",
-            "command": sys.executable,
-            "args": ["-u", str(host)],
-            "cwd": str(project),
-            "env": {
-                "PYTHONPATH": Installer(repo=repo).pythonpath(),
-                "PYTHONPYCACHEPREFIX": Installer(repo=repo).pycache_prefix(),
-                "PYTHONIOENCODING": "utf-8",
-                "CDD_PROJECT": str(project),
-            },
-        }
+        server: dict[str, Any] = {"type": "http", "url": McpDaemon().url}
         user = self.user_config
-        if user is not None:
-            # One user-level entry serves every project, so it names the open project, not this one,
-            # and pins the installed checkout: start_host would otherwise run the open checkout's code.
-            server["cwd"] = user.project_folder
-            server["env"]["CDD_REPO"] = str(repo)
-            server["env"]["CDD_PROJECT"] = user.project_folder
-            server["env"]["CDD_IDE_PATH"] = str(user.folder)
-        if self.ide == "Claude":
-            # Claude Code starts stdio servers from the project root and has no ``cwd`` field.
-            del server["cwd"]
-            server["env"].setdefault("CDD_IDE_PATH", str(Path(self.path).resolve()))
+        if user is None:
+            server["headers"] = {PROJECT_HEADER: str(self._project_root().resolve())}
+        elif self.ide == "Claude":
+            # Claude Code runs the helper in the chat's own folder before it connects, and sends what it prints.
+            server["headersHelper"] = f'"{self.server_home.python}" "{self.server_home.connect_script}"'
+        else:
+            server["headers"] = {PROJECT_HEADER: user.project_folder}
+        if self.ide == "Cursor":
+            del server["type"]
         key = user.servers_key if user is not None else "mcpServers"
         return {key: {"cdd": server}}
+
+    def _has_cdd_entry(self, dest: Path, manifest: dict[str, Any]) -> bool:
+        """Rewriting ``~/.claude.json`` makes Claude Code reconnect cdd in every open chat, so an entry already in
+        place is left alone."""
+        try:
+            existing = json.loads(dest.read_text(encoding="utf-8")) if dest.is_file() else {}
+        except (OSError, json.JSONDecodeError):
+            return False
+        key = next(iter(manifest))
+        servers = existing.get(key) if isinstance(existing, dict) else None
+        return isinstance(servers, dict) and servers.get("cdd") == manifest[key]["cdd"]
 
     def _merged_with_other_servers(self, dest: Path, manifest: dict[str, Any]) -> dict[str, Any]:
         """The MCP config is shared with other servers (and, in ``~/.claude.json``, the IDE's own
@@ -589,7 +341,7 @@ class McpInstallation(Installation):
             server.enroll(op)
 
     def standup(self) -> McpHost:
-        self.host = McpHost.standup(self.manifest_path, repo=self.repo)
+        self.host = McpHost.standup(repo=self.repo)
         return self.host
 
     def diagnose(self) -> dict[str, Any]:
@@ -597,46 +349,51 @@ class McpInstallation(Installation):
         self.diagnosis = host.diagnose()
         return self.diagnosis
 
-    def cursor_host_is_running(self) -> bool:
-        host_pid = HostPid.from_ide(self.pid_folder)
-        return host_pid.is_this_process or host_pid.is_running()
+    @property
+    def server_home(self) -> Any:
+        from harness.mcp.cdd_home import CddHome
 
-    def ensure_cursor_host(self) -> str:
-        if self.ide == "Claude":
-            # Claude Code launches the stdio host each session; touching .mcp.json would re-prompt approval.
-            return "managed by Claude Code" if self.manifest_path.is_file() else "missing"
-        manifest = self.manifest_path
-        spec = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo)).server_entry_from_manifest(
-            manifest
-        )
-        repo_cursor = (Path(self.repo) / ".cursor").resolve() if self.repo is not None else None
-        canonical = repo_cursor is not None and Path(self.path).resolve() == repo_cursor
-        cursor = CursorMcpJson()
-        if self.user_config is None and canonical and spec and cursor.sync_user_cursor_server(spec, canonical=True):
-            return self._restart_cursor_host(manifest, cursor)
-        if self.cursor_host_is_running():
-            return "running"
-        if not manifest.is_file():
-            return "missing"
-        nudge_file = self.pid_folder / NUDGE_NAME
-        now = time.time()
-        try:
-            last = float(nudge_file.read_text(encoding="utf-8").strip())
-        except (OSError, ValueError):
-            last = 0.0
-        if now - last < NUDGE_MIN_SECONDS:
-            return "waiting"
-        status = self._restart_cursor_host(manifest, cursor)
-        nudge_file.write_text(str(now), encoding="utf-8")
-        return status
+        return CddHome()
 
-    def _restart_cursor_host(self, manifest: Path, cursor: CursorMcpJson) -> str:
-        """Bumping the manifest relaunches the host, which drops any reply that host
-        still owes a caller, so the host leaves its own restart to a later standup."""
-        if HostPid.from_ide(self.pid_folder).is_this_process:
-            return "deferred"
-        cursor.touch_mcp_manifest(manifest, bump_env=True)
-        return "nudged"
+    @property
+    def connect_script(self) -> Path:
+        return Path(__file__).resolve().parent / "scripts" / "connect.py"
+
+    def ensure_server(self) -> str:
+        """Install ``~/.cdd/`` on first use and start the one server when none answers. An install that finds a
+        server already running leaves it, and the code it serves, alone."""
+        from harness.mcp.mcp_daemon import McpDaemon
+
+        self.server_home.install(self._checkout, self.connect_script)
+        return self._server_status(McpDaemon(self.server_home).ensure())
+
+    def pin_server(self) -> str:
+        """Serve this checkout's current commit from ``~/.cdd/runtime``, restarting the server onto it."""
+        from harness.mcp.mcp_daemon import McpDaemon
+
+        self.server_home.install(self._checkout, self.connect_script)
+        self.server_home.pin(self._checkout)
+        return self._server_status(McpDaemon(self.server_home).restart())
+
+    def serve_from_checkout(self) -> str:
+        """Serve this checkout as it is on disk, for working on CDD itself, restarting the server onto it."""
+        from harness.mcp.mcp_daemon import McpDaemon
+
+        self.server_home.install(self._checkout, self.connect_script)
+        self.server_home.serve_from(self._checkout)
+        return self._server_status(McpDaemon(self.server_home).restart())
+
+    def server_is_running(self) -> bool:
+        from harness.mcp.mcp_daemon import McpDaemon
+
+        return McpDaemon(self.server_home).is_running
+
+    @property
+    def _checkout(self) -> Path:
+        return Path(self.repo or Path(__file__).resolve().parents[2]).resolve()
+
+    def _server_status(self, ping: dict[str, Any]) -> str:
+        return f"running (pid {ping.get('pid')}, {self.server_home.mode} {ping.get('source')})"
 
 
 def _annotation_uses_path(annotation: object) -> bool:
@@ -673,10 +430,11 @@ def _coerce_mcp_arguments(
 
 
 def _active_mcp_project() -> Path | None:
-    host = _SERVING_MCP_HOST
-    if host is not None:
-        return host._runtime.project
-    return None
+    if _SERVING_MCP_HOST is None:
+        return None
+    from space.work_state import project_checkout
+
+    return project_checkout()
 
 
 def _log_mcp_operation_invocation(
@@ -901,6 +659,13 @@ class McpServer:
                     self.skip(toolset.registration_name, error)
         self._started = True
 
+    def for_project(self, project: Path) -> McpServer:
+        """A runtime with the same toolsets working on ``project``. Toolsets keep state between calls, so each project
+        gets objects of its own and one chat's work never shows up in another's."""
+        runtime = type(self)(repo=self.repo, project=project)
+        runtime.start(self._toolset_refs, constructor_context=self._constructor_context)
+        return runtime
+
     def restarted(self) -> McpServer:
         """A new runtime with the same toolsets, on the code as it is now. Every module from this checkout is imported
         again, this one included, because a toolset enrolled by the old loader would keep the old classes."""
@@ -956,13 +721,54 @@ class McpServer:
         return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
 
 
+class ProjectNotNamed(Exception):
+    """A tool call arrived without the ``X-CDD-Project`` header, so the server cannot tell which project it is for."""
+
+    def __init__(self, tool: str) -> None:
+        super().__init__(
+            f"{tool} was called without naming a project: this chat's cdd entry sends no X-CDD-Project header. "
+            "Run python scripts/install.py from a CDD checkout to write the entry again."
+        )
+        self.tool = tool
+
+
+class _CddProtocolServer(Server):
+    """The MCP protocol server, telling every client that a restart can change the tool list."""
+
+    def create_initialization_options(
+        self,
+        notification_options: NotificationOptions | None = None,
+        experimental_capabilities: dict[str, dict[str, Any]] | None = None,
+    ) -> InitializationOptions:
+        return super().create_initialization_options(
+            notification_options or NotificationOptions(tools_changed=True), experimental_capabilities
+        )
+
+
 class McpHost:
-    """stdio MCP process — one CDD runtime, many protocol requests."""
+    """The cdd server's MCP side: one set of toolsets for each project a chat works on, answering every chat."""
 
     def __init__(self, runtime: McpServer) -> None:
+        # New projects get their toolsets from this runtime; it also answers the tool list, which every project shares.
         self._runtime = runtime
-        self._server = Server("cdd")
+        self._runtimes: dict[Path, McpServer] = {runtime.project: runtime}
+        self._runtimes_lock = threading.Lock()
+        self._server = _CddProtocolServer("cdd")
         self._register_handlers()
+
+    def runtime_for(self, project: Path) -> McpServer:
+        """The toolsets working on ``project``, started the first time a call names it."""
+        with self._runtimes_lock:
+            runtime = self._runtimes.get(project)
+            if runtime is None:
+                runtime = self._runtime.for_project(project)
+                self._runtimes[project] = runtime
+            return runtime
+
+    @property
+    def projects(self) -> list[Path]:
+        with self._runtimes_lock:
+            return sorted(self._runtimes)
 
     def _bind_as_serving(self) -> None:
         global _SERVING_MCP_HOST
@@ -1180,8 +986,9 @@ class McpHost:
     ) -> list[types.TextContent]:
         try:
             resolved = self._runtime.resolve_call_name(name)
+            project = self._requested_project(resolved)
             if resolved in _SYNC_DISPATCH_TOOLS:
-                value = self.dispatch(name, arguments)
+                value = self._dispatch_reporting(name, arguments, None, project)
             else:
                 # Dispatch off the event loop. A synchronous tool call blocks
                 # stdin and stdout, and the client then waits until its timeout.
@@ -1193,7 +1000,7 @@ class McpHost:
                 try:
                     with anyio.fail_after(timeout):
                         value = await anyio.to_thread.run_sync(
-                            self._dispatch_reporting, name, arguments, reporter
+                            self._dispatch_reporting, name, arguments, reporter, project
                         )
                 except TimeoutError:
                     return self._content_blocks(
@@ -1230,13 +1037,36 @@ class McpHost:
 
         return report
 
-    def _dispatch_reporting(
-        self, name: str, arguments: dict[str, object] | None, reporter: Callable[[str], None] | None
-    ) -> object:
-        # Read from the module as it is now: a restart imports progress again, and tools report through the new one.
-        from harness.agent_tools.progress import reporting_to
+    def _requested_project(self, tool: str) -> Path | None:
+        """The project the calling chat works on, from its ``X-CDD-Project`` header. Only ``cdd.ping`` and
+        ``cdd.restart`` work without one; anything else would act on whichever folder the server started in."""
+        from harness.mcp.mcp_daemon import PROJECT_HEADER
 
-        with reporting_to(reporter):
+        try:
+            request = self._server.request_context.request
+        except LookupError:
+            request = None
+        named = request.headers.get(PROJECT_HEADER) if request is not None else None
+        if named:
+            return Path(named)
+        if tool in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
+            return None
+        raise ProjectNotNamed(tool)
+
+    def _dispatch_reporting(
+        self,
+        name: str,
+        arguments: dict[str, object] | None,
+        reporter: Callable[[str], None] | None,
+        project: Path | None,
+    ) -> object:
+        # Read both from the modules as they are now: a restart imports them again, and tools read the new ones.
+        from harness.agent_tools.progress import reporting_to
+        from space.work_state import working_on
+
+        if project is None:
+            return self.dispatch(name, arguments)
+        with working_on(project), reporting_to(reporter):
             return self.dispatch(name, arguments)
 
     def _mcp_tool(self, tool: McpTool) -> types.Tool:
@@ -1274,27 +1104,34 @@ class McpHost:
         )
 
     def dispatch(self, name: str, arguments: dict[str, object] | None = None) -> object:
-        """Run one tool call. A true ``ping`` argument answers without entering the tool."""
-        from space.session import Session
-        from space.session.chat_context import apply_chat_context, clear_chat_context, pop_chat_fields
-
-        Session.refresh_current_from_repo(self._runtime.project)
+        """Run one tool call on the project being worked on. A true ``ping`` argument answers without entering the
+        tool."""
         resolved = self._runtime.resolve_call_name(name)
+        if resolved == BUILTIN_PING_TOOL:
+            return self.ping()
+        if resolved == BUILTIN_RESTART_TOOL:
+            return self.restart()
+        return self._dispatch_on_project(resolved, arguments)
+
+    def _dispatch_on_project(self, resolved: str, arguments: dict[str, object] | None) -> object:
+        from space.session import Session
+        from space.session.chat_context import clear_chat_context, pop_chat_fields
+        from space.work_state import project_checkout
+
+        project = project_checkout()
+        runtime = self.runtime_for(project)
+        Session.refresh_current_from_repo(project)
         args = pop_chat_fields(arguments)
         try:
             if args.get("ping") is True:
                 if not self._enrolled(resolved):
                     raise KeyError(resolved)
                 return {"ping": "pong", "tool": resolved}
-            if resolved == BUILTIN_PING_TOOL:
-                return self.ping()
-            if resolved == BUILTIN_RESTART_TOOL:
-                return self.restart()
-            if resolved in self._runtime._prompts:
-                return self._runtime.invoke_prompt(resolved, args)
-            return self._runtime.invoke_tool(resolved, args)
+            if resolved in runtime.prompts:
+                return runtime.invoke_prompt(resolved, args)
+            return runtime.invoke_tool(resolved, args)
         except BaseException as failure:
-            Session.current().record_failure(failure, tool=resolved)
+            Session.current(project).record_failure(failure, tool=resolved)
             raise
         finally:
             clear_chat_context()
@@ -1319,42 +1156,54 @@ class McpHost:
             return str(value)
         raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
-    async def run_stdio(self) -> None:
-        init_options = InitializationOptions(
-            server_name="cdd",
-            server_version="0.1.0",
-            capabilities=self._server.get_capabilities(
-                notification_options=NotificationOptions(tools_changed=True),
-                experimental_capabilities={},
-            ),
-        )
+    def serve(self, daemon: Any, listener: socket.socket) -> None:
+        """Answer every chat over HTTP on ``listener``, which ``daemon`` claimed, until the process is stopped."""
+        import uvicorn
+
         self._bind_as_serving()
+        daemon.publish(self._runtime.repo)
         try:
-            async with stdio_server() as (read_stream, write_stream):
-                await self._server.run(
-                    read_stream,
-                    write_stream,
-                    init_options,
-                    raise_exceptions=False,
-                )
+            config = uvicorn.Config(self.http_app(daemon.port), log_level="warning")
+            uvicorn.Server(config).run(sockets=[listener])
         finally:
+            daemon.withdraw()
             self._unbind_as_serving()
 
-    def run(self) -> None:
-        try:
-            anyio.run(self.run_stdio)
-        except Exception:
-            # The client initializes a connection once, so a new session on this
-            # stdio refuses every call. Exiting closes the connection for the client.
-            logger.exception("MCP stdio host crashed; exiting")
-            raise
+    def http_app(self, port: int) -> Any:
+        """MCP over Streamable HTTP at ``/mcp`` and a ``/ping`` that says which pid and checkout are serving. Only this
+        machine's own clients get in: the Host must name this port, and a browser page's Origin is refused."""
+        from mcp.server.fastmcp.server import StreamableHTTPASGIApp
+        from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+        from mcp.server.transport_security import TransportSecuritySettings
+        from starlette.applications import Starlette
+        from starlette.responses import JSONResponse
+        from starlette.routing import Route
+
+        from harness.mcp.mcp_daemon import MCP_PATH, PING_PATH
+
+        security = TransportSecuritySettings(allowed_hosts=[f"127.0.0.1:{port}", f"localhost:{port}"], allowed_origins=[])
+        # A chat can sit idle for hours, so its session lives until the chat closes it.
+        manager = StreamableHTTPSessionManager(app=self._server, security_settings=security, session_idle_timeout=None)
+
+        async def ping(_request: Any) -> JSONResponse:
+            return JSONResponse(
+                {"ok": True, "pid": os.getpid(), "source": str(self._runtime.repo), "projects": [str(item) for item in self.projects]}
+            )
+
+        return Starlette(
+            routes=[Route(PING_PATH, ping), Route(MCP_PATH, endpoint=StreamableHTTPASGIApp(manager))],
+            lifespan=lambda _app: manager.run(),
+        )
 
     def ping(self) -> str:
         return "pong"
 
     def restart(self) -> dict[str, Any]:
-        """Swap in a runtime on the code as it is now. The connection, and this host object holding it, stay."""
+        """Swap in a runtime on the code as it is now, for every chat. Connections, and this host object holding them,
+        stay. Each project's toolsets start again on the new code the next time a call names it."""
         self._runtime = self._runtime.restarted()
+        with self._runtimes_lock:
+            self._runtimes = {self._runtime.project: self._runtime}
         sys.modules[__name__]._SERVING_MCP_HOST = self
         return {
             "is_restarted": True,
@@ -1397,74 +1246,13 @@ class McpHost:
         if text:
             print(text, file=sys.stderr)
 
-    def _arg_after(self, args: list[str], flag: str) -> str:
-        if flag not in args:
-            return ""
-        index = args.index(flag)
-        if index + 1 >= len(args):
-            return ""
-        return str(args[index + 1])
-
-    def server_key(self, repo: Path | str) -> str:
-        return "cdd"
-
-    def server_entry_from_manifest(
-        self, servers: Mapping[str, Any] | Path | str
-    ) -> dict[str, Any]:
-        raw = self._mcp_servers(servers)
-        if not isinstance(raw, Mapping):
-            return {}
-        preferred = raw.get("cdd")
-        if isinstance(preferred, dict) and preferred:
-            return preferred
-        named = self._named_cdd_server(raw)
-        if named:
-            return named
-        hosted = self._hosted_cdd_server(raw)
-        if hosted:
-            return hosted
-        first = next(iter(raw.values()), {})
-        return first if isinstance(first, dict) else {}
-
-    def _mcp_servers(self, servers: Mapping[str, Any] | Path | str) -> object:
-        if not isinstance(servers, (Path, str)):
-            return servers
-        path = Path(servers)
-        if not path.is_file():
-            return {}
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data.get("mcpServers") or data.get("servers") or {}
-
-    def _named_cdd_server(self, raw: Mapping[str, Any]) -> dict[str, Any]:
-        for name, spec in raw.items():
-            if isinstance(spec, dict) and str(name).startswith("cdd"):
-                return spec
-        return {}
-
-    def _hosted_cdd_server(self, raw: Mapping[str, Any]) -> dict[str, Any]:
-        for spec in raw.values():
-            if not isinstance(spec, dict):
-                continue
-            blob = " ".join(str(item) for item in spec.get("args") or [])
-            if "start_host.py" in blob or "harness.mcp" in blob:
-                return spec
-        return {}
-
-    def refs_from_manifest(self, manifest: Path | str) -> tuple[str, ...]:
-        args = [str(item) for item in self.server_entry_from_manifest(manifest).get("args") or []]
-        raw = self._arg_after(args, "--toolsets")
-        return tuple(ref.strip() for ref in raw.split(",") if ref.strip())
-
     @classmethod
-    def standup(cls, manifest: Path | str, *, repo: Path | str | None = None) -> McpHost:
-        resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
-        refs = cls.from_refs((), repo=str(resolved), project=str(resolved)).refs_from_manifest(
-            Path(manifest)
-        )
-        if not refs:
-            from harness.installation.installer import Installer
+    def standup(cls, *, repo: Path | str | None = None) -> McpHost:
+        """A host over every annotated toolset in ``repo``, in this process, to check it stands up."""
+        from harness.installation.installer import Installer
 
-            refs = tuple(Installer(repo=resolved).collect_toolsets())
+        resolved = Path(repo).resolve() if repo is not None else Path(__file__).resolve().parents[2]
+        refs = tuple(Installer(repo=resolved).collect_toolsets())
         try:
             return cls.from_refs(refs, repo=str(resolved), project=str(resolved))
         except Exception as error:

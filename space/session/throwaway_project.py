@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 from space.session.session import Session
+from space.work_state import working_on
 
 
 class ThrowawayProject:
@@ -19,13 +20,30 @@ class ThrowawayProject:
         self.root = Path(tempfile.mkdtemp(prefix="cdd-spec-project-"))
         self._saved = os.environ.get("CDD_PROJECT")
         os.environ["CDD_PROJECT"] = str(self.root)
-        Session._current = None
+        Session.forget_current()
 
     def close(self) -> None:
         """Name the project that was named before, and remove this one."""
-        Session._current = None
+        Session.forget_current()
         if self._saved is None:
             os.environ.pop("CDD_PROJECT", None)
         else:
             os.environ["CDD_PROJECT"] = self._saved
         shutil.rmtree(self.root, ignore_errors=True)
+
+
+class ProjectCall:
+    """A spec's calls on one project, made the way the cdd server makes a chat's calls: inside, the project being worked
+    on, and so the current session, is that project's. ``close_all`` ends every call still open, from an ``after.each``."""
+
+    _open: list[ProjectCall] = []
+
+    def __init__(self, project: Path | str) -> None:
+        self._call = working_on(project)
+        self._call.__enter__()
+        type(self)._open.append(self)
+
+    @classmethod
+    def close_all(cls) -> None:
+        while cls._open:
+            cls._open.pop()._call.__exit__(None, None, None)

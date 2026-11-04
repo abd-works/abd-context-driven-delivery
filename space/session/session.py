@@ -15,7 +15,7 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.installation.destination import language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
-from space.work_state import SESSIONS_FOLDER, WorkState, checkout_holding, project_checkout
+from space.work_state import SESSIONS_FOLDER, WorkState, checkout_holding, project_checkout, project_folder
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -206,12 +206,13 @@ _PRACTICE_TYPES = {
 @language_adapter(language="typescript")
 @agent_toolset
 class Session:
-    """Process session — one in-memory current; new and switch open named sessions."""
+    """Work session — one in-memory current for each project; new and switch open named sessions."""
 
     main_session = _MAIN_SESSION_NAME
     default_wip = 3
 
-    _current: Session | None = None
+    # One cdd server works on every chat's project, so each project keeps its own current session.
+    _current_by_project: dict[Path, Session] = {}
 
     def __init__(self, repo_root: Path | str | None = None) -> None:
         self._session_name = ""
@@ -269,21 +270,30 @@ class Session:
         return roots
 
     @classmethod
-    def _slot(cls) -> Session:
-        if cls._current is None:
-            cls._current = cls()
-        return cls._current
+    def _slot(cls, repo_path: Path | str | None = None) -> Session:
+        """The in-memory current session of ``repo_path``'s checkout, else of the project being worked on."""
+        repo = checkout_holding(repo_path) if repo_path is not None else project_checkout()
+        return cls._current_by_project.setdefault(repo, cls())
+
+    @classmethod
+    def forget_current(cls, repo_path: Path | str | None = None) -> None:
+        """Drop the in-memory current session of ``repo_path``'s checkout, or of every project when none is named, so
+        the next call reads ``.sessions/`` again. Naming the project leaves other chats' sessions as they are."""
+        if repo_path is None:
+            cls._current_by_project.clear()
+            return
+        cls._current_by_project.pop(checkout_holding(repo_path), None)
 
     @classmethod
     def refresh_current_from_repo(cls, repo_path: Path | str | None = None) -> None:
         """Reload in-memory session when repo ``.sessions/session.json`` current changed."""
-        slot = cls._slot()
-        repo = slot.repo_from_session(repo_path)
+        repo = checkout_holding(repo_path) if repo_path is not None else project_checkout()
+        slot = cls._slot(repo)
         saved = cls.active_name(repo)
         if slot.name == saved and slot.session_path is not None and slot.repo_path == repo:
             return
-        cls._current = None
-        session = cls._slot()
+        cls._current_by_project.pop(repo, None)
+        session = cls._slot(repo)
         session.repo_path = repo
         session.resolve(saved, repo if saved == _MAIN_SESSION_NAME else None, repo)
 
@@ -296,8 +306,7 @@ class Session:
     def current_folder(cls, repo_path: Path | str | None = None) -> Path:
         """``.sessions/{current}/`` on the project's checkout; ``.sessions/main/`` when none is named.
 
-        Reads the project (``repo_path``, else ``CDD_PROJECT``), not a session held in memory."""
-        slot = cls._slot()
+        Reads the project (``repo_path``, else the project being worked on), not a session held in memory."""
         repo = checkout_holding(repo_path) if repo_path is not None else project_checkout()
         return cls._session_folder(repo, cls.active_name(repo))
 
@@ -308,7 +317,7 @@ class Session:
     def current(cls, repo_path: Path | str | None = None) -> Session:
         """The session saved on the repo; the main session, which works on the whole repository, when none is named."""
         cls.refresh_current_from_repo(repo_path)
-        return cls._current
+        return cls._slot(repo_path)
 
     def repo_from_session(self, repo_path: Path | str | None = None) -> Path:
         """Repo that holds ``.sessions`` — the path already in hand, or the repo it sits in."""
@@ -327,7 +336,7 @@ class Session:
         if self.name and self.name != self.saved_current_session:
             return
         self.saved_current_session = _MAIN_SESSION_NAME
-        opened = type(self)._current
+        opened = type(self)._current_by_project.get(self.repo_path)
         if opened is not None and opened is not self:
             opened._forget()
         if opened is self or not self.name:
@@ -352,7 +361,7 @@ class Session:
 
         ``is_current`` False leaves the current session as it is, because a session a person opens for
         later, such as a board ticket, is not the one being worked on."""
-        session = cls._slot() if is_current else cls(repo_path)
+        session = cls._slot(repo_path) if is_current else cls(repo_path)
         session._bind_new(name, Path(workpath), Path(repo_path), fields or {}, is_current)
         return session.keep_log()
 
@@ -485,13 +494,13 @@ class Session:
 
         ``name`` defaults to ``session`` in ``.sessions/session.json``, then to the saved ``branch``.
         Saves ``name`` as ``session`` there. Does not touch branches or worktrees."""
-        slot = cls._slot()
         if repo_path is not None:
             repo = checkout_holding(repo_path)
         elif workpath is not None:
             repo = checkout_holding(workpath)
         else:
             repo = project_checkout()
+        slot = cls._slot(repo)
         wanted = cls._session_name(name, repo)
         folder = Path(session_path) if session_path is not None else cls._session_folder(repo, wanted)
         if not (folder / "session.json").is_file():
@@ -1149,10 +1158,7 @@ class Session:
         return folder
 
     def _env_workpath(self) -> Path:
-        named = os.environ.get("CDD_PROJECT")
-        if named:
-            return Path(named).resolve()
-        return Path.cwd().resolve()
+        return project_folder()
 
     def _opened_named(self, name: str) -> PracticeSessionOutput | None:
         for opened in self._opened:
@@ -1221,7 +1227,7 @@ class Session:
         Project ``.context/config.json`` ``practice_folders`` overrides the practice's
         ``default_workspace_folder`` (tests, src, …) with a workpath-relative path.
         """
-        base = self.workpath or self.repo_path or Path.cwd()
+        base = self.workpath or self.repo_path or project_folder()
         key = (practice or self._practice_key_for_instance(guidance) or "").strip()
         relative = self._project_default_folder(key)
         if relative is None:
@@ -1245,7 +1251,7 @@ class Session:
         practice = self._output_overrides().get(key, {})
         fidelity = practice.get(self._fidelity_name(guidance), {})
         chosen_root = fidelity.get("root") or practice.get("root") or self._project_default_folder(key)
-        root = (Path(self.workpath or self.repo_path or Path.cwd()) / (chosen_root or ".")).resolve()
+        root = (Path(self.workpath or self.repo_path or project_folder()) / (chosen_root or ".")).resolve()
         return {
             label: [self._output_path(root, name) for name in self._output_names(declared, fidelity.get(label))]
             for label, declared in current.outputs.items()

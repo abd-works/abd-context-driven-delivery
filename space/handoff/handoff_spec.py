@@ -32,7 +32,7 @@ def _restore_project(previous: str | None) -> None:
 def _open_session(root: Path, name: str = "my-session") -> Path:
     work = root / "work"
     work.mkdir(parents=True, exist_ok=True)
-    Session._current = None
+    Session.forget_current()
     Session.new(name, work, root)
     return work
 
@@ -73,12 +73,12 @@ with description("write_handoff"):
             self._prev_project = os.environ.get("CDD_PROJECT")
             os.environ["CDD_PROJECT"] = str(self.root)
             _save_current(self.root, "my-session")
-            Session._current = None
+            Session.forget_current()
             self.toolset = Handoff()
 
         with after.each:
             _restore_project(self._prev_project)
-            Session._current = None
+            Session.forget_current()
             self.tmp.cleanup()
 
         with it("should write a file named handoff-{timestamp}.md in that session's folder"):
@@ -124,12 +124,12 @@ with description("write_handoff"):
             self.root = Path(self.tmp.name)
             self._prev_project = os.environ.get("CDD_PROJECT")
             os.environ["CDD_PROJECT"] = str(self.root)
-            Session._current = None
+            Session.forget_current()
             self.toolset = Handoff()
 
         with after.each:
             _restore_project(self._prev_project)
-            Session._current = None
+            Session.forget_current()
             self.tmp.cleanup()
 
         with it("should write into the main session folder"):
@@ -148,13 +148,13 @@ with description("write_handoff"):
             self._prev_project = os.environ.pop("CDD_PROJECT", None)
             self._prev_cwd = Path.cwd()
             os.chdir(self.root)
-            Session._current = None
+            Session.forget_current()
             self.toolset = Handoff()
 
         with after.each:
             os.chdir(self._prev_cwd)
             _restore_project(self._prev_project)
-            Session._current = None
+            Session.forget_current()
             self.tmp.cleanup()
 
         with it("should write under the current working folder's main session"):

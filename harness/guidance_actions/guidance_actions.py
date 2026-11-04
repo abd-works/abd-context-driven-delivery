@@ -289,7 +289,7 @@ class GuidanceAction:
         if session.session_path is None:
             return ""
         session_json = Path(session.session_path) / "session.json"
-        root = Path(session.workpath or session.repo_path or Path.cwd()).resolve().as_posix()
+        root = Path(session.workpath or session.repo_path or project_checkout()).resolve().as_posix()
         project = Path(session.repo_path or project_checkout()).resolve().as_posix()
         practices = [item for item in self.listed() if not isinstance(item, str)]
         writes = [f"- {item.slug}: {session.practice_root(item).as_posix()}" for item in practices]

@@ -40,9 +40,9 @@ with description("GuidanceAction"):
         from harness.guidance_actions import GuidanceAction
         from space.session import Session
 
-        Session._current = None
+        Session.forget_current()
         warning = GuidanceAction().begin(action="sketch")
-        expect(Session._current is None or not Session._current.name).to(equal(True))
+        expect([session.name for session in Session._current_by_project.values() if session.name]).to(equal([]))
         expect(warning).to(equal(""))
 
     with it("should tell the agent to pass files and stop a call that stalls"):
@@ -157,21 +157,21 @@ with description("GuidanceAction"):
         (tmp / ".git").mkdir()
         work = tmp / "space"
         work.mkdir()
-        Session._current = None
+        Session.forget_current()
         Session.new("alpha", work, tmp)
-        session = Session.current()
+        session = Session.current(tmp)
         chats = session.session_path / "chats"
         chats.mkdir(parents=True, exist_ok=True)
         transcript = chats / "mcp-chat.md"
         transcript.write_text("mcp\n", encoding="utf-8")
-        Session._current = None
+        Session.forget_current()
         os.environ["CDD_REPO"] = str(tmp)
         os.environ["CDD_PROJECT"] = str(work)
         os.environ["CDD_CONVERSATION_ID"] = "mcp-chat"
         os.environ["CDD_TRANSCRIPT_PATH"] = str(transcript)
         os.environ["CDD_TRANSCRIPT_LINES"] = "1"
         McpServer(repo=tmp, project=work)
-        Session._current = None
+        Session.forget_current()
         log = tmp / ".sessions" / "alpha" / "session.log"
         log.write_text("", encoding="utf-8")
         GuidanceAction().run("probe", lambda item: None, action="generate")

@@ -1978,7 +1978,7 @@ class Repo:
         """Switch the main clone to a branch, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.switch_branch``."""
+        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.switch_branch``."""
         return ""
 
     @command(name="close-branch")
@@ -1987,7 +1987,7 @@ class Repo:
         """Close a branch: commit, push, merge into main, push main, delete the branch.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.close_branch``."""
+        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.close_branch``."""
         return ""
 
     @command(name="switch-worktree")
@@ -1996,7 +1996,7 @@ class Repo:
         """Open the sibling worktree for a branch other than main, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.switch_worktree``."""
+        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.switch_worktree``."""
         return ""
 
     @command(name="close-worktree")
@@ -2004,7 +2004,7 @@ class Repo:
     def close_worktree_command(self) -> str:
         """Close the open worktree: commit, push its branch, remove the folder. The branch stays open.
 
-        Pass ``repo_path`` as the project's clone (``CDD_PROJECT``, else the current working directory). Call MCP ``repo.close_worktree``."""
+        Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.close_worktree``."""
         return ""
 
     @agent_tool
@@ -2049,7 +2049,7 @@ class Repo:
 
         If the working tree is clean, say so and do not call ``repo.push_commit``.
         Otherwise call MCP ``repo.push_commit`` with the full message (subject plus body when useful)
-        and ``repo_path`` set to the project's checkout (``CDD_PROJECT``, else the current working directory).
+        and ``repo_path`` set to the project's checkout (the project the calling chat works on).
         """
         return ""
 

@@ -34,7 +34,7 @@ MESSAGE_STATES = (WAITING, TAKEN, SHOWN, DONE, FAILED)
 # The board shows a chat's latest messages; older ones are not worth keeping.
 KEPT_MESSAGES = 20
 
-CommandKind = Literal["submit", "fill", "command", "restart_cdd"]
+CommandKind = Literal["submit", "fill", "command"]
 MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
 T = TypeVar("T")
 
@@ -109,7 +109,7 @@ class Chat:
     @agent_tool
     @noSessionLog
     def send(self, kind: CommandKind, text: str) -> ChatData:
-        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, and restart_cdd restarts the chat's own cdd server on the code as it is now. A fill waits until the chat's turn has ended."""
+        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, and a command runs a slash command. A fill waits until the chat's turn has ended."""
         if not self.is_connected:
             raise ChatNotConnectedError(self.id)
         waiting = self._folder / WAITING

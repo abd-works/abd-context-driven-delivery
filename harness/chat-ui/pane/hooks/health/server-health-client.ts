@@ -131,17 +131,16 @@ async function recordAnswer($: EngineInterface, answer: Answer): Promise<void> {
   await update($, serverHealth, () => ({ ...answer, toolCount, attempt: 0 }))
 }
 
-// The python that runs cdd has what the install needs. The session's own checkout comes first, because
-// when tools are missing, cdd is running from a different checkout.
+// The python that runs the cdd server has what the install needs; ~/.cdd/runtime.json names it and the checkout the
+// server runs. The session's own checkout comes first, because it is the one the person is working on.
 async function installTarget($: EngineInterface): Promise<{ python: string; checkout: string }> {
-  const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
-  const config = JSON.parse(await $.fs.read(`${home}/.claude.json`)) as { mcpServers?: Record<string, { command: string; args: string[] }> }
-  const entry = config.mcpServers?.[SERVER]
+  const home = (await $.env.get('CDD_HOME')) ?? `${(await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))}/.cdd`
+  const runtimePath = `${home}/runtime.json`
+  const runtime = (await $.fs.exists(runtimePath)) ? (JSON.parse(await $.fs.read(runtimePath)) as { python?: string; source?: string }) : {}
   const cwd = await $.session.cwd()
-  const python = entry?.command ?? 'python'
+  const python = runtime.python ?? 'python'
   if (await $.fs.exists(`${cwd}/scripts/install.py`)) return { python, checkout: cwd }
-  const host = entry?.args.find(arg => arg.endsWith('start_host.py'))
-  return { python, checkout: host ? host.replace(/[\\/]harness[\\/]mcp[\\/].*$/, '') : cwd }
+  return { python, checkout: runtime.source ?? cwd }
 }
 
 const lastLines = (text: string): string => text.trim().split('\n').slice(-ERROR_LINES_SHOWN).join('\n')
