@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
 _LOAD_FILE_BUDGET = 40
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
+CONTEXT_FOLDER = ".context"
 _MAIN_SESSION_NAME = "main"
 _LEGACY_REPO_SESSIONS_DIR = "sessions"
 _CLOSED_FOLDER = "closed"
@@ -57,6 +58,19 @@ _TOOL_INPUT_PATH_KEYS = (
 def name_of(text: str) -> str:
     """The name a session, its folder, and its branch get: `Pet visits` is `pet-visits`, since git refuses a space in a branch name."""
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+class OutputRootInContextError(ValueError):
+    """A practice root was chosen inside a ``.context`` folder, which would put the practice's code among its documents
+    and its documents in a ``.context`` within a ``.context``."""
+
+    def __init__(self, practice: str, root: Path) -> None:
+        super().__init__(
+            f"{root} is inside a .context folder: choose the folder for {practice}'s code, "
+            "and its documents and diagrams go in that folder's .context"
+        )
+        self.practice = practice
+        self.root = root
 
 
 class SessionNameRequiredError(ValueError):
@@ -436,6 +450,9 @@ class Session:
 
     def choose_output_root(self, practice: str, root: Path) -> None:
         """Write ``practice``'s files under ``root``, kept in ``session.json`` relative to the workpath like any output override."""
+        # A root holds the practice's code; its documents and diagrams go in the root's own .context.
+        if CONTEXT_FOLDER in Path(root).parts:
+            raise OutputRootInContextError(practice, Path(root))
         outputs = dict(self.fields.get("outputs", {}))
         relative = os.path.relpath(Path(root).resolve(), Path(self.workpath or self.repo_path).resolve())
         outputs[practice] = {**outputs.get(practice, {}), "root": Path(relative).as_posix()}

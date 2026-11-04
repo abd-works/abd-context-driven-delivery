@@ -28,6 +28,23 @@ export const fixViolationPrompt = (rule: ReportRuleData, violation: ViolationDat
 
 export const fixRulePrompt = (rule: ReportRuleData): string => fixPrompt(rule, rule.violations)
 
+// Every violation in one message, grouped under its rule, so one command clears the whole report.
+export function fixReportPrompt(rules: ReportRuleData[]): string {
+  const count = rules.reduce((total, rule) => total + rule.violations.length, 0)
+  const slugs = [...new Set(rules.map(rule => guidanceSlug(rule.fidelity)))]
+  const sections = rules.flatMap(rule => [
+    '',
+    `${rule.name}: ${rule.description}`,
+    ...rule.violations.flatMap((violation, index) => ['', `${index + 1}. ${errorOf(violation).join('\n')}`]),
+  ])
+  return [
+    `Fix these ${count} violations of ${rules.length} rules.`,
+    ...sections,
+    '',
+    `Change each file so the content marked > follows its rule, and change nothing the errors do not name. Then validate ${slugs.join(' ')} on the files you changed.`,
+  ].join('\n')
+}
+
 // A report as the side panel reads it. ReportData has no generated class, because Python returns it as a plain result.
 export class ReportClient {
   constructor(private readonly data: ReportData) {}

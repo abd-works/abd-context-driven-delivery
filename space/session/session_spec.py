@@ -25,7 +25,7 @@ from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
 from harness.mcp.mcp_server import McpServer
 from space.session import Session
-from space.session.session import SessionNameRequiredError
+from space.session.session import OutputRootInContextError, SessionNameRequiredError
 from space.session.throwaway_project import ProjectCall
 from space.work_state import WorkState
 
@@ -898,6 +898,12 @@ with description("a practice"):
                 with it("should use that root"):
                     outputs = self.session.fidelity_outputs(self.guidance)
                     expect(outputs["markdown"]).to(equal([(self.work / "docs/stories/.context/story-map.md").resolve().as_posix()]))
+
+            with context("that a person chooses a .context folder as the practice's root"):
+                with it("should refuse it, since the practice's documents already go in its root's .context"):
+                    expect(lambda: self.session.choose_output_root("stories", self.work / ".context")).to(
+                        raise_error(OutputRootInContextError)
+                    )
 
             with context("with session.json naming a root folder for the fidelity too"):
                 with before.each:

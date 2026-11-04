@@ -28975,3 +28975,136 @@ Traceback (most recent call last):
 json.decoder.JSONDecodeError: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)
 2026-11-04T05:51:23Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
 2026-11-04T17:07:35Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T10:27:03Z chat.list JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1248, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 925, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 737, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 704, in _invoke_mcp_callable
+    return descriptor.__func__(owner, **args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 101, in list
+    return [chat.to_json() for chat in chats if chat.is_connected]
+                                                ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 186, in is_connected
+    return self.clock() - self._state.get("seen", 0) < CHAT_GONE_SECONDS
+                          ^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 196, in _state
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 356, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-11-04T10:27:03Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:42:49Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:46:17Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:46:56Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:46:59Z render.render ValueError: Unsupported format 'realization'. Choose from: ['claude_design', 'drawio', 'java', 'javascript', 'json', 'markdown', 'miro', 'python', 'sketch', 'typescript']
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 711, in _invoke_mcp_callable
+    return target(**args)
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\render\render.py", line 45, in render
+    converted = self.each(on)
+                ^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 228, in each
+    return [operation(item) for item in self.listed()]
+            ^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\render\render.py", line 42, in on
+    return item.render(format, payload, source=source, workspace=workspace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance\guidance.py", line 439, in render
+    target = self._live_adapter(format)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\practices\stories\stories.py", line 68, in _live_adapter
+    return super()._live_adapter(format_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance\guidance.py", line 513, in _live_adapter
+    adapter = self._format_adapter(format_name)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance\guidance.py", line 393, in _format_adapter
+    raise ValueError(
+ValueError: Unsupported format 'realization'. Choose from: ['claude_design', 'drawio', 'java', 'javascript', 'json', 'markdown', 'miro', 'python', 'sketch', 'typescript']
+2026-11-04T16:46:59Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:49:12Z chat.check_in PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\jeffa\\.claude\\cdd-chats\\394316d0-2b3a-4ac7-b543-89daaf09e4f7\\shown\\1793810790588522600.json' -> 'C:\\Users\\jeffa\\.claude\\cdd-chats\\394316d0-2b3a-4ac7-b543-89daaf09e4f7\\done\\1793810790588522600.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 138, in check_in
+    self._finish_worked_on(is_busy)
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 231, in _finish_worked_on
+    self._move(path, DONE)
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 246, in _move
+    path.replace(folder / path.name)
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1376, in replace
+    os.replace(self, target)
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\jeffa\\.claude\\cdd-chats\\394316d0-2b3a-4ac7-b543-89daaf09e4f7\\shown\\1793810790588522600.json' -> 'C:\\Users\\jeffa\\.claude\\cdd-chats\\394316d0-2b3a-4ac7-b543-89daaf09e4f7\\done\\1793810790588522600.json'
+2026-11-04T16:49:12Z chat.check_in PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\jeffa\\.claude\\cdd-chats\\394316d0-2b3a-4ac7-b543-89daaf09e4f7\\shown\\1793810790588522600.json' -> 'C:\\Users\\jeffa\\.claude\\cdd-chats\\394316d0-2b3a-4ac7-b543-89daaf09e4f7\\done\\1793810790588522600.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 138, in check_in
+    self._finish_worked_on(is_busy)
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 231, in _finish_worked_on
+    self._move(path, DONE)
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 246, in _move
+    path.replace(folder / path.name)
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1376, in replace
+    os.replace(self, target)
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\jeffa\\.claude\\cdd-chats\\394316d0-2b3a-4ac7-b543-89daaf09e4f7\\shown\\1793810790588522600.json' -> 'C:\\Users\\jeffa\\.claude\\cdd-chats\\394316d0-2b3a-4ac7-b543-89daaf09e4f7\\done\\1793810790588522600.json'
+2026-11-04T16:49:12Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:49:12Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:49:16Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:55:01Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:55:43Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:56:10Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:56:21Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T16:57:33Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:05:30Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

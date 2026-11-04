@@ -1,6 +1,6 @@
 # Scenario Realizations: Session Board
 
-Source: the `*_story.test.py` files under `move-work-forward-on-session-board/`, one per Story in its epic, sub-epic, and story folders, on `story-map.md`; domain terms link to `kanban-model.md`.
+Source: the `*_story.test.py` files under `harness/kanban/move-work-forward-on-session-board/`, one per Story in its epic, sub-epic, and story folders, on `story-map.md`; domain terms link to `kanban-model.md`.
 
 Each block traces the domain operations a When (or a Then that triggers a collaborator) runs: `->` is a call, `<-` its return.
 `Board page` is the board app in `harness/kanban/app`, `chat mod` is `harness/chat-ui/pane/hooks/register.ts`, and `Agent` is a Claude Code chat calling the cdd tools.
@@ -9,7 +9,7 @@ Each block traces the domain operations a When (or a Then that triggers a collab
 
 ## Open Board
 
-Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/open-board/open_board_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `../move-work-forward-on-session-board/see-work-on-session-board/open-board/open_board_story.test.py`
 
 ### Scenario: Open the board on a project
 
@@ -52,7 +52,7 @@ chat mod <- the board's address
 
 ## Display Board
 
-Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-board/display_board_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `../move-work-forward-on-session-board/see-work-on-session-board/display-board/display_board_story.test.py`
 
 ### Scenario: Draw the columns of the board
 
@@ -113,19 +113,20 @@ Board <- JSONDecodeError
 
 ### Scenario: Restart cdd on the current code
 
-Evidence: observed: board-client.spec 'that a person has restarted cdd' — 'should read the board again from a fresh cdd server', 'should say so in a toast'; board-page.ts restartCdd.
+Evidence: observed: board-client.spec 'that a person has restarted cdd' — 'should say so in a toast'; board-page.ts restartCdd; packages/session-board/app.ts /api/cdd/restart calls cdd.restart on the one cdd server every chat shares (main 4771a635).
 
 **Given** the band says the cdd server is lost
 
 **When** the Person restarts cdd
 
 ```realization
-Board page -> session board server: restart cdd  [External: cdd server]
+Board page -> session board server: restart cdd
+session board server -> cdd.restart()  [External: cdd server]
 Board page -> Board.show()
 Board page -> Chat.list()
 ```
 
-**Then** the session board shows the [board](kanban-model.md#board) read from a fresh cdd server
+**Then** the session board shows the [board](kanban-model.md#board) read again from the cdd server, reloaded on the current code
 
 **And** the band is gone
 
@@ -139,11 +140,11 @@ Evidence: observed: board-client.spec 'Refresh Board After Tool Calls' — 'shou
 
 **And** a read of the [board](kanban-model.md#board) is still waiting for its answer
 
-**When** another chat moves move-me into Discovery's Done and the session board reads the [board](kanban-model.md#board) again
+**And** another chat has moved move-me into Discovery's Done
+
+**When** the session board reads the [board](kanban-model.md#board) again
 
 ```realization
-Agent -> Ticket.move_to('Discovery', done=True)
-Ticket -> Ticket.record('done Discovery')
 Board page -> Board.show()
 Board <- move-me done in Discovery
 ```
@@ -188,7 +189,7 @@ Board <- stories-story_map done on billing-report
 
 ## Arrange Board And Details
 
-Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-details/arrange_board_and_details_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `../move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-details/arrange_board_and_details_story.test.py`
 
 ### Scenario: Give the board more height
 
@@ -252,7 +253,7 @@ Person -> BoardLayoutClient.toggleRegion('board')
 
 ## Display Backlog Items As Tickets
 
-Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-backlog-items-as-tickets/display_backlog_items_as_tickets_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `../move-work-forward-on-session-board/see-work-on-session-board/display-backlog-items-as-tickets/display_backlog_items_as_tickets_story.test.py`
 
 ### Scenario: Show each idea file in the Backlog
 
@@ -315,7 +316,7 @@ BacklogItem <- the file name in words
 
 ## Display Ticket Card
 
-Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-ticket-card/display_ticket_card_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `../move-work-forward-on-session-board/see-work-on-session-board/display-ticket-card/display_ticket_card_story.test.py`
 
 ### Scenario: Show every work session as a ticket
 
@@ -370,9 +371,9 @@ Ticket <- the first stage with work done: Specification
 
 **Then** pet-visits shows in the Specification [stage](kanban-model.md#stage--column)
 
-### Scenario: Draw the card's title, age, and practice blocks
+### Scenario: Draw the card's title, age, and fidelity segments
 
-Evidence: observed: board-client.spec 'Display Ticket Card' — 'should say how many hours ago its ticket was worked on', 'should say one hour in the singular', 'should say a ticket with no activity has none'; ticket-card-view.tsx SegmentsView draws one block per enabled fidelity of its stage, dim while not started.
+Evidence: observed: board-client.spec 'Display Ticket Card' — 'should say how many hours ago its ticket was worked on', 'should say one hour in the singular', 'should say a ticket with no activity has none'; ticket-card-view.tsx SegmentsView draws one segment per enabled fidelity of its stage, dim while not started.
 
 **Given** the [ticket](kanban-model.md#ticket--card) checkout-flow, titled Checkout flow, last worked on at 2026-11-01T10:00:00Z
 
@@ -386,7 +387,7 @@ Board page -> Ticket.to_json(): title, last_activity, progress, practices
 
 **Then** the card reads Checkout flow and 13 hours ago
 
-**And** it shows one block for each enabled Discovery fidelity, the story_map block in the violations colour and the rest dim
+**And** it shows one segment for each enabled Discovery fidelity, the story_map segment in the violations colour and the rest dim
 
 **And** a violations link on the card opens the report
 
@@ -426,7 +427,7 @@ Board <- the active ticket checkout-flow
 
 ## Display Ticket Details
 
-Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-ticket-details/display_ticket_details_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `../move-work-forward-on-session-board/see-work-on-session-board/display-ticket-details/display_ticket_details_story.test.py`
 
 ### Scenario: Show the ticket of a card pressed anywhere
 
@@ -527,13 +528,13 @@ Person -> OpenCardClient.toggle(billing-report)
 
 **And** checkout-flow's card is closed
 
-### Scenario: Open a card on the fidelity of a pressed block
+### Scenario: Open a card on the fidelity of a pressed segment
 
 Evidence: observed: tile-client.spec 'with a segment pressed' — 'should open the card', 'should open the tile of that fidelity'; story-actions.spec 'should open a card on the fidelity of a pressed segment'.
 
-**Given** billing-report's card shows a block for the story_map [fidelity](kanban-model.md#fidelityguidance)
+**Given** billing-report's card shows a segment for the story_map [fidelity](kanban-model.md#fidelityguidance)
 
-**When** the Person opens billing-report's story_map block
+**When** the Person opens billing-report's story_map segment
 
 ```realization
 Person -> OpenCardClient.openSegment(billing-report, Discovery, 'stories-story_map')
@@ -545,7 +546,7 @@ Person -> OpenCardClient.openSegment(billing-report, Discovery, 'stories-story_m
 
 ## Set Stage WIP Limit
 
-Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/set-stage-wip-limit/set_stage_wip_limit_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `../move-work-forward-on-session-board/see-work-on-session-board/set-stage-wip-limit/set_stage_wip_limit_story.test.py`
 
 ### Scenario: Set a stage's limit
 
@@ -603,6 +604,10 @@ Evidence: observed: board-client.spec 'should change nothing for a limit that is
 
 **When** the Person types many as Discovery's limit
 
+```realization
+Person -> BoardClient.submitWipLimit('Discovery', 'many') <- nothing, many is not a whole number
+```
+
 **Then** Discovery still shows the limit 3
 
 **But** no limit is saved
@@ -611,7 +616,7 @@ Evidence: observed: board-client.spec 'should change nothing for a limit that is
 
 ## Arrange Side Panel
 
-Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/arrange-side-panel/arrange_side_panel_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `../move-work-forward-on-session-board/see-work-on-session-board/arrange-side-panel/arrange_side_panel_story.test.py`
 
 ### Scenario: Set a panel's width
 
@@ -657,7 +662,7 @@ Person -> SidePanelClient.toggleExpanded('files')
 
 Evidence: observed: side-panel-client.spec 'Close Side Panel' — 'should close the panel'.
 
-**Given** checkout-flow's [validation report](kanban-model.md#validate--guidanceaction) panel is open
+**Given** checkout-flow's validation report panel is open
 
 **When** the Person closes the report panel
 
@@ -675,13 +680,83 @@ Evidence: observed: story-actions.spec 'should keep the columns' width and scrol
 
 **When** the Person opens checkout-flow's files list
 
+```realization
+Person -> FilesPanelClient.openFiles('checkout-flow', Discovery's fidelities)
+```
+
 **Then** the columns keep their width and scroll sideways beside the files panel
+
+---
+
+## Restrict Actions To Active Session
+
+Actor: Person · Sub-epic: See Work On Session Board · File: `../move-work-forward-on-session-board/see-work-on-session-board/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py`
+
+### Scenario: Lock tickets that are not the active session
+
+Evidence: observed: ticket-client.spec 'should lock a ticket that is not the active session', 'should leave the active ticket open'; tile-client.spec 'should keep Run off on a locked ticket'; ticket-client.tsx runNextHint for a locked ticket; story-actions.spec 'should keep its practice switches off until Active session only is turned off'.
+
+**Given** Active session only is on
+
+**And** checkout-flow is the active [ticket](kanban-model.md#ticket--card)
+
+**When** the session board draws billing-report's card and tiles
+
+```realization
+Board page -> TicketClient.isLocked <- true
+```
+
+**Then** billing-report's Run next, Run, practice switches, Split, and Handoff are off
+
+**And** billing-report's Run next says Activate this session to run its next step
+
+**And** checkout-flow's actions stay on
+
+### Scenario: Keep information and moves open on a locked ticket
+
+Evidence: observed: story-actions.spec 'should let a ticket that is not active be dragged, activated, and its files opened'; ticket-card-view.tsx keeps every card draggable.
+
+**Given** Active session only is on
+
+**And** billing-report is not the active [ticket](kanban-model.md#ticket--card)
+
+**When** the Person opens billing-report's files
+
+```realization
+Person -> Ticket.files(['stories-story_map'])
+```
+
+**Then** the files panel lists billing-report's files
+
+**When** the Person moves billing-report to Specification
+
+```realization
+Person -> Ticket.move_to('Specification')
+```
+
+**Then** billing-report moves to Specification
+
+**And** Activate stays on for billing-report
+
+### Scenario: Unlock every ticket
+
+Evidence: observed: ticket-client.spec 'should unlock every ticket with Active session only off'.
+
+**Given** Active session only is on
+
+**When** the Person turns Active session only off
+
+```realization
+Person -> BoardLayoutClient.toggleOnlyActive()
+```
+
+**Then** billing-report's actions are on like the active ticket's
 
 ---
 
 ## Add Backlog Item
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.py`
+Actor: Person · Sub-epic: Steer Ticket Sessions · File: `../move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.py`
 
 ### Scenario: Add an idea to the Backlog
 
@@ -713,6 +788,10 @@ Evidence: observed: backlog-item-client.spec 'should stay off with no title'; st
 **But** the Person has typed no title
 
 **When** the Person tries to add the item
+
+```realization
+Person -> BacklogDraftClient.add() <- nothing, with no title
+```
 
 **Then** Add stays off
 
@@ -801,7 +880,7 @@ BacklogItem <- Ticket sign-up
 
 ## Open Ticket Session
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-session/open_ticket_session_story.test.py`
+Actor: Person · Sub-epic: Steer Ticket Sessions · File: `../move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-session/open_ticket_session_story.test.py`
 
 ### Scenario: Open a new ticket
 
@@ -837,7 +916,19 @@ Board page -> Chat.send('fill', 'Open a new ticket with ticket.new, titled: ')
 
 **Then** the chat's prompt holds Open a new ticket with ticket.new, titled: for the Person to finish
 
-**But** with no chat connected, + Ticket is off
+### Scenario: Keep + Ticket off with no chat
+
+Evidence: observed: tests/board-surface.spec.ts 'with no chat connected' shows + Ticket off.
+
+**Given** no chat is connected to the session board
+
+**When** the session board draws its header
+
+```realization
+Board page -> ChatClient.canSend <- false
+```
+
+**Then** + Ticket is off
 
 ### Scenario: Open a ticket on a folder of the repository
 
@@ -914,15 +1005,15 @@ Ticket -> Session.forget_output_root('stories')
 
 ## Close Active Session
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.py`
+Actor: Person · Sub-epic: Steer Ticket Sessions · File: `../move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.py`
 
 ### Scenario: Close the active session from its card
 
-Evidence: observed: ticket-client.spec 'Close Active Session' — 'should send the close session command to the chat', 'should leave the ticket in its column'; story-actions.spec 'Close Active Session'.
+Evidence: observed: ticket-client.spec 'Close Active Session' — 'should send the close session command to the chat', 'should leave the ticket in its column'.
 
 **Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card), In progress in Discovery, with a chat connected
 
-**When** the Person presses Close on checkout-flow's card
+**When** the Person closes checkout-flow's session from its card
 
 ```realization
 Person -> Chat.command('/space:session:close-session')
@@ -988,60 +1079,9 @@ Ticket -> Session.move_to_closed()
 
 ---
 
-## Restrict Actions To Active Session
-
-Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py`
-
-### Scenario: Lock tickets that are not the active session
-
-Evidence: observed: ticket-client.spec 'should lock a ticket that is not the active session', 'should leave the active ticket open'; tile-client.spec 'should keep Run off on a locked ticket'; story-actions.spec 'should keep its practice switches off until Active session only is turned off'.
-
-**Given** Active session only is on
-
-**And** checkout-flow is the active [ticket](kanban-model.md#ticket--card)
-
-**When** the Person looks at billing-report's card and tiles
-
-**Then** billing-report's Run next, Run, practice switches, Split, and Handoff are off
-
-**And** checkout-flow's actions stay on
-
-### Scenario: Keep information and moves open on a locked ticket
-
-Evidence: observed: story-actions.spec 'should let a ticket that is not active be dragged, activated, and its files opened'; ticket-card-view.tsx keeps every card draggable.
-
-**Given** Active session only is on
-
-**And** billing-report is not the active [ticket](kanban-model.md#ticket--card)
-
-**When** the Person opens billing-report's files and moves it
-
-```realization
-Person -> Ticket.files(['stories-story_map'])
-Person -> Ticket.move_to('Specification')
-```
-
-**Then** the files panel lists billing-report's files
-
-**And** billing-report moves to Specification
-
-**And** Activate stays on for billing-report
-
-### Scenario: Unlock every ticket
-
-Evidence: observed: ticket-client.spec 'should unlock every ticket with Active session only off'.
-
-**Given** Active session only is on
-
-**When** the Person turns Active session only off
-
-**Then** billing-report's actions are on like the active ticket's
-
----
-
 ## Move Ticket
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/move-ticket/move_ticket_story.test.py`
+Actor: Person · Sub-epic: Steer Ticket Sessions · File: `../move-work-forward-on-session-board/steer-ticket-sessions/move-ticket/move_ticket_story.test.py`
 
 ### Scenario: Move a ticket on to the next column
 
@@ -1181,7 +1221,7 @@ Person -> TicketClient.canDropOn('Complete') <- false
 
 ## Activate Ticket
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/activate-ticket/activate_ticket_story.test.py`
+Actor: Person · Sub-epic: Steer Ticket Sessions · File: `../move-work-forward-on-session-board/steer-ticket-sessions/activate-ticket/activate_ticket_story.test.py`
 
 ### Scenario: Switch to another ticket, committing, pushing, and merging the one left
 
@@ -1264,6 +1304,10 @@ Evidence: observed: activation-client.spec 'that a person has cancelled' — 'sh
 
 **When** the Person cancels
 
+```realization
+Person -> ActivationClient.cancel()
+```
+
 **Then** the dialog is closed
 
 **And** checkout-flow is still the active ticket
@@ -1290,7 +1334,7 @@ Ticket -> Session.switch('billing-report', repo_path)
 
 ## Split Ticket Into Child Tickets
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.py`
+Actor: Person · Sub-epic: Steer Ticket Sessions · File: `../move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.py`
 
 ### Scenario: Ask the chat to split a ticket into child tickets
 
@@ -1325,17 +1369,49 @@ Evidence: observed: ticket-card-view.tsx useCannotFill; tests/board-surface.spec
 
 **But** no chat is connected
 
-**When** the Person looks at checkout-flow's card
+**When** the session board draws checkout-flow's card
+
+```realization
+Board page -> ChatClient.canSend <- false
+```
 
 **Then** Split is off
 
-**And** Split is also off on a closed ticket and on a locked one
+### Scenario: Keep Split off on a closed ticket
+
+Evidence: observed: ticket-card-view.tsx useCannotFill turns Split off on a closed ticket.
+
+**Given** the [ticket](kanban-model.md#ticket--card) browse-pets is closed in Complete
+
+**When** the session board draws browse-pets' card
+
+```realization
+Board page -> TicketClient.isClosed <- true
+```
+
+**Then** Split is off
+
+### Scenario: Keep Split off on a locked ticket
+
+Evidence: observed: ticket-card-view.tsx useCannotFill turns Split off on a locked ticket.
+
+**Given** Active session only is on
+
+**And** billing-report is not the active [ticket](kanban-model.md#ticket--card)
+
+**When** the session board draws billing-report's card
+
+```realization
+Board page -> TicketClient.isLocked <- true
+```
+
+**Then** Split is off
 
 ---
 
 ## Archive Ticket
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/archive-ticket/archive_ticket_story.test.py`
+Actor: Person · Sub-epic: Steer Ticket Sessions · File: `../move-work-forward-on-session-board/steer-ticket-sessions/archive-ticket/archive_ticket_story.test.py`
 
 ### Scenario: Archive a ticket off the board
 
@@ -1355,11 +1431,27 @@ Ticket -> Session.move_to_archive()
 
 **And** its folder is in .sessions/_archive/pet-visits
 
+### Scenario: Refuse to archive a ticket the board does not have
+
+Evidence: inferred: Ticket.load raises TicketNotFoundError in harness/kanban/ticket.py, and ticket.archive loads its ticket by name; no spec archives an unknown ticket.
+
+**Given** the [board](kanban-model.md#board) shows no [ticket](kanban-model.md#ticket--card) named no-such-ticket
+
+**When** the Person archives no-such-ticket
+
+```realization
+Person -> Ticket.load('no-such-ticket') <- TicketNotFoundError
+```
+
+**Then** the board says no ticket named 'no-such-ticket' on the board
+
+**But** nothing is moved to .sessions/_archive
+
 ---
 
 ## Write Ticket Handoff
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/write-ticket-handoff/write_ticket_handoff_story.test.py`
+Actor: Person · Sub-epic: Steer Ticket Sessions · File: `../move-work-forward-on-session-board/steer-ticket-sessions/write-ticket-handoff/write_ticket_handoff_story.test.py`
 
 ### Scenario: Ask the chat to write a handoff
 
@@ -1404,7 +1496,11 @@ Evidence: observed: tests/board-surface.spec.ts 'with no chat connected' — 'sh
 
 **But** no chat is connected
 
-**When** the Person looks at checkout-flow's card
+**When** the session board draws checkout-flow's card
+
+```realization
+Board page -> ChatClient.canSend <- false
+```
 
 **Then** Handoff is off
 
@@ -1414,7 +1510,7 @@ Evidence: observed: tests/board-surface.spec.ts 'with no chat connected' — 'sh
 
 ## Display Latest Handoff
 
-Actor: Board App · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/display-latest-handoff/display_latest_handoff_story.test.py`
+Actor: Board App · Sub-epic: Steer Ticket Sessions · File: `../move-work-forward-on-session-board/steer-ticket-sessions/display-latest-handoff/display_latest_handoff_story.test.py`
 
 ### Scenario: Show the latest handoff
 
@@ -1447,13 +1543,18 @@ Evidence: observed: kanban_tools_spec 'should show no handoff for a ticket that 
 
 **When** the Person selects billing-report
 
+```realization
+Person -> TicketClient.select()
+Board page -> Ticket.latest_handoff <- none
+```
+
 **Then** the details say No handoff yet
 
 ---
 
 ## Display Fidelity Progress
 
-Actor: Board App · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/display-fidelity-progress/display_fidelity_progress_story.test.py`
+Actor: Board App · Sub-epic: Guide Work Through Practices · File: `../move-work-forward-on-session-board/guide-work-through-practices/display-fidelity-progress/display_fidelity_progress_story.test.py`
 
 ### Scenario: Show Generate done
 
@@ -1486,7 +1587,7 @@ FidelityProgress -> FidelityProgress.from_log(...) <- has_violations: true
 FidelityProgress -> FidelityProgress.action_states <- validate: in_progress
 ```
 
-**Then** the story_map tile marks Validate as violations and its block shows in the violations colour
+**Then** the story_map tile marks Validate as violations and its segment shows in the violations colour
 
 **And** Review stays to do
 
@@ -1518,13 +1619,13 @@ Evidence: observed: kanban_tools_spec 'should show each fidelity's Generate, Val
 Ticket -> Ticket.to_json() <- actions: each fidelity's generate, validate, review as to_do
 ```
 
-**Then** each Discovery tile marks Generate, Validate, and Review ○, its block dim
+**Then** each Discovery tile marks Generate, Validate, and Review ○, its segment dim
 
 ---
 
 ## Open Practice Tile
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/open-practice-tile/open_practice_tile_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `../move-work-forward-on-session-board/guide-work-through-practices/open-practice-tile/open_practice_tile_story.test.py`
 
 ### Scenario: Open a tile on a short hover
 
@@ -1542,6 +1643,10 @@ Board page -> Ticket.files(['stories-story_map'])
 **Then** the story_map tile's action bar opens above the grid, at full width
 
 **When** the Person moves the pointer away
+
+```realization
+Person -> TileClient.hoverOut(billing-report, story_map tile)
+```
 
 **Then** the action bar closes
 
@@ -1561,6 +1666,10 @@ Person -> TileClient.open(spot, true)
 
 **When** the Person presses the story_map tile again
 
+```realization
+Person -> TileClient.toggle(billing-report, story_map tile)
+```
+
 **Then** the story_map action bar closes
 
 ### Scenario: Keep two pressed tiles open at once
@@ -1571,9 +1680,17 @@ Evidence: observed: tile-client.spec 'with two tiles pressed' — 'should keep b
 
 **When** the Person presses the bounded_context tile
 
+```realization
+Person -> TileClient.toggle(billing-report, bounded_context tile)
+```
+
 **Then** both action bars are open
 
 **When** the Person chooses sketch on the bounded_context bar
+
+```realization
+Person -> TileActionsClient.chooseAction(bounded_context tile, 'sketch')
+```
 
 **Then** only the bounded_context bar's action is sketch
 
@@ -1585,9 +1702,17 @@ Evidence: observed: tile-client.spec 'with a pressed bar and a bar a hover opene
 
 **When** the Person hovers on the ia tile
 
+```realization
+Person -> TileClient.hoverIn(billing-report, ia tile)
+```
+
 **Then** the ia bar opens beside the story_map bar
 
 **When** the Person moves the pointer away from the ia tile
+
+```realization
+Person -> TileClient.hoverOut(billing-report, ia tile)
+```
 
 **Then** the ia bar closes and the story_map bar stays open
 
@@ -1599,13 +1724,17 @@ Evidence: observed: story-actions.spec 'should leave a tile in the details close
 
 **When** the Person rests the pointer on the story_map tile in the details
 
+```realization
+Person -> nothing: a tile in the details opens on TileClient.toggle, not on a resting pointer
+```
+
 **Then** the story_map action bar stays closed
 
 ---
 
 ## Choose Ticket Practices
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/choose-ticket-practices/choose_ticket_practices_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `../move-work-forward-on-session-board/guide-work-through-practices/choose-ticket-practices/choose_ticket_practices_story.test.py`
 
 ### Scenario: Turn a practice off for a ticket
 
@@ -1627,7 +1756,7 @@ PracticeSessionOutput -> .sessions/checkout-flow/session.json practices
 
 **And** the bounded_context tile closes and fades
 
-**And** the card shows no DDD block
+**And** the card shows no DDD segment
 
 ### Scenario: Finish a stage on the practices left on
 
@@ -1654,7 +1783,11 @@ Evidence: observed: story-actions.spec 'should keep its practice switches off un
 
 **And** billing-report is not the active [ticket](kanban-model.md#ticket--card)
 
-**When** the Person looks at billing-report's practices
+**When** the session board draws billing-report's practices
+
+```realization
+Board page -> TicketClient.isLocked <- true
+```
 
 **Then** each practice switch is off until Active session only is turned off
 
@@ -1662,7 +1795,7 @@ Evidence: observed: story-actions.spec 'should keep its practice switches off un
 
 ## Send Action To Stage Practices
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/send-action-to-stage-practices/send_action_to_stage_practices_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `../move-work-forward-on-session-board/guide-work-through-practices/send-action-to-stage-practices/send_action_to_stage_practices_story.test.py`
 
 ### Scenario: Sketch every fidelity of a stage in one command
 
@@ -1688,13 +1821,17 @@ Evidence: observed: tile-client.spec 'with two stage heads pressed' — 'should 
 
 **When** the Person presses the Specification stage head
 
+```realization
+Person -> TileClient.toggle(billing-report, Specification stage head)
+```
+
 **Then** both stage bars are open
 
 ---
 
 ## Mark Ticket Done In Stage
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/mark-ticket-done-in-stage/mark_ticket_done_in_stage_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `../move-work-forward-on-session-board/guide-work-through-practices/mark-ticket-done-in-stage/mark_ticket_done_in_stage_story.test.py`
 
 ### Scenario: Mark a ticket done in its stage
 
@@ -1750,7 +1887,7 @@ Ticket -> Ticket.is_done <- true
 
 ## Add Active Ticket To System Prompt
 
-Actor: Board App · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/add-active-ticket-to-system-prompt/add_active_ticket_to_system_prompt_story.test.py`
+Actor: Board App · Sub-epic: Guide Work Through Practices · File: `../move-work-forward-on-session-board/guide-work-through-practices/add-active-ticket-to-system-prompt/add_active_ticket_to_system_prompt_story.test.py`
 
 ### Scenario: Name the active ticket and its next guidance in the system prompt
 
@@ -1802,7 +1939,7 @@ Board <- active: none
 
 ## Open Help
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/open-help/open_help_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `../move-work-forward-on-session-board/guide-work-through-practices/open-help/open_help_story.test.py`
 
 ### Scenario: Open a fidelity's help
 
@@ -1859,7 +1996,7 @@ Person -> Board.help('ddd', 'model')
 
 ## Send Next Fidelity Action
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/send-next-fidelity-action/send_next_fidelity_action_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `../move-work-forward-on-session-board/guide-work-through-practices/send-next-fidelity-action/send_next_fidelity_action_story.test.py`
 
 ### Scenario: Generate the next fidelity in its default format
 
@@ -1958,11 +2095,13 @@ Evidence: observed: ticket-client.spec 'should stay off with no chat to send to'
 
 **But** no chat is connected
 
-**When** the Person looks at billing-report's Run next
+**When** the session board draws billing-report's Run next
+
+```realization
+Board page -> TicketClient.canRunNext <- false, with ChatClient.canSend false
+```
 
 **Then** Run next is off
-
-**And** on a locked ticket it says Activate this session to run its next step
 
 ### Scenario: Name nothing to run on a ticket done in its stage
 
@@ -1982,7 +2121,7 @@ Ticket -> Ticket.next <- none
 
 ## Choose Action And Formats
 
-Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `move-work-forward-on-session-board/generate-fidelity-outputs/choose-action-and-formats/choose_action_and_formats_story.test.py`
+Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `../move-work-forward-on-session-board/generate-fidelity-outputs/choose-action-and-formats/choose_action_and_formats_story.test.py`
 
 ### Scenario: Pick the fidelity's default format
 
@@ -2007,6 +2146,10 @@ Evidence: observed: tile-client.spec 'should not pick a format already generated
 
 **When** the Person opens the story_map tile
 
+```realization
+Person -> TileClient.toggle(billing-report, story_map tile)
+```
+
 **Then** the markdown chip is green and not picked
 
 ### Scenario: Stand one chip for a group of formats
@@ -2016,6 +2159,10 @@ Evidence: observed: tile-client.spec 'should let a chip stand for a group', 'sho
 **Given** billing-report's story map is generated in markdown and its bounded context is not
 
 **When** the Person opens the Discovery stage head on story_map and bounded_context
+
+```realization
+Person -> TileClient.toggle(billing-report, Discovery stage head)
+```
 
 **Then** the bar shows a diagram chip and a markdown chip
 
@@ -2029,7 +2176,11 @@ Evidence: observed: tile-client.spec 'should keep Run off until a format is chos
 
 **But** no format is picked
 
-**When** the Person looks at the story_map bar
+**When** the session board draws the story_map bar
+
+```realization
+Board page -> TileActionsClient.barOf(billing-report, Discovery, story_map tile) <- runOff: true
+```
 
 **Then** Run is off
 
@@ -2041,17 +2192,44 @@ Evidence: observed: tile-client.spec 'should keep Run off on a render with nothi
 
 **When** the Person chooses render on the story_map bar
 
+```realization
+Person -> TileActionsClient.chooseAction(story_map tile, 'render')
+```
+
 **Then** Run is off
 
-### Scenario: Keep Run off with no chat or on a locked ticket
+### Scenario: Keep Run off with no chat
 
 Evidence: observed: tile-client.spec 'should keep Run off with no chat connected', 'should keep Run off on a locked ticket'.
 
 **Given** the story_map bar has the markdown chip picked
 
-**But** no chat is connected, or the ticket is not the active session with Active session only on
+**But** no chat is connected
 
-**When** the Person looks at the story_map bar
+**When** the session board draws the story_map bar
+
+```realization
+Board page -> ChatClient.canSend <- false
+Board page -> TileActionsClient.barOf(billing-report, Discovery, story_map tile) <- runOff: true
+```
+
+**Then** Run is off
+
+### Scenario: Keep Run off on a locked ticket
+
+Evidence: observed: tile-client.spec 'should keep Run off with no chat connected', 'should keep Run off on a locked ticket'.
+
+**Given** Active session only is on
+
+**And** billing-report is not the active [ticket](kanban-model.md#ticket--card)
+
+**And** billing-report's story_map bar has the markdown chip picked
+
+**When** the session board draws billing-report's story_map bar
+
+```realization
+Board page -> TileActionsClient.barOf(billing-report, Discovery, story_map tile) <- isLocked: true, runOff: true
+```
 
 **Then** Run is off
 
@@ -2059,7 +2237,7 @@ Evidence: observed: tile-client.spec 'should keep Run off with no chat connected
 
 ## Resolve Fidelity Output Paths
 
-Actor: Claude Code · Sub-epic: Generate Fidelity Outputs · File: `move-work-forward-on-session-board/generate-fidelity-outputs/resolve-fidelity-output-paths/resolve_fidelity_output_paths_story.test.py`
+Actor: Claude Code · Sub-epic: Generate Fidelity Outputs · File: `../move-work-forward-on-session-board/generate-fidelity-outputs/resolve-fidelity-output-paths/resolve_fidelity_output_paths_story.test.py`
 
 ### Scenario: Put a fidelity's files under its practice's root
 
@@ -2122,13 +2300,13 @@ Generate -> Session.fidelity_outputs(Stories scenarios)
 
 **Then** story_map's markdown is /work/tests/our-map.md and its drawio stays /work/tests/story-map.drawio
 
-**And** scenarios' python stays {story_snake}_story.test.py
+**And** scenarios' python keeps its declared name, such as archive_ticket_story.test.py for the story Archive Ticket
 
 ---
 
 ## Generate Fidelity Output
 
-Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `move-work-forward-on-session-board/generate-fidelity-outputs/generate-fidelity-output/generate_fidelity_output_story.test.py`
+Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `../move-work-forward-on-session-board/generate-fidelity-outputs/generate-fidelity-output/generate_fidelity_output_story.test.py`
 
 ### Scenario: Send the generate command from a tile
 
@@ -2151,6 +2329,8 @@ chat mod -> Claude Code command.run('actions-generate', 'stories-story-map forma
 **Then** the chat runs /actions-generate stories-story-map format=markdown
 
 **And** the bar's picks are cleared
+
+**And** Claude Code goes on to Resolve Fidelity Output Paths for stories-story_map
 
 ### Scenario: Render the earlier fidelity into a new format first
 
@@ -2190,7 +2370,7 @@ GuidanceAction -> Session.log_guidance_action('generate', [Stories story_map])
 
 ## Render Fidelity Format
 
-Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `move-work-forward-on-session-board/generate-fidelity-outputs/render-fidelity-format/render_fidelity_format_story.test.py`
+Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `../move-work-forward-on-session-board/generate-fidelity-outputs/render-fidelity-format/render_fidelity_format_story.test.py`
 
 ### Scenario: Render existing output into another format
 
@@ -2216,13 +2396,17 @@ Evidence: observed: tile-client.spec 'should keep Run off on a render with nothi
 
 **When** the Person chooses render on the story_map bar
 
+```realization
+Person -> TileActionsClient.chooseAction(story_map tile, 'render')
+```
+
 **Then** Run is off
 
 ---
 
 ## Send Tile Action To Chat
 
-Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `move-work-forward-on-session-board/generate-fidelity-outputs/send-tile-action-to-chat/send_tile_action_to_chat_story.test.py`
+Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `../move-work-forward-on-session-board/generate-fidelity-outputs/send-tile-action-to-chat/send_tile_action_to_chat_story.test.py`
 
 ### Scenario: Send sketch, iterate, or document as its own command
 
@@ -2240,14 +2424,21 @@ Board page -> Chat.send('command', '/actions-sketch stories-story-map')
 
 **Then** the chat receives the command /actions-sketch stories-story-map
 
-**When** the Person runs iterate, then document, on story_map
+**When** the Person runs iterate on story_map
 
 ```realization
 Board page -> Chat.send('command', '/actions-iterate stories-story-map')
+```
+
+**Then** the chat receives the command /actions-iterate stories-story-map
+
+**When** the Person runs document on story_map
+
+```realization
 Board page -> Chat.send('command', '/actions-document stories-story-map')
 ```
 
-**Then** the chat receives /actions-iterate stories-story-map, then /actions-document stories-story-map
+**Then** the chat receives the command /actions-document stories-story-map
 
 ### Scenario: Tell the person which chat got the command
 
@@ -2256,6 +2447,10 @@ Evidence: observed: chat-client.spec 'should choose the only chat connected', 's
 **Given** two chats are connected and none is picked
 
 **When** the Person runs sketch on story_map
+
+```realization
+Person -> TileActionsClient.run(story_map tile, Discovery) <- nothing sent, with no chat chosen
+```
 
 **Then** nothing is sent
 
@@ -2271,7 +2466,7 @@ Board page -> Chat.send('command', '/actions-sketch stories-story-map')
 
 ## Validate Fidelity
 
-Actor: Person · Sub-epic: Validate Fidelity Outputs · File: `move-work-forward-on-session-board/validate-fidelity-outputs/validate-fidelity/validate_fidelity_story.test.py`
+Actor: Person · Sub-epic: Validate Fidelity Outputs · File: `../move-work-forward-on-session-board/validate-fidelity-outputs/validate-fidelity/validate_fidelity_story.test.py`
 
 ### Scenario: Send the fidelity to validate
 
@@ -2288,6 +2483,8 @@ Board page -> Chat.send('command', '/actions-validate stories-story-map')
 ```
 
 **Then** the chat receives the command /actions-validate stories-story-map
+
+**And** Claude Code goes on to Save Validation Report for stories-story_map
 
 ### Scenario: Count Validate done only with no graph-rule violations
 
@@ -2324,7 +2521,11 @@ Evidence: observed: tile-client.spec 'should keep Validate off with no files and
 
 **But** nothing is recorded on it
 
-**When** the Person looks at the story_map bar
+**When** the session board draws the story_map bar
+
+```realization
+Board page -> TileActionsClient.barOf(billing-report, Discovery, story_map tile) <- validateOff: true
+```
 
 **Then** validate is off
 
@@ -2346,7 +2547,7 @@ Ticket -> Ticket.to_json() <- allowed_actions: generate, validate, review
 
 ## Save Validation Report
 
-Actor: Claude Code · Sub-epic: Validate Fidelity Outputs · File: `move-work-forward-on-session-board/validate-fidelity-outputs/save-validation-report/save_validation_report_story.test.py`
+Actor: Claude Code · Sub-epic: Validate Fidelity Outputs · File: `../move-work-forward-on-session-board/validate-fidelity-outputs/save-validation-report/save_validation_report_story.test.py`
 
 ### Scenario: Save the report and the graph it checked
 
@@ -2363,9 +2564,9 @@ Validate -> Graph.write_json(<report>.json)
 Validate -> Session.log_validation(Ddd tactics, ['private-method-naming ...'])
 ```
 
-**Then** the [validation report](kanban-model.md#validate--guidanceaction) is saved as validation-reports/ddd-tactics-<date>.md naming private-method-naming
+**Then** the validation report is saved as validation-reports/ddd-tactics-20261101T100000.md naming private-method-naming
 
-**And** the graph it checked is saved beside it as ddd-tactics-<date>.json, with the rule hits on its nodes
+**And** the graph it checked is saved beside it as ddd-tactics-20261101T100000.json, with the rule hits on its nodes
 
 **And** Claude Code's reply says where the report is saved
 
@@ -2377,6 +2578,10 @@ Evidence: observed: validate_spec.py 'should save a report for each listed guida
 
 **When** Claude Code validates ddd-tactics and stories-scenarios together
 
+```realization
+Agent -> Validate.validate(['ddd-tactics', 'stories-scenarios'])
+```
+
 **Then** validation-reports holds one stories-scenarios report and one ddd-tactics report
 
 ### Scenario: Leave an earlier report's graph as it was
@@ -2387,19 +2592,23 @@ Evidence: observed: validate_spec.py 'should leave an earlier report's saved gra
 
 **When** Claude Code validates ddd-tactics again
 
+```realization
+Agent -> Validate.validate(['ddd-tactics'])
+```
+
 **Then** ddd-tactics-20200101T000000.json is unchanged
 
 ---
 
 ## Open Validation Report
 
-Actor: Person · Sub-epic: Validate Fidelity Outputs · File: `move-work-forward-on-session-board/validate-fidelity-outputs/open-validation-report/open_validation_report_story.test.py`
+Actor: Person · Sub-epic: Validate Fidelity Outputs · File: `../move-work-forward-on-session-board/validate-fidelity-outputs/open-validation-report/open_validation_report_story.test.py`
 
 ### Scenario: Open a fidelity's latest report
 
 Evidence: observed: kanban_tools_spec 'with validation reports saved for a fidelity' — 'should show that fidelity's latest report', 'should list each rule the report names with its violations', 'should give a violation the line it failed on', 'should show the source lines around a violation'; side-panel-client.spec 'Open Validation Report'; story-actions.spec 'should show the rules with the failing line marked'.
 
-**Given** checkout-flow's story map has the [validation report](kanban-model.md#validate--guidanceaction) stories-story-map-20261101T100000.md with its saved graph
+**Given** checkout-flow's story map has the validation report stories-story-map-20261101T100000.md with its saved graph
 
 **And** the graph names verb-noun-format on tests/story-map.md line 6
 
@@ -2478,7 +2687,7 @@ Ticket -> Ticket.reports <- none
 
 ## Fix Report Violations
 
-Actor: Person · Sub-epic: Validate Fidelity Outputs · File: `move-work-forward-on-session-board/validate-fidelity-outputs/fix-report-violations/fix_report_violations_story.test.py`
+Actor: Person · Sub-epic: Validate Fidelity Outputs · File: `../move-work-forward-on-session-board/validate-fidelity-outputs/fix-report-violations/fix_report_violations_story.test.py`
 
 ### Scenario: Fix one violation at its line
 
@@ -2510,6 +2719,23 @@ Board page -> Chat.send('command', fix message: the verb-noun-format rule and ev
 
 **Then** the chat receives one message with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them
 
+### Scenario: Fix every violation in the report
+
+Evidence: observed: side-panel-client.spec 'with Fix all pressed on the whole report' — 'should send one message to the chat', 'should name every rule the report breaks', 'should give every violation of every rule'.
+
+**Given** checkout-flow's report lists violations of verb-noun-format and do-not-invent-requirements
+
+**And** a chat is connected
+
+**When** the Person fixes every violation in the report
+
+```realization
+Person -> BoardPage.fixReport('checkout-flow', every rule in the report)
+Board page -> Chat.send('command', fix message: each rule with every violation of it, each with its content)
+```
+
+**Then** the chat receives one message naming each rule with every violation of it, each at its file and line with the content that failed, and instructions to fix them all
+
 ### Scenario: Read an open report again after the fix
 
 Evidence: observed: side-panel-client.spec 'with a report and files open as the board changes' — 'should read the report again'.
@@ -2530,7 +2756,7 @@ Board page -> Ticket.report('stories-story_map')
 
 ## Display Violations Band
 
-Actor: Board App · Sub-epic: Validate Fidelity Outputs · File: `move-work-forward-on-session-board/validate-fidelity-outputs/display-violations-band/display_violations_band_story.test.py`
+Actor: Board App · Sub-epic: Validate Fidelity Outputs · File: `../move-work-forward-on-session-board/validate-fidelity-outputs/display-violations-band/display_violations_band_story.test.py`
 
 ### Scenario: Show the active ticket's violations in a band
 
@@ -2555,13 +2781,18 @@ Evidence: observed: board-page-view.tsx draws the band only when the active tick
 
 **When** the session board reads the board
 
+```realization
+Board page -> Board.show()
+Board <- active ticket billing-report with no violated fidelity
+```
+
 **Then** no violations band shows
 
 ---
 
 ## List Ticket Files
 
-Actor: Person · Sub-epic: Review Fidelity Outputs · File: `move-work-forward-on-session-board/review-fidelity-outputs/list-ticket-files/list_ticket_files_story.test.py`
+Actor: Person · Sub-epic: Review Fidelity Outputs · File: `../move-work-forward-on-session-board/review-fidelity-outputs/list-ticket-files/list_ticket_files_story.test.py`
 
 ### Scenario: List a fidelity's files with whether each exists
 
@@ -2620,7 +2851,7 @@ Person -> Ticket.load('no-such-ticket') <- TicketNotFoundError
 
 ## Browse Ticket Folder
 
-Actor: Person · Sub-epic: Review Fidelity Outputs · File: `move-work-forward-on-session-board/review-fidelity-outputs/browse-ticket-folder/browse_ticket_folder_story.test.py`
+Actor: Person · Sub-epic: Review Fidelity Outputs · File: `../move-work-forward-on-session-board/review-fidelity-outputs/browse-ticket-folder/browse_ticket_folder_story.test.py`
 
 ### Scenario: Group a stage's files under their folders
 
@@ -2654,7 +2885,7 @@ Person -> Ticket.session_files()
 
 ## View Fidelity Files
 
-Actor: Person · Sub-epic: Review Fidelity Outputs · File: `move-work-forward-on-session-board/review-fidelity-outputs/view-fidelity-files/view_fidelity_files_story.test.py`
+Actor: Person · Sub-epic: Review Fidelity Outputs · File: `../move-work-forward-on-session-board/review-fidelity-outputs/view-fidelity-files/view_fidelity_files_story.test.py`
 
 ### Scenario: Open one tab per format, generated or not
 
@@ -2671,7 +2902,7 @@ Person -> Ticket.read_file('tests/story-map.md')
 
 **Then** the files panel shows the tabs tests/story-map.md and tests/story-map.drawio
 
-**And** the story-map.md tab shows # Check Out Order
+**And** the tests/story-map.md tab shows # Check Out Order
 
 **And** the drawio tab says it is not generated yet
 
@@ -2682,6 +2913,11 @@ Evidence: observed: side-panel-client.spec 'should go back to the list when the 
 **Given** the tabs tests/story-map.md and tests/story-map.drawio are open
 
 **When** the Person closes both tabs
+
+```realization
+Person -> FilesPanelClient.closeTab('tests/story-map.md')
+Person -> FilesPanelClient.closeTab('tests/story-map.drawio')
+```
 
 **Then** the files panel shows the list
 
@@ -2703,7 +2939,7 @@ Person -> Ticket.read_file('../secrets.txt') <- TicketFileError
 
 ## Review Fidelity
 
-Actor: Person · Sub-epic: Review Fidelity Outputs · File: `move-work-forward-on-session-board/review-fidelity-outputs/review-fidelity/review_fidelity_story.test.py`
+Actor: Person · Sub-epic: Review Fidelity Outputs · File: `../move-work-forward-on-session-board/review-fidelity-outputs/review-fidelity/review_fidelity_story.test.py`
 
 ### Scenario: Review a fidelity after a clean validate
 
@@ -2733,7 +2969,11 @@ Evidence: observed: tile-client.spec 'should not allow Review until Validate is 
 
 **But** nothing is recorded on it
 
-**When** the Person looks at the story_map bar
+**When** the session board draws the story_map bar
+
+```realization
+Board page -> TileActionsClient.barOf(billing-report, Discovery, story_map tile) <- reviewOff: true
+```
 
 **Then** review is off
 

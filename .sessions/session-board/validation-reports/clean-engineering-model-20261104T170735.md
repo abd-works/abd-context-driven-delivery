@@ -183,3 +183,102 @@ Evaluate the current context against this rule (eliminate-duplication):
 Keep all modules for one model artifact in one canonical model document. Link diagrams and code to it rather than restating its classes in another design document, because parallel models become inconsistent.
 
 Evaluate the current context against this rule (one-canonical-model-document):
+## Judgment — `C:/dev/abd-cdd-session-board/harness/kanban/.context/kanban-model.md`
+
+### `vocabulary-traces-to-source` — Fail
+- kanban-model.md:179 `Ticket.lineage`: the session's own field is `parent` (`session.json`, `Ticket.new(parent)` at :235), so one idea has two words, and the board's word does not match the data it reads.
+- kanban-model.md:198 `Ticket.root`: the session calls the same folder its `workpath` (:371); the model admits this at :675.
+
+### `do-not-invent-terms` — Fail
+- kanban-model.md:201 `Ticket.practice_roots` / `PracticeRoot`: the session calls the same thing an output root (`choose_output_root`, `forget_output_root`, `has_chosen_output_root` at :415-419), so there are two nouns for where a practice writes.
+- kanban-model.md:673 `Ticket`: `space/repo` already has a `Ticket` (a GitHub issue), so one name means two concepts in modules the board depends on.
+
+### `do-not-invent-parallel-object-models` — Fail
+- kanban-model.md:270 `FidelityProgress`: it reads the session log into its own done-actions and state model, while `Session.action_states`, `is_stage_done`, and `violations` (:394-402) model the same progress. That is two models of one fact, and :671 keeps both until Session takes over.
+- kanban-model.md:136 `Stage.work_required`: repeats `Session.work_required` (:382).
+- kanban-model.md:195 `Ticket.latest_handoff`, :196 `Ticket.reports`, :191 `Ticket.next_action`: each repeats an Intended `Session` member (:388, :403, :390).
+
+### `model-modules-follow-the-partition` — Fail
+- kanban-model.md:151 `Card`, :121 `Backlog`, :324 `PracticeRoot`: these are in `harness/kanban`, but the module-context seam names only Board, Column, Stage, Ticket, FidelityProgress, and BacklogItem.
+- kanban-model.md:576 `harness/graph` and :532 `cdd_guidance/practices`: the board depends on them (`Ticket.report -> Graph.write_json` at :260, and `StageName`), but module-context's one-way dependencies do not list them. Module-context lists `cdd_guidance/actions`, while the model puts Generate and Validate in `harness/guidance_actions` (:544).
+
+### `class-not-property-instance-or-subtype` — Fail
+- kanban-model.md:121 `Backlog : Column`: it adds no state and no operation of its own beyond `to_json`, so an instance of `Column` named Backlog would do.
+- kanban-model.md:324 `PracticeRoot`: it is a pair of fields that the ticket reports and that is not stored on its own, which makes it a property of the practice's session output rather than a class.
+
+### `keep-classes-single-responsibility` — Fail
+- kanban-model.md:169 `Ticket`: it moves cards, writes reviews, switches branches and worktrees (:238), lists and reads files (:250-257), builds reports (:258), generates commands (:261), and manages practice roots (:216-224). That is many reasons to change, which the model admits at :676.
+- kanban-model.md:100 `Board.folders` and :102 `Board.help`: browsing repository folders and serving practice help are unrelated to showing columns of cards.
+- kanban-model.md:432 `Session.backlog_folder`, :433 `board_file`, :434 `timestamp`, :440 `main_session`, :441 `default_wip`: board and repository concerns sit on the session.
+
+### `put-logic-on-the-owning-resource` — Fail
+- kanban-model.md:263 `Ticket.record`: it appends to the session log, but the session owns its log.
+- kanban-model.md:265 `Ticket.keep`: it moves a file into the session folder, which the session owns.
+- kanban-model.md:100 `Board.folders`: it lists the repository's folders, which `Repo` owns.
+
+### `hide-inner-details` — Fail
+- kanban-model.md:426 `Session.fields` and :428 `save_fields`: they expose the raw contents of `session.json` to callers, which makes the file's layout a public contract.
+- kanban-model.md:263 `Ticket.record(entry: str)`: callers write raw log text, so the log line format leaks to every caller.
+
+### `use-property-not-accessor` — Fail
+- kanban-model.md:631-635 `GraphRulesCollection.slugs()`, `violations()`, `failed_slugs()`, `passing_slugs()`: they take no parameters and are derived from state, so they should be properties.
+- kanban-model.md:656 `GraphRule.failing()`: also derived and parameterless, so it should be a property.
+- kanban-model.md:98 `Board.wip_limit(stage)`: it duplicates `Stage.wip_limit` (:146), which is already a property.
+
+### `prefer-class-operations` — Fail
+- kanban-model.md:411 `Session.active_name(repo_path)`, :430 `all_in(repo_path)`, :432 `backlog_folder(repo_path)`, :433 `board_file(repo_path)`: each takes the repository as a parameter and reaches into it, so they are `Repo` operations.
+- kanban-model.md:593 `violations_from_graph_json_files`: a module-level function that reads a graph back; it belongs on `Graph`.
+
+### `use-explicit-dependencies` — Fail
+- kanban-model.md:91 `Board.load`: practices built once per process are a hidden global cache, not a collaborator passed in.
+- kanban-model.md:93 `Board.current`: finds its repository through the `CDD_PROJECT` environment variable.
+- kanban-model.md:453 `PracticeSessionOutput.guideline`: loaded on first use, so the class builds its own collaborator.
+
+### `keep-operations-single-responsibility` — Fail
+- kanban-model.md:225 `Ticket.close(leaving)`: it closes the session, moves its folder, and commits, pushes, or merges.
+- kanban-model.md:238 `Ticket.activate`: it handles the ticket being left, then switches branch, worktree, and session.
+- kanban-model.md:208 `Ticket.move_previous`: it does five different things depending on the column and returns either a Ticket or a BacklogItem.
+- kanban-model.md:353 `Repo.switch_branch`: it commits, pushes, and switches.
+
+### `limit-operation-parameters` — Fail
+- kanban-model.md:637 `GraphRulesCollection.record_violation(slug, message, file, start, end)`: `file`, `start`, and `end` are one location concept and should be one object.
+- kanban-model.md:585 `Graph.load_files(folder, practices, files, overlays)`: four setup values rather than one intent.
+
+### `avoid-vague-parameter-names` — Fail
+- kanban-model.md:422 `Session.new(..., fields: dict, ...)` and :428 `save_fields(fields)`: `fields` does not say which ticket fields the caller must supply.
+- kanban-model.md:626 `GraphRulesCollection(..., parent)`: untyped, and the name does not say what kind of parent it is.
+- kanban-model.md:552 `GuidanceAction.run(guidance, operation, action)`: `operation` is untyped and vague.
+
+### `state-change-returns-record-or-named-failure` — Fail
+- kanban-model.md:442 `Session.close()`: it coordinates ending the session and returning the repository to main, and returns nothing.
+- kanban-model.md:353 `Repo.switch_branch`, :355 `switch_worktree`, :358 `close_branch`: each returns a bare `str` for a multi-step state change.
+- kanban-model.md:213 `Ticket.finish_review`: it refuses an unknown fidelity but names no failure.
+
+### `domain-exception-carries-context` — Fail
+- kanban-model.md:213 `Ticket.finish_review` and :256 `Ticket.read_file`: both refuse input, but the model names no typed exception or result, so callers cannot tell what broke or why.
+
+### `write-interactions` — Fail
+- kanban-model.md:249 `Ticket.enable_practice -> PracticeSessionOutput.enabled`: it reaches into the session's practice outputs instead of asking `Session`.
+- kanban-model.md:260 `Ticket.report -> Graph.write_json`: the ticket talks to the graph directly, bypassing the session that owns the practice graphs (:454).
+
+### `no-redundant-relationship-paths` — Fail
+- kanban-model.md:71-72 `Board.repo_root` and `Board.repo`: `Repo.root` (:343) already gives the root.
+- kanban-model.md:74 `Board.practices`, :135 `Stage.practices`, :180 `Ticket.practices`: three paths to the practices.
+- kanban-model.md:277-278 `FidelityProgress.stage` and `practice`: the fidelity already knows its stage (:512) and its practice.
+- kanban-model.md:175 `Ticket.name`, :198 `root`: copies of what the session the ticket holds (:174) already says.
+
+### `use-intention-revealing-names` — Fail
+- kanban-model.md:189 `Ticket.next`: does not say what is next; it is the next fidelity.
+- kanban-model.md:265 `Ticket.keep`, :263 `record`, :424 `Session.at`: none says what is kept, recorded, or found.
+- kanban-model.md:233 `Ticket.load(ticket: str)`: the parameter is a name, not a ticket.
+
+### `use-consistent-naming` — Fail
+- kanban-model.md:210 `Ticket.move_to` and :429 `Session.move_to`: one verb for a column move and a folder move (:675).
+- kanban-model.md:90 `load`, :92 `current`, :424 `at`, :430 `all_in`: four verbs for finding an object.
+- kanban-model.md:43 `move` and `pull`: two log words for one move.
+
+### `eliminate-duplication` — Fail
+- kanban-model.md:536 `StageName`: `STAGE_NAMES` in `board.py` repeats the constants in `stages.py`, and `FidelityGuidance.stage` (:512) is still a string.
+- kanban-model.md:292 `FidelityProgress.from_log` and :492 `Activity.from_log_line`: two readers of the same session log lines.
+
+**Passes:** `shape-classes-around-resources`, `external-system-interface-is-one-way` (no external system in scope), `errors-out-of-existence`, `limit-comments`, `write-invariants` (stated at :19 and :30), and `one-canonical-model-document` (the drawio mirrors this file and leaves Intended members out, as :65 says).

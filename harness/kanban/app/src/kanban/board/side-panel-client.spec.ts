@@ -204,6 +204,31 @@ describe('Fix Report Violations', () => {
       expect(rule.violations.every(violation => command!.text.includes(violation.message))).toBe(true)
     })
   })
+
+  describe('with Fix all pressed on the whole report', () => {
+    async function sent() {
+      const { page } = await board.page()
+      const chat = await board.connectChat(page)
+      await page.panels.openReport(TICKET, '')
+      const { rules } = reportPanel(page).report
+      await page.fixReport(TICKET, rules)
+      return { rules, commands: await chat.checkIn() }
+    }
+
+    it('should send one message to the chat', async () => {
+      expect((await sent()).commands).toHaveLength(1)
+    })
+
+    it('should name every rule the report breaks', async () => {
+      const { rules, commands } = await sent()
+      expect(rules.every(rule => commands[0]!.text.includes(`${rule.name}: ${rule.description}`))).toBe(true)
+    })
+
+    it('should give every violation of every rule', async () => {
+      const { rules, commands } = await sent()
+      expect(rules.flatMap(rule => rule.violations).every(violation => commands[0]!.text.includes(violation.message))).toBe(true)
+    })
+  })
 })
 
 describe('Refresh Board After Tool Calls', () => {
