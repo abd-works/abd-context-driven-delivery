@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="engineering" data-abd-theme="engineering">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>Implement — ABD Context Driven Delivery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="../commons/foundry-catalog.css?v=cdd-133">
+<link rel="stylesheet" href="../commons/cdd-board.css?v=cdd-31">
+
+<script src="../commons/catalog-nav.js?v=foundry-13"></script>
+</head>
+<body data-nav-prefix="../" data-nav-current="" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+<div class="page-hero page-hero--foundry">
+  <div class="wrap">
+    <table class="page-hero__table" role="presentation">
+      <tr>
+        <td class="page-hero__cell page-hero__cell--title">
+          <h1 class="page-headline">Implement</h1>
+          <p class="body-lead">acceptance_tests.ts</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="catalog-body">
+<div class="wrap approach-wrap">
+<p class="approach-practice__back"><a href="../cdd-approach.html">← Back to the approach</a></p><div id="catalog-monaco" class="catalog-monaco" data-language="typescript" data-folds="[{&quot;start&quot;: 3, &quot;end&quot;: 4}, {&quot;start&quot;: 5, &quot;end&quot;: 7}, {&quot;start&quot;: 8, &quot;end&quot;: 10}, {&quot;start&quot;: 11, &quot;end&quot;: 16}, {&quot;start&quot;: 17, &quot;end&quot;: 19}]" data-source-id="catalog-monaco-source"></div><script type="application/json" id="catalog-monaco-source">"story('Create Unconfirmed User', () => {\n  background(({ given }) => {\n    scenario('Display Create Account', ({ when, then }) => {\n      let accountCredentials: AccountCredentials;\n      when('the User proceeds to create an account from the Paradise Mobile website', () => {\n        accountCredentials = accountRepository.newAccount();\n      });\n      then('the User can enter account credentials', () => {\n        expect(accountCredentials.isUpdatable).toBe(true);\n      })\n        .and('the email and password rules are unmet', () => {\n          const missing = accountCredentials.missingRequirements();\n          expect(missing).toContain(accountCredentials.requirements.emailRequired);\n          expect(missing).toContain(accountCredentials.requirements.passwordRequired);\n          expect(missing).toContain(accountCredentials.requirements.confirmRequired);\n        })\n        .and('the customer cannot save the customer account', () => {\n          expect(accountCredentials.isPersistable).toBe(false);\n        });\n    });\n      "</script><script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script><script src="../commons/catalog-monaco.js?v=cdd-108"></script>
+</div>
+</div>
+</main>
+<script src="../commons/catalog-foundry-skill-nav.js?v=cdd-16"></script>
+
+</body>
+</html>
