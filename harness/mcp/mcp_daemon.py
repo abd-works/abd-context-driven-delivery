@@ -23,6 +23,7 @@ _PING_SECONDS = 2
 _START_SECONDS = 60
 _STOP_SECONDS = 10
 _LOG_LINES_SHOWN = 20
+_CREATE_BREAKAWAY_FROM_JOB = 0x01000000
 
 
 class ServerDidNotStart(Exception):
@@ -82,10 +83,22 @@ class McpDaemon:
         self._end_process(int(answer.get("pid") or 0))
 
     def spawn(self) -> None:
-        from harness.hooks.process import detached_creationflags, hidden_process_startupinfo, hook_python_executable
+        from harness.hooks.process import detached_creationflags
 
         self.home.folder.mkdir(parents=True, exist_ok=True)
         log = open(self.home.log_path, "a", encoding="utf-8")
+        try:
+            self._start_process(log, detached_creationflags())
+        except PermissionError:
+            # Some Windows jobs refuse to let a child break away; the server then lives in its starter's job, and the
+            # next connect starts it again if that job ends.
+            log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} breakaway refused; starting inside the caller's job\n")
+            log.flush()
+            self._start_process(log, detached_creationflags() & ~_CREATE_BREAKAWAY_FROM_JOB)
+
+    def _start_process(self, log, creationflags: int) -> None:
+        from harness.hooks.process import hidden_process_startupinfo, hook_python_executable
+
         subprocess.Popen(
             [hook_python_executable(self.home.python), "-m", "harness.mcp", "--port", str(self.port)],
             cwd=str(self.home.source),
@@ -93,7 +106,7 @@ class McpDaemon:
             stdin=subprocess.DEVNULL,
             stdout=log,
             stderr=subprocess.STDOUT,
-            creationflags=detached_creationflags(),
+            creationflags=creationflags,
             startupinfo=hidden_process_startupinfo(),
             close_fds=True,
         )
