@@ -92,6 +92,31 @@ with description("Stories"):
             with it("should give its scenarios to the Story of the same name on the map"):
                 expect([len(story.scenarios) for story in self.model.every_story()]).to(equal([1]))
 
+        # Code goes straight in the root and documents in the root's .context, so the map a story test belongs to is
+        # in .context, beside the folders that hold the story tests rather than above them.
+        with context("with a story test at its declared Python path and the story map at its declared path"):
+            with before.each:
+                import tempfile
+
+                from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+                self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
+                story_map = self.root / Stories(fidelity="story_map").fidelities.current.outputs["markdown"]
+                story_map.parent.mkdir(parents=True)
+                story_map.write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
+                story_test = self.root / "move-work-on-board" / "display-board" / "open-board" / "open_board_story.test.py"
+                story_test.parent.mkdir(parents=True)
+                story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
+                self.model = StoryModel.load_files([str(story_test)], self.root)
+
+            with after.each:
+                import shutil
+
+                shutil.rmtree(self.root, ignore_errors=True)
+
+            with it("should give its scenarios to the Story of the same name on the map in the root's .context"):
+                expect([len(story.scenarios) for story in self.model.every_story()]).to(equal([1]))
+
     with context("that is constructed with fidelity acceptance_tests"):
         with it("should default format to python"):
             expect(Stories(fidelity="acceptance_tests").format).to(equal("python"))
