@@ -221,7 +221,7 @@ The base type of Ticket and BacklogItem.
 	// its session's workpath, as a path from the project; empty for the whole repository
 	-> Session.workpath
 + worktree: str
-	// the folder of its own worktree, where its chat works; empty while it has none. The board picks the chat whose folder this is when a person clicks the ticket
+	// the folder of its own worktree, where its chat works; empty while it has none. The board picks the chat working in this folder, or a folder inside it, when a person clicks the ticket
 	-> Board.worktree_of
 + practice_roots: dict[str, PracticeRoot]
 	// where each practice writes, as a path from the project, and whether a person chose it or it is the default
