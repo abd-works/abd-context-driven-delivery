@@ -28,7 +28,7 @@ with story("Open Board"):
         with and_("the session board reads the [board](../../../kanban-model.md#board) again every two seconds"):
             pass
     with scenario("Find the board from a chat"):
-        # Evidence: inferred: the 'board' command handler in tools/chat-mod/hooks/register.ts; no spec runs the mod.
+        # Evidence: inferred: the 'board' command handler in harness/chat-ui/pane/hooks/register.ts; no spec runs the mod.
         with given("a Claude Code chat has the cdd-board mod loaded"):
             pass
         with when("the Person asks the chat where the session board is"):

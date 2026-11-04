@@ -6,6 +6,6 @@
 
 ## Constraint
 
-This tool can only answer while the MCP host is up, so it reports the graph app and the hook server and nothing about the host itself. The server health band in `tools/chat-mod/hooks/health/` works out that the MCP host is lost or that tools are missing from how its own calls fail, and counts the loaded tools from the session's tool list.
+This tool can only answer while the MCP host is up, so it reports the graph app and the hook server and nothing about the host itself. The server health band in `harness/chat-ui/pane/hooks/health/` works out that the MCP host is lost or that tools are missing from how its own calls fail, and counts the loaded tools from the session's tool list.
 
-The band is drawn by the `cdd-board` plugin in `tools/chat-mod`, which already runs in every chat.
+The band is drawn by the `cdd-board` plugin in `harness/chat-ui/pane`, which already runs in every chat.

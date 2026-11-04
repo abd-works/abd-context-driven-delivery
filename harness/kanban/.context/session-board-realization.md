@@ -3,7 +3,7 @@
 Source: the `*_story.test.py` files under `move-work-forward-on-session-board/`, one per Story in its epic, sub-epic, and story folders, on `story-map.md`; domain terms link to `kanban-model.md`.
 
 Each block traces the domain operations a When (or a Then that triggers a collaborator) runs: `->` is a call, `<-` its return.
-`Board page` is the board app in `harness/kanban/app`, `chat mod` is `tools/chat-mod/hooks/register.ts`, and `Agent` is a Claude Code chat calling the cdd tools.
+`Board page` is the board app in `harness/kanban/app`, `chat mod` is `harness/chat-ui/pane/hooks/register.ts`, and `Agent` is a Claude Code chat calling the cdd tools.
 
 ---
 
@@ -34,7 +34,7 @@ Chat <- the chats whose cdd-board mod checked in lately
 
 ### Scenario: Find the board from a chat
 
-Evidence: inferred: the 'board' command handler in tools/chat-mod/hooks/register.ts; no spec runs the mod.
+Evidence: inferred: the 'board' command handler in harness/chat-ui/pane/hooks/register.ts; no spec runs the mod.
 
 **Given** a Claude Code chat has the cdd-board mod loaded
 
@@ -409,7 +409,7 @@ Board <- Ticket checkout-flow
 
 ### Scenario: Name the active ticket on the chat's status line
 
-Evidence: inferred: statusOf and readActive in tools/chat-mod/hooks/register.ts; no spec runs the mod.
+Evidence: inferred: statusOf and readActive in harness/chat-ui/pane/hooks/register.ts; no spec runs the mod.
 
 **Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card), in Discovery, with violations on stories-story_map
 
@@ -1747,7 +1747,7 @@ Actor: Board App · Sub-epic: Guide Work Through Practices · File: `move-work-f
 
 ### Scenario: Name the active ticket and its next guidance in the system prompt
 
-Evidence: inferred: the prompt.compose handler in tools/chat-mod/hooks/register.ts; no spec runs the mod. The map records it Live with a local stand-in for the model.
+Evidence: inferred: the prompt.compose handler in harness/chat-ui/pane/hooks/register.ts; no spec runs the mod. The map records it Live with a local stand-in for the model.
 
 **Given** checkout-flow, titled Checkout flow, is the active [ticket](kanban-model.md#ticket--card), in Discovery, with stories-story_map next
 

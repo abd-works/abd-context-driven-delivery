@@ -7,7 +7,7 @@ section: body
 
 # Story Map — Session Board
 
-**Sources / context:** `harness/kanban/board.py`; `harness/kanban/ticket.py`; `harness/kanban/backlog_item.py`; `harness/kanban/kanban_spec.py`; `harness/kanban/kanban_tools_spec.py`; `harness/kanban/app/src/kanban/` and its `*.spec.ts`; `harness/kanban/app/tests/` (`story-actions.spec.ts`, `board-surface.spec.ts`, and the `tests/kanban/` sub-epics); `tools/chat-mod/hooks/register.ts`; `harness/kanban/.context/module-context.md`; `harness/kanban/.context/kanban-model.md`; the Board Pane canvas, Version 72 (https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN, `project/Main.dc.html`) and its comment threads of 2026-10-31.
+**Sources / context:** `harness/kanban/board.py`; `harness/kanban/ticket.py`; `harness/kanban/backlog_item.py`; `harness/kanban/kanban_spec.py`; `harness/kanban/kanban_tools_spec.py`; `harness/kanban/app/src/kanban/` and its `*.spec.ts`; `harness/kanban/app/tests/` (`story-actions.spec.ts`, `board-surface.spec.ts`, and the `tests/kanban/` sub-epics); `harness/chat-ui/pane/hooks/register.ts`; `harness/kanban/.context/module-context.md`; `harness/kanban/.context/kanban-model.md`; the Board Pane canvas, Version 72 (https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN, `project/Main.dc.html`) and its comment threads of 2026-10-31.
 
 **Acceptance criteria:** A stack of cards on the story map is one Story. The top card is the Story and the cards under it are its acceptance criteria, listed under it here.
 
@@ -23,7 +23,7 @@ section: body
 
 ### (S) Person --> [Open Board](move-work-forward-on-session-board/display-board-and-details-for-repo/open-board/open_board_story.test.py)
 
-Observed: `board-page.ts` `start()` and `board-header-view.tsx` read the board when the page opens. Inferred: the `board` command in `tools/chat-mod/hooks/register.ts` opens the board from the chat.
+Observed: `board-page.ts` `start()` and `board-header-view.tsx` read the board when the page opens. Inferred: the `board` command in `harness/chat-ui/pane/hooks/register.ts` opens the board from the chat.
 
 ### (S) Board App --> [Display Board](move-work-forward-on-session-board/display-board-and-details-for-repo/display-board/display_board_story.test.py)
 
@@ -58,7 +58,7 @@ Observed: `ticket-card-view.tsx` draws the title and age, with one block per ena
 - Display Sessions As Tickets: each work session shows as one ticket and the main session is not on the board. Observed.
 - Place Ticket In Column: a ticket shows in the stage of its latest move, or before any move in the earliest stage its session shows work in. Observed.
 - Display Active Ticket: the active ticket has a thick orange outline. Observed.
-- Show Active Ticket On Status Line: the chat's status line names the active ticket, its stage, its next guidance, and its violations. Inferred: `statusOf` in `tools/chat-mod/hooks/register.ts`.
+- Show Active Ticket On Status Line: the chat's status line names the active ticket, its stage, its next guidance, and its violations. Inferred: `statusOf` in `harness/chat-ui/pane/hooks/register.ts`.
 
 ### (S) Board App --> [Display Ticket Details](move-work-forward-on-session-board/display-board-and-details-for-repo/display-ticket-details/display_ticket_details_story.test.py)
 
@@ -176,7 +176,7 @@ Observed: the arrow takes an In progress ticket to Done without crossing a colum
 
 ### (S) Board App --> [Add Active Ticket To System Prompt](move-work-forward-on-session-board/guide-work-through-practices/add-active-ticket-to-system-prompt/add_active_ticket_to_system_prompt_story.test.py)
 
-Inferred: the `prompt.compose` handler in `tools/chat-mod/hooks/register.ts` names the active ticket and its next guidance, and leaves the prompt unchanged with no active ticket. No spec covers it.
+Inferred: the `prompt.compose` handler in `harness/chat-ui/pane/hooks/register.ts` names the active ticket and its next guidance, and leaves the prompt unchanged with no active ticket. No spec covers it.
 
 ### (S) Person --> [Open Help](move-work-forward-on-session-board/guide-work-through-practices/open-help/open_help_story.test.py)
 
