@@ -100,7 +100,7 @@ describe("Browse Ticket's Session Folder", () => {
   })
 })
 
-describe('View Files', () => {
+describe('View Fidelity Files', () => {
   it('should open one tab per format, generated or not', async () => {
     const { page } = await board.page()
     await page.files.openFiles(TICKET, [SLUG], 'files')

@@ -1071,10 +1071,18 @@ class MarkdownStoryModel(StoryModel):
             actor = story.actors[0] if story.actors else ""
             name = self._story_label(story)
             if actor:
-                actor_name = self.strip_backticks(actor)
-                self._outline_lines.append(f"{marks} (S) {actor_name} --> {name}")
-                continue
-            self._outline_lines.append(f"{marks} (S) --> {name}")
+                self._outline_lines.append(f"{marks} (S) {self.strip_backticks(actor)} --> {name}")
+            else:
+                self._outline_lines.append(f"{marks} (S) --> {name}")
+            self._outline_lines.extend(self._scenario_lines_under(story, level))
+
+    def _scenario_lines_under(self, story, level: int) -> List[str]:
+        """A story's backgrounds and scenarios, their headings one level below the story's."""
+        if not story.scenarios and not story.backgrounds:
+            return []
+        text = MarkdownScenario.render_scenarios(story.scenarios, story_backgrounds=story.backgrounds)
+        marks = "#" * min(level + 1, 6)
+        return [""] + [f"{marks} {line[4:]}" if line.startswith("### ") else line for line in text.splitlines()]
 
     def _story_label(self, story) -> str:
         name = self.strip_backticks(story.name)

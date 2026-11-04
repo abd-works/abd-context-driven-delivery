@@ -31,11 +31,9 @@ let isBusy = false
 let chatName = ''
 let active: TicketData | undefined
 
-// The engine queues a plugin's prompt until the chat is idle; one still queued this long after an idle chat took it is
-// not coming, and the board says so instead of showing it as taken forever.
-const SHOWN_WITHIN_MILLISECONDS = 20_000
-// A slash command resolves only once it has finished, which for a skill takes minutes; the engine refuses one it cannot
-// run straight away, so one not refused by now is running.
+// The engine queues a plugin's prompt or slash command until the chat is idle, the same queue a person's Ctrl+Enter
+// uses, and either resolves only once it has run. It refuses one it will not take straight away, so one not refused by
+// now waits in that queue or is running.
 const REFUSED_WITHIN_MILLISECONDS = 3_000
 
 const after = ($: EngineInterface, milliseconds: number, answer: string): Promise<string> => new Promise(resolve => $.clock.after(milliseconds, () => resolve(answer)))
@@ -75,7 +73,7 @@ async function filled($: EngineInterface, text: string): Promise<string> {
 // Any other text arrives as the person's own message, the same as typing it.
 function submitted($: EngineInterface, text: string): Promise<string> {
   const submitting = $.prompt.submit({ text, asUser: true }).then(answer => (answer.drop === undefined ? '' : `the chat dropped it: ${answer.drop || 'no reason given'}`), reasonOf)
-  return Promise.race([submitting, after($, SHOWN_WITHIN_MILLISECONDS, `the chat had not shown it ${SHOWN_WITHIN_MILLISECONDS / 1000} s after taking it`)])
+  return Promise.race([submitting, after($, REFUSED_WITHIN_MILLISECONDS, '')])
 }
 
 // The chat's cdd server keeps the code it started with; cdd.restart reloads it in place, on the same connection. A server

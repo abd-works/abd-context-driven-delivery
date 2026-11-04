@@ -9,7 +9,7 @@ Each block traces the domain operations a When (or a Then that triggers a collab
 
 ## Open Board
 
-Actor: Person · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/open-board/open_board_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/open-board/open_board_story.test.py`
 
 ### Scenario: Open the board on a project
 
@@ -52,7 +52,7 @@ chat mod <- the board's address
 
 ## Display Board
 
-Actor: Board App · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/display-board/display_board_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-board/display_board_story.test.py`
 
 ### Scenario: Draw the columns of the board
 
@@ -188,7 +188,7 @@ Board <- stories-story_map done on billing-report
 
 ## Arrange Board And Details
 
-Actor: Person · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/arrange-board-and-details/arrange_board_and_details_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-details/arrange_board_and_details_story.test.py`
 
 ### Scenario: Give the board more height
 
@@ -252,7 +252,7 @@ Person -> BoardLayoutClient.toggleRegion('board')
 
 ## Display Backlog Items As Tickets
 
-Actor: Board App · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/display-backlog-items-as-tickets/display_backlog_items_as_tickets_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-backlog-items-as-tickets/display_backlog_items_as_tickets_story.test.py`
 
 ### Scenario: Show each idea file in the Backlog
 
@@ -315,7 +315,7 @@ BacklogItem <- the file name in words
 
 ## Display Ticket Card
 
-Actor: Board App · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/display-ticket-card/display_ticket_card_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-ticket-card/display_ticket_card_story.test.py`
 
 ### Scenario: Show every work session as a ticket
 
@@ -426,7 +426,7 @@ Board <- the active ticket checkout-flow
 
 ## Display Ticket Details
 
-Actor: Board App · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/display-ticket-details/display_ticket_details_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-ticket-details/display_ticket_details_story.test.py`
 
 ### Scenario: Show the ticket of a card pressed anywhere
 
@@ -545,7 +545,7 @@ Person -> OpenCardClient.openSegment(billing-report, Discovery, 'stories-story_m
 
 ## Set Stage WIP Limit
 
-Actor: Person · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/set-stage-wip-limit/set_stage_wip_limit_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/set-stage-wip-limit/set_stage_wip_limit_story.test.py`
 
 ### Scenario: Set a stage's limit
 
@@ -611,7 +611,7 @@ Evidence: observed: board-client.spec 'should change nothing for a limit that is
 
 ## Arrange Side Panel
 
-Actor: Person · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/arrange-side-panel/arrange_side_panel_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/arrange-side-panel/arrange_side_panel_story.test.py`
 
 ### Scenario: Set a panel's width
 
@@ -983,7 +983,7 @@ Evidence: observed: ticket-client.spec 'should let only the active ticket, or on
 
 ## Restrict Actions To Active Session
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py`
 
 ### Scenario: Lock tickets that are not the active session
 
@@ -2213,13 +2213,13 @@ Evidence: observed: tile-client.spec 'should keep Run off on a render with nothi
 
 ---
 
-## Send Sketch Iterate Or Document
+## Send Tile Action To Chat
 
-Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `move-work-forward-on-session-board/generate-fidelity-outputs/send-sketch-iterate-or-document/send_sketch_iterate_or_document_story.test.py`
+Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `move-work-forward-on-session-board/generate-fidelity-outputs/send-tile-action-to-chat/send_tile_action_to_chat_story.test.py`
 
 ### Scenario: Send sketch, iterate, or document as its own command
 
-Evidence: observed: tile-client.spec 'Send Sketch Iterate Or Document' — 'should send %s as its own command' for sketch, iterate, and document; story-actions.spec 'should send the chosen action on a tile'.
+Evidence: observed: tile-client.spec 'Send Tile Action To Chat' — 'should send %s as its own command' for sketch, iterate, and document; story-actions.spec 'should send the chosen action on a tile'.
 
 **Given** billing-report is the active [ticket](kanban-model.md#ticket--card) and a chat is connected
 
@@ -2645,13 +2645,13 @@ Person -> Ticket.session_files()
 
 ---
 
-## View Files
+## View Fidelity Files
 
-Actor: Person · Sub-epic: Review Fidelity Outputs · File: `move-work-forward-on-session-board/review-fidelity-outputs/view-files/view_files_story.test.py`
+Actor: Person · Sub-epic: Review Fidelity Outputs · File: `move-work-forward-on-session-board/review-fidelity-outputs/view-fidelity-files/view_fidelity_files_story.test.py`
 
 ### Scenario: Open one tab per format, generated or not
 
-Evidence: observed: side-panel-client.spec 'View Files' — 'should open one tab per format, generated or not', 'should read the text of the file a tab shows'; story-actions.spec 'should offer a tab for a format not generated yet and say so'; kanban_tools_spec 'should return the file's text'.
+Evidence: observed: side-panel-client.spec 'View Fidelity Files' — 'should open one tab per format, generated or not', 'should read the text of the file a tab shows'; story-actions.spec 'should offer a tab for a format not generated yet and say so'; kanban_tools_spec 'should return the file's text'.
 
 **Given** checkout-flow's story map is tests/story-map.md and tests/story-map.drawio is not there
 

@@ -457,7 +457,6 @@ with description("a graph"):
                             "vocabulary-traces-to-domain-source",
                             "read-all-source-context-in-full",
                             "do-not-invent-requirements",
-                            "evidence-distinguishes-observed-inferred-and-intended",
                         }
                         <= set(names)
                     ).to(equal(True))
@@ -543,12 +542,6 @@ with description("a graph"):
                 with it("should leave do-not-invent-requirements prompt"):
                     expect(rule_on(self.handle_request, "do-not-invent-requirements")["status"]).to(equal("prompt"))
 
-                # Evidence is judged by whoever reads the story, never counted as a graph hit.
-                with context("with a story whose evidence is unlabeled"):
-                    with it("should leave evidence-distinguishes-observed-inferred-and-intended prompt"):
-                        status = rule_on(self.handle_request, "evidence-distinguishes-observed-inferred-and-intended")["status"]
-                        expect(status).to(equal("prompt"))
-
                 with context("with a story that repeats a sibling story"):
                     with it("should record that the story is too similar to another story on the same map node"):
                         message = rule_on(self.submit_order, "right-size-story-nodes")["violations"][0]["message"]
@@ -583,7 +576,6 @@ with description("a graph"):
                                 "stories.Story.vocabulary-traces-to-domain-source",
                                 "stories.Story.read-all-source-context-in-full",
                                 "stories.Story.do-not-invent-requirements",
-                                "stories.Story.evidence-distinguishes-observed-inferred-and-intended",
                             }
                             <= set(self.graph.filter.rules)
                         ).to(equal(True))

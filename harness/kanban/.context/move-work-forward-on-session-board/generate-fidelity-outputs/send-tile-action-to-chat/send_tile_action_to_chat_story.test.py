@@ -4,15 +4,15 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Epic: Move Work Forward On Session Board
 # Sub-epic: Generate Fidelity Outputs
-# Map: ../../../story-map.md#s-person----send-sketch-iterate-or-document
+# Map: ../../../story-map.md#s-person----send-tile-action-to-chat
 # Model: ../../../kanban-model.md
 # Realizations: ../../../session-board-realization.md
 
-# Story: Send Sketch Iterate Or Document
+# Story: Send Tile Action To Chat
 # Actor: Person
-with story("Send Sketch Iterate Or Document"):
+with story("Send Tile Action To Chat"):
     with scenario("Send sketch, iterate, or document as its own command"):
-        # Evidence: observed: tile-client.spec 'Send Sketch Iterate Or Document' — 'should send %s as its own command' for sketch, iterate, and document; story-actions.spec 'should send the chosen action on a tile'.
+        # Evidence: observed: tile-client.spec 'Send Tile Action To Chat' — 'should send %s as its own command' for sketch, iterate, and document; story-actions.spec 'should send the chosen action on a tile'.
         with given("billing-report is the active [ticket](../../../kanban-model.md#ticket--card) and a chat is connected"):
             pass
         with and_("its story_map bar is open"):

@@ -4,15 +4,15 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Epic: Move Work Forward On Session Board
 # Sub-epic: Review Fidelity Outputs
-# Map: ../../../story-map.md#s-person----view-files
+# Map: ../../../story-map.md#s-person----view-fidelity-files
 # Model: ../../../kanban-model.md
 # Realizations: ../../../session-board-realization.md
 
-# Story: View Files
+# Story: View Fidelity Files
 # Actor: Person
-with story("View Files"):
+with story("View Fidelity Files"):
     with scenario("Open one tab per format, generated or not"):
-        # Evidence: observed: side-panel-client.spec 'View Files' — 'should open one tab per format, generated or not', 'should read the text of the file a tab shows'; story-actions.spec 'should offer a tab for a format not generated yet and say so'; kanban_tools_spec 'should return the file's text'.
+        # Evidence: observed: side-panel-client.spec 'View Fidelity Files' — 'should open one tab per format, generated or not', 'should read the text of the file a tab shows'; story-actions.spec 'should offer a tab for a format not generated yet and say so'; kanban_tools_spec 'should return the file's text'.
         with given("checkout-flow's story map is tests/story-map.md and tests/story-map.drawio is not there"):
             pass
         with when("the Person views checkout-flow's story_map files"):

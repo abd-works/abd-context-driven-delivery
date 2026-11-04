@@ -27948,3 +27948,997 @@ Traceback (most recent call last):
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ModuleNotFoundError: No module named 'review.review'
 2026-11-04T04:59:26Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:01:01Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:01:01Z validate AttributeError: 'dict' object has no attribute 'validate'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 202, in run
+    return self.each(operation)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 194, in each
+    return [operation(item) for item in self.listed()]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 194, in <listcomp>
+    return [operation(item) for item in self.listed()]
+            ^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 35, in on
+AttributeError: 'dict' object has no attribute 'validate'
+2026-11-04T05:01:01Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:01:01Z validate.validate AttributeError: 'dict' object has no attribute 'validate'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1294, in dispatch
+    return self._runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 956, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 763, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 781, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 42, in <module>
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 202, in run
+    return self.each(operation)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 194, in each
+    return [operation(item) for item in self.listed()]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 194, in <listcomp>
+    return [operation(item) for item in self.listed()]
+            ^^^^^^^^^^^^^^^
+  File "<agent_instructions>", line 35, in on
+AttributeError: 'dict' object has no attribute 'validate'
+2026-11-04T05:01:01Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:01:11Z chat.messages FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793768451625240100.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 127, in messages
+    return [self._message(path, state) for path, state in newest]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 127, in <listcomp>
+    return [self._message(path, state) for path, state in newest]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 254, in _message
+    sent = json.loads(path.read_text(encoding="utf-8"))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1058, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1044, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793768451625240100.json'
+2026-11-04T05:01:11Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:01:44Z chat.check_in PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\waiting\\1793768503777271100.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793768503777271100.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 139, in check_in
+    return self._take_ready(is_busy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 218, in _take_ready
+    self._move(path, TAKEN)
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 246, in _move
+    path.replace(folder / path.name)
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1188, in replace
+    os.replace(self, target)
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\waiting\\1793768503777271100.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793768503777271100.json'
+2026-11-04T05:01:44Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:02:12Z chat.messages FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793768511927726700.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 127, in messages
+    return [self._message(path, state) for path, state in newest]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 127, in <listcomp>
+    return [self._message(path, state) for path, state in newest]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 254, in _message
+    sent = json.loads(path.read_text(encoding="utf-8"))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1058, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1044, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793768511927726700.json'
+2026-11-04T05:02:12Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:02:30Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:02:30Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:03:20Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:03:29Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:03:30Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:04:38Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:05:27Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:05:27Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:06:34Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:06:34Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:06:47Z chat.messages FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\waiting\\1793768807709298400.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 127, in messages
+    return [self._message(path, state) for path, state in newest]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 127, in <listcomp>
+    return [self._message(path, state) for path, state in newest]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 254, in _message
+    sent = json.loads(path.read_text(encoding="utf-8"))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1058, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1044, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\waiting\\1793768807709298400.json'
+2026-11-04T05:06:47Z chat.check_in PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\waiting\\1793768807709298400.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793768807709298400.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 139, in check_in
+    return self._take_ready(is_busy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 218, in _take_ready
+    self._move(path, TAKEN)
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 246, in _move
+    path.replace(folder / path.name)
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1188, in replace
+    os.replace(self, target)
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\waiting\\1793768807709298400.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793768807709298400.json'
+2026-11-04T05:06:47Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:06:47Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:07:01Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:08:49Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:08:49Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:10:58Z chat.confirm PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793769055579228000.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\failed\\1793769055579228000.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 151, in confirm
+    self._move(taken, SHOWN if is_shown else FAILED)
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 246, in _move
+    path.replace(folder / path.name)
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1188, in replace
+    os.replace(self, target)
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793769055579228000.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\failed\\1793769055579228000.json'
+2026-11-04T05:10:58Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:11:56Z chat.send ChatNotConnectedError: chat '366d5a7c-e91e-404e-b333-bbdaa5cfbf97' is not connected: is the cdd-board mod loaded in it?
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 114, in send
+    raise ChatNotConnectedError(self.id)
+tools.chat.chat.ChatNotConnectedError: chat '366d5a7c-e91e-404e-b333-bbdaa5cfbf97' is not connected: is the cdd-board mod loaded in it?
+2026-11-04T05:11:56Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:11:59Z chat.check_in PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\54f117bd-4355-4e71-998e-4fe0517daa62\\waiting\\1793769116749847500.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\54f117bd-4355-4e71-998e-4fe0517daa62\\taken\\1793769116749847500.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 139, in check_in
+    return self._take_ready(is_busy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 218, in _take_ready
+    self._move(path, TAKEN)
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 246, in _move
+    path.replace(folder / path.name)
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1188, in replace
+    os.replace(self, target)
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\54f117bd-4355-4e71-998e-4fe0517daa62\\waiting\\1793769116749847500.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\54f117bd-4355-4e71-998e-4fe0517daa62\\taken\\1793769116749847500.json'
+2026-11-04T05:11:59Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:12:54Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:12:54Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:14:03Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:14:03Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:14:49Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:14:49Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:20:16Z chat.check_in PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\waiting\\1793769616713355400.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793769616713355400.json'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 701, in _invoke_mcp_callable
+    return op.member(**args)
+           ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 350, in on_subject
+    return operation(found, **arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 139, in check_in
+    return self._take_ready(is_busy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 218, in _take_ready
+    self._move(path, TAKEN)
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 246, in _move
+    path.replace(folder / path.name)
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\pathlib.py", line 1188, in replace
+    os.replace(self, target)
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\waiting\\1793769616713355400.json' -> 'C:\\Users\\thoma\\.claude\\cdd-chats\\7be5bf3b-a1e0-4261-985a-115749dd3689\\taken\\1793769616713355400.json'
+2026-11-04T05:20:16Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:21:10Z validate.validate CancelledError: Cancelled via cancel scope 20b085338d0; reason: deadline exceeded
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1294, in dispatch
+    return self._runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 956, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 763, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 781, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 22, in <module>
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\validate\validate.py", line 120, in _resolve_graph_json_paths
+    return [self._edited_graph_json(edited)]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\validate\validate.py", line 141, in _edited_graph_json
+    graph.load_files(str(workspace), sorted(_GRAPH_PRACTICES), edited)
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1116, in load_files
+    self._build_working_copy()
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1183, in _build_working_copy
+    fill_working_copy(self)
+  File "C:\dev\abd-cdd-session-board\harness\graph\working_copy.py", line 87, in fill_working_copy
+    attach_rules(practice)
+  File "C:\dev\abd-cdd-session-board\harness\graph\rules.py", line 62, in attach_rules
+    practice.graph.report_progress(
+  File "C:\dev\abd-cdd-session-board\harness\graph\graph.py", line 1051, in report_progress
+    report_progress(message)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\progress.py", line 19, in report_progress
+    reporter(message)
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1229, in report
+    anyio.from_thread.run(context.session.send_progress_notification, token, next(reported), None, message)
+  File "C:\Users\thoma\AppData\Local\hermes\hermes-agent\venv\Lib\site-packages\anyio\from_thread.py", line 90, in run
+    return token.backend_class.run_async_from_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Local\hermes\hermes-agent\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2549, in run_async_from_thread
+    return f.result()
+           ^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\concurrent\futures\_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thoma\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+asyncio.exceptions.CancelledError: Cancelled via cancel scope 20b085338d0; reason: deadline exceeded
+2026-11-04T05:21:10Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:21:26Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:22:06Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:22:06Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:23:19Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:23:19Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:24:08Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:24:08Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:24:35Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:24:35Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:25:25Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:25:25Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:25:25Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:25:25Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:25:56Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:25:56Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:27:20Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:27:20Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:27:23Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:27:23Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:28:24Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:28:24Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:30:25Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:30:25Z render.render CodeStoryModelError: Python story map parse expects a path->content dict
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 711, in _invoke_mcp_callable
+    return target(**args)
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\render\render.py", line 45, in render
+    converted = self.each(on)
+                ^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 194, in each
+    return [operation(item) for item in self.listed()]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 194, in <listcomp>
+    return [operation(item) for item in self.listed()]
+            ^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\render\render.py", line 42, in on
+    return item.render(format, payload, source=source, workspace=workspace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance\guidance.py", line 432, in render
+    model = self._to_object_model(content, source)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance\guidance.py", line 450, in _to_object_model
+    return self._parse_content(source_format, content)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance\guidance.py", line 488, in _parse_content
+    return adapter.parse(self._incoming(source_format, content))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\practices\stories\model\code_story_model.py", line 663, in parse
+    return type(self)(self._tests_root).load(external)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\practices\stories\model\python\python_story_model.py", line 38, in load
+    raise CodeStoryModelError("Python story map parse expects a path->content dict")
+cdd_guidance.practices.stories.model.code_story_model.CodeStoryModelError: Python story map parse expects a path->content dict
+2026-11-04T05:30:25Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:30:58Z render.render CodeStoryModelError: Python story map parse expects a path->content dict
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1295, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 953, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 739, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 711, in _invoke_mcp_callable
+    return target(**args)
+           ^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\render\render.py", line 45, in render
+    converted = self.each(on)
+                ^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 194, in each
+    return [operation(item) for item in self.listed()]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance_actions\guidance_actions.py", line 194, in <listcomp>
+    return [operation(item) for item in self.listed()]
+            ^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\render\render.py", line 42, in on
+    return item.render(format, payload, source=source, workspace=workspace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance\guidance.py", line 432, in render
+    model = self._to_object_model(content, source)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance\guidance.py", line 450, in _to_object_model
+    return self._parse_content(source_format, content)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\guidance\guidance.py", line 488, in _parse_content
+    return adapter.parse(self._incoming(source_format, content))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\practices\stories\model\code_story_model.py", line 663, in parse
+    return type(self)(self._tests_root).load(external)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\practices\stories\model\python\python_story_model.py", line 38, in load
+    raise CodeStoryModelError("Python story map parse expects a path->content dict")
+cdd_guidance.practices.stories.model.code_story_model.CodeStoryModelError: Python story map parse expects a path->content dict
+2026-11-04T05:30:58Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T05:47:10Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T05:47:10Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

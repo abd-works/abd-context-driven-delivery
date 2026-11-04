@@ -404,6 +404,12 @@ class PracticeGuidance(Guidance):
 
     _code_formats = frozenset({"python", "typescript", "java", "javascript"})
 
+    def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
+        """What render converts from the files at paths: their text, one after another."""
+        from harness.guidance_actions.guidance_actions import load_document
+
+        return load_document("", paths)
+
     @agent_tool
     def render(
         self,

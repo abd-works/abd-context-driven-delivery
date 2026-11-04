@@ -17,39 +17,43 @@ section: body
 
 # (E) Move Work Forward On Session Board
 
-## (E) Display Board And Details For Repo
+## (E) See Work On Session Board
 
-### (S) Person --> [Open Board](move-work-forward-on-session-board/display-board-and-details-for-repo/open-board/open_board_story.test.py)
+### (S) Person --> [Open Board](move-work-forward-on-session-board/see-work-on-session-board/open-board/open_board_story.test.py)
 
 Observed: `board-page.ts` `start()` and `board-header-view.tsx` read the board when the page opens. Inferred: the `board` command in `tools/chat-mod/hooks/register.ts` opens the board from the chat.
 
-### (S) Board App --> [Display Board](move-work-forward-on-session-board/display-board-and-details-for-repo/display-board/display_board_story.test.py)
+### (S) Board App --> [Display Board](move-work-forward-on-session-board/see-work-on-session-board/display-board/display_board_story.test.py)
 
 Observed: `board-columns-view.tsx`.
 
-### (S) Person --> [Arrange Board And Details](move-work-forward-on-session-board/display-board-and-details-for-repo/arrange-board-and-details/arrange_board_and_details_story.test.py)
+### (S) Person --> [Arrange Board And Details](move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-details/arrange_board_and_details_story.test.py)
 
 Observed.
 
-### (S) Board App --> [Display Backlog Items As Tickets](move-work-forward-on-session-board/display-board-and-details-for-repo/display-backlog-items-as-tickets/display_backlog_items_as_tickets_story.test.py)
+### (S) Board App --> [Display Backlog Items As Tickets](move-work-forward-on-session-board/see-work-on-session-board/display-backlog-items-as-tickets/display_backlog_items_as_tickets_story.test.py)
 
 Observed: the Backlog column shows the title of each file in `.sessions/_backlog/`.
 
-### (S) Board App --> [Display Ticket Card](move-work-forward-on-session-board/display-board-and-details-for-repo/display-ticket-card/display_ticket_card_story.test.py)
+### (S) Board App --> [Display Ticket Card](move-work-forward-on-session-board/see-work-on-session-board/display-ticket-card/display_ticket_card_story.test.py)
 
 Observed: `ticket-card-view.tsx` draws the title and age, with one block per enabled practice, dim while its work is not started.
 
-### (S) Board App --> [Display Ticket Details](move-work-forward-on-session-board/display-board-and-details-for-repo/display-ticket-details/display_ticket_details_story.test.py)
+### (S) Board App --> [Display Ticket Details](move-work-forward-on-session-board/see-work-on-session-board/display-ticket-details/display_ticket_details_story.test.py)
 
 Observed: `details-view.tsx`, `practice-grid-view.tsx`.
 
-### (S) Person --> [Set Stage WIP Limit](move-work-forward-on-session-board/display-board-and-details-for-repo/set-stage-wip-limit/set_stage_wip_limit_story.test.py)
+### (S) Person --> [Set Stage WIP Limit](move-work-forward-on-session-board/see-work-on-session-board/set-stage-wip-limit/set_stage_wip_limit_story.test.py)
 
 Observed: `Board.set_wip_limit`, saved in `.sessions/_board.json`.
 
-### (S) Person --> [Arrange Side Panel](move-work-forward-on-session-board/display-board-and-details-for-repo/arrange-side-panel/arrange_side_panel_story.test.py)
+### (S) Person --> [Arrange Side Panel](move-work-forward-on-session-board/see-work-on-session-board/arrange-side-panel/arrange_side_panel_story.test.py)
 
 Observed: `side-panels-view.tsx` and `drag-grip.ts` hold the report, files, and help panels.
+
+### (S) Person --> [Restrict Actions To Active Session](move-work-forward-on-session-board/see-work-on-session-board/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py)
+
+Observed. With Active session only on, every ticket that is not the active session disables what sends commands to a chat (comment "All buttons and list boxes should be disabled"). Moving, activating, and information stay open: files, the report, expand, and help (comment "you should still be able to get information").
 
 ## (E) Steer Ticket Sessions
 
@@ -65,10 +69,6 @@ Observed: `Ticket.new` calls `Session.new`; `board-page.ts` `openNewTicket`.
 
 Observed: Close on the active ticket asks what to do with its work, then `Ticket.close` calls `Session.close` and moves the folder to `closed/`, so the ticket shows in Complete.
 
-### (S) Person --> [Restrict Actions To Active Session](move-work-forward-on-session-board/steer-ticket-sessions/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py)
-
-Observed. With Active session only on, every ticket that is not the active session disables what sends commands to a chat (comment "All buttons and list boxes should be disabled"). Moving, activating, and information stay open: files, the report, expand, and help (comment "you should still be able to get information").
-
 ### (S) Person --> [Move Ticket](move-work-forward-on-session-board/steer-ticket-sessions/move-ticket/move_ticket_story.test.py)
 
 Observed: the arrows on a card, or a drag, move its ticket whatever its session's work.
@@ -79,11 +79,11 @@ Observed: Activate on a card or the details opens a dialog with what to do on le
 
 ### (S) Person --> [Split Ticket Into Child Tickets](move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.py)
 
-Observed: `fillSplit` in `ticket-client.tsx` fills the prompt and `Ticket.new` records the parent. No spec presses Split.
+Observed: `Ticket.new` records the parent (kanban_tools_spec 'that opens a ticket split from another'). Inferred: Split on a card fills the prompt through `fillSplit` in `ticket-client.tsx`; no spec presses Split.
 
 ### (S) Person --> [Archive Ticket](move-work-forward-on-session-board/steer-ticket-sessions/archive-ticket/archive_ticket_story.test.py)
 
-Observed: the Archive button calls `Ticket.archive`.
+Observed: `Ticket.archive`, called as the `ticket.archive` tool (kanban_spec 'that has been archived'; kanban_tools_spec 'that archives a ticket'). The board app has no Archive button.
 
 ### (S) Person --> [Write Ticket Handoff](move-work-forward-on-session-board/steer-ticket-sessions/write-ticket-handoff/write_ticket_handoff_story.test.py)
 
@@ -145,7 +145,7 @@ Observed: a generate line in the session log counts as Generate done. Run on a t
 
 Observed: Render on a tile sends `/actions-render`.
 
-### (S) Person --> [Send Sketch Iterate Or Document](move-work-forward-on-session-board/generate-fidelity-outputs/send-sketch-iterate-or-document/send_sketch_iterate_or_document_story.test.py)
+### (S) Person --> [Send Tile Action To Chat](move-work-forward-on-session-board/generate-fidelity-outputs/send-tile-action-to-chat/send_tile_action_to_chat_story.test.py)
 
 Observed: Run on a tile sends `/actions-sketch`, `/actions-iterate`, or `/actions-document` to the chosen chat.
 
@@ -175,13 +175,13 @@ Observed.
 
 ### (S) Person --> [List Ticket Files](move-work-forward-on-session-board/review-fidelity-outputs/list-ticket-files/list_ticket_files_story.test.py)
 
-Observed: `Ticket.files`, the folder mode of the files panel, for the tile's or ticket's fidelities and no others; pressing a file opens it. On a ticket whose work is in the whole repository, a pattern lists only what its branch changed. A list that cannot be read says so in a toast.
+Observed: `Ticket.files`, the files mode of the files panel (`FILE_VIEWS` in `file-views-view.tsx`), for the tile's or ticket's fidelities and no others; pressing a file opens it. On a ticket whose work is in the whole repository, a pattern lists only what its branch changed. A list that cannot be read says so in a toast.
 
 ### (S) Person --> [Browse Ticket Folder](move-work-forward-on-session-board/review-fidelity-outputs/browse-ticket-folder/browse_ticket_folder_story.test.py)
 
 Observed: the folder mode of the files panel groups the files under their folders.
 
-### (S) Person --> [View Files](move-work-forward-on-session-board/review-fidelity-outputs/view-files/view_files_story.test.py)
+### (S) Person --> [View Fidelity Files](move-work-forward-on-session-board/review-fidelity-outputs/view-fidelity-files/view_fidelity_files_story.test.py)
 
 Observed: `Ticket.read_file` and `file-views-view.tsx`; one tab per format the fidelity offers, generated or not, and × closes one.
 

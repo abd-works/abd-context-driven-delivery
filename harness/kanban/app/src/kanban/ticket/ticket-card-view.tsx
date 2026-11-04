@@ -73,7 +73,7 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
-      {ticket.violatedSlugs.length ? (
+      {ticket.violatedSlugs.some(slug => stage.workRequired.includes(slug)) ? (
         <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket.name, ''))}>
           violations
         </button>

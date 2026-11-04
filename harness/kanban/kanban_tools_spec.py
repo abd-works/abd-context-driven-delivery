@@ -80,7 +80,7 @@ Graph rule: the story at line 12 opens with a noun.
 Everything else.
 """
 
-# One hit each on a story map rule, a scenarios rule, a shared rule, and an acceptance tests rule.
+# One hit each on a story map rule and a scenarios rule.
 WHOLE_STORIES_GRAPH = {
     "practices": {
         "stories": {
@@ -88,8 +88,6 @@ WHOLE_STORIES_GRAPH = {
             "rules": [
                 ["verb-noun-format", "node-1", "Name the story with a verb"],
                 ["plain-english-gwt-steps", "node-1", "Write the step in plain English"],
-                ["do-not-invent-requirements", "node-1", "Trace the story to its source"],
-                ["shared-example-fixtures", "node-1", "Share the example fixture"],
             ],
         },
     },
@@ -153,7 +151,7 @@ with description("the board tools") as self:
         Session._current = None
         os.environ.pop("CDD_PROJECT", None)
 
-    # (E) Display Board And Details For Repo
+    # (E) See Work On Session Board
     with context("with a project whose sessions folder holds a ticket and a backlog item"):
         with before.each:
             self.project.ticket("pet-visits", *DISCOVERY_DONE, title="Pet visits")
@@ -400,14 +398,15 @@ with description("the board tools") as self:
                     finding = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")["rules"][2]["violations"][0]
                     expect(finding["message"]).to(equal("`Do Stuff` does not say what it does."))
 
-        with context("with a validation report on a rule the practice does not describe"):
+        # A saved graph keeps the hits of a scanner deleted after it was saved.
+        with context("with a validation report on a rule no scanner checks any more"):
             with before.each:
-                unknown = {"practices": {"stories": {"nodes": [], "rules": [["made-up-rule", "node-1", "Broken"]]}}}
-                self.project.report("pet-visits", "stories-story-map-20261031T041200", unknown)
+                deleted = {"practices": {"stories": {"nodes": [], "rules": [["evidence-distinguishes-observed-inferred-and-intended", "node-1", "Label the evidence"]]}}}
+                self.project.report("pet-visits", "stories-story-map-20261031T041200", deleted)
 
-            with it("should leave a rule the practice does not describe without text"):
+            with it("should leave that rule's hits out of the report"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
-                expect(report["rules"][0]["description"]).to(equal(""))
+                expect(report["rules"]).to(equal([]))
 
         # (E) Tickets
         # (S) Person --> Open Ticket Session
@@ -616,12 +615,12 @@ with description("the board tools") as self:
             with after.each:
                 shutil.rmtree(self.outside)
 
-            # (S) Person --> View Files
+            # (S) Person --> View Fidelity Files
             with it("should list the files a pattern finds there"):
                 files = self.project.call("ticket.files", ticket="pet-visits", fidelities=["bdd-behavior"])["bdd-behavior"]["python"]
                 expect(files).to(equal([{"path": (self.outside / "src" / "visits_spec.py").as_posix(), "exists": True}]))
 
-            # (S) Person --> View Files, a path that names its module
+            # (S) Person --> View Fidelity Files, a path that names its module
             with it("should list the files a named part of the path finds there, in folders at any depth"):
                 model = self.outside / "src" / "visits" / ".context" / "visits-model.md"
                 model.parent.mkdir(parents=True)
@@ -658,7 +657,7 @@ with description("the board tools") as self:
             with it("should give the board the ticket's session.json"):
                 expect(self.project.ticket_json("pet-visits")["session_file"]).to(equal(".sessions/pet-visits/session.json"))
 
-            # (S) Person --> View Files
+            # (S) Person --> View Fidelity Files
             with it("should return the file's text"):
                 opened = self.project.call("ticket.read_file", ticket="pet-visits", path="docs/story-map.md")
                 expect(opened["text"]).to(equal("# Story map\n"))
@@ -722,6 +721,18 @@ with description("the board tools") as self:
 
         with it("should name review as the next action"):
             expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("review"))
+
+        # The validating agent adds its judgment to the report after validate has logged its graph's result.
+        with context("with a report whose judgment fails rules the graph passed"):
+            with before.each:
+                self.project.report("sign-up", "stories-story-map-20261031T041200")
+                (self.project.sessions / "sign-up" / "validation-reports" / "stories-story-map-20261031T041200.md").write_text(JUDGED_REPORT, encoding="utf-8")
+
+            with it("should name satisfy as the next action"):
+                expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("satisfy"))
+
+            with it("should count each finding of the judgment"):
+                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-story_map": 4}))
 
         with context("that a person has finished reviewing"):
             with before.each:
@@ -804,6 +815,24 @@ with description("the board tools") as self:
         with it("should give the folder of the reports for every fidelity"):
             expect(self.project.call("ticket.violations", ticket="sign-up")["path"]).to(equal(".sessions/sign-up/validation-reports"))
 
+    # A ticket's card sits in one stage, so its violations are those of that stage's practices.
+    with context("with violations left on a fidelity of a later stage"):
+        with before.each:
+            self.project.ticket(
+                "sign-up",
+                "2026-10-31T01:00:00Z validate Stories story_map graph-rule verb-noun-format map.md:12 no-chat",
+                "2026-10-31T01:00:01Z validate Stories scenarios graph-rule plain-english-gwt-steps map.md:12 no-chat",
+                title="Sign up",
+            )
+            self.project.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
+            reports = self.project.sessions / "sign-up" / "validation-reports"
+            (reports / "stories-scenarios-20261031T050000.md").write_text("# Graph rule validation\n", encoding="utf-8")
+            (reports / "stories-scenarios-20261031T050000.json").write_text(json.dumps(WHOLE_STORIES_GRAPH), encoding="utf-8")
+
+        with it("should list only the rules of the fidelities in the ticket's stage"):
+            rules = self.project.call("ticket.violations", ticket="sign-up")["rules"]
+            expect({rule["fidelity"] for rule in rules}).to(equal({"stories-story_map"}))
+
     with context("with violations two fidelities of one practice share in their saved graphs"):
         with before.each:
             self.project.ticket(
@@ -831,12 +860,12 @@ with description("the board tools") as self:
             )
             self.project.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
 
-        with it("should list the scenarios rules, the shared rules, and the story map rules"):
+        with it("should list the scenarios rules and the story map rules"):
             report = self.project.call("ticket.report", ticket="sign-up", fidelity="stories-scenarios")
-            expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format", "plain-english-gwt-steps", "do-not-invent-requirements"]))
+            expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format", "plain-english-gwt-steps"]))
 
         with it("should count the same rules on the ticket"):
-            expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-scenarios": 3}))
+            expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-scenarios": 2}))
 
         with context("with a story map report newer than the scenarios report"):
             with before.each:
@@ -845,10 +874,10 @@ with description("the board tools") as self:
 
             with it("should leave the story map rules to the story map report"):
                 report = self.project.call("ticket.report", ticket="sign-up", fidelity="stories-scenarios")
-                expect([rule["name"] for rule in report["rules"]]).to(equal(["plain-english-gwt-steps", "do-not-invent-requirements"]))
+                expect([rule["name"] for rule in report["rules"]]).to(equal(["plain-english-gwt-steps"]))
 
             with it("should count only the rules the scenarios report answers for"):
-                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-scenarios": 2}))
+                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-scenarios": 1}))
 
     # (S) Person --> Activate Ticket
     with context("with a git repository and two tickets"):

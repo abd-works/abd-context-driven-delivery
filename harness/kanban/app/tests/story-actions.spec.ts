@@ -131,7 +131,7 @@ test.describe('Generate Fidelity Output', () => {
   })
 })
 
-test.describe('Send Sketch Iterate Or Document', () => {
+test.describe('Send Tile Action To Chat', () => {
   test('should send the chosen action on a tile', async ({ page }) => {
     await waitForChat(page)
     const tile = page.locator('.details-body [data-tile="stories-story_map"]')

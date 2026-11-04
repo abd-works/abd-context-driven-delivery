@@ -15,7 +15,7 @@ Spec files: `board-client.spec`, `ticket-client.spec`, `tile-client.spec`, `side
 
 ## behavior driven development:
 
-# (E) Display Board And Details For Repo
+# (E) See Work On Session Board
 
 ### Display Board
 
@@ -263,11 +263,11 @@ story-actions.spec  describe Generate Fidelity Output
 tile-client.spec  describe Render Fidelity Format
 ```
 
-### Send Sketch Iterate Or Document
+### Send Tile Action To Chat
 
 ```
-tile-client.spec    describe Send Sketch Iterate Or Document
-story-actions.spec  describe Send Sketch Iterate Or Document
+tile-client.spec    describe Send Tile Action To Chat
+story-actions.spec  describe Send Tile Action To Chat
 chat-client.spec    it should choose the only chat connected
 ```
 
@@ -335,10 +335,10 @@ side-panel-client.spec  describe Browse Ticket Folder
 side-panel-client.spec  describe Browse Ticket's Session Folder
 ```
 
-### View Files
+### View Fidelity Files
 
 ```
-side-panel-client.spec  describe View Files
+side-panel-client.spec  describe View Fidelity Files
 ```
 
 ### Review Fidelity
