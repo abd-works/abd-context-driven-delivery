@@ -388,6 +388,16 @@ with description("the board tools") as self:
                         report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
                         expect(report["path"]).to(equal(".sessions/pet-visits/validation-reports/stories-story-map-20261031T041200.md"))
 
+                    # A judgment is a result even when validate saved no graph beside the report.
+                    with context("that its agent has judged since"):
+                        with before.each:
+                            later = self.project.sessions / "pet-visits" / "validation-reports" / "stories-story-map-20261031T050000.md"
+                            later.write_text(JUDGED_REPORT, encoding="utf-8")
+
+                        with it("should show the later judged report"):
+                            report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
+                            expect(report["path"]).to(equal(".sessions/pet-visits/validation-reports/stories-story-map-20261031T050000.md"))
+
                 with it("should list each rule the judgment fails after the graph's rules, once each"):
                     report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
                     expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format", "do-not-invent-requirements", "story-name-captures-system-mechanic"]))

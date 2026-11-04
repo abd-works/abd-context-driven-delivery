@@ -815,7 +815,7 @@ def _report_stamp(report: str) -> str:
 # validate.md allowed only Pass and Fail can mark a rule Warn, which is a Fail.
 JUDGMENT_HEADING = re.compile(r"^## Judgment — `(?P<file>[^`]+)`")
 # A judgment the agent wrote, as against the example the report quotes indented in its instructions.
-JUDGMENT_SECTION = re.compile(r"^#{1,2} Judgment", re.M)
+JUDGMENT_SECTION = re.compile(r"^#{1,2} Judgment\b", re.M)
 JUDGED_RULE_HEADING = re.compile(r"^### `(?P<rule>[^`]+)` — (?:Fail|Warn)\s*$")
 FINDING_LINE = re.compile(r"^- (?:(?P<file>[^\s:]+):(?P<line>\d+)\s+)?(?P<message>.+)$")
 # A finding written before validate.md gave the judgment its shape names its file and line mid-sentence.
