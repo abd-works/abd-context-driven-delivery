@@ -89,8 +89,10 @@ function removeWorktrees(root: string): void {
   execFileSync('git', ['worktree', 'prune'], { cwd: root, stdio: 'ignore' })
 }
 
-// Branches a click opened for a ticket; main is the fixture's own.
+// Branches a click or an activation opened for a ticket; main is the fixture's own, and git deletes no branch the
+// fixture has checked out, so it goes back to main first.
 function removeTicketBranches(root: string): void {
+  execFileSync('git', ['checkout', '-f', 'main'], { cwd: root, stdio: 'ignore' })
   const branches = execFileSync('git', ['branch', '--format=%(refname:short)'], { cwd: root, encoding: 'utf-8' }).split(/\s+/)
   for (const branch of branches.filter(name => name && name !== 'main')) execFileSync('git', ['branch', '-D', branch], { cwd: root, stdio: 'ignore' })
 }
