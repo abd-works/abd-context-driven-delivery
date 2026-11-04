@@ -37,7 +37,7 @@ function FolderGroupsView({ paths }: { paths: string[] }) {
         <div key={folder.root} className="folder-group">
           <div className="folder-root">{folder.root}</div>
           {folder.entries.map(entry => (
-            <button key={entry.path} className="file-link folder-entry" onClick={() => void page.files.openTab(entry.path)}>
+            <button key={entry.path} className="file-link folder-entry" data-path={entry.path} onClick={() => void page.files.openTab(entry.path)}>
               {entry.name}
             </button>
           ))}

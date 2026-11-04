@@ -8,7 +8,7 @@ import { BoardOnProject } from 'test-utils/board-page-support'
 import type { BoardPage } from './board-page'
 import type { FilesPanel, ReportPanel } from './board-store'
 
-// checkout-flow is the active ticket: its story map was validated with one rule broken on tests/story-map.md line 6.
+// checkout-flow is the active ticket: its story map was validated with one rule broken on .context/story-map.md line 6.
 const TICKET = 'checkout-flow'
 const SESSION = 'session=.sessions/checkout-flow/session.json'
 const SLUG = 'stories-story_map'
@@ -40,7 +40,7 @@ describe('List Ticket Files', () => {
   it('should list the files that exist', async () => {
     const { page } = await board.page()
     await page.files.openFiles(TICKET, [SLUG], 'folder')
-    expect(generatedPaths(filesPanel(page))).toEqual(['tests/story-map.md'])
+    expect(generatedPaths(filesPanel(page))).toEqual(['.context/story-map.md'])
   })
 
   describe('with a list that cannot be read', () => {
@@ -106,7 +106,7 @@ describe('View Fidelity Files', () => {
   it('should open one tab per format, generated or not', async () => {
     const { page } = await board.page()
     await page.files.openFiles(TICKET, [SLUG], 'files')
-    expect(filesPanel(page).tabs).toEqual(['tests/story-map.md', 'tests/story-map.drawio'])
+    expect(filesPanel(page).tabs).toEqual(['.context/story-map.md', '.context/story-map.drawio'])
   })
 
   it('should keep markdown before code before diagrams', () => {
@@ -117,14 +117,14 @@ describe('View Fidelity Files', () => {
   it('should read the text of the file a tab shows', async () => {
     const { page } = await board.page()
     await page.files.openFiles(TICKET, [SLUG], 'files')
-    expect(filesPanel(page).texts['tests/story-map.md']).toBe(['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n'))
+    expect(filesPanel(page).texts['.context/story-map.md']).toBe(['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n'))
   })
 
   it('should go back to the folder when the last tab closes', async () => {
     const { page } = await board.page()
     await page.files.openFiles(TICKET, [SLUG], 'files')
-    page.files.closeTab('tests/story-map.md')
-    page.files.closeTab('tests/story-map.drawio')
+    page.files.closeTab('.context/story-map.md')
+    page.files.closeTab('.context/story-map.drawio')
     expect(filesPanel(page).mode).toBe('folder')
   })
 
@@ -182,7 +182,7 @@ describe('Fix Report Violations', () => {
 
     it('should give the error at its file and line', async () => {
       const { violation, commands } = await sent()
-      expect(commands[0]!.text).toContain(`tests/story-map.md:6: ${violation.message}`)
+      expect(commands[0]!.text).toContain(`.context/story-map.md:6: ${violation.message}`)
     })
 
     it('should quote the content that failed', async () => {
@@ -257,7 +257,7 @@ describe('Refresh Board After Tool Calls', () => {
       await page.files.openFiles(TICKET, [SLUG], 'folder')
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.md', '# Graph rule validation\n')
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.json', JSON.stringify(CLEAN_GRAPH))
-      board.write('tests/story-map.drawio', '<mxfile/>\n')
+      board.write('.context/story-map.drawio', '<mxfile/>\n')
       board.logOn(TICKET, 'validate Stories story_map')
       await page.reader.refresh()
       return page
@@ -268,16 +268,16 @@ describe('Refresh Board After Tool Calls', () => {
     })
 
     it('should read the files again', async () => {
-      expect(generatedPaths(filesPanel(await changed()))).toEqual(['tests/story-map.md', 'tests/story-map.drawio'])
+      expect(generatedPaths(filesPanel(await changed()))).toEqual(['.context/story-map.md', '.context/story-map.drawio'])
     })
   })
 
   it('should keep a tab a person closed closed', async () => {
     const { page } = await board.page()
     await page.files.openFiles(TICKET, [SLUG], 'files')
-    page.files.closeTab('tests/story-map.drawio')
+    page.files.closeTab('.context/story-map.drawio')
     await page.files.reload()
-    expect(filesPanel(page).tabs).toEqual(['tests/story-map.md'])
+    expect(filesPanel(page).tabs).toEqual(['.context/story-map.md'])
   })
 })
 

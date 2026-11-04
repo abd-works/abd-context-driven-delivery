@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process'
 import { appendFileSync, rmSync, writeFileSync } from 'node:fs'
 import { EOL } from 'node:os'
 import { join } from 'node:path'
@@ -6,7 +5,7 @@ import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
-import { fixtureRoot } from '../test-utils/fixture-repo'
+import { fixtureRoot, resetSessions } from '../test-utils/fixture-repo'
 import { BOARD_POST_HEADERS, card, FakeChat, openBoard, openCardOf, openTileBarOf, startBoard, toast, turnOffActiveSessionOnly } from './support'
 
 const BROKEN_BOARD_PORT = 8781
@@ -298,7 +297,7 @@ test.describe('Open Validation Report', () => {
 
   test('should open a violation\'s file at its line in the Files panel', async ({ page }) => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
-    await page.locator('[data-panel="report"]').getByRole('button', { name: 'tests/story-map.md:6', exact: true }).click()
+    await page.locator('[data-panel="report"]').getByRole('button', { name: '.context/story-map.md:6', exact: true }).click()
     const files = page.locator('[data-panel="files"]')
     await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
     await expect(files.locator('.code-line.is-failing')).toContainText('Handle Payment')
@@ -310,10 +309,17 @@ test.describe('Fix Report Violations', () => {
     await waitForChat(page)
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
     const report = page.locator('[data-panel="report"]')
-    await report.getByRole('button', { name: 'Fix tests/story-map.md:6' }).click()
+    await report.getByRole('button', { name: 'Fix .context/story-map.md:6' }).click()
     await receivedContaining('of the stories-story-map rule.', 1)
-    await report.getByRole('button', { name: 'Fix all' }).click()
-    await receivedContaining('of the stories-story-map rule.', 2)
+    await report.getByRole('button', { name: 'Fix all', exact: true }).click()
+    await receivedContaining('Fix all violations of verb-noun-format found in this report', 1)
+  })
+
+  test('should send Fix all violations to the chat as the report it names', async ({ page }) => {
+    await waitForChat(page)
+    await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
+    await page.locator('[data-panel="report"]').getByRole('button', { name: 'Fix all violations', exact: true }).click()
+    await receivedContaining('Fix all violations found in this report: .sessions/checkout-flow/validation-reports/', 1)
   })
 })
 
@@ -327,7 +333,7 @@ test.describe('List, browse, and view files', () => {
   test('should show the two modes of the files panel', async ({ page }) => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
     const files = page.locator('[data-panel="files"]')
-    await expect(files.getByText('tests/', { exact: true })).toBeVisible()
+    await expect(files.getByText('.context/', { exact: true })).toBeVisible()
     await files.getByRole('button', { name: 'files', exact: true }).click()
     await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
     await expect(files.locator('.file-lines')).toContainText('Check Out Order')
@@ -353,7 +359,7 @@ test.describe('Refresh Board After Tool Calls', () => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
     const files = page.locator('[data-panel="files"]')
     await expect(files.getByRole('button', { name: 'story-map.md', exact: true })).toBeVisible()
-    writeFileSync(join(fixtureRoot, 'tests', 'story-map.drawio'), `<mxfile />${EOL}`, 'utf-8')
+    writeFileSync(join(fixtureRoot, '.context', 'story-map.drawio'), `<mxfile />${EOL}`, 'utf-8')
     appendFileSync(join(fixtureRoot, '.sessions', 'checkout-flow', 'session.log'), `2026-11-01T11:00:00Z generate /work stories story_map drawio stories no-chat${EOL}`, 'utf-8')
     await expect(files.getByRole('button', { name: 'story-map.drawio', exact: true })).toBeVisible({ timeout: 8_000 })
   })
@@ -376,17 +382,17 @@ test.describe('Display Connected Status', () => {
     await expect(page.locator('.band-failure')).toHaveCount(0)
   })
 
-  // The file a violation names is gone, so ticket.read_file really refuses it.
+  // The ticket a violation belongs to is gone, so ticket.read_file really refuses it.
   test('should show a tool failure in a toast', async ({ page }) => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
-    const violation = page.locator('[data-panel="report"]').getByRole('button', { name: 'tests/story-map.md:6', exact: true })
+    const violation = page.locator('[data-panel="report"]').getByRole('button', { name: '.context/story-map.md:6', exact: true })
     await expect(violation).toBeVisible()
-    rmSync(join(fixtureRoot, 'tests', 'story-map.md'))
+    rmSync(join(fixtureRoot, '.sessions', 'checkout-flow'), { recursive: true, force: true })
     try {
       await violation.click()
-      await expect(toast(page, /is not a file in this repository/)).toBeVisible()
+      await expect(toast(page, /no ticket named 'checkout-flow'/)).toBeVisible()
     } finally {
-      execFileSync('git', ['checkout', '--', 'tests/story-map.md'], { cwd: fixtureRoot })
+      resetSessions(fixtureRoot)
     }
   })
 })
@@ -398,7 +404,7 @@ test.describe('Choose Session Root', () => {
     const roots = page.getByRole('dialog')
     await expect(roots.getByRole('heading', { name: 'Roots of Checkout flow' })).toBeVisible()
     await roots.getByRole('button', { name: 'Change the root of Session' }).click()
-    await expect(roots.getByRole('listitem').filter({ hasText: 'tests/' })).toBeVisible()
+    await expect(roots.getByRole('listitem').filter({ hasText: 'src/' })).toBeVisible()
     await roots.getByRole('button', { name: 'Cancel' }).click()
     await expect(roots.getByRole('button', { name: 'Change the root of Stories' })).toBeVisible()
   })

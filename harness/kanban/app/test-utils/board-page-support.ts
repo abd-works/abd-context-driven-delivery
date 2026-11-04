@@ -3,7 +3,7 @@ import { appendFileSync, mkdtempSync, rmSync } from 'node:fs'
 import type { Server } from 'node:http'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import type { CddConnection } from '@cdd/cdd-connection'
@@ -21,12 +21,10 @@ const LOCAL = '127.0.0.1'
 const BOARD_HEADER = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
 const STATIC_ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)), '..', 'dist')
 
-// The chat tools keep chats, and read their titles, under these folders. Each spec file gets its own, set before its cdd
-// server starts, so no real chat is touched.
+// The run keeps its chats in one folder of its own (see run-cdd-home.ts). Spec files take turns, so each starts with none.
 const separateChats = (): string => {
-  const home = mkdtempSync(join(tmpdir(), 'cdd-board-page-chats-'))
-  process.env.CDD_CHATS_FOLDER = join(home, 'chats')
-  process.env.CDD_CLAUDE_PROJECTS = join(home, 'projects')
+  const home = dirname(process.env.CDD_CHATS_FOLDER ?? '')
+  rmSync(join(home, 'chats'), { recursive: true, force: true })
   return home
 }
 

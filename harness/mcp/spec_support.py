@@ -45,9 +45,9 @@ class SpecServer:
     """The cdd server as chats meet it: its own process on its own port, started through ``~/.cdd/connect.py``, here
     with a throwaway ``~/.cdd`` that serves this checkout and only the toolsets a spec names."""
 
-    def __init__(self, toolsets: tuple[str, ...] = ()) -> None:
-        self.home = CddHome(tempfile.mkdtemp(prefix="cdd-home-"))
-        self.daemon = McpDaemon(self.home, port=self._free_port())
+    def __init__(self, toolsets: tuple[str, ...] = (), home: Path | str | None = None, port: int | None = None) -> None:
+        self.home = CddHome(home or tempfile.mkdtemp(prefix="cdd-home-"))
+        self.daemon = McpDaemon(self.home, port=port or self._free_port())
         self._toolsets = toolsets
         self._prior = {key: os.environ.get(key) for key in (CDD_HOME_ENV, SERVER_PORT_ENV, _TOOLSET_REFS_ENV)}
 
@@ -111,3 +111,27 @@ class ThrowawayMachine:
     def leave(self) -> None:
         self.server.stop()
         self.home.leave()
+
+
+def main(arguments: list[str]) -> None:
+    """For specs in another language, which reach the server through ``~/.cdd/connect.py`` like an IDE does.
+
+    ``install`` sets up a throwaway ``~/.cdd`` serving this checkout and prints its folder and port as JSON; the spec
+    then names both in ``CDD_HOME`` and ``CDD_SERVER_PORT``, and its first call starts the server. ``stop FOLDER PORT``
+    stops that server and removes the folder."""
+    import json
+
+    if arguments[:1] == ["install"]:
+        server = SpecServer()
+        server.install()
+        print(json.dumps({"home": str(server.home.folder), "port": server.daemon.port}))
+    elif arguments[:1] == ["stop"] and len(arguments) == 3:
+        SpecServer(home=arguments[1], port=int(arguments[2])).stop()
+    else:
+        raise SystemExit("usage: python -m harness.mcp.spec_support install | stop FOLDER PORT")
+
+
+if __name__ == "__main__":
+    import sys
+
+    main(sys.argv[1:])

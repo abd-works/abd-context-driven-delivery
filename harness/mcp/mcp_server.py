@@ -24,6 +24,7 @@ from mcp.server.models import InitializationOptions
 
 from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
 from harness.installation.destination import Destination, Installation
+from harness.mcp.restart_gate import RestartGate
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
@@ -753,6 +754,7 @@ class McpHost:
         self._runtime = runtime
         self._runtimes: dict[Path, McpServer] = {runtime.project: runtime}
         self._runtimes_lock = threading.Lock()
+        self._restart_gate = RestartGate()
         self._server = _CddProtocolServer("cdd")
         self._register_handlers()
 
@@ -1114,6 +1116,10 @@ class McpHost:
         return self._dispatch_on_project(resolved, arguments)
 
     def _dispatch_on_project(self, resolved: str, arguments: dict[str, object] | None) -> object:
+        with self._restart_gate.running_call():
+            return self._dispatch_between_restarts(resolved, arguments)
+
+    def _dispatch_between_restarts(self, resolved: str, arguments: dict[str, object] | None) -> object:
         from space.session import Session
         from space.session.chat_context import clear_chat_context, pop_chat_fields
         from space.work_state import project_checkout
@@ -1201,10 +1207,12 @@ class McpHost:
     def restart(self) -> dict[str, Any]:
         """Swap in a runtime on the code as it is now, for every chat. Connections, and this host object holding them,
         stay. Each project's toolsets start again on the new code the next time a call names it."""
-        self._runtime = self._runtime.restarted()
-        with self._runtimes_lock:
-            self._runtimes = {self._runtime.project: self._runtime}
-        sys.modules[__name__]._SERVING_MCP_HOST = self
+        # A call running on the old classes would find their modules gone, so the restart waits for it to end.
+        with self._restart_gate.restarting():
+            self._runtime = self._runtime.restarted()
+            with self._runtimes_lock:
+                self._runtimes = {self._runtime.project: self._runtime}
+            sys.modules[__name__]._SERVING_MCP_HOST = self
         return {
             "is_restarted": True,
             "tools": len(self._runtime.tools) + len(self._runtime.prompts),
