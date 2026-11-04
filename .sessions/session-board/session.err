@@ -1892,3 +1892,36 @@ Traceback (most recent call last):
     raise ValueError(f"missing argument {name!r}")
 ValueError: missing argument 'next_focus'
 2026-11-03T22:46:17Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T10:27:03Z chat.list JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1248, in dispatch
+    return self._runtime.invoke_tool(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 925, in invoke_tool
+    return self._tools[resolved].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 737, in invoke
+    return _invoke_mcp_callable(self._op, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 704, in _invoke_mcp_callable
+    return descriptor.__func__(owner, **args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 101, in list
+    return [chat.to_json() for chat in chats if chat.is_connected]
+                                                ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 186, in is_connected
+    return self.clock() - self._state.get("seen", 0) < CHAT_GONE_SECONDS
+                          ^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\tools\chat\chat.py", line 196, in _state
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\json\decoder.py", line 356, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-11-04T10:27:03Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

@@ -449,3 +449,4 @@
 2026-11-03T22:46:17Z error handoff.handoff_session C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 1869 no-chat C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 1894
 2026-11-03T22:46:18Z tool handoff.handoff_session
 2026-11-03T22:46:41Z tool handoff.write_handoff
+2026-11-04T10:27:03Z error chat.list C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 1895 no-chat C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 1927
