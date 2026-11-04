@@ -1,5 +1,5 @@
 /**
- * States each behavior of List Ticket Files, View Files, and Open Validation Report once. Reaches the tier only through
+ * States each behavior of List Ticket Files, View Fidelity Files, and Open Validation Report once. Reaches the tier only through
  * its driver. The sentences match kanban_tools_spec.py.
  */
 import { shareBehavior } from 'test-utils/behavior-test/behavior-test'

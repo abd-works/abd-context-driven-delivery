@@ -41,7 +41,8 @@ def _outline_depth(match: "re.Match") -> int:
         return len(marks) - 1
     return len(match.group("indent")) // 4
 _OUTLINE_ESTIMATE_PATTERN = re.compile(r"^(\s*)\*\s+(\S.+)$")
-_EVIDENCE_LABEL = re.compile(r"\b(Observed|Inferred|Intended):", re.IGNORECASE)
+# A label is followed by its evidence after a colon, or opens a line and ends its own sentence.
+_EVIDENCE_LABEL = re.compile(r"\b(Observed|Inferred|Intended):|^\s*(Observed|Inferred|Intended)\.", re.IGNORECASE)
 
 
 # -- MarkdownIncrement ---------------------------------------------------------
@@ -1070,10 +1071,18 @@ class MarkdownStoryModel(StoryModel):
             actor = story.actors[0] if story.actors else ""
             name = self._story_label(story)
             if actor:
-                actor_name = self.strip_backticks(actor)
-                self._outline_lines.append(f"{marks} (S) {actor_name} --> {name}")
-                continue
-            self._outline_lines.append(f"{marks} (S) --> {name}")
+                self._outline_lines.append(f"{marks} (S) {self.strip_backticks(actor)} --> {name}")
+            else:
+                self._outline_lines.append(f"{marks} (S) --> {name}")
+            self._outline_lines.extend(self._scenario_lines_under(story, level))
+
+    def _scenario_lines_under(self, story, level: int) -> List[str]:
+        """A story's backgrounds and scenarios, their headings one level below the story's."""
+        if not story.scenarios and not story.backgrounds:
+            return []
+        text = MarkdownScenario.render_scenarios(story.scenarios, story_backgrounds=story.backgrounds)
+        marks = "#" * min(level + 1, 6)
+        return [""] + [f"{marks} {line[4:]}" if line.startswith("### ") else line for line in text.splitlines()]
 
     def _story_label(self, story) -> str:
         name = self.strip_backticks(story.name)
@@ -1497,7 +1506,7 @@ class MarkdownStoryModel(StoryModel):
         if self._current_outline_story is None:
             return
         evidence = self._current_outline_story.evidence
-        for label in _EVIDENCE_LABEL.findall(self._raw_line):
+        for label in (with_evidence or ending for with_evidence, ending in _EVIDENCE_LABEL.findall(self._raw_line)):
             if label.lower() not in evidence:
                 evidence.append(label.lower())
 

@@ -8,11 +8,11 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import language_adapter
-from harness.kanban.board import Board, Card, Column, name_of
+from harness.kanban.board import Board, Card, Column
 from harness.kanban.data import BacklogItemData
 from harness.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
-from space.session import Session
+from space.session import Session, name_of
 
 
 class BacklogItemNotFoundError(LookupError):

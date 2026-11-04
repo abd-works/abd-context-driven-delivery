@@ -37,7 +37,7 @@ class Render(GuidanceAction):
         def on(item):
             if isinstance(item, str):
                 return item
-            payload = item if loaded in ("", None) else loaded
+            payload = item if loaded in ("", None) else item.read_paths(paths, source) if paths else loaded
             if workspace and "workspace" in inspect.signature(item.render).parameters:
                 return item.render(format, payload, source=source, workspace=workspace)
             return item.render(format, payload, source=source)

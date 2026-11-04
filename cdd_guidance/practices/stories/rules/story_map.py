@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-_EVIDENCE = {"observed", "inferred", "intended"}
 _VERB_OPENINGS = {"verb", "unlisted"}
 _MOST_SCENARIOS = 7
 
@@ -30,7 +29,7 @@ class FourToNineChildren(PracticeGraphRule):
         if node.type in {"Story", "Scenario"}:
             return []
         severity = node.get_fact("child_band") or ""
-        if severity not in {"warning", "error"}:
+        if severity != "error":
             return []
         count = node.get_fact("child_count", 0)
         label = node.get_fact("child_label") or "children"
@@ -115,16 +114,3 @@ class BehavioursNotOneTimeTasks(PracticeGraphRule):
             return []
         return [f"Story {node.name!r} reads like a one-time task, not a repeatable behaviour."]
 
-
-class EvidenceDistinguishesObservedInferredAndIntended(PracticeGraphRule):
-    slug = "evidence-distinguishes-observed-inferred-and-intended"
-    node_types = ("Epic", "SubEpic", "Story")
-
-    def check(self, node, context) -> list[str]:
-        labels = node.get_fact("evidence") or []
-        if isinstance(labels, str):
-            labels = [labels]
-        if any(str(item).strip().casefold() in _EVIDENCE for item in labels):
-            return []
-        kind = node.type.lower().replace("subepic", "sub-epic")
-        return [f"{kind} {node.name!r}: evidence must be observed, inferred, or intended."]

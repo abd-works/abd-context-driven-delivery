@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import time
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Callable, Literal, TypedDict, TypeVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -19,6 +20,9 @@ CHAT_GONE_SECONDS = 5
 TITLE_READ_SECONDS = 30
 TITLE_MARK = "custom-title"
 STATE_FILE = "chat.json"
+# Windows refuses to open or rename over a file another process is renaming, for a moment.
+HELD_FILE_ATTEMPTS = 20
+HELD_FILE_PAUSE_SECONDS = 0.01
 # A message waits until the chat takes it, then the chat says whether it showed it or why it could not. Each state is a
 # folder, and a message moves from one to the next.
 WAITING = "waiting"
@@ -30,8 +34,9 @@ MESSAGE_STATES = (WAITING, TAKEN, SHOWN, DONE, FAILED)
 # The board shows a chat's latest messages; older ones are not worth keeping.
 KEPT_MESSAGES = 20
 
-CommandKind = Literal["submit", "fill", "command"]
+CommandKind = Literal["submit", "fill", "command", "restart_cdd"]
 MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
+T = TypeVar("T")
 
 
 class ChatData(TypedDict):
@@ -104,7 +109,7 @@ class Chat:
     @agent_tool
     @noSessionLog
     def send(self, kind: CommandKind, text: str) -> ChatData:
-        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, and a command runs a slash command. A fill waits until the chat's turn has ended."""
+        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, and restart_cdd restarts the chat's own cdd server on the code as it is now. A fill waits until the chat's turn has ended."""
         if not self.is_connected:
             raise ChatNotConnectedError(self.id)
         waiting = self._folder / WAITING
@@ -130,6 +135,7 @@ class Chat:
         state = self._state
         title, title_read = (_latest_title(self._transcript), self.clock()) if self.clock() - state.get("title_read", 0) > TITLE_READ_SECONDS else (state.get("title", ""), state["title_read"])
         self._write({"name": name, "title": title, "is_busy": is_busy, "seen": self.clock(), "title_read": title_read})
+        self._finish_worked_on(is_busy)
         return self._take_ready(is_busy)
 
     @mcp
@@ -193,10 +199,13 @@ class Chat:
     @property
     def _state(self) -> dict:
         path = self._folder / STATE_FILE
-        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        return _while_windows_holds(lambda: _state_in(path))
 
+    # A mod that reloads can check in twice at once, so the state is written beside the file and renamed over it whole.
     def _write(self, state: dict) -> None:
-        (self._folder / STATE_FILE).write_text(json.dumps(state), encoding="utf-8")
+        written = self._folder / f"{STATE_FILE}.{os.getpid()}.{threading.get_ident()}"
+        written.write_text(json.dumps(state), encoding="utf-8")
+        _while_windows_holds(lambda: written.replace(self._folder / STATE_FILE))
 
     # Oldest first. Each sent command is its own file, so a sender never writes a file the chat is reading. A taken command
     # waits in the taken folder until the chat confirms it, so the board can show what the chat never showed.
@@ -210,6 +219,16 @@ class Chat:
             taken.append({"message": path.stem, "kind": command["kind"], "text": command["text"]})
         self._forget_old_messages()
         return taken
+
+    # The mod finishes what it runs, but a mod that reloads mid-turn forgets it, so a shown message the chat has been busy
+    # with is also done once the chat checks in idle.
+    def _finish_worked_on(self, is_busy: bool) -> None:
+        for path in self._sent_in(SHOWN):
+            sent = json.loads(path.read_text(encoding="utf-8"))
+            if is_busy and not sent.get("is_worked_on"):
+                path.write_text(json.dumps({**sent, "is_worked_on": True}), encoding="utf-8")
+            elif not is_busy and sent.get("is_worked_on"):
+                self._move(path, DONE)
 
     # Windows' clock repeats within a quick burst of sends, so the name moves past every one already sent; it still
     # sorts in the order sent.
@@ -241,6 +260,27 @@ class Chat:
         projects = _claude_projects()
         found = projects.glob(f"*/{self.id}.jsonl") if projects.is_dir() else []
         return next(iter(found), None)
+
+
+def _state_in(path: Path) -> dict:
+    """The state a chat last wrote; none when it never checked in, or when two check-ins written over each other left a
+    file that does not read, so the chat's next check-in writes it afresh."""
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def _while_windows_holds(operation: Callable[[], T]) -> T:
+    """Run operation on the state file, again while Windows holds the file for another process's rename."""
+    for _ in range(HELD_FILE_ATTEMPTS - 1):
+        try:
+            return operation()
+        except PermissionError:
+            time.sleep(HELD_FILE_PAUSE_SECONDS)
+    return operation()
 
 
 def _latest_title(transcript: Path | None) -> str:

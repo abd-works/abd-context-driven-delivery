@@ -37,14 +37,14 @@ async function brokenRule(page: BoardPage): Promise<ReportRuleData> {
 describe('List Ticket Files', () => {
   it('should list the files that exist', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(TICKET, [SLUG], 'list')
+    await page.files.openFiles(TICKET, [SLUG], 'folder')
     expect(generatedPaths(filesPanel(page))).toEqual(['tests/story-map.md'])
   })
 
   describe('with a list that cannot be read', () => {
     async function refused() {
       const { page } = await board.page()
-      await page.files.openFiles('no-such-ticket', [SLUG], 'list')
+      await page.files.openFiles('no-such-ticket', [SLUG], 'folder')
       return page
     }
 
@@ -100,7 +100,7 @@ describe("Browse Ticket's Session Folder", () => {
   })
 })
 
-describe('View Files', () => {
+describe('View Fidelity Files', () => {
   it('should open one tab per format, generated or not', async () => {
     const { page } = await board.page()
     await page.files.openFiles(TICKET, [SLUG], 'files')
@@ -118,12 +118,12 @@ describe('View Files', () => {
     expect(filesPanel(page).texts['tests/story-map.md']).toBe(['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n'))
   })
 
-  it('should go back to the list when the last tab closes', async () => {
+  it('should go back to the folder when the last tab closes', async () => {
     const { page } = await board.page()
     await page.files.openFiles(TICKET, [SLUG], 'files')
     page.files.closeTab('tests/story-map.md')
     page.files.closeTab('tests/story-map.drawio')
-    expect(filesPanel(page).mode).toBe('list')
+    expect(filesPanel(page).mode).toBe('folder')
   })
 
   describe('with a violation in a file its fidelity does not declare', () => {
@@ -159,19 +159,50 @@ describe('Open Validation Report', () => {
 })
 
 describe('Fix Report Violations', () => {
-  it('should send Fix for one violation at its line', async () => {
-    const { page } = await board.page()
-    const chat = await board.connectChat(page)
-    const rule = await brokenRule(page)
-    await page.fixViolation(TICKET, rule, rule.violations[0]!)
-    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: `/actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format ${SESSION}` }])
+  describe('with Fix pressed on one violation', () => {
+    async function sent() {
+      const { page } = await board.page()
+      const chat = await board.connectChat(page)
+      const rule = await brokenRule(page)
+      const violation = rule.violations[0]!
+      await page.fixViolation(TICKET, rule, violation)
+      return { rule, violation, commands: await chat.checkIn() }
+    }
+
+    it('should send one message to the chat', async () => {
+      expect((await sent()).commands).toHaveLength(1)
+    })
+
+    it('should name the rule and what it requires', async () => {
+      const { rule, commands } = await sent()
+      expect(commands[0]!.text).toContain(`${rule.name}: ${rule.description}`)
+    })
+
+    it('should give the error at its file and line', async () => {
+      const { violation, commands } = await sent()
+      expect(commands[0]!.text).toContain(`tests/story-map.md:6: ${violation.message}`)
+    })
+
+    it('should quote the content that failed', async () => {
+      const { violation, commands } = await sent()
+      const failing = violation.source.find(entry => entry.number === violation.line)!
+      expect(commands[0]!.text).toContain(`> ${failing.number} | ${failing.text}`)
+    })
+
+    it("should name the ticket's session", async () => {
+      expect((await sent()).commands[0]!.text).toContain(SESSION)
+    })
   })
 
-  it('should send Fix all for every violation of a rule', async () => {
-    const { page } = await board.page()
-    const chat = await board.connectChat(page)
-    await page.fixRule(TICKET, await brokenRule(page))
-    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: `/actions-satisfy stories-story-map rule verb-noun-format ${SESSION}` }])
+  describe('with Fix all pressed on a rule', () => {
+    it('should send every violation of the rule in one message', async () => {
+      const { page } = await board.page()
+      const chat = await board.connectChat(page)
+      const rule = await brokenRule(page)
+      await page.fixRule(TICKET, rule)
+      const [command] = await chat.checkIn()
+      expect(rule.violations.every(violation => command!.text.includes(violation.message))).toBe(true)
+    })
   })
 })
 
@@ -181,7 +212,7 @@ describe('Refresh Board After Tool Calls', () => {
     async function changed() {
       const { page } = await board.page()
       await page.panels.openReport(TICKET, SLUG)
-      await page.files.openFiles(TICKET, [SLUG], 'list')
+      await page.files.openFiles(TICKET, [SLUG], 'folder')
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.md', '# Graph rule validation\n')
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.json', JSON.stringify(CLEAN_GRAPH))
       board.write('tests/story-map.drawio', '<mxfile/>\n')
@@ -227,7 +258,7 @@ describe('Arrange Side Panel', () => {
     it('should expand one panel at a time', async () => {
       const { page } = await board.page()
       await page.panels.openReport(TICKET, SLUG)
-      await page.files.openFiles(TICKET, [SLUG], 'list')
+      await page.files.openFiles(TICKET, [SLUG], 'folder')
       page.panels.toggleExpanded('report')
       page.panels.toggleExpanded('files')
       expect(page.store.state.panels.filter(panel => panel.isExpanded).map(panel => panel.kind)).toEqual(['files'])

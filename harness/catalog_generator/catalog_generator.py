@@ -38,7 +38,7 @@ from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
+_SKILLS_ROOTS = (_REPO_ROOT / ".claude" / "skills", _REPO_ROOT / ".cursor" / "skills")
 _SKILL_NAME_RE = re.compile(r"^name:\s*(.+?)\s*$", re.MULTILINE)
 _NO_CATALOG = "noCatalog"
 
@@ -541,6 +541,9 @@ class CatalogPage:
 class SkillSlashName:
     """Slash-invocable skill name from deployed SKILL.md frontmatter."""
 
+    def __init__(self, skills_roots: Iterable[Path] = _SKILLS_ROOTS) -> None:
+        self._skills_roots = tuple(skills_roots)
+
     def resolve(self, module_dir_name: str) -> str | None:
         for candidate in (module_dir_name, module_dir_name.replace("_", "-")):
             for skill_md in self._skill_files(candidate):
@@ -550,16 +553,26 @@ class SkillSlashName:
         return None
 
     def _skill_files(self, candidate: str) -> list[Path]:
-        """``{candidate}/SKILL.md`` at the skills root, then under each category folder
-        (install deploys ``.cursor/skills/{category}/{skill}/SKILL.md``)."""
-        found = [_SKILLS_DIR / candidate / "SKILL.md"]
-        if _SKILLS_DIR.is_dir():
-            found.extend(
-                category / candidate / "SKILL.md"
-                for category in sorted(_SKILLS_DIR.iterdir())
-                if category.is_dir()
-            )
+        found: list[Path] = []
+        for root in self._skills_roots:
+            found.extend(self._skill_files_under(root, candidate))
         return [path for path in found if path.is_file()]
+
+    def _skill_files_under(self, root: Path, candidate: str) -> list[Path]:
+        """``{candidate}/SKILL.md`` at the skills root, the Cursor layout
+        ``{category}/{candidate}/SKILL.md``, and the Claude layout, which joins the
+        category into one folder name: ``{category}-{candidate}/SKILL.md``."""
+        found = [root / candidate / "SKILL.md"]
+        if not root.is_dir():
+            return found
+        flat_name = re.compile(rf"^[a-z0-9_]+-{re.escape(candidate)}$")
+        for folder in sorted(root.iterdir()):
+            if not folder.is_dir():
+                continue
+            found.append(folder / candidate / "SKILL.md")
+            if flat_name.match(folder.name):
+                found.append(folder / "SKILL.md")
+        return found
 
 
 def extract_tool_overview(markdown: str) -> str:

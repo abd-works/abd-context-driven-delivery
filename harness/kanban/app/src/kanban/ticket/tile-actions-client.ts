@@ -26,6 +26,12 @@ export type TileBar = {
   hasViolations: boolean
 }
 
+// A tile can hold several fidelities: its link opens the report of the one left with violations, else the first report.
+function reportSlugOf(ticket: TicketClient, tile: Tile): string | undefined {
+  const reported = tile.slugs.filter(slug => ticket.reports[slug])
+  return reported.find(slug => ticket.stateOf(slug).key === 'violations') ?? reported[0]
+}
+
 function chipFaceOf(stage: ColumnClient, tile: Tile, chip: FormatChip): ChipFace {
   const done = chipDoneCount(tile.files, tile.slugs, chip)
   const offered = chipOfferedCount(stage, tile.slugs, chip)
@@ -93,7 +99,7 @@ export class TileActionsClient {
       reviewOff: !this.hasSomethingToCheck(ticket, tile, 'review'),
       validate,
       review: stepFaceOf(ticket.standingOf(tile.slugs, 'review'), 'Review'),
-      reportSlug: tile.slugs.find(slug => ticket.reports[slug]),
+      reportSlug: reportSlugOf(ticket, tile),
       hasViolations: validate.text !== '',
     }
   }

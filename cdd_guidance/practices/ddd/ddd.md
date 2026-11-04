@@ -24,7 +24,7 @@ Build the solution around how the business actually works, in the words the busi
 
 ### Default folder
 
-`default_workspace_folder` is `src/` for **generate**. Documenting an existing system uses the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. A bounded context folder contains `.context/bounded-context.md`. The code-format build writes that file when it creates the context folder and the aggregate folders under it. A folder of classes with no such file is a module or a package. Leave production `src/` alone unless the user directs otherwise.
+**Generate** writes where the session's folder and the `outputs` of each fidelity say. Documenting an existing system uses the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. A bounded context folder contains `.context/bounded-context.md`. The code-format build writes that file when it creates the context folder and the aggregate folders under it. A folder of classes with no such file is a module or a package. Leave production `src/` alone unless the user directs otherwise.
 
 ### Document
 
@@ -72,8 +72,7 @@ default_format: markdown
 stage: discovery
 clean_engineering: modules
 outputs:
-  root: src
-  markdown: bounded-context-map.md
+  markdown: ".context/bounded-context-map.md"
 ```
 
 #### Overview
@@ -165,11 +164,10 @@ default_format: markdown
 stage: specification
 clean_engineering: model
 outputs:
-  root: src
   python: "{bounded_context}/{aggregate}/{aggregate}.py"
   typescript: "{bounded_context}/{aggregate}/{aggregate}.ts"
-  markdown: domain-model.md
-  drawio: domain-model.drawio
+  markdown: ".context/domain-model.md"
+  drawio: ".context/domain-model.drawio"
 ```
 
 #### Overview
@@ -249,7 +247,6 @@ default_format: python
 stage: implementation
 clean_engineering: code
 outputs:
-  root: src
   python: "{bounded_context}/{aggregate}/"
   typescript: "{bounded_context}/{aggregate}/"
 ```

@@ -266,8 +266,8 @@ a:hover { color: #C64514; }
 .board-root .file-mode { padding: 0; background: transparent; border: 0; color: var(--muted); font: 400 12px var(--mono); }
 .board-root .file-mode.is-chosen { color: var(--accent-text); font-weight: 700; }
 .files-body { display: flex; flex-direction: column; }
-.file-list, .folder-group { display: flex; flex-direction: column; gap: 8px; }
-.file-list, .folder-groups { padding: 20px; }
+.folder-group { display: flex; flex-direction: column; gap: 8px; }
+.folder-groups { padding: 20px; }
 .folder-groups { display: flex; flex-direction: column; gap: 14px; }
 .folder-root { font: 600 12px var(--mono); }
 .board-root .file-link.folder-entry { margin-left: 16px; }

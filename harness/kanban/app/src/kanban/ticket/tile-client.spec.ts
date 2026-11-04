@@ -129,6 +129,15 @@ describe('Validate Fidelity', () => {
     await page.tiles.open(spot(), true)
     expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).validateOff).toBe(true)
   })
+
+  it('should link to the report of the fidelity left with violations', async () => {
+    board.logOn(TICKET, 'validate Stories story_map', 'validate ddd bounded_context graph-rule domain-nouns-only tests/story-map.md:6')
+    board.write(`.sessions/${TICKET}/validation-reports/stories-story-map-20261101T100000.md`, '# Graph rule validation\n')
+    board.write(`.sessions/${TICKET}/validation-reports/ddd-bounded-context-20261101T100000.md`, '# Graph rule validation\n')
+    const { page, ticket } = await activeTicketPage()
+    await page.tiles.open(spot(TWO_SLUGS, HEAD), true)
+    expect(page.tileActions.barOf(ticket, STAGE, barAt(page, HEAD)!).reportSlug).toBe(OTHER_SLUG)
+  })
 })
 
 describe('Generate Fidelity Output', () => {
@@ -161,7 +170,7 @@ describe('Render Fidelity Format', () => {
   })
 })
 
-describe('Send Sketch Iterate Or Document', () => {
+describe('Send Tile Action To Chat', () => {
   it.each(['sketch', 'iterate', 'document'])('should send %s as its own command', async action => {
     const { page, chat } = await activeTicketPage()
     await page.tiles.open(spot(), true)
@@ -194,7 +203,7 @@ describe('Review Fidelity', () => {
   })
 })
 
-describe('Run Action Across Practices', () => {
+describe('Send Action To Stage Practices', () => {
   it('should name every fidelity of the stage in one command', async () => {
     const { page, chat } = await activeTicketPage()
     await page.tiles.open(spot(STAGE.workRequired, HEAD), true)

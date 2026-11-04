@@ -8,7 +8,7 @@ import re
 import shutil
 import traceback
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
@@ -52,6 +52,11 @@ _TOOL_INPUT_PATH_KEYS = (
     "transcript_path",
     "agent_transcript_path",
 )
+
+
+def name_of(text: str) -> str:
+    """The name a session, its folder, and its branch get: `Pet visits` is `pet-visits`, since git refuses a space in a branch name."""
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
 class SessionNameRequiredError(ValueError):
@@ -498,7 +503,7 @@ class Session:
     @classmethod
     def _session_name(cls, name: str, repo: Path) -> str:
         state = WorkState(repo)
-        cleaned = (name or "").strip() or state.session or state.branch.replace("/", "-")
+        cleaned = name_of(name or state.session or state.branch)
         if not cleaned:
             raise SessionNameRequiredError()
         return cleaned
@@ -1062,10 +1067,14 @@ class Session:
             "SESSION ARTIFACTS: with session_path set, write every large/temporary agent output "
             "(graph JSON, MCP dumps, probes) under session_path—not only under Cursor agent-tools. "
             "List artifact paths on append_log. "
+            "PERMANENT ARTIFACTS: fidelity outputs belong to the folder the session was opened on, its "
+            "workpath, and sit at the repository root only when the session names no folder. Markdown and "
+            "drawio go in that folder's .context/; code goes straight in that folder. "
             f"Log file: {log_file}. Errors: {err_file}."
         )
 
     def _bind_new(self, name: str, workpath: Path, repo_path: Path, fields: dict[str, str], is_current: bool) -> None:
+        name = name_of(name)
         self.name = name
         self.workpath = workpath.resolve()
         self.repo_path = repo_path.resolve()
@@ -1221,12 +1230,13 @@ class Session:
         return [[str(folder)]]
 
     def fidelity_outputs(self, guidance: PracticeGuidance) -> dict[str, list[str]]:
-        """Where the active fidelity writes each format: its declared outputs under its root, with session.json's overrides.
+        """Where the active fidelity writes each format: its declared paths under the session's workpath.
 
-        The session's ``outputs`` field holds them by practice: ``root`` for the practice, and under a
-        fidelity's name its own ``root`` and a file name per format for a single-file output. The root is
-        the first of: the fidelity's override, the practice's override, ``practice_folders`` in
-        ``.context/config.json``, the root the fidelity declares.
+        The workpath is the folder the session was opened on, and the repository when it names none.
+        The session's ``outputs`` field overrides by practice: ``root`` for the practice, and under a
+        fidelity's name its own ``root`` and a file name per format for a single-file output. An override
+        root is a folder under the workpath: the first of the fidelity's override, the practice's override,
+        and ``practice_folders`` in ``.context/config.json``.
         """
         current = getattr(getattr(guidance, "fidelities", None), "current", None)
         if current is None:
@@ -1235,10 +1245,10 @@ class Session:
         practice = self._output_overrides().get(key, {})
         fidelity = practice.get(self._fidelity_name(guidance), {})
         chosen_root = fidelity.get("root") or practice.get("root") or self._project_default_folder(key)
-        root = self._output_root(guidance, key, chosen_root or current.output_root)
+        root = (Path(self.workpath or self.repo_path or Path.cwd()) / (chosen_root or ".")).resolve()
         return {
             label: [self._output_path(root, name) for name in self._output_names(declared, fidelity.get(label))]
-            for label, declared in current.output_files.items()
+            for label, declared in current.outputs.items()
         }
 
     def _output_overrides(self) -> dict:
@@ -1246,15 +1256,10 @@ class Session:
             return {}
         return self._read_session_folder_json(self.session_path).get("outputs", {})
 
-    def _output_root(self, guidance: PracticeGuidance, practice: str, override: str | None) -> Path:
-        if override:
-            return (Path(self.workpath or self.repo_path or Path.cwd()) / override).resolve()
-        return Path(self._default_output_paths(guidance, practice)[0][0])
-
     def _output_names(self, declared: str | list[str], override: str | None) -> list[str]:
         names = [declared] if isinstance(declared, str) else list(declared)
         is_single_file = len(names) == 1 and not set(names[0]) & _OUTPUT_PATTERN_MARKS
-        return [override] if override and is_single_file else names
+        return [PurePosixPath(names[0]).with_name(override).as_posix()] if override and is_single_file else names
 
     def _output_path(self, root: Path, name: str) -> str:
         folder_mark = "/" if name.endswith("/") else ""

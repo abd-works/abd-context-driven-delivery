@@ -34,7 +34,7 @@ export class FilesAndReportsPageDriver implements FilesAndReportsDriver {
   private async openFilesList(ticket: string, fidelity: string): Promise<void> {
     await card(this.page, ticket).locator('.card-hit').click()
     await this.tileOf(fidelity).locator('.tile-name').click()
-    await this.tileOf(fidelity).locator('.expansion').getByRole('button', { name: 'list', exact: true }).click()
+    await this.tileOf(fidelity).locator('.expansion').getByRole('button', { name: 'folder', exact: true }).click()
     await expect(this.filesPanel.locator('.file-link').first()).toBeVisible()
   }
 

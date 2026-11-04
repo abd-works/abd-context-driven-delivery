@@ -21,14 +21,10 @@ with description("a fidelity's declared outputs") as self:
             self.outputs = Stories().fidelities["story_map"].outputs
 
         with it("should name the file for each format"):
-            expect(self.outputs).to(equal({"root": "tests", "markdown": "story-map.md", "drawio": "story-map.drawio"}))
+            expect(self.outputs).to(equal({"markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio"}))
 
         with it("should give the file of its default format"):
-            expect(Stories().fidelities["story_map"].default_output).to(equal("story-map.md"))
-
-        with it("should give its root folder apart from its files"):
-            fidelity = Stories().fidelities["story_map"]
-            expect((fidelity.output_root, "root" in fidelity.output_files)).to(equal(("tests", False)))
+            expect(Stories().fidelities["story_map"].default_output).to(equal(".context/story-map.md"))
 
     with context("with a fidelity that writes several files for one format"):
         with before.each:
@@ -50,13 +46,24 @@ with description("a fidelity's declared outputs") as self:
             ]
             expect(missing).to(be_empty)
 
-        with it("should give every fidelity its root folder"):
-            roots = {
-                f"{type(practice).__name__}.{name}": fidelity.outputs.get("root")
+        with it("should leave every fidelity without a root folder"):
+            rooted = [
+                f"{type(practice).__name__}.{name}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
-            }
-            expect({name: root for name, root in roots.items() if root not in ("src", "tests", "ux")}).to(equal({}))
+                if "root" in fidelity.outputs
+            ]
+            expect(rooted).to(be_empty)
+
+        with it("should keep every markdown and drawio output in a .context folder"):
+            outside = [
+                f"{type(practice).__name__}.{name}.{label}"
+                for practice in self.practices
+                for name, fidelity in practice.fidelities.entries.items()
+                for label, path in fidelity.outputs.items()
+                if label in ("markdown", "drawio", "realization") and ".context/" not in path
+            ]
+            expect(outside).to(be_empty)
 
         with it("should give every specification and implementation fidelity a code format"):
             without_code = [
@@ -72,8 +79,5 @@ with description("a fidelity's declared outputs") as self:
         with before.each:
             self.ux = Ux()
 
-        with it("should keep mockups under the ux folder"):
-            expect(self.ux.fidelities["mockup"].outputs["root"]).to(equal("ux"))
-
-        with it("should keep front end code under the src folder"):
-            expect(self.ux.fidelities["front_end_code"].outputs["root"]).to(equal("src"))
+        with it("should write mockups as html beside the front end's code"):
+            expect(self.ux.fidelities["mockup"].outputs["html"]).to(equal("{epic}/{user_goal}.html"))

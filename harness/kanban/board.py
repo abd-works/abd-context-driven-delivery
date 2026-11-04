@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cache
@@ -44,11 +43,6 @@ def _every_practice() -> tuple[PracticeGuidance, ...]:
     from ux.ux import Ux
 
     return (Stories(), Ddd(), Ux(), CleanEngineering(), Bdd())
-
-
-def name_of(title: str) -> str:
-    """The folder and file name a title gets: `Pet visits` is `pet-visits`."""
-    return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
 
 
 @language_adapter(language="typescript")
@@ -281,7 +275,7 @@ class Stage(Column):
         return {
             "name": self.name,
             "work_required": [self._slug(fidelity) for fidelity in self.work_required],
-            "formats": {self._slug(fidelity): list(fidelity.output_files) for fidelity in self.work_required},
+            "formats": {self._slug(fidelity): list(fidelity.outputs) for fidelity in self.work_required},
             "default_formats": {self._slug(fidelity): fidelity.default_format for fidelity in self.work_required},
             "wip_limit": self.wip_limit,
             "is_over_limit": len(tickets) > self.wip_limit,

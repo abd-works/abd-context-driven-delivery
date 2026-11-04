@@ -298,6 +298,28 @@ Observed: `SimPicker`; "should list every sim". Inferred: the porting hint in `s
             activate_sim = self.reconstructed.epics[0].epics[0].stories[1]
             expect(activate_sim.evidence).to(equal([]))
 
+    # A label that says all there is to say ends its sentence there, with no evidence after it.
+    with context("that labels an outline story with a label ending its own sentence"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+
+Observed. The sim list shows every sim.
+### (S) Customer --> Activate Sim
+
+The activation is observed.
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should give the story that label"):
+            select_sim = self.reconstructed.epics[0].epics[0].stories[0]
+            expect(select_sim.evidence).to(equal(["observed"]))
+
+        with it("should not take the word inside a sentence for a label"):
+            activate_sim = self.reconstructed.epics[0].epics[0].stories[1]
+            expect(activate_sim.evidence).to(equal([]))
+
     with context("that is rendered as an outline"):
         with before.each:
             source = self.markdown.parse("""(E) Onboard A Customer

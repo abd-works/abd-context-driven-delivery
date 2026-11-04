@@ -10,6 +10,9 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Display Fidelity Progress
 # Actor: Board App
+#
+# Acceptance criteria:
+# - Each fidelity shows Generate, Validate, and Review as to do, in progress, or done. Observed.
 with story("Display Fidelity Progress"):
     with scenario("Show Generate done"):
         # Evidence: observed: kanban_spec 'with a fidelity generated' — 'should show Generate done and Validate and Review remaining for that fidelity', 'should still find the practice and fidelity by name'.

@@ -8,7 +8,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 **Think hierarchically.** Use **Epics** for business capabilities or end-to-end outcomes, **Sub-Epics** for outcomes within an Epic, and **Stories** for discrete user or system interactions with observable results. Decompose Stories into **Scenarios**, then express each Scenario as **Given**, **When**, and **Then** steps. The hierarchy lets a reader move from the business outcome to the behaviour that implements it without losing traceability.
 
-**Write action-oriented interactions.** At every level, name the actor, action, and subject when the format includes actor metadata; name nodes with a base-form verb and a noun. `Manage Customer Orders` says what the Epic achieves, while `Orders` does not. Keep 4-9 direct children under an epic or sub-epic, warn at 3 or 10, and restructure at 2 or fewer or 11 or more, because shallow chains and crowded nodes both hide the shape of the work. A story holds 1 to 7 code scenarios; more than 7 and the story is huge.
+**Write action-oriented interactions.** At every level, name the actor, action, and subject when the format includes actor metadata; name nodes with a base-form verb and a noun. `Manage Customer Orders` says what the Epic achieves, while `Orders` does not. Keep 4-9 direct children under an epic or sub-epic, and restructure at 3 or fewer or 10 or more, because shallow chains and crowded nodes both hide the shape of the work. A story holds 1 to 7 code scenarios; more than 7 and the story is huge.
 
 ---
 
@@ -24,7 +24,6 @@ Whenever you define or change user interactions and resulting system behavior, a
 - **`vocabulary-traces-to-domain-source`** - Use terms from the domain language and model when they exist, because one shared definition keeps Stories, examples, and code consistent.
 - **`read-all-source-context-in-full`** - Before fixing the hierarchy or asking a question about an interaction between systems, read every referenced source that informs the decision, including the owning segment, module context, session records, related Story context, build order, code, recorded observations, and relevant run logs. Name the source and location that supports each important interaction, because titles and search results do not explain behaviour.
 - **`do-not-invent-requirements`** - Write only behaviour described by a source or explicitly requested by the user. Add a system-to-system interaction only when a named caller invokes it or a source requires it, because an assumed interaction becomes unrequested architecture, Scenarios, and tests.
-- **`evidence-distinguishes-observed-inferred-and-intended`** - Label behaviour as observed, inferred, or intended and cite its source. When available evidence cannot exercise required behaviour, write the intended GWT and state the limitation, because an unobserved expectation must not be presented as a fact.
 
 ---
 
@@ -36,9 +35,8 @@ Whenever you define or change user interactions and resulting system behavior, a
 default_format: markdown
 stage: discovery
 outputs:
-  root: tests
-  markdown: story-map.md
-  drawio: story-map.drawio
+  markdown: ".context/story-map.md"
+  drawio: ".context/story-map.drawio"
 ```
 
 #### Overview
@@ -79,7 +77,7 @@ If this change will not stay here, follow `practices/stories.mdc`.
 
 - **`verb-noun-format`** - Name every Epic, Sub-Epic, and Story with a base-form verb and noun. Epics and Sub-Epics name goals rather than an actor's activity or a supporting system call, because grammar alone does not preserve the right level of abstraction.
 - **`story-name-captures-system-mechanic`** - At Story level, use a verb that names the operation and a noun that names the record or concept it acts on. Replace vague names such as `Handle Request`, `Process Data`, or `Manage Record`, because they hide what the system does.
-- **`four-to-nine-children`** - Keep 4-9 direct children on an epic or sub-epic, warn at 3 or 10, and restructure at 2 or fewer or 11 or more, because readers cannot reason easily about shallow chains or crowded nodes. Do not apply this band to the scenarios under a story.
+- **`four-to-nine-children`** - Keep 4-9 direct children on an epic or sub-epic, and restructure at 3 or fewer or 10 or more, because readers cannot reason easily about shallow chains or crowded nodes. Do not apply this band to the scenarios under a story.
 - **`story-scenarios-one-to-four`** - A story's code scenarios number 1 to 7. More than 7 and the story is huge — split it. A story with no scenarios is not a story yet.
 - **`branch-on-mechanical-uniqueness`** - Create separate Stories for distinct mechanics and use Scenarios or examples when several source entries share one mechanic, because one Story per source entry duplicates behaviour while one Story for different mechanics hides work.
 - **`right-size-story-nodes`** - Put one observable interaction at one system boundary in each Story. Keep the caller's request, response, and translation together; give the callee its own boundary Story; keep display-only and forwarding-only work as outcomes, because splitting every internal call or interface step obscures the interaction being tested.
@@ -94,11 +92,10 @@ If this change will not stay here, follow `practices/stories.mdc`.
 default_format: python
 stage: specification
 outputs:
-  root: tests
   python: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.py"
   typescript: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
-  markdown: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.md"
-  realization: "{scope}-realization.md"
+  markdown: ".context/{epic}/{sub-epic}/{story}/{story_snake}_story.test.md"
+  realization: ".context/{scope}-realization.md"
 ```
 
 #### Overview
@@ -170,7 +167,6 @@ default_format: python
 stage: implementation
 clean_engineering: code
 outputs:
-  root: tests
   python:
     - "{sub_epic_slug}.story.shared.py"
     - "{sub_epic_slug}.story.domain.spec.py"

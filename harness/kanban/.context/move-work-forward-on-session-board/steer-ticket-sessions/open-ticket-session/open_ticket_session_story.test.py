@@ -10,6 +10,9 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Open Ticket Session
 # Actor: Person
+#
+# Acceptance criteria:
+# - Choose Session Root: a person browses to the folder the ticket's work goes in, for the whole ticket or one practice, and can go back to the default. Observed.
 with story("Open Ticket Session"):
     with scenario("Open a new ticket"):
         # Evidence: observed: kanban_tools_spec 'that opens a new ticket' — 'should return the new ticket in Discovery', 'should leave the current session as it is'; kanban_spec 'should name Generate on story_map as next'.

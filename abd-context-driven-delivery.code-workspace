@@ -7,6 +7,10 @@
 		{
 			"name": "story-ui",
 			"path": "../story-ui"
+		},
+		{
+			"name": "pml-web",
+			"path": "../pml-web"
 		}
 	],
 	"settings": {}

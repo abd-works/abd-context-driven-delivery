@@ -41,9 +41,8 @@ If the user asks for language while generating **modules** or **model**, use thi
 default_format: markdown
 stage: discovery
 outputs:
-  root: src
   markdown: "{module}/.context/module-context.md"
-  drawio: modules.drawio
+  drawio: ".context/modules.drawio"
 ```
 
 **Diagram format:** `drawio` (modules view with blue boxes, public-interface bullets, and one-way dependency arrows; template `templates/modules.drawio`). **Markdown:** `module-context.md` uses template `templates/modules.md`. Programming-language channels are for **model** and later.
@@ -153,10 +152,9 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 default_format: python
 stage: specification
 outputs:
-  root: src
   python: "{module}/"
   typescript: "{module}/"
-  markdown: "{module}/{module}-model.md"
+  markdown: "{module}/.context/{module}-model.md"
 ```
 
 #### Overview
@@ -257,7 +255,6 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 default_format: python
 stage: implementation
 outputs:
-  root: src
   python: "{module}/"
   typescript: "{module}/"
 ```

@@ -5,7 +5,7 @@ import { useBoard } from '../board/board-context'
 import type { FilesPanel } from '../board/board-store'
 import { folderGroupsOf, generatedPaths } from './files-panel-client'
 
-const FILE_MODES = ['list', 'folder', 'files']
+const FILE_MODES = ['folder', 'files']
 const NOT_GENERATED = ['Not generated yet.', 'Pick this format on the card, then generate or render it.']
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
@@ -25,19 +25,6 @@ export function FilesPanelHeadView({ panel }: { panel: FilesPanel }) {
           </button>
         ))}
       </div>
-    </div>
-  )
-}
-
-function FileListView({ paths }: { paths: string[] }) {
-  const { page } = useBoard()
-  return (
-    <div className="file-list">
-      {paths.map(path => (
-        <button key={path} className="file-link" onClick={() => void page.files.openTab(path)}>
-          {path}
-        </button>
-      ))}
     </div>
   )
 }
@@ -117,5 +104,9 @@ export function FilesPanelBodyView({ panel }: { panel: FilesPanel }) {
   const paths = generatedPaths(panel)
   if (panel.mode === 'files' && panel.tabs.length) return <FileTabsView panel={panel} />
   if (panel.mode === 'files' || !paths.length) return <p className="panel-note files-empty">Nothing generated yet for this fidelity.</p>
-  return <div className="panel-body files-body">{panel.mode === 'list' ? <FileListView paths={paths} /> : <FolderGroupsView paths={paths} />}</div>
+  return (
+    <div className="panel-body files-body">
+      <FolderGroupsView paths={paths} />
+    </div>
+  )
 }

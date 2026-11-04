@@ -5,7 +5,7 @@ import type { BoardStore } from '../board/board-store'
 
 const SHOWN_COMMAND = 80
 
-type CommandKind = 'submit' | 'fill' | 'command'
+type CommandKind = 'submit' | 'fill' | 'command' | 'restart_cdd'
 
 const shortened = (text: string): string => (text.length > SHOWN_COMMAND ? `${text.slice(0, SHOWN_COMMAND)}…` : text)
 
@@ -79,6 +79,14 @@ export class ChatClient {
   fill(text: string): Promise<void> {
     const wait = this.target?.is_busy ? ' It goes in when this turn ends.' : ''
     return this.send('fill', text, `Queued for the prompt of ${this.targetName}, for you to review: ${shortened(text)}${wait}`)
+  }
+
+  // Every chat runs its own cdd server, which keeps the code it started with, so each connected chat is asked to restart
+  // its own.
+  async restartCdd(): Promise<void> {
+    const { chats } = this.store.state
+    for (const chat of chats) await ChatClientGenerated.named(this.api, chat.id).send('restart_cdd', '')
+    if (chats.length) this.store.toast(`Asked ${chats.length === 1 ? chats[0]!.name || chats[0]!.id : `${chats.length} chats`} to restart cdd`)
   }
 
   private async send(kind: CommandKind, text: string, sent: string): Promise<void> {

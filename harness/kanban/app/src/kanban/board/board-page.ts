@@ -7,14 +7,13 @@ import { ChatClient } from '../chat/chat-client'
 import { ActivationClient } from '../ticket/activation-client'
 import { FilesPanelClient } from '../ticket/files-panel-client'
 import { OpenCardClient } from '../ticket/open-card-client'
-import { locationOf } from '../ticket/report-client'
+import { fixRulePrompt, fixViolationPrompt } from '../ticket/report-client'
 import { RootChoiceClient } from '../ticket/root-choice-client'
 import { TicketClient } from '../ticket/ticket-client'
 import { TileActionsClient } from '../ticket/tile-actions-client'
 import { TileClient } from '../ticket/tile-client'
 import { BoardApi } from './board-api'
 import type { Send } from './board-api'
-import { guidanceSlug } from './board-brand'
 import { BoardClient } from './board-client'
 import { BoardLayoutClient } from './board-layout-client'
 import { BoardReader } from './board-reader'
@@ -67,13 +66,12 @@ export class BoardPage {
     return new BacklogItemClient(json, this)
   }
 
-  // location names the file and its line.
   fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData): Promise<void> {
-    return this.chat.command(this.actionCommandFor(ticket, `/actions-satisfy ${guidanceSlug(rule.fidelity)} ${locationOf(violation)} rule ${rule.name}`))
+    return this.chat.command(this.actionCommandFor(ticket, fixViolationPrompt(rule, violation)))
   }
 
   fixRule(ticket: string, rule: ReportRuleData): Promise<void> {
-    return this.chat.command(this.actionCommandFor(ticket, `/actions-satisfy ${guidanceSlug(rule.fidelity)} rule ${rule.name}`))
+    return this.chat.command(this.actionCommandFor(ticket, fixRulePrompt(rule)))
   }
 
   // A report's fixes are for the ticket whose report it is, so they name that ticket's session.
@@ -81,12 +79,15 @@ export class BoardPage {
     return this.board.tickets.find(shown => shown.name === ticket)?.actionCommand(command) ?? command
   }
 
-  // Stops the board's cdd server and reads the board again, which starts a fresh one on the code as it is now.
+  // Stops the board's cdd server and reads the board again, which starts a fresh one on the code as it is now, then asks
+  // every connected chat to restart its own.
   async restartCdd(): Promise<void> {
     const restarted = await this.api.post<{ is_restarted: boolean }>(CDD_RESTART_PATH)
     if (!restarted) return
     await Promise.all([this.reader.refresh(), this.chat.refresh()])
-    if (!this.store.state.serverFailure) this.store.toast('cdd restarted on the current code')
+    if (this.store.state.serverFailure) return
+    this.store.toast('cdd restarted on the current code')
+    await this.chat.restartCdd()
   }
 
   openNewTicket(): Promise<void> {

@@ -127,7 +127,6 @@ default_format: python
 stage: discovery
 clean_engineering: model
 outputs:
-  root: src
   python: "**/*_spec.py"
   typescript: "**/*spec.ts"
   java: "**/*Spec.java"
@@ -182,10 +181,9 @@ default_format: markdown
 stage: specification
 clean_engineering: model
 outputs:
-  root: src
   python: "**/*_spec.py"
   typescript: "**/*spec.ts"
-  markdown: "{scope}-realization.md"
+  markdown: ".context/{scope}-realization.md"
 ```
 
 #### Overview
@@ -236,7 +234,6 @@ default_format: python
 stage: implementation
 clean_engineering: code
 outputs:
-  root: src
   python: "**/*_spec.py"
   typescript: "**/*spec.ts"
   java: "**/*Spec.java"

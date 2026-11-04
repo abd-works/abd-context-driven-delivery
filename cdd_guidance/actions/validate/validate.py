@@ -46,10 +46,11 @@ class Validate(GuidanceAction):
         or a saved graph.json. When set, append a graph-rule report for each guidance's practice and still run AI validation.
         paths: the files or folders being edited, named from the project's root or absolute (e.g. src/my-paradise/order.ts).
         For graph-backed guidance, the graph is built from just these files as they are now and its rules run on them;
-        the saved graph is not read or rebuilt. A path that is not there, or not under the session's root, is refused."""
+        the saved graph is not read or rebuilt. A path that is not there, or not under the session's root, is refused.
+        With no paths and no graph, the folders holding the fidelity's written output are checked."""
         self._bind_guidance(guidance)
         sections: list[str] = [_VALIDATE_MARKDOWN]
-        prefixes = self._workspace_relative(paths)
+        prefixes = self._workspace_relative(paths or (self._written_outputs() if graph is None else []))
         graph_paths = self._resolve_graph_json_paths(graph, prefixes)
         if graph_paths:
             sections.append(
@@ -153,6 +154,29 @@ class Validate(GuidanceAction):
         if unreadable:
             raise PathsNotFoundError(unreadable, project, workspace)
         return [path.relative_to(workspace).as_posix() for _, path in named]
+
+    def _written_outputs(self) -> list[str]:
+        """The folders holding what each listed graph-backed guidance's fidelity declares and has already written: what
+        a validate that names no paths checks, so its graph is built and saved beside the report. The folder, not the
+        file, because a story map's stories keep their scenarios in files beside it."""
+        if not self._graph_practices():
+            return []
+        workspace = self._validate_workspace()
+        declared = [
+            path
+            for item in self.listed()
+            if not isinstance(item, str)
+            for paths in self._fidelity_outputs(item).values()
+            for path in paths
+        ]
+        found = [(self._project_checkout() / path).resolve() for path in declared if "{" not in path]
+        folders = {path.parent if path.is_file() else path for path in found if path.exists()}
+        return sorted(str(folder) for folder in folders if folder == workspace or workspace in folder.parents)
+
+    def _fidelity_outputs(self, item) -> dict[str, list[str]]:
+        from space.session import Session
+
+        return Session.current().fidelity_outputs(item)
 
     def _graph_practices(self) -> list[str]:
         """Graph practices of the listed guidance (clean-engineering is clean_engineering); none for other guidance."""

@@ -174,6 +174,9 @@ class Commit:
     def note_text(cls, fields: dict[str, str]) -> str:
         return "\n".join(f"{key}: {value}" for key, value in fields.items())
 
+    def to_mcp_result(self) -> dict[str, str]:
+        return {"sha": self.sha, "message": self.message}
+
     def note_payload(self) -> dict[str, str]:
         out: dict[str, str] = {}
         for line in (self.message or "").splitlines():

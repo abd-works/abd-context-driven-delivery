@@ -288,6 +288,17 @@ with description("a session"):
                 else:
                     os.environ["CDD_PROJECT"] = self._prior_project
 
+        # A session's name is its folder and its branch, and git refuses a space in a branch name.
+        with context("with a name that has spaces and capitals"):
+            with before.each:
+                Session.switch("Chat UI", workpath=self.work, repo_path=self.repo)
+
+            with it("should name the session by its slug"):
+                expect(Session.current().name).to(equal("chat-ui"))
+
+            with it("should keep the session in a folder named by its slug"):
+                expect((self.repo / ".sessions" / "chat-ui" / "session.json").is_file()).to(equal(True))
+
         with context("with a repo path"):
             with before.each:
                 self.instructions = Session.switch("alpha", repo_path=self.repo)
@@ -846,7 +857,7 @@ with description("a practice"):
 
             with it("should put each format's file under the practice's root folder"):
                 outputs = self.session.fidelity_outputs(self.guidance)
-                expect(outputs["markdown"]).to(equal([(self.work / "tests" / "story-map.md").resolve().as_posix()]))
+                expect(outputs["markdown"]).to(equal([(self.work / ".context" / "story-map.md").resolve().as_posix()]))
 
             with context("with session.json naming a root folder for the practice"):
                 with before.each:
@@ -854,7 +865,7 @@ with description("a practice"):
 
                 with it("should use that root"):
                     outputs = self.session.fidelity_outputs(self.guidance)
-                    expect(outputs["markdown"]).to(equal([(self.work / "docs/stories/story-map.md").resolve().as_posix()]))
+                    expect(outputs["markdown"]).to(equal([(self.work / "docs/stories/.context/story-map.md").resolve().as_posix()]))
 
             with context("with session.json naming a root folder for the fidelity too"):
                 with before.each:
@@ -862,7 +873,7 @@ with description("a practice"):
 
                 with it("should prefer the fidelity's root"):
                     outputs = self.session.fidelity_outputs(self.guidance)
-                    expect(outputs["drawio"]).to(equal([(self.work / "docs/map/story-map.drawio").resolve().as_posix()]))
+                    expect(outputs["drawio"]).to(equal([(self.work / "docs/map/.context/story-map.drawio").resolve().as_posix()]))
 
             with context("with session.json naming a file for a single-file output"):
                 with before.each:
@@ -870,11 +881,11 @@ with description("a practice"):
 
                 with it("should use that file name"):
                     outputs = self.session.fidelity_outputs(self.guidance)
-                    expect(outputs["markdown"]).to(equal([(self.work / "tests" / "our-map.md").resolve().as_posix()]))
+                    expect(outputs["markdown"]).to(equal([(self.work / ".context" / "our-map.md").resolve().as_posix()]))
 
                 with it("should keep the declared name for the other formats"):
                     outputs = self.session.fidelity_outputs(self.guidance)
-                    expect(outputs["drawio"]).to(equal([(self.work / "tests" / "story-map.drawio").resolve().as_posix()]))
+                    expect(outputs["drawio"]).to(equal([(self.work / ".context" / "story-map.drawio").resolve().as_posix()]))
 
             with context("with session.json naming a file for a patterned output"):
                 with before.each:

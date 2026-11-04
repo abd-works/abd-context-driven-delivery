@@ -12,7 +12,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Actor: Board App
 with story("Add Active Ticket To System Prompt"):
     with scenario("Name the active ticket and its next guidance in the system prompt"):
-        # Evidence: inferred: the prompt.compose handler in tools/chat-mod/hooks/register.ts; no spec runs the mod. The map records it Live with a local stand-in for the model.
+        # Evidence: inferred: the prompt.compose handler in harness/chat-ui/pane/hooks/register.ts; no spec runs the mod. The map records it Live with a local stand-in for the model.
         with given("checkout-flow, titled Checkout flow, is the active [ticket](../../../kanban-model.md#ticket--card), in Discovery, with stories-story_map next"):
             pass
         with when("a chat with the cdd-board mod loaded composes its system prompt"):

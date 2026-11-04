@@ -82,7 +82,7 @@ with description("a generate action on practice guidance") as self:
 
         with it("should say where each format of the artifact is saved in the main session"):
             prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
-            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/tests/story-map.md"))
+            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/.context/story-map.md"))
 
     with context("with a session open"):
         with before.each:
@@ -97,7 +97,7 @@ with description("a generate action on practice guidance") as self:
 
         with it("should say where each format of the artifact is saved"):
             prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
-            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/tests/story-map.md"))
+            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/.context/story-map.md"))
 
         with context("that an MCP call names a guidance slug"):
             with before.each:

@@ -127,7 +127,7 @@ describe('Move Ticket', () => {
   })
 })
 
-describe('Run Next Step', () => {
+describe('Send Next Fidelity Action', () => {
   it('should name the step that runs next', async () => {
     const { page } = await board.page()
     expect(ticketOn(page, OTHER).runNextLabel).toBe('Run next: generate')
@@ -236,11 +236,21 @@ describe('Write Ticket Handoff', () => {
   })
 })
 
-describe('Satisfy Violations From Band', () => {
-  it('should fill the prompt with the fidelities that have violations', async () => {
+describe('Close Active Session', () => {
+  async function closed() {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
-    await ticketOn(page, ACTIVE).fillSatisfy()
-    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: '/actions-satisfy stories-story-map session=.sessions/checkout-flow/session.json' }])
+    await ticketOn(page, ACTIVE).closeSession()
+    return { page, chat }
+  }
+
+  it('should send the close session command to the chat', async () => {
+    const { chat } = await closed()
+    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session' }])
+  })
+
+  it('should leave the ticket in its column', async () => {
+    const { page } = await closed()
+    expect(ticketOn(page, ACTIVE).column).toBe('Discovery')
   })
 })

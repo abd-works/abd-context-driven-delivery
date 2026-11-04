@@ -35,7 +35,6 @@ export function CheckIcon() {
 
 // The three ways the files panel shows a fidelity's files: a list, the folder they sit in, and the files themselves.
 const FILE_VIEW_SHAPES: Record<string, string> = {
-  list: 'M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01',
   folder: 'M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z',
   files: 'M5 2.5h5l3 3V12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1zM10 2.5V5.5h3M3 5v8.5a1 1 0 0 0 1 1h6',
 }

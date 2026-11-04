@@ -3,13 +3,13 @@
 Source: the `*_story.test.py` files under `move-work-forward-on-session-board/`, one per Story in its epic, sub-epic, and story folders, on `story-map.md`; domain terms link to `kanban-model.md`.
 
 Each block traces the domain operations a When (or a Then that triggers a collaborator) runs: `->` is a call, `<-` its return.
-`Board page` is the board app in `harness/kanban/app`, `chat mod` is `tools/chat-mod/hooks/register.ts`, and `Agent` is a Claude Code chat calling the cdd tools.
+`Board page` is the board app in `harness/kanban/app`, `chat mod` is `harness/chat-ui/pane/hooks/register.ts`, and `Agent` is a Claude Code chat calling the cdd tools.
 
 ---
 
 ## Open Board
 
-Actor: Person · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/open-board/open_board_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/open-board/open_board_story.test.py`
 
 ### Scenario: Open the board on a project
 
@@ -34,7 +34,7 @@ Chat <- the chats whose cdd-board mod checked in lately
 
 ### Scenario: Find the board from a chat
 
-Evidence: inferred: the 'board' command handler in tools/chat-mod/hooks/register.ts; no spec runs the mod.
+Evidence: inferred: the 'board' command handler in harness/chat-ui/pane/hooks/register.ts; no spec runs the mod.
 
 **Given** a Claude Code chat has the cdd-board mod loaded
 
@@ -42,16 +42,17 @@ Evidence: inferred: the 'board' command handler in tools/chat-mod/hooks/register
 
 ```realization
 Person -> Claude Code command.run('board')  [External: Claude Code]
-chat mod <- the board's address and how to start it
+chat mod -> board server start when it does not answer
+chat mod <- the board's address
 ```
 
-**Then** the chat answers The board is at http://127.0.0.1:8778. Start it with: npm start, in harness/kanban/app.
+**Then** the chat answers The board is at http://127.0.0.1:8778, and starts the board first when nothing answers on that port
 
 ---
 
 ## Display Board
 
-Actor: Board App · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/display-board/display_board_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-board/display_board_story.test.py`
 
 ### Scenario: Draw the columns of the board
 
@@ -187,7 +188,7 @@ Board <- stories-story_map done on billing-report
 
 ## Arrange Board And Details
 
-Actor: Person · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/arrange-board-and-details/arrange_board_and_details_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-details/arrange_board_and_details_story.test.py`
 
 ### Scenario: Give the board more height
 
@@ -251,7 +252,7 @@ Person -> BoardLayoutClient.toggleRegion('board')
 
 ## Display Backlog Items As Tickets
 
-Actor: Board App · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/display-backlog-items-as-tickets/display_backlog_items_as_tickets_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-backlog-items-as-tickets/display_backlog_items_as_tickets_story.test.py`
 
 ### Scenario: Show each idea file in the Backlog
 
@@ -314,7 +315,7 @@ BacklogItem <- the file name in words
 
 ## Display Ticket Card
 
-Actor: Board App · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/display-ticket-card/display_ticket_card_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-ticket-card/display_ticket_card_story.test.py`
 
 ### Scenario: Show every work session as a ticket
 
@@ -408,7 +409,7 @@ Board <- Ticket checkout-flow
 
 ### Scenario: Name the active ticket on the chat's status line
 
-Evidence: inferred: statusOf and readActive in tools/chat-mod/hooks/register.ts; no spec runs the mod.
+Evidence: inferred: statusOf and readActive in harness/chat-ui/pane/hooks/register.ts; no spec runs the mod.
 
 **Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card), in Discovery, with violations on stories-story_map
 
@@ -425,7 +426,7 @@ Board <- the active ticket checkout-flow
 
 ## Display Ticket Details
 
-Actor: Board App · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/display-ticket-details/display_ticket_details_story.test.py`
+Actor: Board App · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/display-ticket-details/display_ticket_details_story.test.py`
 
 ### Scenario: Show the ticket of a card pressed anywhere
 
@@ -544,7 +545,7 @@ Person -> OpenCardClient.openSegment(billing-report, Discovery, 'stories-story_m
 
 ## Set Stage WIP Limit
 
-Actor: Person · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/set-stage-wip-limit/set_stage_wip_limit_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/set-stage-wip-limit/set_stage_wip_limit_story.test.py`
 
 ### Scenario: Set a stage's limit
 
@@ -610,7 +611,7 @@ Evidence: observed: board-client.spec 'should change nothing for a limit that is
 
 ## Arrange Side Panel
 
-Actor: Person · Sub-epic: Display Board And Details For Repo · File: `move-work-forward-on-session-board/display-board-and-details-for-repo/arrange-side-panel/arrange_side_panel_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/arrange-side-panel/arrange_side_panel_story.test.py`
 
 ### Scenario: Set a panel's width
 
@@ -915,13 +916,30 @@ Ticket -> Session.forget_output_root('stories')
 
 Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.py`
 
-### Scenario: Close the active session with its work committed
+### Scenario: Close the active session from its card
 
-Evidence: observed: activation-client.spec 'Close Active Session' — 'should ask what to do with its work', 'should send what to do with its work', 'should select the ticket in Complete'; story-actions.spec 'should ask what to do with its work, then show the ticket in Complete'; kanban_tools_spec 'should leave no ticket active'.
+Evidence: observed: ticket-client.spec 'Close Active Session' — 'should send the close session command to the chat', 'should leave the ticket in its column'; story-actions.spec 'Close Active Session'.
+
+**Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card), In progress in Discovery, with a chat connected
+
+**When** the Person presses Close on checkout-flow's card
+
+```realization
+Person -> Chat.command('/space:session:close-session')
+Chat -> Session.close()
+```
+
+**Then** the chat is sent /space:session:close-session
+
+**And** checkout-flow stays In progress in Discovery
+
+### Scenario: Complete the active ticket with its work committed
+
+Evidence: observed: activation-client.spec 'Close Active Session' — 'should ask what to do with its work', 'should send what to do with its work', 'should select the ticket in Complete'; ticket-client.tsx dropOn opens the Close dialog for the active ticket; kanban_tools_spec 'should leave no ticket active'.
 
 **Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card), on its own branch
 
-**When** the Person closes checkout-flow's session
+**When** the Person moves checkout-flow into Complete
 
 ```realization
 Person -> Ticket.workspace()
@@ -946,7 +964,7 @@ Board page -> Board.show()
 
 **And** no ticket is active
 
-### Scenario: Close a ticket that has no branch of its own
+### Scenario: Complete a ticket that has no branch of its own
 
 Evidence: observed: activation-client.spec 'should choose nothing to leave when the session has no branch'; kanban_tools_spec 'should commit nothing on a ticket that has no branch'.
 
@@ -954,7 +972,7 @@ Evidence: observed: activation-client.spec 'should choose nothing to leave when 
 
 **But** it has no branch of its own
 
-**When** the Person closes checkout-flow's session and confirms
+**When** the Person moves checkout-flow into Complete and confirms
 
 ```realization
 Person -> Ticket.close([])
@@ -968,21 +986,11 @@ Ticket -> Session.move_to_closed()
 
 **But** nothing is committed
 
-### Scenario: Close the active ticket by moving it to Complete
-
-Evidence: observed: ticket-client.spec 'should let only the active ticket, or one done in Implementation, be dropped on Complete'; ticket-client.tsx dropOn opens the Close dialog for the active ticket.
-
-**Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card), In progress in Discovery
-
-**When** the Person moves checkout-flow into Complete
-
-**Then** the dialog headed Close session Checkout flow asks what to do with its work
-
 ---
 
 ## Restrict Actions To Active Session
 
-Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py`
+Actor: Person · Sub-epic: See Work On Session Board · File: `move-work-forward-on-session-board/see-work-on-session-board/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py`
 
 ### Scenario: Lock tickets that are not the active session
 
@@ -1652,13 +1660,13 @@ Evidence: observed: story-actions.spec 'should keep its practice switches off un
 
 ---
 
-## Run Action Across Practices
+## Send Action To Stage Practices
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/run-action-across-practices/run_action_across_practices_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/send-action-to-stage-practices/send_action_to_stage_practices_story.test.py`
 
 ### Scenario: Sketch every fidelity of a stage in one command
 
-Evidence: observed: tile-client.spec 'Run Action Across Practices' — 'should name every fidelity of the stage in one command'.
+Evidence: observed: tile-client.spec 'Send Action To Stage Practices' — 'should name every fidelity of the stage in one command'.
 
 **Given** billing-report is the active [ticket](kanban-model.md#ticket--card) in Discovery and a chat is connected
 
@@ -1746,7 +1754,7 @@ Actor: Board App · Sub-epic: Guide Work Through Practices · File: `move-work-f
 
 ### Scenario: Name the active ticket and its next guidance in the system prompt
 
-Evidence: inferred: the prompt.compose handler in tools/chat-mod/hooks/register.ts; no spec runs the mod. The map records it Live with a local stand-in for the model.
+Evidence: inferred: the prompt.compose handler in harness/chat-ui/pane/hooks/register.ts; no spec runs the mod. The map records it Live with a local stand-in for the model.
 
 **Given** checkout-flow, titled Checkout flow, is the active [ticket](kanban-model.md#ticket--card), in Discovery, with stories-story_map next
 
@@ -1849,9 +1857,9 @@ Person -> Board.help('ddd', 'model')
 
 ---
 
-## Run Next Step
+## Send Next Fidelity Action
 
-Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/run-next-step/run_next_step_story.test.py`
+Actor: Person · Sub-epic: Guide Work Through Practices · File: `move-work-forward-on-session-board/guide-work-through-practices/send-next-fidelity-action/send_next_fidelity_action_story.test.py`
 
 ### Scenario: Generate the next fidelity in its default format
 
@@ -2212,13 +2220,13 @@ Evidence: observed: tile-client.spec 'should keep Run off on a render with nothi
 
 ---
 
-## Send Sketch Iterate Or Document
+## Send Tile Action To Chat
 
-Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `move-work-forward-on-session-board/generate-fidelity-outputs/send-sketch-iterate-or-document/send_sketch_iterate_or_document_story.test.py`
+Actor: Person · Sub-epic: Generate Fidelity Outputs · File: `move-work-forward-on-session-board/generate-fidelity-outputs/send-tile-action-to-chat/send_tile_action_to_chat_story.test.py`
 
 ### Scenario: Send sketch, iterate, or document as its own command
 
-Evidence: observed: tile-client.spec 'Send Sketch Iterate Or Document' — 'should send %s as its own command' for sketch, iterate, and document; story-actions.spec 'should send the chosen action on a tile'.
+Evidence: observed: tile-client.spec 'Send Tile Action To Chat' — 'should send %s as its own command' for sketch, iterate, and document; story-actions.spec 'should send the chosen action on a tile'.
 
 **Given** billing-report is the active [ticket](kanban-model.md#ticket--card) and a chat is connected
 
@@ -2483,10 +2491,10 @@ Evidence: observed: side-panel-client.spec 'Fix Report Violations' — 'should s
 **When** the Person fixes that violation
 
 ```realization
-Board page -> Chat.send('command', '/actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format')
+Board page -> Chat.send('command', fix message: the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed)
 ```
 
-**Then** the chat receives the command /actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format
+**Then** the chat receives one message naming the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed, with instructions to fix it
 
 ### Scenario: Fix every violation of a rule
 
@@ -2497,10 +2505,10 @@ Evidence: observed: side-panel-client.spec 'should send Fix all for every violat
 **When** the Person fixes every violation of verb-noun-format
 
 ```realization
-Board page -> Chat.send('command', '/actions-satisfy stories-story-map rule verb-noun-format')
+Board page -> Chat.send('command', fix message: the verb-noun-format rule and every violation of it, each with its content)
 ```
 
-**Then** the chat receives the command /actions-satisfy stories-story-map rule verb-noun-format
+**Then** the chat receives one message with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them
 
 ### Scenario: Read an open report again after the fix
 
@@ -2520,13 +2528,13 @@ Board page -> Ticket.report('stories-story_map')
 
 ---
 
-## Satisfy Violations From Band
+## Display Violations Band
 
-Actor: Person · Sub-epic: Validate Fidelity Outputs · File: `move-work-forward-on-session-board/validate-fidelity-outputs/satisfy-violations-from-band/satisfy_violations_from_band_story.test.py`
+Actor: Board App · Sub-epic: Validate Fidelity Outputs · File: `move-work-forward-on-session-board/validate-fidelity-outputs/display-violations-band/display_violations_band_story.test.py`
 
 ### Scenario: Show the active ticket's violations in a band
 
-Evidence: observed: board-page-view.tsx ViolationsBandView; story-actions.spec 'should name the active ticket's violations across the page top and fill the prompt'.
+Evidence: observed: board-page-view.tsx ViolationsBandView; story-actions.spec 'should name the active ticket's violations across the page top'.
 
 **Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card) with violations on stories-story_map
 
@@ -2537,35 +2545,7 @@ Board page -> Board.show()
 Board <- active ticket checkout-flow with progress violations on stories-story_map
 ```
 
-**Then** a band across the page top names checkout-flow's violations with Show and Satisfy
-
-### Scenario: Fill the prompt with the fidelities that have violations
-
-Evidence: observed: ticket-client.spec 'Satisfy Violations From Band' — 'should fill the prompt with the fidelities that have violations'.
-
-**Given** the band names checkout-flow's violations on stories-story_map
-
-**And** a chat is connected
-
-**When** the Person satisfies the violations from the band
-
-```realization
-Board page -> Chat.send('fill', '/actions-satisfy stories-story-map')
-```
-
-**Then** the chat's prompt holds /actions-satisfy stories-story-map
-
-### Scenario: Keep Satisfy off with no chat
-
-Evidence: observed: tests/board-surface.spec.ts 'with no chat connected' — 'should say to load the mod and turn off what sends to a chat'.
-
-**Given** the band names checkout-flow's violations
-
-**But** no chat is connected
-
-**When** the Person looks at the band
-
-**Then** Satisfy is off
+**Then** a band across the page top names checkout-flow's violations
 
 ### Scenario: Show no band when the active ticket is clean
 
@@ -2672,13 +2652,13 @@ Person -> Ticket.session_files()
 
 ---
 
-## View Files
+## View Fidelity Files
 
-Actor: Person · Sub-epic: Review Fidelity Outputs · File: `move-work-forward-on-session-board/review-fidelity-outputs/view-files/view_files_story.test.py`
+Actor: Person · Sub-epic: Review Fidelity Outputs · File: `move-work-forward-on-session-board/review-fidelity-outputs/view-fidelity-files/view_fidelity_files_story.test.py`
 
 ### Scenario: Open one tab per format, generated or not
 
-Evidence: observed: side-panel-client.spec 'View Files' — 'should open one tab per format, generated or not', 'should read the text of the file a tab shows'; story-actions.spec 'should offer a tab for a format not generated yet and say so'; kanban_tools_spec 'should return the file's text'.
+Evidence: observed: side-panel-client.spec 'View Fidelity Files' — 'should open one tab per format, generated or not', 'should read the text of the file a tab shows'; story-actions.spec 'should offer a tab for a format not generated yet and say so'; kanban_tools_spec 'should return the file's text'.
 
 **Given** checkout-flow's story map is tests/story-map.md and tests/story-map.drawio is not there
 

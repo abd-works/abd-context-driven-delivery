@@ -491,12 +491,12 @@ Slash commands for the board live on `tools/workflow`. Do not deploy `/git`. Imp
 
 ---
 
-## tools/chat-mod
-The *cdd-board* Claude Code mod connects a chat to the Session Board: it checks the chat in with *Chat*, runs the commands waiting for it, and shows the active ticket on the status line and in the system prompt.
+## harness/chat-ui/pane
+The *cdd-board* Claude Code mod connects a chat to the Session Board: it checks the chat in with *Chat*, runs the commands waiting for it, shows the active ticket on the status line and in the system prompt, and draws the chat band with its server health mark.
 
 - **Purpose:** Let a person drive the agent from the board, and keep the chat aware of the active ticket.
 - **Seam (terms):** `cdd-board` plugin, `/board`
-- **Dependencies (one-way):** `tools/chat`, `harness/kanban`
+- **Dependencies (one-way):** `tools/chat`, `harness/kanban`, `harness/health`
 
 ---
 

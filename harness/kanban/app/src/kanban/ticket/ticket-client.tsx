@@ -12,6 +12,7 @@ const RUN_NEXT_COMMANDS: Record<string, string> = {
 // Steps the board does itself rather than sending to a chat: fixing violations opens the report, and a review is the
 // person's own approval.
 const STEPS_WITHOUT_CHAT = ['satisfy', 'review']
+const CLOSE_SESSION_COMMAND = '/space:session:close-session'
 
 const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogItemData => !('column' in moved)
 
@@ -206,16 +207,13 @@ export class TicketClient extends TicketClientGenerated {
     return this.page.chat.fill(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.new with parent ${this.name} for each story.`)
   }
 
+  // Closing ends the chat's session and leaves the ticket where it is; moving it into Complete is what completes it.
+  closeSession(): Promise<void> {
+    return this.page.chat.command(CLOSE_SESSION_COMMAND)
+  }
+
   fillHandoff(): Promise<void> {
     return this.page.chat.fill(`Write a handoff for ticket ${this.name} with /space-handoff-handoff-session.`)
-  }
-
-  fillSatisfy(): Promise<void> {
-    return this.page.chat.fill(this.actionCommand(`/actions-satisfy ${this.violatedSlugs.map(guidanceSlug).join(' ')}`))
-  }
-
-  fillShowViolations(): Promise<void> {
-    return this.page.chat.fill(`Show the violations on ${this.violatedSlugs.map(guidanceSlug).join(' ')} for ticket ${this.name}.`)
   }
 
   get canRunNext(): boolean {

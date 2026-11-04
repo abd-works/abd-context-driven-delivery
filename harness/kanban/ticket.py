@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 import os
 import re
 from datetime import datetime, timezone
@@ -13,10 +14,10 @@ from typing import TYPE_CHECKING, Any
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import language_adapter
-from harness.kanban.board import Board, Card, Stage, name_of
+from harness.kanban.board import Board, Card, Stage
 from harness.kanban.data import FileEntryData, FileTextData, PracticeRootData, ReportData, TicketData, WorkspaceData
 from harness.mcp.mcp_server import mcp
-from space.session import Session
+from space.session import Session, name_of
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
@@ -138,10 +139,19 @@ class Ticket(Card):
         """One per fidelity the board requires, in stage order; read from the session log each time."""
         lines = self._log_lines()
         return [
-            FidelityProgress.from_log(fidelity, stage, lines)
+            self._judged(FidelityProgress.from_log(fidelity, stage, lines))
             for stage in self._stages
             for fidelity in stage.work_required
         ]
+
+    def _judged(self, progress: FidelityProgress) -> FidelityProgress:
+        """A validate the log shows passing still failed when the judgment the validating agent added to its report fails a rule."""
+        if "validate" not in progress.done_actions:
+            return progress
+        reports = sorted((self._folder / REPORT_FOLDER).glob(progress.report_files))
+        if not reports or not _judgments_in(reports[-1].read_text(encoding="utf-8", errors="replace")):
+            return progress
+        return progress.with_violations()
 
     @property
     def column(self) -> Column:
@@ -202,10 +212,9 @@ class Ticket(Card):
 
     @property
     def violation_counts(self) -> dict[str, int]:
-        """How many violations the latest report names, for each fidelity left with violations; a report with no saved graph has none to count."""
-        reports = self.reports
-        graphs = {entry: self._graph_of(reports[entry.slug]) for entry in self.progress if entry.has_violations and entry.slug in reports}
-        return {entry.slug: sum(map(len, self._hits_by_rule(graph, entry).values())) for entry, graph in graphs.items() if graph.is_file()}
+        """How many violations the latest report names, graph hits and judged findings, for each fidelity left with violations."""
+        counts = {entry.slug: sum(rule["count"] for rule in self.report(entry.slug)["rules"]) for entry in self.progress if entry.has_violations}
+        return {slug: count for slug, count in counts.items() if count}
 
     @mcp
     @agent_tool
@@ -388,24 +397,24 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def report(self, fidelity: str) -> ReportData:
-        """Return the latest validation report of fidelity, a slug such as stories-story_map: its path and text, and the rules broken on the nodes of the graph saved beside it, each with its description and each violation with its line and the source around it. has_saved_graph is false when the report has no saved graph, so no rules can be listed."""
+        """Return the latest validation report of fidelity, a slug such as stories-story_map: its path and text, and the rules broken in it, each with its description and each violation with its line and the source around it. The rules are those broken on the nodes of the graph saved beside the report, then each rule the validating agent's judgment fails that the graph did not hit. has_saved_graph is false when the report has no saved graph, so its graph's rules are missing."""
         path = self.reports.get(fidelity, "")
         if not path:
             return {"path": "", "text": "", "rules": [], "has_saved_graph": False}
         graph = self._graph_of(path)
-        return {
-            "path": path,
-            "text": (self._board.repo_root / path).read_text(encoding="utf-8", errors="replace"),
-            "rules": self._rules_broken_in(graph, fidelity) if graph.is_file() else [],
-            "has_saved_graph": graph.is_file(),
-        }
+        text = (self._board.repo_root / path).read_text(encoding="utf-8", errors="replace")
+        graph_rules = self._rules_broken_in(path, fidelity) if graph.is_file() else []
+        hit = {rule["name"] for rule in graph_rules}
+        judged = [rule for rule in self._judged_rules(text, fidelity) if rule["name"] not in hit]
+        return {"path": path, "text": text, "rules": graph_rules + judged, "has_saved_graph": graph.is_file()}
 
     @mcp
     @agent_tool
     @noSessionLog
     def violations(self) -> ReportData:
-        """Return the rules broken on every fidelity left with violations, each rule naming its fidelity, in the shape of ticket.report. path is the folder the reports sit in. A saved graph holds its whole practice's hits, so a rule two fidelities share is listed once. has_saved_graph is false when a report has no saved graph, so its rules are missing."""
-        reports = [self.report(entry.slug) for entry in self.progress if entry.has_violations]
+        """Return the rules broken on every fidelity of the ticket's stage left with violations, across its practices, each rule naming its fidelity, in the shape of ticket.report. path is the folder the reports sit in. A saved graph holds its whole practice's hits, so a rule two fidelities share is listed once. has_saved_graph is false when a report has no saved graph, so its rules are missing."""
+        column = self.column
+        reports = [self.report(entry.slug) for entry in self.progress if entry.has_violations and entry.stage is column]
         rules = {self._rule_identity(rule): rule for report in reversed(reports) for rule in report["rules"]}
         return {
             "path": self._from_project(self._folder / REPORT_FOLDER),
@@ -546,29 +555,67 @@ class Ticket(Card):
         held = Ticket(self._session.move_to_backlog(), self._board)
         return BacklogItem.holding(held, self._board)
 
+    @property
+    def _graph_root(self) -> Path:
+        """The folder a saved graph names its files from: the session's root, or the project's when it has none."""
+        return Path(self._session.workpath or self._board.repo_root).resolve()
+
     def _graph_of(self, report: str) -> Path:
         """The graph a validation saved beside its report."""
         return (self._board.repo_root / report).with_suffix(".json")
 
-    def _hits_by_rule(self, graph: Path, progress: FidelityProgress) -> dict[str, list[dict[str, Any]]]:
+    def _hits_by_rule(self, report: str, progress: FidelityProgress) -> dict[str, list[dict[str, Any]]]:
+        """The hits on the rules report answers for: a saved graph holds its whole practice's hits. A rule no fidelity describes belongs to none, so every report keeps it."""
         from validate.graph_json_reader import violations_by_rule, violations_from_graph_json_files
 
-        return violations_by_rule(violations_from_graph_json_files([graph], [progress.practice]))
+        answered = self._rules_answered_by(report, progress)
+        described = progress.rule_descriptions
+        scanned = self._scanned_rules(report, progress.practice)
+        hits = violations_by_rule(violations_from_graph_json_files([self._graph_of(report)], [progress.practice]))
+        return {name: rule_hits for name, rule_hits in hits.items() if name in scanned and (name in answered or name not in described)}
 
-    def _rules_broken_in(self, graph: Path, fidelity: str) -> list[dict[str, Any]]:
+    def _scanned_rules(self, report: str, practice: str) -> set[str]:
+        """The rules a scanner checks now; a saved graph keeps the hits of a scanner deleted since it was saved."""
+        from harness.graph.practice_rules_registry import checks_for_practice
+        from harness.graph.schema_rules import active_overlay_patterns
+
+        overlays = json.loads(self._graph_of(report).read_text(encoding="utf-8")).get("overlays", [])
+        return set(checks_for_practice(practice, active_overlay_patterns(tuple(overlays))))
+
+    def _rules_answered_by(self, report: str, progress: FidelityProgress) -> set[str]:
+        """The shared rules, the fidelity's own, and each earlier fidelity's that has no report newer than report."""
+        reports = self.reports
+        superseded = [earlier for earlier in progress.earlier_fidelities if _report_stamp(reports.get(progress.slug_of(earlier), "")) > _report_stamp(report)]
+        return progress.rule_slugs_without(superseded)
+
+    def _rules_broken_in(self, report: str, fidelity: str) -> list[dict[str, Any]]:
         progress = next(entry for entry in self.progress if entry.slug == fidelity)
         descriptions = progress.rule_descriptions
         return [
             {"fidelity": fidelity, "name": name, "description": descriptions.get(name, ""), "count": len(hits), "violations": [self._violation_of(hit) for hit in hits]}
-            for name, hits in self._hits_by_rule(graph, progress).items()
+            for name, hits in self._hits_by_rule(report, progress).items()
         ]
+
+    def _judged_rules(self, text: str, fidelity: str) -> list[dict[str, Any]]:
+        """Each rule the judgment in a report fails, with its findings at the judged file's lines."""
+        descriptions = next(entry for entry in self.progress if entry.slug == fidelity).rule_descriptions
+        rules = []
+        for judgment in _judgments_in(text):
+            violations = [self._judged_violation(judgment.file, finding) for finding in judgment.findings]
+            rules.append({"fidelity": fidelity, "name": judgment.rule, "description": descriptions.get(judgment.rule, ""), "count": len(violations), "violations": violations})
+        return rules
+
+    def _judged_violation(self, judged_file: str, finding: Finding) -> dict[str, Any]:
+        """A finding names the judged file by its name alone, or no file; one that names another file keeps that file's path."""
+        location = judged_file if not finding.file or Path(finding.file).name == Path(judged_file).name else finding.file
+        return {"location": location, "line": finding.line, "message": finding.message, "source": self._source_around(location, finding.line)}
 
     def _rule_identity(self, rule: dict[str, Any]) -> tuple[Any, ...]:
         practice = rule["fidelity"].split("-")[0]
         return (practice, rule["name"], *((violation["location"], violation["line"], violation["message"]) for violation in rule["violations"]))
 
     def _violation_of(self, hit: dict[str, Any]) -> dict[str, Any]:
-        location = self._relative_to(self._board.repo_root.resolve(), hit["location"])
+        location = self._relative_to(self._board.repo_root.resolve(), str(self._graph_root / hit["location"]))
         line = hit["line_number"]
         return {"location": location, "line": line, "message": hit["violation_message"], "source": self._source_around(location, line)}
 
@@ -604,7 +651,7 @@ class Ticket(Card):
         if earlier is None:
             return ""
         made = {label for label, entries in self._files_of(earlier.fidelity).items() if any(entry["exists"] for entry in entries)}
-        wanted = [label for label in formats if label in earlier.fidelity.output_files and label not in made]
+        wanted = [label for label in formats if label in earlier.fidelity.outputs and label not in made]
         if not made or not wanted:
             return ""
         return f"/actions-render {earlier.slug.replace('_', '-')} format={','.join(wanted)} source={sorted(made)[0]}"
@@ -697,7 +744,26 @@ class FidelityProgress:
 
     @property
     def slug(self) -> str:
-        return f"{self.practice}-{self._fidelity.name}"
+        return self.slug_of(self._fidelity)
+
+    def with_violations(self) -> FidelityProgress:
+        """This progress with its latest validate failed, so validate and review are to do again."""
+        return FidelityProgress(self._fidelity, self._stage, [action for action in self._done_actions if action == "generate"], True)
+
+    def slug_of(self, fidelity: FidelityGuidance) -> str:
+        return f"{self.practice}-{fidelity.name}"
+
+    @property
+    def earlier_fidelities(self) -> list[FidelityGuidance]:
+        """The fidelities of this practice that come before this one."""
+        names = [fidelity.name for fidelity in self._practice_fidelities]
+        return self._practice_fidelities[:names.index(self._fidelity.name)] if self._fidelity.name in names else []
+
+    def rule_slugs_without(self, superseded: list[FidelityGuidance]) -> set[str]:
+        """The practice's shared rules, this fidelity's own, and every earlier fidelity's but the superseded ones."""
+        dropped = {fidelity.name for fidelity in superseded}
+        earlier = [rule for fidelity in self.earlier_fidelities if fidelity.name not in dropped for rule in fidelity.rules]
+        return {rule.slug for rule in [*self._fidelity.practice_guidance.rules, *earlier, *self._fidelity.rules]}
 
     @property
     def report_files(self) -> str:
@@ -708,10 +774,13 @@ class FidelityProgress:
     def rule_descriptions(self) -> dict[str, str]:
         """Each rule's text by slug. A saved graph holds the whole practice's hits, so every fidelity's rules count; this fidelity's own win."""
         practice = self._fidelity.practice_guidance
-        entries = practice.fidelities.entries
-        fidelities = entries.values() if isinstance(entries, dict) else entries
-        rules = [*practice.rules, *(rule for fidelity in fidelities for rule in fidelity.rules), *self._fidelity.rules]
+        rules = [*practice.rules, *(rule for fidelity in self._practice_fidelities for rule in fidelity.rules), *self._fidelity.rules]
         return {rule.slug: rule.body.strip() for rule in rules}
+
+    @property
+    def _practice_fidelities(self) -> list[FidelityGuidance]:
+        entries = self._fidelity.practice_guidance.fidelities.entries
+        return list(entries.values() if isinstance(entries, dict) else entries)
 
     @property
     def state(self) -> str:
@@ -729,6 +798,66 @@ class FidelityProgress:
         if self._has_violations:
             states["validate"] = "in_progress"
         return states
+
+
+def _report_stamp(report: str) -> str:
+    """The date a report's name ends with; names stamp it in a form that sorts by time. Nothing for no report."""
+    return Path(report).stem.rsplit("-", 1)[-1] if report else ""
+
+
+# The judgment the validating agent adds to a report, in the shape validate.md gives it. A report written before
+# validate.md allowed only Pass and Fail can mark a rule Warn, which is a Fail.
+JUDGMENT_HEADING = re.compile(r"^## Judgment — `(?P<file>[^`]+)`")
+JUDGED_RULE_HEADING = re.compile(r"^### `(?P<rule>[^`]+)` — (?:Fail|Warn)\s*$")
+FINDING_LINE = re.compile(r"^- (?:(?P<file>[^\s:]+):(?P<line>\d+)\s+)?(?P<message>.+)$")
+# A finding written before validate.md gave the judgment its shape names its file and line mid-sentence.
+NAMED_LINE = re.compile(r"(?P<file>[\w./-]+\.\w+):(?P<line>\d+)")
+
+
+class Finding:
+    """One finding of a judged rule: the file and line it names, when it names them, and what it says."""
+
+    def __init__(self, file: str, line: int | None, message: str) -> None:
+        self.file = file
+        self.line = line
+        self.message = message
+
+
+class Judgment:
+    """One rule the judgment fails, in one judged file, with its findings."""
+
+    def __init__(self, file: str, rule: str) -> None:
+        self.file = file
+        self.rule = rule
+        self.findings: list[Finding] = []
+
+    def add(self, line: str) -> None:
+        """A bullet is a finding; a paragraph under a rule with no bullets is its one finding."""
+        bullet = FINDING_LINE.match(line)
+        if bullet is None and self.findings:
+            return
+        message = bullet["message"] if bullet else line
+        named = (bullet if bullet and bullet["line"] else None) or NAMED_LINE.search(message)
+        self.findings.append(Finding(named["file"] if named else "", int(named["line"]) if named else None, message))
+
+
+def _judgments_in(text: str) -> list[Judgment]:
+    """The rules a report's judgment fails; none when the report has no judgment."""
+    judgments: list[Judgment] = []
+    judged_file, current = "", None
+    for line in text.splitlines():
+        heading = JUDGMENT_HEADING.match(line)
+        rule = JUDGED_RULE_HEADING.match(line)
+        if heading:
+            judged_file, current = heading["file"], None
+        elif rule and judged_file:
+            current = Judgment(judged_file, rule["rule"])
+            judgments.append(current)
+        elif line.startswith("#"):
+            current = None
+        elif current and line.strip():
+            current.add(line.strip())
+    return judgments
 
 
 def practice_key(practice: PracticeGuidance) -> str:

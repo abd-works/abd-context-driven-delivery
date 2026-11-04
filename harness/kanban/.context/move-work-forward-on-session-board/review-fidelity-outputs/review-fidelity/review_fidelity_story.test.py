@@ -10,6 +10,10 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Review Fidelity
 # Actor: Person
+#
+# Acceptance criteria:
+# - Ignore Early Review: a review before a clean validate does not count. Observed.
+# - Complete Stage Work: when every fidelity of a stage is reviewed, the ticket shows in that stage's Done part. Observed: `Ticket.is_done`.
 with story("Review Fidelity"):
     with scenario("Review a fidelity after a clean validate"):
         # Evidence: observed: kanban_tools_spec 'with a ticket whose story map has passed validate' — 'should name review as the next action', 'that a person has finished reviewing' — 'should show the fidelity's review done', 'should write the review to the session log'; kanban_spec 'should show the fidelity done'.

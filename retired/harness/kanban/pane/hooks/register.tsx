@@ -21,6 +21,19 @@ import {
   setColumnOffset,
 } from './kanban/board-client'
 import { BandView, PaneView } from './kanban/board-view'
+import {
+  currentHealthView,
+  currentInstall,
+  currentServerHealth,
+  hideDetails,
+  openDetails,
+  reconnect,
+  refreshHealth,
+  refreshHealthSoon,
+  runInstall,
+  togglePin,
+} from './health/server-health-client'
+import { ServerHealthBandView } from './health/server-health-view'
 import { currentPanels, reloadFiles, reloadFileText, reloadReport, setPanelWidth } from './kanban/side-panel-client'
 import {
   activateNamed,
@@ -92,6 +105,7 @@ export const register: Register = on => {
     })
     void $.ui.open({ id: PANE, title: 'Board' })
     await refresh($)
+    refreshHealthSoon($)
     return next(e)
   })
 
@@ -121,13 +135,13 @@ export const register: Register = on => {
 
   // The cdd server can still be connecting at session start; by the first prompt it answers.
   on('prompt.submit', async ($, e, next) => {
-    await refresh($)
+    await Promise.all([refresh($), refreshHealth($)])
     return next(e)
   })
 
   on('tool.call', async ($, e, next) => {
     const ran = await next(e)
-    if (e.tool.startsWith(`mcp__${SERVER}__`)) await refreshAll($)
+    if (e.tool.startsWith(`mcp__${SERVER}__`)) await Promise.all([refreshAll($), refreshHealth($)])
     return ran
   })
 
@@ -151,9 +165,26 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey) return next(e)
     const active = await activeTicket($)
-    if (!active || active.violations.length === 0) return next(e)
-    return BandView($, $.ui.resolve(e), e.surface !== SURFACE_WITHOUT_PICTURES, active, () => fillShowViolations($, active), () => fillSatisfy($, active))
+    const elements = $.ui.resolve(e)
+    const violations = active && active.violations.length > 0 ? BandView($, elements, e.surface !== SURFACE_WITHOUT_PICTURES, active, () => fillShowViolations($, active), () => fillSatisfy($, active)) : null
+    const actions = {
+      togglePin: () => togglePin($),
+      openDetails: () => openDetails($),
+      hideDetails: () => hideDetails($),
+      reconnect: () => reconnect($, () => refreshAll($)),
+      runInstall: () => runInstall($),
+    }
+    const band = {
+      health: await currentServerHealth($),
+      view: await currentHealthView($),
+      install: await currentInstall($),
+      hasPictures: e.surface !== SURFACE_WITHOUT_PICTURES,
+      columns: e.props.bodyColumns,
+      actions,
+    }
+    return ServerHealthBandView(elements, band, violations)
   })
 
   // A region clips its rows, so the engine's window cannot reach them: the pane moves them itself. With a panel beside

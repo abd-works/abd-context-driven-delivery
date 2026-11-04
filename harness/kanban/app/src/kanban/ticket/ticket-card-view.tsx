@@ -73,7 +73,7 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
-      {ticket.violatedSlugs.length ? (
+      {ticket.violatedSlugs.some(slug => stage.workRequired.includes(slug)) ? (
         <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket.name, ''))}>
           violations
         </button>
@@ -108,12 +108,15 @@ function SplitActionView({ ticket }: { ticket: TicketClient }) {
 function SessionActionsView({ ticket }: { ticket: TicketClient }) {
   const { page } = useBoard()
   const cannotFill = useCannotFill(ticket)
-  const toggle = ticket.isActive ? { action: 'close', label: 'Close', hint: 'Close this session' } : { action: 'activate', label: 'Activate', hint: 'Activate this session' }
   return (
     <span className="file-views">
       <SessionActionView action="next" label={ticket.runNextLabel} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
       <SessionActionView action="handoff" label="Handoff" hint="Write a handoff for this session" isOff={cannotFill} onPress={() => ticket.fillHandoff()} />
-      <SessionActionView action={toggle.action} label={toggle.label} hint={toggle.hint} isOff={ticket.isClosed} onPress={() => page.activation.start(ticket, ticket.isActive)} />
+      {ticket.isActive ? (
+        <SessionActionView action="close" label="Close" hint="Close this session in the chat" isOff={cannotFill} onPress={() => ticket.closeSession()} />
+      ) : (
+        <SessionActionView action="activate" label="Activate" hint="Activate this session" isOff={ticket.isClosed} onPress={() => page.activation.start(ticket, false)} />
+      )}
     </span>
   )
 }

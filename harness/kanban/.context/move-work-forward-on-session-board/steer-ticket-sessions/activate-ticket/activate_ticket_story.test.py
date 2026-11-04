@@ -10,6 +10,10 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Activate Ticket
 # Actor: Person
+#
+# Acceptance criteria:
+# - Commit, push, and merge into main are chosen when the session is left, and merge starts off. Observed: `Ticket.activate`, `Ticket.close`.
+# - Create Ticket Branch And Worktree: they are created when a ticket that has none is activated, and a ticket that has one is offered neither again. Observed.
 with story("Activate Ticket"):
     with scenario("Switch to another ticket, committing, pushing, and merging the one left"):
         # Evidence: observed: activation-client.spec 'Activate Ticket' — 'should offer commit and push on leaving and open with merge off', 'should offer a branch to a ticket that has none', 'should say what it switches from and to', 'that a person has confirmed with merge chosen'; story-actions.spec 'should switch the session from the dialog, with merge off'.

@@ -10,12 +10,10 @@ storyNode:
   where:
     - id is the text slugs from the root to this node, joined by dots
     - id is unique on the map
-    - evidence is observed | inferred | intended
   rules:
     - vocabulary-traces-to-domain-source
     - read-all-source-context-in-full
     - do-not-invent-requirements
-    - evidence-distinguishes-observed-inferred-and-intended
 
 epic:
   fidelity: story_map

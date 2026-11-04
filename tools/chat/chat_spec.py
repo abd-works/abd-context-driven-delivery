@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from threading import Thread
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 for _root in (_REPO_ROOT, _REPO_ROOT / "tools"):
@@ -17,6 +18,7 @@ from chat.chat import Chat, ChatNotConnectedError
 
 CHAT = "ad6c04ab-chat"
 CLOCK = [1000.0]
+CONCURRENT_CHECK_INS = 200
 
 
 def _said(commands: list) -> list[tuple[str, str]]:
@@ -25,6 +27,14 @@ def _said(commands: list) -> list[tuple[str, str]]:
 
 def _states() -> list[str]:
     return [message["state"] for message in Chat.load(CHAT).messages()]
+
+
+def _check_in_repeatedly(name: str, failures: list[Exception]) -> None:
+    try:
+        for _ in range(CONCURRENT_CHECK_INS):
+            Chat.load(CHAT).check_in(is_busy=True, name=name)
+    except Exception as failure:
+        failures.append(failure)
 
 
 def _titled(title: str) -> str:
@@ -51,6 +61,24 @@ with description("a chat") as self:
         with it("should refuse a command for a chat that is not connected"):
             expect(lambda: Chat.load(CHAT).send("command", "/actions-validate")).to(raise_error(ChatNotConnectedError))
 
+    # Two check-ins written over each other left state files that no longer read, beside chats still checking in.
+    with context("with a state file that does not read beside a chat that has checked in"):
+        with before.each:
+            Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
+            damaged = self.chats / "damaged-chat"
+            damaged.mkdir()
+            (damaged / "chat.json").write_text('{"name": "old", "seen": 1000.0}}', encoding="utf-8")
+
+        with it("should list the chat that reads"):
+            expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT]))
+
+        with context("that has checked in again"):
+            with before.each:
+                Chat.load("damaged-chat").check_in(is_busy=False, name="repo · second words")
+
+            with it("should list the chat again"):
+                expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT, "damaged-chat"]))
+
     # (S) Chat --> Check In With Board
     with context("that has checked in"):
         with before.each:
@@ -75,6 +103,23 @@ with description("a chat") as self:
 
             with it("should go by the latest title"):
                 expect(Chat.list()[0]["name"]).to(equal("Session board handoff review"))
+
+        # A mod that reloads can check in twice at once, and a state file written over itself cannot be read.
+        with context("that checks in from two places at once"):
+            with before.each:
+                self.failures = []
+                names = ("repo · first words", "repo · a much longer name than the first one")
+                checking_in = [Thread(target=_check_in_repeatedly, args=(name, self.failures)) for name in names]
+                for thread in checking_in:
+                    thread.start()
+                for thread in checking_in:
+                    thread.join()
+
+            with it("should take every check-in"):
+                expect(self.failures).to(be_empty)
+
+            with it("should still be listed"):
+                expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT]))
 
         with context("that has gone quiet"):
             with before.each:
@@ -131,6 +176,25 @@ with description("a chat") as self:
 
                         with it("should show the command as done"):
                             expect(_states()).to(equal(["done"]))
+
+                    # A mod that reloads mid-turn forgets the commands it was running, so the chat's own check-ins finish them.
+                    with context("that the chat has worked on through a turn"):
+                        with before.each:
+                            Chat.load(CHAT).check_in(is_busy=True)
+
+                        with context("that has ended"):
+                            with before.each:
+                                Chat.load(CHAT).check_in(is_busy=False)
+
+                            with it("should show the command as done"):
+                                expect(_states()).to(equal(["done"]))
+
+                    with context("that the chat has not yet started a turn for"):
+                        with before.each:
+                            Chat.load(CHAT).check_in(is_busy=False)
+
+                        with it("should still show the command as shown"):
+                            expect(_states()).to(equal(["shown"]))
 
                 with context("that the chat could not show"):
                     with before.each:

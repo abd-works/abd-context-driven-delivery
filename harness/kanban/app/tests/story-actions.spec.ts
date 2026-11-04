@@ -30,6 +30,10 @@ async function lastReceived(text: string): Promise<void> {
   await expect.poll(() => chat.received.map(command => command.text), { timeout: 8_000 }).toContain(text)
 }
 
+async function receivedContaining(words: string, count: number): Promise<void> {
+  await expect.poll(() => chat.received.filter(command => command.text.includes(words)).length, { timeout: 8_000 }).toBe(count)
+}
+
 test.beforeAll(async ({ playwright, baseURL }) => {
   const request = await playwright.request.newContext({ baseURL })
   chat = new FakeChat(request, 'surface-chat', 'Surface chat')
@@ -50,7 +54,7 @@ test.describe('Restrict Actions To Active Session', () => {
     const billing = card(page, 'billing-report')
     await expect(billing).toHaveAttribute('draggable', 'true')
     await expect(billing.getByRole('button', { name: 'Activate' })).toBeEnabled()
-    await billing.getByRole('button', { name: 'list' }).click()
+    await billing.getByRole('button', { name: 'folder' }).click()
     await expect(page.locator('[data-panel="files"]')).toBeVisible()
   })
 
@@ -127,7 +131,7 @@ test.describe('Generate Fidelity Output', () => {
   })
 })
 
-test.describe('Send Sketch Iterate Or Document', () => {
+test.describe('Send Tile Action To Chat', () => {
   test('should send the chosen action on a tile', async ({ page }) => {
     await waitForChat(page)
     const tile = page.locator('.details-body [data-tile="stories-story_map"]')
@@ -307,31 +311,26 @@ test.describe('Fix Report Violations', () => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
     const report = page.locator('[data-panel="report"]')
     await report.getByRole('button', { name: 'Fix tests/story-map.md:6' }).click()
-    await lastReceived('/actions-satisfy stories-story-map tests/story-map.md:6 rule verb-noun-format session=.sessions/checkout-flow/session.json')
+    await receivedContaining('of the stories-story-map rule.', 1)
     await report.getByRole('button', { name: 'Fix all' }).click()
-    await lastReceived('/actions-satisfy stories-story-map rule verb-noun-format session=.sessions/checkout-flow/session.json')
+    await receivedContaining('of the stories-story-map rule.', 2)
   })
 })
 
-test.describe('Satisfy Violations From Band', () => {
-  test('should name the active ticket\'s violations across the page top and fill the prompt', async ({ page }) => {
-    await waitForChat(page)
+test.describe('Display Violations Band', () => {
+  test('should name the active ticket\'s violations across the page top', async ({ page }) => {
     await expect(page.getByRole('status', { name: "Active ticket's violations" })).toContainText('checkout-flow · Discovery · violations: stories-story_map')
-    await page.getByRole('button', { name: 'Satisfy' }).click()
-    await lastReceived('/actions-satisfy stories-story-map session=.sessions/checkout-flow/session.json')
   })
 })
 
 test.describe('List, browse, and view files', () => {
-  test('should show the three modes of the files panel', async ({ page }) => {
+  test('should show the two modes of the files panel', async ({ page }) => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
     const files = page.locator('[data-panel="files"]')
     await expect(files.getByText('tests/', { exact: true })).toBeVisible()
     await files.getByRole('button', { name: 'files', exact: true }).click()
     await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
     await expect(files.locator('.file-lines')).toContainText('Check Out Order')
-    await files.getByRole('button', { name: 'list', exact: true }).click()
-    await expect(files.getByRole('button', { name: 'tests/story-map.md' })).toBeVisible()
   })
 
   test('should offer a tab for a format not generated yet and say so', async ({ page }) => {
@@ -351,12 +350,12 @@ test.describe('Refresh Board After Tool Calls', () => {
   })
 
   test('should read an open files list again when the board changes', async ({ page }) => {
-    await card(page, 'checkout-flow').getByRole('button', { name: 'list' }).first().click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
     const files = page.locator('[data-panel="files"]')
-    await expect(files.getByRole('button', { name: 'tests/story-map.md' })).toBeVisible()
+    await expect(files.getByRole('button', { name: 'story-map.md', exact: true })).toBeVisible()
     writeFileSync(join(fixtureRoot, 'tests', 'story-map.drawio'), `<mxfile />${EOL}`, 'utf-8')
     appendFileSync(join(fixtureRoot, '.sessions', 'checkout-flow', 'session.log'), `2026-11-01T11:00:00Z generate /work stories story_map drawio stories no-chat${EOL}`, 'utf-8')
-    await expect(files.getByRole('button', { name: 'tests/story-map.drawio' })).toBeVisible({ timeout: 8_000 })
+    await expect(files.getByRole('button', { name: 'story-map.drawio', exact: true })).toBeVisible({ timeout: 8_000 })
   })
 })
 
@@ -419,13 +418,16 @@ test.describe('Activate Ticket', () => {
 })
 
 test.describe('Close Active Session', () => {
-  test('should ask what to do with its work, then show the ticket in Complete', async ({ page }) => {
+  test('should send the close session command to the chat', async ({ page }) => {
+    await waitForChat(page)
     await card(page, 'billing-report').getByRole('button', { name: 'Close' }).first().click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog.getByRole('heading', { name: 'Close session Billing report' })).toBeVisible()
-    await dialog.getByRole('checkbox', { name: 'Push Billing report to origin' }).uncheck()
-    await dialog.getByRole('button', { name: 'Close session' }).click()
-    await expect(toast(page, 'Session Billing report closed')).toBeVisible({ timeout: 15_000 })
-    await expect(column(page, 'Complete').locator('[data-ticket="billing-report"]')).toBeVisible()
+    await lastReceived('/space:session:close-session')
+  })
+
+  test('should leave the ticket in its column', async ({ page }) => {
+    await waitForChat(page)
+    await card(page, 'billing-report').getByRole('button', { name: 'Close' }).first().click()
+    await lastReceived('/space:session:close-session')
+    await expect(column(page, 'Complete').locator('[data-ticket="billing-report"]')).toHaveCount(0)
   })
 })

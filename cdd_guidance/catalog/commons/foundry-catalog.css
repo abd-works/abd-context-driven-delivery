@@ -4832,8 +4832,9 @@ a.approach-stage__label {
 }
 .approach-stage-examples,
 .approach-refine-row {
-  --approach-example-h: min(68vh, 640px);
-  --approach-example-min-h: 560px;
+  --approach-example-h: min(85vh, 960px);
+  --approach-example-min-h: 240px;
+  --approach-refine-duration: 0.38s;
 }
 
 .approach-stage-examples {
@@ -4878,33 +4879,64 @@ a.approach-stage__label {
 }
 
 .approach-refine__opening {
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  max-width: 0;
   max-height: 0;
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
   margin-top: 0;
-  transition: max-height 0.45s ease, opacity 0.35s ease, margin-top 0.45s ease;
+  transition:
+    flex-grow var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    flex-basis var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    width var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    max-width var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    max-height var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease,
+    margin-top var(--approach-refine-duration) ease;
 }
 
 .approach-refine__opening.is-open {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
   max-height: 800px;
   opacity: 1;
   pointer-events: auto;
   margin-top: 8px;
 }
 
-.approach-refine__examples > .approach-stage-column {
+.approach-refine__examples > .approach-stage-column,
+.approach-refine__examples > .approach-refine__placeholder {
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  max-width: 0;
   max-height: 0;
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
   margin-top: 0;
-  transition: max-height 0.45s ease, opacity 0.35s ease, margin-top 0.45s ease;
+  padding: 0;
+  border-width: 0;
+  transition:
+    flex-grow var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    flex-basis var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    width var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    max-width var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    max-height var(--approach-refine-duration) cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease,
+    margin-top var(--approach-refine-duration) ease;
 }
 
 .approach-refine__examples > .approach-stage-column.is-open {
   display: flex;
   flex-direction: column;
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
   height: var(--approach-example-h);
   min-height: var(--approach-example-min-h);
   max-height: var(--approach-example-h);
@@ -4992,10 +5024,19 @@ a.approach-stage__label {
 .pe-asset .skill-md-preview,
 .pe-asset .approach-stage-drawio-zoom.approach-stage-drawio--story-map,
 .pe-asset .approach-stage-drawio-zoom.approach-stage-drawio--framed {
-  height: var(--approach-example-h, min(68vh, 640px));
-  min-height: var(--approach-example-min-h, 560px);
+  height: 100%;
+  min-height: var(--approach-example-min-h, 240px);
+  max-height: var(--approach-example-h, min(85vh, 960px));
   box-sizing: border-box;
   align-self: stretch;
+}
+
+.approach-refine__examples > .approach-stage-column.is-open .approach-stage-drawio-zoom.approach-stage-drawio--story-map,
+.approach-refine__examples > .approach-stage-column.is-open .approach-stage-drawio-zoom.approach-stage-drawio--framed {
+  height: auto;
+  min-height: 0;
+  max-height: var(--approach-example-h, min(85vh, 960px));
+  flex: 0 0 auto;
 }
 
 .approach-stage-column .catalog-monaco {

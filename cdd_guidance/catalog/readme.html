@@ -40,9 +40,9 @@
 <h2>Install</h2>
 <ol>
 <li>Clone this repository into the project workspace, or as a sibling checkout the agent can see.</li>
-<li>In chat, run <code><a href="installation/installer.py">/install</a></code>. That writes skills, rules, MCP, and hooks into the IDE path (<code>.cursor</code> for Cursor).</li>
+<li>In chat, run <code>/install</code>, or from the repo root: <code>python scripts/install.py</code>. That writes commands, skills, rules, MCP, and hooks into the IDE path (<code>.cursor</code> for Cursor).</li>
 </ol>
-<p>Open <code><a href="catalog/index.html">catalog/index.html</a></code> for the board of practices, stages, and actions.</p>
+<p>Open <code><a href="cdd_guidance/catalog/index.html">cdd_guidance/catalog/index.html</a></code> for the board of practices, stages, and actions.</p>
 <h2>Basic usage</h2>
 <p>Name a practice and a action and optionally a format. The action is what to do. The practice is which view of the work.</p>
 <pre><code>/stories-map /generate /miro {{context}}  ← write the scenario files for that slice
@@ -56,22 +56,22 @@
 <h2>Stages</h2>
 <p>Work moves through three stages. Stay on the current stage until that view agrees, then go deeper on one slice.</p>
 <ul>
-<li><a href="practices/cdd/cdd.md#discovery">Discovery</a> — outcome, journey, and architecture, still cheap to change. </li>
+<li><a href="harness/catalog_generator/markdown/cdd-approach.md#discovery">Discovery</a> — outcome, journey, and architecture, still cheap to change. </li>
 </ul>
-<p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/cdd/agents/discovery.md">Discoverer</a> agent to run discovery.</em></p>
+<p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/discovery.md">Discoverer</a> agent to run discovery.</em></p>
 <ul>
-<li><a href="practices/cdd/cdd.md#spec">Specification</a> — one increment: scenarios, domain behavior, and the experience. </li>
+<li><a href="harness/catalog_generator/markdown/cdd-approach.md#specification">Specification</a> — one increment: scenarios, domain behavior, and the experience. </li>
 </ul>
-<p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/cdd/agents/specification.md">Specification</a> agent to run specification.</em></p>
+<p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/specification.md">Specification</a> agent to run specification.</em></p>
 <ul>
-<li><a href="practices/cdd/cdd.md#engineer">Implementation</a> — tests, touchpoints, and the solution on the target stack. </li>
+<li><a href="harness/catalog_generator/markdown/cdd-approach.md#implement">Implementation</a> — tests, touchpoints, and the solution on the target stack. </li>
 </ul>
-<p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/cdd/agents/implementation.md">Implementation</a> agent to run implementation.</em></p>
+<p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/implementation.md">Implementation</a> agent to run implementation.</em></p>
 <h2>Practices</h2>
 <p>Tools that refine context in stages, according to a particular perspective.</p>
 <ul>
 <li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md">Stories</a> — actors, systems, and the interactions that deliver the solution.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md#story_map">story-map</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md#scenarios">scenarios</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/stories/stories.md#acceptance_tests">acceptance-tests</a>.</em></li>
-<li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md">Domain-driven design</a> — the business concepts and the boundaries that protect them.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#bounded_context">bounded-context</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#building_blocks">building-blocks</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#tactics">tactics</a>.</em></li>
+<li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md">Domain-driven design</a> — the business concepts and the boundaries that protect them.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#bounded_context">bounded-context</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#model">model</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ddd/ddd.md#tactics">tactics</a>.</em></li>
 <li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md">Clean engineering</a> — modules, contracts, and the code that can be generated and checked.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md#modules">modules</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md#model">model</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/clean_engineering/clean_engineering.md#code">code</a>.</em></li>
 <li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/bdd/bdd.md">Behavior-driven development</a> — behavior tests written in the language of the domain.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/bdd/bdd.md#behavior">behavior</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/bdd/bdd.md#development">development</a>.</em></li>
 <li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ux/ux.md">User experience</a> — how people move through and act on the solution.<br><em>Use <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ux/ux.md#ia">ia</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ux/ux.md#mockup">mockup</a>, <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/practices/ux/ux.md#front_end_code">front-end-code</a>.</em></li>

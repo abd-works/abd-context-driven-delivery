@@ -4,7 +4,7 @@
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <UserObject label="Display Board And Details For Repo" link="story-map.md#e-display-board-and-details-for-repo" id="e-display-board-and-details-for-repo">
+                <UserObject label="See Work On Session Board" link="story-map.md#e-see-work-on-session-board" id="e-see-work-on-session-board">
                     <mxCell style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
                         <mxGeometry x="-1020" y="380" width="470" height="60" as="geometry"/>
                     </mxCell>
@@ -219,7 +219,7 @@
                         <mxGeometry x="220" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Run Action Across Practices" link="story-map.md#s-person----run-action-across-practices" id="s-person----run-action-across-practices">
+                <UserObject label="Send Action To Stage Practices" link="story-map.md#s-person----send-action-to-stage-practices" id="s-person----send-action-to-stage-practices">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="280" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
@@ -239,12 +239,12 @@
                         <mxGeometry x="460" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Run Next Step" link="story-map.md#s-person----run-next-step" id="s-person----run-next-step">
+                <UserObject label="Send Next Fidelity Action" link="story-map.md#s-person----send-next-fidelity-action" id="s-person----send-next-fidelity-action">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="520" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Name Next Fidelity" link="story-map.md#s-person----run-next-step" id="s-person----run-next-step/name-next-fidelity">
+                <UserObject label="Name Next Fidelity" link="story-map.md#s-person----send-next-fidelity-action" id="s-person----send-next-fidelity-action/name-next-fidelity">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="520" y="509" width="50" height="50" as="geometry"/>
                     </mxCell>
@@ -274,7 +274,7 @@
                         <mxGeometry x="780" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Send Sketch Iterate Or Document" link="story-map.md#s-person----send-sketch-iterate-or-document" id="s-person----send-sketch-iterate-or-document">
+                <UserObject label="Send Tile Action To Chat" link="story-map.md#s-person----send-tile-action-to-chat" id="s-person----send-tile-action-to-chat">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="840" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
@@ -304,12 +304,12 @@
                         <mxGeometry x="1100" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Satisfy Violations From Band" link="story-map.md#s-person----satisfy-violations-from-band" id="s-person----satisfy-violations-from-band">
+                <UserObject label="Display Violations Band" link="story-map.md#s-board-app----display-violations-band" id="s-board-app----display-violations-band">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="1160" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="Show Violations Band" link="story-map.md#s-person----satisfy-violations-from-band" id="s-person----satisfy-violations-from-band/show-violations-band">
+                <UserObject label="Show Violations Band" link="story-map.md#s-board-app----display-violations-band" id="s-board-app----display-violations-band/show-violations-band">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="1160" y="509" width="50" height="50" as="geometry"/>
                     </mxCell>
@@ -329,7 +329,7 @@
                         <mxGeometry x="1300" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>
                 </UserObject>
-                <UserObject label="View Files" link="story-map.md#s-person----view-files" id="s-person----view-files">
+                <UserObject label="View Fidelity Files" link="story-map.md#s-person----view-fidelity-files" id="s-person----view-fidelity-files">
                     <mxCell style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;" parent="1" vertex="1">
                         <mxGeometry x="1360" y="457" width="50" height="50" as="geometry"/>
                     </mxCell>

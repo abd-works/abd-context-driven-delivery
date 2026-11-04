@@ -96,6 +96,15 @@ describe('Display Board', () => {
         await page.restartCdd()
         expect(toastsOf(page)).toContain('cdd restarted on the current code')
       })
+
+      describe('with a chat connected', () => {
+        it("should ask the chat to restart its own cdd", async () => {
+          const { page } = await board.page()
+          const chat = await board.connectChat(page)
+          await page.restartCdd()
+          expect(await chat.checkIn()).toEqual([{ kind: 'restart_cdd', text: '' }])
+        })
+      })
     })
 
     it('should show the band when the server itself does not answer', async () => {

@@ -73,7 +73,7 @@ with description("Stories"):
                 self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
                 (self.root / "story-map.md").write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
                 names = {"{epic}": "move-work-on-board", "{sub-epic}": "display-board", "{story}": "open-board", "{story_snake}": "open_board"}
-                self.filled = self.stories.fidelities.current.output_files["python"]
+                self.filled = self.stories.fidelities.current.outputs["python"]
                 for name, value in names.items():
                     self.filled = self.filled.replace(name, value)
                 story_test = self.root / self.filled

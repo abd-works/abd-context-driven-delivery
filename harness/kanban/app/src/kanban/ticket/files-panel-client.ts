@@ -120,7 +120,7 @@ export class FilesPanelClient {
 
   // A violation can name a file its fidelity does not declare, so its text is read whatever the panel lists.
   async openFileAtLine(ticket: string, fidelity: string, path: string, line: number): Promise<void> {
-    if (this.panel?.ticket !== ticket) await this.openFiles(ticket, [fidelity], 'list')
+    if (this.panel?.ticket !== ticket) await this.openFiles(ticket, [fidelity], 'folder')
     const text = await this.textOf(ticket, path, true)
     this.change(entry => showingTab(entry, path, text, line))
   }
@@ -128,7 +128,7 @@ export class FilesPanelClient {
   closeTab(path: string): void {
     this.change(entry => {
       const tabs = entry.tabs.filter(tab => tab !== path)
-      return { ...entry, tabs, mode: tabs.length ? 'files' : 'list', activeTab: entry.activeTab === path ? (tabs[0] ?? '') : entry.activeTab }
+      return { ...entry, tabs, mode: tabs.length ? 'files' : 'folder', activeTab: entry.activeTab === path ? (tabs[0] ?? '') : entry.activeTab }
     })
   }
 

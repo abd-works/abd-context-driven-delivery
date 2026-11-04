@@ -36,7 +36,58 @@
 
 <div class="catalog-body">
 <div class="wrap">
-<div class="cap-grid"></div><div hidden></div>
+<div class="cap-grid"><a class="cap-card" href="tools/repo.html"><p class="cap-card__title">repo</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a></div><div hidden><header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">repo</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>git — module context</h1>
+<h2>Purpose</h2>
+<p><strong>Git</strong> (<code>space/git/</code>): object-oriented domain for a local git clone plus GitHub workflow surfaces. Models <strong>Repo → Branch → Commit</strong> for version control and <strong>Repo → Project → Ticket → TicketState</strong> for kanban/issue workflow. Tickets also carry <strong>research tags</strong>, <strong>notes</strong>, and <strong>flow</strong> on that same graph (git notes and commit trailers) — not a parallel yaml ticket index. Callers use domain objects, not a subprocess helper module.</p>
+<h2>Primary use case</h2>
+<p><strong>Workspace</strong> composes <code>GitRepo</code> (<code>Repo</code> alias) on <code>WorkSession.git</code> for session-branch checkout, commit, push, and eval notes. <strong>Workflow</strong> composes <code>Repo</code> for backlog/start/finish (GitHub issue + Project Status) without duplicating gh logic. Tests use <code>Repo.memory()</code> (legacy <code>NullGitRepo()</code>) — no git/gh on PATH required.</p>
+<h2>Seam</h2>
+<p><code>space.repo.repo:Repo</code> — chaining slash <code>/branch {name}</code> and <code>/worktree {name}</code> (MCP <code>repo.branch</code>, <code>repo.worktree</code>); skill <code>/branch-create</code> and slash <code>/new-branch</code> (MCP <code>repo.new_branch</code>); <code>/switch-branch</code>, <code>/close-branch</code>, <code>/new-worktree</code>, <code>/switch-worktree</code>, <code>/close-worktree</code> (instruction commands → matching <code>repo.*</code> MCP tools); skill <code>/branch-switch</code> (MCP <code>repo.branch_switch</code>). Branch primitives never add worktrees. <code>/push</code> (slash instructions → MCP <code>repo.push_commit</code>). Workflow board moves stay on <code>tools/workflow</code>. Seam terms: Repo, Branch, Commit, Project, Ticket, TicketState, ResearchTag.</p>
+<h2>Constraint</h2>
+<ul>
+<li>Callers depend on <strong>domain types</strong> (<code>Repo</code>, <code>Branch</code>, <code>Project</code>, <code>Ticket</code>, …).</li>
+<li><strong>Git-primary</strong> for provenance: commit message trailers (<code>GitHub-Issue:</code>, <code>Workflow-State:</code>)<br>and git notes (<code>refs/notes/eval-mistakes</code> and ticket/research notes) — not parallel yaml indexes.<br>Research tags, ticket notes, and flow live on Ticket / Project / TicketState (Backlog / In Progress / Done only).</li>
+<li><strong>Workflow</strong> orchestrates; <strong>Repo</strong> executes git/gh — do not embed ticket or merge policy<br>inside <code>Repo</code> beyond thin wrappers.</li>
+<li><code>Repo.memory()</code> is for <strong>tests and dry runs</strong> — production paths use <code>Repo.open()</code>.</li>
+</ul>
+<h2>Public API</h2>
+<ul>
+<li><code>Repo.find_root(start)</code> / <code>Repo.open(start)</code> — locate and open a real clone</li>
+<li><code>Repo.memory(root)</code> / <code>NullGitRepo(root)</code> — in-memory clone for specs</li>
+<li><code>Repo.branch_named(name)</code> → <code>Branch</code> (current: <code>branch_named(current_branch)</code>)</li>
+<li><code>Branch.checkout()</code>, <code>Branch.commit(paths, message)</code> → <code>Commit</code>, <code>Branch.merge(other)</code> → <code>Commit</code></li>
+<li><code>Commit.format(subject, trailers)</code> / <code>Commit.from_message(sha, message)</code> — message + trailer <code>data</code></li>
+<li><code>Repo.attach_project(owner, number)</code> → <code>Project</code> (links the board onto this repository)</li>
+<li><code>Project.link_repository()</code> — <code>gh project link</code> so the board appears on the repo Projects tab</li>
+<li><code>Project.state_named(name)</code> — column on the board (any live Status option)</li>
+<li><code>Project.refresh_states()</code> / <code>Project.status_option_names()</code> — hydrate columns from GitHub</li>
+<li><code>GH_PROJECT_SCOPES_HINT</code> — <code>gh auth refresh -h github.com -s read:project,project</code> when board API calls fail</li>
+<li><code>Ticket.set_status(state)</code> / <code>Ticket.parse_number(ref)</code> / <code>Ticket.github_ref(...)</code> / <code>Ticket.close()</code></li>
+<li><code>Ticket.add_label(name)</code> / <code>Ticket.add_theme(theme)</code> / <code>issue_theme_label(theme)</code> — issue-sidebar <code>theme:&lt;slug&gt;</code> (filter/group; not a Status column)</li>
+<li><code>Ticket.write_type(name)</code> — apply an org issue Type name (WorkTicket owns defect / small change / feature mapping)</li>
+<li><code>Repo.list_issue_types()</code> / <code>Repo.ensure_issue_type(name, description=, color=)</code> — org issue types for the repo owner</li>
+<li><code>Ticket</code> — <code>number</code>, <code>title</code>, <code>body</code>, <code>url</code>, <code>state</code>, <code>issue_type</code>, <code>labels</code>, open <code>data</code> map</li>
+<li><code>TicketState</code> — column name (<code>Backlog</code>, <code>In Progress</code>, <code>Done</code>)</li>
+<li><code>Project.github_status_option(state_name, option_names)</code> / <code>Project.github_theme_option(theme, option_names)</code> — exact GitHub field match first, then Status aliases (<code>Backlog</code> ↔ <code>Todo</code>)</li>
+<li><code>Repo.ticket(ref)</code> / <code>Repo.create_ticket(title, body)</code></li>
+<li><code>Repo.workflow_commit_message(subject, issue_number, workflow_state, reviewed_by=...)</code></li>
+<li>Flat legacy surface on <code>Repo</code> for workspace: <code>checkout_or_create</code>, <code>commit</code>, <code>push</code>,<br><code>merge_branch</code>, <code>note</code>, <code>read_notes</code>, <code>find_mistakes</code>,<br><code>write_annotated_tag</code> / <code>read_annotated_tag</code> / <code>list_annotated_tags</code>,<br><code>is_dirty</code> (ignores <code>events.log</code>), <code>current_branch</code></li>
+<li>Worktree surface: <code>Worktree</code> (path + branch record and checkout/sync/close on <code>repo.py</code>), <code>list_worktrees</code>, <code>worktree_for</code>, <code>add_worktree</code>,<br><code>remove_worktree</code>, <code>fetch</code> / <code>pull</code> / <code>fetch_pull</code>, <code>merge_from</code> (merge into the<br>current branch without checking the other out), <code>push_to</code>, <code>has_stash</code>,<br><code>is_linked_worktree</code>, <code>primary_root</code></li>
+</ul>
+<h2>Dependencies</h2>
+<ul>
+<li>stdlib (<code>subprocess</code>, <code>pathlib</code>, <code>dataclasses</code>)</li>
+<li><code>git</code> and <code>gh</code> on PATH for <code>Repo.open()</code> (optional for <code>Repo.memory()</code>)</li>
+<li><code>tools.tool</code> — <code>@toolset</code> on manifest class <code>Git</code></li>
+<li>consumed by <code>workspace</code> (shim), <code>workflow</code> (orchestration)</li>
+</ul>
+<h2>Mechanism</h2>
+<p>Domain objects hold behavior; <code>Repo.git</code> / <code>Repo.gh</code> run the CLIs. <code>Repo.memory()</code> stores branches, commits, tickets, project status, and notes in plain dicts/lists — same public API as CLI-backed <code>Repo.open()</code>. Commit trailers are parsed into <code>Commit.data</code>; workflow helpers format <code>GitHub-Issue:</code> and <code>Workflow-State:</code> lines. Project status maps to GitHub Projects via <code>gh project link</code> / <code>item-add</code> / <code>item-edit</code> when not in memory mode. <code>Ticket.set_status</code> sends the live Status option to gh (workflow <code>Backlog</code> → GitHub <code>Todo</code> when that is the board option). Memory mode still records the workflow name (<code>Backlog</code>).</p>
+<h2>Rationale</h2>
+<p>Git and GitHub were split across <code>workspace/git_repo.py</code> and <code>workflow/gh_client.py</code> — duplicate subprocess wrappers and no shared ticket/project model. Consolidating under <code>space/git</code> gives one OO graph aligned with the backbone (G-04, G-36, G-37): git records decisions at commit time; GitHub holds live collaboration state. Small focused types replace a fat <code>GhClient</code>/<code>GitRepo</code> service.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+</div>
 </div>
 </div>
 </main>

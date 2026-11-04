@@ -404,6 +404,12 @@ class PracticeGuidance(Guidance):
 
     _code_formats = frozenset({"python", "typescript", "java", "javascript"})
 
+    def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
+        """What render converts from the files at paths: their text, one after another."""
+        from harness.guidance_actions.guidance_actions import load_document
+
+        return load_document("", paths)
+
     @agent_tool
     def render(
         self,
@@ -604,19 +610,9 @@ class FidelityGuidance(Guidance):
             self.format = self._default_format
 
     @property
-    def output_root(self) -> str:
-        """The folder this fidelity's outputs sit under, from its yaml."""
-        return str(self.outputs.get("root", ""))
-
-    @property
-    def output_files(self) -> dict[str, str | list[str]]:
-        """Each format's file, pattern, or folder, from its yaml."""
-        return {label: value for label, value in self.outputs.items() if label != "root"}
-
-    @property
     def default_output(self) -> str | list[str]:
         """The output of this fidelity's default format."""
-        return self.output_files.get(self.default_format, "")
+        return self.outputs.get(self.default_format, "")
 
     @property
     def clean_engineering(self) -> FidelityGuidance | None:
