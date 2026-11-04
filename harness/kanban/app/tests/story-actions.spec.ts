@@ -418,13 +418,16 @@ test.describe('Activate Ticket', () => {
 })
 
 test.describe('Close Active Session', () => {
-  test('should ask what to do with its work, then show the ticket in Complete', async ({ page }) => {
+  test('should send the close session command to the chat', async ({ page }) => {
+    await waitForChat(page)
     await card(page, 'billing-report').getByRole('button', { name: 'Close' }).first().click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog.getByRole('heading', { name: 'Close session Billing report' })).toBeVisible()
-    await dialog.getByRole('checkbox', { name: 'Push Billing report to origin' }).uncheck()
-    await dialog.getByRole('button', { name: 'Close session' }).click()
-    await expect(toast(page, 'Session Billing report closed')).toBeVisible({ timeout: 15_000 })
-    await expect(column(page, 'Complete').locator('[data-ticket="billing-report"]')).toBeVisible()
+    await lastReceived('/space:session:close-session')
+  })
+
+  test('should leave the ticket in its column', async ({ page }) => {
+    await waitForChat(page)
+    await card(page, 'billing-report').getByRole('button', { name: 'Close' }).first().click()
+    await lastReceived('/space:session:close-session')
+    await expect(column(page, 'Complete').locator('[data-ticket="billing-report"]')).toHaveCount(0)
   })
 })

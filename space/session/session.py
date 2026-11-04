@@ -54,6 +54,11 @@ _TOOL_INPUT_PATH_KEYS = (
 )
 
 
+def name_of(text: str) -> str:
+    """The name a session, its folder, and its branch get: `Pet visits` is `pet-visits`, since git refuses a space in a branch name."""
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
 class SessionNameRequiredError(ValueError):
     """Raised when switch-session has no name and ``.sessions/session.json`` has no session or branch."""
 
@@ -498,7 +503,7 @@ class Session:
     @classmethod
     def _session_name(cls, name: str, repo: Path) -> str:
         state = WorkState(repo)
-        cleaned = (name or "").strip() or state.session or state.branch.replace("/", "-")
+        cleaned = name_of(name or state.session or state.branch)
         if not cleaned:
             raise SessionNameRequiredError()
         return cleaned
@@ -1066,6 +1071,7 @@ class Session:
         )
 
     def _bind_new(self, name: str, workpath: Path, repo_path: Path, fields: dict[str, str], is_current: bool) -> None:
+        name = name_of(name)
         self.name = name
         self.workpath = workpath.resolve()
         self.repo_path = repo_path.resolve()

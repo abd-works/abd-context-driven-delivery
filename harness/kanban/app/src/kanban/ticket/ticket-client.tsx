@@ -12,6 +12,7 @@ const RUN_NEXT_COMMANDS: Record<string, string> = {
 // Steps the board does itself rather than sending to a chat: fixing violations opens the report, and a review is the
 // person's own approval.
 const STEPS_WITHOUT_CHAT = ['satisfy', 'review']
+const CLOSE_SESSION_COMMAND = '/space:session:close-session'
 
 const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogItemData => !('column' in moved)
 
@@ -204,6 +205,11 @@ export class TicketClient extends TicketClientGenerated {
 
   fillSplit(): Promise<void> {
     return this.page.chat.fill(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.new with parent ${this.name} for each story.`)
+  }
+
+  // Closing ends the chat's session and leaves the ticket where it is; moving it into Complete is what completes it.
+  closeSession(): Promise<void> {
+    return this.page.chat.command(CLOSE_SESSION_COMMAND)
   }
 
   fillHandoff(): Promise<void> {

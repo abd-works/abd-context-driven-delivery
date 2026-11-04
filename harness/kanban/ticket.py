@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING, Any
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import language_adapter
-from harness.kanban.board import Board, Card, Stage, name_of
+from harness.kanban.board import Board, Card, Stage
 from harness.kanban.data import FileEntryData, FileTextData, PracticeRootData, ReportData, TicketData, WorkspaceData
 from harness.mcp.mcp_server import mcp
-from space.session import Session
+from space.session import Session, name_of
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance

@@ -288,6 +288,17 @@ with description("a session"):
                 else:
                     os.environ["CDD_PROJECT"] = self._prior_project
 
+        # A session's name is its folder and its branch, and git refuses a space in a branch name.
+        with context("with a name that has spaces and capitals"):
+            with before.each:
+                Session.switch("Chat UI", workpath=self.work, repo_path=self.repo)
+
+            with it("should name the session by its slug"):
+                expect(Session.current().name).to(equal("chat-ui"))
+
+            with it("should keep the session in a folder named by its slug"):
+                expect((self.repo / ".sessions" / "chat-ui" / "session.json").is_file()).to(equal(True))
+
         with context("with a repo path"):
             with before.each:
                 self.instructions = Session.switch("alpha", repo_path=self.repo)

@@ -916,13 +916,30 @@ Ticket -> Session.forget_output_root('stories')
 
 Actor: Person · Sub-epic: Steer Ticket Sessions · File: `move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.py`
 
-### Scenario: Close the active session with its work committed
+### Scenario: Close the active session from its card
 
-Evidence: observed: activation-client.spec 'Close Active Session' — 'should ask what to do with its work', 'should send what to do with its work', 'should select the ticket in Complete'; story-actions.spec 'should ask what to do with its work, then show the ticket in Complete'; kanban_tools_spec 'should leave no ticket active'.
+Evidence: observed: ticket-client.spec 'Close Active Session' — 'should send the close session command to the chat', 'should leave the ticket in its column'; story-actions.spec 'Close Active Session'.
+
+**Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card), In progress in Discovery, with a chat connected
+
+**When** the Person presses Close on checkout-flow's card
+
+```realization
+Person -> Chat.command('/space:session:close-session')
+Chat -> Session.close()
+```
+
+**Then** the chat is sent /space:session:close-session
+
+**And** checkout-flow stays In progress in Discovery
+
+### Scenario: Complete the active ticket with its work committed
+
+Evidence: observed: activation-client.spec 'Close Active Session' — 'should ask what to do with its work', 'should send what to do with its work', 'should select the ticket in Complete'; ticket-client.tsx dropOn opens the Close dialog for the active ticket; kanban_tools_spec 'should leave no ticket active'.
 
 **Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card), on its own branch
 
-**When** the Person closes checkout-flow's session
+**When** the Person moves checkout-flow into Complete
 
 ```realization
 Person -> Ticket.workspace()
@@ -947,7 +964,7 @@ Board page -> Board.show()
 
 **And** no ticket is active
 
-### Scenario: Close a ticket that has no branch of its own
+### Scenario: Complete a ticket that has no branch of its own
 
 Evidence: observed: activation-client.spec 'should choose nothing to leave when the session has no branch'; kanban_tools_spec 'should commit nothing on a ticket that has no branch'.
 
@@ -955,7 +972,7 @@ Evidence: observed: activation-client.spec 'should choose nothing to leave when 
 
 **But** it has no branch of its own
 
-**When** the Person closes checkout-flow's session and confirms
+**When** the Person moves checkout-flow into Complete and confirms
 
 ```realization
 Person -> Ticket.close([])
@@ -968,16 +985,6 @@ Ticket -> Session.move_to_closed()
 **And** its folder is in .sessions/closed/checkout-flow
 
 **But** nothing is committed
-
-### Scenario: Close the active ticket by moving it to Complete
-
-Evidence: observed: ticket-client.spec 'should let only the active ticket, or one done in Implementation, be dropped on Complete'; ticket-client.tsx dropOn opens the Close dialog for the active ticket.
-
-**Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card), In progress in Discovery
-
-**When** the Person moves checkout-flow into Complete
-
-**Then** the dialog headed Close session Checkout flow asks what to do with its work
 
 ---
 

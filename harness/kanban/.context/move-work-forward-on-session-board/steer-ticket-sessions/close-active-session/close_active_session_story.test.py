@@ -11,11 +11,23 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Story: Close Active Session
 # Actor: Person
 with story("Close Active Session"):
-    with scenario("Close the active session with its work committed"):
-        # Evidence: observed: activation-client.spec 'Close Active Session' — 'should ask what to do with its work', 'should send what to do with its work', 'should select the ticket in Complete'; story-actions.spec 'should ask what to do with its work, then show the ticket in Complete'; kanban_tools_spec 'should leave no ticket active'.
+    with scenario("Close the active session from its card"):
+        # Evidence: observed: ticket-client.spec 'Close Active Session' — 'should send the close session command to the chat', 'should leave the ticket in its column'.
+        with given("checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card), In progress in Discovery, with a chat connected"):
+            pass
+        with when("the Person presses Close on checkout-flow's card"):
+            # Person -> Chat.command('/space:session:close-session')
+            # Chat -> Session.close()
+            pass
+        with then("the chat is sent /space:session:close-session"):
+            pass
+        with and_("checkout-flow stays In progress in Discovery"):
+            pass
+    with scenario("Complete the active ticket with its work committed"):
+        # Evidence: observed: activation-client.spec 'Close Active Session' — 'should ask what to do with its work', 'should send what to do with its work', 'should select the ticket in Complete'; ticket-client.tsx dropOn opens the Close dialog for the active ticket; kanban_tools_spec 'should leave no ticket active'.
         with given("checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card), on its own branch"):
             pass
-        with when("the Person closes checkout-flow's session"):
+        with when("the Person moves checkout-flow into Complete"):
             # Person -> Ticket.workspace()
             # Ticket <- leaving_has_branch: true
             pass
@@ -34,13 +46,13 @@ with story("Close Active Session"):
             pass
         with and_("no ticket is active"):
             pass
-    with scenario("Close a ticket that has no branch of its own"):
+    with scenario("Complete a ticket that has no branch of its own"):
         # Evidence: observed: activation-client.spec 'should choose nothing to leave when the session has no branch'; kanban_tools_spec 'should commit nothing on a ticket that has no branch'.
         with given("checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card)"):
             pass
         with but_("it has no branch of its own"):
             pass
-        with when("the Person closes checkout-flow's session and confirms"):
+        with when("the Person moves checkout-flow into Complete and confirms"):
             # Person -> Ticket.close([])
             # Ticket -> Session.close()
             # Ticket -> Session.move_to_closed()
@@ -50,12 +62,4 @@ with story("Close Active Session"):
         with and_("its folder is in .sessions/closed/checkout-flow"):
             pass
         with but_("nothing is committed"):
-            pass
-    with scenario("Close the active ticket by moving it to Complete"):
-        # Evidence: observed: ticket-client.spec 'should let only the active ticket, or one done in Implementation, be dropped on Complete'; ticket-client.tsx dropOn opens the Close dialog for the active ticket.
-        with given("checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card), In progress in Discovery"):
-            pass
-        with when("the Person moves checkout-flow into Complete"):
-            pass
-        with then("the dialog headed Close session Checkout flow asks what to do with its work"):
             pass

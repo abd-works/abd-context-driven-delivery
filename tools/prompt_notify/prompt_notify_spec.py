@@ -81,11 +81,9 @@ with description("prompt echo detection"):
                     "tool_input": {
                         "path": str(
                             _REPO_ROOT
-                            / ".cursor"
+                            / ".claude"
                             / "skills"
-                            / "practices"
-                            / "bdd"
-                            / "bdd-behavior"
+                            / "practices-bdd-bdd-behavior"
                             / "SKILL.md"
                         )
                     },
@@ -101,7 +99,7 @@ with description("prompt echo detection"):
                     "tool_name": "Read",
                     "tool_input": {
                         "path": str(
-                            _REPO_ROOT / ".cursor" / "rules" / "practices" / "bdd.mdc"
+                            _REPO_ROOT / ".claude" / "rules" / "practices" / "bdd.md"
                         )
                     },
                 }
