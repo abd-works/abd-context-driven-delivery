@@ -280,6 +280,20 @@ describe('Open Ticket Chat', () => {
     })
   })
 
+  // A chat's working folder can move into a folder of its checkout, and it still works on that checkout's ticket.
+  describe("with a chat working in a folder inside the ticket's worktree", () => {
+    it("should send the board's commands to that chat", async () => {
+      const { page } = await board.page()
+      await board.connectChat(page, 'other-chat')
+      const worktree = board.openWorktree(ACTIVE)
+      await board.chat('ticket-chat', 'abd · first words', `${worktree}\\harness\\kanban`).checkIn()
+      await page.chat.refresh()
+      await page.reader.refresh()
+      await ticketOn(page, ACTIVE).choose()
+      expect(page.store.state.targetChat).toBe('ticket-chat')
+    })
+  })
+
   describe("with no chat working in the ticket's worktree", () => {
     async function clicked(times = 1) {
       const { page } = await board.page()

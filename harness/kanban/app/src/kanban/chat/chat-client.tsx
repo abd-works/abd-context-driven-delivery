@@ -10,7 +10,12 @@ const STARTING_CHAT_MILLISECONDS = 120_000
 // A folder as the mod and as git each write it, so the two compare: one kind of slash, no trailing one, one case.
 const folderKey = (folder: string): string => folder.replaceAll('\\', '/').replace(/\/+$/, '').toLowerCase()
 
-export const isSameFolder = (one: string, other: string): boolean => Boolean(one && other) && folderKey(one) === folderKey(other)
+// A chat works in a checkout from its root or from any folder inside it, since its working folder can move.
+export const isWorkingIn = (chatFolder: string, checkout: string): boolean => {
+  if (!chatFolder || !checkout) return false
+  const [chat, root] = [folderKey(chatFolder), folderKey(checkout)]
+  return chat === root || chat.startsWith(`${root}/`)
+}
 
 // What a connected chat is asked, to start the chat of a ticket: a session of its own, in the ticket's worktree, under the
 // ticket's name. A ticket with no worktree yet gets one first.
@@ -50,9 +55,9 @@ export class ChatClient {
     await this.readMessages()
   }
 
-  // The connected chat working in folder, such as a ticket's worktree.
+  // The connected chat working in folder or a folder inside it, such as a ticket's worktree.
   chatIn(folder: string): ChatData | undefined {
-    return this.store.state.chats.find(chat => isSameFolder(chat.folder, folder))
+    return this.store.state.chats.find(chat => isWorkingIn(chat.folder, folder))
   }
 
   // A ticket's chat works in the ticket's worktree. With none there yet, the chosen chat is asked to start one, once.
