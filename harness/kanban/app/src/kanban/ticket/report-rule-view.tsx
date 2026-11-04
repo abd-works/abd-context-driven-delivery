@@ -4,7 +4,7 @@ import { countOf } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { ReportPanel } from '../board/board-store'
 import { ChevronIcon } from '../board/icons'
-import { locationOf } from './report-client'
+import { locationOf, type ReportClient } from './report-client'
 
 function SourceLineView({ violation, entry }: { violation: ViolationData; entry: SourceLineData }) {
   return (
@@ -61,7 +61,7 @@ function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; 
   )
 }
 
-function RuleHeadView({ ticket, rule, place, isOpen, isOff }: { ticket: string; rule: ReportRuleData; place: string; isOpen: boolean; isOff: boolean }) {
+function RuleHeadView({ ticket, report, rule, place, isOpen, isOff }: { ticket: string; report: ReportClient; rule: ReportRuleData; place: string; isOpen: boolean; isOff: boolean }) {
   const { page } = useBoard()
   return (
     <div className="rule-head">
@@ -75,7 +75,7 @@ function RuleHeadView({ ticket, rule, place, isOpen, isOff }: { ticket: string; 
         </h2>
         <p>{rule.description}</p>
       </div>
-      <button className="ghost-button" disabled={isOff} onClick={() => void page.fixRule(ticket, rule)}>
+      <button className="ghost-button" disabled={isOff} onClick={() => void page.fixRule(ticket, report, rule)}>
         Fix all
       </button>
     </div>
@@ -87,7 +87,7 @@ export function RuleView({ panel, rule, isOff }: { panel: ReportPanel; rule: Rep
   const isOpen = !panel.closedRules.includes(place)
   return (
     <section className="report-rule">
-      <RuleHeadView ticket={panel.ticket} rule={rule} place={place} isOpen={isOpen} isOff={isOff} />
+      <RuleHeadView ticket={panel.ticket} report={panel.report} rule={rule} place={place} isOpen={isOpen} isOff={isOff} />
       {isOpen ? rule.violations.map((violation, index) => <ViolationView key={`${violation.location}-${violation.line}-${index}`} panel={panel} rule={rule} violation={violation} isOff={isOff} />) : null}
     </section>
   )

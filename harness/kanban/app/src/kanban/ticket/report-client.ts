@@ -26,24 +26,11 @@ function fixPrompt(rule: ReportRuleData, violations: ViolationData[]): string {
 
 export const fixViolationPrompt = (rule: ReportRuleData, violation: ViolationData): string => fixPrompt(rule, [violation])
 
-export const fixRulePrompt = (rule: ReportRuleData): string => fixPrompt(rule, rule.violations)
+export const fixRulePrompt = (report: ReportClient, rule: ReportRuleData): string =>
+  `Fix all violations of ${rule.name} found in this report: ${report.path}`
 
-// Every violation in one message, grouped under its rule, so one command clears the whole report.
-export function fixReportPrompt(rules: ReportRuleData[]): string {
-  const count = rules.reduce((total, rule) => total + rule.violations.length, 0)
-  const slugs = [...new Set(rules.map(rule => guidanceSlug(rule.fidelity)))]
-  const sections = rules.flatMap(rule => [
-    '',
-    `${rule.name}: ${rule.description}`,
-    ...rule.violations.flatMap((violation, index) => ['', `${index + 1}. ${errorOf(violation).join('\n')}`]),
-  ])
-  return [
-    `Fix these ${count} violations of ${rules.length} rules.`,
-    ...sections,
-    '',
-    `Change each file so the content marked > follows its rule, and change nothing the errors do not name. Then validate ${slugs.join(' ')} on the files you changed.`,
-  ].join('\n')
-}
+// The report already holds every violation, so the chat reads it there rather than from a copy in the message.
+export const fixReportPrompt = (report: ReportClient): string => `Fix all violations found in this report: ${report.path}`
 
 // A report as the side panel reads it. ReportData has no generated class, because Python returns it as a plain result.
 export class ReportClient {

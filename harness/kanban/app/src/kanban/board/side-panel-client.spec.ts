@@ -195,38 +195,35 @@ describe('Fix Report Violations', () => {
   })
 
   describe('with Fix all pressed on a rule', () => {
-    it('should send every violation of the rule in one message', async () => {
+    it('should ask the chat to fix all violations of that rule found in the report it names', async () => {
       const { page } = await board.page()
       const chat = await board.connectChat(page)
       const rule = await brokenRule(page)
-      await page.fixRule(TICKET, rule)
+      const { report } = reportPanel(page)
+      await page.fixRule(TICKET, report, rule)
       const [command] = await chat.checkIn()
-      expect(rule.violations.every(violation => command!.text.includes(violation.message))).toBe(true)
+      expect(command!.text).toContain(`Fix all violations of ${rule.name} found in this report: ${report.path}`)
     })
   })
 
+  // The report already holds every violation, so the chat is pointed at it rather than sent a copy.
   describe('with Fix all pressed on the whole report', () => {
     async function sent() {
       const { page } = await board.page()
       const chat = await board.connectChat(page)
-      await page.panels.openReport(TICKET, '')
-      const { rules } = reportPanel(page).report
-      await page.fixReport(TICKET, rules)
-      return { rules, commands: await chat.checkIn() }
+      await page.panels.openReport(TICKET, SLUG)
+      const { report } = reportPanel(page)
+      await page.fixReport(TICKET, report)
+      return { report, commands: await chat.checkIn() }
     }
 
     it('should send one message to the chat', async () => {
       expect((await sent()).commands).toHaveLength(1)
     })
 
-    it('should name every rule the report breaks', async () => {
-      const { rules, commands } = await sent()
-      expect(rules.every(rule => commands[0]!.text.includes(`${rule.name}: ${rule.description}`))).toBe(true)
-    })
-
-    it('should give every violation of every rule', async () => {
-      const { rules, commands } = await sent()
-      expect(rules.flatMap(rule => rule.violations).every(violation => commands[0]!.text.includes(violation.message))).toBe(true)
+    it('should ask the chat to fix all violations found in the report it names', async () => {
+      const { report, commands } = await sent()
+      expect(commands[0]!.text).toContain(`Fix all violations found in this report: ${report.path}`)
     })
   })
 })

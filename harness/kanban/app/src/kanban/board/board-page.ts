@@ -7,7 +7,7 @@ import { ChatClient } from '../chat/chat-client'
 import { ActivationClient } from '../ticket/activation-client'
 import { FilesPanelClient } from '../ticket/files-panel-client'
 import { OpenCardClient } from '../ticket/open-card-client'
-import { fixReportPrompt, fixRulePrompt, fixViolationPrompt } from '../ticket/report-client'
+import { fixReportPrompt, fixRulePrompt, fixViolationPrompt, type ReportClient } from '../ticket/report-client'
 import { RootChoiceClient } from '../ticket/root-choice-client'
 import { TicketClient } from '../ticket/ticket-client'
 import { TileActionsClient } from '../ticket/tile-actions-client'
@@ -70,12 +70,12 @@ export class BoardPage {
     return this.chat.command(this.actionCommandFor(ticket, fixViolationPrompt(rule, violation)))
   }
 
-  fixRule(ticket: string, rule: ReportRuleData): Promise<void> {
-    return this.chat.command(this.actionCommandFor(ticket, fixRulePrompt(rule)))
+  fixRule(ticket: string, report: ReportClient, rule: ReportRuleData): Promise<void> {
+    return this.chat.command(this.actionCommandFor(ticket, fixRulePrompt(report, rule)))
   }
 
-  fixReport(ticket: string, rules: ReportRuleData[]): Promise<void> {
-    return this.chat.command(this.actionCommandFor(ticket, fixReportPrompt(rules)))
+  fixReport(ticket: string, report: ReportClient): Promise<void> {
+    return this.chat.command(this.actionCommandFor(ticket, fixReportPrompt(report)))
   }
 
   // A report's fixes are for the ticket whose report it is, so they name that ticket's session.
