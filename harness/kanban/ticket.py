@@ -206,9 +206,15 @@ class Ticket(Card):
 
     @property
     def reports(self) -> dict[str, str]:
-        """The latest validation report of each fidelity that has one, as paths from the project; report names sort by their date."""
+        """The latest validation report of each fidelity that has one, as paths from the project; report names sort by their date.
+        Validate saves a report before the agent judges it, so a report with no judgment and no saved graph yet does not
+        hide an earlier one that has its result."""
         found = {progress.slug: sorted((self._folder / REPORT_FOLDER).glob(progress.report_files)) for progress in self.progress}
-        return {slug: self._from_project(files[-1]) for slug, files in found.items() if files}
+        return {slug: self._from_project(self._latest_with_result(files)) for slug, files in found.items() if files}
+
+    def _latest_with_result(self, reports: list[Path]) -> Path:
+        with_result = [report for report in reports if report.with_suffix(".json").is_file() or JUDGMENT_SECTION.search(report.read_text(encoding="utf-8"))]
+        return (with_result or reports)[-1]
 
     @property
     def violation_counts(self) -> dict[str, int]:
@@ -808,6 +814,8 @@ def _report_stamp(report: str) -> str:
 # The judgment the validating agent adds to a report, in the shape validate.md gives it. A report written before
 # validate.md allowed only Pass and Fail can mark a rule Warn, which is a Fail.
 JUDGMENT_HEADING = re.compile(r"^## Judgment — `(?P<file>[^`]+)`")
+# A judgment the agent wrote, as against the example the report quotes indented in its instructions.
+JUDGMENT_SECTION = re.compile(r"^#{1,2} Judgment", re.M)
 JUDGED_RULE_HEADING = re.compile(r"^### `(?P<rule>[^`]+)` — (?:Fail|Warn)\s*$")
 FINDING_LINE = re.compile(r"^- (?:(?P<file>[^\s:]+):(?P<line>\d+)\s+)?(?P<message>.+)$")
 # A finding written before validate.md gave the judgment its shape names its file and line mid-sentence.

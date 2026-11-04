@@ -115,7 +115,7 @@ class ProjectTools:
 
     def report(self, ticket: str, name: str, graph: dict | None = None) -> None:
         reports = self.sessions / ticket / "validation-reports"
-        reports.mkdir()
+        reports.mkdir(exist_ok=True)
         (reports / f"{name}.md").write_text("# Graph rule validation\n", encoding="utf-8")
         if graph:
             (reports / f"{name}.json").write_text(json.dumps(graph), encoding="utf-8")
@@ -377,6 +377,16 @@ with description("the board tools") as self:
                     (self.project.root / "docs" / "map.md").write_text("".join(f"line {number}\n" for number in range(1, 21)), encoding="utf-8")
                     report = self.project.sessions / "pet-visits" / "validation-reports" / "stories-story-map-20261031T041200.md"
                     report.write_text(JUDGED_REPORT, encoding="utf-8")
+
+                # Validate saves a report before the agent writes its judgment, so a run that never got judged must not
+                # hide the result of the one before it.
+                with context("with a later validate whose report has no judgment and no saved graph yet"):
+                    with before.each:
+                        self.project.report("pet-visits", "stories-story-map-20261031T050000")
+
+                    with it("should still show the judged report"):
+                        report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
+                        expect(report["path"]).to(equal(".sessions/pet-visits/validation-reports/stories-story-map-20261031T041200.md"))
 
                 with it("should list each rule the judgment fails after the graph's rules, once each"):
                     report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")

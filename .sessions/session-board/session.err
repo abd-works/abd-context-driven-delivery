@@ -29108,3 +29108,55 @@ PermissionError: [WinError 32] The process cannot access the file because it is 
 2026-11-04T16:56:21Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
 2026-11-04T16:57:33Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
 2026-11-04T17:05:30Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:12:15Z validate.validate PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-session-board\harness\kanban at harness/kanban/.context/kanban-model.md, read from C:\dev\abd-context-driven-delivery. Name paths from the project's root, or absolute.
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1294, in dispatch
+    return self._runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 956, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 763, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 781, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 21, in <module>
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\validate\validate.py", line 155, in _workspace_relative
+    raise PathsNotFoundError(unreadable, project, workspace)
+cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-session-board\harness\kanban at harness/kanban/.context/kanban-model.md, read from C:\dev\abd-context-driven-delivery. Name paths from the project's root, or absolute.
+2026-11-04T17:12:15Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:12:19Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:17Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:18Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:18Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:18Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:19Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:36Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:37Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:37Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:38Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:38Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:54Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:54Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:55Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:55Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:14:55Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:17:08Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:17:08Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:17:09Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:17:09Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:17:09Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
