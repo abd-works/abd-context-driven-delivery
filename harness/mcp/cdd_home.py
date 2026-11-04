@@ -119,8 +119,18 @@ class CddHome:
         commit = self._git(source, "-C", str(target), "rev-parse", "HEAD")
         if not (target / SERVER_MODULE).is_file():
             raise PinFailed(source, f"commit {commit[:8]} has no {SERVER_MODULE}; commit the one-server code before pinning")
+        self._mirror_origin(source, target)
         self._save_runtime(target, self.PINNED, commit=commit)
         return commit
+
+    def _mirror_origin(self, source: Path, target: Path) -> None:
+        """Give the pinned copy the checkout's ``origin``: tools that cite the repository, such as the catalog, read it."""
+        found = subprocess.run(["git", "remote", "get-url", "origin"], cwd=source, capture_output=True, text=True)
+        if found.returncode != 0:
+            return
+        url = found.stdout.strip()
+        has_origin = subprocess.run(["git", "remote", "get-url", "origin"], cwd=target, capture_output=True, text=True).returncode == 0
+        self._git(target, "remote", "set-url" if has_origin else "add", "origin", url)
 
     def serve_from(self, checkout: Path | str) -> None:
         """Run the server on ``checkout`` as it is on disk, so a ``cdd.restart`` picks up its edits."""
