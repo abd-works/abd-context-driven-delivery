@@ -72,7 +72,7 @@ export type BoardState = {
   targetChat: string | null
   // The chat a person chose, kept while it is away so it is chosen again when it reconnects.
   pickedChat: string | null
-  // When each ticket's chat was asked to start, by ticket name, so a person clicking again does not ask twice.
+  // When each ticket's new chat was opened, by ticket name, so a person clicking again does not open a second one.
   startingChats: Record<string, number>
   // The latest messages sent to the target chat, newest first, and whether the list of them is open.
   messages: ChatMessageData[]

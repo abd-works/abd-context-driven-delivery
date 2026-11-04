@@ -69,6 +69,8 @@ class SpecServer:
         return self.daemon.ensure()
 
     def stop(self) -> None:
+        # A call still finishing could run the connect script and start the server again, so the script goes first.
+        self.home.connect_script.unlink(missing_ok=True)
         self.daemon.stop()
         for key, value in self._prior.items():
             if value is None:

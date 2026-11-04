@@ -43,9 +43,12 @@ export class BoardPage {
   readonly roots = new RootChoiceClient(this)
   readonly draft = new BacklogDraftClient(this)
 
+  // Opens a claude:// link, which the Claude app on this computer handles. A spec replaces it to see the link.
+  openLink: (link: string) => void = link => globalThis.location?.assign(link)
+
   constructor(send?: Send) {
     this.api = new BoardApi(this.store, send)
-    this.chat = new ChatClient(this.store, this.api)
+    this.chat = new ChatClient(this.store, this.api, link => this.openLink(link))
     this.panels = new SidePanelClient(this.store, this.api)
     this.files = new FilesPanelClient(this.store, this.api)
     this.build = new BuildClient(this.store, this.api)

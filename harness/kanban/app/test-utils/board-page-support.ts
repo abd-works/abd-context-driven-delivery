@@ -17,6 +17,9 @@ import type { TicketClient } from '@src/kanban/ticket/ticket-client'
 import { CddProject } from './behavior-test/cdd-project'
 import { STAMP, writeInto, writeSession, type Session } from './fixture-repo'
 
+// Windows holds a folder a moment after the process using it lets go.
+const REMOVE_RETRIES = 20
+const REMOVE_RETRY_MILLISECONDS = 250
 const LOCAL = '127.0.0.1'
 const BOARD_HEADER = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
 const STATIC_ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)), '..', 'dist')
@@ -206,7 +209,11 @@ export class BoardOnProject {
   private removeWorktrees(): void {
     const lines = this.git('worktree', 'list', '--porcelain').split(/\r?\n/)
     const folders = lines.filter(line => line.startsWith('worktree ')).map(line => line.slice('worktree '.length))
-    for (const folder of folders.slice(1)) this.git('worktree', 'remove', '--force', folder)
+    // On Windows git can unregister a worktree and leave its folder, which the next one of that name then collides with.
+    for (const folder of folders.slice(1)) {
+      this.git('worktree', 'remove', '--force', folder)
+      rmSync(folder, { recursive: true, force: true, maxRetries: REMOVE_RETRIES, retryDelay: REMOVE_RETRY_MILLISECONDS })
+    }
   }
 
   // The active ticket on a branch of its own, as activating it with a branch leaves it.
@@ -249,6 +256,7 @@ export class BoardOnProject {
 
   async close(): Promise<void> {
     this.removeOrigin()
+    this.removeWorktrees()
     await this.board.close()
     await this.project.close()
     rmSync(this.chatsHome, { recursive: true, force: true })
