@@ -25,7 +25,6 @@ from cdd_guidance.practices.stories.rules.scenarios import (
 from cdd_guidance.practices.stories.rules.story_map import (
     BehavioursNotOneTimeTasks,
     BranchOnMechanicalUniqueness,
-    EvidenceDistinguishesObservedInferredAndIntended,
     FourToNineChildren,
     KebabCasePaths,
     StoryScenariosOneToFour,
@@ -43,7 +42,6 @@ RULES: tuple = (
     StoryNameCapturesSystemMechanic(),
     PlainEnglishGwtSteps(),
     RightSizeStoryNodes(),
-    EvidenceDistinguishesObservedInferredAndIntended(),
     ExamplesExportDataNotRepository(),
     GwtStepsTraceToDomainOperations(),
     DomainOperationInTheStep(),

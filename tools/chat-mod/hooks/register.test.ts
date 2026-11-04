@@ -121,6 +121,23 @@ test('connected shows all five parts with the count of loaded tools', async ($, 
   await ui.unmount()
 })
 
+test('a part shows its name only while the pointer is over it', async ($, on) => {
+  engine(on)
+  const ui = await pinnedBand($)
+
+  const name = (await ui.find({ key: 'Kanban app' }))?.children?.[2]
+  expect([name?.props?.display, name?.hover?.display, name?.children?.[0]?.children?.[0]]).toEqual(['none', 'flex', 'Kanban app'])
+  await ui.unmount()
+})
+
+test('connected has no heading above the five parts', async ($, on) => {
+  engine(on)
+  const ui = await pinnedBand($)
+
+  expect(await findText(ui, 'Connected')).toBeFalsy()
+  await ui.unmount()
+})
+
 test('a second press on the icon collapses the band', async ($, on) => {
   engine(on)
   const ui = await pinnedBand($)

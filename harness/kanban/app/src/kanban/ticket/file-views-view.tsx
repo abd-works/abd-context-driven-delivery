@@ -4,7 +4,6 @@ import { useBoard } from '../board/board-context'
 import { FileViewIcon } from '../board/icons'
 
 const FILE_VIEWS = [
-  { mode: 'list', hint: 'List the files' },
   { mode: 'folder', hint: 'Browse the folder' },
   { mode: 'files', hint: 'View the files' },
 ]

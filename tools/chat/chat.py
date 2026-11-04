@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import time
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Callable, Literal, TypedDict, TypeVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -19,6 +20,9 @@ CHAT_GONE_SECONDS = 5
 TITLE_READ_SECONDS = 30
 TITLE_MARK = "custom-title"
 STATE_FILE = "chat.json"
+# Windows refuses to open or rename over a file another process is renaming, for a moment.
+HELD_FILE_ATTEMPTS = 20
+HELD_FILE_PAUSE_SECONDS = 0.01
 # A message waits until the chat takes it, then the chat says whether it showed it or why it could not. Each state is a
 # folder, and a message moves from one to the next.
 WAITING = "waiting"
@@ -32,6 +36,7 @@ KEPT_MESSAGES = 20
 
 CommandKind = Literal["submit", "fill", "command", "restart_cdd"]
 MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
+T = TypeVar("T")
 
 
 class ChatData(TypedDict):
@@ -194,10 +199,13 @@ class Chat:
     @property
     def _state(self) -> dict:
         path = self._folder / STATE_FILE
-        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        return _while_windows_holds(lambda: json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {})
 
+    # A mod that reloads can check in twice at once, so the state is written beside the file and renamed over it whole.
     def _write(self, state: dict) -> None:
-        (self._folder / STATE_FILE).write_text(json.dumps(state), encoding="utf-8")
+        written = self._folder / f"{STATE_FILE}.{os.getpid()}.{threading.get_ident()}"
+        written.write_text(json.dumps(state), encoding="utf-8")
+        _while_windows_holds(lambda: written.replace(self._folder / STATE_FILE))
 
     # Oldest first. Each sent command is its own file, so a sender never writes a file the chat is reading. A taken command
     # waits in the taken folder until the chat confirms it, so the board can show what the chat never showed.
@@ -252,6 +260,16 @@ class Chat:
         projects = _claude_projects()
         found = projects.glob(f"*/{self.id}.jsonl") if projects.is_dir() else []
         return next(iter(found), None)
+
+
+def _while_windows_holds(operation: Callable[[], T]) -> T:
+    """Run operation on the state file, again while Windows holds the file for another process's rename."""
+    for _ in range(HELD_FILE_ATTEMPTS - 1):
+        try:
+            return operation()
+        except PermissionError:
+            time.sleep(HELD_FILE_PAUSE_SECONDS)
+    return operation()
 
 
 def _latest_title(transcript: Path | None) -> str:

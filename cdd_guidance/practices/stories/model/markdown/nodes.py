@@ -41,7 +41,8 @@ def _outline_depth(match: "re.Match") -> int:
         return len(marks) - 1
     return len(match.group("indent")) // 4
 _OUTLINE_ESTIMATE_PATTERN = re.compile(r"^(\s*)\*\s+(\S.+)$")
-_EVIDENCE_LABEL = re.compile(r"\b(Observed|Inferred|Intended):", re.IGNORECASE)
+# A label is followed by its evidence after a colon, or opens a line and ends its own sentence.
+_EVIDENCE_LABEL = re.compile(r"\b(Observed|Inferred|Intended):|^\s*(Observed|Inferred|Intended)\.", re.IGNORECASE)
 
 
 # -- MarkdownIncrement ---------------------------------------------------------
@@ -1497,7 +1498,7 @@ class MarkdownStoryModel(StoryModel):
         if self._current_outline_story is None:
             return
         evidence = self._current_outline_story.evidence
-        for label in _EVIDENCE_LABEL.findall(self._raw_line):
+        for label in (with_evidence or ending for with_evidence, ending in _EVIDENCE_LABEL.findall(self._raw_line)):
             if label.lower() not in evidence:
                 evidence.append(label.lower())
 

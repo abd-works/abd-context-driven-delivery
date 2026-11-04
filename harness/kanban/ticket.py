@@ -204,8 +204,8 @@ class Ticket(Card):
     def violation_counts(self) -> dict[str, int]:
         """How many violations the latest report names, for each fidelity left with violations; a report with no saved graph has none to count."""
         reports = self.reports
-        graphs = {entry: self._graph_of(reports[entry.slug]) for entry in self.progress if entry.has_violations and entry.slug in reports}
-        return {entry.slug: sum(map(len, self._hits_by_rule(graph, entry).values())) for entry, graph in graphs.items() if graph.is_file()}
+        found = {entry: reports[entry.slug] for entry in self.progress if entry.has_violations and entry.slug in reports}
+        return {entry.slug: sum(map(len, self._hits_by_rule(report, entry).values())) for entry, report in found.items() if self._graph_of(report).is_file()}
 
     @mcp
     @agent_tool
@@ -396,7 +396,7 @@ class Ticket(Card):
         return {
             "path": path,
             "text": (self._board.repo_root / path).read_text(encoding="utf-8", errors="replace"),
-            "rules": self._rules_broken_in(graph, fidelity) if graph.is_file() else [],
+            "rules": self._rules_broken_in(path, fidelity) if graph.is_file() else [],
             "has_saved_graph": graph.is_file(),
         }
 
@@ -550,17 +550,27 @@ class Ticket(Card):
         """The graph a validation saved beside its report."""
         return (self._board.repo_root / report).with_suffix(".json")
 
-    def _hits_by_rule(self, graph: Path, progress: FidelityProgress) -> dict[str, list[dict[str, Any]]]:
+    def _hits_by_rule(self, report: str, progress: FidelityProgress) -> dict[str, list[dict[str, Any]]]:
+        """The hits on the rules report answers for: a saved graph holds its whole practice's hits. A rule no fidelity describes belongs to none, so every report keeps it."""
         from validate.graph_json_reader import violations_by_rule, violations_from_graph_json_files
 
-        return violations_by_rule(violations_from_graph_json_files([graph], [progress.practice]))
+        answered = self._rules_answered_by(report, progress)
+        described = progress.rule_descriptions
+        hits = violations_by_rule(violations_from_graph_json_files([self._graph_of(report)], [progress.practice]))
+        return {name: rule_hits for name, rule_hits in hits.items() if name in answered or name not in described}
 
-    def _rules_broken_in(self, graph: Path, fidelity: str) -> list[dict[str, Any]]:
+    def _rules_answered_by(self, report: str, progress: FidelityProgress) -> set[str]:
+        """The shared rules, the fidelity's own, and each earlier fidelity's that has no report newer than report."""
+        reports = self.reports
+        superseded = [earlier for earlier in progress.earlier_fidelities if _report_stamp(reports.get(progress.slug_of(earlier), "")) > _report_stamp(report)]
+        return progress.rule_slugs_without(superseded)
+
+    def _rules_broken_in(self, report: str, fidelity: str) -> list[dict[str, Any]]:
         progress = next(entry for entry in self.progress if entry.slug == fidelity)
         descriptions = progress.rule_descriptions
         return [
             {"fidelity": fidelity, "name": name, "description": descriptions.get(name, ""), "count": len(hits), "violations": [self._violation_of(hit) for hit in hits]}
-            for name, hits in self._hits_by_rule(graph, progress).items()
+            for name, hits in self._hits_by_rule(report, progress).items()
         ]
 
     def _rule_identity(self, rule: dict[str, Any]) -> tuple[Any, ...]:
@@ -697,7 +707,22 @@ class FidelityProgress:
 
     @property
     def slug(self) -> str:
-        return f"{self.practice}-{self._fidelity.name}"
+        return self.slug_of(self._fidelity)
+
+    def slug_of(self, fidelity: FidelityGuidance) -> str:
+        return f"{self.practice}-{fidelity.name}"
+
+    @property
+    def earlier_fidelities(self) -> list[FidelityGuidance]:
+        """The fidelities of this practice that come before this one."""
+        names = [fidelity.name for fidelity in self._practice_fidelities]
+        return self._practice_fidelities[:names.index(self._fidelity.name)] if self._fidelity.name in names else []
+
+    def rule_slugs_without(self, superseded: list[FidelityGuidance]) -> set[str]:
+        """The practice's shared rules, this fidelity's own, and every earlier fidelity's but the superseded ones."""
+        dropped = {fidelity.name for fidelity in superseded}
+        earlier = [rule for fidelity in self.earlier_fidelities if fidelity.name not in dropped for rule in fidelity.rules]
+        return {rule.slug for rule in [*self._fidelity.practice_guidance.rules, *earlier, *self._fidelity.rules]}
 
     @property
     def report_files(self) -> str:
@@ -708,10 +733,13 @@ class FidelityProgress:
     def rule_descriptions(self) -> dict[str, str]:
         """Each rule's text by slug. A saved graph holds the whole practice's hits, so every fidelity's rules count; this fidelity's own win."""
         practice = self._fidelity.practice_guidance
-        entries = practice.fidelities.entries
-        fidelities = entries.values() if isinstance(entries, dict) else entries
-        rules = [*practice.rules, *(rule for fidelity in fidelities for rule in fidelity.rules), *self._fidelity.rules]
+        rules = [*practice.rules, *(rule for fidelity in self._practice_fidelities for rule in fidelity.rules), *self._fidelity.rules]
         return {rule.slug: rule.body.strip() for rule in rules}
+
+    @property
+    def _practice_fidelities(self) -> list[FidelityGuidance]:
+        entries = self._fidelity.practice_guidance.fidelities.entries
+        return list(entries.values() if isinstance(entries, dict) else entries)
 
     @property
     def state(self) -> str:
@@ -729,6 +757,11 @@ class FidelityProgress:
         if self._has_violations:
             states["validate"] = "in_progress"
         return states
+
+
+def _report_stamp(report: str) -> str:
+    """The date a report's name ends with; names stamp it in a form that sorts by time. Nothing for no report."""
+    return Path(report).stem.rsplit("-", 1)[-1] if report else ""
 
 
 def practice_key(practice: PracticeGuidance) -> str:

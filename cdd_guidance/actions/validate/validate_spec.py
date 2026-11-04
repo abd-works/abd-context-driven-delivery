@@ -36,6 +36,24 @@ _SPEC_FILE = f"{_STORY_FOLDER}/authenticate_user.story.server.spec.ts"
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"
 # "Board Stuff" opens with a noun, which verb-noun-format rejects.
 _STORY_MAP = "# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n\n### (S) Person --> Board Stuff\n"
+# The scenarios of the story map's Open Board story, in the file a story's heading links to.
+_OPEN_BOARD_SCENARIOS = """from story_test import given, scenario, story, then, when
+
+# Epic: Move Work On Board
+# Sub-epic: Display Board
+# Map: ../../story-map.md#s-person----open-board
+
+# Story: Open Board
+# Actor: Person
+with story("Open Board"):
+    with scenario("Open the board"):
+        with given("the board is closed"):
+            pass
+        with when("the Person opens the board"):
+            pass
+        with then("the board shows its columns"):
+            pass
+"""
 
 
 def _write(root: Path, relative: str, text: str) -> None:
@@ -212,6 +230,30 @@ with description("a validate action on practice guidance") as self:
 
             with it("should name its violations on that line"):
                 expect(self.validate_lines[-1]).to(contain(" graph-rule "))
+
+        # The session board validates with no paths, and a report saved without its graph lists no violations to fix.
+        with context("that the story map fidelity declares as its output"):
+            with before.each:
+                declared = {"markdown": [str(self.folder / "board/.context/story-map.md")], "drawio": [str(self.folder / "board/.context/story-map.drawio")]}
+                self.action._fidelity_outputs = lambda item: declared
+
+            with context("that is validated with no paths named"):
+                with before.each:
+                    self.report = self.action.validate(guidance=["stories-story-map"])
+
+                with it("should report the violations in the declared output"):
+                    expect(self.report).to(contain("Board Stuff"))
+
+                with it("should save the graph it checked beside the report"):
+                    expect([path.suffix for path in (self.session / "validation-reports").iterdir()]).to(contain(".json"))
+
+            # A story's scenarios sit in files beside the story map, and a story read without them has none.
+            with context("with the scenario file of its story beside it"):
+                with before.each:
+                    _write(self.folder, "board/.context/display-board/open-board/open_board_story.test.py", _OPEN_BOARD_SCENARIOS)
+
+                with it("should read the story's scenarios from the file beside the declared output"):
+                    expect(self.action.validate(guidance=["stories-story-map"])).not_to(contain("'Open Board': 0 scenarios"))
 
         # An agent works from the project's checkout, so every path it sees starts there, not at the session's root.
         with context("in a session whose root is a folder of the project"):

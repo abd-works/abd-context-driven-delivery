@@ -267,7 +267,6 @@ export const register: Register = on => {
       health: await currentServerHealth($),
       view: await currentHealthView($),
       install: await currentInstall($),
-      columns: e.props.bodyColumns,
       actions,
     }
     return ServerHealthBandView($.ui.resolve(e), band)

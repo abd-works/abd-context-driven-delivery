@@ -40,7 +40,7 @@ CHECKED_GRAPH = {
     "practices": {
         "clean_engineering": {
             "nodes": [["node-1", "", "Story", "clean_engineering", "docs/map.md", 12, 12]],
-            "rules": [["verb-noun-format", "node-1", "Name the story with a verb"], ["verb-noun-format", "node-1", "Name the epic with a verb"]],
+            "rules": [["domain-nouns-only", "node-1", "Name the story with a verb"], ["domain-nouns-only", "node-1", "Name the epic with a verb"]],
         },
         "stories": {
             "nodes": [["node-2", "", "Story", "stories", "docs/other.md", 3, 3]],
@@ -53,6 +53,20 @@ STORY_MAP_GRAPH = {
         "stories": {
             "nodes": [["node-1", "", "Story", "stories", "docs/map.md", 12, 12]],
             "rules": [["verb-noun-format", "node-1", "Name the story with a verb"], ["verb-noun-format", "node-1", "Name the epic with a verb"]],
+        },
+    },
+}
+# One hit each on a story map rule, a scenarios rule, a shared rule, and an acceptance tests rule.
+WHOLE_STORIES_GRAPH = {
+    "practices": {
+        "stories": {
+            "nodes": [["node-1", "", "Story", "stories", "docs/map.md", 12, 12]],
+            "rules": [
+                ["verb-noun-format", "node-1", "Name the story with a verb"],
+                ["plain-english-gwt-steps", "node-1", "Write the step in plain English"],
+                ["do-not-invent-requirements", "node-1", "Trace the story to its source"],
+                ["shared-example-fixtures", "node-1", "Share the example fixture"],
+            ],
         },
     },
 }
@@ -283,11 +297,11 @@ with description("the board tools") as self:
 
             with it("should count the violations of each rule"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
-                expect((report["rules"][0]["name"], report["rules"][0]["count"])).to(equal(("verb-noun-format", 2)))
+                expect((report["rules"][0]["name"], report["rules"][0]["count"])).to(equal(("domain-nouns-only", 2)))
 
             with it("should leave out the violations of other practices in the saved graph"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
-                expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format"]))
+                expect([rule["name"] for rule in report["rules"]]).to(equal(["domain-nouns-only"]))
 
             with it("should say the report has its saved graph"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
@@ -735,6 +749,35 @@ with description("the board tools") as self:
         with it("should list a rule two fidelities share once"):
             rules = self.project.call("ticket.violations", ticket="sign-up")["rules"]
             expect([rule["fidelity"] for rule in rules]).to(equal(["stories-story_map"]))
+
+    # A saved graph holds the hits of every rule of its practice, but a report answers for its own fidelity.
+    with context("with a scenarios report whose saved graph holds every stories rule's hits"):
+        with before.each:
+            self.project.ticket(
+                "sign-up",
+                "2026-10-31T01:00:01Z validate Stories scenarios graph-rule verb-noun-format map.md:12 no-chat",
+                title="Sign up",
+            )
+            self.project.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
+
+        with it("should list the scenarios rules, the shared rules, and the story map rules"):
+            report = self.project.call("ticket.report", ticket="sign-up", fidelity="stories-scenarios")
+            expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format", "plain-english-gwt-steps", "do-not-invent-requirements"]))
+
+        with it("should count the same rules on the ticket"):
+            expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-scenarios": 3}))
+
+        with context("with a story map report newer than the scenarios report"):
+            with before.each:
+                reports = self.project.sessions / "sign-up" / "validation-reports"
+                (reports / "stories-story-map-20261031T050000.md").write_text("# Graph rule validation\n", encoding="utf-8")
+
+            with it("should leave the story map rules to the story map report"):
+                report = self.project.call("ticket.report", ticket="sign-up", fidelity="stories-scenarios")
+                expect([rule["name"] for rule in report["rules"]]).to(equal(["plain-english-gwt-steps", "do-not-invent-requirements"]))
+
+            with it("should count only the rules the scenarios report answers for"):
+                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-scenarios": 2}))
 
     # (S) Person --> Activate Ticket
     with context("with a git repository and two tickets"):

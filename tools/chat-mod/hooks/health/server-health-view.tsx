@@ -16,11 +16,12 @@ const BRAND = {
   errorWash: '#2F1414',
 }
 
-const COLUMNS = 5
+// Wide enough for an icon and the longest value, `▦ running :5173`; the columns wrap when the band is narrower than five of them.
+const PART_WIDTH = 16
 const SUCCESS_WASH = '#12261A'
 const WARNING_WASH = '#2B2110'
 
-type Part = { label: string; value: string; isUp: boolean }
+type Part = { icon: string; label: string; value: string; isUp: boolean }
 type Actions = {
   togglePin: () => unknown
   openDetails: () => unknown
@@ -32,7 +33,6 @@ type Band = {
   health: ServerHealthJson
   view: HealthViewJson
   install: InstallJson
-  columns: number
   actions: Actions
 }
 
@@ -43,21 +43,23 @@ const LOOKS = {
   'tools-missing': { glyph: '!', color: BRAND.warning, wash: WARNING_WASH, border: BRAND.warning },
 }
 
-const runningOn = (port: number | null): string => (port === null ? 'not running' : `running :${port}`)
+const colourOf = (part: Part): string => (part.isUp ? BRAND.success : BRAND.muted)
+
+const runningOn =(port: number | null): string => (port === null ? 'not running' : `running :${port}`)
 
 function partsOf({ report, toolCount }: ServerHealthJson): Part[] {
   const { kanbanAppPort, graphAppPort, isHookServerRunning: isHookRunning } = new ServerHealthClient(report)
   return [
-    { label: 'MCP host', value: 'running', isUp: true },
-    { label: 'Tools', value: `${toolCount} loaded`, isUp: true },
-    { label: 'Kanban app', value: runningOn(kanbanAppPort), isUp: kanbanAppPort !== null },
-    { label: 'Graph app', value: runningOn(graphAppPort), isUp: graphAppPort !== null },
-    { label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning },
+    { icon: '⬢', label: 'MCP host', value: 'running', isUp: true },
+    { icon: '⚒', label: 'Tools', value: `${toolCount} loaded`, isUp: true },
+    { icon: '▦', label: 'Kanban app', value: runningOn(kanbanAppPort), isUp: kanbanAppPort !== null },
+    { icon: '◈', label: 'Graph app', value: runningOn(graphAppPort), isUp: graphAppPort !== null },
+    { icon: '↪', label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning },
   ]
 }
 
 function headlineOf({ connection, attempt, toolCount }: ServerHealthJson): { title: string; detail: string } {
-  if (connection === 'connected') return { title: 'Connected', detail: '' }
+  if (connection === 'connected') return { title: '', detail: '' }
   if (connection === 'disconnected') return { title: 'Disconnected', detail: `${SERVER} stopped.` }
   if (connection === 'tools-missing') return { title: 'Tools missing', detail: `${toolCount} loaded, ${REPORT_TOOL} is not one of them.` }
   if (attempt === 0) return { title: 'Connecting', detail: `Waiting for ${SERVER} to answer.` }
@@ -80,13 +82,17 @@ function installLineOf({ state }: InstallJson): string {
   return state === 'failed' ? 'Install failed. See the error in Details.' : ''
 }
 
-function PartsView({ Box, Text }: ElementTable, health: ServerHealthJson, columns: number) {
+// The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value.
+function PartsView({ Box, Text }: ElementTable, health: ServerHealthJson) {
   return (
-    <Box flexDirection="row">
+    <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
       {partsOf(health).map(part => (
-        <Box key={part.label} flexDirection="column" width={Math.floor(columns / COLUMNS)}>
-          <Text color={BRAND.muted}>{part.label}</Text>
-          <Text color={part.isUp ? BRAND.success : BRAND.muted}>{part.value}</Text>
+        <Box key={part.label} flexDirection="row" gap={1} width={PART_WIDTH}>
+          <Text size="heading" color={colourOf(part)}>{part.icon}</Text>
+          <Text color={colourOf(part)}>{part.value}</Text>
+          <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+            <Text color={BRAND.text}>{part.label}</Text>
+          </Box>
         </Box>
       ))}
     </Box>
@@ -122,7 +128,7 @@ function ButtonsView(elements: ElementTable, { health, view, install, actions }:
 
 function ExpandedView(elements: ElementTable, band: Band) {
   const { Box, Text } = elements
-  const { health, view, install, columns } = band
+  const { health, view, install } = band
   const look = LOOKS[health.connection]
   const { title, detail } = headlineOf(health)
   const installLine = installLineOf(install)
@@ -135,12 +141,14 @@ function ExpandedView(elements: ElementTable, band: Band) {
       backgroundColor={look.wash}
       {...(view.isPinned ? {} : { display: 'none' as const, hover: { display: 'flex' as const } })}
     >
-      <Box flexDirection="row" gap={1}>
-        <Text weight="semibold" color={look.color}>{title}</Text>
-        {detail ? <Text color={BRAND.text}>{detail}</Text> : null}
-      </Box>
+      {title ? (
+        <Box flexDirection="row" gap={1}>
+          <Text weight="semibold" color={look.color}>{title}</Text>
+          {detail ? <Text color={BRAND.text}>{detail}</Text> : null}
+        </Box>
+      ) : null}
       {installLine ? <Text color={BRAND.text}>{installLine}</Text> : null}
-      {health.connection === 'connected' ? PartsView(elements, health, columns) : null}
+      {health.connection === 'connected' ? PartsView(elements, health) : null}
       {view.areDetailsOpen ? DetailsView(elements, health, install) : null}
       {ButtonsView(elements, band)}
     </Box>

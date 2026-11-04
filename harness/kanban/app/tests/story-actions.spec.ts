@@ -54,7 +54,7 @@ test.describe('Restrict Actions To Active Session', () => {
     const billing = card(page, 'billing-report')
     await expect(billing).toHaveAttribute('draggable', 'true')
     await expect(billing.getByRole('button', { name: 'Activate' })).toBeEnabled()
-    await billing.getByRole('button', { name: 'list' }).click()
+    await billing.getByRole('button', { name: 'folder' }).click()
     await expect(page.locator('[data-panel="files"]')).toBeVisible()
   })
 
@@ -327,15 +327,13 @@ test.describe('Satisfy Violations From Band', () => {
 })
 
 test.describe('List, browse, and view files', () => {
-  test('should show the three modes of the files panel', async ({ page }) => {
+  test('should show the two modes of the files panel', async ({ page }) => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
     const files = page.locator('[data-panel="files"]')
     await expect(files.getByText('tests/', { exact: true })).toBeVisible()
     await files.getByRole('button', { name: 'files', exact: true }).click()
     await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
     await expect(files.locator('.file-lines')).toContainText('Check Out Order')
-    await files.getByRole('button', { name: 'list', exact: true }).click()
-    await expect(files.getByRole('button', { name: 'tests/story-map.md' })).toBeVisible()
   })
 
   test('should offer a tab for a format not generated yet and say so', async ({ page }) => {
@@ -355,12 +353,12 @@ test.describe('Refresh Board After Tool Calls', () => {
   })
 
   test('should read an open files list again when the board changes', async ({ page }) => {
-    await card(page, 'checkout-flow').getByRole('button', { name: 'list' }).first().click()
+    await card(page, 'checkout-flow').getByRole('button', { name: 'folder' }).first().click()
     const files = page.locator('[data-panel="files"]')
-    await expect(files.getByRole('button', { name: 'tests/story-map.md' })).toBeVisible()
+    await expect(files.getByRole('button', { name: 'story-map.md', exact: true })).toBeVisible()
     writeFileSync(join(fixtureRoot, 'tests', 'story-map.drawio'), `<mxfile />${EOL}`, 'utf-8')
     appendFileSync(join(fixtureRoot, '.sessions', 'checkout-flow', 'session.log'), `2026-11-01T11:00:00Z generate /work stories story_map drawio stories no-chat${EOL}`, 'utf-8')
-    await expect(files.getByRole('button', { name: 'tests/story-map.drawio' })).toBeVisible({ timeout: 8_000 })
+    await expect(files.getByRole('button', { name: 'story-map.drawio', exact: true })).toBeVisible({ timeout: 8_000 })
   })
 })
 

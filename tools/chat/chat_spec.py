@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from threading import Thread
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 for _root in (_REPO_ROOT, _REPO_ROOT / "tools"):
@@ -17,6 +18,7 @@ from chat.chat import Chat, ChatNotConnectedError
 
 CHAT = "ad6c04ab-chat"
 CLOCK = [1000.0]
+CONCURRENT_CHECK_INS = 200
 
 
 def _said(commands: list) -> list[tuple[str, str]]:
@@ -25,6 +27,14 @@ def _said(commands: list) -> list[tuple[str, str]]:
 
 def _states() -> list[str]:
     return [message["state"] for message in Chat.load(CHAT).messages()]
+
+
+def _check_in_repeatedly(name: str, failures: list[Exception]) -> None:
+    try:
+        for _ in range(CONCURRENT_CHECK_INS):
+            Chat.load(CHAT).check_in(is_busy=True, name=name)
+    except Exception as failure:
+        failures.append(failure)
 
 
 def _titled(title: str) -> str:
@@ -75,6 +85,23 @@ with description("a chat") as self:
 
             with it("should go by the latest title"):
                 expect(Chat.list()[0]["name"]).to(equal("Session board handoff review"))
+
+        # A mod that reloads can check in twice at once, and a state file written over itself cannot be read.
+        with context("that checks in from two places at once"):
+            with before.each:
+                self.failures = []
+                names = ("repo · first words", "repo · a much longer name than the first one")
+                checking_in = [Thread(target=_check_in_repeatedly, args=(name, self.failures)) for name in names]
+                for thread in checking_in:
+                    thread.start()
+                for thread in checking_in:
+                    thread.join()
+
+            with it("should take every check-in"):
+                expect(self.failures).to(be_empty)
+
+            with it("should still be listed"):
+                expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT]))
 
         with context("that has gone quiet"):
             with before.each:

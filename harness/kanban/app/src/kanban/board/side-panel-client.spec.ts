@@ -37,14 +37,14 @@ async function brokenRule(page: BoardPage): Promise<ReportRuleData> {
 describe('List Ticket Files', () => {
   it('should list the files that exist', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(TICKET, [SLUG], 'list')
+    await page.files.openFiles(TICKET, [SLUG], 'folder')
     expect(generatedPaths(filesPanel(page))).toEqual(['tests/story-map.md'])
   })
 
   describe('with a list that cannot be read', () => {
     async function refused() {
       const { page } = await board.page()
-      await page.files.openFiles('no-such-ticket', [SLUG], 'list')
+      await page.files.openFiles('no-such-ticket', [SLUG], 'folder')
       return page
     }
 
@@ -118,12 +118,12 @@ describe('View Files', () => {
     expect(filesPanel(page).texts['tests/story-map.md']).toBe(['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n'))
   })
 
-  it('should go back to the list when the last tab closes', async () => {
+  it('should go back to the folder when the last tab closes', async () => {
     const { page } = await board.page()
     await page.files.openFiles(TICKET, [SLUG], 'files')
     page.files.closeTab('tests/story-map.md')
     page.files.closeTab('tests/story-map.drawio')
-    expect(filesPanel(page).mode).toBe('list')
+    expect(filesPanel(page).mode).toBe('folder')
   })
 
   describe('with a violation in a file its fidelity does not declare', () => {
@@ -212,7 +212,7 @@ describe('Refresh Board After Tool Calls', () => {
     async function changed() {
       const { page } = await board.page()
       await page.panels.openReport(TICKET, SLUG)
-      await page.files.openFiles(TICKET, [SLUG], 'list')
+      await page.files.openFiles(TICKET, [SLUG], 'folder')
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.md', '# Graph rule validation\n')
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.json', JSON.stringify(CLEAN_GRAPH))
       board.write('tests/story-map.drawio', '<mxfile/>\n')
@@ -258,7 +258,7 @@ describe('Arrange Side Panel', () => {
     it('should expand one panel at a time', async () => {
       const { page } = await board.page()
       await page.panels.openReport(TICKET, SLUG)
-      await page.files.openFiles(TICKET, [SLUG], 'list')
+      await page.files.openFiles(TICKET, [SLUG], 'folder')
       page.panels.toggleExpanded('report')
       page.panels.toggleExpanded('files')
       expect(page.store.state.panels.filter(panel => panel.isExpanded).map(panel => panel.kind)).toEqual(['files'])

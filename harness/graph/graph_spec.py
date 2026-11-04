@@ -543,38 +543,11 @@ with description("a graph"):
                 with it("should leave do-not-invent-requirements prompt"):
                     expect(rule_on(self.handle_request, "do-not-invent-requirements")["status"]).to(equal("prompt"))
 
+                # Evidence is judged by whoever reads the story, never counted as a graph hit.
                 with context("with a story whose evidence is unlabeled"):
-                    with it("should record that evidence must be observed, inferred, or intended"):
-                        message = rule_on(
-                            self.handle_request,
-                            "evidence-distinguishes-observed-inferred-and-intended",
-                        )["violations"][0]["message"]
-                        expect(message).to(
-                            equal("story 'Handle Request': evidence must be observed, inferred, or intended.")
-                        )
-
-                    with it("should store that evidence hit on the story line"):
-                        hit = rule_on(
-                            self.handle_request,
-                            "evidence-distinguishes-observed-inferred-and-intended",
-                        )["violations"][0]
-                        expect({"file": hit["file"], "start": hit["start"], "end": hit["end"]}).to(
-                            equal(
-                                {
-                                    "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
-                                    "start": 444,
-                                    "end": _HANDLE_REQUEST_END,
-                                }
-                            )
-                        )
-
-                with context("with a story labeled observed"):
-                    with it("should leave that story's evidence passing"):
-                        status = rule_on(
-                            self.submit_order,
-                            "evidence-distinguishes-observed-inferred-and-intended",
-                        )["status"]
-                        expect(status).to(equal("passing"))
+                    with it("should leave evidence-distinguishes-observed-inferred-and-intended prompt"):
+                        status = rule_on(self.handle_request, "evidence-distinguishes-observed-inferred-and-intended")["status"]
+                        expect(status).to(equal("prompt"))
 
                 with context("with a story that repeats a sibling story"):
                     with it("should record that the story is too similar to another story on the same map node"):
