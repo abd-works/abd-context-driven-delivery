@@ -61,6 +61,24 @@ with description("a chat") as self:
         with it("should refuse a command for a chat that is not connected"):
             expect(lambda: Chat.load(CHAT).send("command", "/actions-validate")).to(raise_error(ChatNotConnectedError))
 
+    # Two check-ins written over each other left state files that no longer read, beside chats still checking in.
+    with context("with a state file that does not read beside a chat that has checked in"):
+        with before.each:
+            Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
+            damaged = self.chats / "damaged-chat"
+            damaged.mkdir()
+            (damaged / "chat.json").write_text('{"name": "old", "seen": 1000.0}}', encoding="utf-8")
+
+        with it("should list the chat that reads"):
+            expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT]))
+
+        with context("that has checked in again"):
+            with before.each:
+                Chat.load("damaged-chat").check_in(is_busy=False, name="repo · second words")
+
+            with it("should list the chat again"):
+                expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT, "damaged-chat"]))
+
     # (S) Chat --> Check In With Board
     with context("that has checked in"):
         with before.each:

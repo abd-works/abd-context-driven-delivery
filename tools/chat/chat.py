@@ -199,7 +199,7 @@ class Chat:
     @property
     def _state(self) -> dict:
         path = self._folder / STATE_FILE
-        return _while_windows_holds(lambda: json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {})
+        return _while_windows_holds(lambda: _state_in(path))
 
     # A mod that reloads can check in twice at once, so the state is written beside the file and renamed over it whole.
     def _write(self, state: dict) -> None:
@@ -260,6 +260,17 @@ class Chat:
         projects = _claude_projects()
         found = projects.glob(f"*/{self.id}.jsonl") if projects.is_dir() else []
         return next(iter(found), None)
+
+
+def _state_in(path: Path) -> dict:
+    """The state a chat last wrote; none when it never checked in, or when two check-ins written over each other left a
+    file that does not read, so the chat's next check-in writes it afresh."""
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
 
 
 def _while_windows_holds(operation: Callable[[], T]) -> T:
