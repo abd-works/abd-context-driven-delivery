@@ -149,7 +149,7 @@ class Ticket(Card):
         if "validate" not in progress.done_actions:
             return progress
         reports = sorted((self._folder / REPORT_FOLDER).glob(progress.report_files))
-        if not reports or not _judgments_in(reports[-1].read_text(encoding="utf-8", errors="replace")):
+        if not reports or not _judgments_in(self._latest_with_result(reports).read_text(encoding="utf-8", errors="replace")):
             return progress
         return progress.with_violations()
 
