@@ -24,6 +24,7 @@ import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
 const CDD_RESTART_PATH = '/cdd/restart'
+const CLAUDE_OPEN_PATH = '/claude/open'
 const NOT_READ_YET: BoardData = { project: '', active: null, columns: [] }
 
 // Everything the page's views act through, wired once.
@@ -43,8 +44,9 @@ export class BoardPage {
   readonly roots = new RootChoiceClient(this)
   readonly draft = new BacklogDraftClient(this)
 
-  // Opens a claude:// link, which the Claude app on this computer handles. A spec replaces it to see the link.
-  openLink: (link: string) => void = link => globalThis.location?.assign(link)
+  // Opens a claude:// link through the board server, because the Browser pane does not pass the link to the Claude app.
+  // A spec replaces it to see the link.
+  openLink: (link: string) => void = link => void this.api.post(CLAUDE_OPEN_PATH, { link })
 
   constructor(send?: Send) {
     this.api = new BoardApi(this.store, send)
