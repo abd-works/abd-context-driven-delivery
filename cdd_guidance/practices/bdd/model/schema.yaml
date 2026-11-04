@@ -77,6 +77,8 @@ observation:
     - examples are the concrete cases for this outcome
     - demonstrates is the class whose public effect this observation proves
     - invokes is the operation or property the call surface exercises
+    - invokes lists what the nearest enclosing setup calls first, then what the observation's own body calls or reads
+    - realization fidelity draws invokes, each followed through the clean engineering model's interactions for that operation
     - specifies is the story scenario this observation makes executable
   rules:
     - observable-behavior

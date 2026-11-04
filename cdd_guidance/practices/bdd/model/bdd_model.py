@@ -79,15 +79,23 @@ class BddModel(BoundNode):
         return "\n\n".join(self._sketch_lines(item) for item in canonical.descriptions)
 
     def _sketch_lines(self, description: Description) -> str:
-        lines = [description.name]
+        # Spec code often puts `it` straight under the outermost describe, so those observations come before its contexts.
+        lines = [description.name, *self._observation_lines(description.observations, "")]
         for child in description.contexts:
             lines.extend(self._sketch_context(child, 1))
         return "\n".join(lines) + "\n"
 
     def _sketch_context(self, node: Context, depth: int) -> list[str]:
         pad = "  " * depth
-        lines = [f"{pad}{node.name}"]
-        for observation in node.observations:
+        lines = [f"{pad}{node.name}", *self._observation_lines(node.observations, pad)]
+        for child in node.contexts:
+            lines.extend(self._sketch_context(child, depth + 1))
+        return lines
+
+    def _observation_lines(self, observations, pad: str) -> list[str]:
+        """Each observation one level under its parent: a fenced block when it carries a realization, else its line."""
+        lines: list[str] = []
+        for observation in observations:
             if observation.surface_lines or observation.call_graph:
                 lines.append(f"{pad}  ```")
                 for surface in observation.surface_lines:
@@ -99,8 +107,6 @@ class BddModel(BoundNode):
                 lines.append(f"{pad}  ```")
             else:
                 lines.append(f"{pad}  it {observation.name}")
-        for child in node.contexts:
-            lines.extend(self._sketch_context(child, depth + 1))
         return lines
 
     def setup_at(self, path: tuple) -> CodeBody:
@@ -148,10 +154,15 @@ def _parse_sketch(text: str) -> list[Description]:
         stripped = raw.strip()
         if stripped.startswith("```"):
             if in_fence:
-                _apply_fence_block(fence_lines, stack)
+                _apply_fence_block(fence_lines, _owner(stack, description))
                 fence_lines = []
                 in_fence = False
             else:
+                # An indented fence belongs to the node one level above it, so a fence one level under the description holds
+                # the description's own observations. A fence at the margin belongs to the innermost open context.
+                fence_level = (len(raw) - len(raw.lstrip(" "))) // 2
+                while fence_level and stack and stack[-1][0] >= fence_level:
+                    stack.pop()
                 in_fence = True
             continue
         if in_fence:
@@ -160,21 +171,25 @@ def _parse_sketch(text: str) -> list[Description]:
         if not stripped or stripped.startswith(("//", "#", "Fidelity:")):
             continue
         if stripped.startswith("->"):
-            if _current_observation(stack) is None:
+            if _current_observation(_owner(stack, description)) is None:
                 pending_surface.append(stripped[2:].strip())
             else:
-                _append_surface_line(stripped, stack)
+                _append_surface_line(stripped, _owner(stack, description))
             continue
         indent = len(raw) - len(raw.lstrip(" "))
         level = indent // 2
         if stripped.startswith("it "):
-            if not stack:
+            # An `it` one level under a context belongs to it; one level under the description belongs to the description.
+            while stack and stack[-1][0] >= level:
+                stack.pop()
+            owner = _owner(stack, description)
+            if owner is None:
                 continue
-            observation = Observation(stripped[3:].strip(), len(stack[-1][1].observations) + 1)
+            observation = Observation(stripped[3:].strip(), len(owner.observations) + 1)
             if pending_surface:
                 observation.surface_lines = list(pending_surface)
                 pending_surface = []
-            stack[-1][1].observations.append(observation)
+            owner.observations.append(observation)
             continue
         pending_surface = []
         if level == 0:
@@ -193,15 +208,20 @@ def _parse_sketch(text: str) -> list[Description]:
     return descriptions
 
 
-def _current_observation(stack: list[tuple[int, Context]]) -> Observation | None:
-    if not stack:
+def _owner(stack: list[tuple[int, Context]], description: Description | None) -> Context | Description | None:
+    """The node the next observation belongs to: the innermost open context, else the description itself."""
+    return stack[-1][1] if stack else description
+
+
+def _current_observation(owner: Context | Description | None) -> Observation | None:
+    if owner is None:
         return None
-    observations = stack[-1][1].observations
+    observations = owner.observations
     return observations[-1] if observations else None
 
 
-def _append_surface_line(stripped: str, stack: list[tuple[int, Context]]) -> None:
-    observation = _current_observation(stack)
+def _append_surface_line(stripped: str, owner: Context | Description | None) -> None:
+    observation = _current_observation(owner)
     if observation is None:
         return
     arrow = parse_arrow_line(stripped)
@@ -209,8 +229,8 @@ def _append_surface_line(stripped: str, stack: list[tuple[int, Context]]) -> Non
     observation.surface_lines.append(payload)
 
 
-def _apply_fence_block(lines: list[str], stack: list[tuple[int, Context]]) -> None:
-    if not stack:
+def _apply_fence_block(lines: list[str], owner: Context | Description | None) -> None:
+    if owner is None:
         return
     pending_surface: list[str] = []
     pending_graph: list[CallGraphEntry] = []
@@ -219,14 +239,14 @@ def _apply_fence_block(lines: list[str], stack: list[tuple[int, Context]]) -> No
         if not stripped or stripped.startswith("//"):
             continue
         if stripped.startswith("it "):
-            observation = Observation(stripped[3:].strip(), len(stack[-1][1].observations) + 1)
+            observation = Observation(stripped[3:].strip(), len(owner.observations) + 1)
             if pending_surface:
                 observation.surface_lines = list(pending_surface)
                 pending_surface = []
             if pending_graph:
                 observation.call_graph = list(pending_graph)
                 pending_graph = []
-            stack[-1][1].observations.append(observation)
+            owner.observations.append(observation)
             continue
         arrow = parse_arrow_line(stripped)
         if arrow is not None:

@@ -6,7 +6,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Sub-epic: Validate Fidelity Outputs
 # Map: ../../../.context/story-map.md#s-claude-code----save-validation-report
 # Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-realization.md
+# Realizations: ../../../.context/session-board-scenario-realization.md
 
 # Story: Save Validation Report
 # Actor: Claude Code

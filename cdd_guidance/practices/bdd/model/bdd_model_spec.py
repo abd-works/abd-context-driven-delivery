@@ -14,6 +14,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel, _parse_sketch
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
+from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
 
 
 with description("a bdd spec on a graph"):
@@ -66,6 +67,21 @@ it should complete payment
         expect(observation.name).to(equal("should complete payment"))
         expect(observation.call_graph[0].text).to(equal("cart.checkout()"))
         expect(observation.call_graph[1].text).to(equal("payment.charge()"))
+
+    with it("should keep an observation that sits straight under its description, through a render and back"):
+        spec = BddModel()
+        cart = Description("a cart")
+        empty = Observation("should start empty")
+        empty.call_graph = [CallGraphEntry(depth=0, kind="out", text="Cart.items")]
+        cart.observations.append(empty)
+        with_items = Context("that has items")
+        with_items.observations.append(Observation("should count them"))
+        cart.contexts.append(with_items)
+        spec.descriptions.append(cart)
+        restored = _parse_sketch(spec.render(spec))
+        expect([observation.name for observation in restored[0].observations]).to(equal(["should start empty"]))
+        expect([entry.text for entry in restored[0].observations[0].call_graph]).to(equal(["Cart.items"]))
+        expect([observation.name for observation in restored[0].contexts[0].observations]).to(equal(["should count them"]))
 
 
 _HEADED = """

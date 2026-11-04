@@ -183,21 +183,31 @@ clean_engineering: model
 outputs:
   python: "**/*_spec.py"
   typescript: "**/*spec.ts"
-  markdown: ".context/{scope}-realization.md"
+  markdown: ".context/{scope}-bdd-realization.md"
 ```
 
 #### Overview
 
 Expand each agreed `it should` into the domain call graph that executes that observation — sketch fidelity only (signatures and collaborator calls, no bodies). Notation matches `@clean_engineering` **model** interactions (`->` outbound, `<-` return). This fidelity does not restate GWT scenarios; it traces the describe/`that`/`with` tree already fixed at **behavior**.
 
+The BDD realization is not the scenario realization. A scenario realization (`@stories` `#scenarios`, `{scope}-scenario-realization.md`) follows the story map: each Scenario's Given/When/Then. The BDD realization follows the spec files: each `it should` under its `describe`, `that`, and `with`. Keep them in separate files, because both use the same notation and name the same operations, and a reader has to know which one a graph realizes.
+
 #### Sketch
 
-Ask which public operation on the subject under test each observation exercises, which collaborators participate, and what crosses an external-system boundary. Write the graph from a read of production code at those seams.
+Ask which public operation on the subject under test each observation exercises, which collaborators participate, and what crosses an external-system boundary. Answer from the knowledge graph and the Clean Engineering model, not from a fresh read of the code.
 
 #### Guidance
 
 - **Default on** after **behavior** signatures exist, unless the user says **no realizations**.
-- Walk implementation from the outermost domain entry for the observation; strip pass-through helpers and language-native noise; stop at external systems with `[ExternalSystem]` at the boundary (same rules as `@practices/stories/story-realizations`).
+- **Render it from the graph.** The realization is drawn, not written by hand, so it says exactly what the graph and the model say:
+  1. Load the knowledge graph for the spec files, the code they test, and the module's model (`graph.load_files` with `bdd` and `clean_engineering`, files naming the module folder). The load reads each folder's `.context/*-model.md` with the code.
+  2. Save it (`graph.save_json`, written to `.context/graph.json`).
+  3. Render it: `render` on this guidance with `format=markdown`, `source=graph`, and `paths` naming the saved graph. Write the result to `.context/{scope}-bdd-realization.md`.
+  4. Read the result for the gaps below, fix the model or the specs where they are wrong, and render again. Do not edit the rendered file by hand, because the next render replaces it.
+- **The tree comes from the graph.** The graph's `Spec`, `Description`, `Context`, and `Observation` nodes are the behavior tree, in each spec file's order, with every heading and `it should` as the spec writes it; one graph per observation, none added or dropped.
+- **Each observation's entry operations come from its `invokes` edges.** The graph links an observation to the operations and properties it reaches: first what its nearest enclosing setup calls (`before.each`, `beforeEach`, `before`), which is the event the observation follows, then what its own body calls or reads. A tool called by name, `call("ticket.move_next", …)`, is that toolset's operation. Spec files and test helpers are never entries, so the graph already shows the domain call a helper delegates to.
+- **The calls under each entry come from the Clean Engineering model.** Under each entry operation come the `->` interactions the model (`{module}/.context/*-model.md`) lists for it, then each of those operations' interactions in turn, with the return type from the model's signature as `<-`. A property's interactions count too (`Board.active` asks `Session.active_name`). The graph stops at an operation the model gives no interactions. When the code makes a call the model does not list, or calls an operation the model does not describe, add it to the model and render again, because a realization that disagrees with the model leaves two descriptions of one design. Label an external system's operation `[ExternalSystem]` in the model, so the realization stops at it.
+- **An observation with no `invokes` edge says so.** Its block holds `// the graph holds no operation this observation calls` rather than a guessed graph. That happens when it drives only a browser page, or calls something the graph does not load; the note tells the reader where the realization stops.
 - Keep Arrange surface lines (`-> subject = new …`, property sets) separate from the nested call graph under the Act that the observation proves.
 - Store graphs on observations in the BDD model: fenced blocks in `templates/bdd-sketch.md`, round-tripped through `practices/bdd/model` (same call-graph conversion as stories and clean engineering).
 
@@ -207,7 +217,7 @@ Fill the **realization** section of `templates/bdd-templates.{ext}` (`.py` / `.j
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md,**/*-realization.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md,**/*-bdd-realization.md"
 ```
 
 Whenever you add or change call graphs on BDD observations, or change production code those graphs describe. Follow these rules.

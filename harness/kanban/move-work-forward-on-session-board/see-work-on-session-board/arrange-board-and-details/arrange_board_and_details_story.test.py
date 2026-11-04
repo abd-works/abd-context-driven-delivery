@@ -6,7 +6,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Sub-epic: See Work On Session Board
 # Map: ../../../.context/story-map.md#s-person----arrange-board-and-details
 # Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-realization.md
+# Realizations: ../../../.context/session-board-scenario-realization.md
 
 # Story: Arrange Board And Details
 # Actor: Person

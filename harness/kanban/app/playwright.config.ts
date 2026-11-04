@@ -21,6 +21,7 @@ export default defineConfig({
     { name: 'layout', testMatch: 'board-surface.spec.ts' },
     { name: 'e2e-tier', testMatch: '**/*.behavior.e2e.ts' },
     { name: 'story-actions', testMatch: 'story-actions.spec.ts' },
+    { name: 'story-ui', testDir: '..', testMatch: '*.story.ui.spec.ts' },
   ],
   workers: 1,
   timeout: 30_000,

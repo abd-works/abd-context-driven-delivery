@@ -41,6 +41,8 @@ class Bdd(PracticeGuidance):
                 "markdown": ("cdd_guidance.practices.bdd.model.bdd_model", "MarkdownBddModel"),
                 "python": ("cdd_guidance.practices.bdd.model.code_spec_model", "PythonBddModel"),
                 "typescript": ("cdd_guidance.practices.bdd.model.code_spec_model", "TypeScriptBddModel"),
+                # A saved knowledge graph, read only: rendering from it draws the realization fidelity.
+                "graph": ("cdd_guidance.practices.bdd.model.graph_bdd_model", "GraphBddModel"),
             },
         )
         if path is not None or session is not None:

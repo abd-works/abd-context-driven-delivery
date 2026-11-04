@@ -20,6 +20,7 @@ def is_spec_file(path: Path) -> bool:
         or "_spec." in name
         or ".test." in name
         or ".spec." in name
+        or ".e2e." in name
         or name.endswith("test.java")
         or name.endswith("tests.java")
     )

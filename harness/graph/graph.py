@@ -1207,8 +1207,12 @@ class Graph:
     def _practice_document(self, practice: PracticeGraph) -> dict:
         nodes = [node for group in practice.nodes.values() for node in group]
         edges = [edge for group in practice.edges.values() for edge in group]
+        from harness.graph.node_data import encode_node_data
+
         return {
             "source_root": practice.source_root,
+            # Facts about the practice as a whole, such as the Clean Engineering model's members, live on its root.
+            "root_facts": encode_node_data(practice.root_node.data),
             "nodes": [self._node_row(node) for node in nodes],
             "edges": [self._edge_row(edge) for edge in edges],
             "rules": [[slug, node.node_id, message] for node in nodes for slug, message in node.rules.violations()],

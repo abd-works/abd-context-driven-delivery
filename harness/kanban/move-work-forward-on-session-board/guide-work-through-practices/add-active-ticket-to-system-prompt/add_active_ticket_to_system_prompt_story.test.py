@@ -6,7 +6,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Sub-epic: Guide Work Through Practices
 # Map: ../../../.context/story-map.md#s-board-app----add-active-ticket-to-system-prompt
 # Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-realization.md
+# Realizations: ../../../.context/session-board-scenario-realization.md
 
 # Story: Add Active Ticket To System Prompt
 # Actor: Board App

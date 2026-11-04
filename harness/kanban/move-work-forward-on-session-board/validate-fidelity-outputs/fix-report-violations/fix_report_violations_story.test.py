@@ -6,7 +6,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Sub-epic: Validate Fidelity Outputs
 # Map: ../../../.context/story-map.md#s-person----fix-report-violations
 # Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-realization.md
+# Realizations: ../../../.context/session-board-scenario-realization.md
 
 # Story: Fix Report Violations
 # Actor: Person

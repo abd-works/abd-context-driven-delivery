@@ -99853,3 +99853,40 @@ Traceback (most recent call last):
     "project": self.repo_root.name,
 ModuleNotFoundError: No module named 'review.review'
 2026-11-04T06:39:41Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T18:02:23Z validate.validate PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/kanban/see-work-on-session-board.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/see-work-on-session-board.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/see-work-on-session-board.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/steer-ticket-sessions.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/steer-ticket-sessions.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/steer-ticket-sessions.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/guide-work-through-practices.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/guide-work-through-practices.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/guide-work-through-practices.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/generate-fidelity-outputs.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/generate-fidelity-outputs.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/generate-fidelity-outputs.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/validate-fidelity-outputs.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/validate-fidelity-outputs.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/validate-fidelity-outputs.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/review-fidelity-outputs.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/review-fidelity-outputs.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/review-fidelity-outputs.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/story_test.py, read from C:\dev\abd-cdd-session-board; harness/kanban/session_board_examples.py, read from C:\dev\abd-cdd-session-board; harness/kanban/session_board_tiers.py, read from C:\dev\abd-cdd-session-board. Name paths from the project's root, or absolute.
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1294, in dispatch
+    return self._runtime.invoke_prompt(resolved, args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 956, in invoke_prompt
+    return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 763, in invoke
+    return self._expanded_instructions(tool, member, dict(arguments or {}))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 781, in _expanded_instructions
+    expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1269, in expand
+    self._scan()
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1302, in _scan
+    self._walk_statements(function_def)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1983, in _walk_statements
+    self._dispatch_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1945, in _dispatch_statement
+    self._dispatch_simple_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1936, in _dispatch_simple_statement
+    self._execute_statement(statement)
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 1765, in _execute_statement
+    exec(
+  File "<agent_instructions>", line 21, in <module>
+  File "C:\dev\abd-cdd-session-board\cdd_guidance\actions\validate\validate.py", line 155, in _workspace_relative
+    raise PathsNotFoundError(unreadable, project, workspace)
+cdd_guidance.actions.validate.validate.PathsNotFoundError: validate found no file under the session's root C:\dev\abd-cdd-cdd-chat-ui\harness\chat-ui at harness/kanban/see-work-on-session-board.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/see-work-on-session-board.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/see-work-on-session-board.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/steer-ticket-sessions.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/steer-ticket-sessions.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/steer-ticket-sessions.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/guide-work-through-practices.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/guide-work-through-practices.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/guide-work-through-practices.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/generate-fidelity-outputs.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/generate-fidelity-outputs.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/generate-fidelity-outputs.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/validate-fidelity-outputs.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/validate-fidelity-outputs.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/validate-fidelity-outputs.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/review-fidelity-outputs.story.shared.py, read from C:\dev\abd-cdd-session-board; harness/kanban/review-fidelity-outputs.story.domain.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/review-fidelity-outputs.story.server.spec.py, read from C:\dev\abd-cdd-session-board; harness/kanban/story_test.py, read from C:\dev\abd-cdd-session-board; harness/kanban/session_board_examples.py, read from C:\dev\abd-cdd-session-board; harness/kanban/session_board_tiers.py, read from C:\dev\abd-cdd-session-board. Name paths from the project's root, or absolute.
+2026-11-04T18:02:23Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T18:11:57Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T18:11:57Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T18:15:49Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T18:22:20Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T18:22:20Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T18:26:37Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)

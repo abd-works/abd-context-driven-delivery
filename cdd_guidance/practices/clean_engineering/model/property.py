@@ -125,6 +125,8 @@ class Property(OoadNode):
         self.origin = ""
         self.relationship: Relationship | None = None
         self.invariants: List[Invariant] = []
+        # A derived property can ask collaborators for its value, written under it as `-> Session.active_name`.
+        self.callees: List[str] = []
 
     def clone(self) -> "Property":
         cloned = type(self)(self.name, self.sequential_order, self.type_hint, self.description)
@@ -134,6 +136,7 @@ class Property(OoadNode):
         cloned.origin = self.origin
         cloned.relationship = self.relationship.clone() if self.relationship is not None else None
         cloned.invariants = [item.clone() for item in self.invariants]
+        cloned.callees = list(self.callees)
         return cloned
 
     def save(self) -> str:
@@ -164,6 +167,7 @@ class Property(OoadNode):
         source_relationship = getattr(source, "relationship", None)
         self.relationship = source_relationship.clone() if source_relationship is not None else None
         self.invariants = [item.clone() for item in getattr(source, "invariants", [])]
+        self.callees = list(getattr(source, "callees", []))
 
     def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
         return []

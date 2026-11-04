@@ -5,7 +5,7 @@
 **Format references:**
 - Scenario structure and fidelity: `@practices/stories/stories.md` `#scenarios` — GWT plus **Scenario realizations (default on)** unless the user says **no realizations**.
 - Acceptance tests: `@practices/stories/stories.md` `#acceptance_tests` — implement through the realized call graph.
-- BDD: `@practices/bdd/bdd.md` `#realization` — same call-graph notation on `it should` observations (not GWT).
+- BDD: `@practices/bdd/bdd.md` `#realization` — the same notation on each `it should` of the spec files, in its own `{scope}-bdd-realization.md`. A scenario realization follows the story map's Scenarios; a BDD realization follows the spec files' observations. Keep them in separate files, because a reader has to know which one a graph realizes.
 - Interaction notation: `@practices/clean_engineering/clean_engineering.md` — `write-interactions`; arrows round-trip via `practices/clean_engineering/model/call_graph.py` and the stories/BDD model channels.
 
 ---
@@ -36,15 +36,15 @@ Each step expands into an indented call graph. Indent one level per call depth. 
 
 ```
 objectName.operation(args)
-  → collaborator.operation(args)
-      → deeperCollaborator.operation(args)
-      ← result
-  ← result
-← result
+  -> collaborator.operation(args)
+    -> deeperCollaborator.operation(args)
+    <- result
+  <- result
+<- result
 ```
 
-- `→` outbound call to a collaborator or external system.
-- `←` return value flowing back to the caller above.
+- `->` outbound call to a collaborator or external system.
+- `<-` return value flowing back to the caller above.
 - Named arguments when they name a domain concept worth tracing. Omit when the name adds nothing over the type.
 - External systems (anything outside the domain model) are labelled at the call site: `[ExternalSystem] operation(args)`.
 
@@ -54,7 +54,7 @@ When a step is a pure state assertion (a Given precondition or a Then outcome), 
 
 ## Output format
 
-Produce one Markdown file per scope (story, sub-epic, or explicit grouping the user names). Name it after the scope using kebab-case.
+Produce one Markdown file per scope (story, sub-epic, or explicit grouping the user names): `.context/{scope-kebab-case}-scenario-realization.md`.
 
 ```markdown
 # Scenario Realizations: {Scope Name}
@@ -90,19 +90,14 @@ When a Then step itself triggers observable downstream behaviour (a system call,
 
 1. **Identify the scope.** Accept a story name, sub-epic, folder path, or spec file as the scope. When the user names a folder, include every story file inside it.
 
-2. **Read source material in full.** For each story in scope:
-   - Read the scenario file (`.md` or spec file).
-   - Read the production code files the scenarios call — at minimum the entry point class and every domain class it touches across the call graph.
-   - Read the relevant domain model files when they exist alongside the code.
-   - Do not skim. A step that looks simple at the scenario level often fans out across several domain objects. You cannot draw the call graph from headings alone.
+2. **Read the scenarios and the Clean Engineering model in full.** For each story in scope, read its scenario file. Read the Clean Engineering model the scenarios' domain terms link to (`{module}/.context/*-model.md`): every operation, its signature, and the `->` interactions under it. The model is where each operation's collaborators are written down, so the call graph comes from it rather than from re-reading the code.
 
-3. **Identify the outermost call for each When step.** In acceptance test specs, the When step is typically a call on a domain aggregate, service, or story entry-point class. That is the root of the call graph. If the spec uses a helper to set up the call, strip the helper and start from the real domain operation.
+3. **Find the operation each When starts from.** Load the knowledge graph for the scope (`graph.load_files` with `stories` and `clean_engineering`). Each step's `invokes` edges name the operations its acceptance test calls, matched to the code's classes. The first operation a When invokes is the root of its call graph. When that operation is a test helper, start from the domain operation the helper calls, because the helper only sets up the call.
 
-4. **Walk the call graph.** From the outermost call, follow every collaborator call the implementation makes:
-   - Strip language-native calls (`.map`, `.filter`, `JSON.parse`, TypeScript utilities).
-   - Strip private helpers that exist only to break up code; if a private helper calls a real domain operation, show the domain operation in place of the helper.
-   - Stop at external system boundaries (repositories, gateways, external APIs). Name the boundary and the operation it exposes; do not recurse into external system internals.
-   - Stop at TypeScript or framework library calls. Name the library operation at the boundary if it is semantically significant (e.g. an HTTP call, a database write), then stop.
+4. **Walk the call graph through the model.** Under the root, write each `->` interaction the model lists for that operation, then each of those operations' interactions in turn, with the return type from each signature as `<-`:
+   - Stop at an operation the model gives no interactions; it finishes its job from its own state.
+   - Stop at an external system: label the call `[ExternalSystem]` and do not recurse into it.
+   - When the model leaves out an interaction the code makes, the model is incomplete. Add the interaction to the model first, then draw it, because a realization that disagrees with the model leaves two descriptions of one design.
 
 5. **Write the realization.** For each scenario:
    - Copy the Given and Then text in plain domain language.
@@ -111,7 +106,7 @@ When a Then step itself triggers observable downstream behaviour (a system call,
 
 6. **Name everything from the domain model.** Every object name, operation name, and system name must trace to the source code or domain model. Do not invent synonyms. Follow `vocabulary-traces-to-source`.
 
-7. **Write the output file.** Place it alongside the source scenarios unless the user specifies otherwise, or write it to the location the user names. One file per scope. Name it `{scope-kebab-case}-realization.md`.
+7. **Write the output file.** Write `.context/{scope-kebab-case}-scenario-realization.md` in the module the scenarios belong to, or the location the user names. One file per scope.
 
 ---
 

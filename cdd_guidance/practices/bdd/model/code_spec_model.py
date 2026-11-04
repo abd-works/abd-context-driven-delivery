@@ -15,7 +15,10 @@ from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, C
 _SIGNATURE = "BDD: SIGNATURE"
 _SPEC = "spec"
 _MAMBA_BLOCKS = {"description": "description", "describe": "description", "context": "context", "it": "it", "_it": "it"}
-_SCRIPT_BLOCK = re.compile(r"(?<![.\w])(describe|context|it|test)\s*\(\s*(['\"`])((?:\\.|(?!\2).)*)\2")
+# Playwright names its blocks through `test`: `test.describe(...)`, `test.describe.serial(...)`, and `test(...)`.
+_SCRIPT_BLOCK = re.compile(
+    r"(?<![.\w])(?:test\.)?(describe|context|it|test)(?:\.(?:serial|parallel|only|skip|fixme))?\s*\(\s*(['\"`])((?:\\.|(?!\2).)*)\2"
+)
 
 # (first line, last line, read) for one child block; read(lead, order) builds the child's node.
 ChildBlock = Tuple[int, int, Callable[[List[str], int], object]]
