@@ -28974,3 +28974,4 @@ Traceback (most recent call last):
     raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
 json.decoder.JSONDecodeError: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)
 2026-11-04T05:51:23Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T17:07:35Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
