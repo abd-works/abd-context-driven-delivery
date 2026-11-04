@@ -345,10 +345,10 @@ beforeEach(() => {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
-      const operation = String(url).replace('/api/', '');
+      const operation = operationOf(url, init);
       const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
       calls.push({ operation, body });
-      const payload = { ok: true, result: answer(operation, body) };
+      const payload = answer(operation, body);
       const serialized = JSON.stringify(payload);
       return {
         ok: true,
@@ -529,7 +529,7 @@ it('should keep the selected node type and drop the other class', async () => {
   await expand(user, 'AccountCredentials');
   expect(screen.getByText('register')).toBeTruthy();
   const filtered = calls.filter((call) => call.operation === 'return_nodes').at(-1);
-  expect(filtered?.body.filter).toMatchObject({ node_types: ['Operation'] });
+  expect(filtered?.body.filter).toMatchObject({ types: ['Operation'] });
 });
 
 it('should put the chosen folder on the page and show its classes', async () => {
@@ -551,22 +551,19 @@ it('should show the backend traceback instead of loading forever', async () => {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
-      const operation = String(url).replace('/api/', '');
+      const operation = operationOf(url, init);
       const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
       calls.push({ operation, body });
       if (operation === 'load_working_copy') {
         const payload = {
-          ok: false,
           error: 'No working copy for stories.',
-          error_type: 'QueryFailure',
-          traceback: 'Traceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: missing',
           diagnosis:
             'I just encountered an error doing load_working_copy on C:\\repo. Please diagnose and fix.\n\nTraceback (most recent call last):\n  File "host.py", line 1, in handle\nQueryFailure: missing',
         };
         const serialized = JSON.stringify(payload);
         return { ok: false, text: async () => serialized, json: async () => payload };
       }
-      const payload = { ok: true, result: answer(operation, body) };
+      const payload = answer(operation, body);
       const serialized = JSON.stringify(payload);
       return { ok: true, text: async () => serialized, json: async () => payload };
     }),
@@ -635,12 +632,12 @@ it('should apply overlays through the api when a folder is chosen', async () => 
   await openFolder(user);
   await user.click(screen.getByTestId('overlay-add'));
   await waitFor(() =>
-    expect(calls.some((call) => call.operation === 'choose_overlay_folder')).toBe(true),
+    expect(calls.some((call) => call.operation === 'overlay_of')).toBe(true),
   );
   await waitFor(() =>
     expect(
       calls.some(
-        (call) => call.operation === 'apply_overlays' && (call.body.overlays as string[]).includes(overlayFolder),
+        (call) => call.operation === 'set_overlays' && (call.body.overlays as string[]).includes(overlayFolder),
       ),
     ).toBe(true),
   );
@@ -654,7 +651,7 @@ it('should remove an overlay when its remove control is clicked', async () => {
   await waitFor(() => expect(activeOverlays).toContain(overlayFolder));
   await user.click(screen.getByTestId('overlay-remove-lern_domain_driven'));
   await waitFor(() =>
-    expect(calls.some((call) => call.operation === 'apply_overlays' && (call.body.overlays as string[]).length === 0)).toBe(
+    expect(calls.some((call) => call.operation === 'set_overlays' && (call.body.overlays as string[]).length === 0)).toBe(
       true,
     ),
   );
@@ -812,6 +809,7 @@ it('should show invokes, observes, and demonstrates on a step', async () => {
 });
 
 it('should show each load step while the graph is loading', async () => {
+  let polled = 0;
   let release: (value: unknown) => void = () => undefined;
   const gate = new Promise((resolve) => {
     release = resolve;
@@ -820,24 +818,19 @@ it('should show each load step while the graph is loading', async () => {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
-      const operation = String(url).replace('/api/', '');
+      const operation = operationOf(url, init);
       const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
       calls.push({ operation, body });
       if (operation === 'load_working_copy') {
         await gate;
       }
       if (operation === 'progress') {
-        const payload = {
-          ok: true,
-          messages: [
-            'load: Reading classes',
-            'load: Recording stories',
-          ],
-        };
+        const steps = ['Reading classes', 'Recording stories'];
+        const payload = [{ tool: 'graph.load_working_copy', message: steps[Math.min(polled++, steps.length - 1)] }];
         const serialized = JSON.stringify(payload);
         return { ok: true, text: async () => serialized, json: async () => payload };
       }
-      const payload = { ok: true, result: answer(operation, body) };
+      const payload = answer(operation, body);
       const serialized = JSON.stringify(payload);
       return { ok: true, text: async () => serialized, json: async () => payload };
     }),
@@ -845,7 +838,7 @@ it('should show each load step while the graph is loading', async () => {
   render(<App />);
   const log = await screen.findByTestId('loading-log');
   expect(log.textContent).toContain('Reading classes');
-  expect(log.textContent).toContain('Recording stories');
+  await waitFor(() => expect(log.textContent).toContain('Recording stories'));
   expect(screen.getByTestId('extraction-progress').textContent).toContain('Recording stories');
   release(undefined);
   await screen.findByRole('button', { name: 'Expand clean_engineering' });
@@ -882,28 +875,36 @@ function chosen(testId: string): string[] {
   return Array.from((screen.getByTestId(testId) as HTMLSelectElement).selectedOptions).map((option) => option.value);
 }
 
-function answer(operation: string, body: Record<string, unknown>): unknown {
-  const filter = (body.filter ?? {}) as { practices?: string[]; node_types?: string[] };
-  if (operation === 'choose_folder') {
-    return folder;
+// The operation a request names: the graph's tool, the explorer's folder dialog, or the progress of the running calls.
+function operationOf(url: string, init?: RequestInit): string {
+  const last = String(url).split('/').pop() ?? '';
+  if (last === 'choose-folder' && init?.body && String(init.body).includes('overlay')) {
+    return 'choose_folder';
   }
-  if (operation === 'choose_overlay_folder') {
-    return overlayFolder;
+  return last.replace(/-/g, '_');
+}
+
+function answer(operation: string, body: Record<string, unknown>): unknown {
+  if (operation === 'choose_folder') {
+    return { folder: String(body.title).includes('overlay') ? overlayFolder : folder };
+  }
+  if (operation === 'overlay_of') {
+    return { overlay: body.folder };
   }
   if (operation === 'inventory') {
     return inventoryBundle();
   }
-  if (operation === 'apply_overlays') {
+  if (operation === 'set_overlays') {
     activeOverlays = Array.isArray(body.overlays) ? (body.overlays as string[]) : [];
     return inventoryBundle();
   }
   if (operation === 'filter_choices') {
-    return constrained(filter.node_types ?? []);
+    return constrained((body.node_types as string[] | undefined) ?? []);
   }
   if (operation === 'return_nodes') {
-    const picked = body.filter as { practices?: string[]; node_types?: string[]; violations?: boolean };
+    const picked = body.filter as { practices?: string[]; types?: string[]; violations?: boolean };
     shownViolations = Boolean(picked.violations);
-    return rowsFor(picked.practices ?? [], picked.node_types ?? [], shownViolations);
+    return rowsFor(picked.practices ?? [], picked.types ?? [], shownViolations);
   }
   if (operation === 'source') {
     const nodeId = String(body.node_id);
@@ -943,10 +944,10 @@ function answer(operation: string, body: Record<string, unknown>): unknown {
     };
   }
   if (operation === 'load_working_copy') {
-    return 'Reloaded the working copy';
+    return { message: 'Reloaded the working copy' };
   }
   if (operation === 'progress') {
-    return { messages: [] };
+    return [];
   }
   if (operation === 'staleness') {
     return reported;

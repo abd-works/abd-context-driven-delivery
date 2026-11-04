@@ -277,6 +277,49 @@ _Scope: mixed markdown content should be tolerated._
             get_sim = self.reconstructed.epics[0].epics[0]
             expect([story.name for story in get_sim.stories]).to(equal(["Select Sim", "Activate Sim"]))
 
+    with context("that labels the evidence under each outline story"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+
+Observed: `SimPicker`; "should list every sim". Inferred: the porting hint in `sim.py`.
+
+- Show Sim Price: the price shows beside each sim. Intended: no spec covers it yet.
+### (S) Customer --> Activate Sim
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should give a story each label written under it, once"):
+            select_sim = self.reconstructed.epics[0].epics[0].stories[0]
+            expect(select_sim.evidence).to(equal(["observed", "inferred", "intended"]))
+
+        with it("should give a story with no label under it no evidence"):
+            activate_sim = self.reconstructed.epics[0].epics[0].stories[1]
+            expect(activate_sim.evidence).to(equal([]))
+
+    # A label that says all there is to say ends its sentence there, with no evidence after it.
+    with context("that labels an outline story with a label ending its own sentence"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+
+Observed. The sim list shows every sim.
+### (S) Customer --> Activate Sim
+
+The activation is observed.
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should give the story that label"):
+            select_sim = self.reconstructed.epics[0].epics[0].stories[0]
+            expect(select_sim.evidence).to(equal(["observed"]))
+
+        with it("should not take the word inside a sentence for a label"):
+            activate_sim = self.reconstructed.epics[0].epics[0].stories[1]
+            expect(activate_sim.evidence).to(equal([]))
+
     with context("that is rendered as an outline"):
         with before.each:
             source = self.markdown.parse("""(E) Onboard A Customer

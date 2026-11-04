@@ -15,7 +15,7 @@ from agent_bdd.agent_bdd_common import (
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_TOOLS_SPEC = _REPO_ROOT / "harness" / "agent_tools" / "agent_tools_agent_spec.py"
+_TOOLS_SPEC = _REPO_ROOT / "retired" / "harness" / "agent_tools" / "agent_tools_agent_spec.py"
 
 
 with description("an agent spec file"):
@@ -41,6 +41,7 @@ with description("an agent spec file"):
         with it("should build a generator runbook from create_practice_guidance_agent_spec"):
             agent_spec = (
                 _REPO_ROOT
+                / "retired"
                 / "cdd_guidance"
                 / "builders"
                 / "create_practice_guidance"

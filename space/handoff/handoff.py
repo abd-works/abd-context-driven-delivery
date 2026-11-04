@@ -1,7 +1,7 @@
 """Handoff - write a compact session summary so the next agent can continue.
 
 Writes handoff-{timestamp}.md into the session folder of the project being worked on:
-``{work folder}/.sessions/{current session}/``, or ``{work folder}/.sessions/default/`` when the
+``{work folder}/.sessions/{current session}/``, or ``{work folder}/.sessions/main/`` when the
 project has no named current session. The work folder is the checkout of ``CDD_PROJECT`` (the project
 the MCP host serves), else the process cwd, as :meth:`Session.current_folder` resolves it.
 No archiving, no latest pointer — one timestamped file per call.
@@ -33,7 +33,7 @@ class Handoff:
     @skill
     @agent_tool
     def write_handoff(self, content: str = "", paths: list[str] | str | None = None) -> str:
-        """Write a handoff into the current session folder, .sessions/{session}/handoff-{timestamp}.md (.sessions/default/ with no named session).
+        """Write a handoff into the current session folder, .sessions/{session}/handoff-{timestamp}.md (.sessions/main/ with no named session).
         Returns the absolute path of the written file.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the handoff body in content.
         content: in-process text. Leave this empty on an MCP call."""
@@ -75,7 +75,7 @@ class Handoff:
         Find the corrections document in this order:
         1. Assume it is in the current session folder (e.g. `.sessions/{name}/corrections.md` or a path the session already uses).
         2. If not found, search the sessions root (`.sessions/corrections.md`, `.sessions/**/corrections.md`).
-        3. If still not found, look under `.sessions/default/`.
+        3. If still not found, look under `.sessions/main/`.
         4. Also try the durable project location `.context/corrections.md` if the session copies are missing.
 
         Read the current session block first (the latest `# Session: YYYY-MM-DD` heading). Prefer rules that appear in that block, ordered by star count.

@@ -184,6 +184,8 @@ files (`<aggregate>/<aggregate>.ts`), PascalCase exported types (`{Domain}`).
 
 ### Persistence: one lowdb JSON store per aggregate
 
+lowdb stores what the application itself owns. An aggregate whose state lives in the CDD domain has no store here: see **CDD-backed aggregates** below.
+
 [lowdb](https://github.com/typicode/lowdb) is the adapter (`JSONFilePreset` /
 `JSONFile` from `lowdb/node` in production; `Memory` from `lowdb` in tests).
 Each aggregate's JSON file sits beside its domain module in `src/<domain-slug>/`.
@@ -218,6 +220,22 @@ coordination style **when generating stories** (see `ask-cross-aggregate-sync`
 in § Shared rules) — then keep that choice for the slice.
 
 ---
+
+### CDD-backed aggregates
+
+An aggregate whose rules and state live in the Python CDD domain follows `patterns-cdd-web-domain-access`. The installer generates its domain classes, its server adapter, its routes, and the browser class that posts to them, imported through `@cdd/*`, so this project does not rewrite the domain or write a route for it. Every MCP call is made on the server.
+
+| LERN file | For a CDD-backed aggregate |
+|---|---|
+| `<aggregate>.ts` | Optional: only types or logic the page needs that Python does not hold. `{Object}`, the shared base, is generated, and nothing uses it directly |
+| `<aggregate>-node.ts` | None: `{Object}Adapter` is generated |
+| `<aggregate>-routes.ts` | None: mount the generated `{object}Routes` once, with `cdd-routes.ts` from `patterns-cdd-web-domain-access` |
+| `<aggregate>-client.tsx` | `{Object}Client extends {Object}ClientGenerated`. A person acts on it; it does the page's work with the other page clients and calls up to the generated client to reach the routes |
+| `<aggregate>.json`, `{Domain}Repository` | None: the tool is the store |
+
+Its server tier drives `{Object}Adapter` against a real cdd server on a throwaway project, where an aggregate this application owns drives `{Domain}Node`.
+
+The persistence rules (`one-json-store-per-aggregate`, `repository-owns-aggregate-lifecycle`, `one-repository-per-aggregate`, `node-repository-parses-on-read`, `reset-every-repository`) apply only to aggregates this application owns. The layout, navigation, naming, and testing rules apply to every aggregate.
 
 ### Files per aggregate (`src/<boundedContext>/<aggregate>/`)
 
@@ -357,6 +375,53 @@ Rules `reduce-story-overlap`, `scaffold-test-scripts`,
 `playwright-tests-browser-interaction`, and `pml-artifact-layout` govern these
 files.
 
+### Testing with BDD
+
+When BDD is the test practice, the same idea holds: state each behavior once and
+run it on every tier. Gherkin's `shareStory` becomes the BDD practice's **Share**,
+`shared_examples` and `it_behaves_like`. All the rules in `practices/bdd/bdd.md`
+still apply, so the tree reads as one sentence and its states use `that` and
+`with`.
+
+A shared behavior takes its blocks from the tier running it, and it reaches the
+tier only through a **driver**, an object with the same operations on every tier.
+Keeping the names `describe` and `it` means the BDD practice reads a shared
+behavior exactly as it reads any other spec.
+
+```ts
+export const ticketBehavior = shareBehavior<TicketDriver>(({ describe, it, before, expect, driver }) => {
+  describe('a ticket', () => {
+    describe('that is done in its stage', () => {
+      before(() => driver().moveNext('session-board'))
+
+      it('should show the ticket in the next stage', async () => {
+        expect(await driver().columnOf('session-board')).toEqual('Specification')
+      })
+    })
+  })
+})
+```
+
+Each tier proves something the others cannot, so each runs that same tree against
+something different.
+
+| Tier | File | Driver calls | Proves |
+|---|---|---|---|
+| Shared | `<snake>.spec.shared.ts` | Nothing: it states the behaviors and the driver's type | One set of signatures across every tier |
+| Domain | `<snake>.behavior.domain.spec.ts` | `{Domain}` in memory | Logic held in `<aggregate>.ts`. Skip this tier when the core holds little or no logic, because the server tier already runs it |
+| Server | `<snake>.behavior.server.spec.ts` | `{Domain}Node` directly, which calls its real store or MCP tool | The results are correct from the object's side. Nothing is stubbed |
+| Playwright | `<snake>.behavior.playwright.ts` | The page, with the API answered from examples | What the person sees shows up, quickly and repeatably |
+| E2e | `<snake>.behavior.e2e.ts` | The page, the real server, and the real store or tool | The whole stack works together |
+
+`<snake>.page-driver.ts` holds the page driver, which the Playwright and e2e tiers
+share. The helpers live in `test-utils/behavior-test/`: `behavior-test.ts` has
+`shareBehavior` and `itBehavesLike`, and `behavior-playwright.ts` gives a shared
+behavior Playwright's blocks.
+
+A tier adds its own `describe` or `test` only for what the shared tree cannot say:
+an HTTP status on the server tier, or layout on the Playwright tier. The e2e tier
+runs on a throwaway project, because it presses controls that really act.
+
 ### UX hand-off
 
 Screens and navigation for this slice were designed upstream by `ux` before
@@ -409,7 +474,9 @@ heading and skip the question.
 2. **`ask-cross-aggregate-sync`** — if more than one aggregate is in play,
    AskQuestion as specified above and persist the answer **before** calling
    the Stories companion.
-3. Call guidance on the Stories companion. For each sub-epic write
+3. When BDD is the test practice, write `<snake>.spec.shared.ts` for each
+   sub-epic and run it on each tier as **Testing with BDD** describes, then
+   continue from step 4. Otherwise call guidance on the Stories companion. For each sub-epic write
    `<snake>.story.shared.ts`, then `<snake>.story.domain.spec.ts` and
    `<snake>.story.server.spec.ts` that run that shared story, plus
    `examples/`. Add `<snake>.story.playwright.ts` only for browser interaction
@@ -480,4 +547,13 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`no-expect-in-given`** — A Given sets up state; it does not assert. Checks belong in a Then.
 - **`outline-rows-loop-over-examples`** — A Scenario Outline runs as `examples.forEach(row => scenario(`Name: ${row.example}`, …))` over its examples export, in the shared story and in the Playwright screen story alike. Never hand-write one `scenario('Name: row', …)` per row: a hand-written row drops the other rows silently.
 - **`reset-every-repository`** — Every exported repository instance, in-memory and node, is reset before each story, so no story sees another's state.
+
+### Testing with BDD
+
+- **`shared-behavior-stays-tier-free`** — A shared behavior reaches its tier only through its driver. It imports no node or client and never touches `page` or `fetch`, because a line tied to one tier stops the behavior running on the others.
+- **`tier-runs-shared-behavior`** — Each tier file runs the shared behavior with `itBehavesLike`, so a signature exists once. A tier that copies a behavior keeps passing after the shared one changes.
+- **`server-tier-calls-the-real-thing`** — The server tier calls `{Domain}Node` objects, which call their real store or MCP tool, with no `vi.mock`, `vi.fn`, or spy. Give it a throwaway store or project. A stub here would agree with the code that wrote it and prove nothing about the real answer.
+- **`e2e-runs-the-whole-stack`** — The e2e tier runs the page, the real server, and the real store or tool, with no stub and no intercepted request. Anything stubbed there is already covered by a faster tier, and the gap between the layers is what this tier exists to catch.
+- **`domain-tier-only-for-domain-logic`** — Add a domain tier only when `<aggregate>.ts` holds logic worth proving alone. A core that only states structure has nothing to run, and the server tier already exercises it.
+- **`same-signature-across-languages`** — When the domain is in another language, as a CDD-backed domain is, a behavior the Mamba spec states keeps the same `should` sentence in the shared behavior. A sentence on one side only shows a behavior untested on the other.
 - **`ask-cross-aggregate-sync`** — **Hard gate** when generating stories. Use AskQuestion; persist the answer under **Cross-aggregate sync** in `.context/grill-answers.md` before writing story files.

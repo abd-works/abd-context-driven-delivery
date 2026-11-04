@@ -31,6 +31,25 @@ _STORY_MAP = """\
     (E) Place New Order
         (S) Customer --> Browse Product Catalog
 """
+_MARKDOWN_STORY_MAP = """\
+# (E) Manage Customer Orders
+
+## (E) Place New Order
+
+### (S) Customer --> Browse Product Catalog
+"""
+_STORY_TEST = '''\
+from story_test import given, scenario, story, then, when
+
+with story("Browse Product Catalog"):
+    with scenario("Show the products in stock"):
+        with given("the catalog holds a kettle in stock"):
+            pass
+        with when("the Customer opens the catalog"):
+            pass
+        with then("the kettle is listed"):
+            pass
+'''
 
 
 with description("Render"):
@@ -99,3 +118,17 @@ with description("Render"):
             source="sketch",
         )
         expect(str(results[0]["content"])).to(contain("Cart"))
+
+    with it("should read the story tests in a folder under their story map"):
+        folder = Path(tempfile.mkdtemp(prefix="render-story-tests-"))
+        (folder / "story-map.md").write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+        story_test = folder / "manage-customer-orders" / "place-new-order" / "browse-product-catalog"
+        story_test.mkdir(parents=True)
+        (story_test / "browse_product_catalog_story.test.py").write_text(_STORY_TEST, encoding="utf-8")
+        results = Render().render(
+            ["stories-scenarios"],
+            format="markdown",
+            paths=str(folder),
+            source="python",
+        )
+        expect(str(results[0]["content"])).to(contain("Scenario: Show the products in stock"))

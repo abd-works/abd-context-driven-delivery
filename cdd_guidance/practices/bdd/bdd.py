@@ -18,7 +18,7 @@ class Bdd(PracticeGuidance):
     catalog_card = {
         "name": "Behavior-Driven Development",
         "label": "behavior-driven-development",
-        "family": "aad-fam-sdd",
+        "family": "aad-fam-bdd",
         "perspective": "bdd",
         "order": 40,
         "blurb": "Specify domain logic through behavioural, automated tests.",
@@ -45,12 +45,3 @@ class Bdd(PracticeGuidance):
         )
         if path is not None or session is not None:
             self._attach_workspace(path=path, session=session)
-
-    @property
-    def model(self):
-        from cdd_guidance.practices.bdd.model.transformation.bdd_transformer import BddTransformer
-
-        class BddPracticeModel:
-            transformer = BddTransformer
-
-        return BddPracticeModel()

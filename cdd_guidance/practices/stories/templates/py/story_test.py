@@ -104,6 +104,8 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
                 expanded.append(self._transform_scenario(stmt, []))
                 continue
             expanded.append(stmt)
+        # Mamba puts its own import at the top, and Python refuses anything before `from __future__`.
+        expanded.sort(key=lambda stmt: not (isinstance(stmt, ast.ImportFrom) and stmt.module == "__future__"))
         node.body = expanded
         return node
 

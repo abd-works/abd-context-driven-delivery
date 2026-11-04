@@ -1,7 +1,7 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { initialOpenFolds, inlineCallLayout, type FoldMember, type InlineFold } from './call-expansion';
-import type { SourceText } from './SourceClient';
+import type { SourceData } from '@cdd/harness/graph/graph';
 import { buildViolationCorrectPrompt, type ViolationFocus } from './violation-prompt';
 
 const LINE_HEIGHT = 20;
@@ -13,7 +13,7 @@ export type SourceRule = {
 };
 
 type SourceViewProps = {
-  source: SourceText | null;
+  source: SourceData | null;
   violation: ViolationFocus | null;
   rules: SourceRule[];
   activeRule: string;
@@ -39,7 +39,7 @@ function SourceEditor({
   activeRule,
   onSelectRule,
 }: {
-  source: SourceText;
+  source: SourceData;
   violation: ViolationFocus | null;
   rules: SourceRule[];
   activeRule: string;

@@ -77,7 +77,7 @@ class GraphStoryModel:
         return len(epic.stories) + sum(self._story_count(child) for child in epic.epics)
 
     def _epic(self, root: str, parent_id: str, epic: Epic, top: bool, nodes: list, edges: list) -> None:
-        story_file = self._file_under(epic)
+        story_file = self._file_under(epic) or self._file(epic)
         folder = self._folder(story_file, up=1 if top and epic.epics else 0)
         semantic = "Epic" if top else "SubEpic"
         node_id = f"stories:{semantic}:{folder}:{epic.name}"
@@ -120,7 +120,9 @@ class GraphStoryModel:
             self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
 
     def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list, scoped: list[str] = ()) -> None:
-        """Record the scenario with its own examples and those its story's Background scopes."""
+        """Record the scenario with its own examples and those its story's Background scopes. A scenario read from a
+        story test sits in that file, not in the story map its Story came from."""
+        file = self._file(scenario) or file
         node_id = f"stories:Scenario:{file}:{scenario.name}"
         line, end = self._source_span(scenario, root, file)
         self._ensure_source(scenario, file, line, end)
@@ -236,9 +238,10 @@ class GraphStoryModel:
         return ""
 
     def _file(self, node) -> str:
-        source = getattr(node, "source", None)
-        file = getattr(source, "file", "") if source is not None else ""
-        return str(file or "").replace("\\", "/")
+        """The file the node was read from; empty while it only holds the placeholder a new node starts with."""
+        if not getattr(node, "has_source_file", False):
+            return ""
+        return str(node.source.file).replace("\\", "/")
 
     def _folder(self, file: str, up: int) -> str:
         parts = [part for part in file.split("/") if part]
@@ -297,11 +300,14 @@ class GraphStoryModel:
     def _next_line(self, root: str, file: str, text: str) -> int:
         lines = self._file_lines(root, file)
         start = self._cursor.get(file, 0)
-        if text:
-            for index in range(start, len(lines)):
-                if text in lines[index]:
-                    self._cursor[file] = index + 1
-                    return index + 1
+        if not text:
+            return 1
+        # Search on from the last node found first, so a repeated name lands on its own entry; a diagram
+        # need not list its cells in the map's order, so search from the top when that finds nothing.
+        for index in [*range(start, len(lines)), *range(0, start)]:
+            if text in lines[index]:
+                self._cursor[file] = index + 1
+                return index + 1
         return 1
 
 

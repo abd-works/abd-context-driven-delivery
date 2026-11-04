@@ -13,7 +13,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 sys.modules.pop("actions", None)
 
 import yaml
-from expects import be_true, contain, equal, expect
+from expects import be_true, contain, equal, expect, have_key
 from mamba import before, context, description, it
 
 from harness.agent_tools.agent_tools import (
@@ -40,7 +40,7 @@ from harness.agent_tools._examples.super_delegation.super_delegation_demo import
     SuperBase,
 )
 from agent_bdd.yaml_fence import load_fenced
-from harness.agent_tools.agent_tools import AgentToolSet, agent_tool as _tool, tools, instructions
+from harness.agent_tools.agent_tools import AgentToolSet, agent_tool as _tool, tool_subject, tools, instructions
 
 Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
 
@@ -1074,3 +1074,44 @@ with description("a toolset that exposes annotated properties and child collecti
             expect("code.ping" in host.tools).to(equal(True))
             expect("extra.ping" in host.tools).to(equal(True))
 
+
+
+@agent_toolset
+class Parcel:
+    """A parcel in a depot."""
+
+    def __init__(self, label: str, depot: str) -> None:
+        self.label = label
+        self.depot = depot
+
+    @classmethod
+    @tool_subject
+    def load(cls, parcel: str) -> "Parcel":
+        return cls(parcel, "north")
+
+    @classmethod
+    @_tool
+    def receive(cls, label: str) -> str:
+        return f"received {label}"
+
+    @_tool
+    def forward(self, destination: str = "south") -> str:
+        return f"{self.label} from {self.depot} to {destination}"
+
+
+with description("a domain class whose constructor takes collaborators"):
+    with context("that marks a @tool_subject loader"):
+        with it("should build as a toolset with no arguments"):
+            expect(AgentToolSet.instantiate(Parcel).tools).to(have_key("forward"))
+
+        with it("should take the loader's argument before the operation's own"):
+            forward = AgentToolSet.instantiate(Parcel).tools["forward"]
+            expect(list(forward.parameters)).to(equal(["parcel", "destination"]))
+
+        with it("should run the operation on the object the call names"):
+            forward = AgentToolSet.instantiate(Parcel).tools["forward"]
+            expect(forward.callable(parcel="box-1", destination="west")).to(equal("box-1 from north to west"))
+
+        with it("should leave a classmethod tool to take only its own arguments"):
+            receive = AgentToolSet.instantiate(Parcel).tools["receive"]
+            expect(list(receive.parameters)).to(equal(["label"]))

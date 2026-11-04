@@ -17,7 +17,7 @@ from harness.graph.graph import Graph
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, WrittenBlock
 
-from .source_location import SourceLocation
+from .source_location import SourceLocation, path_from
 
 # Pairs the schema names with belongsTo. The facade does not grow a method for them.
 _BELONGS = {
@@ -164,12 +164,7 @@ class StoryNode(BoundNode, ABC):
     def load_child_band(self, count: int, label: str) -> None:
         self.child_count = count
         self.child_label = label
-        if count == 0 or 4 <= count <= 9:
-            self.child_band = ""
-        elif count in (3, 10):
-            self.child_band = "warning"
-        else:
-            self.child_band = "error"
+        self.child_band = "" if count == 0 or 4 <= count <= 9 else "error"
 
     def take_code_from(self, source: "StoryNode") -> None:
         """Keep the code the source was read with, so a copy in another channel can still write it back."""
@@ -682,9 +677,19 @@ class Epic(StoryNode):
         for story in self.stories:
             story.source = loc
 
+    def place_in(self, file: str) -> None:
+        """Name *file* on this epic and everything under it that names no file yet; the line stays unknown."""
+        if not self.has_source_file:
+            self.source = SourceLocation(file)
+        for child in self.epics:
+            child.place_in(file)
+        for story in self.stories:
+            if not story.has_source_file:
+                story.source = SourceLocation(file)
+
     def _stamp_epic(self, name: str, loc) -> bool:
         for child in self.epics:
-            if child.name == name and not getattr(child, "source", None):
+            if child.name == name and not child.has_source_file:
                 child.source = loc
                 return True
             if child._stamp_epic(name, loc):
@@ -696,7 +701,7 @@ class Epic(StoryNode):
             if child._stamp_story(name, loc):
                 return True
         for story in self.stories:
-            if story.name == name and not getattr(story, "source", None):
+            if story.name == name and not story.has_source_file:
                 story.source = loc
                 return True
         return False
@@ -925,6 +930,86 @@ class StoryModel(StoryNode):
             return parsed
         return story_map
 
+    @classmethod
+    def load_files(cls, files, project, *, on_file=None) -> "StoryModel":
+        """Read the story maps and story tests among *files*; each node names its file as a path from *project*.
+
+        A story test holds one Story's scenarios in its own language, and the story map says which epic that Story
+        sits under. So a story test's scenarios go on the map's Story of the same name, and a story test with no map
+        listed reads the map in its own folder."""
+        from pathlib import Path
+
+        project = Path(project).resolve()
+        paths = [Path(item).resolve() for item in files]
+        tests = [path for path in paths if story_test_type(path) is not None]
+        maps = [path for path in paths if is_story_map_file(path)]
+        maps += [found for found in cls._maps_beside(tests) if found not in maps]
+        merged = cls()
+        for path in maps:
+            for epic in list(cls._story_map_file(path, project, on_file).epics):
+                merged.append_epic(epic)
+        for path in tests:
+            merged._take_scenarios_from(path, project, on_file)
+        return merged
+
+    @classmethod
+    def _maps_beside(cls, tests) -> list:
+        """The story map each story test belongs to: in its own folder, or the nearest folder above it, since story
+        tests sit in epic folders below their map."""
+        return list(dict.fromkeys(found for path in tests for found in [cls._nearest_map(path.parent)] if found))
+
+    @staticmethod
+    def _nearest_map(folder):
+        """The story map in *folder* or the nearest folder above it: its markdown when it has one, since a drawio of
+        the same map would add every Story twice."""
+        for candidate in (folder, *folder.parents):
+            maps = sorted(path.resolve() for path in candidate.iterdir() if is_story_map_file(path))
+            if maps:
+                markdown = [path for path in maps if path.suffix.lower() == ".md"]
+                return (markdown or maps)[0]
+        return None
+
+    def _take_scenarios_from(self, path, project, on_file=None) -> None:
+        """Give the scenarios of each Story in the story test at *path* to this model's Story of the same name, each
+        keeping the story test as its source. A Story the map does not have adds nothing."""
+        file = path_from(project, path)
+        if on_file is not None:
+            on_file(file)
+        stories = {story.name: story for story in self.every_story()}
+        for read in story_test_type(path).load_all(path.read_text(encoding="utf-8")):
+            story = stories.get(read.name)
+            if story is None:
+                continue
+            for scenario in read.scenarios:
+                scenario.source = SourceLocation(file)
+            story.backgrounds = list(read.backgrounds)
+            story.scenarios = list(read.scenarios)
+
+    def every_story(self) -> List["Story"]:
+        """Every Story under every epic and sub-epic, in map order."""
+        found: List[Story] = []
+        pending = list(self.epics)
+        while pending:
+            epic = pending.pop(0)
+            found.extend(epic.stories)
+            pending[:0] = list(epic.epics)
+        return found
+
+    @classmethod
+    def _story_map_file(cls, path, project, on_file=None) -> "StoryModel":
+        from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
+        from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+
+        if path.suffix.lower() == ".md":
+            return MarkdownStoryModel.from_workspace(path, on_file=on_file, project=project) or cls()
+        file = path_from(project, path)
+        if on_file is not None:
+            on_file(file)
+        loaded = DrawIOStoryModel().load(path.read_text(encoding="utf-8"))
+        for epic in loaded.epics:
+            epic.place_in(file)
+        return loaded
+
     @staticmethod
     def _story_map_at(story_map_root, json_story_map, markdown_story_map, on_file=None) -> "StoryModel":
         story_map_dir = story_map_root
@@ -969,6 +1054,38 @@ class StoryModel(StoryNode):
     def _renumber(self, nodes: List[StoryNode]) -> None:
         for i, node in enumerate(nodes, start=1):
             node.sequential_order = i
+
+
+STORY_MAP_SUFFIXES = (".md", ".drawio")
+
+
+def story_test_type(path):
+    """The Story type that reads a story test in its own language, by the file's ending; none for any other file."""
+    from pathlib import Path
+
+    name = Path(path).name
+    if name.endswith("_story.test.py"):
+        from cdd_guidance.practices.stories.model.python.nodes import PythonStory
+
+        return PythonStory
+    if name.endswith("_story.test.ts"):
+        from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptStory
+
+        return TypeScriptStory
+    if name.endswith("_story.test.js"):
+        from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptStory
+
+        return JavaScriptStory
+    return None
+
+
+def is_story_map_file(path) -> bool:
+    """A story map is a markdown or drawio file named story-map (or story_map), alone or after a prefix."""
+    from pathlib import Path
+
+    path = Path(path)
+    stem = path.stem.lower().replace("_", "-")
+    return path.suffix.lower() in STORY_MAP_SUFFIXES and (stem == "story-map" or stem.endswith("-story-map"))
 
 
 class StoryModelFactory:

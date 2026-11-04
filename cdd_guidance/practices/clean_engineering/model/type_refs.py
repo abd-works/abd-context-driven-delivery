@@ -58,7 +58,7 @@ def domain_type_names(type_hint: str) -> List[str]:
 
 
 def pascal_type_names(type_hint: str) -> List[str]:
-    if not type_hint or is_primitive_type(type_hint):
+    if not type_hint:
         return []
     names: List[str] = []
     for token in re.split(r"[\[\]|&<>,\s]+", type_hint):

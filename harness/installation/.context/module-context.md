@@ -12,6 +12,7 @@
 ### Destination
 
 - Put `@skill`, `@command`, `@rules`, `@mcp`, or `@Hook` on a member when that channel should receive it. Unmarked members stay in-process.
+- Put `@language_adapter(language="typescript")` on a toolset class when an application outside Python needs its `@mcp` operations as typed code, and name its `identity` when its tools load one object by name. It marks the class, not a member, because the installer writes the whole object as one file of code.
 
 ### Installation
 
@@ -21,13 +22,17 @@
 
 - Writes skill, command, and rules markdown. Marks live on the member (`@skill`, `@command`, `@rules`).
 
+### LanguageAdapterInstallation
+
+- Writes typed code for a toolset marked `@language_adapter(language="typescript")` to `{install path}/language-adapters/typescript/`, in the folders its source sits in: its `to_json()` data, a class that reads it, and a class that calls its MCP tools. It records toolsets during the walk and writes them together, because their files import each other. The mark sits on the class, not a member, because the whole object is one file.
+
 Build order: `harness/installation` → `harness/mcp` → `harness/hooks`
 
 ---
 
 # installation
 - **Purpose:** Publish a toolset’s marked members into Cursor (or VS Code / Kilo) so the agent can invoke them as skills, MCP, hooks, commands, or rules.
-- **Seam (terms):** Installer, Destination, Installation, FileInstallation, Skill, Command, Rules
+- **Seam (terms):** Installer, Destination, Installation, FileInstallation, LanguageAdapterInstallation, Skill, Command, Rules
 - **Dependencies (one-way):** `harness/agent_tools`, `harness/mcp`, `harness/hooks`
 
 ## Constraint

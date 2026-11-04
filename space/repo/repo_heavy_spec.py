@@ -1,5 +1,6 @@
 """BDD spec for space/repo — clone, branch, worktree, and push."""
 
+import json
 import os
 import shutil
 import sys
@@ -20,6 +21,7 @@ from expects import be_a, be_below, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.mcp.mcp_server import McpHost
 from space.repo import TicketNotFoundError
 from space.repo.repo import (
     Branch,
@@ -675,6 +677,22 @@ with description("a git command that outlives its timeout"):
             expect(lambda: Repo._run_git_process(launcher, 1)).to(raise_error(subprocess.TimeoutExpired))
             expect(time.monotonic() - started).to(be_below(15))
 
+    with context("that rewrites the working tree"):
+        with it("should get the long limit so a slow checkout is not stopped partway"):
+            from unittest.mock import patch
+
+            with patch.object(Repo, "_run_git_process", return_value=(0, "", "")) as run:
+                Repo.git(".", "checkout", "main")
+            expect(run.call_args.args[1]).to(equal(180))
+
+    with context("that only reads the repository"):
+        with it("should keep the short limit so a hung git fails fast"):
+            from unittest.mock import patch
+
+            with patch.object(Repo, "_run_git_process", return_value=(0, "", "")) as run:
+                Repo.git(".", "status")
+            expect(run.call_args.args[1]).to(equal(10))
+
 
 def _git(root: Path, *args: str) -> str:
     return subprocess.run(
@@ -774,6 +792,19 @@ with description("the repo push toolset"):
             commit = toolset.push_commit("push: checkpoint")
             expect(commit.sha).not_to(equal(""))
             expect(commit.subject).to(equal("push: checkpoint"))
+
+        with it("should return the new commit as JSON through the MCP host"):
+            (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")
+            host = McpHost.from_refs(
+                ("space.repo.repo:Repo",),
+                repo=str(self.repo_root),
+                project=str(self.repo_root),
+            )
+            commit = host.dispatch(
+                "repo.push_commit", {"message": "push: checkpoint", "sync_remote": False}
+            )
+            payload = json.loads(host._content_blocks(commit)[0].text)
+            expect(payload["sha"]).to(equal(_git(self.repo_root, "rev-parse", "HEAD")))
 
         with it("should publish push_commit on MCP and keep /push as instructions only"):
             from harness.agent_tools.agent_tools import InstallDestination

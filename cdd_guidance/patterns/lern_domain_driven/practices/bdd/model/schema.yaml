@@ -1,0 +1,22 @@
+# LERN overlay on bdd. Extend only.
+behaviorShared:
+  - fidelity: development
+  - is: bdd.spec
+  - states: bdd.description
+  - links?: ddd.aggregate
+behaviorDomain:
+  - fidelity: development
+  - is: bdd.spec
+  - executes: behaviorShared
+behaviorServer:
+  - fidelity: development
+  - is: bdd.spec
+  - executes: behaviorShared
+behaviorPlaywright:
+  - fidelity: development
+  - is: bdd.spec
+  - executes: behaviorShared
+behaviorE2e:
+  - fidelity: development
+  - is: bdd.spec
+  - executes: behaviorShared

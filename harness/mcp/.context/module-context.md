@@ -25,3 +25,4 @@ One MCP package: the `@mcp` annotation, `McpInstallation` (writes `mcp.json` and
 - **Transport:** stdio
 - **Entry:** `python -m harness.mcp` — `--toolsets` or `MCP_TOOLSET_REFS`
 - **Built-in:** `cdd.ping`
+- **Crash:** the process exits instead of restarting, because a client initializes a connection once and a new session on the same stdio refuses every call. It exits when the next message reaches it, since the stdin reader cannot be interrupted while it waits.

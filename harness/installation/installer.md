@@ -12,6 +12,8 @@ Use slash **`/install`** (command — not a skill, not MCP). Deployed **commands
 
 Every full install also re-deploys the Installer toolset last so the slash commands stay current.
 
+A toolset marked ``@language_adapter(language="typescript")`` also gets typed code under ``{install_path}/language-adapters/typescript/``, in the folders its source sits in: its data, a class that reads it, and a class that calls its MCP tools. `clean` removes these with the rest of the install, and `patterns-cdd-web-domain-access` says how applications use them.
+
 When install runs **inside** the live MCP host process, the installer skips a second `McpHost.standup()` and skips `ensure_mcp_host()` so it does not reload every toolset or rewrite Cursor `mcp.json` during an unrelated tool request.
 
 **After install finishes, read the diagnostic report back to the user.** `install` always runs `diagnose_after_install` (install-channel counts and runtime status only) and appends to `{install_path}/diagnostics.json` (for this repo, `.cursor/diagnostics.json`). It does not run guidance instruction or action probes — use `/guidance-diagnostics` for those. The CLI only prints reports that start with `!` (red); green and yellow stay in the log. Open the latest `installs[]` entry: give the overall `color`, paste the full `diagnose_install` `report` (channel deltas, any new/deleted items, **mcp host**, **hook server**, **hooks registered (events)**, **hook handlers (operations)**), and call out red or yellow. If you ran install in the shell, read that file or run `Installer(...).diagnose_install()` against the same install path — do not leave the user without the summary.

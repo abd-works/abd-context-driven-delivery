@@ -22,17 +22,6 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions", "cdd_gui
         sys.path.remove(_p)
     sys.path.insert(0, _p)
 sys.path.insert(0, _root)
-for _name in list(sys.modules):
-    if (
-        _name in {"harness", "scan", "lifecycle", "workspace", "practices", "patterns", "tools", "cdd_guidance"}
-        or _name.startswith("harness.")
-        or _name.startswith("scan.")
-        or _name.startswith("practices.")
-        or _name.startswith("patterns.")
-        or _name.startswith("cdd_guidance.")
-        or _name.startswith("tools.")
-    ):
-        del sys.modules[_name]
 
 from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
@@ -83,6 +72,12 @@ _ALL_RULE_SLUGS = (
     "no-expect-in-given",
     "outline-rows-loop-over-examples",
     "reset-every-repository",
+    "shared-behavior-stays-tier-free",
+    "tier-runs-shared-behavior",
+    "server-tier-calls-the-real-thing",
+    "e2e-runs-the-whole-stack",
+    "domain-tier-only-for-domain-logic",
+    "same-signature-across-languages",
 )
 
 with description("a LernDomainDriven generator"):

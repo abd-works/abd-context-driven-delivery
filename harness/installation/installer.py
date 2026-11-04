@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import time
@@ -22,6 +23,7 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
 )
 from harness.installation.files import FileInstallation, command
+from harness.installation.language_adapter import LanguageAdapterInstallation
 from harness.hooks.hooks import Hook
 from harness.markdown import markdown
 @noCatalog
@@ -32,6 +34,7 @@ class Installer:
     domain_slug = "installer"
     TOOLSET_REF = "harness.installation.installer:Installer"
     _STATE_NAME = ".install-state.json"
+    _BOARD_PLUGIN = "cdd-board@abd-works"
     _DEFAULT_PATHS = {
         "Cursor": ".cursor",
         "VS Code": ".github",
@@ -74,7 +77,7 @@ class Installer:
             "FidelityGuidance",
         }
     )
-    _DEPLOYED_CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook", "agent")
+    _DEPLOYED_CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook", "agent", "language-adapter")
     _GREEN_SURFACE_CHANGE = 0.10
     _YELLOW_SURFACE_CHANGE = 0.50
     _DIAGNOSTICS_LOG = "diagnostics.json"
@@ -119,6 +122,7 @@ class Installer:
         self.ensure_import_path()
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook: Any = None
+        self._language_adapters = LanguageAdapterInstallation(self.ide, self.path, repo=self.repo)
         self._installed_paths: list[str] = []
         self._deployed_toolsets: list[str] = []
         self.diagnosis: list[str] = []
@@ -324,6 +328,7 @@ class Installer:
         for tool in toolset.tools.values():
             for installation in self.installations_for(tool):
                 installation.install(tool)
+        self._language_adapters.record(toolset)
 
     @command(name="clean")
     @agent_tool
@@ -455,6 +460,7 @@ class Installer:
         self._reset_channels()
         self._install_all(toolsets)
         self._install_installer_toolset()
+        self._language_adapters.write_all()
         self._install_agents()
         self._install_standing_rules()
         self._remove_legacy_underscore_skills()
@@ -513,6 +519,8 @@ class Installer:
 
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
+        self._language_adapters = LanguageAdapterInstallation(self.ide, self.path, repo=self.repo)
+        self._bind_install_tracker(self._language_adapters)
 
     def _install_installer_toolset(self) -> None:
         toolset = AgentToolSet.instantiate(self.TOOLSET_REF)
@@ -547,7 +555,7 @@ class Installer:
     def ensure_runtimes(self) -> dict[str, Any]:
         """Start the hook daemon and MCP host; fail if either stays down."""
         if self.ide == "Claude":
-            return {"hook": "not installed", "mcp": self._ensure_mcp_runtime()}
+            return {"hook": "not installed", "mcp": self._ensure_mcp_runtime(), "board": self._install_board_plugin()}
         hook_pid = self._ensure_hook_runtime()
         mcp = self._ensure_mcp_runtime()
         print(
@@ -581,6 +589,43 @@ class Installer:
                 return "running"
             time.sleep(0.25)
         raise RuntimeError(f"install failed: MCP host is not running ({status})")
+
+    def _install_board_plugin(self) -> str:
+        """Install the ``cdd-board`` plugin from this checkout at user level, for every project.
+        The board is a convenience on top of the install, so a miss is printed, never raised."""
+        claude = self._claude_cli()
+        if claude is None:
+            print(f"{self._BOARD_PLUGIN} not installed: no claude command found", file=sys.stderr)
+            return "missing"
+        self._run_claude(claude, "plugin", "marketplace", "add", str(self.repo))
+        self._run_claude(claude, "plugin", "install", self._BOARD_PLUGIN, "--scope", "user")
+        self._run_claude(claude, "plugin", "update", self._BOARD_PLUGIN, "--scope", "user")
+        if self._BOARD_PLUGIN in self._run_claude(claude, "plugin", "list"):
+            return "installed"
+        print(f"{self._BOARD_PLUGIN} not installed: claude plugin install did not take", file=sys.stderr)
+        return "missing"
+
+    def _claude_cli(self) -> str | None:
+        """The desktop app's newest Claude Code, else the one on PATH, which can be too old for the plugin."""
+        found = [path for folder in self._desktop_claude_code_folders() for path in folder.glob("*/*/claude.exe")]
+        versions = [path for path in found if re.fullmatch(r"[\d.]+", path.parent.parent.name)]
+        if versions:
+            return str(max(versions, key=lambda path: [int(part) for part in path.parent.parent.name.split(".")]))
+        return shutil.which("claude")
+
+    def _desktop_claude_code_folders(self) -> list[Path]:
+        """Where the desktop app keeps its Claude Code: under `%APPDATA%\\Claude`, or under each profile in
+        `%LOCALAPPDATA%\\Claude-Data`. Neither is on PATH, so without these the plugin never installs."""
+        roaming = Path(os.environ.get("APPDATA") or Path.home()) / "Claude" / "claude-code"
+        local = Path(os.environ.get("LOCALAPPDATA") or Path.home())
+        return [roaming, *local.glob("Claude-Data/*/claude-code")]
+
+    def _run_claude(self, claude: str, *args: str) -> str:
+        try:
+            run = subprocess.run([claude, *args], capture_output=True, text=True, encoding="utf-8", timeout=120)
+        except (OSError, subprocess.SubprocessError) as error:
+            return str(error)
+        return run.stdout + run.stderr
 
     def _print_channel_notice(self, diagnosis: dict[str, Any]) -> None:
         notice = diagnosis.get("notice") or ""
@@ -785,7 +830,12 @@ class Installer:
             "mcp": self._mcp_names(),
             "hook": self._hook_names(),
             "agent": self._markdown_names("agents", "*.md"),
+            "language-adapter": self._language_adapter_names(),
         }
+
+    def _language_adapter_names(self) -> list[str]:
+        folder = self.path / "language-adapters"
+        return sorted(path.relative_to(folder).as_posix() for path in folder.rglob("*.ts")) if folder.is_dir() else []
 
     def _markdown_names(self, folder_name: str, file_name: str) -> list[str]:
         folder = self.path / folder_name

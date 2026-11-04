@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import functools
 import importlib.util
 import inspect
 import re
@@ -325,10 +326,33 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             if getattr(member, "_is_agent_tool", False):
                 discovered[name] = AgentOperation(
                     name=name,
-                    callable=self._bound_callable(name, member),
+                    callable=self._operation_callable(name, member),
                     toolset=self,
                 )
         return discovered
+
+    def _operation_callable(self, name: str, member: Any) -> Any:
+        load = self.tool_subject_of(type(self))
+        if load is None or isinstance(inspect.getattr_static(type(self), name), classmethod):
+            return self._bound_callable(name, member)
+        return self._on_subject(load, member)
+
+    def _on_subject(self, load: Callable[..., Any], operation: Callable[..., Any]) -> Callable[..., Any]:
+        """A tool over ``operation`` that first loads the object the call names: it takes the loader's
+        arguments and the operation's own, so every reader of its signature sees what a caller passes."""
+        identity = list(inspect.signature(load).parameters.values())
+        own = [param for param in inspect.signature(operation).parameters.values() if param.name != "self"]
+        identity_names = [param.name for param in identity]
+
+        @functools.wraps(operation)
+        def on_subject(**arguments: Any) -> Any:
+            found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            return operation(found, **arguments)
+
+        on_subject.__signature__ = inspect.Signature(identity + own, return_annotation=inspect.signature(operation).return_annotation)
+        on_subject.__annotations__ = {**load.__func__.__annotations__, **operation.__annotations__}
+        setattr(on_subject, ON_SUBJECT_FLAG, True)
+        return on_subject
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
         discovered: dict[str, AgentInstructions] = {}
@@ -733,14 +757,31 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             for key, value in item.items():
                 if key not in {"toolset", "context"}:
                     context.setdefault(key, value)
-            return loaded(**context)
+            return cls._built(loaded, context)
         if isinstance(item, dict):
             return cls(**item)
         if isinstance(item, str):
-            return cls._load(item)()
+            return cls._built(cls._load(item), {})
         if isinstance(item, type):
-            return item()
+            return cls._built(item, {})
         return item
+
+    @classmethod
+    def _built(cls, toolset: type, context: dict[str, Any]) -> Any:
+        """A toolset with a ``@tool_subject`` loader is a domain class whose constructor needs a real object's
+        collaborators. Listing its tools needs none of them, and each tool loads the object it acts on."""
+        if cls.tool_subject_of(toolset) is not None:
+            return toolset.__new__(toolset)
+        return toolset(**context)
+
+    @classmethod
+    def tool_subject_of(cls, toolset: type) -> Callable[..., Any] | None:
+        """The classmethod marked ``@tool_subject`` on ``toolset``, bound to it, when it has one."""
+        for name in dir(toolset):
+            member = inspect.getattr_static(toolset, name, None)
+            if isinstance(member, classmethod) and getattr(member.__func__, TOOL_SUBJECT_FLAG, False):
+                return getattr(toolset, name)
+        return None
 
     @classmethod
     def instantiate_all(cls, items: list) -> list:
@@ -950,6 +991,8 @@ class AgentTool(AgentToolDestination):
     def should_log_session_invocation(self, arguments: dict[str, Any] | None) -> bool:
         if arguments and arguments.get("ping") is True:
             return False
+        if getattr(self.callable, NO_SESSION_LOG_FLAG, False):
+            return False
         if getattr(self.callable, "_is_agent_tool", False):
             return True
         return self.install_to_mcp
@@ -967,8 +1010,6 @@ class AgentTool(AgentToolDestination):
 
         Session.refresh_current_from_repo(repo_path)
         session = Session.current()
-        if session is None or session.session_path is None:
-            return
         apply_chat_context(session)
         payload = arguments or {}
         logged_args = {
@@ -1130,8 +1171,6 @@ class GuidanceAgentOperation(AgentOperation):
 
         Session.refresh_current_from_repo(repo_path)
         session = Session.current()
-        if session is None or session.session_path is None:
-            return
         apply_chat_context(session)
         payload = dict(arguments or {})
         if "guidance" in payload:
@@ -2089,7 +2128,7 @@ class ToolsetManifest:
     def signature(self) -> dict[str, dict[str, Any]]:
         if self._toolset_cls is None:
             return {}
-        instance = self._toolset_cls()
+        instance = AgentToolSet.instantiate(self._toolset_cls)
         signature: dict[str, dict[str, Any]] = {}
         for name, tool in instance.tools.items():
             kind = "action" if tool.kind == "instructions" else tool.kind
@@ -2194,6 +2233,26 @@ class ToolSetCollectionMark:
         merged.__qualname__ = target.__qualname__
         setattr(merged, "_is_toolset_collection", True)
         return merged
+
+
+NO_SESSION_LOG_FLAG = "_no_session_log"
+TOOL_SUBJECT_FLAG = "_is_tool_subject"
+ON_SUBJECT_FLAG = "_runs_on_subject"
+
+
+def noSessionLog(target: Callable[..., Any]) -> Callable[..., Any]:
+    """Keep an operation's calls out of the session log. Use it on reads an agent or a mod repeats often, such as the
+    session board, so the log keeps the work that was done rather than every look at it."""
+    setattr(target, NO_SESSION_LOG_FLAG, True)
+    return target
+
+
+def tool_subject(target: Callable[..., Any]) -> Callable[..., Any]:
+    """Mark the classmethod that finds the object a tool call acts on, so ``@agent_tool`` can sit on a domain class
+    whose constructor takes collaborators. Each instance operation's tool takes this loader's arguments before its
+    own: ``load(ticket)`` and ``move_next(self)`` make the tool ``ticket.move_next(ticket)``."""
+    setattr(target, TOOL_SUBJECT_FLAG, True)
+    return target
 
 
 agent_tool = AgentToolMark

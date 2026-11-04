@@ -50,6 +50,19 @@ class Stories(PracticeGuidance):
         if stage is not None:
             self._activate(stage=stage)
 
+    def read_paths(self, paths: list[str] | str, source: str | None = None):
+        """Story tests in code carry their epic and sub-epic only in their folders, under the story map that names them,
+        so they are read as files beside that map, not as one run of text."""
+        if self._canonical_format(source or self.format or "") not in self._code_formats:
+            return super().read_paths(paths, source)
+        from pathlib import Path
+
+        from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+        entries = [paths] if isinstance(paths, str) else list(paths)
+        files = [found for entry in map(Path, entries) for found in (sorted(entry.rglob("*")) if entry.is_dir() else [entry])]
+        return StoryModel.load_files([path for path in files if path.is_file()], Path.cwd())
+
     def _live_adapter(self, format_name: str):
         if self.story_test_folder is None or self._canonical_format(format_name) != "typescript":
             return super()._live_adapter(format_name)

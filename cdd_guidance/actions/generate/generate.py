@@ -29,8 +29,9 @@ class Generate(GuidanceAction):
         return ""
 
     def _rules(self, guidance: GuidanceArg) -> str:
-        """Shared rules and the active fidelity's rules, inlined into generate."""
-        return Validate().validate(guidance)
+        """Shared rules and the active fidelity's rules, inlined into generate. Read without running Validate, because
+        nothing has been written yet to check."""
+        return Validate().rules_of(guidance)
 
     def _validate(self) -> Validate:
         """Validate as a tool, so its rules are injected again when it is called."""
@@ -58,8 +59,6 @@ class Generate(GuidanceAction):
         from space.session import Session
 
         session = Session.current()
-        if session is None:
-            return ""
         outputs = [session.fidelity_outputs(item) for item in self.listed() if not isinstance(item, str)]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:

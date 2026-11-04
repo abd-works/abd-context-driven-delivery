@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import atexit
+import importlib
 import inspect
 import json
 import logging
@@ -22,11 +23,13 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 
-from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
+from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
 from harness.installation.destination import Destination, Installation
 
 logger = logging.getLogger(__name__)
 BUILTIN_PING_TOOL = "cdd.ping"
+# Reloads the host's Python in place, so a chat picks up changed code without a new connection.
+BUILTIN_RESTART_TOOL = "cdd.restart"
 # Workspace diagnostics call ``serving_mcp_host().dispatch`` for many tools; that path
 # must not run on an anyio worker thread (deadlock / multi-minute stalls under stdio).
 _SYNC_DISPATCH_TOOLS = frozenset(
@@ -43,6 +46,8 @@ _CALL_TIMEOUT_SECONDS = 10
 # First graph builds walk the repo; cache hits must still finish under the default.
 _LONG_CALL_TIMEOUT_SECONDS = {
     "graph.load_working_copy": 600,
+    # Applying an overlay rebuilds the graph from the open folder.
+    "graph.set_overlays": 600,
     # Branch and worktree commands push and pull over the network.
     "repo.switch_branch": 600,
     "repo.close_branch": 600,
@@ -487,6 +492,7 @@ class McpInstallation(Installation):
         text = json.dumps(manifest, indent=2) + "\n"
         if self.ide == "Claude" and self.user_config is not None:
             self.allow_cdd_tools(self.user_config.folder / "settings.json")
+            self.drop_project_cdd_server()
         if dest.is_file() and dest.read_text(encoding="utf-8") == text:
             self.track_write(dest)
             return
@@ -510,6 +516,23 @@ class McpInstallation(Installation):
         settings.parent.mkdir(parents=True, exist_ok=True)
         settings.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
+    def drop_project_cdd_server(self) -> None:
+        """A ``cdd`` entry in the project's ``.mcp.json`` outranks the user-level host in Claude
+        Code, so it goes; the project's other servers stay."""
+        project_config = self._project_root() / ".mcp.json"
+        try:
+            data = json.loads(project_config.read_text(encoding="utf-8")) if project_config.is_file() else None
+        except (OSError, json.JSONDecodeError):
+            return
+        servers = data.get("mcpServers") if isinstance(data, dict) else None
+        if not isinstance(servers, dict) or "cdd" not in servers:
+            return
+        del servers["cdd"]
+        if servers or len(data) > 1:
+            project_config.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        else:
+            project_config.unlink()
+
     def _stdio_manifest(self) -> dict[str, Any]:
         from harness.installation.installer import Installer
 
@@ -530,8 +553,10 @@ class McpInstallation(Installation):
         }
         user = self.user_config
         if user is not None:
-            # One user-level entry serves every project, so it names the open project, not this one.
+            # One user-level entry serves every project, so it names the open project, not this one,
+            # and pins the installed checkout: start_host would otherwise run the open checkout's code.
             server["cwd"] = user.project_folder
+            server["env"]["CDD_REPO"] = str(repo)
             server["env"]["CDD_PROJECT"] = user.project_folder
             server["env"]["CDD_IDE_PATH"] = str(user.folder)
         if self.ide == "Claude":
@@ -672,6 +697,8 @@ def _invoke_mcp_callable(
     args = _coerce_mcp_arguments(op.member, arguments)
     toolset = op.tool
     operation = op.operation
+    if getattr(op.member, ON_SUBJECT_FLAG, False):
+        return op.member(**args)
     if toolset is not None and operation:
         owner = toolset if inspect.isclass(toolset) else type(toolset)
         descriptor = owner.__dict__.get(operation)
@@ -723,8 +750,11 @@ class McpPrompt:
 
     def invoke(self, arguments: dict[str, object] | None = None) -> object:
         payload = dict(arguments or {})
-        _log_mcp_operation_invocation(self._op, payload)
         tool = self._op.tool
+        # One action object serves every call while the server runs, so each call starts its own session line.
+        if hasattr(tool, "clear_session_action_log"):
+            tool.clear_session_action_log()
+        _log_mcp_operation_invocation(self._op, payload)
         name = self._op.operation
         if name == "instructions" and hasattr(tool, "instructions"):
             return tool.instructions
@@ -752,8 +782,11 @@ class McpPrompt:
         body = (expanded.instructions or "").strip()
         doc = (inspect.getdoc(member) or "").strip()
         if doc and doc not in body:
-            return f"{doc}\n\n{body}".strip() if body else doc
-        return body or self.prompt_text or doc
+            body = f"{doc}\n\n{body}".strip() if body else doc
+        reply = body or self.prompt_text or doc
+        # An action that works in a session says which one, so the agent knows its folders without looking for them.
+        session = getattr(tool, "session_context", "")
+        return f"{reply}\n\n{session}" if session else reply
 
 
 class McpServer:
@@ -774,6 +807,8 @@ class McpServer:
         self._prompts: dict[str, McpPrompt] = {}
         self.exceptions: list[McpIllegitimateTool] = []
         self._started = False
+        self._toolset_refs: tuple[str, ...] = ()
+        self._constructor_context: dict[str, object] = {}
         from space.session import Session
 
         self.session = Session.current(self.project)
@@ -845,6 +880,8 @@ class McpServer:
         constructor_context: dict[str, object] | None = None,
     ) -> None:
         context = dict(constructor_context or {})
+        self._toolset_refs = tuple(toolset_refs)
+        self._constructor_context = context
         self.mcp_installations = []
         self._tools.clear()
         self._prompts.clear()
@@ -864,6 +901,27 @@ class McpServer:
                     self.skip(toolset.registration_name, error)
         self._started = True
 
+    def restarted(self) -> McpServer:
+        """A new runtime with the same toolsets, on the code as it is now. Every module from this checkout is imported
+        again, this one included, because a toolset enrolled by the old loader would keep the old classes."""
+        self._forget_checkout_modules()
+        fresh = importlib.import_module(__name__)
+        runtime = fresh.McpServer(repo=self.repo, project=self.project)
+        runtime.start(self._toolset_refs, constructor_context=self._constructor_context)
+        return runtime
+
+    def _forget_checkout_modules(self) -> None:
+        for name, module in list(sys.modules.items()):
+            if self._is_checkout_file(getattr(module, "__file__", None)):
+                del sys.modules[name]
+        importlib.invalidate_caches()
+
+    def _is_checkout_file(self, file: str | None) -> bool:
+        if not file:
+            return False
+        path = Path(file).resolve()
+        return self.repo in path.parents and self.venv not in path.parents
+
     def _enroll_toolset(self, toolset: Any) -> None:
         if getattr(toolset, "practice_guidance", "missing") is None:
             return
@@ -880,8 +938,9 @@ class McpServer:
         as_dots = name.replace("_", ".")
         if as_dots in self._tools or as_dots in self._prompts:
             return as_dots
-        if name == BUILTIN_PING_TOOL.replace(".", "_", 1):
-            return BUILTIN_PING_TOOL
+        for builtin in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
+            if name == builtin.replace(".", "_", 1):
+                return builtin
         for enrolled in (*self._tools, *self._prompts):
             if enrolled.replace(".", "_") == name or enrolled.replace(".", "_", 1) == name:
                 return enrolled
@@ -934,7 +993,20 @@ class McpHost:
         try:
             return get_type_hints(function)
         except (NameError, TypeError, AttributeError):
-            return {}
+            return self._hints_one_by_one(function)
+
+    def _hints_one_by_one(self, function: Callable[..., object]) -> dict[str, Any]:
+        """Each annotation read on its own, so one naming a class imported only for type checking, as a return type
+        often does to break a circular import, leaves the parameters' types readable. One that cannot be read is left
+        out, the same as before."""
+        hints: dict[str, Any] = {}
+        module_names = getattr(function, "__globals__", {})
+        for name, annotation in getattr(function, "__annotations__", {}).items():
+            try:
+                hints[name] = eval(annotation, module_names) if isinstance(annotation, str) else annotation
+            except NameError:
+                continue
+        return hints
 
     def _is_schema_parameter(self, name: str, param: inspect.Parameter) -> bool:
         if name in {"self", "cls"}:
@@ -1044,7 +1116,12 @@ class McpHost:
                     name=BUILTIN_PING_TOOL,
                     description="Health check for the CDD MCP host process.",
                     inputSchema={"type": "object", "properties": {}},
-                )
+                ),
+                types.Tool(
+                    name=BUILTIN_RESTART_TOOL,
+                    description="Restart the CDD MCP host on the code as it is now: reload its Python and start its toolsets again, on the same connection.",
+                    inputSchema={"type": "object", "properties": {}},
+                ),
             ]
             tools.extend(
                 listed
@@ -1067,30 +1144,12 @@ class McpHost:
         async def handle_call_tool(
             name: str, arguments: dict[str, object] | None
         ) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-            try:
-                resolved = self._runtime.resolve_call_name(name)
-                if resolved in _SYNC_DISPATCH_TOOLS:
-                    value = self.dispatch(name, arguments)
-                else:
-                    # Dispatch off the event loop. A synchronous tool call blocks
-                    # stdin and stdout, and the client then waits until its timeout.
-                    # A call that is still running after the limit is a failed call.
-                    timeout = _LONG_CALL_TIMEOUT_SECONDS.get(
-                        resolved, _CALL_TIMEOUT_SECONDS
-                    )
-                    try:
-                        with anyio.fail_after(timeout):
-                            value = await anyio.to_thread.run_sync(
-                                self.dispatch, name, arguments
-                            )
-                    except TimeoutError:
-                        return self._content_blocks(
-                            f"TimeoutError: {name} exceeded {timeout} seconds"
-                        )
-                return self._content_blocks(value)
-            except Exception as error:
-                logger.exception("MCP tool %s failed", name)
-                return self._content_blocks(f"{type(error).__name__}: {error}")
+            blocks = await self._call_tool_blocks(name, arguments)
+            # A worker thread runs to the end even when the client cancels it, and
+            # the cancellation has already answered the request. Stop here, because
+            # a second answer raises in the MCP session and takes down the host.
+            await anyio.lowlevel.checkpoint()
+            return blocks
 
         @self._server.list_prompts()
         async def handle_list_prompts() -> list[types.Prompt]:
@@ -1115,6 +1174,70 @@ class McpHost:
                     )
                 ],
             )
+
+    async def _call_tool_blocks(
+        self, name: str, arguments: dict[str, object] | None
+    ) -> list[types.TextContent]:
+        try:
+            resolved = self._runtime.resolve_call_name(name)
+            if resolved in _SYNC_DISPATCH_TOOLS:
+                value = self.dispatch(name, arguments)
+            else:
+                # Dispatch off the event loop. A synchronous tool call blocks
+                # stdin and stdout, and the client then waits until its timeout.
+                # A call that is still running after the limit is a failed call.
+                timeout = _LONG_CALL_TIMEOUT_SECONDS.get(
+                    resolved, _CALL_TIMEOUT_SECONDS
+                )
+                reporter = self._progress_reporter()
+                try:
+                    with anyio.fail_after(timeout):
+                        value = await anyio.to_thread.run_sync(
+                            self._dispatch_reporting, name, arguments, reporter
+                        )
+                except TimeoutError:
+                    return self._content_blocks(
+                        f"TimeoutError: {name} exceeded {timeout} seconds"
+                    )
+            if resolved == BUILTIN_RESTART_TOOL:
+                await self._announce_tool_list_changed()
+            return self._content_blocks(value)
+        except Exception as error:
+            logger.exception("MCP tool %s failed", name)
+            return self._content_blocks(f"{type(error).__name__}: {error}")
+
+    async def _announce_tool_list_changed(self) -> None:
+        """A restart can add or drop tools, so the client is told to list them again."""
+        try:
+            await self._server.request_context.session.send_tool_list_changed()
+        except LookupError:
+            return
+
+    def _progress_reporter(self) -> Callable[[str], None] | None:
+        """Sends a tool's progress reports as notifications for its call, when the caller asked for them with a progress
+        token. The tool runs on a worker thread, so each report goes back through the event loop."""
+        try:
+            context = self._server.request_context
+        except LookupError:
+            return None
+        token = context.meta.progressToken if context.meta else None
+        if token is None:
+            return None
+        reported = iter(range(1, sys.maxsize))
+
+        def report(message: str) -> None:
+            anyio.from_thread.run(context.session.send_progress_notification, token, next(reported), None, message)
+
+        return report
+
+    def _dispatch_reporting(
+        self, name: str, arguments: dict[str, object] | None, reporter: Callable[[str], None] | None
+    ) -> object:
+        # Read from the module as it is now: a restart imports progress again, and tools report through the new one.
+        from harness.agent_tools.progress import reporting_to
+
+        with reporting_to(reporter):
+            return self.dispatch(name, arguments)
 
     def _mcp_tool(self, tool: McpTool) -> types.Tool:
         return types.Tool(
@@ -1165,20 +1288,20 @@ class McpHost:
                 return {"ping": "pong", "tool": resolved}
             if resolved == BUILTIN_PING_TOOL:
                 return self.ping()
+            if resolved == BUILTIN_RESTART_TOOL:
+                return self.restart()
             if resolved in self._runtime._prompts:
                 return self._runtime.invoke_prompt(resolved, args)
             return self._runtime.invoke_tool(resolved, args)
         except BaseException as failure:
-            session = Session.current()
-            if session is not None:
-                session.record_failure(failure, tool=resolved)
+            Session.current().record_failure(failure, tool=resolved)
             raise
         finally:
             clear_chat_context()
 
     def _enrolled(self, name: str) -> bool:
         return (
-            name == BUILTIN_PING_TOOL
+            name in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL)
             or name in self._runtime._tools
             or name in self._runtime._prompts
         )
@@ -1189,7 +1312,7 @@ class McpHost:
 
     @staticmethod
     def _json_default(value: object) -> object:
-        converter = getattr(value, "to_mcp_result", None)
+        converter = getattr(value, "to_mcp_result", None) or getattr(value, "to_json", None)
         if callable(converter):
             return converter()
         if isinstance(value, Path):
@@ -1201,7 +1324,7 @@ class McpHost:
             server_name="cdd",
             server_version="0.1.0",
             capabilities=self._server.get_capabilities(
-                notification_options=NotificationOptions(),
+                notification_options=NotificationOptions(tools_changed=True),
                 experimental_capabilities={},
             ),
         )
@@ -1218,17 +1341,26 @@ class McpHost:
             self._unbind_as_serving()
 
     def run(self) -> None:
-        while True:
-            try:
-                anyio.run(self.run_stdio)
-                return
-            except (KeyboardInterrupt, SystemExit):
-                raise
-            except Exception:
-                logger.exception("MCP stdio host crashed; restarting")
+        try:
+            anyio.run(self.run_stdio)
+        except Exception:
+            # The client initializes a connection once, so a new session on this
+            # stdio refuses every call. Exiting closes the connection for the client.
+            logger.exception("MCP stdio host crashed; exiting")
+            raise
 
     def ping(self) -> str:
         return "pong"
+
+    def restart(self) -> dict[str, Any]:
+        """Swap in a runtime on the code as it is now. The connection, and this host object holding it, stay."""
+        self._runtime = self._runtime.restarted()
+        sys.modules[__name__]._SERVING_MCP_HOST = self
+        return {
+            "is_restarted": True,
+            "tools": len(self._runtime.tools) + len(self._runtime.prompts),
+            "exceptions": [{"tool": item.tool, "reason": item.reason} for item in self._runtime.exceptions],
+        }
 
     def diagnose(self) -> dict[str, Any]:
         reply = self.ping()
@@ -1236,6 +1368,7 @@ class McpHost:
             raise McpStandupFailed("diagnose", self, "MCP host ping failed")
         tools = [
             BUILTIN_PING_TOOL,
+            BUILTIN_RESTART_TOOL,
             *sorted(self._runtime.tools),
             *sorted(self._runtime.prompts),
         ]

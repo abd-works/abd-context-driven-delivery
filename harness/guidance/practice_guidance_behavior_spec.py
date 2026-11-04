@@ -144,7 +144,7 @@ with description("a practice"):
 
             with it("should take Default format and Stage from the lines under the fidelity heading"):
                 expect(self.child.default_format).to(equal("python"))
-                expect(self.child.stage).to(equal("specification"))
+                expect(self.child.stage).to(equal("discovery"))
 
             with it("should use that Default format on the practice"):
                 expect(self.practice.format).to(equal("python"))

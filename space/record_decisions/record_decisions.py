@@ -20,10 +20,7 @@ class RecordDecisions:
 
     def _cdr_dir(self) -> Path:
         """CDR directory is the current session workpath ``.context/cdr``."""
-        session = Session.current()
-        if session is None or session.workpath is None:
-            raise ValueError("no current session")
-        return Path(session.workpath) / ".context" / "cdr"
+        return Path(Session.current().workpath) / ".context" / "cdr"
 
     def _next_cdr_number(self, cdr_dir: Path) -> int:
         """Return the next sequential CDR number from existing files (pure)."""

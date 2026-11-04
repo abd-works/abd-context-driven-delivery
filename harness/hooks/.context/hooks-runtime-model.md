@@ -200,7 +200,7 @@ Cursor process for every hooked event. `hook_server.py` constructs `HookServer` 
 + exceptions: list[HookIllegitimateHandler]
 ----
 + run(): None
-	// ensure default session; read stdin; print JSON HookResult
+	// ensure main session; read stdin; print JSON HookResult
 	-> HookPayload.from_stdin
 	-> dispatch(payload)
 + dispatch(payload: HookPayload): HookResult

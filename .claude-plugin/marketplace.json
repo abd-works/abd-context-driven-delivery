@@ -1,0 +1,11 @@
+{
+  "name": "abd-works",
+  "owner": { "name": "abd works" },
+  "plugins": [
+    {
+      "name": "cdd-board",
+      "source": "./harness/chat-ui/pane",
+      "description": "Connects a chat to the CDD session board: board buttons reach the chat, and the active ticket shows on the status line and in the system prompt"
+    }
+  ]
+}

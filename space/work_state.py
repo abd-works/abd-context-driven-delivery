@@ -5,10 +5,29 @@ import json
 import os
 from pathlib import Path
 
+SESSIONS_FOLDER = ".sessions"
 STATE_NAME = "session.json"
 DESIGN_CANVAS_FOLDER = "design-canvas"
 E2E_RESULTS_FOLDER = "e2e-test-results"
 _LEGACY_SESSION_KEY = "current"
+
+
+def checkout_holding(path: Path | str) -> Path:
+    """The git checkout containing ``path``; ``path`` itself when it is not inside one."""
+    resolved = Path(path).resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return resolved
+
+
+def project_checkout() -> Path:
+    """The checkout of the project being worked on: the one holding ``CDD_PROJECT``, else the current folder.
+
+    ``CDD_REPO`` names the CDD checkout that hosts the tools, not the project, so it never picks the project. Sessions,
+    the board, and every tool that finds ``.sessions/`` start here, so they all find the same one."""
+    named = os.environ.get("CDD_PROJECT")
+    return checkout_holding(named) if named else Path.cwd().resolve()
 
 
 class WorkState:
@@ -18,8 +37,12 @@ class WorkState:
         self.root = Path(repo_root).resolve()
 
     @property
+    def sessions_folder(self) -> Path:
+        return self.root / SESSIONS_FOLDER
+
+    @property
     def path(self) -> Path:
-        return self.root / ".sessions" / STATE_NAME
+        return self.sessions_folder / STATE_NAME
 
     @property
     def branch(self) -> str:
@@ -47,12 +70,12 @@ class WorkState:
 
     @property
     def release(self) -> str:
-        """The release this checkout's work belongs to: the open session, else the branch, else ``default``."""
-        return self.session or self.branch or "default"
+        """The release this checkout's work belongs to: the open session, else the branch, else ``main``."""
+        return self.session or self.branch or "main"
 
     def release_folder(self, release: str = "") -> Path:
         """``.sessions/<release>/``: the release's session files, its design canvas, and its end-to-end results."""
-        return self.root / ".sessions" / (release or self.release)
+        return self.sessions_folder / (release or self.release)
 
     def load(self) -> dict[str, str]:
         if not self.path.is_file():

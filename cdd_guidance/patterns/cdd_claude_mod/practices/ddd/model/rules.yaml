@@ -1,0 +1,33 @@
+# Claude Code mod rule slugs for graph nodes (see cdd_claude_mod.md § Shared rules).
+domainComponent:
+  rules:
+    - domain-lives-in-python
+    - state-lives-behind-the-tool
+    - pane-lives-beside-its-domain
+    - domain-folder-in-the-mod
+tool:
+  rules:
+    - tool-stays-thin
+    - one-line-from-client-to-domain
+    - tool-matches-the-object
+    - same-verb-across-layers
+    - preserve-arg-names-across-layers
+    - every-action-reaches-the-agent-the-same-way
+    - spec-the-tool-boundary
+clientRoot:
+  rules:
+    - client-mirrors-python-domain
+    - client-only-displays
+    - actions-are-plain-functions
+    - mirror-only-what-the-mod-uses
+    - contract-comes-from-the-adapter
+    - client-shapes-for-display
+    - property-casing-transform
+    - mcp-calls-only-on-the-client
+    - fail-loud-on-mcp
+view:
+  rules:
+    - views-render-only
+    - size-to-the-pane
+    - key-every-listed-button
+    - consistent-view-naming

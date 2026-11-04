@@ -10,7 +10,7 @@ Miniature kit for Clean Engineering Draw.io class / modules diagrams: create the
 
 ## Public API
 
-`Drawio`, `DrawIOCleanEngineeringModel`; `keep_positioning` on render/create_diagram (existing class positions and relationship routing stay put; new classes use the layout algorithm); layout scanners under `scanners/` (`*_scanner.py`); fixtures under `examples/evals/<case>/{faultyAsset,repairedAsset}.drawio`.
+`Drawio`, `DrawIOCleanEngineeringModel`; `keep_positioning` on render/create_diagram (existing class positions and relationship routing stay put; new classes use `CardPlacement` and new arrows `ArrowRouter`, both in `model/diagram/class_layout.py`); layout scanners under `scanners/` (`*_scanner.py`); fixtures under `examples/evals/<case>/{faultyAsset,repairedAsset}.drawio`.
 
 ## Constraint
 

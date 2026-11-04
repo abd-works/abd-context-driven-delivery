@@ -80,6 +80,8 @@ def fill_working_copy(graph: Graph) -> None:
         _offer(graph.practice("ux"), ["UxMap", "Screen"])
     if _overlay_selected(graph, "lern_domain_driven"):
         _record_lern(graph, source, classes)
+    if _overlay_selected(graph, "cdd_web_domain_access"):
+        _record_cdd_web_domain_access(graph, source)
     _register_overlay_schema_catalog(graph)
     for practice in graph.practices.values():
         attach_rules(practice)
@@ -623,7 +625,7 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
     for cls in classes:
         folder = str(Path(cls["file"]).parent).replace("\\", "/")
         kind = inferred_tactical_kind(_stereotyped_name(cls["text"], cls["name"]), names)
-        if kind is None:
+        if kind is None or f"{folder}/".startswith(_TEST_FOLDERS):
             continue
         members.setdefault(folder, []).append({**cls, "kind": kind})
     nodes = []
@@ -685,7 +687,6 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
 
 def _record_stories(practice, source: Path) -> None:
     from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
-    from cdd_guidance.practices.stories.model.story_model import StoryModel
     from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
 
     files: dict[str, str] = {}
@@ -704,9 +705,19 @@ def _record_stories(practice, source: Path) -> None:
     model = TypeScriptStoryModel("tests").load(files, on_file=lambda detail: report("parse", detail))
     if not model.epics:
         _report(graph, "stories · markdown")
-        model = StoryModel.load(source, on_file=lambda detail: report("markdown", detail))
+        model = _story_map_model(graph, source, lambda detail: report("markdown", detail))
     _report(graph, "stories · record")
     GraphStoryModel(model).record(practice, on_node=lambda detail: report("record", detail))
+
+
+def _story_map_model(graph: Graph, source: Path, on_file):
+    """The story maps under ``source``; with edited files, only the story maps among them."""
+    from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+    edited = graph.edited_files()
+    if edited is None:
+        return StoryModel.load(source, on_file=on_file)
+    return StoryModel.load_files(edited, source, on_file=on_file)
 
 
 def _gwt_phase(step) -> str:
@@ -814,11 +825,13 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
     """LERN overlay: schema tier nodes from repo files, wired with schema relationship kinds, carrying tier facts."""
     from cdd_guidance.patterns.lern_domain_driven.tier_facts import story_file_facts, test_setup_text
 
+    _record_lern_behaviors(graph, root)
     ddd = graph.practice("ddd") if "ddd" in graph.practices else None
     stories = graph.practice("stories") if "stories" in graph.practices else None
     if ddd is None or stories is None:
         return
     _record_lern_context_mappings(graph, root, ddd)
+    _record_lern_tier_folders(ddd, root)
     aggregates = {
         node.source.file.replace("\\", "/"): node
         for node in ddd.by_id.values()
@@ -885,6 +898,82 @@ def _record_lern(graph: Graph, root: Path, classes: list[dict]) -> None:
         story_file = stories.by_id[f"stories:{semantic}:{relative}"]
         for key, value in story_file_facts(file.read_text(encoding="utf-8")).items():
             story_file.set_fact(key, value)
+
+
+# A helper class in a test folder is never a domain aggregate, whatever its name suggests.
+_TEST_FOLDERS = ("tests/", "test-utils/")
+
+
+def _record_cdd_web_domain_access(graph: Graph, root: Path) -> None:
+    """CDD web domain access overlay: what reaches the domain from outside Python, each file carrying the facts its rules read."""
+    from cdd_guidance.patterns.cdd_web_domain_access import access_facts
+
+    if "ddd" not in graph.practices:
+        return
+    ddd = graph.practice("ddd")
+    for file in scanned_files(root):
+        text = file.read_text(encoding="utf-8", errors="replace")
+        recorded = _cdd_web_domain_access_tier(file, text, access_facts)
+        if recorded is not None:
+            _cdd_web_domain_access_node(ddd, root, file, *recorded)
+
+
+def _cdd_web_domain_access_tier(file: Path, text: str, access_facts) -> tuple[str, dict] | None:
+    if file.name.endswith("-routes.ts"):
+        return "AccessRoute", access_facts.route_facts(text)
+    if access_facts.is_hand_written_adapter(file.name, text):
+        return "AccessHandWrittenAdapter", {}
+    if file.name.endswith("-node.ts"):
+        return "AccessNode", access_facts.node_facts(text)
+    if file.suffix == ".py" and access_facts.is_marked(text):
+        return "AccessMarkedToolset", access_facts.marked_toolset_facts(text)
+    return None
+
+
+def _cdd_web_domain_access_node(practice, root: Path, file: Path, semantic: str, facts: dict) -> None:
+    relative = file.relative_to(root).as_posix()
+    node_id = f"ddd:{semantic}:{relative}"
+    start, end = _file_line_span(root, relative)
+    practice.apply_nodes([[node_id, file.name, semantic, "ddd", relative, start, end]])
+    for key, value in facts.items():
+        practice.by_id[node_id].set_fact(key, value)
+
+
+def _record_lern_tier_folders(ddd, root: Path) -> None:
+    """A folder holding its slug's routes or node is an aggregate, even with no domain class: a CDD-backed one has none."""
+    for file in scanned_files(root):
+        folder = file.parent.relative_to(root).as_posix()
+        is_tier_file = file.name in (f"{file.parent.name}-routes.ts", f"{file.parent.name}-node.ts")
+        if is_tier_file and folder.startswith("src/") and f"ddd:Aggregate:{folder}" not in ddd.by_id:
+            ddd.apply_nodes([[f"ddd:Aggregate:{folder}", file.parent.name, "Aggregate", "ddd", folder, 1, 1]])
+
+
+def _record_lern_behaviors(graph: Graph, root: Path) -> None:
+    """LERN behavior files on the BDD practice, each carrying the facts its tier rules read."""
+    from cdd_guidance.patterns.lern_domain_driven.tier_facts import behavior_file_facts
+
+    if "bdd" not in graph.practices:
+        return
+    bdd = graph.practice("bdd")
+    for file in scanned_files(root):
+        semantic = _LERN_BEHAVIOR_TIERS.get(".".join(file.name.split(".")[1:]))
+        if semantic is None:
+            continue
+        relative = file.relative_to(root).as_posix()
+        node_id = f"bdd:{semantic}:{relative}"
+        start, end = _file_line_span(root, relative)
+        bdd.apply_nodes([[node_id, file.name, semantic, "bdd", relative, start, end]])
+        for key, value in behavior_file_facts(file.read_text(encoding="utf-8")).items():
+            bdd.by_id[node_id].set_fact(key, value)
+
+
+_LERN_BEHAVIOR_TIERS = {
+    "spec.shared.ts": "BehaviorShared",
+    "behavior.domain.spec.ts": "BehaviorDomain",
+    "behavior.server.spec.ts": "BehaviorServer",
+    "behavior.playwright.ts": "BehaviorPlaywright",
+    "behavior.e2e.ts": "BehaviorE2e",
+}
 
 
 def _lern_story_semantic(file: Path) -> str | None:

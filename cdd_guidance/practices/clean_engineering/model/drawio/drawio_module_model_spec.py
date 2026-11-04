@@ -1,4 +1,5 @@
 """BDD specs for a Draw.io modules diagram and a Draw.io class diagram."""
+import re
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
@@ -429,3 +430,63 @@ with description('Drawio creating a diagram'):
                     _create_kept(md, path)
                     xml = Path(path).read_text(encoding='utf-8')
                     expect(_has_vertex(xml, _CART)).to(be_true)
+
+
+_TWO_MODULES = """# shop/cart
+
+## Item
+
+------
++ title: str
+----
+
+## Basket : Item
+
+------
++ << composition >> lines: list[Line]
+----
+
+## Line
+
+------
++ quantity: int
+----
+
+# shop/checkout
+
+## Payment
+
+------
++ << association >> basket: Basket
+----
+"""
+
+
+with description('a class model that spans two modules'):
+    with before.each:
+        model = MarkdownCleanEngineeringModel(name='', sequential_order=1).parse(_TWO_MODULES)
+        self.rendered = DrawIOCleanEngineeringModel().render(model)
+        self.cells = {cell.get('id'): cell for cell in ET.fromstring(self.rendered).iter('mxCell')}
+
+    with it('should draw every class on one page'):
+        expect(ET.fromstring(self.rendered).findall('diagram')).to(have_len(1))
+
+    with it('should colour each module differently'):
+        fills = {re.search(r'fillColor=(#\w+)', cell.get('style')).group(1) for cell in self.cells.values() if cell.get('vertex') == '1'}
+        expect(fills).to(have_len(2))
+
+    with it('should draw an arrow for a marked list of a class'):
+        arrow = next(cell for cell in self.cells.values() if cell.get('target') == 'shop-cart--line')
+        expect(arrow.get('style')).to(contain('startArrow=diamondThin'))
+
+    with it('should name the arrow after its property'):
+        arrow = next(cell for cell in self.cells.values() if cell.get('target') == 'shop-cart--line')
+        expect(arrow.get('value')).to(equal('lines'))
+
+    with it('should draw inheritance from the class heading'):
+        arrow = next(cell for cell in self.cells.values() if cell.get('source') == 'shop-cart--basket' and cell.get('target') == 'shop-cart--item')
+        expect(arrow.get('style')).to(contain('endArrow=block'))
+
+    with it('should keep each class in its module when read back'):
+        parsed = DrawIOCleanEngineeringModel(name='', sequential_order=1).parse(self.rendered)
+        expect([module.name for module in parsed.modules]).to(equal(['shop/cart', 'shop/checkout']))

@@ -1,0 +1,28 @@
+# Claude Code mod overlay on ddd. Extend only.
+# is: names the supertype. ddd.type is already defined in practices/ddd — do not restate it.
+# A bare name is one. A bracket list is the collection.
+domainComponent:
+  - is: ddd.aggregate
+  - path: "harness/{domain}/"
+  - tool: tool
+  - entityRoot: ddd.entityRoot
+  - entities: [ddd.entities]
+  - clientRoot: clientRoot
+  - view: [view]
+
+tool:
+  - is: class
+  - name: string
+  - path: "{object}"
+  - belongsTo: domainComponent
+  - entityRoot: ddd.entityRoot
+clientRoot:
+  - is: class
+  - name: string
+  - path: "pane/hooks/{domain}/{object}-client"
+  - calls: tool
+view:
+  - is: class
+  - name: string
+  - path: "pane/hooks/{domain}/{screen}-view"
+  - clientRoot: clientRoot

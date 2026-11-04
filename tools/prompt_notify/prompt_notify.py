@@ -64,6 +64,11 @@ _YAML_ACTION = re.compile(r"\baction:\s*([A-Za-z0-9_-]+)", re.I)
 _SKIP_BEGIN_FALLBACK = frozenset({"open_workspace", "end", "begin"})
 _ARROW = " \u2192 "
 _SAME_BURST_SECONDS = 2
+_FLAT_ACTION_PREFIX = "actions-"
+_FLAT_PRACTICE_PREFIX = "practices-"
+_RULE_SUFFIXES = frozenset({".mdc", ".md"})
+_SKILL_DIRS = ("/.cursor/skills/", "/.claude/skills/")
+_RULE_DIRS = ("/.cursor/rules/", "/.claude/rules/")
 
 
 @agent_toolset
@@ -99,7 +104,9 @@ class PromptNotify:
         self._walk_skill_tree(skills / "actions")
         self.skill_kind = "practice"
         self._walk_skill_tree(skills / "practices")
-        self._walk_rule_tree(_REPO_ROOT / ".cursor" / "rules" / "practices", found)
+        self._walk_flat_skill_tree(_REPO_ROOT / ".claude" / "skills")
+        for ide in (".cursor", ".claude"):
+            self._walk_rule_tree(_REPO_ROOT / ide / "rules" / "practices", found)
         for name in _FALLBACK_ACTIONS:
             found.setdefault(name.replace("_", "-"), "action")
         type(self)._catalog = sorted(found.items(), key=lambda item: len(item[0]), reverse=True)
@@ -290,7 +297,8 @@ class PromptNotify:
         self, haystacks: list[str], action_names: set[str]
     ) -> tuple[str, str] | None:
         for hay in haystacks:
-            in_skills = "/.cursor/skills/" in hay.replace("\\", "/").lower()
+            posix = hay.replace("\\", "/").lower()
+            in_skills = any(folder in posix for folder in _SKILL_DIRS)
             for token, kind in self.catalog:
                 if not self._token_in(hay, token):
                     continue
@@ -419,17 +427,40 @@ class PromptNotify:
             if leaf.is_dir():
                 found.setdefault(leaf.name.replace("_", "-"), "fidelity")
 
+    def _walk_flat_skill_tree(self, root: Path) -> None:
+        """Claude joins nested skill folders into one name: ``actions-sketch``,
+        ``practices-bdd``, ``practices-bdd-bdd-behavior``."""
+        if not root.is_dir():
+            return
+        names = [child.name for child in root.iterdir() if child.is_dir()]
+        for name in names:
+            if name.startswith(_FLAT_ACTION_PREFIX):
+                self.skill_found.setdefault(name[len(_FLAT_ACTION_PREFIX):], "action")
+        practice_names = [
+            name[len(_FLAT_PRACTICE_PREFIX):] for name in names if name.startswith(_FLAT_PRACTICE_PREFIX)
+        ]
+        for name in practice_names:
+            self._add_flat_practice_skill(name, practice_names)
+
+    def _add_flat_practice_skill(self, name: str, practice_names: list[str]) -> None:
+        owners = [other for other in practice_names if name.startswith(f"{other}-")]
+        if not owners:
+            self.skill_found.setdefault(name, "practice")
+            return
+        owner = max(owners, key=len)
+        self.skill_found.setdefault(name[len(owner) + 1:], "fidelity")
+
     def _walk_rule_tree(self, root: Path, found: dict[str, str]) -> None:
         if not root.is_dir():
             return
         for child in root.iterdir():
-            if child.suffix == ".mdc":
+            if child.suffix in _RULE_SUFFIXES:
                 found.setdefault(child.stem.replace("_", "-"), "guideline")
                 continue
             if not child.is_dir():
                 continue
             found.setdefault(child.name.replace("_", "-"), "guideline")
-            for leaf in child.glob("*.mdc"):
+            for leaf in (path for path in child.iterdir() if path.suffix in _RULE_SUFFIXES):
                 found.setdefault(
                     f"{child.name}-{leaf.stem}".replace("_", "-"),
                     "guideline",
@@ -466,7 +497,7 @@ class PromptNotify:
 
     def _skill_or_rule_path(self, path: str) -> bool:
         posix = path.replace("\\", "/").lower()
-        return "/.cursor/skills/" in posix or "/.cursor/rules/" in posix
+        return any(folder in posix for folder in _SKILL_DIRS + _RULE_DIRS)
 
     def _token_in(self, hay: str, token: str) -> bool:
         compacted_hay = f"-{self._compact(hay)}-"

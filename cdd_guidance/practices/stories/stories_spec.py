@@ -62,6 +62,36 @@ with description("Stories"):
         with it("should retain fidelity scenarios"):
             expect(self.stories.fidelities.current.fidelity).to(equal("scenarios"))
 
+        # Generate tells the agent to save story tests at the declared path, so a file saved there below its story map
+        # must be one validate reads back onto its Story, or every generated test goes unchecked.
+        with context("with a story test saved at its declared Python path below the story map"):
+            with before.each:
+                import tempfile
+
+                from cdd_guidance.practices.stories.model.story_model import StoryModel
+
+                self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
+                (self.root / "story-map.md").write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
+                names = {"{epic}": "move-work-on-board", "{sub-epic}": "display-board", "{story}": "open-board", "{story_snake}": "open_board"}
+                self.filled = self.stories.fidelities.current.outputs["python"]
+                for name, value in names.items():
+                    self.filled = self.filled.replace(name, value)
+                story_test = self.root / self.filled
+                story_test.parent.mkdir(parents=True)
+                story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
+                self.model = StoryModel.load_files([str(story_test)], self.root)
+
+            with after.each:
+                import shutil
+
+                shutil.rmtree(self.root, ignore_errors=True)
+
+            with it("should sit in epic, sub-epic, and story folders"):
+                expect(self.filled).to(equal("move-work-on-board/display-board/open-board/open_board_story.test.py"))
+
+            with it("should give its scenarios to the Story of the same name on the map"):
+                expect([len(story.scenarios) for story in self.model.every_story()]).to(equal([1]))
+
     with context("that is constructed with fidelity acceptance_tests"):
         with it("should default format to python"):
             expect(Stories(fidelity="acceptance_tests").format).to(equal("python"))
@@ -412,3 +442,19 @@ with description("Stories"):
             expect('from "./whens"' in text).to(equal(False))
             expect("_test_helper.ts" in text).to(equal(False))
             expect("_test_helper.py" in text).to(equal(False))
+
+
+with description("a Python story test file"):
+    with context("that starts with a future import"):
+        with it("should compile after the story transform"):
+            import ast
+            import importlib.util
+
+            loader_path = Path(__file__).parent / "templates" / "py" / "story_test.py"
+            spec = importlib.util.spec_from_file_location("story_test_loader", loader_path)
+            loader = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(loader)
+            source = 'from __future__ import annotations' + chr(10) + 'with story("Get Sim"):' + chr(10) + '    pass' + chr(10)
+            tree = loader.StoryNodeTransformer().visit(ast.parse(source))
+            ast.fix_missing_locations(tree)
+            expect(compile(tree, "get_sim_story.test.py", "exec").co_filename).to(equal("get_sim_story.test.py"))

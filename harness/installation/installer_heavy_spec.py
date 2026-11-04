@@ -703,7 +703,6 @@ with description("an agent toolset") as self:
                     refs = Installer(
                         ide="Cursor", path=self.repo / ".cursor", repo=self.repo
                     ).collect_toolsets()
-                    expect(refs).not_to(contain("_retired.transformers.transformers:Transformers"))
                     expect(refs).to(contain("cdd_guidance.patterns.lern_domain_driven.lern_domain_driven:LernDomainDriven"))
                     expect(refs).to(contain("cdd_guidance.patterns.mern_domain_driven.mern_domain_driven:MernDomainDriven"))
                     expect(refs).to(contain("harness.graph.graph:Graph"))
@@ -1356,6 +1355,57 @@ with description("toolsets installed for Claude Code") as self:
         expect(servers["cdd"]).not_to(have_key("cwd"))
         expect(servers["cdd"]["env"]["CDD_IDE_PATH"]).to(equal(str(self.tree.resolve())))
         expect((self.tree / "mcp.json").exists()).to(equal(False))
+
+    with context("installing the board plugin"):
+        with before.each:
+            self.installer = Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT)
+            self.calls = []
+            self.installer._claude_cli = lambda: "claude"
+            self.listed = "cdd-board@abd-works"
+
+            def run(claude, *args):
+                self.calls.append(args)
+                return self.listed
+
+            self.installer._run_claude = run
+
+        with it("should add this checkout as the marketplace and install the plugin at user scope"):
+            expect(self.installer._install_board_plugin()).to(equal("installed"))
+            expect(self.calls[0]).to(equal(("plugin", "marketplace", "add", str(_REPO_ROOT))))
+            expect(self.calls[1]).to(equal(("plugin", "install", "cdd-board@abd-works", "--scope", "user")))
+
+        with it("should say the plugin is missing when the list does not show it"):
+            self.listed = ""
+            expect(self.installer._install_board_plugin()).to(equal("missing"))
+
+        with it("should say the plugin is missing when there is no claude command"):
+            self.installer._claude_cli = lambda: None
+            expect(self.installer._install_board_plugin()).to(equal("missing"))
+
+    with context("finding Claude Code in the desktop app"):
+        with before.each:
+            self.installer = Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT)
+            self.local = Path(tempfile.mkdtemp(prefix="cdd-local-app-data-"))
+            self.saved = {name: os.environ.get(name) for name in ("APPDATA", "LOCALAPPDATA")}
+            os.environ["APPDATA"] = str(self.local / "Roaming")
+            os.environ["LOCALAPPDATA"] = str(self.local)
+            for version in ("2.1.200", "2.1.309"):
+                found = self.local / "Claude-Data" / "claude_profile" / "claude-code" / version / "build" / "claude.exe"
+                found.parent.mkdir(parents=True)
+                found.write_text("", encoding="utf-8")
+
+        with after.each:
+            for name, value in self.saved.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+            shutil.rmtree(self.local, ignore_errors=True)
+
+        with context("that keeps it under a profile in its local data folder"):
+            with it("should use the newest version there"):
+                expected = self.local / "Claude-Data" / "claude_profile" / "claude-code" / "2.1.309" / "build" / "claude.exe"
+                expect(self.installer._claude_cli()).to(equal(str(expected)))
 
     with it("should install no hooks and leave the project's settings.json alone"):
         expect(self.settings).to(equal({"permissions": {"allow": ["Bash(ls)"]}}))

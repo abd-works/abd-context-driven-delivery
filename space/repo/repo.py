@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
+from harness.installation.destination import language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 from space.repo.latest_release import LatestRelease
@@ -26,9 +27,10 @@ class RepoConnectError(RuntimeError):
 
 
 _COMMAND_TIMEOUT_SECONDS = 10
-# Push, fetch, and pull wait on the network; local git commands should never need this long.
-_NETWORK_COMMAND_TIMEOUT_SECONDS = 180
-_NETWORK_COMMANDS = frozenset({"push", "fetch", "pull"})
+# Push, fetch, and pull wait on the network. Checkout, merge, and worktree rewrite the working
+# tree, and stopping one partway leaves a half-switched checkout with a stale index.lock.
+_LONG_COMMAND_TIMEOUT_SECONDS = 180
+_LONG_COMMANDS = frozenset({"push", "fetch", "pull", "checkout", "merge", "worktree"})
 
 
 class GhConnectError(RuntimeError):
@@ -158,6 +160,15 @@ class Commit:
             key, value = line.split(": ", 1)
             data[key.strip()] = value.strip()
         return data
+
+    def to_mcp_result(self) -> dict:
+        """JSON-safe snapshot for MCP tool results — sha, subject, full message, trailers."""
+        return {
+            "sha": self.sha,
+            "subject": self.subject,
+            "message": self.message,
+            "data": self.data,
+        }
 
     @classmethod
     def note_text(cls, fields: dict[str, str]) -> str:
@@ -832,6 +843,7 @@ class Project:
         )
 
 
+@language_adapter(language="typescript")
 @agent_toolset
 class Repo:
     """Local git clone with optional GitHub project + tickets."""
@@ -915,8 +927,8 @@ class Repo:
         if not found:
             raise RepoConnectError("Cannot connect git: `git` is not available.")
         timeout = timeout or (
-            _NETWORK_COMMAND_TIMEOUT_SECONDS
-            if args and args[0] in _NETWORK_COMMANDS
+            _LONG_COMMAND_TIMEOUT_SECONDS
+            if args and args[0] in _LONG_COMMANDS
             else _COMMAND_TIMEOUT_SECONDS
         )
         try:
@@ -1055,6 +1067,21 @@ class Repo:
 
     def branch_named(self, name: str) -> Branch:
         return Branch(self, name)
+
+    def has_branch(self, name: str) -> bool:
+        if self._memory:
+            return name in self._branch_names
+        return bool(self._git("branch", "--list", name).strip())
+
+    def files_changed_on(self, branch: str) -> list[str]:
+        """Paths from the repository root that ``branch`` changed since it left the default branch, with uncommitted changes when it is checked out."""
+        if not self.has_branch(branch):
+            return []
+        committed = self._git("diff", "--name-only", f"{self.default_branch}...{branch}").splitlines()
+        if self.current_branch != branch:
+            return committed
+        uncommitted = self._git("status", "--porcelain", "--untracked-files=all", "--no-renames").splitlines()
+        return [*committed, *(line[3:].strip('"') for line in uncommitted)]
 
     def cli_agent_tag_name(self, branch: str) -> str:
         slug = (branch or "").strip() or "HEAD"

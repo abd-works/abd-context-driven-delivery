@@ -41,7 +41,7 @@ If the user asks for language while generating **modules** or **model**, use thi
 default_format: markdown
 stage: discovery
 outputs:
-  markdown: ".context/module-context.md"
+  markdown: "{module}/.context/module-context.md"
   drawio: ".context/modules.drawio"
 ```
 
@@ -152,10 +152,9 @@ Whenever you create, alter, or delete object-oriented boundaries and public seam
 default_format: python
 stage: specification
 outputs:
-  python: "{module}-model.py"
-  typescript: "{module}-model.ts"
-  markdown: ".context/{module}-model.md"
-  drawio: ".context/{module}-model.drawio"
+  python: "{module}/"
+  typescript: "{module}/"
+  markdown: "{module}/.context/{module}-model.md"
 ```
 
 #### Overview
@@ -256,8 +255,8 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 default_format: python
 stage: implementation
 outputs:
-  python: "./"
-  typescript: "./"
+  python: "{module}/"
+  typescript: "{module}/"
 ```
 
 #### Overview

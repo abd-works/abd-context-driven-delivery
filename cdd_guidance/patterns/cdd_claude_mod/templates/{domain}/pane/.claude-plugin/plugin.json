@@ -1,0 +1,6 @@
+{
+  "name": "cdd-{domain}",
+  "version": "0.1.0",
+  "description": "{One line on what the person sees}",
+  "types": "./types/index.d.ts"
+}

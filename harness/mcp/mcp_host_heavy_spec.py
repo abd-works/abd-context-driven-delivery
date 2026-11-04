@@ -27,8 +27,13 @@ from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
 from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
-from space.repo.repo import DefaultBranchError
+from space.repo.repo import Commit, DefaultBranchError
 from space.session import Session
+
+
+def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":
+    """An operation whose return type names a class its module imports only for type checking, as a circular import
+    needs, in a module whose annotations are text (`from __future__ import annotations`)."""
 
 
 class JsonSchemaAnyOf:
@@ -40,6 +45,10 @@ with description("an MCP host input schema"):
 
     with before.each:
         self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
+
+    with context("that has been derived from an operation whose return type cannot be resolved"):
+        with it("should still advertise its boolean parameter as JSON Schema boolean"):
+            expect(self.host.input_schema_for_callable(_moved)["properties"]["done"]).to(equal({"type": "boolean"}))
 
     with context("that has been derived from a ParameterTypes echo operation"):
         with before.each:
@@ -336,8 +345,41 @@ with description("an MCP host tool result") as self:
                 equal(str((self.work / "tests").resolve()))
             )
 
+    with context("that is a commit"):
+        with before.each:
+            self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
+            commit = Commit.from_message("abc123", "push: checkpoint\nReviewed-By: human")
+            self.payload = json.loads(self.host._content_blocks(commit)[0].text)
+
+        with it("should expose the commit sha as JSON"):
+            expect(self.payload["sha"]).to(equal("abc123"))
+
+        with it("should expose the commit subject as JSON"):
+            expect(self.payload["subject"]).to(equal("push: checkpoint"))
+
+        with it("should expose the full commit message as JSON"):
+            expect(self.payload["message"]).to(equal("push: checkpoint\nReviewed-By: human"))
+
+        with it("should expose the commit trailers as JSON"):
+            expect(self.payload["data"]).to(equal({"Reviewed-By": "human"}))
+
 
 with description("an MCP host") as self:
+    with context("whose stdio session has crashed"):
+        with before.each:
+            self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
+            self.sessions = []
+
+            async def crash_once():
+                self.sessions.append("started")
+                if len(self.sessions) == 1:
+                    raise RuntimeError("stdio session crashed")
+
+            self.host.run_stdio = crash_once
+
+        with it("should end the process so the client opens a new connection"):
+            expect(self.host.run).to(raise_error(RuntimeError))
+
     with context("that has stood up without a manifest file"):
         with before.each:
             self.host = McpHost.standup(Path("no-such-mcp.json"), repo=_REPO_ROOT)
@@ -540,6 +582,32 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with it("should leave out cwd, which Claude Code does not read"):
             expect("cwd" in self.data["mcpServers"]["cdd"]).to(equal(False))
             expect(self.data["mcpServers"]["cdd"]["env"]["CDD_PROJECT"]).to(equal("."))
+
+        with it("should pin the installed checkout, whichever project is open"):
+            expect(self.data["mcpServers"]["cdd"]["env"]["CDD_REPO"]).to(equal(str(_REPO_ROOT)))
+
+        with context("with a cdd server in the project's .mcp.json"):
+            with before.each:
+                self.project = self.root / "project"
+                (self.project / ".claude").mkdir(parents=True)
+                self.project_config = self.project / ".mcp.json"
+                self.installation = McpInstallation("Claude", self.project / ".claude", repo=_REPO_ROOT)
+                self.installation._is_temp_path = lambda path: False
+                for tool in SampleMcpOps().tools.values():
+                    self.installation.record_operation(tool)
+
+            with it("should remove the file when cdd was its only server"):
+                self.project_config.write_text(json.dumps({"mcpServers": {"cdd": {}}}), encoding="utf-8")
+                self.installation.write_mcp_manifest()
+                expect(self.project_config.exists()).to(equal(False))
+
+            with it("should keep the project's other servers"):
+                self.project_config.write_text(
+                    json.dumps({"mcpServers": {"cdd": {}, "other": {"command": "other"}}}), encoding="utf-8"
+                )
+                self.installation.write_mcp_manifest()
+                saved = json.loads(self.project_config.read_text(encoding="utf-8"))
+                expect(saved).to(equal({"mcpServers": {"other": {"command": "other"}}}))
 
         with it("should keep the host pid in ~/.claude"):
             expect(self.installation.pid_folder).to(equal(self.root / ".claude"))

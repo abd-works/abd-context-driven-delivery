@@ -81,7 +81,9 @@ def property_notes(prop: "Property") -> List[str]:
 def bind_property_relationship(prop: "Property") -> None:
     """A relationship exists only when the field's type names a domain class."""
     targets = domain_type_names(prop.type_hint)
-    if not targets:
+    is_unmarked_collection = not prop.stereotype and (prop.type_hint or " ")[0].islower()
+    if not targets or is_unmarked_collection:
+        # An unmarked list is derived from relationships drawn elsewhere, so it adds no arrow of its own.
         prop.relationship = None
         return
     kind = (prop.stereotype or "association").lower()

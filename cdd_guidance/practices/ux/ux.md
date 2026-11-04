@@ -68,8 +68,8 @@ Whenever you name screens, attach stories, or import domain terms on the UX surf
 default_format: drawio
 stage: discovery
 outputs:
-  drawio: ".context/information-architecture.drawio"
-  markdown: ".context/ux-context.md"
+  drawio: "{epic}/.context/information-architecture.drawio"
+  markdown: "{epic}/.context/ux-context.md"
 ```
 
 #### Overview
