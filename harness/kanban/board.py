@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from datetime import datetime
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -110,6 +111,18 @@ class Board:
     @property
     def repo(self) -> Repo:
         return self._repo
+
+    def worktree_of(self, ticket: str) -> Path | None:
+        """The folder of the worktree that has ticket's branch checked out; none when it has no worktree."""
+        return self._worktrees.get(ticket)
+
+    @cached_property
+    def _worktrees(self) -> dict[str, Path]:
+        """Each branch's worktree, listed once per board read: the board is read after every call. A project that is no
+        git clone has none."""
+        if not self._repo.is_clone:
+            return {}
+        return {tree.branch: tree.path for tree in self._repo.list_worktrees()}
 
     @property
     def practices(self) -> list[PracticeGuidance]:

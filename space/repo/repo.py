@@ -901,6 +901,16 @@ class Repo:
                 return candidate
         return None
 
+    @property
+    def is_clone(self) -> bool:
+        """Whether git works here: a .git folder holding a HEAD, or the .git file of a linked worktree. A .git folder with
+        nothing in it only marks a project's root."""
+        root = self.find_root()
+        if root is None:
+            return False
+        marker = root / ".git"
+        return marker.is_file() or (marker / "HEAD").is_file()
+
     @classmethod
     def open(cls, start: str | Path) -> Repo:
         root = cls(start).find_root()
@@ -961,6 +971,8 @@ class Repo:
             stderr=subprocess.PIPE,
             text=True,
             encoding="utf-8",
+            # The cdd server runs without a console, so on Windows each git it starts would open a window of its own.
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         try:
             stdout, stderr = process.communicate(timeout=timeout)

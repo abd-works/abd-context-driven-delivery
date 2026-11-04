@@ -96,6 +96,7 @@ export class TestChat {
     private readonly board: RunningBoard,
     readonly id: string,
     private readonly name: string,
+    private readonly folder: string,
   ) {}
 
   // What the chat was given, as a person reads it.
@@ -119,7 +120,7 @@ export class TestChat {
   }
 
   private async take(isBusy: boolean): Promise<ChatCommandData[]> {
-    return (await ChatClientGenerated.named(this.board.api, this.id).checkIn(isBusy, this.name)) ?? []
+    return (await ChatClientGenerated.named(this.board.api, this.id).checkIn(isBusy, this.name, this.folder)) ?? []
   }
 }
 
@@ -154,8 +155,9 @@ export class BoardOnProject {
     return this.board.unreadPage(timed)
   }
 
-  chat(id: string, name = ''): TestChat {
-    return new TestChat(this.board, id, name)
+  // folder is where the chat works, as its mod reports it: a ticket's chat works in the ticket's worktree.
+  chat(id: string, name = '', folder = ''): TestChat {
+    return new TestChat(this.board, id, name, folder)
   }
 
   // A chat checked in and chosen on the page, as a person sees it in the picker.
@@ -193,6 +195,20 @@ export class BoardOnProject {
     writeInto(join(this.root, '.sessions', 'session.json'), JSON.stringify({ session: ticket ?? '' }))
   }
 
+  // A ticket's own worktree beside the project, as activating it with a worktree leaves it. Returns its folder.
+  openWorktree(ticket: string): string {
+    const folder = `${this.root}-${ticket}`
+    this.git('worktree', 'add', '-b', ticket, folder)
+    return folder
+  }
+
+  // A branch checked out in a worktree cannot be deleted, so the worktrees go first.
+  private removeWorktrees(): void {
+    const lines = this.git('worktree', 'list', '--porcelain').split(/\r?\n/)
+    const folders = lines.filter(line => line.startsWith('worktree ')).map(line => line.slice('worktree '.length))
+    for (const folder of folders.slice(1)) this.git('worktree', 'remove', '--force', folder)
+  }
+
   // The active ticket on a branch of its own, as activating it with a branch leaves it.
   checkOutBranch(name: string): void {
     this.git('checkout', '-b', name)
@@ -221,6 +237,7 @@ export class BoardOnProject {
   reset(): void {
     const hadOrigin = this.origin !== null
     this.removeOrigin()
+    this.removeWorktrees()
     this.git('checkout', '-f', 'main')
     this.git('reset', '--hard', this.firstCommit)
     this.git('clean', '-fd')

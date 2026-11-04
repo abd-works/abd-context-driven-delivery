@@ -4,6 +4,20 @@ import type { BoardApi } from '../board/board-api'
 import type { BoardStore } from '../board/board-store'
 
 const SHOWN_COMMAND = 80
+// A chat asked to start a ticket's chat is not asked again for this long, while the new chat opens and checks in.
+const STARTING_CHAT_MILLISECONDS = 120_000
+
+// A folder as the mod and as git each write it, so the two compare: one kind of slash, no trailing one, one case.
+const folderKey = (folder: string): string => folder.replaceAll('\\', '/').replace(/\/+$/, '').toLowerCase()
+
+export const isSameFolder = (one: string, other: string): boolean => Boolean(one && other) && folderKey(one) === folderKey(other)
+
+// What a connected chat is asked, to start the chat of a ticket: a session of its own, in the ticket's worktree, under the
+// ticket's name. A ticket with no worktree yet gets one first.
+export const startChatPrompt = (ticket: string, worktree: string): string =>
+  worktree
+    ? `Start a new Claude Code session titled "${ticket}" working in ${worktree}, for the session board's ticket ${ticket}. Its task: work on ticket ${ticket}.`
+    : `Open the worktree for the session board's ticket ${ticket} with repo.switch_worktree name=${ticket}, then start a new Claude Code session titled "${ticket}" working in that worktree. Its task: work on ticket ${ticket}.`
 
 type CommandKind = 'submit' | 'fill' | 'command'
 
@@ -34,6 +48,22 @@ export class ChatClient {
     const picked = chats.find(chat => chat.id === pickedChat) ?? chats[0]
     this.store.change({ chats, targetChat: picked?.id ?? null })
     await this.readMessages()
+  }
+
+  // The connected chat working in folder, such as a ticket's worktree.
+  chatIn(folder: string): ChatData | undefined {
+    return this.store.state.chats.find(chat => isSameFolder(chat.folder, folder))
+  }
+
+  // A ticket's chat works in the ticket's worktree. With none there yet, the chosen chat is asked to start one, once.
+  async openFor(ticket: string, worktree: string): Promise<void> {
+    const found = this.chatIn(worktree)
+    if (found) return this.choose(found.id)
+    if (!this.canSend) return this.store.toast(`Open a chat for ${ticket} in ${worktree || 'its worktree'}: no chat is connected to start one.`, true)
+    const asked = this.store.state.startingChats[ticket]
+    if (asked !== undefined && Date.now() - asked < STARTING_CHAT_MILLISECONDS) return
+    this.store.change({ startingChats: { ...this.store.state.startingChats, [ticket]: Date.now() } })
+    await this.send('submit', startChatPrompt(ticket, worktree), `Asked ${this.targetName} to start the chat of ${ticket}`)
   }
 
   choose(chat: string): void {

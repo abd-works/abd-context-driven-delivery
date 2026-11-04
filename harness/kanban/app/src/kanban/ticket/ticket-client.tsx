@@ -147,6 +147,12 @@ export class TicketClient extends TicketClientGenerated {
     this.page.board.select(this.address)
   }
 
+  // A person clicking the ticket: it opens in the details, and the board's commands go to its chat.
+  async choose(): Promise<void> {
+    this.select()
+    await this.page.chat.openFor(this.name, this.worktree)
+  }
+
   override async moveNext(): Promise<this | null> {
     return this.followed(await super.moveNext())
   }

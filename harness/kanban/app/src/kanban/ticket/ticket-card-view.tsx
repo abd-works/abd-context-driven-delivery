@@ -191,7 +191,7 @@ export function TicketCardView({ ticket, spot }: { ticket: TicketClient; spot: C
       draggable={isDraggable}
       onDragStart={dragStarted}
       onDragEnd={dragEnded}
-      onClick={() => ticket.select()}
+      onClick={() => void ticket.choose()}
       style={{ borderColor: borderColorOf(ticket, isSelected), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}
     >
       {/* Chrome starts no drag on a button, and this one covers the card, so it carries the card's drag. */}

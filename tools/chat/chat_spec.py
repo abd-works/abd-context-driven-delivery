@@ -93,6 +93,17 @@ with description("a chat") as self:
         with it("should go by the name its mod sent while the app has given it no title"):
             expect(Chat.list()[0]["name"]).to(equal("repo · first words"))
 
+        with it("should name no folder while its mod has sent none"):
+            expect(Chat.list()[0]["folder"]).to(equal(""))
+
+        # The board finds a ticket's chat by the worktree the chat works in.
+        with context("from the folder it works in"):
+            with before.each:
+                Chat.load(CHAT).check_in(is_busy=False, name="repo · first words", folder="C:/dev/repo-checkout-flow")
+
+            with it("should name that folder"):
+                expect(Chat.list()[0]["folder"]).to(equal("C:/dev/repo-checkout-flow"))
+
         with context("with a title the app wrote into its transcript, read at a later check-in"):
             with before.each:
                 folder = self.projects / "C--dev-repo"

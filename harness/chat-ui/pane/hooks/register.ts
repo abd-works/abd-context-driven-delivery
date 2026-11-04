@@ -110,9 +110,10 @@ function post($: EngineInterface, chat: string, operation: string, body: object)
   return $.http.fetch(`${BOARD_URL}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers: BOARD_HEADERS, body: JSON.stringify(body) })
 }
 
-// Checks in through the board, which runs chat.check_in on the cdd server every chat shares.
+// Checks in through the board, which runs chat.check_in on the cdd server every chat shares. The folder the chat works in
+// lets the board find a ticket's chat: the one working in the ticket's worktree.
 async function checkIn($: EngineInterface, chat: string): Promise<void> {
-  const answer = await post($, chat, 'check-in', { is_busy: isBusy, name: chatName })
+  const answer = await post($, chat, 'check-in', { is_busy: isBusy, name: chatName, folder: await $.session.cwd() })
   if (!answer.ok) return
   for (const command of JSON.parse(answer.text) as ChatCommandData[]) await run($, chat, command)
 }

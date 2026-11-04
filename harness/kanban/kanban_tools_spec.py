@@ -969,6 +969,21 @@ with description("the board tools") as self:
         with it("should say a ticket has no branch yet"):
             expect(self.project.call("ticket.workspace", ticket="sign-up")["has_branch"]).to(be_false)
 
+        with it("should name no worktree for a ticket that has none"):
+            expect(self.project.ticket_json("sign-up")["worktree"]).to(equal(""))
+
+        # The board finds a ticket's chat by the worktree the ticket's work is in.
+        with context("with a worktree opened for a ticket"):
+            with before.each:
+                self.worktree = self.project.root.parent / f"{self.project.root.name}-sign-up"
+                subprocess.run(["git", "worktree", "add", "-q", "-b", "sign-up", str(self.worktree)], cwd=self.project.root, check=True)
+
+            with after.each:
+                subprocess.run(["git", "worktree", "remove", "--force", str(self.worktree)], cwd=self.project.root, check=False)
+
+            with it("should name the ticket's worktree folder"):
+                expect(Path(self.project.ticket_json("sign-up")["worktree"]).resolve()).to(equal(self.worktree.resolve()))
+
         with context("with the active ticket on no branch of its own"):
             with before.each:
                 Session.switch("pet-visits", repo_path=self.project.root)

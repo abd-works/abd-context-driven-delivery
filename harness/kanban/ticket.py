@@ -234,6 +234,12 @@ class Ticket(Card):
         return self._from_repository(self._workpath)
 
     @property
+    def worktree(self) -> str:
+        """The folder of the ticket's own worktree, where its chat works; empty while it has none."""
+        found = self._board.worktree_of(self.name)
+        return str(found) if found else ""
+
+    @property
     def practice_roots(self) -> dict[str, PracticeRootData]:
         """Where each practice writes, as a path from the project, and whether a person chose it or it is the default."""
         guidances = {entry.practice: entry.fidelity.practice_guidance for entry in self.progress}
@@ -363,7 +369,7 @@ class Ticket(Card):
         active = self._board.active
         return {
             "has_branch": repo.has_branch(self.name),
-            "has_worktree": repo.worktree_for(self.name) is not None,
+            "has_worktree": self._board.worktree_of(self.name) is not None,
             "leaving_has_branch": active is not None and active._is_on_its_branch,
         }
 
@@ -503,6 +509,7 @@ class Ticket(Card):
             "violation_counts": self.violation_counts,
             "practices": self.practices,
             "workpath": self.workpath,
+            "worktree": self.worktree,
             "practice_roots": self.practice_roots,
             "session_file": self.session_file,
             "progress": {entry.slug: entry.state for entry in progress},

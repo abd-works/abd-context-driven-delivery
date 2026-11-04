@@ -27,6 +27,7 @@
 
 - The visual representation of one session on the board, with its title, scope, and *parent* (the ticket it was split from). It holds no work of its own: every question about work goes to its session.
 - Starts in the earliest stage its session shows work in, or Discovery when nothing is done yet. After that it moves only when a person moves it.
+- Its work goes on in its own *worktree*, a checkout of its branch beside the repository, and its *chat* is the chat working in that worktree. Clicking a ticket on the board sends the board's commands to that chat, shown under the ticket's name; when no chat works there yet, the board asks a connected chat to start one in the worktree, titled with the ticket's name, opening the worktree first if the ticket has none.
 - **Invariant:** a ticket never moves to another column by itself. A person moves it, by dragging it or moving it on and back, whatever its session's work, and the move is written to its session log with the stage it enters.
 
 ### session
@@ -97,6 +98,10 @@ Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built y
 + set_wip_limit(stage: str, limit: int): Board
 	// `board.set_wip_limit`: saved in `.sessions/_board.json`
 + wip_limit(stage: str): int
++ worktree_of(ticket: str): Path
+	// the worktree that has ticket's branch checked out; none when it has none. The worktrees are listed once per board read, because the board is read after every call, and a project that is no git clone has none
+	-> Repo.is_clone
+	-> Repo.list_worktrees
 	// 3 until a person sets it
 + folders(path: str): list[str]
 	// `board.folders`: the folders inside one folder of the repository, as paths from the project, for a person choosing a workpath or a practice root; installed packages, caches, and hidden folders are left out
@@ -215,6 +220,9 @@ The base type of Ticket and BacklogItem.
 + workpath: str
 	// its session's workpath, as a path from the project; empty for the whole repository
 	-> Session.workpath
++ worktree: str
+	// the folder of its own worktree, where its chat works; empty while it has none. The board picks the chat whose folder this is when a person clicks the ticket
+	-> Board.worktree_of
 + practice_roots: dict[str, PracticeRoot]
 	// where each practice writes, as a path from the project, and whether a person chose it or it is the default
 	-> Session.practice_root
@@ -311,7 +319,7 @@ The base type of Ticket and BacklogItem.
 + record(entry: str)
 	// appends a timestamped line to the session log
 + to_json(): dict
-	// its fields and column, with its session's work, next action, handoff, reports, workpath, practice roots, and the actions allowed on each fidelity: generate always, validate and review once any action on it is recorded
+	// its fields and column, with its session's work, next action, handoff, reports, workpath, worktree, practice roots, and the actions allowed on each fidelity: generate always, validate and review once any action on it is recorded
 
 ## FidelityProgress
 
@@ -444,6 +452,8 @@ The repository the board shows. Only the members the board's work depends on are
 + Repo(root: Path)
 ------
 + root: Path
++ is_clone: bool
+	// whether git works here: a `.git` folder holding a HEAD, or a linked worktree's `.git` file. An empty `.git` folder only marks a project's root
 + << composition >> sessions: list[Session]
 	// Intended, replaces `Session.all_in`: every session in `.sessions/` and `.sessions/closed/`. The main session is not listed, and folders whose names start with `_` are not sessions
 + current_session: Session
@@ -453,6 +463,7 @@ The repository the board shows. Only the members the board's work depends on are
 + files_changed_on(branch: str): list[str]
 	// what the branch changed since it left the default branch, with uncommitted changes when it is checked out
 + worktree_for(branch: str): Worktree
++ list_worktrees(): list[Worktree]
 + switch_branch(name: str): str
 	// commits and pushes the branch being left, and leaves the default branch committed but not pushed
 + switch_worktree(name: str): str

@@ -1,9 +1,10 @@
 import type { BacklogItemData } from '@cdd/harness/kanban/backlog-item'
 import type { BoardData } from '@cdd/harness/kanban/board'
 import type { ReportRuleData, TicketData, ViolationData } from '@cdd/harness/kanban/ticket'
+import type { ChatData } from '@cdd/tools/chat/chat'
 
 import { BacklogDraftClient, BacklogItemClient } from '../backlog-item/backlog-item-client'
-import { ChatClient } from '../chat/chat-client'
+import { ChatClient, isSameFolder } from '../chat/chat-client'
 import { ActivationClient } from '../ticket/activation-client'
 import { FilesPanelClient } from '../ticket/files-panel-client'
 import { OpenCardClient } from '../ticket/open-card-client'
@@ -56,6 +57,11 @@ export class BoardPage {
 
   async reloadOpen(): Promise<void> {
     await Promise.all([this.tiles.reload(), this.panels.reload(), this.files.reload()])
+  }
+
+  // A chat working in a ticket's worktree goes by the ticket's name.
+  chatName(chat: ChatData): string {
+    return this.board.tickets.find(ticket => isSameFolder(ticket.worktree, chat.folder))?.name ?? (chat.name || chat.id)
   }
 
   ticket(json: TicketData): TicketClient {
