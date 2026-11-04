@@ -99333,3 +99333,31 @@ Traceback (most recent call last):
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ModuleNotFoundError: No module named 'review.review'
 2026-11-04T00:42:15Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
+2026-11-04T00:42:44Z board.show ModuleNotFoundError: No module named 'review.review'
+Traceback (most recent call last):
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 1202, in dispatch
+    if resolved == BUILTIN_RESTART_TOOL:
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 916, in invoke_tool
+    del sys.modules[name]
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 734, in invoke
+    self._op = op
+           ^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\mcp\mcp_server.py", line 696, in _invoke_mcp_callable
+    _log_mcp_operation_invocation(op, arguments)
+               ^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\agent_tools\agent_tools.py", line 349, in on_subject
+    found = load(**{name: arguments.pop(name) for name in identity_names if name in arguments})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 65, in current
+    self._columns = self._build_columns()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 59, in load
+    # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 48, in __init__
+  File "C:\dev\abd-cdd-session-board\harness\kanban\board.py", line 178, in _build_columns
+    return self._saved_wip_limits.get(stage, Session.default_wip)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'review.review'
+2026-11-04T00:42:44Z session log missing chat id and transcript path (CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)
