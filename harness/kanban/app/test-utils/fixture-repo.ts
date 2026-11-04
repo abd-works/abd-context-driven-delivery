@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -70,13 +70,33 @@ function commitAll(root: string): void {
   git('commit', '-m', 'Fixture')
 }
 
-// The sessions a run of specs changes go back to how they started. The .git folder and the committed files stay.
+// The sessions a run of specs changes go back to how they started, with no worktree or branch a click opened for a
+// ticket. The .git folder and the committed files stay.
 export function resetSessions(root: string): void {
+  removeWorktrees(root)
+  removeTicketBranches(root)
   rmSync(join(root, '.sessions'), { recursive: true, force: true, maxRetries: REMOVE_RETRIES, retryDelay: REMOVE_RETRY_MILLISECONDS })
   writeSessions(root)
 }
 
+// Worktrees a spec opened beside the repository outlive it, and a new one of the same name would collide with them.
+function removeWorktrees(root: string): void {
+  if (!existsSync(join(root, '.git'))) return
+  const listed = execFileSync('git', ['worktree', 'list', '--porcelain'], { cwd: root, encoding: 'utf-8' }).split(/\r?\n/)
+  const folders = listed.filter(line => line.startsWith('worktree ')).map(line => line.slice('worktree '.length))
+  for (const folder of folders.slice(1)) rmSync(folder, { recursive: true, force: true, maxRetries: REMOVE_RETRIES, retryDelay: REMOVE_RETRY_MILLISECONDS })
+  // Git keeps a removed folder registered, and will not delete a branch it still counts as checked out there.
+  execFileSync('git', ['worktree', 'prune'], { cwd: root, stdio: 'ignore' })
+}
+
+// Branches a click opened for a ticket; main is the fixture's own.
+function removeTicketBranches(root: string): void {
+  const branches = execFileSync('git', ['branch', '--format=%(refname:short)'], { cwd: root, encoding: 'utf-8' }).split(/\s+/)
+  for (const branch of branches.filter(name => name && name !== 'main')) execFileSync('git', ['branch', '-D', branch], { cwd: root, stdio: 'ignore' })
+}
+
 export function createFixtureRepo(root: string): void {
+  removeWorktrees(root)
   rmSync(root, { recursive: true, force: true })
   mkdirSync(root, { recursive: true })
   writeInto(join(root, STORY_MAP_FILE), STORY_MAP_TEXT)

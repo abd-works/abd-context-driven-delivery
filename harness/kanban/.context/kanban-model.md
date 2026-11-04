@@ -27,7 +27,7 @@
 
 - The visual representation of one session on the board, with its title, scope, and *parent* (the ticket it was split from). It holds no work of its own: every question about work goes to its session.
 - Starts in the earliest stage its session shows work in, or Discovery when nothing is done yet. After that it moves only when a person moves it.
-- Its work goes on in its own *worktree*, a checkout of its branch beside the repository, and its *chat* is the chat working in that worktree. Clicking a ticket on the board sends the board's commands to that chat, shown under the ticket's name; when no chat works there yet, the board asks a connected chat to start one in the worktree, titled with the ticket's name, opening the worktree first if the ticket has none.
+- Its work goes on in its own *worktree*, a checkout of its branch beside the repository, and its *chat* is the chat working in that worktree. Clicking a ticket on the board sends the board's commands to that chat, shown under the ticket's name; when no chat works there yet, the board opens a new chat in the Claude app on the worktree from a `claude://code/new` link, whose prompt asks it to take the ticket's name as its title, opening the worktree first if the ticket has none. The app asks the person to confirm the folder and send, because it starts no session on its own.
 - **Invariant:** a ticket never moves to another column by itself. A person moves it, by dragging it or moving it on and back, whatever its session's work, and the move is written to its session log with the stage it enters.
 
 ### session
@@ -290,6 +290,9 @@ The base type of Ticket and BacklogItem.
 	// opens the ticket's branch and its worktree, as opening names
 	-> Repo.switch_branch
 	-> Repo.switch_worktree
++ open_worktree(): Ticket
+	// `ticket.open_worktree`: opens its own worktree beside the repository, creating its branch when missing, and leaves the open session as it is; the ticket comes back from a new board read, which lists the new worktree
+	-> Branch.open_in_worktree
 + workspace(): dict
 	// `ticket.workspace`: whether it has its branch and worktree, and whether the ticket being left is on its branch
 	-> Repo.has_branch

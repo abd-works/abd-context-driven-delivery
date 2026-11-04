@@ -4,8 +4,10 @@ import type { BoardApi } from '../board/board-api'
 import type { BoardStore } from '../board/board-store'
 
 const SHOWN_COMMAND = 80
-// A chat asked to start a ticket's chat is not asked again for this long, while the new chat opens and checks in.
+// A ticket's new chat is not opened again for this long, while the person confirms it and it checks in.
 const STARTING_CHAT_MILLISECONDS = 120_000
+// The Claude app opens a new session on a folder from this link, with its prompt filled in for the person to send.
+const NEW_CHAT_LINK = 'claude://code/new'
 
 // A folder as the mod and as git each write it, so the two compare: one kind of slash, no trailing one, one case.
 const folderKey = (folder: string): string => folder.replaceAll('\\', '/').replace(/\/+$/, '').toLowerCase()
@@ -17,12 +19,11 @@ export const isWorkingIn = (chatFolder: string, checkout: string): boolean => {
   return chat === root || chat.startsWith(`${root}/`)
 }
 
-// What a connected chat is asked, to start the chat of a ticket: a session of its own, in the ticket's worktree, under the
-// ticket's name. A ticket with no worktree yet gets one first.
-export const startChatPrompt = (ticket: string, worktree: string): string =>
-  worktree
-    ? `Start a new Claude Code session titled "${ticket}" working in ${worktree}, for the session board's ticket ${ticket}. Its task: work on ticket ${ticket}.`
-    : `Open the worktree for the session board's ticket ${ticket} with repo.switch_worktree name=${ticket}, then start a new Claude Code session titled "${ticket}" working in that worktree. Its task: work on ticket ${ticket}.`
+// The link that opens a ticket's new chat on its worktree. The link names no title, so its prompt asks for the ticket's.
+export const newChatLink = (ticket: string, worktree: string): string => {
+  const prompt = `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket.`
+  return `${NEW_CHAT_LINK}?folder=${encodeURIComponent(worktree)}&q=${encodeURIComponent(prompt)}`
+}
 
 type CommandKind = 'submit' | 'fill' | 'command'
 
@@ -33,6 +34,7 @@ export class ChatClient {
   constructor(
     private readonly store: BoardStore,
     private readonly api: BoardApi,
+    private readonly openLink: (link: string) => void,
   ) {}
 
   get canSend(): boolean {
@@ -60,15 +62,14 @@ export class ChatClient {
     return this.store.state.chats.find(chat => isWorkingIn(chat.folder, folder))
   }
 
-  // A ticket's chat works in the ticket's worktree. With none there yet, the chosen chat is asked to start one, once.
-  async openFor(ticket: string, worktree: string): Promise<void> {
-    const found = this.chatIn(worktree)
-    if (found) return this.choose(found.id)
-    if (!this.canSend) return this.store.toast(`Open a chat for ${ticket} in ${worktree || 'its worktree'}: no chat is connected to start one.`, true)
+  // A ticket's new chat opens in the Claude app on the ticket's worktree; the app asks the person to confirm the folder and
+  // send. Until it checks in, clicking the ticket again opens no second one.
+  startFor(ticket: string, worktree: string): void {
     const asked = this.store.state.startingChats[ticket]
-    if (asked !== undefined && Date.now() - asked < STARTING_CHAT_MILLISECONDS) return
+    if (!worktree || (asked !== undefined && Date.now() - asked < STARTING_CHAT_MILLISECONDS)) return
     this.store.change({ startingChats: { ...this.store.state.startingChats, [ticket]: Date.now() } })
-    await this.send('submit', startChatPrompt(ticket, worktree), `Asked ${this.targetName} to start the chat of ${ticket}`)
+    this.openLink(newChatLink(ticket, worktree))
+    this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
   }
 
   choose(chat: string): void {

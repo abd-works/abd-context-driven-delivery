@@ -147,10 +147,22 @@ export class TicketClient extends TicketClientGenerated {
     this.page.board.select(this.address)
   }
 
-  // A person clicking the ticket: it opens in the details, and the board's commands go to its chat.
+  // A person clicking the ticket: it opens in the details, and the board's commands go to its chat, the one working in its
+  // worktree. With no chat there yet, a new one opens there, after the worktree when the ticket has none. A ticket in
+  // Complete has closed its work, so it gets no new branch, worktree, or chat.
   async choose(): Promise<void> {
     this.select()
-    await this.page.chat.openFor(this.name, this.worktree)
+    const chat = this.page.chat.chatIn(this.worktree)
+    if (chat) return this.page.chat.choose(chat.id)
+    if (this.isClosed) return
+    this.page.chat.startFor(this.name, await this.worktreeOpened())
+  }
+
+  private async worktreeOpened(): Promise<string> {
+    if (this.worktree) return this.worktree
+    const opened = await this.openWorktree()
+    await this.page.reader.refresh()
+    return opened?.worktree ?? ''
   }
 
   override async moveNext(): Promise<this | null> {

@@ -363,6 +363,14 @@ class Ticket(Card):
     @mcp
     @agent_tool
     @noSessionLog
+    def open_worktree(self) -> Ticket:
+        """Open ticket's own worktree beside the repository, creating its branch when missing: the folder its chat works in, named as its worktree. The open session is left as it is."""
+        self._board.repo.branch_named(self.name).open_in_worktree()
+        return Ticket(self._session, Board.load(self._board.repo.root))
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def workspace(self) -> WorkspaceData:
         """Say whether ticket already has its branch and its worktree, so activating it offers only what is missing, and whether the active ticket being left is on a branch of its own, so its work can be committed, pushed, and merged."""
         repo = self._board.repo

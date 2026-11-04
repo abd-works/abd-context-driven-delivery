@@ -294,41 +294,61 @@ describe('Open Ticket Chat', () => {
     })
   })
 
+  // The app opens a new session on a folder from a claude://code/new link; the person confirms the folder and sends.
   describe("with no chat working in the ticket's worktree", () => {
     async function clicked(times = 1) {
       const { page } = await board.page()
-      const other = await board.connectChat(page, 'other-chat')
+      const opened: string[] = []
+      page.openLink = link => opened.push(link)
       const worktree = board.openWorktree(ACTIVE)
       await page.reader.refresh()
       for (let click = 0; click < times; click++) await ticketOn(page, ACTIVE).choose()
-      return { worktree, received: await other.checkIn() }
+      return { worktree, opened }
     }
 
-    it("should ask the connected chat to start a chat titled with the ticket's name in its worktree", async () => {
-      const { worktree, received } = await clicked()
-      expect(received).toEqual([{ kind: 'submit', text: expect.stringContaining(`titled "${ACTIVE}" working in ${worktree}`) }])
+    it("should open a new chat on the ticket's worktree", async () => {
+      const { worktree, opened } = await clicked()
+      expect(new URL(opened[0]!).searchParams.get('folder')).toBe(worktree)
     })
 
-    it('should ask only once while that chat starts', async () => {
-      expect((await clicked(2)).received).toHaveLength(1)
+    it("should ask the new chat to take the ticket's name as its title", async () => {
+      const { opened } = await clicked()
+      expect(new URL(opened[0]!).searchParams.get('q')).toContain(`Title this session "${ACTIVE}"`)
+    })
+
+    it('should open it only once while that chat starts', async () => {
+      expect((await clicked(2)).opened).toHaveLength(1)
     })
   })
 
   describe('with a ticket that has no worktree yet', () => {
-    it('should ask for its worktree to be opened first', async () => {
+    async function clicked() {
       const { page } = await board.page()
-      const other = await board.connectChat(page, 'other-chat')
+      const opened: string[] = []
+      page.openLink = link => opened.push(link)
       await ticketOn(page, ACTIVE).choose()
-      const [asked] = await other.checkIn()
-      expect(asked?.text).toContain(`repo.switch_worktree name=${ACTIVE}`)
+      return { page, opened }
+    }
+
+    it('should open its worktree', async () => {
+      const { page } = await clicked()
+      expect(ticketOn(page, ACTIVE).worktree).not.toBe('')
+    })
+
+    it('should open the new chat on that worktree', async () => {
+      const { page, opened } = await clicked()
+      expect(new URL(opened[0]!).searchParams.get('folder')).toBe(ticketOn(page, ACTIVE).worktree)
     })
   })
 
-  describe('with no chat connected', () => {
-    it("should say a chat has to be opened in the ticket's worktree", async () => {
+  // A ticket in Complete has closed its work, so clicking it opens no branch, worktree, or chat for it.
+  describe('with a ticket in Complete', () => {
+    it('should open no new chat', async () => {
       const { page } = await board.page()
-      await ticketOn(page, ACTIVE).choose()
-      expect(page.store.state.toasts.at(-1)?.text).toContain(`Open a chat for ${ACTIVE}`)
+      const opened: string[] = []
+      page.openLink = link => opened.push(link)
+      await page.board.tickets.find(ticket => ticket.name === 'shipped-work')!.choose()
+      expect(opened).toEqual([])
     })
   })
 })

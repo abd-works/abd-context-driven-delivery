@@ -984,6 +984,21 @@ with description("the board tools") as self:
             with it("should name the ticket's worktree folder"):
                 expect(Path(self.project.ticket_json("sign-up")["worktree"]).resolve()).to(equal(self.worktree.resolve()))
 
+        # The board opens a ticket's worktree before it opens a chat there for a ticket that has none.
+        with context("that opens a ticket's worktree"):
+            with before.each:
+                self.opened = Path(self.project.call("ticket.open_worktree", ticket="sign-up")["worktree"])
+
+            with after.each:
+                subprocess.run(["git", "worktree", "remove", "--force", str(self.opened)], cwd=self.project.root, check=False)
+
+            with it("should name the folder it opened as the ticket's worktree"):
+                expect(Path(self.project.ticket_json("sign-up")["worktree"]).resolve()).to(equal(self.opened.resolve()))
+
+            with it("should check out the ticket's branch there"):
+                branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.opened, check=True, capture_output=True, text=True)
+                expect(branch.stdout.strip()).to(equal("sign-up"))
+
         with context("with the active ticket on no branch of its own"):
             with before.each:
                 Session.switch("pet-visits", repo_path=self.project.root)
@@ -1057,7 +1072,7 @@ with description("the board tools") as self:
             expect(names).to(equal({
                 "board.show", "board.set_wip_limit", "board.help", "board.folders",
                 "ticket.create", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.activate", "ticket.finish_review", "ticket.choose_workpath", "ticket.choose_practice_root", "ticket.use_default_practice_root",
-                "ticket.workspace", "ticket.enable_practice", "ticket.files", "ticket.session_files", "ticket.read_file", "ticket.report", "ticket.violations", "ticket.generate_commands",
+                "ticket.workspace", "ticket.open_worktree", "ticket.enable_practice", "ticket.files", "ticket.session_files", "ticket.read_file", "ticket.report", "ticket.violations", "ticket.generate_commands",
                 "backlog-item.create", "backlog-item.start",
             }))
 
