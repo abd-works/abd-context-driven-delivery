@@ -31,4 +31,14 @@ describe('Reload Page On New Build', () => {
       expect(page.store.state.isNewBuild).toBe(true)
     })
   })
+
+  // The board server answers the build itself, so its answer says nothing about whether cdd is back.
+  describe('with cdd not connected', () => {
+    it('should keep saying so after checking the build', async () => {
+      const { page } = board.unreadPage()
+      page.store.change({ serverFailure: 'The cdd server is not connected' })
+      await page.build.check()
+      expect(page.store.state.serverFailure).toBe('The cdd server is not connected')
+    })
+  })
 })

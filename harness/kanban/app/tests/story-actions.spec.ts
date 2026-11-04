@@ -404,7 +404,7 @@ test.describe('Choose Session Root', () => {
     const roots = page.getByRole('dialog')
     await expect(roots.getByRole('heading', { name: 'Roots of Checkout flow' })).toBeVisible()
     await roots.getByRole('button', { name: 'Change the root of Session' }).click()
-    await expect(roots.getByRole('listitem').filter({ hasText: 'src/' })).toBeVisible()
+    await expect(roots.getByRole('listitem').filter({ hasText: 'app/' })).toBeVisible()
     await roots.getByRole('button', { name: 'Cancel' }).click()
     await expect(roots.getByRole('button', { name: 'Change the root of Stories' })).toBeVisible()
   })

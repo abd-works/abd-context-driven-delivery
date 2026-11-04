@@ -12,7 +12,7 @@ const REMOVE_RETRIES = 20
 const REMOVE_RETRY_MILLISECONDS = 100
 export const STAMP = '2026-11-01T10:00:00Z'
 const STORY_MAP_FILE = '.context/story-map.md'
-const SOURCE_FILE = 'src/checkout/order.py'
+const SOURCE_FILE = 'app/checkout/order.py'
 const STORY_MAP_TEXT = ['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n')
 
 const STORY_MAP_GRAPH = {
