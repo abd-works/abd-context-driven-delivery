@@ -235,12 +235,3 @@ describe('Write Ticket Handoff', () => {
     expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.' }])
   })
 })
-
-describe('Satisfy Violations From Band', () => {
-  it('should fill the prompt with the fidelities that have violations', async () => {
-    const { page } = await board.page()
-    const chat = await board.connectChat(page)
-    await ticketOn(page, ACTIVE).fillSatisfy()
-    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: '/actions-satisfy stories-story-map session=.sessions/checkout-flow/session.json' }])
-  })
-})

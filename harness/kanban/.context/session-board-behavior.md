@@ -311,11 +311,10 @@ side-panel-client.spec    with Fix all pressed on a rule
 story-actions.spec      it should send Fix and Fix all to the chat
 ```
 
-### Satisfy Violations From Band
+### Display Violations Band
 
 ```
-ticket-client.spec  describe Satisfy Violations From Band
-story-actions.spec  describe Satisfy Violations From Band
+story-actions.spec  describe Display Violations Band
 ```
 
 # (E) Review Fidelity Outputs

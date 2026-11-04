@@ -116,7 +116,6 @@ test.describe('the session board on the page', () => {
     test('should say to load the mod and turn off what sends to a chat', async ({ page }) => {
       await expect(page.getByText('No chat connected: load the cdd-board mod in a chat to send commands')).toBeVisible()
       await expect(page.getByRole('button', { name: '+ Ticket' })).toBeDisabled()
-      await expect(page.getByRole('button', { name: 'Satisfy' })).toBeDisabled()
       await expect(card(page, 'checkout-flow').getByRole('button', { name: 'Handoff' }).first()).toBeDisabled()
     })
 

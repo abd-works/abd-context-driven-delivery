@@ -29,7 +29,7 @@ class FourToNineChildren(PracticeGraphRule):
         if node.type in {"Story", "Scenario"}:
             return []
         severity = node.get_fact("child_band") or ""
-        if severity not in {"warning", "error"}:
+        if severity != "error":
             return []
         count = node.get_fact("child_count", 0)
         label = node.get_fact("child_label") or "children"

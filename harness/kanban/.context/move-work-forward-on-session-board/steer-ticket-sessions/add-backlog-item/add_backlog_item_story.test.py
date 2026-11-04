@@ -10,6 +10,9 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Add Backlog Item
 # Actor: Person
+#
+# Acceptance criteria:
+# - Start Backlog Item: the → arrow on a backlog card opens a ticket in Discovery, and a ticket that was moved to the Backlog comes back with its work. Observed: `BacklogItem.start`.
 with story("Add Backlog Item"):
     with scenario("Add an idea to the Backlog"):
         # Evidence: observed: kanban_tools_spec 'that adds a backlog item' — 'should show the item in the Backlog with its text', 'should write the title and text to one markdown file'; backlog-item-client.spec 'with a title and text typed'.

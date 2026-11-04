@@ -22,19 +22,11 @@ function ServerBandView({ failure, hasBoard }: { failure: string; hasBoard: bool
 }
 
 function ViolationsBandView({ ticket }: { ticket: TicketClient }) {
-  const { page } = useBoard()
-  const isOff = !page.chat.canSend
   return (
     <div className="band" role="status" aria-label="Active ticket's violations">
       <span className="band-words">
         {ticket.name} · {ticket.column} · violations: {ticket.violatedSlugs.join(', ')}
       </span>
-      <button className="action" disabled={isOff} onClick={() => void ticket.fillShowViolations()}>
-        Show
-      </button>
-      <button className="action primary" disabled={isOff} onClick={() => void ticket.fillSatisfy()}>
-        Satisfy
-      </button>
     </div>
   )
 }

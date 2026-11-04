@@ -2521,13 +2521,13 @@ Board page -> Ticket.report('stories-story_map')
 
 ---
 
-## Satisfy Violations From Band
+## Display Violations Band
 
-Actor: Person · Sub-epic: Validate Fidelity Outputs · File: `move-work-forward-on-session-board/validate-fidelity-outputs/satisfy-violations-from-band/satisfy_violations_from_band_story.test.py`
+Actor: Board App · Sub-epic: Validate Fidelity Outputs · File: `move-work-forward-on-session-board/validate-fidelity-outputs/display-violations-band/display_violations_band_story.test.py`
 
 ### Scenario: Show the active ticket's violations in a band
 
-Evidence: observed: board-page-view.tsx ViolationsBandView; story-actions.spec 'should name the active ticket's violations across the page top and fill the prompt'.
+Evidence: observed: board-page-view.tsx ViolationsBandView; story-actions.spec 'should name the active ticket's violations across the page top'.
 
 **Given** checkout-flow is the active [ticket](kanban-model.md#ticket--card) with violations on stories-story_map
 
@@ -2538,35 +2538,7 @@ Board page -> Board.show()
 Board <- active ticket checkout-flow with progress violations on stories-story_map
 ```
 
-**Then** a band across the page top names checkout-flow's violations with Show and Satisfy
-
-### Scenario: Fill the prompt with the fidelities that have violations
-
-Evidence: observed: ticket-client.spec 'Satisfy Violations From Band' — 'should fill the prompt with the fidelities that have violations'.
-
-**Given** the band names checkout-flow's violations on stories-story_map
-
-**And** a chat is connected
-
-**When** the Person satisfies the violations from the band
-
-```realization
-Board page -> Chat.send('fill', '/actions-satisfy stories-story-map')
-```
-
-**Then** the chat's prompt holds /actions-satisfy stories-story-map
-
-### Scenario: Keep Satisfy off with no chat
-
-Evidence: observed: tests/board-surface.spec.ts 'with no chat connected' — 'should say to load the mod and turn off what sends to a chat'.
-
-**Given** the band names checkout-flow's violations
-
-**But** no chat is connected
-
-**When** the Person looks at the band
-
-**Then** Satisfy is off
+**Then** a band across the page top names checkout-flow's violations
 
 ### Scenario: Show no band when the active ticket is clean
 

@@ -10,6 +10,10 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Arrange Board And Details
 # Actor: Person
+#
+# Acceptance criteria:
+# - Resize Board And Details: a drag on the split bar gives one region more height and cannot close either. Observed.
+# - Expand Board Or Details: one region takes the whole page and a second press brings the other back. Observed.
 with story("Arrange Board And Details"):
     with scenario("Give the board more height"):
         # Evidence: observed: board-client.spec 'should give the board the height a drag asks for'; story-actions.spec 'should give the board more height on a drag, and never close the details'.

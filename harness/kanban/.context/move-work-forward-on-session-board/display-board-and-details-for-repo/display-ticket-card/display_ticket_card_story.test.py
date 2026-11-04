@@ -10,6 +10,12 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Display Ticket Card
 # Actor: Board App
+#
+# Acceptance criteria:
+# - Display Sessions As Tickets: each work session shows as one ticket and the main session is not on the board. Observed.
+# - Place Ticket In Column: a ticket shows in the stage of its latest move, or before any move in the earliest stage its session shows work in. Observed.
+# - Display Active Ticket: the active ticket has a thick orange outline. Observed.
+# - Show Active Ticket On Status Line: the chat's status line names the active ticket, its stage, its next guidance, and its violations. Inferred: `statusOf` in `tools/chat-mod/hooks/register.ts`.
 with story("Display Ticket Card"):
     with scenario("Show every work session as a ticket"):
         # Evidence: observed: kanban_spec 'should show every work session as a ticket', 'should leave main off the board', 'should leave archived sessions off the board', 'should show closed sessions in Complete'.

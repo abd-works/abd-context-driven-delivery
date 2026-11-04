@@ -10,6 +10,11 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Send Next Fidelity Action
 # Actor: Person
+#
+# Acceptance criteria:
+# - Name Next Fidelity: the button names the step that runs next. Observed: `Ticket.next`, `Ticket.next_action`.
+# - Run next steps through generate, validate, and review for each practice in order. Observed: `Ticket.next_action`.
+# - Run next holds on fix violations until they are fixed, and says "fix violations". Observed.
 with story("Send Next Fidelity Action"):
     with scenario("Generate the next fidelity in its default format"):
         # Evidence: observed: ticket-client.spec 'with generate next' — 'should ask for the commands of the default format', 'should send those commands in order'; 'should name the step that runs next'; kanban_tools_spec 'should name generate as the next action'.

@@ -317,12 +317,9 @@ test.describe('Fix Report Violations', () => {
   })
 })
 
-test.describe('Satisfy Violations From Band', () => {
-  test('should name the active ticket\'s violations across the page top and fill the prompt', async ({ page }) => {
-    await waitForChat(page)
+test.describe('Display Violations Band', () => {
+  test('should name the active ticket\'s violations across the page top', async ({ page }) => {
     await expect(page.getByRole('status', { name: "Active ticket's violations" })).toContainText('checkout-flow · Discovery · violations: stories-story_map')
-    await page.getByRole('button', { name: 'Satisfy' }).click()
-    await lastReceived('/actions-satisfy stories-story-map session=.sessions/checkout-flow/session.json')
   })
 })
 

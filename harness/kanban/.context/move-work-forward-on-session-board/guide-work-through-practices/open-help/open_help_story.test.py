@@ -10,6 +10,11 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Open Help
 # Actor: Person
+#
+# Acceptance criteria:
+# - Fidelity help shows its overview, guidance, and rules. Observed.
+# - Practice help shows its overview, guidance, and shared rules. Observed.
+# - The Forge link opens the fidelity's or practice's page. Inferred: `FIDELITIES_WITHOUT_PAGE` in `harness/kanban/board.py` leaves out fidelities with no page.
 with story("Open Help"):
     with scenario("Open a fidelity's help"):
         # Evidence: observed: kanban_tools_spec 'that opens help on a fidelity' — 'should show the fidelity's rules', 'should name the stage a fidelity belongs to', 'should link to the fidelity's page on the forge'; story-actions.spec 'should show a fidelity's overview, guidance, rules, and Forge link'.

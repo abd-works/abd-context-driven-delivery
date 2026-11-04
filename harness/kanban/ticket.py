@@ -388,17 +388,16 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def report(self, fidelity: str) -> ReportData:
-        """Return the latest validation report of fidelity, a slug such as stories-story_map: its path and text, and the rules broken on the nodes of the graph saved beside it, each with its description and each violation with its line and the source around it. has_saved_graph is false when the report has no saved graph, so no rules can be listed."""
+        """Return the latest validation report of fidelity, a slug such as stories-story_map: its path and text, and the rules broken in it, each with its description and each violation with its line and the source around it. The rules are those broken on the nodes of the graph saved beside the report, then each rule the validating agent's judgment fails that the graph did not hit. has_saved_graph is false when the report has no saved graph, so its graph's rules are missing."""
         path = self.reports.get(fidelity, "")
         if not path:
             return {"path": "", "text": "", "rules": [], "has_saved_graph": False}
         graph = self._graph_of(path)
-        return {
-            "path": path,
-            "text": (self._board.repo_root / path).read_text(encoding="utf-8", errors="replace"),
-            "rules": self._rules_broken_in(path, fidelity) if graph.is_file() else [],
-            "has_saved_graph": graph.is_file(),
-        }
+        text = (self._board.repo_root / path).read_text(encoding="utf-8", errors="replace")
+        graph_rules = self._rules_broken_in(path, fidelity) if graph.is_file() else []
+        hit = {rule["name"] for rule in graph_rules}
+        judged = [rule for rule in self._judged_rules(text, fidelity) if rule["name"] not in hit]
+        return {"path": path, "text": text, "rules": graph_rules + judged, "has_saved_graph": graph.is_file()}
 
     @mcp
     @agent_tool
@@ -546,6 +545,11 @@ class Ticket(Card):
         held = Ticket(self._session.move_to_backlog(), self._board)
         return BacklogItem.holding(held, self._board)
 
+    @property
+    def _graph_root(self) -> Path:
+        """The folder a saved graph names its files from: the session's root, or the project's when it has none."""
+        return Path(self._session.workpath or self._board.repo_root).resolve()
+
     def _graph_of(self, report: str) -> Path:
         """The graph a validation saved beside its report."""
         return (self._board.repo_root / report).with_suffix(".json")
@@ -573,12 +577,26 @@ class Ticket(Card):
             for name, hits in self._hits_by_rule(report, progress).items()
         ]
 
+    def _judged_rules(self, text: str, fidelity: str) -> list[dict[str, Any]]:
+        """Each rule the judgment in a report fails, with its findings at the judged file's lines."""
+        descriptions = next(entry for entry in self.progress if entry.slug == fidelity).rule_descriptions
+        rules = []
+        for judgment in _judgments_in(text):
+            violations = [self._judged_violation(judgment.file, finding) for finding in judgment.findings]
+            rules.append({"fidelity": fidelity, "name": judgment.rule, "description": descriptions.get(judgment.rule, ""), "count": len(violations), "violations": violations})
+        return rules
+
+    def _judged_violation(self, judged_file: str, finding: Finding) -> dict[str, Any]:
+        """A finding names the judged file by its name alone, or no file; one that names another file keeps that file's path."""
+        location = judged_file if not finding.file or Path(finding.file).name == Path(judged_file).name else finding.file
+        return {"location": location, "line": finding.line, "message": finding.message, "source": self._source_around(location, finding.line)}
+
     def _rule_identity(self, rule: dict[str, Any]) -> tuple[Any, ...]:
         practice = rule["fidelity"].split("-")[0]
         return (practice, rule["name"], *((violation["location"], violation["line"], violation["message"]) for violation in rule["violations"]))
 
     def _violation_of(self, hit: dict[str, Any]) -> dict[str, Any]:
-        location = self._relative_to(self._board.repo_root.resolve(), hit["location"])
+        location = self._relative_to(self._board.repo_root.resolve(), str(self._graph_root / hit["location"]))
         line = hit["line_number"]
         return {"location": location, "line": line, "message": hit["violation_message"], "source": self._source_around(location, line)}
 
@@ -762,6 +780,61 @@ class FidelityProgress:
 def _report_stamp(report: str) -> str:
     """The date a report's name ends with; names stamp it in a form that sorts by time. Nothing for no report."""
     return Path(report).stem.rsplit("-", 1)[-1] if report else ""
+
+
+# The judgment the validating agent adds to a report, in the shape validate.md gives it. A report written before
+# validate.md allowed only Pass and Fail can mark a rule Warn, which is a Fail.
+JUDGMENT_HEADING = re.compile(r"^## Judgment — `(?P<file>[^`]+)`")
+JUDGED_RULE_HEADING = re.compile(r"^### `(?P<rule>[^`]+)` — (?:Fail|Warn)\s*$")
+FINDING_LINE = re.compile(r"^- (?:(?P<file>[^\s:]+):(?P<line>\d+)\s+)?(?P<message>.+)$")
+# A finding written before validate.md gave the judgment its shape names its file and line mid-sentence.
+NAMED_LINE = re.compile(r"(?P<file>[\w./-]+\.\w+):(?P<line>\d+)")
+
+
+class Finding:
+    """One finding of a judged rule: the file and line it names, when it names them, and what it says."""
+
+    def __init__(self, file: str, line: int | None, message: str) -> None:
+        self.file = file
+        self.line = line
+        self.message = message
+
+
+class Judgment:
+    """One rule the judgment fails, in one judged file, with its findings."""
+
+    def __init__(self, file: str, rule: str) -> None:
+        self.file = file
+        self.rule = rule
+        self.findings: list[Finding] = []
+
+    def add(self, line: str) -> None:
+        """A bullet is a finding; a paragraph under a rule with no bullets is its one finding."""
+        bullet = FINDING_LINE.match(line)
+        if bullet is None and self.findings:
+            return
+        message = bullet["message"] if bullet else line
+        named = (bullet if bullet and bullet["line"] else None) or NAMED_LINE.search(message)
+        self.findings.append(Finding(named["file"] if named else "", int(named["line"]) if named else None, message))
+
+
+def _judgments_in(text: str) -> list[Judgment]:
+    """The rules a report's judgment fails; none when the report has no judgment."""
+    judgments: list[Judgment] = []
+    judged_file, current = "", None
+    for line in text.splitlines():
+        heading = JUDGMENT_HEADING.match(line)
+        rule = JUDGED_RULE_HEADING.match(line)
+        if heading:
+            judged_file, current = heading["file"], None
+        elif rule and judged_file:
+            current = Judgment(judged_file, rule["rule"])
+            judgments.append(current)
+        elif line.startswith("#"):
+            current = None
+        elif current and line.strip():
+            current.add(line.strip())
+    return judgments
 
 
 def practice_key(practice: PracticeGuidance) -> str:

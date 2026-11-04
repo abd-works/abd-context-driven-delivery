@@ -10,6 +10,12 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Arrange Side Panel
 # Actor: Person
+#
+# Acceptance criteria:
+# - Resize Side Panel: a drag grip on the panel's left edge sets its width. Observed.
+# - Expand Side Panel: one panel is expanded at a time and it takes the board's width less the other open panels. Observed.
+# - Close Side Panel: × closes the panel. Observed.
+# - Scroll Fixed Columns: columns keep their width and scroll sideways when a panel opens. Observed.
 with story("Arrange Side Panel"):
     with scenario("Set a panel's width"):
         # Evidence: observed: side-panel-client.spec 'should set the width a drag asks for', 'should not go narrower than the smallest width'; story-actions.spec 'should set a panel's width on a drag of its left edge'.

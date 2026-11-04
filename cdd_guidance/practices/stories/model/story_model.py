@@ -164,12 +164,7 @@ class StoryNode(BoundNode, ABC):
     def load_child_band(self, count: int, label: str) -> None:
         self.child_count = count
         self.child_label = label
-        if count == 0 or 4 <= count <= 9:
-            self.child_band = ""
-        elif count in (3, 10):
-            self.child_band = "warning"
-        else:
-            self.child_band = "error"
+        self.child_band = "" if count == 0 or 4 <= count <= 9 else "error"
 
     def take_code_from(self, source: "StoryNode") -> None:
         """Keep the code the source was read with, so a copy in another channel can still write it back."""

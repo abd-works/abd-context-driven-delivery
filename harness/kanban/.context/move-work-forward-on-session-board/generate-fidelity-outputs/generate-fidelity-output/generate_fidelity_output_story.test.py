@@ -10,6 +10,9 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Generate Fidelity Output
 # Actor: Person
+#
+# Acceptance criteria:
+# - When a fidelity uses a different format from the one before it, the earlier fidelity is rendered into that format first. Observed: `Ticket.generate_commands`.
 with story("Generate Fidelity Output"):
     with scenario("Send the generate command from a tile"):
         # Evidence: observed: tile-client.spec 'Generate Fidelity Output' — 'should send the commands the ticket names', 'should clear the picks'; story-actions.spec 'should send the generate commands from Run on an opened card'.

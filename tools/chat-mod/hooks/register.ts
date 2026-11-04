@@ -78,9 +78,13 @@ function submitted($: EngineInterface, text: string): Promise<string> {
   return Promise.race([submitting, after($, SHOWN_WITHIN_MILLISECONDS, `the chat had not shown it ${SHOWN_WITHIN_MILLISECONDS / 1000} s after taking it`)])
 }
 
-// The chat's cdd server keeps the code it started with; cdd.restart reloads it in place, on the same connection.
+// The chat's cdd server keeps the code it started with; cdd.restart reloads it in place, on the same connection. A server
+// started before cdd.restart existed has no such tool, and only reconnecting it in /mcp loads the code that does.
+const NO_RESTART_TOOL = 'this chat\'s cdd server started before cdd.restart existed: reconnect cdd once in /mcp'
+
 async function restartedCdd($: EngineInterface): Promise<string> {
-  const result = await $.mcp.call(SERVER, 'cdd.restart', {})
+  const result = await $.mcp.call(SERVER, 'cdd.restart', {}).catch(() => null)
+  if (!result) return NO_RESTART_TOOL
   return result.isError ? `cdd.restart failed: ${result.content[0]?.text ?? 'no reason given'}` : ''
 }
 

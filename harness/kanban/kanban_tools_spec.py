@@ -56,6 +56,30 @@ STORY_MAP_GRAPH = {
         },
     },
 }
+# A report as validate saves it, with the judgment the validating agent added: a rule the graph already hit, a failed rule
+# with two findings, and a rule an older report marked Warn.
+JUDGED_REPORT = """# Graph rule validation
+
+## Judgment — `docs/map.md`
+
+| Rule | Verdict |
+|---|---|
+| verb-noun-format | **Fail** (graph rule) |
+
+### `verb-noun-format` — Fail
+Graph rule: the story at line 12 opens with a noun.
+
+### `do-not-invent-requirements` — Fail
+- map.md:7 `Open Board`: no source names the board command.
+- map.md:9 `Close Board`: invented.
+
+### `story-name-captures-system-mechanic` — Warn
+- map.md:3 `Do Stuff` does not say what it does.
+
+### Passes
+Everything else.
+"""
+
 # One hit each on a story map rule, a scenarios rule, a shared rule, and an acceptance tests rule.
 WHOLE_STORIES_GRAPH = {
     "practices": {
@@ -287,6 +311,25 @@ with description("the board tools") as self:
                     source = report["rules"][0]["violations"][0]["source"]
                     expect((source[0], source[-1])).to(equal(({"number": 10, "text": "line 10"}, {"number": 16, "text": "line 16"})))
 
+            # A graph names each file from the session's root, which can be a folder of the project with its own docs/map.md.
+            with context("with a session whose root is a folder of the project"):
+                with before.each:
+                    session = self.project.sessions / "pet-visits" / "session.json"
+                    root = self.project.root / "harness" / "pets"
+                    session.write_text(json.dumps({**json.loads(session.read_text(encoding="utf-8")), "workpath": str(root)}), encoding="utf-8")
+                    (root / "docs").mkdir(parents=True)
+                    (root / "docs" / "map.md").write_text("".join(f"pets line {number}\n" for number in range(1, 21)), encoding="utf-8")
+                    (self.project.root / "docs").mkdir()
+                    (self.project.root / "docs" / "map.md").write_text("".join(f"project line {number}\n" for number in range(1, 21)), encoding="utf-8")
+
+                with it("should name the violation's file from the project's root"):
+                    report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
+                    expect(report["rules"][0]["violations"][0]["location"]).to(equal("harness/pets/docs/map.md"))
+
+                with it("should show the source lines of the file in the session's root"):
+                    report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
+                    expect(report["rules"][0]["violations"][0]["source"][0]["text"]).to(equal("pets line 10"))
+
             with it("should return exactly the fields ViolationData names"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
                 expect(set(report["rules"][0]["violations"][0])).to(equal(set(ViolationData.__annotations__)))
@@ -328,6 +371,34 @@ with description("the board tools") as self:
             with it("should show the text of each rule under its name"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
                 expect(report["rules"][0]["description"]).to(contain("verb"))
+
+            # The agent that ran validate adds its judgment to the report, and the report panel must agree with it.
+            with context("with the judgment of the agent that validated it"):
+                with before.each:
+                    (self.project.root / "docs").mkdir()
+                    (self.project.root / "docs" / "map.md").write_text("".join(f"line {number}\n" for number in range(1, 21)), encoding="utf-8")
+                    report = self.project.sessions / "pet-visits" / "validation-reports" / "stories-story-map-20261031T041200.md"
+                    report.write_text(JUDGED_REPORT, encoding="utf-8")
+
+                with it("should list each rule the judgment fails after the graph's rules, once each"):
+                    report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
+                    expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format", "do-not-invent-requirements", "story-name-captures-system-mechanic"]))
+
+                with it("should count each finding of a judged rule"):
+                    report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
+                    expect(report["rules"][1]["count"]).to(equal(2))
+
+                with it("should give a judged finding the judged file and its line"):
+                    finding = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")["rules"][1]["violations"][0]
+                    expect((finding["location"], finding["line"])).to(equal(("docs/map.md", 7)))
+
+                with it("should show the source lines around a judged finding"):
+                    finding = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")["rules"][1]["violations"][0]
+                    expect(finding["source"][0]["text"]).to(equal("line 5"))
+
+                with it("should list a rule an older report warns on as failing, since a warning is a Fail"):
+                    finding = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")["rules"][2]["violations"][0]
+                    expect(finding["message"]).to(equal("`Do Stuff` does not say what it does."))
 
         with context("with a validation report on a rule the practice does not describe"):
             with before.each:

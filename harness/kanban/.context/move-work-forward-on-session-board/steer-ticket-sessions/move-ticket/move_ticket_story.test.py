@@ -10,6 +10,13 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Move Ticket
 # Actor: Person
+#
+# Acceptance criteria:
+# - Move Ticket To Next Column: the forward arrow moves it one column on from Done. Observed: `Ticket.move_next`.
+# - Move Ticket To Previous Column: the back arrow moves it one column back, into that column's Done. Observed: `Ticket.move_previous`.
+# - A ticket moved out of Implementation closes into Complete. Observed.
+# - A ticket moved back out of Complete reopens in Implementation. Observed.
+# - A ticket moved back out of Discovery goes to the Backlog with its work. Observed: `Ticket.move_previous`, `BacklogItem.holding`.
 with story("Move Ticket"):
     with scenario("Move a ticket on to the next column"):
         # Evidence: observed: kanban_tools_spec 'that moves a ticket to the next column' — 'should show the ticket in the next stage', 'should show the ticket in progress there'; kanban_spec 'should write the stage it entered to its session log'; ticket-client.spec 'should read the board again and select the ticket where it landed'.

@@ -210,14 +210,6 @@ export class TicketClient extends TicketClientGenerated {
     return this.page.chat.fill(`Write a handoff for ticket ${this.name} with /space-handoff-handoff-session.`)
   }
 
-  fillSatisfy(): Promise<void> {
-    return this.page.chat.fill(this.actionCommand(`/actions-satisfy ${this.violatedSlugs.map(guidanceSlug).join(' ')}`))
-  }
-
-  fillShowViolations(): Promise<void> {
-    return this.page.chat.fill(`Show the violations on ${this.violatedSlugs.map(guidanceSlug).join(' ')} for ticket ${this.name}.`)
-  }
-
   get canRunNext(): boolean {
     if (!this.next || this.isLocked) return false
     return STEPS_WITHOUT_CHAT.includes(this.nextAction) || this.page.chat.canSend

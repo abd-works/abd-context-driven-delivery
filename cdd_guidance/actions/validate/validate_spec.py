@@ -218,6 +218,11 @@ with description("a validate action on practice guidance") as self:
             report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
             expect(report).to(contain("Board Stuff"))
 
+        # The session board lists the agent's judgment beside the graph's hits only when it is written in this shape.
+        with it("should tell the agent to write its judgment under the judged file, one heading per failed rule"):
+            report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
+            expect(report).to(contain("## Judgment — `path/of/the/judged/file.md`\n\n   ### `rule-slug` — Fail\n   - story-map.md:86"))
+
         # The session board reads a fidelity's latest validate line, so a second, clean line would hide the violations.
         with context("that has been validated"):
             with before.each:

@@ -10,6 +10,11 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 
 # Story: Display Ticket Details
 # Actor: Board App
+#
+# Acceptance criteria:
+# - A press anywhere on a card shows that ticket in the details region below the board, and with no card pressed the details show the active ticket. Observed.
+# - The details show the ticket's practices with their fidelity progress and its latest validation reports. Observed.
+# - Expand Ticket: the expanded card shows the same tiles as the details, and only one is expanded at a time. Observed.
 with story("Display Ticket Details"):
     with scenario("Show the ticket of a card pressed anywhere"):
         # Evidence: observed: story-actions.spec 'should show the ticket of a card pressed anywhere'; ticket-client.spec 'should name the ticket's stage and how far it has got there', 'should say what runs next'.
