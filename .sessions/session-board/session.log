@@ -1426,3 +1426,6 @@
 2026-11-04T05:30:25Z error render.render C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 28833 no-chat C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 28874
 2026-11-04T05:30:58Z error render.render C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 28875 no-chat C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 28916
 2026-11-04T05:47:10Z error board.show C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 28917 no-chat C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 28944
+2026-11-04T05:49:40Z tool session.current
+2026-11-04T05:51:22Z tool repo.switch_worktree
+2026-11-04T05:51:23Z error repo.switch_worktree C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 28945 no-chat C:\dev\abd-cdd-session-board\.sessions\session-board\session.err 28976
