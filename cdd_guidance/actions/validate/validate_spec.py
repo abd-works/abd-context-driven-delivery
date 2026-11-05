@@ -247,6 +247,21 @@ with description("a validate action on practice guidance") as self:
             with it("should name its violations on that line"):
                 expect(self.validate_lines[-1]).to(contain(" graph-rule "))
 
+        # A board command names its ticket's session, which need not be the session open in the chat that runs it.
+        with context("in a session the command names that is not the open one"):
+            with before.each:
+                self.other = self.folder / ".sessions" / "pet-visits"
+                self.other.mkdir(parents=True)
+                (self.other / "session.json").write_text(f'{{"workpath": "{(self.folder / "board").as_posix()}"}}', encoding="utf-8")
+                self.action = Validate()
+                self.report = self.action.validate(guidance=f"stories-story-map session={(self.other / 'session.json').as_posix()}", paths=[(self.folder / "board/.context/story-map.md").as_posix()])
+
+            with it("should check the named session's files"):
+                expect(self.report).to(contain("Epic `Move Work On Board`"))
+
+            with it("should save the report in the named session"):
+                expect([path.suffix for path in (self.other / "validation-reports").iterdir()]).to(contain(".md"))
+
         # The session board validates with no paths, and a report saved without its graph lists no violations to fix.
         with context("that the story map fidelity declares as its output"):
             with before.each:

@@ -167,9 +167,7 @@ class Validate(GuidanceAction):
         """Each listed guidance's fidelity outputs, by format, and the one format validate checks: the format the
         guidance names, else the one the latest generate wrote, else the fidelity's default. A fidelity's formats mirror
         each other, so checking every one reports each finding once per format."""
-        from space.session import Session
-
-        session = Session.current()
+        session = self.acting_session()
         named = [item.get("format", "") if isinstance(item, dict) else "" for item in self._tool_items or []]
         checked: list[tuple[str, dict[str, list[str]]]] = []
         for item, format in zip(self.listed(), named):
@@ -202,9 +200,7 @@ class Validate(GuidanceAction):
         return sorted(str(folder) for folder in folders if folder == workspace or workspace in folder.parents)
 
     def _fidelity_outputs(self, item) -> dict[str, list[str]]:
-        from space.session import Session
-
-        return Session.current().fidelity_outputs(item)
+        return self.acting_session().fidelity_outputs(item)
 
     def _graph_practices(self) -> list[str]:
         """Graph practices of the listed guidance (clean-engineering is clean_engineering); none for other guidance."""
@@ -216,19 +212,13 @@ class Validate(GuidanceAction):
         return [name for name in names if name in _GRAPH_PRACTICES]
 
     def _session_path(self) -> Path:
-        from space.session import Session
-
-        return Path(Session.current().session_path)
+        return Path(self.acting_session().session_path)
 
     def _validate_workspace(self) -> Path:
-        from space.session import Session
-
-        return Path(Session.current().workpath).resolve()
+        return Path(self.acting_session().workpath).resolve()
 
     def _project_checkout(self) -> Path:
-        from space.session import Session
-
-        session = Session.current()
+        session = self.acting_session()
         return Path(session.repo_path or session.workpath).resolve()
 
     def _graph_json_report(
@@ -332,11 +322,9 @@ class Validate(GuidanceAction):
         return bodies
 
     def _log_graph_validation(self, violations: list) -> None:
-        from space.session import Session
-
         if self._guidance_text is not None or not violations:
             return
-        session = Session.current()
+        session = self.acting_session()
         synopsis = [
             f"graph-rule {item.get('rule_slug', '')} {item.get('location', '')}:{item.get('line_number', '')}"
             for item in violations[:40]
@@ -358,11 +346,9 @@ class Validate(GuidanceAction):
         self._log_validation_to_session()
 
     def _log_validation_to_session(self) -> None:
-        from space.session import Session
-
         if self._guidance_text is not None:
             return
-        session = Session.current()
+        session = self.acting_session()
         for item in self.listed():
             session.log_validation(item, [])
 
