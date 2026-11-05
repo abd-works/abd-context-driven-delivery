@@ -309,6 +309,34 @@ with description("a session"):
             with it("should keep the session in a folder named by its slug"):
                 expect((self.repo / ".sessions" / "chat-ui" / "session.json").is_file()).to(equal(True))
 
+        # The board reads the main checkout's .sessions, so a ticket's log written in its worktree never showed there.
+        with context("from a linked worktree of the checkout whose board holds it"):
+            with before.each:
+                self.worktree = Path(tempfile.mkdtemp())
+                worktree_git = self.repo / ".git" / "worktrees" / "alpha"
+                worktree_git.mkdir(parents=True)
+                (worktree_git / "commondir").write_text("../..\n", encoding="utf-8")
+                (self.worktree / ".git").write_text(f"gitdir: {worktree_git}\n", encoding="utf-8")
+                ProjectCall(self.worktree)
+                Session.switch("alpha", repo_path=self.worktree)
+
+            with after.each:
+                shutil.rmtree(self.worktree, ignore_errors=True)
+
+            with it("should log into the ticket's folder on the board"):
+                expect(Session.current().session_path).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
+
+            with it("should keep the worktree's own choice of session in the worktree"):
+                expect(WorkState(self.worktree).session).to(equal("alpha"))
+
+            with context("that switches to the main session"):
+                with before.each:
+                    Session.new("main", self.work, self.repo)
+                    Session.switch("main", repo_path=self.worktree)
+
+                with it("should log into the worktree's own main session"):
+                    expect(Session.current().session_path).to(equal(self.worktree.resolve() / ".sessions" / "main"))
+
         with context("with a repo path"):
             with before.each:
                 self.instructions = Session.switch("alpha", repo_path=self.repo)
@@ -515,25 +543,30 @@ with description("a session"):
             self.edited = self.work / "cart.py"
             self.edited.write_text("class Cart:\n    pass\n", encoding="utf-8")
 
-        with context("with paths passed in"):
-            with it("should still log the action and record no-chat on session.err when chat is missing"):
+        # Every tool call from a chat the server cannot name logs this way, so a note per line in session.err grew it without end.
+        with context("with no chat known"):
+            with before.each:
                 Session.forget_current()
                 bare = Path(tempfile.mkdtemp())
                 work = bare / "work"
                 work.mkdir()
                 Session.new("alpha", work, bare)
-                session = Session.current()
+                self.bare_session = Session.current()
                 from space.session.chat_context import clear_chat_context
 
                 clear_chat_context()
                 os.environ.pop("CDD_CONVERSATION_ID", None)
                 os.environ.pop("CDD_TRANSCRIPT_PATH", None)
-                session.log_action("sketch", [work / "x.py"])
-                log = (session.session_path / "session.log").read_text(encoding="utf-8")
-                err = (session.session_path / "session.err").read_text(encoding="utf-8")
-                expect("sketch" in log and "no-chat" in log and "session.err" in log).to(equal(True))
-                expect("missing chat" in err).to(equal(True))
+                self.bare_session.log_action("sketch", [work / "x.py"])
 
+            with it("should log the action as from no chat"):
+                log = (self.bare_session.session_path / "session.log").read_text(encoding="utf-8")
+                expect(log.rstrip().endswith("x.py no-chat")).to(equal(True))
+
+            with it("should write nothing to session.err"):
+                expect((self.bare_session.session_path / "session.err").exists()).to(equal(False))
+
+        with context("with paths passed in"):
             with it("should append a timestamped line that names the action and the path"):
                 self.session.log_action("sketch", [self.edited])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")

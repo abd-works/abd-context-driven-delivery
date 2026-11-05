@@ -19,8 +19,8 @@ def _transcript_line_count(path: Path) -> str:
 
 def _reparent_no_chat(line: str, chat_id: str, transcript: Path, line_numbers: str) -> str:
     pointer = f"{chat_id} {transcript} {line_numbers}"
-    if " no-chat " in line:
-        return line.split(" no-chat ", 1)[0] + " " + pointer
+    if " no-chat" in f"{line} ":
+        return line.split(" no-chat", 1)[0] + " " + pointer
     return line
 
 

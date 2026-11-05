@@ -1142,7 +1142,8 @@ class Graph:
         for item in files:
             path = Path(item) if Path(item).is_absolute() else folder / item
             path = path.resolve()
-            if folder not in path.parents:
+            # The loaded folder itself, such as ".", stands for every source file under it.
+            if path != folder.resolve() and folder.resolve() not in path.parents:
                 continue
             if path.is_dir():
                 found.extend(item.resolve() for item in scanned_files(path))

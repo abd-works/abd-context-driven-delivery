@@ -86,12 +86,6 @@ def chat_from_environ() -> tuple[str, Path, str] | None:
     return chat_id, path, lines
 
 
-MISSING_CHAT_DETAIL = (
-    "session log missing chat id and transcript path "
-    "(CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH, or set_chat_context / note_chat)"
-)
-
-
 def apply_chat_context(session: Session) -> bool:
     """Bind chat metadata on the session before writing a log line."""
     resolved = chat_from_environ()

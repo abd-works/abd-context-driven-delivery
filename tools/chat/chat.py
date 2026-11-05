@@ -132,6 +132,10 @@ class Chat:
     @noSessionLog
     def check_in(self, is_busy: bool = False, name: str = "", folder: str = "") -> list[ChatCommandData]:
         """Check chat in, as its cdd-board mod does every second: say whether a turn is running, what to call the chat, and the folder it works in, and take the commands ready for it. A fill stays waiting while a turn runs, because one made during a turn can report success and show nothing."""
+        with _checking_in(self._folder):
+            return self._check_in(is_busy, name, folder)
+
+    def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommandData]:
         self._folder.mkdir(parents=True, exist_ok=True)
         state = self._state
         title, title_read = (_latest_title(self._transcript), self.clock()) if self.clock() - state.get("title_read", 0) > TITLE_READ_SECONDS else (state.get("title", ""), state["title_read"])
@@ -261,6 +265,17 @@ class Chat:
         projects = _claude_projects()
         found = projects.glob(f"*/{self.id}.jsonl") if projects.is_dir() else []
         return next(iter(found), None)
+
+
+# A mod that reloads checks in twice at once, and one cdd server answers every chat, so both arrive in this process. Each
+# chat checks in one call at a time, so a waiting command is taken once and never moved while the other call reads it.
+_CHECK_IN_LOCKS: dict[Path, threading.Lock] = {}
+_CHECK_IN_LOCKS_GUARD = threading.Lock()
+
+
+def _checking_in(folder: Path) -> threading.Lock:
+    with _CHECK_IN_LOCKS_GUARD:
+        return _CHECK_IN_LOCKS.setdefault(folder.resolve(), threading.Lock())
 
 
 def _state_in(path: Path) -> dict:

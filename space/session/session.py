@@ -15,7 +15,14 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.installation.destination import language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
-from space.work_state import SESSIONS_FOLDER, WorkState, checkout_holding, project_checkout, project_folder
+from space.work_state import (
+    SESSIONS_FOLDER,
+    WorkState,
+    checkout_holding,
+    main_checkout_of,
+    project_checkout,
+    project_folder,
+)
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -34,6 +41,8 @@ _CLOSED_FOLDER = "closed"
 _ARCHIVE_FOLDER = "_archive"
 _BACKLOG_FOLDER = "_backlog"
 _BOARD_FILE = "_board.json"
+# A log line from a chat the server cannot name ends with "no-chat" in place of the chat's id, transcript, and lines.
+NO_CHAT: tuple[str, Path, str] = ("no-chat", Path(), "")
 _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
 _KNOWN_ACTIONS = (
@@ -893,23 +902,11 @@ class Session:
     def require_chat_noted(self) -> None:
         if self._chat is not None:
             return
-        from space.session.chat_context import MISSING_CHAT_DETAIL, apply_chat_context
+        from space.session.chat_context import apply_chat_context
 
         if apply_chat_context(self):
             return
-        self._record_missing_chat_for_log(MISSING_CHAT_DETAIL)
-
-    def _record_missing_chat_for_log(self, message: str) -> None:
-        if self.session_path is None:
-            return
-        err = self.session_path / "session.err"
-        err.parent.mkdir(parents=True, exist_ok=True)
-        prior = err.read_text(encoding="utf-8") if err.is_file() else ""
-        line_number = len(prior.splitlines()) + 1
-        stamp = self.timestamp(datetime.now(timezone.utc))
-        with err.open("a", encoding="utf-8") as handle:
-            handle.write(f"{stamp} {message}\n")
-        self.note_chat("no-chat", err, str(line_number))
+        self._chat = NO_CHAT
 
     def log_action(self, action: str, paths: list[Path]) -> None:
         if self.session_path is None:
@@ -1173,13 +1170,17 @@ class Session:
 
     @classmethod
     def _session_folder(cls, repo_path: Path, name: str) -> Path:
+        """A ticket on the board lives in the main checkout's ``.sessions``, so a chat in the ticket's linked worktree
+        logs there too and the board shows its work. Each checkout keeps its own main session."""
         root = Path(repo_path).resolve()
         preferred = cls.sessions_dir(root) / name
         legacy = root / _LEGACY_REPO_SESSIONS_DIR / name
-        if (preferred / "session.json").is_file():
-            return preferred
-        if (legacy / "session.json").is_file():
-            return legacy
+        candidates = [preferred, legacy]
+        if name != _MAIN_SESSION_NAME:
+            candidates.insert(0, cls.sessions_dir(main_checkout_of(root)) / name)
+        for folder in candidates:
+            if (folder / "session.json").is_file():
+                return folder
         return preferred
 
     def _write_session_folder_json(self) -> None:
@@ -1422,6 +1423,8 @@ class Session:
     def _noted_chat(self) -> str:
         if self._chat is None:
             return ""
+        if self._chat is NO_CHAT:
+            return NO_CHAT[0]
         chat_id, chat_file, line_numbers = self._chat
         return f"{chat_id} {chat_file} {line_numbers}".strip()
 
