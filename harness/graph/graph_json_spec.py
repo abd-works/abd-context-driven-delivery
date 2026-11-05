@@ -13,6 +13,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from expects import contain, equal, expect
+from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from graph import Graph
@@ -44,7 +45,7 @@ with description("a graph"):
             self.source_file = source / "cart.ts"
             self.source_file.write_text(_CLASS, encoding="utf-8")
             self.graph = Graph()
-            self.graph.load_working_copy(str(self.root), {"clean_engineering": str(self.root)})
+            data_of(self.graph.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}))
 
         with after.each:
             shutil.rmtree(self.root, ignore_errors=True)
@@ -63,7 +64,7 @@ with description("a graph"):
             cache.write_text(json.dumps(saved), encoding="utf-8")
             os.utime(self.root, None)
             fresh = Graph()
-            fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)})
+            data_of(fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}))
             expect(_names(fresh)).to(contain("SavedCart"))
 
         with context("with a saved graph newer than the folder and the rules"):
@@ -72,7 +73,7 @@ with description("a graph"):
 
             with it("should load the saved json"):
                 fresh = Graph()
-                fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)})
+                data_of(fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}))
                 expect(_names(fresh)).to(contain("SavedCart"))
 
         with context("with a file newer than the saved graph"):
@@ -83,7 +84,7 @@ with description("a graph"):
 
             with it("should reload the folder"):
                 fresh = Graph()
-                fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)})
+                data_of(fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}))
                 expect(_names(fresh)).to(contain("Cart"))
 
         with context("with a rule file newer than the saved graph"):
@@ -96,7 +97,7 @@ with description("a graph"):
 
             with it("should reload"):
                 fresh = Graph()
-                fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)})
+                data_of(fresh.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}))
                 expect(_names(fresh)).to(contain("Cart"))
 
         with context("that is forced to reload"):
@@ -105,11 +106,11 @@ with description("a graph"):
 
             with it("should save the rebuilt graph"):
                 fresh = Graph()
-                fresh.load_working_copy(
+                data_of(fresh.load_working_copy(
                     str(self.root),
                     {"clean_engineering": str(self.root)},
                     force=True,
-                )
+                ))
                 saved = json.loads((self.root / ".context" / "graph.json").read_text(encoding="utf-8"))
                 names = [row[1] for row in saved["practices"]["clean_engineering"]["nodes"]]
                 expect(names).to(contain("Cart"))
@@ -136,15 +137,15 @@ with description("a graph"):
 
             with it("should load a subset of the saved practices"):
                 fresh = Graph()
-                message = fresh.load_working_copy(
+                message = data_of(fresh.load_working_copy(
                     str(self.root),
                     {"clean_engineering": str(self.root)},
-                )
+                ))
                 expect(message["message"]).to(equal("Loaded the saved graph."))
                 expect(_names(fresh)).to(contain("SavedCart"))
 
             with it("should keep other practices when saving a different load"):
                 other = Graph()
-                other.load_working_copy(str(self.root), {"bdd": str(self.root)}, force=True)
+                data_of(other.load_working_copy(str(self.root), {"bdd": str(self.root)}, force=True))
                 saved = json.loads((self.root / ".context" / "graph.json").read_text(encoding="utf-8"))
                 expect(sorted(saved["practices"])).to(equal(["bdd", "clean_engineering", "stories"]))

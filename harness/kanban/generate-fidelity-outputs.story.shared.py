@@ -107,7 +107,7 @@ def _(s):
 
     @s.and_("the story_map tile marks Generate ✓")
     def _(world):
-        expect_action(world.ticket.to_json(), STORY_MAP, "generate", "done")
+        expect_action(world.data_of(world.ticket), STORY_MAP, "generate", "done")
 
 
 @shared_stories.scenario("Resolve Fidelity Output Paths", "Put a fidelity's files under its practice's root")

@@ -40,7 +40,7 @@ with story("View Fidelity Files"):
         with given("checkout-flow's repository is the project folder"):
             pass
         with when("a file outside the repository is asked for"):
-            # Person -> Ticket.read_file('../secrets.txt') <- FileOutsideRepositoryError
+            # Person -> Ticket.read_file('../secrets.txt') -> FileManager.read <- PathOutsideRootsError
             pass
         with then("the board says ../secrets.txt is not a file in this repository"):
             pass

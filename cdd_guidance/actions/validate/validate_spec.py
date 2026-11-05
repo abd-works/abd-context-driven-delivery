@@ -37,7 +37,8 @@ _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, 
 # "Board Stuff" opens with a noun, which verb-noun-format rejects.
 _STORY_MAP = "# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n\n### (S) Person --> Board Stuff\n"
 # The scenarios of the story map's Open Board story, in the file a story's heading links to.
-_OPEN_BOARD_SCENARIOS = """from story_test import given, scenario, story, then, when
+_EMPTY_DRAWIO = '<mxfile><diagram name="Story Map"><mxGraphModel><root><mxCell id="0" /></root></mxGraphModel></diagram></mxfile>\n'
+_OPEN_BOARD_SCENARIOS ="""from story_test import given, scenario, story, then, when
 
 # Epic: Move Work On Board
 # Sub-epic: Display Board
@@ -246,6 +247,21 @@ with description("a validate action on practice guidance") as self:
             with it("should name its violations on that line"):
                 expect(self.validate_lines[-1]).to(contain(" graph-rule "))
 
+        # A board command names its ticket's session, which need not be the session open in the chat that runs it.
+        with context("in a session the command names that is not the open one"):
+            with before.each:
+                self.other = self.folder / ".sessions" / "pet-visits"
+                self.other.mkdir(parents=True)
+                (self.other / "session.json").write_text(f'{{"workpath": "{(self.folder / "board").as_posix()}"}}', encoding="utf-8")
+                self.action = Validate()
+                self.report = self.action.validate(guidance=f"stories-story-map session={(self.other / 'session.json').as_posix()}", paths=[(self.folder / "board/.context/story-map.md").as_posix()])
+
+            with it("should check the named session's files"):
+                expect(self.report).to(contain("Epic `Move Work On Board`"))
+
+            with it("should save the report in the named session"):
+                expect([path.suffix for path in (self.other / "validation-reports").iterdir()]).to(contain(".md"))
+
         # The session board validates with no paths, and a report saved without its graph lists no violations to fix.
         with context("that the story map fidelity declares as its output"):
             with before.each:
@@ -261,6 +277,30 @@ with description("a validate action on practice guidance") as self:
 
                 with it("should save the graph it checked beside the report"):
                     expect([path.suffix for path in (self.session / "validation-reports").iterdir()]).to(contain(".json"))
+
+            # The drawio mirrors the markdown, so judging both reports every finding twice.
+            with context("with its drawio beside it"):
+                with before.each:
+                    _write(self.folder, "board/.context/story-map.drawio", _EMPTY_DRAWIO)
+
+                with it("should judge only the markdown the fidelity writes by default"):
+                    report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md", "board/.context/story-map.drawio"])
+                    expect(report).to(contain("Judge only the checked format's files (markdown: "))
+
+                with it("should judge only the format the guidance names"):
+                    expect(self.action.validate(guidance="stories-story-map format=drawio")).to(contain("Judge only the checked format's files (drawio: "))
+
+                with context("that the latest generate wrote"):
+                    with before.each:
+                        self.log = Path(Session.current().session_path) / "session.log"
+                        self.logged = self.log.read_text(encoding="utf-8") if self.log.is_file() else ""
+                        self.log.write_text(self.logged + "2026-11-05T00:00:00Z generate /work stories story_map drawio stories no-chat\n", encoding="utf-8")
+
+                    with after.each:
+                        self.log.write_text(self.logged, encoding="utf-8")
+
+                    with it("should judge only the drawio"):
+                        expect(self.action.validate(guidance=["stories-story-map"])).to(contain("Judge only the checked format's files (drawio: "))
 
             # A story's scenarios sit in files beside the story map, and a story read without them has none.
             with context("with the scenario file of its story beside it"):

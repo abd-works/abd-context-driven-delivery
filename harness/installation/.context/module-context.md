@@ -24,7 +24,7 @@
 
 ### LanguageAdapterInstallation
 
-- Writes typed code for a toolset marked `@language_adapter(language="typescript")` to `{install path}/language-adapters/typescript/`, in the folders its source sits in: its `to_json()` data, a class that reads it, and a class that calls its MCP tools. It records toolsets during the walk and writes them together, because their files import each other. The mark sits on the class, not a member, because the whole object is one file.
+- Writes typed code for a toolset marked `@language_adapter(language="typescript")` to `{install path}/language-adapters/typescript/`, in the folders its source sits in: its data, typed from the properties it marks with `@data_field`, a class that reads it, and a class that calls its MCP tools. It records toolsets during the walk and writes them together, because their files import each other. The mark sits on the class, not a member, because the whole object is one file.
 
 Build order: `harness/installation` → `harness/mcp` → `harness/hooks`
 

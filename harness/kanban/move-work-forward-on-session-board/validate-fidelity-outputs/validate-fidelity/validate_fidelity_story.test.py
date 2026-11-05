@@ -59,7 +59,7 @@ with story("Validate Fidelity"):
         with given("checkout-flow's story map has violations"):
             pass
         with when("the session board reads checkout-flow"):
-            # Ticket -> Ticket.to_json() <- allowed_actions: generate, validate, review
+            # Ticket -> data_of(Ticket) <- allowed_actions: generate, validate, review
             pass
         with then("validate is on for story_map"):
             pass

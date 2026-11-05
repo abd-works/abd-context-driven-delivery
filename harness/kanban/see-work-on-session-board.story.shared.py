@@ -4,12 +4,12 @@ Scenarios: move-work-forward-on-session-board/see-work-on-session-board/*/*_stor
 Map: .context/story-map.md#e-see-work-on-session-board. Model: .context/kanban-model.md.
 
 Steps reach the board only through the World a tier hands them (`world.Board`, `world.Ticket`), so the domain spec
-and the cdd tools spec replay the same steps. Every Then asserts what the board returns, in the shapes of
-harness/kanban/data.py that the board app draws from.
+and the cdd tools spec replay the same steps. Every Then asserts what the board returns, as the data
+fields its classes mark, which the board app draws from.
 
 Covered by the board app's TypeScript client specs in harness/kanban/app, not here, because they have no Python
 operation: Arrange Board And Details (all three); Arrange Side Panel (all four); Display Board "Say the cdd server is
-not connected", "Restart cdd on the current code", "Keep the newer board when an older read answers late", "Announce a
+not connected", "Update the board and cdd to the latest code", "Say which update step failed", "Keep the newer board when an older read answers late", "Announce a
 ticket that moved", "Announce a reviewed fidelity"; Display Ticket Card "Draw the card's title, age, and fidelity
 segments", "Name the active ticket on the chat's status line"; Display Ticket Details "Show the active ticket with no
 card pressed", "Show the ticket worked on last when none is active", "Say another session must be activated to act on
@@ -74,7 +74,7 @@ def _(s):
 
     @s.when("the Person opens the session board at http://127.0.0.1:8778")
     def _(world):
-        world.read = world.Board.current().show().to_json()
+        world.read = world.data_of(world.Board.current().show())
 
     @s.then("the header reads cdd-board-surface-fixture · 9 tickets · active: Checkout flow")
     def _(world):
@@ -91,7 +91,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.board.show().to_json()
+        world.read = world.data_of(world.board.show())
 
     @s.then("the columns read Backlog, Discovery, Specification, Implementation, and Complete, in that order")
     def _(world):
@@ -116,7 +116,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.refusal = refusal_of(lambda: world.Board.current().show().to_json())
+        world.refusal = refusal_of(lambda: world.data_of(world.Board.current().show()))
 
     @s.then("a toast says cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)")
     def _(world):
@@ -131,7 +131,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.Board.current().show().to_json()
+        world.read = world.data_of(world.Board.current().show())
 
     @s.then("the Backlog column shows the backlog item Search the catalog")
     def _(world):
@@ -159,7 +159,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.Board.current().show().to_json()
+        world.read = world.data_of(world.Board.current().show())
 
     @s.then("the Backlog column shows one backlog item Gift cards with the text Sell them at the till.")
     def _(world):
@@ -178,7 +178,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.Board.current().show().to_json()
+        world.read = world.data_of(world.Board.current().show())
 
     @s.then("the Backlog column shows the backlog item Returns and refunds")
     def _(world):
@@ -194,7 +194,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.Board.current().show().to_json()
+        world.read = world.data_of(world.Board.current().show())
 
     @s.then("the Discovery stage shows the tickets Pet visits and Sign up")
     def _(world):
@@ -217,7 +217,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.Board.current().show().to_json()
+        world.read = world.data_of(world.Board.current().show())
 
     @s.then("second-spec shows In progress in the Specification stage")
     def _(world):
@@ -237,7 +237,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.Board.current().show().to_json()
+        world.read = world.data_of(world.Board.current().show())
 
     @s.then("pet-visits shows in the Specification stage")
     def _(world):
@@ -253,7 +253,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.Board.current().show().to_json()
+        world.read = world.data_of(world.Board.current().show())
 
     # The thick orange outline is drawn by ticket-card-view.tsx from the active ticket named here.
     @s.then("the header names Checkout flow as active")
@@ -269,7 +269,7 @@ def _(s):
 
     @s.when("the Person selects billing-report's card")
     def _(world):
-        world.selected = world.Ticket.load(BILLING_REPORT.name).to_json()
+        world.selected = world.data_of(world.Ticket.load(BILLING_REPORT.name))
 
     @s.then("the details show Billing report, root whole repository, and Discovery · in progress")
     def _(world):
@@ -292,7 +292,7 @@ def _(s):
 
     @s.when("the Person selects child's card")
     def _(world):
-        world.selected = world.Ticket.load(CHILD.name).to_json()
+        world.selected = world.data_of(world.Ticket.load(CHILD.name))
 
     @s.then("the details read child · story of epic")
     def _(world):
@@ -307,7 +307,7 @@ def _(s):
 
     @s.when("the Person sets Discovery's limit to 4")
     def _(world):
-        world.read = world.Board.current().set_wip_limit(stage="Discovery", limit=RAISED_DISCOVERY_LIMIT).to_json()
+        world.read = world.data_of(world.Board.current().set_wip_limit(stage="Discovery", limit=RAISED_DISCOVERY_LIMIT))
 
     @s.then("Discovery shows the limit 4")
     def _(world):
@@ -315,7 +315,7 @@ def _(s):
 
     @s.and_("the limit is still 4 when the board is read again")
     def _(world):
-        expect(column_in(world.Board.current().show().to_json(), "Discovery")["wip_limit"]).to(equal(RAISED_DISCOVERY_LIMIT))
+        expect(column_in(world.data_of(world.Board.current().show()), "Discovery")["wip_limit"]).to(equal(RAISED_DISCOVERY_LIMIT))
 
 
 @shared_stories.scenario("Set Stage WIP Limit", "Give every stage a limit of 3 until a person sets one")
@@ -327,7 +327,7 @@ def _(s):
 
     @s.when("the session board reads the board")
     def _(world):
-        world.read = world.Board.current().show().to_json()
+        world.read = world.data_of(world.Board.current().show())
 
     @s.then("Discovery, Specification, and Implementation each show the limit 3")
     def _(world):
@@ -343,7 +343,7 @@ def _(s):
 
     @s.when("the Person sets Discovery's limit to 2")
     def _(world):
-        world.read = world.Board.current().set_wip_limit(stage="Discovery", limit=LOWERED_DISCOVERY_LIMIT).to_json()
+        world.read = world.data_of(world.Board.current().set_wip_limit(stage="Discovery", limit=LOWERED_DISCOVERY_LIMIT))
 
     @s.then("Discovery's count shows in red, over its limit")
     def _(world):

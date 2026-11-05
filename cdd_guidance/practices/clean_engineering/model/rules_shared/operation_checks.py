@@ -41,6 +41,7 @@ _STATIC_FACTORY_NAMES = frozenset({"instance", "create"})
 _STATIC_FACTORY_EXTRA_NAMES = frozenset(
     {
         "fromRequest",
+        "current",
     }
 )
 _CAMEL_FROM_FACTORY = re.compile(r"^from[A-Z]")
@@ -178,6 +179,10 @@ class AvoidVagueParameterNames(PracticeGraphRule):
         return []
 
 
+# A Claude Code mod hands every hook its engine as `$`, the name the mod API documents, so a reader knows it on sight.
+_CONVENTIONAL_PARAMETER_NAMES = frozenset({"$"})
+
+
 class UseIntentionRevealingNames(PracticeGraphRule):
     slug = "use-intention-revealing-names"
     node_types = ("Parameter", "Operation")
@@ -186,14 +191,14 @@ class UseIntentionRevealingNames(PracticeGraphRule):
         if node.type == "Parameter":
             return self._parameter_hits(node)
         for name in _parameter_names(node):
-            if _setter_parameter(name, _operation_is_setter(node)):
+            if _setter_parameter(name, _operation_is_setter(node)) or name in _CONVENTIONAL_PARAMETER_NAMES:
                 continue
             if len(name) < 3 or name.lower() in GENERIC_NAMES:
                 return [f"Parameter '{name}' in '{node.name}' does not reveal intent."]
         return []
 
     def _parameter_hits(self, node) -> list[str]:
-        if not re.match(r"^[\w$]+$", node.name):
+        if not re.match(r"^[\w$]+$", node.name) or node.name in _CONVENTIONAL_PARAMETER_NAMES:
             return []
         operation = node.get_fact("operation_name", "")
         if _setter_parameter(node.name, bool(node.get_fact("property_setter"))):

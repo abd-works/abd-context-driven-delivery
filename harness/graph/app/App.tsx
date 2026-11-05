@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 import type { CddProgress } from '@cdd/cdd-shared';
-import type { GraphTreeData, InventoryData, PracticeInventoryData, SourceData } from '@cdd/harness/graph/graph';
+import type { ExplorerEntryData, InventoryData, PracticeInventoryData, NodeSourceData } from '@cdd/harness/graph/graph';
 import { nodeFilter, type FilterSelection } from './filter/filter-selection';
 import { FilterView } from './filter/FilterView';
 import { GraphClient } from './graph/GraphClient';
@@ -33,7 +33,7 @@ export function App() {
   const [loadedFolder, setLoadedFolder] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
-  const [trees, setTrees] = useState<GraphTreeData[]>([]);
+  const [trees, setTrees] = useState<ExplorerEntryData[]>([]);
   const [catalog, setCatalog] = useState<Record<string, PracticeInventoryData>>({});
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
   const [relationships, setRelationships] = useState<string[]>([]);
@@ -47,7 +47,7 @@ export function App() {
   const [selectedId, setSelectedId] = useState('');
   const [activeRule, setActiveRule] = useState('');
   const [violation, setViolation] = useState<ViolationFocus | null>(null);
-  const [source, setSource] = useState<SourceData | null>(null);
+  const [source, setSource] = useState<NodeSourceData | null>(null);
   const loadGeneration = useRef(0);
   const loadingRef = useRef(false);
   loadingRef.current = loading;
@@ -166,7 +166,7 @@ export function App() {
     const overlays = bundle.overlays?.length ? bundle.overlays : filter.overlays;
     const merged = { ...filter, overlays };
     const shown = merged.practices.length ? merged.practices : Object.keys(bundle.practices);
-    setTrees(shown.map((name) => bundle.practices[name]?.tree).filter((tree): tree is GraphTreeData => Boolean(tree)));
+    setTrees(shown.map((name) => bundle.practices[name]?.tree).filter((tree): tree is ExplorerEntryData => Boolean(tree)));
     setNodeTypes(unique(shown.flatMap((name) => bundle.practices[name]?.node_types ?? [])));
     setRelationships(visibleRelationships(unique(shown.flatMap((name) => bundle.practices[name]?.edge_types ?? []))));
     setRules(unique(shown.flatMap((name) => bundle.practices[name]?.rules ?? [])));
@@ -259,7 +259,7 @@ export function App() {
     setTrees(
       shown
         .map((name) => keep(bundle.practices[name]?.tree, names, resolved.node_types, resolved.violations))
-        .filter((tree): tree is GraphTreeData => Boolean(tree)),
+        .filter((tree): tree is ExplorerEntryData => Boolean(tree)),
     );
   }
 
@@ -498,11 +498,11 @@ function mergeKept(current: string[], available: string[], added: string[]): str
 }
 
 function keep(
-  node: GraphTreeData | undefined,
+  node: ExplorerEntryData | undefined,
   ids: Set<string>,
   types: string[],
   violationsOnly = false,
-): GraphTreeData | null {
+): ExplorerEntryData | null {
   if (!node) {
     return null;
   }
@@ -510,7 +510,7 @@ function keep(
   const children = node.children
     .filter((child) => child.type !== 'rules')
     .map((child) => keep(child, ids, types, violationsOnly))
-    .filter((child): child is GraphTreeData => Boolean(child));
+    .filter((child): child is ExplorerEntryData => Boolean(child));
   const holder = node.type === node.name;
   if (holder) {
     return children.length > 0 ? { ...node, children } : null;
@@ -529,7 +529,7 @@ function keep(
   return { ...node, children: [...children, ...rules] };
 }
 
-function findNode(nodes: GraphTreeData[], id: string): GraphTreeData | null {
+function findNode(nodes: ExplorerEntryData[], id: string): ExplorerEntryData | null {
   for (const node of nodes) {
     if (node.node_id === id) {
       return node;
@@ -542,7 +542,7 @@ function findNode(nodes: GraphTreeData[], id: string): GraphTreeData | null {
   return null;
 }
 
-function rulesOn(node: GraphTreeData | null): SourceRule[] {
+function rulesOn(node: ExplorerEntryData | null): SourceRule[] {
   const holder = node?.children.find((child) => child.type === 'rules');
   return (holder?.children ?? []).map((rule) => ({
     name: rule.name,

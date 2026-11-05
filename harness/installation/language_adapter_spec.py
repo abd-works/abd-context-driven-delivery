@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from expects import be_false, be_true, contain, equal, expect, raise_error
+from expects import be_false, be_true, contain, equal, expect, have_key, raise_error
 from mamba import before, context, description, it
 
 from harness.installation.installer import Installer
@@ -13,7 +13,16 @@ _REPO = Path(__file__).resolve().parents[2]
 Installer(repo=_REPO).ensure_import_path()
 
 from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
-from harness.installation.destination import edited_fields_of, edits, identity_field_of, language_adapter, languages_of  # noqa: E402
+from harness.installation.destination import (  # noqa: E402
+    data_field,
+    data_fields_of,
+    data_of,
+    edited_fields_of,
+    edits,
+    identity_field_of,
+    language_adapter,
+    languages_of,
+)
 from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
     MissingIdentityError,
@@ -68,6 +77,69 @@ with description("a language adapter"):
                     pass
 
                 expect(languages_of(Unmarked)).to(equal(()))
+
+    with description("the data of a domain object"):
+        with before.all:
+            class Place:
+                def __init__(self, folder):
+                    self._folder = folder
+
+                @property
+                @data_field
+                def folder(self) -> Path:
+                    return self._folder
+
+            class Card:
+                def __init__(self, title, places):
+                    self._title = title
+                    self._places = places
+
+                @property
+                @data_field
+                def title(self) -> str:
+                    return self._title
+
+                @property
+                @data_field(key="column")
+                def column_name(self) -> str:
+                    return "Discovery"
+
+                @property
+                @data_field
+                def places(self) -> list[Place]:
+                    return self._places
+
+                @property
+                def unshown(self) -> str:
+                    return "kept in Python"
+
+            class PinnedCard(Card):
+                @property
+                @data_field
+                def is_pinned(self) -> bool:
+                    return True
+
+                @property
+                def title(self) -> str:
+                    return f"Pinned: {self._title}"
+
+            self.card_class, self.pinned_class = Card, PinnedCard
+            self.card = PinnedCard("Visits", [Place(Path("notes"))])
+
+        with it("should be the properties marked as its data, under their names"):
+            expect(list(data_fields_of(self.card_class))).to(equal(["title", "column", "places"]))
+
+        with it("should keep the data a base class marks, ahead of its own"):
+            expect(list(data_fields_of(self.pinned_class))).to(equal(["title", "column", "places", "is_pinned"]))
+
+        with it("should be written as a plain value, each object it holds written as its own data"):
+            expect(data_of(self.card)).to(equal({"title": "Pinned: Visits", "column": "Discovery", "places": [{"folder": "notes"}], "is_pinned": True}))
+
+        with it("should read a field a subclass overrides from the subclass, though only the base marks it"):
+            expect(data_of(self.card)["title"]).to(equal("Pinned: Visits"))
+
+        with it("should leave out a property it does not mark"):
+            expect(data_of(self.card)).not_to(have_key("unshown"))
 
     with description("the installation of a marked toolset"):
         with before.all:
@@ -160,7 +232,7 @@ with description("a language adapter"):
                 expect(shared).to(contain("{ path: '/cdd/progress', run: async cdd => cdd.progress() }"))
 
         with description("its data"):
-            with it("should state what to_json returns, from the Python"):
+            with it("should state the data the Python class marks"):
                 expect(self.ticket).to(contain("export type TicketData = {"))
                 expect(self.ticket).to(contain("  is_done: boolean\n"))
 
@@ -172,6 +244,12 @@ with description("a language adapter"):
 
             with it("should state a nested shape in the file that uses it"):
                 expect(self.ticket).to(contain("export type ReportData = {"))
+
+            with it("should type a field holding objects as their data, named after their class"):
+                expect(self.ticket).to(contain("  source: SourceLineData[]\n"))
+
+            with it("should type a field holding another marked object as that object's data, imported from its file"):
+                expect(self.board).to(contain("  in_progress?: TicketData[]\n"))
 
             with context("with a field that takes one of a few named words"):
                 with it("should allow only those words"):

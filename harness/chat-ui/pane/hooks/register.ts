@@ -23,6 +23,7 @@ import {
   togglePin,
 } from './health/server-health-client'
 import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { withChatNamed } from './session/session-log-client'
 
 const PLUGIN = 'cdd-board'
 const CHECK_IN_MILLISECONDS = 1000
@@ -77,9 +78,10 @@ export const register: Register = on => {
     return finished
   })
 
-  // The agent changes the board through cdd's tools without telling the mod, so a cdd tool call that finishes reads it again.
+  // A cdd tool call names this chat for session.log. The agent changes the board through cdd's tools without telling
+  // the mod, so a cdd tool call that finishes reads it again.
   on('tool.call', async ($, e, next) => {
-    const ran = await next(e)
+    const ran = await next(await withChatNamed($, e))
     if (CDD_TOOL.test(e.tool)) await refreshChatBar($)
     return ran
   })

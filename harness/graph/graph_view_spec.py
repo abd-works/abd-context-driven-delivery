@@ -8,6 +8,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from expects import be_above, contain, equal, expect
+from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from graph import Graph, Node, PracticeGraph, Source
@@ -55,7 +56,7 @@ with description("a graph"):
 
         with it("should return the operation that fails"):
             import json
-            returned = [node["name"] for node in self.graph.return_nodes()]
+            returned = [node["name"] for node in data_of(self.graph.return_nodes())]
             expect(returned).to(equal(["failure"]))
 
     with context("with a relationship selected"):
@@ -86,7 +87,7 @@ with description("a graph"):
 
         with it("should return the nodes on the selected edge"):
             import json
-            returned = {node["name"] for node in self.graph.return_nodes()}
+            returned = {node["name"] for node in data_of(self.graph.return_nodes())}
             expect(returned).to(equal({"account-credentials", "AccountCredentials"}))
 
     with context("with a query row that carries a stage"):
@@ -115,7 +116,7 @@ with description("a graph"):
                 ["clean_engineering:Package:src/domain/customer:customer", "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer", "owns", "2", "direct"],
             ])
             self.practice.root_node.populate()
-            self.tree = self.practice.root_node.serialize()
+            self.tree = data_of(self.practice.root_node.serialize())
 
         with it("should parent the package on the module"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")

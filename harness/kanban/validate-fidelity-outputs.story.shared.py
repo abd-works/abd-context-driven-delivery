@@ -66,7 +66,7 @@ def _(s):
 
     @s.and_("the story_map tile marks Validate ✓")
     def _(world):
-        expect_action(world.ticket.to_json(), STORY_MAP, "validate", "done")
+        expect_action(world.data_of(world.ticket), STORY_MAP, "validate", "done")
 
     @s.when("Claude Code validates it again and finds actor-named-in-step on map.md line 12")
     def _(world):
@@ -79,7 +79,7 @@ def _(s):
 
     @s.and_("the story_map tile marks Validate as violations again")
     def _(world):
-        expect_held_on_violations(world.ticket.to_json(), STORY_MAP)
+        expect_held_on_violations(world.data_of(world.ticket), STORY_MAP)
 
 
 @shared_stories.scenario("Validate Fidelity", "Allow Validate again on the same output")
@@ -90,7 +90,7 @@ def _(s):
 
     @s.when("the session board reads checkout-flow")
     def _(world):
-        world.read = world.Ticket.load(CHECKOUT_FLOW.name).to_json()
+        world.read = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name))
 
     @s.then("validate is on for story_map")
     def _(world):
@@ -172,7 +172,7 @@ def _(s):
 
     @s.when("the Person opens checkout-flow's story_map report")
     def _(world):
-        world.report = world.Ticket.load(CHECKOUT_FLOW.name).report(fidelity=STORY_MAP)
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).report(fidelity=STORY_MAP))
 
     @s.then("the report panel shows .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md")
     def _(world):
@@ -192,7 +192,7 @@ def _(s):
 
     @s.when("the Person opens checkout-flow's violations from its card")
     def _(world):
-        world.report = world.Ticket.load(CHECKOUT_FLOW.name).violations()
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).violations())
 
     @s.then("the report panel shows .sessions/checkout-flow/validation-reports with every rule broken, each naming its fidelity")
     def _(world):
@@ -208,7 +208,7 @@ def _(s):
 
     @s.when("the Person opens the story_map report")
     def _(world):
-        world.report = world.Ticket.load(CHECKOUT_FLOW.name).report(fidelity=STORY_MAP)
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).report(fidelity=STORY_MAP))
 
     @s.then("the report panel shows the report's text")
     def _(world):
@@ -227,7 +227,7 @@ def _(s):
 
     @s.when("the session board reads billing-report")
     def _(world):
-        world.read = world.Ticket.load(BILLING_REPORT.name).to_json()
+        world.read = world.data_of(world.Ticket.load(BILLING_REPORT.name))
 
     @s.then("the story_map bar shows no report link")
     def _(world):

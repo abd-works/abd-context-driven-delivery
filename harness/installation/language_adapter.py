@@ -14,10 +14,10 @@ import sys
 import types
 from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
-from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints, is_typeddict
+from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
 from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
-from harness.installation.destination import Installation, SourceFile, edited_fields_of, identity_field_of, languages_of
+from harness.installation.destination import Installation, SourceFile, data_fields_of, edited_fields_of, identity_field_of, languages_of
 
 _FOLDER = "language-adapters"
 _TYPESCRIPT = "typescript"
@@ -138,6 +138,36 @@ def _unwrapped(hint: object) -> object:
     return hint
 
 
+def is_shape(hint: object) -> bool:
+    """A class that marks properties as its data."""
+    return isinstance(hint, type) and bool(data_fields_of(hint))
+
+
+def shape_name(shape: type) -> str:
+    """A class's data is named after it, so `Ticket` sends `TicketData`."""
+    return f"{shape.__name__}Data"
+
+
+def _subclasses(cls: type) -> list[type]:
+    return [found for sub in cls.__subclasses__() for found in (sub, *_subclasses(sub))]
+
+
+def shape_fields(shape: type, names: Mapping[str, Any]) -> dict[str, object]:
+    """Each field's type by its name in the data. A field only some kinds of a class have, such as a stage's WIP
+    limit on a column, is optional, so one type holds every kind. names resolves the types a module imports only
+    for type checking."""
+    fields = {key: _return_hint(field, names) for key, field in data_fields_of(shape).items()}
+    for sub in _subclasses(shape):
+        for key, field in data_fields_of(sub).items():
+            fields.setdefault(key, NotRequired[_return_hint(field, names)])
+    return fields
+
+
+def _return_hint(field: property, names: Mapping[str, Any]) -> object:
+    getter = field.fget
+    return get_type_hints(getter, globalns=getter.__globals__, localns=dict(names), include_extras=True)["return"]
+
+
 def is_source_file(hint: object) -> bool:
     """A field marked `Annotated[str, SourceFile]`, which holds a path the file manager reads."""
     if get_origin(hint) is NotRequired:
@@ -254,7 +284,7 @@ class TypeScriptToolset:
 
     @property
     def data_name(self) -> str:
-        return self._data_shape.__name__ if self._data_shape else f"{self.name}Data"
+        return shape_name(self._data_shape) if self._data_shape else f"{self.name}Data"
 
     @property
     def _routes_name(self) -> str:
@@ -262,15 +292,18 @@ class TypeScriptToolset:
 
     @property
     def _data_shape(self) -> type | None:
-        """The TypedDict the toolset's `to_json()` is annotated with, when it has one."""
-        to_json = getattr(type(self._toolset), "to_json", None)
-        if to_json is None:
-            return None
-        return self._shape_named(str(inspect.signature(to_json).return_annotation), to_json)
+        """The toolset's class when it marks properties as its data."""
+        toolset_class = type(self._toolset)
+        return toolset_class if data_fields_of(toolset_class) else None
+
+    @property
+    def peer_classes(self) -> dict[str, type]:
+        """Every marked toolset's class by name, for the types a module imports only for type checking."""
+        return {peer.name: type(peer._toolset) for peer in self._peers.values()}
 
     def _shape_named(self, name: str, function: Any) -> type | None:
         found = vars(sys.modules[function.__module__]).get(name)
-        return found if is_typeddict(found) else None
+        return found if is_shape(found) else None
 
     def render(self) -> dict[PurePosixPath, str]:
         # The operations come first: writing them is what names the imports and nested shapes the files need.
@@ -317,7 +350,7 @@ class TypeScriptToolset:
         root = self._data_shape
         if root is None:
             return [f"export type {self.data_name} = {_OPEN_DATA}", ""]
-        self._shapes[root.__name__] = root
+        self._shapes[shape_name(root)] = root
         lines: list[str] = []
         written: set[str] = set()
         while unwritten := [name for name in self._shapes if name not in written]:
@@ -327,8 +360,8 @@ class TypeScriptToolset:
         return lines
 
     def _shape_lines(self, shape: type) -> list[str]:
-        fields = [self._field_line(name, hint) for name, hint in get_type_hints(shape, include_extras=True).items()]
-        return [f"export type {shape.__name__} = {{", *fields, "}", ""]
+        fields = [self._field_line(name, hint) for name, hint in shape_fields(shape, self.peer_classes).items()]
+        return [f"export type {shape_name(shape)} = {{", *fields, "}", ""]
 
     def _field_line(self, name: str, hint: object) -> str:
         if get_origin(hint) is NotRequired:
@@ -337,7 +370,7 @@ class TypeScriptToolset:
 
     def _hint_type(self, hint: object) -> str:
         hint = _unwrapped(hint)
-        if is_typeddict(hint):
+        if is_shape(hint):
             return self._shape_reference(hint)
         origin = get_origin(hint)
         if origin is Literal:
@@ -351,12 +384,14 @@ class TypeScriptToolset:
         return _SCALAR_TYPES.get(hint, "unknown")
 
     def _shape_reference(self, shape: type) -> str:
+        name = shape_name(shape)
         for peer in self._peers.values():
-            if peer is not self and peer._data_shape is shape:
-                self._imports.add((peer.name, shape.__name__))
-                return shape.__name__
-        self._shapes.setdefault(shape.__name__, shape)
-        return shape.__name__
+            if peer._data_shape is shape:
+                if peer is not self:
+                    self._imports.add((peer.name, name))
+                return name
+        self._shapes.setdefault(name, shape)
+        return name
 
     def _base_class(self) -> list[str]:
         """The shared base: state and getters, no calls. Nothing uses it directly; code holds one of its subtypes."""
@@ -398,7 +433,7 @@ class TypeScriptToolset:
         ]
 
     def data_fields(self) -> dict[str, object]:
-        return get_type_hints(self._data_shape, include_extras=True) if self._data_shape else {}
+        return shape_fields(self._data_shape, self.peer_classes) if self._data_shape else {}
 
     def _getter(self, name: str, hint: object) -> list[str]:
         optional = get_origin(hint) is NotRequired

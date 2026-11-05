@@ -56,7 +56,7 @@ function writeSessions(root: string): void {
   writeSession(root, { name: 'ready-to-move', title: 'Ready to move', log: [`${STAMP} done Discovery no-chat`] })
   writeSession(root, { name: 'second-spec', title: 'Second spec', log: [`${STAMP} move Specification no-chat`] })
   writeSession(root, { name: 'almost-shipped', title: 'Almost shipped', log: [`${STAMP} move Implementation no-chat`, `${STAMP} done Implementation no-chat`] })
-  writeSession(root, { name: 'shipped-work', title: 'Shipped work', folder: join('closed', 'shipped-work') })
+  writeSession(root, { name: 'shipped-work', title: 'Shipped work', folder: join('_complete', 'shipped-work') })
   writeInto(join(root, '.sessions', '_backlog', 'search-the-catalog.md'), '# Search the catalog\n\nAn idea.\n')
   writeInto(join(root, '.sessions', 'session.json'), JSON.stringify({ session: 'checkout-flow' }))
 }

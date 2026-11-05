@@ -59,7 +59,7 @@ with story("Close Active Session"):
             pass
         with then("checkout-flow shows in Complete"):
             pass
-        with and_("its folder is in .sessions/closed/checkout-flow"):
+        with and_("its folder is in .sessions/_complete/checkout-flow"):
             pass
         with but_("nothing is committed"):
             pass

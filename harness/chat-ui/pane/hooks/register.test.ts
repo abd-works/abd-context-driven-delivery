@@ -208,3 +208,31 @@ test('the health band yields to a survey', async ($, on) => {
   // Beneath the plugins nothing draws, so a band that passed the survey through finds nothing to mount.
   await expect($.ui.mount({ ...BAND, props: { ...BAND.props, hasSurvey: true } })).rejects.toThrow('no implementation for ui.render')
 })
+
+// (E) Record Session Action
+
+test('should send the chat id with a cdd tool call', async ($, on) => {
+  engine(on)
+  let sent: Record<string, unknown> = {}
+  on('tool.call', (_: unknown, e: Record<string, unknown>) => {
+    sent = e
+    return { result: {} }
+  })
+
+  await $.tool.call({ tool: 'mcp__plugin_cdd_cdd__validate_validate', paths: 'cart.py' } as any)
+
+  expect(sent.conversation_id).toBe('chat-1')
+})
+
+test('should send another tool its own arguments only', async ($, on) => {
+  engine(on)
+  let sent: Record<string, unknown> = {}
+  on('tool.call', (_: unknown, e: Record<string, unknown>) => {
+    sent = e
+    return { result: {} }
+  })
+
+  await $.tool.call({ tool: 'Bash', command: 'ls' })
+
+  expect(sent.conversation_id).toBeUndefined()
+})

@@ -7,9 +7,8 @@ from pathlib import Path
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.installation.destination import language_adapter
+from harness.installation.destination import data_field, language_adapter
 from harness.kanban.board import BACKLOG_COLUMN, Board, Card, Column
-from harness.kanban.data import BacklogItemData
 from harness.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
 from space.session import Session, name_of
@@ -29,7 +28,7 @@ class BacklogItem(Card):
 
     def __init__(self, path: Path, board: Board) -> None:
         super().__init__(board)
-        self._path = Path(path)
+        self._path = path
 
     @classmethod
     @tool_subject
@@ -70,6 +69,11 @@ class BacklogItem(Card):
         return self._path
 
     @property
+    @data_field(key="path")
+    def path_from_project(self) -> str:
+        return self._board.repo.path_from_top(self._path)
+
+    @property
     def title(self) -> str:
         """The item's first `# ` heading, or its file name in words."""
         for line in self._path.read_text(encoding="utf-8").splitlines():
@@ -82,6 +86,7 @@ class BacklogItem(Card):
         return self._board.column(BACKLOG_COLUMN)
 
     @property
+    @data_field
     def text(self) -> str:
         """The file's content after its heading."""
         content = self._path.read_text(encoding="utf-8")
@@ -112,9 +117,6 @@ class BacklogItem(Card):
     def move_previous(self) -> BacklogItem:
         """The Backlog is the first column, so an item has nowhere further back to go."""
         return self
-
-    def to_json(self) -> BacklogItemData:
-        return {**super().to_json(), "text": self.text, "path": self._path.relative_to(self._board.repo.root).as_posix()}
 
     # The ticket folder an item holds: the folder it is kept in, or a folder of its name beside it.
     @property

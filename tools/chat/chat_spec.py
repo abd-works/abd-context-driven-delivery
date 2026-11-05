@@ -15,6 +15,7 @@ from expects import be_empty, equal, expect, have_keys, raise_error
 from mamba import after, before, context, description, it
 
 from chat.chat import Chat, ChatNotConnectedError
+from harness.installation.destination import data_of
 
 CHAT = "ad6c04ab-chat"
 CLOCK = [1000.0]
@@ -23,11 +24,11 @@ MANY_COMMANDS = 40
 
 
 def _said(commands: list) -> list[tuple[str, str]]:
-    return [(command["kind"], command["text"]) for command in commands]
+    return [(command.kind, command.text) for command in commands]
 
 
 def _states() -> list[str]:
-    return [message["state"] for message in Chat.load(CHAT).messages()]
+    return [message.state for message in Chat.load(CHAT).messages()]
 
 
 def _check_in_repeatedly(name: str, failures: list[Exception]) -> None:
@@ -71,14 +72,14 @@ with description("a chat") as self:
             (damaged / "chat.json").write_text('{"name": "old", "seen": 1000.0}}', encoding="utf-8")
 
         with it("should list the chat that reads"):
-            expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT]))
+            expect([chat.id for chat in Chat.list()]).to(equal([CHAT]))
 
         with context("that has checked in again"):
             with before.each:
                 Chat.load("damaged-chat").check_in(is_busy=False, name="repo · second words")
 
             with it("should list the chat again"):
-                expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT, "damaged-chat"]))
+                expect([chat.id for chat in Chat.list()]).to(equal([CHAT, "damaged-chat"]))
 
     # (S) Chat --> Check In With Board
     with context("that has checked in"):
@@ -86,16 +87,16 @@ with description("a chat") as self:
             Chat.load(CHAT).check_in(is_busy=True, name="repo · first words")
 
         with it("should be listed by its id"):
-            expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT]))
+            expect([chat.id for chat in Chat.list()]).to(equal([CHAT]))
 
         with it("should say a turn is running"):
-            expect(Chat.list()[0]["is_busy"]).to(equal(True))
+            expect(Chat.list()[0].is_busy).to(equal(True))
 
         with it("should go by the name its mod sent while the app has given it no title"):
-            expect(Chat.list()[0]["name"]).to(equal("repo · first words"))
+            expect(Chat.list()[0].name).to(equal("repo · first words"))
 
         with it("should name no folder while its mod has sent none"):
-            expect(Chat.list()[0]["folder"]).to(equal(""))
+            expect(Chat.list()[0].folder).to(equal(""))
 
         # The board finds a ticket's chat by the worktree the chat works in.
         with context("from the folder it works in"):
@@ -103,7 +104,7 @@ with description("a chat") as self:
                 Chat.load(CHAT).check_in(is_busy=False, name="repo · first words", folder="C:/dev/repo-checkout-flow")
 
             with it("should name that folder"):
-                expect(Chat.list()[0]["folder"]).to(equal("C:/dev/repo-checkout-flow"))
+                expect(Chat.list()[0].folder).to(equal("C:/dev/repo-checkout-flow"))
 
         with context("with a title the app wrote into its transcript, read at a later check-in"):
             with before.each:
@@ -114,7 +115,7 @@ with description("a chat") as self:
                 Chat.load(CHAT).check_in(is_busy=False, name="repo · first words")
 
             with it("should go by the latest title"):
-                expect(Chat.list()[0]["name"]).to(equal("Session board handoff review"))
+                expect(Chat.list()[0].name).to(equal("Session board handoff review"))
 
         # A mod that reloads can check in twice at once, and a state file written over itself cannot be read.
         with context("that checks in from two places at once"):
@@ -131,7 +132,7 @@ with description("a chat") as self:
                 expect(self.failures).to(be_empty)
 
             with it("should still be listed"):
-                expect([chat["id"] for chat in Chat.list()]).to(equal([CHAT]))
+                expect([chat.id for chat in Chat.list()]).to(equal([CHAT]))
 
         with context("that has gone quiet"):
             with before.each:
@@ -181,12 +182,12 @@ with description("a chat") as self:
 
             # (S) Person --> View Chat Messages
             with it("should show the command waiting among its messages"):
-                expect(Chat.load(CHAT).messages()[0]).to(have_keys({"kind": "command", "text": "/actions-validate stories-story-map", "sent_at": 1000.0, "state": "waiting", "reason": ""}))
+                expect(data_of(Chat.load(CHAT).messages()[0])).to(have_keys({"kind": "command", "text": "/actions-validate stories-story-map", "sent_at": 1000.0, "state": "waiting", "reason": ""}))
 
             # (S) Person --> Remove Chat Message
             with context("that a person has removed"):
                 with before.each:
-                    Chat.load(CHAT).remove(Chat.load(CHAT).messages()[0]["message"])
+                    Chat.load(CHAT).remove(Chat.load(CHAT).messages()[0].message)
 
                 with it("should no longer show it"):
                     expect(Chat.load(CHAT).messages()).to(be_empty)
@@ -203,7 +204,7 @@ with description("a chat") as self:
 
                 with context("that the chat has shown"):
                     with before.each:
-                        Chat.load(CHAT).confirm(self.taken["message"], is_shown=True)
+                        Chat.load(CHAT).confirm(self.taken.message, is_shown=True)
 
                     with it("should show the command as shown in the chat"):
                         expect(_states()).to(equal(["shown"]))
@@ -211,7 +212,7 @@ with description("a chat") as self:
                     # (S) Chat --> Finish Chat Command
                     with context("that has finished running"):
                         with before.each:
-                            Chat.load(CHAT).finish(self.taken["message"])
+                            Chat.load(CHAT).finish(self.taken.message)
 
                         with it("should show the command as done"):
                             expect(_states()).to(equal(["done"]))
@@ -237,24 +238,24 @@ with description("a chat") as self:
 
                 with context("that the chat could not show"):
                     with before.each:
-                        Chat.load(CHAT).confirm(self.taken["message"], is_shown=False, reason="a Stop stands")
+                        Chat.load(CHAT).confirm(self.taken.message, is_shown=False, reason="a Stop stands")
 
                     with it("should show the command as failed"):
                         expect(_states()).to(equal(["failed"]))
 
                     with it("should say why"):
-                        expect(Chat.load(CHAT).messages()[0]["reason"]).to(equal("a Stop stands"))
+                        expect(Chat.load(CHAT).messages()[0].reason).to(equal("a Stop stands"))
 
                     # (S) Person --> Resend Chat Message
                     with context("that a person has resent"):
                         with before.each:
-                            Chat.load(CHAT).resend(self.taken["message"])
+                            Chat.load(CHAT).resend(self.taken.message)
 
                         with it("should show the command waiting again"):
                             expect(_states()).to(equal(["waiting"]))
 
                         with it("should let go of why it failed"):
-                            expect(Chat.load(CHAT).messages()[0]["reason"]).to(equal(""))
+                            expect(Chat.load(CHAT).messages()[0].reason).to(equal(""))
 
                         with it("should give the command to the chat at its next check-in"):
                             expect(_said(Chat.load(CHAT).check_in(is_busy=True))).to(equal([("command", "/actions-validate stories-story-map")]))
@@ -266,7 +267,7 @@ with description("a chat") as self:
                     Chat.load(CHAT).check_in(is_busy=False)
 
                 with it("should keep only the latest, newest first"):
-                    expect([message["text"] for message in Chat.load(CHAT).messages()][:2]).to(equal(["message 29", "message 28"]))
+                    expect([message.text for message in Chat.load(CHAT).messages()][:2]).to(equal(["message 29", "message 28"]))
 
                 with it("should keep no more than it shows"):
                     expect(len(Chat.load(CHAT).messages())).to(equal(20))

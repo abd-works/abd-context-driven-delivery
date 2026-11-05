@@ -54,8 +54,6 @@ def marked_toolset_facts(text: str) -> dict:
 
 
 def _reaches_typescript(text: str, match: re.Match[str]) -> bool:
-    """TypeScript reads what `to_json()` and an MCP operation return, and nothing else on the class."""
-    if match.group(1) == "to_json":
-        return True
+    """TypeScript reads what an MCP operation returns, and the properties a class marks with `@data_field`."""
     decorators = text[: match.start()].rsplit("\n", _DECORATOR_LINES)[1:]
     return _OPERATION_MARK in "\n".join(decorators)

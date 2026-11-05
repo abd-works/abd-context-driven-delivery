@@ -13,6 +13,7 @@ Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from bdd.bdd import Bdd  # noqa: E402
 from ddd.ddd import Ddd  # noqa: E402
+from harness.installation.destination import data_of  # noqa: E402
 from harness.kanban.board import Board, Card, ColumnNotFoundError  # noqa: E402
 from harness.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
@@ -30,7 +31,7 @@ class SessionsFolder:
         os.environ["CDD_PROJECT"] = str(self.project)
 
     def session(self, name: str, *log_lines: str, closed: bool = False, **fields) -> Path:
-        folder = self.root / ("closed" if closed else "") / name
+        folder = self.root / ("_complete" if closed else "") / name
         folder.mkdir(parents=True)
         (folder / "session.json").write_text(json.dumps({"name": name, **fields}), encoding="utf-8")
         stamped = [f"2026-10-31T0{index % 10}:00:00Z {line}" for index, line in enumerate(log_lines)]
@@ -159,7 +160,7 @@ with description("a board") as self:
             expect([card.column.name for card in self.board.cards]).to(equal(["Discovery", "Discovery", "Complete", "Backlog"]))
 
         with it("should list every column with its tickets or items"):
-            expect([column["name"] for column in self.board.to_json()["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
+            expect([column["name"] for column in data_of(self.board)["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
 
 with description("a backlog item") as self:
     with after.each:
@@ -356,6 +357,14 @@ with description("a ticket") as self:
             with it("should not count the review"):
                 expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "validate"]))
 
+        # A person who clicks Review has reviewed the output, whatever its validate found.
+        with context("that was reviewed after a validate that found violations"):
+            with before.each:
+                self.lines += [VALIDATE_STORY_MAP_WITH_VIOLATIONS, REVIEW_STORY_MAP]
+
+            with it("should count the review"):
+                expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "review"]))
+
     # (S) Person --> Review Fidelity, Complete Stage Work; (S) Person --> Move Ticket
     with context("with every required fidelity in its stage done"):
         with before.each:
@@ -452,7 +461,7 @@ with description("a ticket") as self:
             expect(self.closed.column.name).to(equal("Complete"))
 
         with it("should have its folder in closed"):
-            expect((self.root / "closed" / "pet-visits" / "session.log").is_file()).to(be_true)
+            expect((self.root / "_complete" / "pet-visits" / "session.log").is_file()).to(be_true)
 
     # (S) Person --> Archive Ticket
     with context("that has been archived"):

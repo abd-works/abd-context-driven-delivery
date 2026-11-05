@@ -7,12 +7,11 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.installation.destination import language_adapter
-from harness.kanban.data import BoardData, ColumnData, HelpData
+from harness.installation.destination import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 from cdd_guidance.practices.stages import DISCOVERY, IMPLEMENTATION, SPECIFICATION
 from space.session import Session
@@ -20,6 +19,7 @@ from space.work_state import board_checkout
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
+    from harness.guidance.rule import Rule
     from harness.kanban.backlog_item import BacklogItem
     from harness.kanban.ticket import Ticket
     from space.repo.repo import Repo
@@ -112,6 +112,11 @@ class Board:
     def repo(self) -> Repo:
         return self._repo
 
+    @property
+    @data_field
+    def project(self) -> str:
+        return self._repo.root.name
+
     def worktree_of(self, ticket: str) -> Path | None:
         """The folder of the worktree that has ticket's branch checked out; none when it has no worktree."""
         return self._worktrees.get(ticket)
@@ -129,6 +134,7 @@ class Board:
         return list(self._practices)
 
     @property
+    @data_field
     def columns(self) -> list[Column]:
         return list(self._columns)
 
@@ -159,6 +165,12 @@ class Board:
     def active(self) -> Ticket | None:
         """The ticket of the session saved as open; none while main is, since main is not on the board."""
         return self.ticket(Session.active_name(self._repo.root))
+
+    @property
+    @data_field(key="active")
+    def active_name(self) -> str | None:
+        active = self.active
+        return active.name if active else None
 
     def column(self, name: str) -> Column:
         found = next((column for column in self._columns if column.name == name), None)
@@ -200,19 +212,11 @@ class Board:
     @mcp
     @agent_tool
     @noSessionLog
-    def help(self, practice: str, fidelity: str = "") -> HelpData:
+    def help(self, practice: str, fidelity: str = "") -> Help:
         """Return the overview, guidance, and rules of practice, or of its fidelity when one is named, with the stage that fidelity belongs to and its page on the forge."""
         guidance = self.practice(practice)
         subject = self._fidelity_of(guidance, fidelity) if fidelity else guidance
-        return {
-            "practice": practice,
-            "fidelity": fidelity,
-            "stage": subject.stage.capitalize() if fidelity else "",
-            "overview": (subject.overview or "").strip(),
-            "guidance": (subject.guidance or "").strip(),
-            "rules": [{"slug": rule.slug, "text": rule.body.strip()} for rule in subject.rules],
-            "href": self._forge_page(practice, fidelity),
-        }
+        return Help(practice, fidelity, subject.stage.capitalize() if fidelity else "", subject, self._forge_page(practice, fidelity))
 
     def practice(self, key: str) -> PracticeGuidance:
         """The board's practice whose folder name is key, such as clean_engineering."""
@@ -223,15 +227,6 @@ class Board:
 
     def wip_limit(self, stage: str) -> int:
         return self._saved_wip_limits.get(stage, Session.default_wip)
-
-    def to_json(self) -> BoardData:
-        """Every column with its tickets or items: what the board pane and other IDEs read."""
-        active = self.active
-        return {
-            "project": self._repo.root.name,
-            "active": active.name if active else None,
-            "columns": [column.to_json() for column in self._columns],
-        }
 
     @property
     def _saved_wip_limits(self) -> dict[str, int]:
@@ -253,7 +248,7 @@ class Board:
     def _build_columns(self) -> list[Column]:
         # The stage names come from the one place a fidelity's **Stage:** is read against, written as column titles.
         stages = [Stage(name.capitalize(), self, list(STAGE_ACTIONS)) for name in (DISCOVERY, SPECIFICATION, IMPLEMENTATION)]
-        return [Backlog(self), *stages, Column(COMPLETE_COLUMN, self)]
+        return [Backlog(self), *stages, Complete(self)]
 
 
 class Column:
@@ -264,15 +259,13 @@ class Column:
         self._board = board
 
     @property
+    @data_field
     def name(self) -> str:
         return self._name
 
     @property
     def cards(self) -> list[Card]:
         return [card for card in self._board.cards if card.column is self]
-
-    def to_json(self) -> ColumnData:
-        return {"name": self._name, "tickets": [card.to_json() for card in self.cards]}
 
 
 class Backlog(Column):
@@ -281,8 +274,22 @@ class Backlog(Column):
     def __init__(self, board: Board) -> None:
         super().__init__(BACKLOG_COLUMN, board)
 
-    def to_json(self) -> ColumnData:
-        return {"name": self.name, "items": [card.to_json() for card in self.cards]}
+    @property
+    @data_field
+    def items(self) -> list[BacklogItem]:
+        return list(self.cards)
+
+
+class Complete(Column):
+    """*Complete* is the last column: the tickets whose sessions are closed."""
+
+    def __init__(self, board: Board) -> None:
+        super().__init__(COMPLETE_COLUMN, board)
+
+    @property
+    @data_field
+    def tickets(self) -> list[Ticket]:
+        return list(self.cards)
 
 
 class Stage(Column):
@@ -295,6 +302,21 @@ class Stage(Column):
     @property
     def actions(self) -> list[str]:
         return list(self._actions)
+
+    @property
+    @data_field(key="work_required")
+    def work_required_slugs(self) -> list[str]:
+        return [self._slug(fidelity) for fidelity in self.work_required]
+
+    @property
+    @data_field
+    def formats(self) -> dict[str, list[str]]:
+        return {self._slug(fidelity): list(fidelity.outputs) for fidelity in self.work_required}
+
+    @property
+    @data_field
+    def default_formats(self) -> dict[str, str]:
+        return {self._slug(fidelity): fidelity.default_format for fidelity in self.work_required}
 
     @property
     def work_required(self) -> list[FidelityGuidance]:
@@ -315,29 +337,24 @@ class Stage(Column):
         return earlier if isinstance(earlier, Stage) else None
 
     @property
+    @data_field
+    def wip_limit(self) -> int:
+        return self._board.wip_limit(self.name)
+
+    @property
+    @data_field
+    def is_over_limit(self) -> bool:
+        return len(self.cards) > self.wip_limit
+
+    @property
+    @data_field
     def in_progress(self) -> list[Ticket]:
         return [ticket for ticket in self.cards if not ticket.is_done]
 
     @property
+    @data_field
     def done(self) -> list[Ticket]:
         return [ticket for ticket in self.cards if ticket.is_done]
-
-    @property
-    def wip_limit(self) -> int:
-        return self._board.wip_limit(self.name)
-
-    def to_json(self) -> ColumnData:
-        in_progress, done = self.in_progress, self.done
-        return {
-            "name": self.name,
-            "work_required": [self._slug(fidelity) for fidelity in self.work_required],
-            "formats": {self._slug(fidelity): list(fidelity.outputs) for fidelity in self.work_required},
-            "default_formats": {self._slug(fidelity): fidelity.default_format for fidelity in self.work_required},
-            "wip_limit": self.wip_limit,
-            "is_over_limit": len(in_progress) + len(done) > self.wip_limit,
-            "in_progress": [ticket.to_json() for ticket in in_progress],
-            "done": [ticket.to_json() for ticket in done],
-        }
 
     def _slug(self, fidelity: FidelityGuidance) -> str:
         return f"{fidelity.practice_guidance.key}-{fidelity.name}"
@@ -350,6 +367,7 @@ class Card(ABC):
         self._board = board
 
     @property
+    @data_field
     @abstractmethod
     def title(self) -> str: ...
 
@@ -358,6 +376,7 @@ class Card(ABC):
     def column(self) -> Column: ...
 
     @property
+    @data_field
     @abstractmethod
     def last_activity(self) -> str: ...
 
@@ -367,8 +386,68 @@ class Card(ABC):
     @abstractmethod
     def move_previous(self) -> Card: ...
 
-    def to_json(self) -> dict[str, Any]:
-        return {"title": self.title, "last_activity": self.last_activity}
-
     def _timestamp(self, moment: datetime) -> str:
         return Session.timestamp(moment)
+
+
+class Help:
+    """The overview, guidance, and rules of a practice or one of its fidelities, with its stage and its page on the forge."""
+
+    def __init__(self, practice: str, fidelity: str, stage: str, subject: PracticeGuidance | FidelityGuidance, href: str) -> None:
+        self._practice = practice
+        self._fidelity = fidelity
+        self._stage = stage
+        self._subject = subject
+        self._href = href
+
+    @property
+    @data_field
+    def practice(self) -> str:
+        return self._practice
+
+    @property
+    @data_field
+    def fidelity(self) -> str:
+        return self._fidelity
+
+    @property
+    @data_field
+    def stage(self) -> str:
+        return self._stage
+
+    @property
+    @data_field
+    def overview(self) -> str:
+        return (self._subject.overview or "").strip()
+
+    @property
+    @data_field
+    def guidance(self) -> str:
+        return (self._subject.guidance or "").strip()
+
+    @property
+    @data_field
+    def rules(self) -> list[HelpRule]:
+        return [HelpRule(rule) for rule in self._subject.rules]
+
+    @property
+    @data_field
+    def href(self) -> str:
+        return self._href
+
+
+class HelpRule:
+    """One rule as help shows it: its slug and its text."""
+
+    def __init__(self, rule: Rule) -> None:
+        self._rule = rule
+
+    @property
+    @data_field
+    def slug(self) -> str:
+        return self._rule.slug
+
+    @property
+    @data_field
+    def text(self) -> str:
+        return self._rule.body.strip()

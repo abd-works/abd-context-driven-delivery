@@ -7,9 +7,9 @@ section: body
 
 # Story Map — Session Board
 
-**Sources / context:** `harness/kanban/board.py`; `harness/kanban/ticket.py`; `harness/kanban/backlog_item.py`; `harness/kanban/kanban_spec.py`; `harness/kanban/kanban_tools_spec.py`; `harness/kanban/app/src/kanban/` and its `*.spec.ts`; `harness/kanban/app/tests/` (`story-actions.spec.ts`, `board-surface.spec.ts`, and the `tests/kanban/` sub-epics); `harness/chat-ui/pane/hooks/register.ts`; `harness/kanban/.context/module-context.md`; `harness/kanban/.context/kanban-model.md`; the Board Pane canvas, Version 72 (https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN, `project/Main.dc.html`) and its comment threads of 2026-10-31.
+**Sources / context:** `.sessions/session-board/ticket-enhancements.md` (the ticket enhancements, from `.sessions/_backlog/board-enhancements.md` and the board notes of 2026-11-05); `harness/kanban/board.py`; `harness/kanban/ticket.py`; `harness/kanban/backlog_item.py`; `harness/kanban/kanban_spec.py`; `harness/kanban/kanban_tools_spec.py`; `harness/kanban/app/src/kanban/` and its `*.spec.ts`; `harness/kanban/app/tests/` (`story-actions.spec.ts`, `board-surface.spec.ts`, and the `tests/kanban/` sub-epics); `harness/chat-ui/pane/hooks/register.ts`; `harness/kanban/.context/module-context.md`; `harness/kanban/.context/kanban-model.md`; the Board Pane canvas, Version 72 (https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN, `project/Main.dc.html`) and its comment threads of 2026-10-31.
 
-**Evidence:** The line under each Story says where it stands. **Observed** means the code and specs do it today. **Inferred** means the code does it but no spec presses it. The spec signatures behind each Story are in [session-board-behavior.md](session-board-behavior.md), under the Story's name. Each Story heading links to its scenario file. Pane-era observations are kept in `retired/harness/kanban/`.
+**Evidence:** The line under each Story says where it stands. **Observed** means the code and specs do it today. **Inferred** means the code does it but no spec presses it. **Intended** means a source asks for it and the code does not do it yet. The spec signatures behind each Story are in [session-board-behavior.md](session-board-behavior.md), under the Story's name. Each Story heading links to its scenario file. Pane-era observations are kept in `retired/harness/kanban/`.
 
 **Actors:** Person, Board App, Claude Code.
 
@@ -41,7 +41,7 @@ Observed: `ticket-card-view.tsx` draws the title and age, with one segment per e
 
 ### (S) Board App --> [Display Ticket Details](move-work-forward-on-session-board/see-work-on-session-board/display-ticket-details/display_ticket_details_story.test.md)
 
-Observed: `details-view.tsx`, `practice-grid-view.tsx`.
+Observed: `details-view.tsx`, `practice-grid-view.tsx`. Intended (`.sessions/session-board/ticket-enhancements.md`): a click on any empty area of a card expands it.
 
 ### (S) Person --> [Set Stage WIP Limit](move-work-forward-on-session-board/see-work-on-session-board/set-stage-wip-limit/set_stage_wip_limit_story.test.md)
 
@@ -57,17 +57,13 @@ Observed. With Active session only on, every ticket that is not the active sessi
 
 ## (E) Steer Ticket Sessions
 
-### (S) Person --> [Add Backlog Item](move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.md)
-
-Observed: the + on the Backlog heading opens a form with a title and text, and `BacklogItem.add` writes them to one markdown file in `.sessions/_backlog/`.
-
 ### (S) Person --> [Open Ticket Session](move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-session/open_ticket_session_story.test.md)
 
 Observed: `Ticket.new` calls `Session.new`; `board-page.ts` `openNewTicket`.
 
 ### (S) Person --> [Close Active Session](move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.md)
 
-Observed: Close on the active ticket's card sends `/space:session:close-session` to the chat, which calls `Session.close`; the ticket stays in its column. Moving the active ticket into Complete asks what to do with its work, then `Ticket.close` calls `Session.close` and moves the folder to `closed/`, so the ticket shows in Complete.
+Observed: Close on the active ticket's card sends `/space:session:close-session` to the chat, which calls `Session.close`; the ticket stays in its column. Moving the active ticket into Complete asks what to do with its work, then `Ticket.close` calls `Session.close` and moves the folder to `_complete/`, so the ticket shows in Complete.
 
 ### (S) Person --> [Move Ticket](move-work-forward-on-session-board/steer-ticket-sessions/move-ticket/move_ticket_story.test.md)
 
@@ -77,14 +73,6 @@ Observed: the arrows on a card, or a drag, move its ticket whatever its session'
 
 Observed: Activate on a card or the details opens a dialog with what to do on leaving and on opening, then calls `ticket.activate`.
 
-### (S) Person --> [Split Ticket Into Child Tickets](move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.md)
-
-Observed: `Ticket.new` records the parent (kanban_tools_spec 'that opens a ticket split from another'). Inferred: Split on a card fills the prompt through `fillSplit` in `ticket-client.tsx`; no spec presses Split.
-
-### (S) Person --> [Archive Ticket](move-work-forward-on-session-board/steer-ticket-sessions/archive-ticket/archive_ticket_story.test.md)
-
-Observed: `Ticket.archive`, called as the `ticket.archive` tool (kanban_spec 'that has been archived'; kanban_tools_spec 'that archives a ticket'). The board app has no Archive button.
-
 ### (S) Person --> [Write Ticket Handoff](move-work-forward-on-session-board/steer-ticket-sessions/write-ticket-handoff/write_ticket_handoff_story.test.md)
 
 Observed: the Handoff button fills the prompt with `/space-handoff-handoff-session`.
@@ -92,6 +80,58 @@ Observed: the Handoff button fills the prompt with `/space-handoff-handoff-sessi
 ### (S) Board App --> [Display Latest Handoff](move-work-forward-on-session-board/steer-ticket-sessions/display-latest-handoff/display_latest_handoff_story.test.md)
 
 Observed: `Ticket.latest_handoff`.
+
+## (E) Maintain Tickets
+
+### (S) Person --> [Add Backlog Item](move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.md)
+
+Observed: the + on the Backlog heading opens a form with a title and text, and `BacklogItem.add` writes them to one markdown file in `.sessions/_backlog/`.
+
+### (S) Person --> Edit Ticket Text
+
+Intended (`.sessions/session-board/ticket-enhancements.md`): a double click on a card's text edits it. A backlog item's text is its markdown file in `.sessions/_backlog/`; a session ticket's text is a markdown file kept in its session folder, which the session's instructions refer to, so the board and the agent read the same text.
+
+### (S) Person --> Reorder Tickets In Column
+
+Intended (`.sessions/session-board/ticket-enhancements.md`): a ticket dragged up or down within its column keeps that place.
+
+### (S) Person --> [Archive Ticket](move-work-forward-on-session-board/steer-ticket-sessions/archive-ticket/archive_ticket_story.test.md)
+
+Observed: `Ticket.archive`, called as the `ticket.archive` tool (kanban_spec 'that has been archived'; kanban_tools_spec 'that archives a ticket'). The board app has no Archive button. Intended (`.sessions/session-board/ticket-enhancements.md`): Archive on a card.
+
+### (S) Person --> Delete Ticket
+
+Intended (`.sessions/session-board/ticket-enhancements.md`): Delete on a card removes the ticket and its session folder from the board.
+
+## (E) Organize Ticket Hierarchy
+
+### (S) Person --> [Split Ticket Into Child Tickets](move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.md)
+
+Observed: `Ticket.new` records the parent (kanban_tools_spec 'that opens a ticket split from another'). Inferred: Split on a card fills the prompt through `fillSplit` in `ticket-client.tsx`; no spec presses Split. Intended (`.sessions/session-board/ticket-enhancements.md`): a split goes to the AI, which slices the ticket thinly into the child tickets it proposes.
+
+### (S) Person --> Add Child Ticket
+
+Intended (`.sessions/session-board/ticket-enhancements.md`): a person adds a child ticket to a parent by hand.
+
+### (S) Board App --> Display Child Tickets In Parent
+
+Intended (`.sessions/session-board/ticket-enhancements.md`): a parent's card holds its child tickets stacked inside it, with the parent's title small above them.
+
+### (S) Person --> Expand Parent Ticket
+
+Intended (`.sessions/session-board/ticket-enhancements.md`): a parent collapses to its own card and expands to show its children.
+
+### (S) Person --> Detach Child Ticket
+
+Intended (`.sessions/session-board/ticket-enhancements.md`): a child pulled out of its parent becomes a ticket of its own beside it and moves independently.
+
+### (S) Person --> Move Child Ticket To Another Parent
+
+Intended (`.sessions/session-board/ticket-enhancements.md`): a ticket added as a child of a different parent leaves its old parent.
+
+### (S) Claude Code --> Nest Child Branch And Session
+
+Intended (`.sessions/session-board/ticket-enhancements.md`): a child ticket's branch and session nest under its parent's, so the hierarchy holds in git and in `.sessions/` as on the board.
 
 ## (E) Guide Work Through Practices
 

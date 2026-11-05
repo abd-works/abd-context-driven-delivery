@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { KindMark } from '../kind-mark';
-import type { GraphTreeData } from '@cdd/harness/graph/graph';
+import type { ExplorerEntryData } from '@cdd/harness/graph/graph';
 import { ruleHits, selectionForRule, type GraphSelection } from './graph-selection';
 import { queryProgress } from './query-progress';
 
 type GraphViewProps = {
-  trees: GraphTreeData[];
+  trees: ExplorerEntryData[];
   loading: boolean;
   loadingLabel?: string;
   loadingLog?: string[];
@@ -102,7 +102,7 @@ function TreeNode({
   onSelect,
   ownerId,
 }: {
-  node: GraphTreeData;
+  node: ExplorerEntryData;
   selectedId: string;
   activeRule: string;
   onSelect: (selection: GraphSelection) => void;

@@ -255,11 +255,12 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         operation.is_static = any(
             isinstance(dec, ast.Name) and dec.id == "staticmethod" for dec in node.decorator_list
         )
-        operation.is_classmethod = any(
-            isinstance(dec, ast.Name) and dec.id == "classmethod" for dec in node.decorator_list
-        )
+        operation.is_classmethod = self._is_classmethod(node)
         apply_python_function_metrics(operation, node)
         return operation
+
+    def _is_classmethod(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+        return any(isinstance(dec, ast.Name) and dec.id == "classmethod" for dec in node.decorator_list)
 
     def _body_of(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> CodeBody:
         """The statements as written, with the comments above them; the docstring stays the description."""
@@ -287,8 +288,9 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
 
     def _parameter_strings(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
         items: list[str] = []
+        receivers = {"self", "cls"} if self._is_classmethod(node) else {"self"}
         for arg in list(node.args.args) + list(node.args.kwonlyargs):
-            if arg.arg == "self":
+            if arg.arg in receivers:
                 continue
             if arg.annotation is not None:
                 items.append(f"{arg.arg}: {ast.unparse(arg.annotation)}")

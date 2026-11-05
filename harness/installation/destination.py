@@ -1,6 +1,7 @@
 """Destination mark and Installation write channel — no hook or installer import."""
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from typing import Any, Callable
 
@@ -12,6 +13,7 @@ _NO_DEPLOY_FLAG = "_no_deploy"
 _LANGUAGE_ADAPTERS_FLAG = "_language_adapters"
 _IDENTITY_FLAG = "_language_adapter_identity"
 _EDITS_FLAG = "_language_adapter_edits"
+_DATA_FIELD_FLAG = "_data_field"
 
 
 def noCatalog(target: Any = None) -> Any:
@@ -49,7 +51,7 @@ def noDeploy(target: Any = None) -> Any:
 def language_adapter(*, language: str, identity: str = "") -> Callable[[Any], Any]:
     """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them.
 
-    identity names the field of what `to_json()` returns that holds the object's name, so code holding only that data
+    identity names the data field (`@data_field`) that holds the object's name, so code holding only that data
     knows which object its operations act on. An object its tools never load by name, such as the one board, has none.
     """
 
@@ -89,6 +91,47 @@ def edits(*fields: str) -> Callable[[Any], Any]:
 def edited_fields_of(operation: Any) -> tuple[str, ...]:
     """The fields an operation's `@edits` mark names, or none."""
     return tuple(getattr(operation, _EDITS_FLAG, ()))
+
+
+def data_field(target: Any = None, *, key: str = "") -> Any:
+    """Mark a property as part of the object's data: what its tools answer with and what a language adapter types.
+
+    Put it under `@property`. key is the name the data uses when it differs from the property's, such as a ticket's
+    `column_name` sent as `column`, because the property of that name returns the column itself.
+    """
+
+    def mark(getter: Any) -> Any:
+        setattr(getter, _DATA_FIELD_FLAG, key or getter.__name__)
+        return getter
+
+    if target is None:
+        return mark
+    return mark(target)
+
+
+def data_fields_of(cls: type) -> dict[str, property]:
+    """The properties a class marks as its data, by the name each takes in the data; a base class's come first. A
+    subclass that overrides a marked property, such as a card's title, is read through its own."""
+    attributes: dict[str, str] = {}
+    for klass in reversed(cls.__mro__):
+        for attribute, member in vars(klass).items():
+            if isinstance(member, property) and hasattr(member.fget, _DATA_FIELD_FLAG):
+                attributes[getattr(member.fget, _DATA_FIELD_FLAG)] = attribute
+    return {key: inspect.getattr_static(cls, attribute) for key, attribute in attributes.items()}
+
+
+def data_of(value: Any) -> Any:
+    """value as plain JSON data: an object with marked properties as its fields, each object it holds as its own data."""
+    if isinstance(value, Path):
+        return value.as_posix()
+    if isinstance(value, dict):
+        return {key: data_of(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [data_of(item) for item in value]
+    fields = data_fields_of(type(value)) if not isinstance(value, type) else {}
+    if fields:
+        return {key: data_of(field.fget(value)) for key, field in fields.items()}
+    return value
 
 
 class SourceFile:

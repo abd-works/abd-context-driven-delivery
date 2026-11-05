@@ -15,7 +15,7 @@
 *Given* the cdd server behind the session board is not connected
 *When* the session board reads the [board](../../../kanban-model.md#board)
 *Then* a band across the top of the page says The cdd server is not connected
-*And* the header offers Connect in place of Restart cdd
+*And* the header offers Update
 
 #### Scenario: Show a failing tool in a toast
 
@@ -24,13 +24,20 @@
 *Then* a toast says cdd board.show failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
 *But* no band says the cdd server is lost
 
-#### Scenario: Restart cdd on the current code
+#### Scenario: Update the board and cdd to the latest code
 
 *Given* the band says the cdd server is lost
-*When* the Person restarts cdd
-*Then* the session board shows the [board](../../../kanban-model.md#board) read again from the cdd server, reloaded on the current code
-*And* the band is gone
-*And* a toast says cdd restarted on the current code
+*When* the Person presses Update
+*Then* the session board server gets the latest code, rebuilds the page, and pins the cdd server to it
+*And* the session board server restarts on the new code
+*And* the page loads again from the restarted server
+
+#### Scenario: Say which update step failed
+
+*Given* the latest code cannot be pulled
+*When* the Person presses Update
+*Then* a toast says Update failed at get latest, with the reason
+*And* the page and the session board server keep running as they were
 
 #### Scenario: Keep the newer board when an older read answers late
 

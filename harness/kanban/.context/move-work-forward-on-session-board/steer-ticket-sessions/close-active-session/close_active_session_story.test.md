@@ -25,5 +25,5 @@
 *But* it has no branch of its own
 *When* the Person moves checkout-flow into Complete and confirms
 *Then* checkout-flow shows in Complete
-*And* its folder is in .sessions/closed/checkout-flow
+*And* its folder is in .sessions/_complete/checkout-flow
 *But* nothing is committed

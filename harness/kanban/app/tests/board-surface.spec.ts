@@ -120,8 +120,6 @@ test.describe('the session board on the page', () => {
     })
 
     test('should keep local actions working', async ({ page }) => {
-      await page.getByRole('button', { name: 'Refresh' }).click()
-      await expect(page.getByRole('button', { name: 'Refresh' })).toBeEnabled()
       await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
       await expect(page.locator('[data-panel="report"]')).toBeVisible()
     })

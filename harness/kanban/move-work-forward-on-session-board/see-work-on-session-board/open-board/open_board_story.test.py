@@ -19,7 +19,7 @@ with story("Open Board"):
             pass
         with when("the Person opens the session board at http://127.0.0.1:8778"):
             # Board page -> Board.show()
-            # Board <- Board.to_json(): project, active, columns
+            # Board <- data_of(Board): project, active, columns
             # Board page -> Chat.list()
             # Chat <- the chats whose cdd-board mod checked in lately
             pass

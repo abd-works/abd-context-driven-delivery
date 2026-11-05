@@ -54,26 +54,42 @@ it should show a toast
 ##### that a person has restarted cdd
 
 ```
-it should read the board again from a fresh cdd server
--> BoardReader.refresh()
--> BoardStore.change({ serverFailure: 'lost' })
-  -> board-store.saveLayout()
-  -> BoardStore.dismissToast()
--> BoardPage.restartCdd()
+it should get the latest code, rebuild the page, then pin cdd to it
+-> BoardPage.update()
+-> BoardUpdate.update()
 ```
 
 ```
-it should say so in a toast
--> BoardReader.refresh()
--> BoardPage.restartCdd()
+it should restart the board server once the update has answered
+-> BoardPage.update()
+-> BoardUpdate.restart()
 ```
 
-###### with a chat connected
+```
+it should load the page again from the restarted server
+-> BoardPage.update()
+-> BoardStore.change({ isNewBuild: true })
+```
+
+###### with a step that fails
 
 ```
-it should ask the chat to restart its own cdd
--> BoardReader.refresh()
--> BoardPage.restartCdd()
+it should say in a toast which step failed
+-> BoardPage.update()
+-> BoardUpdate.update()
+<- UpdateStepFailed
+```
+
+```
+it should keep the page it has
+-> BoardPage.update()
+```
+
+```
+it should keep the board server running
+-> BoardPage.update()
+-> BoardUpdate.update()
+<- UpdateStepFailed
 ```
 
 ```
@@ -2303,11 +2319,8 @@ it should list every column with its tickets or items
 <- BacklogItem
 -> Board.current("pet-visits")
 <- Board
--> Board.to_json()
-  -> Column.to_json()
-    -> Card.to_json()
-    <- dict
-  <- dict
+-> data_of(Board)
+  <- the board's data fields, each column and card as its own data
 <- dict
 ```
 
@@ -3975,7 +3988,7 @@ it should take the ticket's name on every ticket tool that acts on one
 // the graph holds no operation this observation calls
 ```
 
-#### whose JSON is compared with the shapes in data.py
+#### whose JSON is compared with the data fields each class marks
 
 ```
 it should return exactly the fields TicketData names

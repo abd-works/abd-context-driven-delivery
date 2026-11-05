@@ -10,6 +10,7 @@ import type { CddConnection } from '@cdd/cdd-connection'
 import type { CddApi } from '@cdd/cdd-shared'
 import { ChatClientGenerated, type ChatCommandData } from '@cdd/tools/chat/chat'
 import { createApp } from '../packages/session-board/app'
+import { BoardUpdate } from '@src/session-board/board-update'
 import type { Send } from '@src/kanban/board/board-api'
 import { BoardPage } from '@src/kanban/board/board-page'
 import type { TicketClient } from '@src/kanban/ticket/ticket-client'
@@ -22,7 +23,8 @@ const REMOVE_RETRIES = 20
 const REMOVE_RETRY_MILLISECONDS = 250
 const LOCAL = '127.0.0.1'
 const BOARD_HEADER = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
-const STATIC_ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)), '..', 'dist')
+const APP_FOLDER = resolve(fileURLToPath(new URL('.', import.meta.url)), '..')
+const STATIC_ROOT = join(APP_FOLDER, 'dist')
 
 // The run keeps its chats in one folder of its own (see run-cdd-home.ts). Spec files take turns, so each starts with none.
 const separateChats = (): string => {
@@ -39,6 +41,32 @@ const freePort = (): Promise<number> =>
     })
   })
 
+// An update really pulls, builds, and installs, so the test server records each step it would run and when it would
+// restart, and a spec can make one step fail.
+export class UpdateRecord {
+  readonly steps: string[] = []
+  restarts = 0
+  failingStep: string | null = null
+
+  boardUpdate(): BoardUpdate {
+    return new BoardUpdate(
+      APP_FOLDER,
+      () => this.restarts++,
+      async (command, args) => {
+        const step = [command, ...args].join(' ')
+        this.steps.push(step)
+        if (this.failingStep && step.includes(this.failingStep)) throw new Error(`${this.failingStep} could not run`)
+      },
+    )
+  }
+
+  clear(): void {
+    this.steps.length = 0
+    this.restarts = 0
+    this.failingStep = null
+  }
+}
+
 export type Asked = { method: string; path: string; body: Record<string, unknown> | undefined }
 
 // The real session board server, with its generated routes, on its own port. A page's calls pass straight through to it;
@@ -48,14 +76,16 @@ export class RunningBoard {
     readonly cdd: CddConnection,
     private readonly origin: string,
     private readonly server: Server,
+    readonly updates: UpdateRecord,
   ) {}
 
   static async on(cdd: CddConnection): Promise<RunningBoard> {
     const port = await freePort()
+    const updates = new UpdateRecord()
     const server = await new Promise<Server>(done => {
-      const listening = createApp(cdd, port, STATIC_ROOT).listen(port, LOCAL, () => done(listening))
+      const listening = createApp(cdd, port, STATIC_ROOT, updates.boardUpdate()).listen(port, LOCAL, () => done(listening))
     })
-    return new RunningBoard(cdd, `http://${LOCAL}:${port}`, server)
+    return new RunningBoard(cdd, `http://${LOCAL}:${port}`, server, updates)
   }
 
   // A page that has not read the board yet, for what a page does before its first read. timed lets a spec decide when
@@ -251,6 +281,7 @@ export class BoardOnProject {
     for (const branch of this.git('branch', '--format=%(refname:short)').split('\n').filter(name => name && name !== 'main')) this.git('branch', '-D', branch)
     rmSync(join(this.chatsHome, 'chats'), { recursive: true, force: true })
     this.project.reset()
+    this.board.updates.clear()
     if (hadOrigin) this.addOrigin()
   }
 

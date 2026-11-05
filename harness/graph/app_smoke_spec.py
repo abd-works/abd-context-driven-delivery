@@ -8,6 +8,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from expects import contain, equal, expect
+from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from graph import Graph
@@ -26,8 +27,8 @@ with description("an example graph"):
         with before.all:
             self.graph = Graph()
             roots = {name: str(_SAMPLE) for name in _PRACTICES}
-            self.graph.load_working_copy(str(_HERE), roots, database=str(_SAMPLE))
-            self.inventory = self.graph.inventory()["practices"]
+            data_of(self.graph.load_working_copy(str(_HERE), roots, database=str(_SAMPLE)))
+            self.inventory = data_of(self.graph.inventory())["practices"]
 
         with context("with clean engineering"):
             with it("should count the same nodes as the graph"):
@@ -81,7 +82,7 @@ with description("an example graph"):
 
         with context("with operations selected"):
             with before.all:
-                self.rows = self.graph.return_nodes({"practices": ["clean_engineering"], "types": ["Operation"]})
+                self.rows = data_of(self.graph.return_nodes({"practices": ["clean_engineering"], "types": ["Operation"]}))
 
             with it("should return operation nodes"):
                 expect({row["type"] for row in self.rows}).to(equal({"Operation"}))
@@ -91,16 +92,16 @@ with description("an example graph"):
 
         with context("with clean engineering chosen in the filter"):
             with it("should offer the node types clean engineering holds"):
-                expect(self.graph.filter_choices(["clean_engineering"], [])["node_types"]).to(contain("Operation"))
+                expect(data_of(self.graph.filter_choices(["clean_engineering"], []))["node_types"]).to(contain("Operation"))
 
             with it("should leave nothing chosen for the next filter"):
-                self.graph.filter_choices(["clean_engineering"], ["Operation"])
+                data_of(self.graph.filter_choices(["clean_engineering"], ["Operation"]))
                 expect(self.graph.filter.practices).to(equal([]))
 
         with context("with an operation opened"):
             with before.all:
-                operation = self.graph.return_nodes({"practices": ["clean_engineering"], "types": ["Operation"]})[0]
-                self.opened = self.graph.source(operation["node_id"])
+                operation = data_of(self.graph.return_nodes({"practices": ["clean_engineering"], "types": ["Operation"]}))[0]
+                self.opened = data_of(self.graph.source(operation["node_id"]))
 
             with it("should name the file the operation sits in"):
                 expect(self.opened["file"]).to(contain("."))

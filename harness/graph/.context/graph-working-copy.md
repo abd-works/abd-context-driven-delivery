@@ -6,4 +6,4 @@ The explorer graph is built from source on disk, not from a separate query datab
 
 The Vite app in `harness/graph/app` follows the CDD web domain access pattern. Its server holds one `CddConnection` and mounts the generated `graphRoutes`, so every call reaches `Graph.current()`, the one graph the cdd server holds. The page's `GraphClient` extends the generated `GraphClientGenerated` and calls `loadWorkingCopy` with every practice name mapped to the chosen folder root. It adds only the folder dialogs, which `choose_folder.py` opens on the server's machine.
 
-Every graph operation answers a `TypedDict` from `harness/graph/data.py`. A load reports each practice, file, and rule through `report_progress`, and the page reads those steps from `/cdd/progress` while it waits. Every call finishes within ten minutes.
+Every graph operation answers an object from `harness/graph/explorer.py`, such as the inventory or a node's source, which marks its data with `@data_field`. A load reports each practice, file, and rule through `report_progress`, and the page reads those steps from `/cdd/progress` while it waits. Every call finishes within ten minutes.

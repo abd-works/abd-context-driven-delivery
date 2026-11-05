@@ -16,9 +16,13 @@ from harness.installation.installer import Installer
 
 Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.kanban.data import BacklogItemData, ColumnData, ReportRuleData, TicketData, ViolationData, WorkspaceData  # noqa: E402
+from harness.installation.destination import data_fields_of, data_of  # noqa: E402
+from harness.kanban.backlog_item import BacklogItem  # noqa: E402
+from harness.kanban.board import Stage  # noqa: E402
+from harness.kanban.report import ReportRule, Violation  # noqa: E402
+from harness.kanban.ticket import Ticket, Workspace  # noqa: E402
 from harness.kanban.board import FidelityNotFoundError, PracticeNotFoundError  # noqa: E402
-from harness.kanban.ticket import FileOutsideRepositoryError  # noqa: E402
+from tools.file_manager.file_manager import PathOutsideRootsError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Session  # noqa: E402
 
@@ -58,7 +62,7 @@ STORY_MAP_GRAPH = {
     },
 }
 # A report as validate saves it, with the judgment the validating agent added: a rule the graph already hit, a failed rule
-# with two findings, and a rule with one finding.
+# with two findings in the map and one in its drawio, and a rule with one finding followed by a list of passing rules.
 JUDGED_REPORT = """# Graph rule validation
 
 ## Judgment — `docs/map.md`
@@ -76,6 +80,14 @@ Graph rule: the story at line 12 opens with a noun.
 
 ### `story-name-captures-system-mechanic` — Fail
 - map.md:3 `Do Stuff` does not say what it does.
+
+**Passes:**
+- verb-noun-format: every name is a verb and a noun.
+
+## Judgment — `docs/map.drawio`
+
+### `do-not-invent-requirements` — Fail
+- map.drawio:2 `Open Board`: no source names the board command.
 
 ### Passes
 Everything else.
@@ -128,7 +140,7 @@ class ProjectTools:
 
     def call(self, tool: str, **arguments):
         result = self.server.invoke_tool(tool, arguments)
-        return json.loads(json.dumps(result, default=lambda value: value.to_json()))
+        return json.loads(json.dumps(result, default=data_of))
 
     def column(self, name: str) -> dict:
         return next(column for column in self.call("board.show")["columns"] if column["name"] == name)
@@ -329,13 +341,13 @@ with description("the board tools") as self:
                     report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
                     expect(report["rules"][0]["violations"][0]["source"][0]["text"]).to(equal("pets line 10"))
 
-            with it("should return exactly the fields ViolationData names"):
+            with it("should return exactly the fields a Violation marks as its data"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
-                expect(set(report["rules"][0]["violations"][0])).to(equal(set(ViolationData.__annotations__)))
+                expect(set(report["rules"][0]["violations"][0])).to(equal(set(data_fields_of(Violation))))
 
-            with it("should return exactly the fields ReportRuleData names"):
+            with it("should return exactly the fields a ReportRule marks as its data"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
-                expect(set(report["rules"][0])).to(equal(set(ReportRuleData.__annotations__)))
+                expect(set(report["rules"][0])).to(equal(set(data_fields_of(ReportRule))))
 
             with it("should count the violations of each rule"):
                 report = self.project.call("ticket.report", ticket="pet-visits", fidelity="clean_engineering-modules")
@@ -403,9 +415,13 @@ with description("the board tools") as self:
                     report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
                     expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format", "do-not-invent-requirements", "story-name-captures-system-mechanic"]))
 
-                with it("should count each finding of a judged rule"):
+                with it("should count each finding of a judged rule in every judged file"):
                     report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
-                    expect(report["rules"][1]["count"]).to(equal(2))
+                    expect(report["rules"][1]["count"]).to(equal(3))
+
+                with it("should not read the passing rules listed after a judged rule as its findings"):
+                    report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
+                    expect(report["rules"][2]["count"]).to(equal(1))
 
                 with it("should give a judged finding the judged file and its line"):
                     finding = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")["rules"][1]["violations"][0]
@@ -712,13 +728,8 @@ with description("the board tools") as self:
             with it("should refuse to generate a fidelity the ticket does not have, naming it"):
                 expect(lambda: self.project.call("ticket.generate_commands", ticket="pet-visits", fidelities=["stories-horoscope"], formats=["drawio"])).to(raise_error(FidelityNotFoundError))
 
-            with it("should refuse a file outside the repository, naming the path and the ticket"):
-                try:
-                    self.project.call("ticket.read_file", ticket="pet-visits", path="../elsewhere.md")
-                    refused = None
-                except FileOutsideRepositoryError as error:
-                    refused = (error.path, error.ticket)
-                expect(refused).to(equal(("../elsewhere.md", "pet-visits")))
+            with it("should refuse a file outside the repository"):
+                expect(lambda: self.project.call("ticket.read_file", ticket="pet-visits", path="../elsewhere.md")).to(raise_error(PathOutsideRootsError))
 
         # (S) Person --> List Ticket Files, the session folder
         with context("with files in its session folder"):
@@ -795,7 +806,7 @@ with description("the board tools") as self:
                 expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("satisfy"))
 
             with it("should count each finding of the judgment"):
-                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-story_map": 4}))
+                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-story_map": 5}))
 
         with context("that a person has finished reviewing"):
             with before.each:
@@ -1094,19 +1105,19 @@ with description("the board tools") as self:
             self.project.ticket("pet-visits", title="Pet visits")
             self.project.backlog_item("returns.md", "Returns and refunds")
 
-        with it("should return exactly the fields TicketData names"):
-            expect(set(self.project.ticket_json("pet-visits"))).to(equal(set(TicketData.__annotations__)))
+        with it("should return exactly the fields a Ticket marks as its data"):
+            expect(set(self.project.ticket_json("pet-visits"))).to(equal(set(data_fields_of(Ticket))))
 
-        with it("should return exactly the fields WorkspaceData names"):
+        with it("should return exactly the fields a Workspace marks as its data"):
             subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
             workspace = self.project.call("ticket.workspace", ticket="pet-visits")
-            expect(set(workspace)).to(equal(set(WorkspaceData.__annotations__)))
+            expect(set(workspace)).to(equal(set(data_fields_of(Workspace))))
 
-        with it("should return exactly the fields BacklogItemData names"):
-            expect(set(self.project.column("Backlog")["items"][0])).to(equal(set(BacklogItemData.__annotations__)))
+        with it("should return exactly the fields a BacklogItem marks as its data"):
+            expect(set(self.project.column("Backlog")["items"][0])).to(equal(set(data_fields_of(BacklogItem))))
 
-        with it("should return only the fields ColumnData names on a stage"):
-            expect(set(self.project.column("Discovery")) - set(ColumnData.__annotations__)).to(equal(set()))
+        with it("should return exactly the fields a Stage marks as its data"):
+            expect(set(self.project.column("Discovery"))).to(equal(set(data_fields_of(Stage))))
 
     with context("whose signatures are compared with the board app's shared behaviors"):
         with it("should state every shared behavior here under the same sentence"):

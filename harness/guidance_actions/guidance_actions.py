@@ -273,19 +273,27 @@ class GuidanceAction:
         #         warning = session.branch_warning()
         # return warning
 
+    def acting_session(self):
+        """The session this command acts on: the one its session= word names, else the open session. A board command
+        names its ticket's session, which need not be the session open in the chat that runs it."""
+        from space.session import Session
+        from space.work_state import project_checkout
+
+        session = Session.current()
+        if not self.named_session:
+            return session
+        project = Path(session.repo_path or project_checkout())
+        named = Path(self.named_session)
+        return Session.load((named if named.is_absolute() else project / named).parent, project)
+
     @property
     def session_context(self) -> str:
         """The open session as an agent acting on this command needs it: its session.json, the project root paths
         are named from, the session's root, and where each listed practice writes. The agent works from the project's
         checkout, so every path it sees starts there; told nothing, it guesses where files go under a moved root."""
-        from space.session import Session
         from space.work_state import project_checkout
 
-        session = Session.current()
-        if self.named_session:
-            named = Path(self.named_session)
-            named = named if named.is_absolute() else Path(session.repo_path or project_checkout()) / named
-            session = Session.load(named.parent, Path(session.repo_path or project_checkout()))
+        session = self.acting_session()
         if session.session_path is None:
             return ""
         session_json = Path(session.session_path) / "session.json"

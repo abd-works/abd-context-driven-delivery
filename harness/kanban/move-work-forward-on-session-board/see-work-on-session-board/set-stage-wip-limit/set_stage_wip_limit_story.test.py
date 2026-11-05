@@ -35,12 +35,12 @@ with story("Set Stage WIP Limit"):
         with then("Discovery, Specification, and Implementation each show the limit 3"):
             pass
     with scenario("Show a stage over its limit"):
-        # Evidence: observed: kanban_tools_spec 'that sets a stage's limit below the tickets it holds' — 'should show the stage over its limit'; Stage.to_json is_over_limit.
+        # Evidence: observed: kanban_tools_spec 'that sets a stage's limit below the tickets it holds' — 'should show the stage over its limit'; Stage.is_over_limit.
         with given("the Discovery [stage](../../../.context/kanban-model.md#stage--column) holds the [tickets](../../../.context/kanban-model.md#ticket--card) billing-report, move-me, and back-to-backlog"):
             pass
         with when("the Person sets Discovery's limit to 2"):
             # Person -> Board.set_wip_limit('Discovery', 2)
-            # Stage -> Stage.to_json() <- is_over_limit: true
+            # Stage -> data_of(Stage) <- is_over_limit: true
             pass
         with then("Discovery's count shows in red, over its limit"):
             pass
