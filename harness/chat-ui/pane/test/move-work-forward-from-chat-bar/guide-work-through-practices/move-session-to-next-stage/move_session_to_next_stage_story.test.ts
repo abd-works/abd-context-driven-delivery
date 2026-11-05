@@ -1,6 +1,8 @@
 import { expect } from 'claude-code/testing'
 
-import { boardOf, called, cdd, checkoutFlow, checkoutFlowWith, DONE, drawn, GENERATED, labelOf, markOf, openChatBar, textOf } from '../../../chat-bar-world'
+import { called } from '../../../cdd-stub'
+import { boardOf, checkoutFlowWith, DONE, GENERATED } from '../../../examples/chat-bar.examples'
+import { CHAT_BAR, drawn, labelOf, markOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -10,16 +12,13 @@ import { scenario, story } from '../../../story-test'
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> Move Session To Next Stage
-story('Move Session To Next Stage', () => {
+story('Move Session To Next Stage', CHAT_BAR, () => {
   scenario('Move on once every fidelity is reviewed', ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 'When every fidelity of the stage is reviewed, the button moves the session to the next stage'; no chat bar code yet
     given('checkout-flow is In progress in Specification with stories-scenarios, ux-mockup and clean_engineering-model reviewed', async ($, on, scene) => {
-      scene.world = cdd(on, boardOf('checkout-flow', checkoutFlowWith({ 'stories-scenarios': DONE, 'ux-mockup': DONE, 'clean_engineering-model': DONE }, { is_done: true, next: null })))
-      scene.ui = await openChatBar($)
+      scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-scenarios': DONE, 'ux-mockup': DONE, 'clean_engineering-model': DONE }, { is_done: true, next: null }))
     })
     when('the Person moves checkout-flow to the next [stage](../../../../../../kanban/.context/kanban-model.md#stage--column)', async ($, on, scene) => {
-      scene.world.board = boardOf('checkout-flow', checkoutFlow({ column: 'Implementation', next: 'stories-acceptance_tests' }))
-      scene.world.answers['ticket.move_next'] = checkoutFlow({ column: 'Implementation' })
       expect(await labelOf(scene.ui, 'next-action')).toBe('move checkout-flow on')
       await scene.ui.press({ key: 'next-action' })
     })
@@ -32,14 +31,12 @@ story('Move Session To Next Stage', () => {
     and('its dots show the Implementation fidelities, not started', async ($, on, scene) => {
       const labels = await Promise.all(['dot-stories-acceptance_tests', 'dot-ux-front_end_code', 'dot-clean_engineering-code'].map(key => labelOf(scene.ui, key)))
       expect(labels).toEqual(['stories-acceptance_tests to do', 'ux-front_end_code to do', 'clean_engineering-code to do'])
-      await scene.ui.unmount()
     })
   })
   scenario('Keep acting on fidelities until the stage is reviewed', ({ given, when, then, but }) => {
     // Evidence: inferred: CDR 0001 'Action button and ▾ picker'
     given('checkout-flow is In progress in Specification with ux-mockup selected', async ($, on, scene) => {
-      scene.world = cdd(on, boardOf('checkout-flow', checkoutFlowWith({ 'ux-mockup': GENERATED })))
-      scene.ui = await openChatBar($)
+      scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'ux-mockup': GENERATED }))
       await scene.ui.press({ key: 'dot-ux-mockup' })
     })
     but('ux-mockup is not reviewed')
@@ -51,7 +48,6 @@ story('Move Session To Next Stage', () => {
     })
     but('not the move to Implementation', async ($, on, scene) => {
       expect(textOf(await markOf(scene.ui, 'next-action'))).not.toBe('→')
-      await scene.ui.unmount()
     })
   })
 })

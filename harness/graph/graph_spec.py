@@ -9,7 +9,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from expects import be_above, contain, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 from graph import Graph, Node, PracticeGraph, Source
 
@@ -1074,3 +1074,72 @@ with description("a scenario row with only a start line"):
         expect(len(self.source.text.splitlines())).to(be_above(1))
         expect(self.source.text).to(contain("when("))
         expect(self.source.text).to(contain("then("))
+
+
+with description("an example a story test imports"):
+    with before.each:
+        import tempfile
+
+        self.temp = tempfile.TemporaryDirectory()
+        root = Path(self.temp.name)
+        files = {
+            "examples/account.examples.ts": "\n".join(
+                [
+                    "export function accountWith(name: string) {",
+                    "  return { name }",
+                    "}",
+                    "",
+                    "export const VERIFIED = {",
+                    "  status: 'verified',",
+                    "}",
+                    "",
+                    "export const STAGES = [",
+                    "  'Discovery',",
+                    "  'Specification',",
+                    "]",
+                ]
+            ),
+            "verify-account/verify_account_story.test.ts": "\n".join(
+                [
+                    "import { accountWith, STAGES, VERIFIED } from '../examples/account.examples'",
+                    "const LOCAL = 'only here'",
+                    "story('Verify Account', () => {",
+                    "  given('a verified account', () => accountWith(VERIFIED.status))",
+                    "})",
+                ]
+            ),
+        }
+        for relative, body in files.items():
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(body, encoding="utf-8")
+        self.story_test = "verify-account/verify_account_story.test.ts"
+
+    with after.each:
+        self.temp.cleanup()
+
+    def _aligned(self, name: str) -> Source:
+        source = Source(self.story_test, 4, 4, self.temp.name)
+        source.align_to_example_export(self.temp.name, name)
+        return source
+
+    with context("that is a fixture function"):
+        with it("should sit in its examples file"):
+            expect(self._aligned("accountWith").file).to(equal("examples/account.examples.ts"))
+
+    with context("that is an exported constant"):
+        with it("should sit in its examples file"):
+            expect(self._aligned("VERIFIED").file).to(equal("examples/account.examples.ts"))
+
+        with it("should span the whole object it declares"):
+            source = self._aligned("VERIFIED")
+            expect((source.start_line, source.end_line)).to(equal((5, 7)))
+
+    with context("that is an exported list"):
+        with it("should span the whole list it declares"):
+            source = self._aligned("STAGES")
+            expect((source.start_line, source.end_line)).to(equal((9, 12)))
+
+    with context("that is a constant the story test declares itself"):
+        with it("should stay at the story test"):
+            expect(self._aligned("LOCAL").file).to(equal(self.story_test))

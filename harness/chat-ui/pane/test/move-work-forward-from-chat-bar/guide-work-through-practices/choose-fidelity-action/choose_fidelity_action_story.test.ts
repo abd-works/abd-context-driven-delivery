@@ -1,6 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { buttonKeys, cdd, drawn, openChatBar } from '../../../chat-bar-world'
+import { buttonKeys, CHAT_BAR, drawn } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -10,12 +10,10 @@ import { scenario, story } from '../../../story-test'
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> Choose Fidelity Action
-story('Choose Fidelity Action', () => {
+story('Choose Fidelity Action', CHAT_BAR, () => {
   scenario('Pick another action for the fidelity', ({ given, when, then }) => {
     // Evidence: inferred: CDR 0001 'The picker offers every builder action'; no chat bar code yet
     given("checkout-flow's ux-mockup is the selected fidelity", async ($, on, scene) => {
-      scene.world = cdd(on)
-      scene.ui = await openChatBar($)
       await scene.ui.press({ key: 'dot-ux-mockup' })
     })
     when('the Person opens the action picker', async ($, on, scene) => {
@@ -31,7 +29,6 @@ story('Choose Fidelity Action', () => {
     then('the chat runs /actions-iterate ux-mockup', async ($, on, scene) => {
       expect(scene.world.sent).toContain('/actions-iterate ux-mockup')
       expect(await drawn(scene.ui, 'picker')).toBeUndefined()
-      await scene.ui.unmount()
     })
   })
 })

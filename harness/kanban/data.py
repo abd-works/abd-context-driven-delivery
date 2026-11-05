@@ -37,6 +37,7 @@ class TicketData(TypedDict):
     progress: dict[str, str]
     actions: dict[str, ActionStatesData]
     allowed_actions: dict[str, list[str]]
+    next_actions: dict[str, str]
 
 
 class BacklogItemData(TypedDict):

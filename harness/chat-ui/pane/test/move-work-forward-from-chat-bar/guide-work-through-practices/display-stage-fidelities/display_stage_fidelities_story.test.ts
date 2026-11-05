@@ -1,6 +1,7 @@
 import { expect } from 'claude-code/testing'
 
-import { boardOf, cdd, checkoutFlowWith, DONE, labelOf, markOf, openChatBar, textOf } from '../../../chat-bar-world'
+import { boardOf, checkoutFlowWith, DONE } from '../../../examples/chat-bar.examples'
+import { CHAT_BAR, labelOf, markOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -10,15 +11,12 @@ import { scenario, story } from '../../../story-test'
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> Display Stage Fidelities
-story('Display Stage Fidelities', () => {
+story('Display Stage Fidelities', CHAT_BAR, () => {
   scenario("Show an earlier stage's fidelities", ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 "Clicking a stage shows that stage's fidelities"; no chat bar code yet
-    given("the Chat Bar shows checkout-flow's Specification dots with ux-mockup selected", async ($, on, scene) => {
-      scene.world = cdd(on)
-    })
+    given("the Chat Bar shows checkout-flow's Specification dots with ux-mockup selected")
     and('its Discovery [fidelity progress](../../../../../../kanban/.context/kanban-model.md#fidelityprogress) is stories-story_map done, ux-ia not started and clean_engineering-modules done', async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-story_map': DONE, 'clean_engineering-modules': DONE }))
-      scene.ui = await openChatBar($)
       await scene.ui.press({ key: 'dot-ux-mockup' })
     })
     when('the Person shows the Discovery [stage](../../../../../../kanban/.context/kanban-model.md#stage--column)', async ($, on, scene) => {
@@ -32,7 +30,6 @@ story('Display Stage Fidelities', () => {
     and('no dot is selected, because ux-mockup is not a Discovery fidelity', async ($, on, scene) => {
       const marks = await Promise.all(['dot-stories-story_map', 'dot-ux-ia', 'dot-clean_engineering-modules'].map(async key => textOf(await markOf(scene.ui, key))))
       expect(marks).toEqual(['●', '●', '●'])
-      await scene.ui.unmount()
     })
   })
 })

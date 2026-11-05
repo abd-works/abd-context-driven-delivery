@@ -397,27 +397,49 @@ class Source:
         self._text = None
 
     def align_to_example_export(self, root: str, name: str) -> None:
-        """Point this slice at an exported fixture function by name under ``root``."""
+        """Point this slice at the fixture named ``name`` under ``root``: a fixture function, or an exported constant
+        such as ``export const DONE = {...}``. A story test imports both from its examples file, so an example it
+        names belongs there, not at the test that uses it."""
         if not root or not name:
             return
         root_path = Path(root)
         if not root_path.is_dir():
             return
-        pattern = re.compile(rf"(?:export\s+)?function\s+{re.escape(name)}\b")
+        function = re.compile(rf"(?:export\s+)?function\s+{re.escape(name)}\b")
+        constant = re.compile(rf"\bexport\s+const\s+{re.escape(name)}\b")
         for path in sorted(root_path.rglob("*.ts")):
             if any(part in {"node_modules", "dist", "build"} for part in path.parts):
                 continue
             text = path.read_text(encoding="utf-8")
             lines = text.splitlines()
             for index, line in enumerate(lines, start=1):
-                if not pattern.search(line):
+                if function.search(line):
+                    end = self._call_end(lines, index - 1)
+                elif constant.search(line):
+                    end = self._declaration_end(lines, index - 1)
+                else:
                     continue
                 self.file = path.relative_to(root_path).as_posix()
                 self.root = root
                 self.start_line = index
-                self.end_line = self._call_end(lines, index - 1)
+                self.end_line = end
                 self._text = None
                 return
+
+    def _declaration_end(self, lines: list[str], start: int) -> int:
+        """The line a declaration ends on: the first from start where its braces, brackets and parentheses are all
+        closed, so a multi-line object or list is read whole."""
+        paren = 0
+        brace = 0
+        bracket = 0
+        quote = ""
+        for index in range(start, len(lines)):
+            line = lines[index]
+            paren, brace, quote, _ = self._scan_call(line, paren, brace, quote)
+            bracket += line.count("[") - line.count("]")
+            if paren <= 0 and brace <= 0 and bracket <= 0 and not quote:
+                return index + 1
+        return len(lines)
 
     def _file_lines(self) -> list[str]:
         full = self._full_path()

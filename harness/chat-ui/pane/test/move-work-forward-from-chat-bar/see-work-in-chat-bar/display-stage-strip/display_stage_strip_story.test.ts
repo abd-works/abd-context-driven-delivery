@@ -1,6 +1,8 @@
 import { expect } from 'claude-code/testing'
 
-import { boardOf, buttonKeys, cdd, checkoutFlow, drawn, openChatBar, SPECIFICATION } from '../../../chat-bar-world'
+import { cdd } from '../../../cdd-stub'
+import { boardOf, checkoutFlow, SPECIFICATION } from '../../../examples/chat-bar.examples'
+import { buttonKeys, CHAT_BAR, drawn } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -10,15 +12,11 @@ import { scenario, story } from '../../../story-test'
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Chat Bar --> Display Stage Strip
-story('Display Stage Strip', () => {
+story('Display Stage Strip', CHAT_BAR, () => {
   scenario('Show the active session as one line', ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 'The line reads left to right' and design/StageStrip.dc.html; no chat bar code draws it yet, so this is intended behaviour
-    given('the [session](../../../../../../kanban/.context/kanban-model.md#session) checkout-flow is active and In progress in Specification', ($, on, scene) => {
-      scene.world = cdd(on)
-    })
-    when('the Chat Bar draws above the prompt', async ($, on, scene) => {
-      scene.ui = await openChatBar($)
-    })
+    given('the [session](../../../../../../kanban/.context/kanban-model.md#session) checkout-flow is active and In progress in Specification')
+    when('the Chat Bar draws above the prompt')
     // Boot ui.render -> refreshChatBar($) -> $.mcp.call('board.show') -> Board.show()
     // Board <- to_json(): active, columns
     // Boot -> ChatBarView($, currentChatBar($))
@@ -47,15 +45,11 @@ story('Display Stage Strip', () => {
       expect(inks).toEqual(['#E5531A', '#E5531A', '#E5531A', '#E5531A66', '#E5531A66'])
       expect((await drawn(scene.ui, 'stage-box-Specification'))?.props?.borderStyle).toBe('single')
       expect((await drawn(scene.ui, 'stage-box-Discovery'))?.props?.borderStyle).toBeUndefined()
-      await scene.ui.unmount()
     })
   })
   scenario('Redraw after the agent moves the session', ({ given, when, then }) => {
     // Evidence: inferred: refresh-on-engine-events in patterns-cdd-claude-mod; no chat bar code yet
-    given('the Chat Bar shows checkout-flow In progress in Specification', async ($, on, scene) => {
-      scene.world = cdd(on)
-      scene.ui = await openChatBar($)
-    })
+    given('the Chat Bar shows checkout-flow In progress in Specification')
     when("the agent's tool call moves checkout-flow into Implementation", async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlow({ column: 'Implementation', next: 'stories-acceptance_tests' }))
       await $.tool.call({ tool: 'mcp__plugin_cdd_cdd__ticket_move_next' } as never)
@@ -65,7 +59,6 @@ story('Display Stage Strip', () => {
       expect((await drawn(scene.ui, 'stage-box-Implementation'))?.props?.borderStyle).toBe('single')
       expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-acceptance_tests', 'dot-ux-front_end_code', 'dot-clean_engineering-code'])
       expect(buttonKeys(await drawn(scene.ui, 'line'))).not.toContain(`dot-${SPECIFICATION[0]}`)
-      await scene.ui.unmount()
     })
   })
 })

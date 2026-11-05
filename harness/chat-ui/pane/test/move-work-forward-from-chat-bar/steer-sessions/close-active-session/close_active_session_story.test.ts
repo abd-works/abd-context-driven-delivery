@@ -1,6 +1,7 @@
 import { expect } from 'claude-code/testing'
 
-import { boardOf, called, cdd, checkoutFlow, findText, markOf, openChatBar, textOf } from '../../../chat-bar-world'
+import { called } from '../../../cdd-stub'
+import { CHAT_BAR, expectMarks, findText, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -10,13 +11,11 @@ import { scenario, story } from '../../../story-test'
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> Close Active Session
-story('Close Active Session', () => {
+story('Close Active Session', CHAT_BAR, () => {
   scenario('Close the session with its work committed', ({ given, when, then, and }) => {
     // Evidence: inferred: mirrors Close Active Session 'Complete the active ticket with its work committed'; no chat bar code yet
     given('checkout-flow is the active [session](../../../../../../kanban/.context/kanban-model.md#session), on its own branch', async ($, on, scene) => {
-      scene.world = cdd(on)
       scene.world.answers['ticket.workspace'] = { has_branch: true, has_worktree: true, leaving_has_branch: true }
-      scene.ui = await openChatBar($)
     })
     when('the Person closes checkout-flow', async ($, on, scene) => {
       await scene.ui.press({ key: 'close-button' })
@@ -26,8 +25,6 @@ story('Close Active Session', () => {
       expect(textOf(await findText(scene.ui, /^LEAVE/))).toBe('LEAVE ☑ commit ☑ push')
     })
     when('the Person confirms', async ($, on, scene) => {
-      scene.world.board = boardOf(null)
-      scene.world.answers['ticket.close'] = checkoutFlow({ column: 'Complete' })
       await scene.ui.press({ key: 'close-confirm' })
     })
     // ChatBarView press -> closeSession($, chatBar) -> $.mcp.call('ticket.close', { ticket: 'checkout-flow', leaving: ['commit', 'push'] }) -> Ticket.close()
@@ -36,34 +33,27 @@ story('Close Active Session', () => {
       expect(scene.world.toasts).toContain('Checkout flow: committed, pushed · Session Checkout flow closed')
     })
     and('no session is active', async ($, on, scene) => {
-      expect(textOf(await markOf(scene.ui, 'session-name-button'))).toBe('no session')
+      await expectMarks(scene.ui, { 'session-name-button': 'no session' })
       expect(called(scene.world, 'ticket.close')).toEqual({ ticket: 'checkout-flow', leaving: ['commit', 'push'] })
-      await scene.ui.unmount()
     })
   })
   scenario('Close a session that has no branch of its own', ({ given, when, then, but }) => {
     // Evidence: inferred: mirrors Close Active Session 'Complete a ticket that has no branch of its own'
-    given('checkout-flow is the active [session](../../../../../../kanban/.context/kanban-model.md#session)', async ($, on, scene) => {
-      scene.world = cdd(on)
-      scene.ui = await openChatBar($)
-    })
+    given('checkout-flow is the active [session](../../../../../../kanban/.context/kanban-model.md#session)')
     but('it has no branch of its own', async ($, on, scene) => {
       scene.world.answers['ticket.workspace'] = { has_branch: false, has_worktree: false, leaving_has_branch: false }
     })
     when('the Person closes checkout-flow and confirms', async ($, on, scene) => {
-      scene.world.board = boardOf(null)
-      scene.world.answers['ticket.close'] = checkoutFlow({ column: 'Complete' })
       await scene.ui.press({ key: 'close-button' })
       await scene.ui.press({ key: 'close-confirm' })
     })
     // closeSession($, chatBar) -> $.mcp.call('ticket.close', { ticket: 'checkout-flow', leaving: [] })
     then('no session is active', async ($, on, scene) => {
-      expect(textOf(await markOf(scene.ui, 'session-name-button'))).toBe('no session')
+      await expectMarks(scene.ui, { 'session-name-button': 'no session' })
     })
     but('nothing is committed', async ($, on, scene) => {
       expect(called(scene.world, 'ticket.close')).toEqual({ ticket: 'checkout-flow', leaving: [] })
       expect(scene.world.toasts).toContain('Session Checkout flow closed')
-      await scene.ui.unmount()
     })
   })
 })

@@ -2,9 +2,10 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { BoardData, ColumnData } from '@cdd/harness/kanban/board'
-import type { TicketData, WorkspaceData } from '@cdd/harness/kanban/ticket'
+import type { TicketData } from '@cdd/harness/kanban/ticket'
 
-import type { ChatBarJson, ChatBarViewJson } from '../../types'
+import type { ChatBarJson } from '../../types'
+import { reasonOf } from '../failure'
 import { SERVER } from '../health/server-health-client'
 import { FidelityClient, selectedFidelitySlug } from './fidelity-client'
 import { StageClient, shownStageName } from './stage-client'
@@ -12,22 +13,11 @@ import { StageClient, shownStageName } from './stage-client'
 // The chat bar: the active session's line above the prompt. Sources: harness/chat-ui/.context/story-map.md,
 // cdr/0001-stage-strip-band.md, design/StageStrip.dc.html. Every rule lives in the Python Ticket; this file shows its answers.
 const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null } as ChatBarJson)
-const chatBarView = atom({ plugin: 'cdd-board', key: 'chatBarView' } as const, {
-  isSessionListOpen: false,
-  isCardOpen: false,
-  switchTo: null,
-  closing: null,
-} as ChatBarViewJson)
 
-export const STAGES = ['Backlog', 'Discovery', 'Specification', 'Implementation', 'Complete']
-// What the board's activation dialog chooses first: leave the old session committed and pushed, open the new one on
-// its own branch and worktree.
-const LEAVING = ['commit', 'push']
-const OPENING = ['branch', 'worktree']
+const STAGES = ['Backlog', 'Discovery', 'Specification', 'Implementation', 'Complete']
 
 const ticketsOf = (column: ColumnData): TicketData[] => [...(column.in_progress ?? []), ...(column.done ?? []), ...(column.tickets ?? [])]
 const practiceOf = (slug: string): string => slug.slice(0, slug.indexOf('-'))
-const reasonOf = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
 // The active session's line: health mark, session name, fidelity dots, action button, stage icons.
 export class ChatBarClient {
@@ -50,21 +40,20 @@ export class ChatBarClient {
     return columns.flatMap(column => ticketsOf(column).map(ticket => ({ name: ticket.name, stage: column.name })))
   }
 
-  get session(): TicketData | null {
-    const active = this.board?.active
-    return this.board?.columns.flatMap(ticketsOf).find(ticket => ticket.name === active) ?? null
+  get hasSession(): boolean {
+    return this.ticket !== null
   }
 
   get sessionName(): string {
-    return this.session?.name ?? ''
+    return this.ticket?.name ?? ''
   }
 
   get title(): string {
-    return this.session?.title ?? ''
+    return this.ticket?.title ?? ''
   }
 
   get stage(): string {
-    return this.session?.column ?? ''
+    return this.ticket?.column ?? ''
   }
 
   // A stage icon a person picked shows that stage's fidelities; otherwise the dots show the stage the session is in.
@@ -74,7 +63,7 @@ export class ChatBarClient {
 
   // Ticket.is_done answers whether every fidelity of the stage is reviewed, so the action button moves the session on.
   get canMoveNext(): boolean {
-    return (this.session?.is_done ?? false) && this.stage !== 'Complete'
+    return (this.ticket?.is_done ?? false) && this.stage !== 'Complete'
   }
 
   get stages(): StageClient[] {
@@ -92,34 +81,70 @@ export class ChatBarClient {
 
   // The shown stage's fidelities of the practices this session has turned on.
   get fidelities(): FidelityClient[] {
-    const session = this.session
+    const ticket = this.ticket
     const column = this.board?.columns.find(entry => entry.name === this.shownStage)
-    if (!session || !column) return []
+    if (!ticket || !column) return []
     return (column.work_required ?? [])
-      .filter(slug => session.practices[practiceOf(slug)])
+      .filter(slug => ticket.practices[practiceOf(slug)])
       .map(
         slug =>
           new FidelityClient({
             slug,
-            progress: session.progress[slug] ?? 'not_started',
-            violationCount: session.violation_counts[slug] ?? 0,
-            actions: session.actions[slug] ?? { generate: 'to_do', validate: 'to_do', review: 'to_do' },
+            progress: ticket.progress[slug] ?? 'not_started',
+            violationCount: ticket.violation_counts[slug] ?? 0,
+            actions: ticket.actions[slug] ?? { generate: 'to_do', validate: 'to_do', review: 'to_do' },
             defaultFormat: column.default_formats?.[slug] ?? '',
-            nextOfTicket: session.next === slug ? session.next_action : '',
+            nextAction: ticket.next_actions?.[slug] ?? '',
             isSelected: slug === this.selected,
-            folder: session.practice_roots[practiceOf(slug)]?.root ?? '',
+            folder: ticket.practice_roots[practiceOf(slug)]?.root ?? '',
           }),
       )
   }
 
   // The fidelity the action button acts on: the one a person selected, else the ticket's next, else the first shown.
   get actionFidelity(): FidelityClient | null {
-    return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.fidelity === this.session?.next) ?? this.fidelities[0] ?? null
+    return this.selectedFidelity ?? this.fidelities.find(fidelity => fidelity.fidelity === this.ticket?.next) ?? this.fidelities[0] ?? null
   }
 
   // Null when the stored fidelity is not one of the shown stage's, so the selection never points into a hidden stage.
   get selectedFidelity(): FidelityClient | null {
     return this.fidelities.find(fidelity => fidelity.isSelected) ?? null
+  }
+
+  // The status line: the session, its stage, its next fidelity or done, and how many fidelities have violations.
+  get statusLine(): string {
+    const ticket = this.ticket
+    if (!ticket) return ''
+    const violations = Object.values(ticket.progress).filter(state => state === 'violations').length
+    const next = ticket.next ? `next: ${ticket.next}` : ticket.is_done ? 'done' : ''
+    return [ticket.name, ticket.column, next, violations ? `${violations} with violations` : ''].filter(Boolean).join(' · ')
+  }
+
+  // The agent context: what the agent is told about the active session in its system prompt, the same session the
+  // person sees.
+  get agentContext(): string {
+    const ticket = this.ticket
+    if (!ticket) return ''
+    return (
+      `CDD session board: you are working on ticket ${ticket.name} ("${ticket.title}"), in ${ticket.column}. ` +
+      (ticket.next ? `Its next guidance is ${ticket.next}. ` : 'Its stage is done and waits for a person to move it. ') +
+      'Each fidelity goes through generate, validate, then review, which a person records on the board.'
+    )
+  }
+
+  private get ticket(): TicketData | null {
+    const active = this.board?.active
+    return this.board?.columns.flatMap(ticketsOf).find(ticket => ticket.name === active) ?? null
+  }
+}
+
+// A cdd tool answered with isError, or with no JSON. tool names it; the message is the server's own text.
+export class CddToolFailed extends Error {
+  constructor(
+    readonly tool: string,
+    reason: string,
+  ) {
+    super(reason)
   }
 }
 
@@ -128,31 +153,22 @@ export class MoveRefused {
   constructor(readonly reason: string) {}
 }
 
-// ticket.close refused to close the session. reason is the server's own text.
-export class CloseRefused {
-  constructor(readonly reason: string) {}
-}
-
-// The one place this mod's chat bar calls cdd: a reply that is not JSON, or one flagged isError, is a failure carrying
-// the server's own text.
+// The one place this mod's chat bar calls cdd: a reply that is not JSON, or one flagged isError, is a CddToolFailed
+// carrying the server's own text.
 export async function callTool<T>($: EngineInterface, tool: string, args: object): Promise<T> {
   const result = await $.mcp.call(SERVER, tool, args)
   const text = result.content[0]?.text ?? ''
-  if (result.isError) throw new Error(text || `${tool} failed`)
+  if (result.isError) throw new CddToolFailed(tool, text || `${tool} failed`)
   try {
     return JSON.parse(text) as T
   } catch {
-    throw new Error(text || `${tool} sent back nothing`)
+    throw new CddToolFailed(tool, text || `${tool} sent back nothing`)
   }
 }
 
 // Atom chatBar, declared in pane/types/index.d.ts and kept in this file: the last board.show answer.
 export async function currentChatBar($: EngineInterface): Promise<ChatBarClient> {
   return new ChatBarClient(await read($, chatBar), await shownStageName($), await selectedFidelitySlug($))
-}
-
-export function currentChatBarView($: EngineInterface) {
-  return read($, chatBarView)
 }
 
 // A failed read keeps the last board and says why, so the bar never draws old state as if it were current.
@@ -165,89 +181,17 @@ export async function refreshChatBar($: EngineInterface): Promise<void> {
   }
 }
 
-export async function moveNext($: EngineInterface, bar: ChatBarClient): Promise<ChatBarClient | MoveRefused> {
+export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | MoveRefused> {
   try {
-    await callTool<TicketData>($, 'ticket.move_next', { ticket: bar.sessionName })
+    await callTool<TicketData>($, 'ticket.move_next', { ticket: chatBar.sessionName })
   } catch (failure) {
-    $.ui.toast(`${bar.sessionName} did not move: ${reasonOf(failure)}`)
+    $.ui.toast(`${chatBar.sessionName} did not move: ${reasonOf(failure)}`)
     return new MoveRefused(reasonOf(failure))
   }
   await refreshChatBar($)
   return currentChatBar($)
 }
 
-export async function runHandoff($: EngineInterface, bar: ChatBarClient): Promise<void> {
-  await $.prompt.fill({ text: `Write a handoff for ticket ${bar.sessionName} with /space-handoff-handoff-session.`, mode: 'append' })
-}
-
-export async function toggleSessionList($: EngineInterface): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, isSessionListOpen: !view.isSessionListOpen, isCardOpen: false }))
-}
-
-export async function toggleCard($: EngineInterface): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, isCardOpen: !view.isCardOpen, isSessionListOpen: false }))
-}
-
-// Picking a session opens the activation dialog on it; the session opens only once the person confirms.
-export async function pickSession($: EngineInterface, sessionName: string): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, isSessionListOpen: false, switchTo: sessionName }))
-}
-
-export async function cancelSwitch($: EngineInterface): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, switchTo: null }))
-}
-
-export async function activateSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {
-  try {
-    await callTool<TicketData>($, 'ticket.activate', { ticket: sessionName, leaving: LEAVING, opening: OPENING })
-  } catch (failure) {
-    $.ui.toast(`${sessionName} did not open: ${reasonOf(failure)}`)
-  }
-  await update($, chatBarView, view => ({ ...view, switchTo: null }))
-  await refreshChatBar($)
-  return currentChatBar($)
-}
-
-// A new session opens through the same activation dialog as one picked from the list.
-export async function createSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {
-  try {
-    const created = await callTool<TicketData>($, 'ticket.create', { title: sessionName })
-    await update($, chatBarView, view => ({ ...view, isSessionListOpen: false, switchTo: created.name }))
-  } catch (failure) {
-    $.ui.toast(`${sessionName} was not created: ${reasonOf(failure)}`)
-  }
-  await refreshChatBar($)
-  return currentChatBar($)
-}
-
-// The close dialog offers to commit and push only when the session has a branch of its own.
-export async function openClose($: EngineInterface, bar: ChatBarClient): Promise<void> {
-  try {
-    const workspace = await callTool<WorkspaceData>($, 'ticket.workspace', { ticket: bar.sessionName })
-    await update($, chatBarView, view => ({ ...view, closing: { hasBranch: workspace.leaving_has_branch } }))
-  } catch (failure) {
-    $.ui.toast(`${bar.sessionName} cannot close: ${reasonOf(failure)}`)
-  }
-}
-
-export async function cancelClose($: EngineInterface): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, closing: null }))
-}
-
-// Null when closing leaves no session active.
-export async function closeSession($: EngineInterface, bar: ChatBarClient): Promise<ChatBarClient | null | CloseRefused> {
-  const { closing } = await read($, chatBarView)
-  const leaving = closing?.hasBranch ? LEAVING : []
-  try {
-    await callTool<TicketData>($, 'ticket.close', { ticket: bar.sessionName, leaving })
-  } catch (failure) {
-    $.ui.toast(`${bar.title} did not close: ${reasonOf(failure)}`)
-    return new CloseRefused(reasonOf(failure))
-  }
-  const left = leaving.length ? `${bar.title}: committed, pushed · ` : ''
-  $.ui.toast(`${left}Session ${bar.title} closed`)
-  await update($, chatBarView, view => ({ ...view, closing: null }))
-  await refreshChatBar($)
-  const after = await currentChatBar($)
-  return after.session ? after : null
+export async function runHandoff($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
+  await $.prompt.fill({ text: `Write a handoff for ticket ${chatBar.sessionName} with /space-handoff-handoff-session.`, mode: 'append' })
 }

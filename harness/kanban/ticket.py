@@ -198,9 +198,7 @@ class Ticket(Card):
     def next_action(self) -> str:
         """What Run next does: generate, validate, or review on the next fidelity, or satisfy while it has violations."""
         upcoming = self.next_fidelity
-        if upcoming is None:
-            return ""
-        return SATISFY if upcoming.has_violations else upcoming.remaining_actions[0]
+        return upcoming.next_action if upcoming else ""
 
     @property
     def last_activity(self) -> str:
@@ -523,6 +521,7 @@ class Ticket(Card):
             "progress": {entry.slug: entry.state for entry in progress},
             "actions": {entry.slug: entry.action_states for entry in progress},
             "allowed_actions": {entry.slug: self._allowed_actions(entry) for entry in progress},
+            "next_actions": {entry.slug: entry.next_action for entry in progress},
         }
 
     def _allowed_actions(self, progress: FidelityProgress) -> list[str]:
@@ -784,6 +783,15 @@ class FidelityProgress:
     @property
     def remaining_actions(self) -> list[str]:
         return [action for action in self._stage.actions if action not in self._done_actions]
+
+    @property
+    def next_action(self) -> str:
+        """What runs next on this fidelity: satisfy while it has violations, else the first of its stage's actions not
+        done, or nothing once it is done."""
+        if self._has_violations:
+            return SATISFY
+        remaining = self.remaining_actions
+        return remaining[0] if remaining else ""
 
     @property
     def has_violations(self) -> bool:

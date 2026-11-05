@@ -780,6 +780,11 @@ with description("the board tools") as self:
         with it("should name review as the next action"):
             expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("review"))
 
+        # (S) Person --> Invoke Next Fidelity Action
+        with it("should name each fidelity's own next action"):
+            next_actions = self.project.ticket_json("sign-up")["next_actions"]
+            expect((next_actions["stories-story_map"], next_actions["stories-scenarios"])).to(equal(("review", "generate")))
+
         # The validating agent adds its judgment to the report after validate has logged its graph's result.
         with context("with a report whose judgment fails rules the graph passed"):
             with before.each:
@@ -838,6 +843,9 @@ with description("the board tools") as self:
 
         with it("should allow Validate and Review again on the same output"):
             expect(self.project.ticket_json("sign-up")["allowed_actions"]["stories-story_map"]).to(equal(["generate", "validate", "review"]))
+
+        with it("should name satisfy as that fidelity's own next action"):
+            expect(self.project.ticket_json("sign-up")["next_actions"]["stories-story_map"]).to(equal("satisfy"))
 
         # (S) Person --> Open Validation Report
         with context("with that fidelity's report saved with its graph"):

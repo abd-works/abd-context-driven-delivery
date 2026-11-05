@@ -1,6 +1,8 @@
 import { expect } from 'claude-code/testing'
 
-import { cdd, drawn, findText, HEALTHY, labelOf, openChatBar, textOf } from '../../../chat-bar-world'
+import { cdd } from '../../../cdd-stub'
+import { HEALTHY } from '../../../examples/chat-bar.examples'
+import { CHAT_BAR, drawn, findText, labelOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -10,17 +12,14 @@ import { scenario, story } from '../../../story-test'
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> Open Server Health Panel
-story('Open Server Health Panel', () => {
+story('Open Server Health Panel', CHAT_BAR, () => {
   scenario('Show every part running on one line', ({ given, when, then, and }) => {
     // Evidence: observed: server-health-view.tsx lists MCP host, Tools, Kanban app, Graph app, Hook server; register.test.ts
-    given('cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173', async ($, on, scene) => {
-      scene.world = cdd(on)
-    })
+    given('cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173')
     and('the hook server is not running', async ($, on, scene) => {
       scene.world.health = { ...HEALTHY, is_hook_server_running: false }
     })
     when('the Person opens the server health panel', async ($, on, scene) => {
-      scene.ui = await openChatBar($)
       await scene.ui.press({ key: 'health-icon' })
     })
     // ServerHealthBandView -> ExpandedView(elements, health)
@@ -39,32 +38,25 @@ story('Open Server Health Panel', () => {
     and("each part's name shows on hover", async ($, on, scene) => {
       const names = await Promise.all(['MCP host', 'Tools', 'Kanban app', 'Graph app', 'Hook server'].map(async part => (await drawn(scene.ui, part))?.children?.[2]))
       expect(names.map(name => [name?.props?.display, name?.hover?.display])).toEqual(Array(5).fill(['none', 'flex']))
-      await scene.ui.unmount()
     })
   })
   scenario('Pin the panel open', ({ given, when, then }) => {
     // Evidence: observed: server-health-client.ts togglePin
-    given('the server health panel is open over the mark', async ($, on, scene) => {
-      scene.world = cdd(on)
-      scene.ui = await openChatBar($)
-    })
+    given('the server health panel is open over the mark')
     when('the Person pins the panel', async ($, on, scene) => {
       await scene.ui.press({ key: 'health-icon' })
     })
     // ServerHealthBandView press -> togglePin($)
     then('the panel stays open after the pointer leaves the mark', async ($, on, scene) => {
       expect((await drawn(scene.ui, 'server-health'))?.children?.[0]?.props?.display).toBeUndefined()
-      await scene.ui.unmount()
     })
   })
   scenario('Say what is wrong when cdd is down', ({ given, when, then, and }) => {
     // Evidence: observed: server-health-view.tsx headlineOf and the Details, Run install, Reconnect buttons
     given('plugin:cdd:cdd does not answer', async ($, on, scene) => {
-      scene.world = cdd(on)
       scene.world.serverLost = true
     })
     when('the Person opens the server health panel', async ($, on, scene) => {
-      scene.ui = await openChatBar($)
       await scene.ui.press({ key: 'health-icon' })
     })
     then('the headline reads Disconnected, plugin:cdd:cdd stopped.', async ($, on, scene) => {
@@ -74,7 +66,6 @@ story('Open Server Health Panel', () => {
     and('Details, Run install and Reconnect are offered', async ($, on, scene) => {
       const offered = await Promise.all(['health-details', 'health-install', 'health-reconnect'].map(key => labelOf(scene.ui, key)))
       expect(offered).toEqual(['Details', 'Run install', 'Reconnect'])
-      await scene.ui.unmount()
     })
   })
 })

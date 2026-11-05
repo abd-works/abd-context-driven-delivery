@@ -1,8 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import { currentChatBar } from './chat-bar-client'
-
 const shownStage = atom({ plugin: 'cdd-board', key: 'shownStage' } as const, null as string | null)
 
 // One glyph per stage, standing for the canvas's icons: Backlog, Discovery (magnifier), Specification (document),
@@ -47,10 +45,6 @@ export class StageClient {
 // Atom shownStage, declared in pane/types/index.d.ts and kept in this file: the stage whose fidelities the dots show.
 export function shownStageName($: EngineInterface) {
   return read($, shownStage)
-}
-
-export async function currentStage($: EngineInterface): Promise<StageClient | null> {
-  return (await currentChatBar($)).stages.find(stage => stage.isShown) ?? null
 }
 
 // Showing the stage in progress goes back to it. A fidelity of the last stage then reads as none selected, because

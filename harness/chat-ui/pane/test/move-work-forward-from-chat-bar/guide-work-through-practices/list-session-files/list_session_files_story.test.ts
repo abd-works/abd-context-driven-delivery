@@ -1,6 +1,7 @@
 import { expect } from 'claude-code/testing'
 
-import { called, cdd, labelOf, openChatBar } from '../../../chat-bar-world'
+import { called } from '../../../cdd-stub'
+import { CHAT_BAR, labelOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -10,12 +11,10 @@ import { scenario, story } from '../../../story-test'
 // Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
 
 // (S) Person --> List Session Files
-story('List Session Files', () => {
+story('List Session Files', CHAT_BAR, () => {
   scenario('Open a tab per file of the selected fidelity', ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 "Files opens the board's files view for the selected fidelity only"; no chat bar code yet
     given("checkout-flow's clean_engineering-model is the selected fidelity", async ($, on, scene) => {
-      scene.world = cdd(on)
-      scene.ui = await openChatBar($)
       await scene.ui.press({ key: 'dot-clean_engineering-model' })
     })
     and('it declares pane/hooks/chat-bar/chat-bar-client.ts and pane/hooks/chat-bar/fidelity-client.ts', async ($, on, scene) => {
@@ -30,7 +29,6 @@ story('List Session Files', () => {
       const tabs = await Promise.all(['file-pane/hooks/chat-bar/chat-bar-client.ts', 'file-pane/hooks/chat-bar/fidelity-client.ts'].map(key => labelOf(scene.ui, key)))
       expect(tabs).toEqual(['chat-bar-client.ts', 'fidelity-client.ts'])
       expect(called(scene.world, 'ticket.files')).toEqual({ ticket: 'checkout-flow', fidelities: ['clean_engineering-model'] })
-      await scene.ui.unmount()
     })
   })
 })
