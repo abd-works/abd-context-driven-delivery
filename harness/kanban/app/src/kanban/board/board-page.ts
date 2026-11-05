@@ -92,7 +92,7 @@ export class BoardPage {
   // A report's fixes are for the ticket whose report it is, so they name that ticket's session and go to its chat.
   private sendActionFor(ticket: string, command: string): Promise<void> {
     const shown = this.board.tickets.find(candidate => candidate.name === ticket)
-    return this.chat.command(shown?.actionCommand(command) ?? command, shown?.worktree)
+    return this.chat.command(shown?.actionCommand(command) ?? command, shown?.name, shown?.worktree)
   }
 
   // Restarts the one cdd server every chat and the board share on the code as it is now, then reads the board again.

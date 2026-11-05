@@ -107,7 +107,7 @@ export class TileActionsClient {
   async runCommandsOf(ticket: string, fidelities: string[], formats: string[]): Promise<void> {
     const commands = await TicketClientGenerated.named(this.page.api, ticket).generateCommands(fidelities, formats)
     const worktree = this.page.board.tickets.find(shown => shown.name === ticket)?.worktree
-    for (const command of commands ?? []) await this.chat.command(command, worktree)
+    for (const command of commands ?? []) await this.chat.command(command, ticket, worktree)
   }
 
   // One command names every fidelity the bar acts on, so a stage's work stays a single turn.
@@ -126,7 +126,7 @@ export class TileActionsClient {
   // The tile's ticket names its own session in the command, which goes to that ticket's chat.
   private sendFor(tile: Tile, command: string): Promise<void> {
     const ticket = this.page.board.tickets.find(shown => shown.name === tile.ticket)
-    return this.chat.command(ticket ? ticket.actionCommand(command) : command, ticket?.worktree)
+    return this.chat.command(ticket ? ticket.actionCommand(command) : command, ticket?.name, ticket?.worktree)
   }
 
   // The ticket writes the review to its session log, and the board read after it shows the fidelity reviewed.

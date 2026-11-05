@@ -1401,7 +1401,7 @@ with description("toolsets installed for Claude Code") as self:
             self.installer = Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT)
             self.calls = []
             self.installer._claude_cli = lambda: "claude"
-            self.listed = "cdd-board@abd-works"
+            self.listed = "cdd-board@cdd-home"
 
             def run(claude, *args):
                 self.calls.append(args)
@@ -1409,10 +1409,17 @@ with description("toolsets installed for Claude Code") as self:
 
             self.installer._run_claude = run
 
-        with it("should add this checkout as the marketplace and install the plugin at user scope"):
+        # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
+        with it("should remove the board mod installed from a checkout's own marketplace"):
+            self.installer._install_board_plugin()
+            expect(self.calls[:2]).to(equal([
+                ("plugin", "uninstall", "cdd-board@abd-works", "--scope", "user"),
+                ("plugin", "marketplace", "remove", "abd-works"),
+            ]))
+
+        with it("should install the board mod the cdd home publishes, at user scope"):
             expect(self.installer._install_board_plugin()).to(equal("installed"))
-            expect(self.calls[0]).to(equal(("plugin", "marketplace", "add", str(_REPO_ROOT))))
-            expect(self.calls[1]).to(equal(("plugin", "install", "cdd-board@abd-works", "--scope", "user")))
+            expect(("plugin", "install", "cdd-board@cdd-home", "--scope", "user") in self.calls).to(equal(True))
 
         with it("should say the plugin is missing when the list does not show it"):
             self.listed = ""

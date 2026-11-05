@@ -68,6 +68,7 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <CardMarkView ticket={ticket} />
       <div className="ticket-title-line">
         <div className="ticket-title">{ticket.title}</div>
+        {page.chat.isOpeningFor(ticket.name) ? <span className="progress-wheel" role="status" title="Opening its chat in the Claude app" aria-label="Opening its chat" /> : null}
         <SplitActionView ticket={ticket} />
       </div>
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>

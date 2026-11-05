@@ -33,7 +33,10 @@ class Installer:
     domain_slug = "installer"
     TOOLSET_REF = "harness.installation.installer:Installer"
     _STATE_NAME = ".install-state.json"
-    _BOARD_PLUGIN = "cdd-board@abd-works"
+    _BOARD_PLUGIN = "cdd-board@cdd-home"
+    # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
+    _CHECKOUT_BOARD_PLUGIN = "cdd-board@abd-works"
+    _CHECKOUT_MARKETPLACE = "abd-works"
     _DEFAULT_PATHS = {
         "Cursor": ".cursor",
         "VS Code": ".github",
@@ -577,13 +580,17 @@ class Installer:
         return McpInstallation(self.ide, self.path, repo=self.repo).ensure_server()
 
     def _install_board_plugin(self) -> str:
-        """Install the ``cdd-board`` plugin from this checkout at user level, for every project.
-        The board is a convenience on top of the install, so a miss is printed, never raised."""
+        """Install the ``cdd-board`` mod ``~/.cdd/`` publishes from the code the server runs, at user level, for every
+        project. The board is a convenience on top of the install, so a miss is printed, never raised."""
+        from harness.mcp.cdd_home import CddHome
+
         claude = self._claude_cli()
         if claude is None:
             print(f"{self._BOARD_PLUGIN} not installed: no claude command found", file=sys.stderr)
             return "missing"
-        self._run_claude(claude, "plugin", "marketplace", "add", str(self.repo))
+        self._run_claude(claude, "plugin", "uninstall", self._CHECKOUT_BOARD_PLUGIN, "--scope", "user")
+        self._run_claude(claude, "plugin", "marketplace", "remove", self._CHECKOUT_MARKETPLACE)
+        self._run_claude(claude, "plugin", "marketplace", "add", str(CddHome().claude_plugins))
         self._run_claude(claude, "plugin", "install", self._BOARD_PLUGIN, "--scope", "user")
         self._run_claude(claude, "plugin", "update", self._BOARD_PLUGIN, "--scope", "user")
         if self._BOARD_PLUGIN in self._run_claude(claude, "plugin", "list"):

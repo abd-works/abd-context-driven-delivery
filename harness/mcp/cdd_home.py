@@ -1,8 +1,10 @@
 """``~/.cdd/``: the one place the cdd server runs from, whichever checkout ran the install."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -11,6 +13,10 @@ CDD_HOME_ENV = "CDD_HOME"
 CLAUDE_MARKETPLACE = "cdd-home"
 CLAUDE_PLUGIN = "cdd"
 CLAUDE_PLUGIN_DESCRIPTION = "Connects every Claude Code chat to the one cdd server, naming the chat's folder as its project"
+# The cdd-board mod is published from the code the server runs, so every chat's mod matches the server it talks to.
+BOARD_PLUGIN = "cdd-board"
+BOARD_MOD_FOLDER = Path("harness") / "chat-ui" / "pane"
+BOARD_MOD_PARTS = (".claude-plugin", "hooks", "types")
 # A commit without the server cannot serve chats, so pinning one would leave every chat without cdd.
 SERVER_MODULE = "harness/mcp/mcp_daemon.py"
 # The folders under a checkout that hold importable packages, beside the checkout root itself.
@@ -76,18 +82,54 @@ class CddHome:
         in with the chat's folder, which a user-level entry never sees. Returns the files written."""
         plugin = self.claude_plugins / CLAUDE_PLUGIN
         files = {
-            self.claude_plugins / ".claude-plugin" / "marketplace.json": {
-                "name": CLAUDE_MARKETPLACE,
-                "owner": {"name": "cdd"},
-                "plugins": [{"name": CLAUDE_PLUGIN, "source": f"./{CLAUDE_PLUGIN}", "description": CLAUDE_PLUGIN_DESCRIPTION}],
-            },
             plugin / ".claude-plugin" / "plugin.json": {"name": CLAUDE_PLUGIN, "version": "1.0.0", "description": CLAUDE_PLUGIN_DESCRIPTION},
             plugin / ".mcp.json": {"mcpServers": {"cdd": server}},
         }
         for path, content in files.items():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(content, indent=2) + "\n", encoding="utf-8")
-        return list(files)
+            self._write_json(path, content)
+        if self.is_installed:
+            self.write_board_plugin()
+        return [self._write_marketplace(), *files]
+
+    def write_board_plugin(self) -> None:
+        """Publish the cdd-board mod from the code the server runs. Its version gains a hash of the mod's files:
+        Claude Code keeps a plugin it has already seen at the same version, so a changed mod needs a new one."""
+        source = self.source / BOARD_MOD_FOLDER
+        if not (source / ".claude-plugin" / "plugin.json").is_file():
+            return
+        target = self.claude_plugins / BOARD_PLUGIN
+        shutil.rmtree(target, ignore_errors=True)
+        for part in BOARD_MOD_PARTS:
+            if (source / part).is_dir():
+                shutil.copytree(source / part, target / part, ignore=shutil.ignore_patterns("*.test.*"))
+        manifest_path = target / ".claude-plugin" / "plugin.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["version"] = f"{manifest.get('version', '0.0.0')}-{self._content_hash(target)}"
+        self._write_json(manifest_path, manifest)
+        self._write_marketplace()
+
+    def _content_hash(self, folder: Path) -> str:
+        digest = hashlib.sha256()
+        for path in sorted(item for item in folder.rglob("*") if item.is_file()):
+            digest.update(path.relative_to(folder).as_posix().encode("utf-8"))
+            digest.update(path.read_bytes())
+        return digest.hexdigest()[:12]
+
+    def _write_marketplace(self) -> Path:
+        """List every plugin published here; a marketplace naming a missing folder fails to load."""
+        plugins = []
+        for name in (CLAUDE_PLUGIN, BOARD_PLUGIN):
+            manifest = self.claude_plugins / name / ".claude-plugin" / "plugin.json"
+            if manifest.is_file():
+                description = json.loads(manifest.read_text(encoding="utf-8")).get("description", "")
+                plugins.append({"name": name, "source": f"./{name}", "description": description})
+        path = self.claude_plugins / ".claude-plugin" / "marketplace.json"
+        self._write_json(path, {"name": CLAUDE_MARKETPLACE, "owner": {"name": "cdd"}, "plugins": plugins})
+        return path
+
+    def _write_json(self, path: Path, content: dict) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(content, indent=2) + "\n", encoding="utf-8")
 
     @property
     def pinned_checkout(self) -> Path:
@@ -147,6 +189,7 @@ class CddHome:
             raise PinFailed(source, f"commit {commit[:8]} has no {SERVER_MODULE}; commit the one-server code before pinning")
         self._mirror_origin(source, target)
         self._save_runtime(target, self.PINNED, commit=commit)
+        self.write_board_plugin()
         return commit
 
     def _mirror_origin(self, source: Path, target: Path) -> None:
@@ -161,6 +204,7 @@ class CddHome:
     def serve_from(self, checkout: Path | str) -> None:
         """Run the server on ``checkout`` as it is on disk, so a ``cdd.restart`` picks up its edits."""
         self._save_runtime(Path(checkout).resolve(), self.CHECKOUT)
+        self.write_board_plugin()
 
     def _git(self, checkout: Path, *arguments: str) -> str:
         # Some fixtures nest deeper than Windows' default path limit, and the pinned copy needs every file.
