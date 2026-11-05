@@ -75,6 +75,7 @@ tools/prompt_log/prompt_log.debug
 
 # Virtualenv & Secrets
 .venv/
+.venv-*/
 conf/*
 !conf/.secrets.example
 *.secrets.txt
