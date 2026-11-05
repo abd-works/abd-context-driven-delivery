@@ -973,20 +973,19 @@ class StoryModel(StoryNode):
         return None
 
     def _take_scenarios_from(self, path, project, on_file=None) -> None:
-        """Give the scenarios of each Story in the story test at *path* to this model's Story of the same name, each
-        keeping the story test as its source. A Story the map does not have adds nothing."""
+        """Give the scenarios of each Story in the story test at *path* to every Story of the same name in this model,
+        each keeping the story test as its source. The markdown and the drawio of one story map each hold that Story,
+        so both take its scenarios. A Story the map does not have adds nothing."""
         file = path_from(project, path)
         if on_file is not None:
             on_file(file)
-        stories = {story.name: story for story in self.every_story()}
         for read in story_test_type(path).load_all(path.read_text(encoding="utf-8")):
-            story = stories.get(read.name)
-            if story is None:
-                continue
             for scenario in read.scenarios:
                 scenario.source = SourceLocation(file)
-            story.backgrounds = list(read.backgrounds)
-            story.scenarios = list(read.scenarios)
+            for story in self.every_story():
+                if story.name == read.name:
+                    story.backgrounds = list(read.backgrounds)
+                    story.scenarios = list(read.scenarios)
 
     def every_story(self) -> List["Story"]:
         """Every Story under every epic and sub-epic, in map order."""

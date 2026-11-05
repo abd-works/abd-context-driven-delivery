@@ -229,6 +229,21 @@ with description("a working copy scan") as self:
         with it("should count the scenario on its story"):
             expect([node.get_fact("scenario_count") for node in _story_nodes(self.story_test, "Open Board")]).to(equal([1]))
 
+    # The markdown and the diagram are two formats of one story map, so a story test's scenarios belong to both.
+    with context("limited to a story map in both formats and its story test"):
+        with before.all:
+            self.both_formats = Graph()
+            self.both_formats.load_files(
+                str(self.root),
+                ["stories"],
+                ["board/.context/story-map.md", "board/.context/story-map.drawio", _STORY_TEST_PATH],
+            )
+
+        with it("should count the scenario on the story in each format"):
+            expect(
+                sorted(node.get_fact("scenario_count") for node in _story_nodes(self.both_formats, "Open Board"))
+            ).to(equal([1, 1]))
+
     with context("loaded with a relative practice root"):
         with before.all:
             self.relative = Graph()
