@@ -43,7 +43,8 @@ from harness.kanban.session_board_examples import (
     validated,
 )
 from harness.kanban.story_test import SharedStories, expect_action, expect_no_next, expect_placed, expect_refused, refusal_of
-from harness.kanban.ticket import FidelityNotFoundError, TicketFileError, TicketNotFoundError
+from harness.kanban.ticket import FidelityNotFoundError, TicketNotFoundError
+from tools.file_manager.file_manager import PathOutsideRootsError
 
 shared_stories = SharedStories("Review Fidelity Outputs")
 
@@ -171,7 +172,7 @@ def _(s):
 
     @s.then("the board says ../secrets.txt is not a file in this repository")
     def _(world):
-        expect_refused(world.refusal, TicketFileError, "'../secrets.txt' is not a file in this repository")
+        expect_refused(world.refusal, PathOutsideRootsError, "../secrets.txt is outside the session's roots")
 
 
 @shared_stories.scenario("Review Fidelity", "Review a fidelity after a clean validate")
