@@ -555,7 +555,7 @@ class Installer:
         """Start the hook daemon and the cdd server; fail if either stays down."""
         if self.ide == "Claude":
             mcp = self._ensure_mcp_runtime()
-            return {"hook": "not installed", "mcp": mcp, "cdd plugin": self._install_cdd_plugin(), "board": self._install_board_plugin()}
+            return {"hook": "not installed", "mcp": mcp, "cdd plugin": self._install_cdd_plugin(), "board": self.install_board_plugin()}
         hook_pid = self._ensure_hook_runtime()
         mcp = self._ensure_mcp_runtime()
         print(
@@ -579,17 +579,23 @@ class Installer:
 
         return McpInstallation(self.ide, self.path, repo=self.repo).ensure_server()
 
-    def _install_board_plugin(self) -> str:
+    def install_board_plugin(self) -> str:
         """Install the ``cdd-board`` mod ``~/.cdd/`` publishes from the code the server runs, at user level, for every
-        project. The board is a convenience on top of the install, so a miss is printed, never raised."""
+        project. Each claude command takes seconds, so one runs only for what is missing, old, or from a checkout.
+        The board is a convenience on top of the install, so a miss is printed, never raised."""
         from harness.mcp.cdd_home import CddHome
 
+        installed = self._installed_plugins()
+        from_checkout = self._CHECKOUT_BOARD_PLUGIN in installed
+        if not from_checkout and installed.get(self._BOARD_PLUGIN) == self._published_board_version():
+            return "installed"
         claude = self._claude_cli()
         if claude is None:
             print(f"{self._BOARD_PLUGIN} not installed: no claude command found", file=sys.stderr)
             return "missing"
-        self._run_claude(claude, "plugin", "uninstall", self._CHECKOUT_BOARD_PLUGIN, "--scope", "user")
-        self._run_claude(claude, "plugin", "marketplace", "remove", self._CHECKOUT_MARKETPLACE)
+        if from_checkout:
+            self._run_claude(claude, "plugin", "uninstall", self._CHECKOUT_BOARD_PLUGIN, "--scope", "user")
+            self._run_claude(claude, "plugin", "marketplace", "remove", self._CHECKOUT_MARKETPLACE)
         self._run_claude(claude, "plugin", "marketplace", "add", str(CddHome().claude_plugins))
         self._run_claude(claude, "plugin", "install", self._BOARD_PLUGIN, "--scope", "user")
         self._run_claude(claude, "plugin", "update", self._BOARD_PLUGIN, "--scope", "user")
@@ -600,10 +606,13 @@ class Installer:
 
     def _install_cdd_plugin(self) -> str:
         """Install the ``cdd`` plugin from ``~/.cdd/`` at user level. It declares the cdd server for every chat, so
-        without it Claude Code has no cdd at all: a miss is printed with the command to run by hand."""
+        without it Claude Code has no cdd at all: a miss is printed with the command to run by hand. Claude Code
+        reads it from its folder, so one already installed needs no claude command."""
         from harness.mcp.cdd_home import CLAUDE_MARKETPLACE, CLAUDE_PLUGIN, CddHome
 
         plugin = f"{CLAUDE_PLUGIN}@{CLAUDE_MARKETPLACE}"
+        if plugin in self._installed_plugins():
+            return "installed"
         claude = self._claude_cli()
         marketplace = CddHome().claude_plugins
         if claude is None:
@@ -616,6 +625,26 @@ class Installer:
             return "installed"
         print(f"{plugin} not installed: claude plugin install did not take", file=sys.stderr)
         return "missing"
+
+    def _installed_plugins(self) -> dict[str, str]:
+        """Each plugin Claude Code has installed, with its version, from its own record of them."""
+        from harness.mcp.mcp_server import UserMcpConfig
+
+        record = UserMcpConfig("Claude").folder / "plugins" / "installed_plugins.json"
+        try:
+            plugins = json.loads(record.read_text(encoding="utf-8")).get("plugins", {})
+        except (OSError, ValueError, AttributeError):
+            return {}
+        return {name: str((entries or [{}])[0].get("version", "")) for name, entries in plugins.items()}
+
+    def _published_board_version(self) -> str:
+        from harness.mcp.cdd_home import BOARD_PLUGIN, CddHome
+
+        manifest = CddHome().claude_plugins / BOARD_PLUGIN / ".claude-plugin" / "plugin.json"
+        try:
+            return str(json.loads(manifest.read_text(encoding="utf-8")).get("version", ""))
+        except (OSError, ValueError):
+            return ""
 
     def _claude_cli(self) -> str | None:
         """The desktop app's newest Claude Code, else the one on PATH, which can be too old for the plugin."""

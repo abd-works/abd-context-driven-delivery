@@ -1408,26 +1408,78 @@ with description("toolsets installed for Claude Code") as self:
                 return self.listed
 
             self.installer._run_claude = run
+            self.installed = {}
+            self.installer._installed_plugins = lambda: self.installed
+            self.installer._published_board_version = lambda: "0.6.3-abc"
 
         # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
         with it("should remove the board mod installed from a checkout's own marketplace"):
-            self.installer._install_board_plugin()
+            self.installed = {"cdd-board@abd-works": "0.6.3"}
+            self.installer.install_board_plugin()
             expect(self.calls[:2]).to(equal([
                 ("plugin", "uninstall", "cdd-board@abd-works", "--scope", "user"),
                 ("plugin", "marketplace", "remove", "abd-works"),
             ]))
 
+        # Each claude command starts the Claude Code CLI, which takes seconds, so an install with nothing to change runs none.
+        with context("with the board mod the cdd home publishes already installed"):
+            with before.each:
+                self.installed = {"cdd-board@cdd-home": "0.6.3-abc"}
+                self.answer = self.installer.install_board_plugin()
+
+            with it("should say it is installed"):
+                expect(self.answer).to(equal("installed"))
+
+            with it("should run no claude command"):
+                expect(self.calls).to(equal([]))
+
+        with context("with an older board mod installed"):
+            with it("should update it"):
+                self.installed = {"cdd-board@cdd-home": "0.6.3-old"}
+                self.installer.install_board_plugin()
+                expect(("plugin", "update", "cdd-board@cdd-home", "--scope", "user") in self.calls).to(equal(True))
+
         with it("should install the board mod the cdd home publishes, at user scope"):
-            expect(self.installer._install_board_plugin()).to(equal("installed"))
+            expect(self.installer.install_board_plugin()).to(equal("installed"))
             expect(("plugin", "install", "cdd-board@cdd-home", "--scope", "user") in self.calls).to(equal(True))
 
         with it("should say the plugin is missing when the list does not show it"):
             self.listed = ""
-            expect(self.installer._install_board_plugin()).to(equal("missing"))
+            expect(self.installer.install_board_plugin()).to(equal("missing"))
 
         with it("should say the plugin is missing when there is no claude command"):
             self.installer._claude_cli = lambda: None
-            expect(self.installer._install_board_plugin()).to(equal("missing"))
+            expect(self.installer.install_board_plugin()).to(equal("missing"))
+
+    with context("installing the cdd plugin"):
+        with before.each:
+            self.installer = Installer(ide="Claude", path=self.tree, repo=_REPO_ROOT)
+            self.calls = []
+            self.installer._claude_cli = lambda: "claude"
+
+            def run(claude, *args):
+                self.calls.append(args)
+                return "cdd@cdd-home"
+
+            self.installer._run_claude = run
+
+        # Claude Code reads the cdd plugin from its folder in ~/.cdd, so an installed one needs nothing more.
+        with context("that is already installed"):
+            with before.each:
+                self.installer._installed_plugins = lambda: {"cdd@cdd-home": "1.0.0"}
+                self.answer = self.installer._install_cdd_plugin()
+
+            with it("should say it is installed"):
+                expect(self.answer).to(equal("installed"))
+
+            with it("should run no claude command"):
+                expect(self.calls).to(equal([]))
+
+        with context("that is not installed"):
+            with it("should install it at user scope"):
+                self.installer._installed_plugins = lambda: {}
+                self.installer._install_cdd_plugin()
+                expect(("plugin", "install", "cdd@cdd-home", "--scope", "user") in self.calls).to(equal(True))
 
     with context("finding Claude Code in the desktop app"):
         with before.each:
