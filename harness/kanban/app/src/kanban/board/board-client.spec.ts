@@ -31,7 +31,7 @@ const until = async (isReady: () => boolean): Promise<void> => {
 const toastsOf = (page: { store: { state: { toasts: { text: string }[] } } }): string[] => page.store.state.toasts.map(toast => toast.text)
 
 // A session closed under the name of one still open.
-const closedTwinOf = (name: string, title: string) => board.writeSession({ name, title, folder: join('closed', name) })
+const closedTwinOf = (name: string, title: string) => board.writeSession({ name, title, folder: join('_complete', name) })
 
 describe('Display Board', () => {
   describe('Display Connected Status', () => {
@@ -83,18 +83,50 @@ describe('Display Board', () => {
       })
     })
 
-    describe('that a person has restarted cdd', () => {
-      it('should read the board again from a fresh cdd server', async () => {
+    describe('that a person has pressed Update', () => {
+      const updated = async () => {
         const { page } = await board.page()
-        page.store.change({ serverFailure: 'lost' })
-        await page.restartCdd()
-        expect(page.store.state.serverFailure).toBeNull()
+        page.pause = async () => undefined
+        await page.update()
+        return page
+      }
+
+      it('should get the latest code, rebuild the page, then pin cdd to it', async () => {
+        await updated()
+        expect(board.board.updates.steps).toEqual([
+          'git pull --ff-only',
+          expect.stringMatching(/vite\.js build$/),
+          expect.stringMatching(/scripts\/install\.py --ide Claude --pin-runtime$/),
+        ])
       })
 
-      it('should say so in a toast', async () => {
-        const { page } = await board.page()
-        await page.restartCdd()
-        expect(toastsOf(page)).toContain('cdd restarted on the current code')
+      it('should restart the board server once the update has answered', async () => {
+        await updated()
+        await until(() => board.board.updates.restarts === 1)
+        expect(board.board.updates.restarts).toBe(1)
+      })
+
+      it('should load the page again from the restarted server', async () => {
+        expect((await updated()).store.state.isNewBuild).toBe(true)
+      })
+
+      describe('with a step that fails', () => {
+        beforeEach(() => {
+          board.board.updates.failingStep = 'pull'
+        })
+
+        it('should say in a toast which step failed', async () => {
+          expect(toastsOf(await updated()).at(-1)).toBe('Update failed at get latest: pull could not run')
+        })
+
+        it('should keep the page it has', async () => {
+          expect((await updated()).store.state.isNewBuild).toBe(false)
+        })
+
+        it('should keep the board server running', async () => {
+          await updated()
+          expect(board.board.updates.restarts).toBe(0)
+        })
       })
     })
 

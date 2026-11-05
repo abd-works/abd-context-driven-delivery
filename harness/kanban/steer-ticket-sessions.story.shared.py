@@ -332,9 +332,9 @@ def _(s):
     def _(world):
         expect(world.closed["column"]).to(equal("Complete"))
 
-    @s.and_("its folder is in .sessions/closed/checkout-flow")
+    @s.and_("its folder is in .sessions/_complete/checkout-flow")
     def _(world):
-        expect_session_folder(world.project.sessions, "closed", CHECKOUT_FLOW.name)
+        expect_session_folder(world.project.sessions, "_complete", CHECKOUT_FLOW.name)
 
     @s.but_("nothing is committed")
     def _(world):
@@ -429,9 +429,9 @@ def _(s):
     def _(world):
         expect(world.moved["column"]).to(equal("Complete"))
 
-    @s.and_("its folder is in .sessions/closed/almost-shipped")
+    @s.and_("its folder is in .sessions/_complete/almost-shipped")
     def _(world):
-        expect_session_folder(world.project.sessions, "closed", ALMOST_SHIPPED.name)
+        expect_session_folder(world.project.sessions, "_complete", ALMOST_SHIPPED.name)
 
 
 @shared_stories.scenario("Move Ticket", "Reopen a ticket moved back out of Complete")

@@ -1257,7 +1257,7 @@ with description("a session read for a board") as self:
 
     with context("that has moved to another folder"):
         with before.each:
-            self.moved = self.beta.move_folder_to(self.repo / ".sessions" / "closed")
+            self.moved = self.beta.move_folder_to(self.repo / ".sessions" / "_complete")
 
         with it("should keep its log and title in the new folder"):
             expect(self.moved.title).to(equal("Beta"))

@@ -31,7 +31,7 @@ class SessionsFolder:
         os.environ["CDD_PROJECT"] = str(self.project)
 
     def session(self, name: str, *log_lines: str, closed: bool = False, **fields) -> Path:
-        folder = self.root / ("closed" if closed else "") / name
+        folder = self.root / ("_complete" if closed else "") / name
         folder.mkdir(parents=True)
         (folder / "session.json").write_text(json.dumps({"name": name, **fields}), encoding="utf-8")
         stamped = [f"2026-10-31T0{index % 10}:00:00Z {line}" for index, line in enumerate(log_lines)]
@@ -461,7 +461,7 @@ with description("a ticket") as self:
             expect(self.closed.column.name).to(equal("Complete"))
 
         with it("should have its folder in closed"):
-            expect((self.root / "closed" / "pet-visits" / "session.log").is_file()).to(be_true)
+            expect((self.root / "_complete" / "pet-visits" / "session.log").is_file()).to(be_true)
 
     # (S) Person --> Archive Ticket
     with context("that has been archived"):

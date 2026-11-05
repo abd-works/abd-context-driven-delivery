@@ -88,7 +88,7 @@ with story("Move Ticket"):
             pass
         with then("almost-shipped shows in Complete"):
             pass
-        with and_("its folder is in .sessions/closed/almost-shipped"):
+        with and_("its folder is in .sessions/_complete/almost-shipped"):
             pass
     with scenario("Reopen a ticket moved back out of Complete"):
         # Evidence: observed: kanban_tools_spec 'and back again' — 'should reopen the ticket in Implementation'; kanban_spec 'that a person has dragged out of Complete' — 'should be open again, in progress in that stage'.

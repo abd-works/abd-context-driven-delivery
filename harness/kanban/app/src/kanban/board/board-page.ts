@@ -23,7 +23,10 @@ import { BuildClient } from './build-client'
 import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
-const CDD_RESTART_PATH = '/cdd/restart'
+const UPDATE_PATH = '/update'
+const BUILD_PATH = '/build'
+const SERVER_BACK_WITHIN_MILLISECONDS = 30_000
+const SERVER_BACK_CHECK_MILLISECONDS = 1000
 const CLAUDE_OPEN_PATH = '/claude/open'
 const NOT_READ_YET: BoardData = { project: '', active: null, columns: [] }
 
@@ -47,6 +50,8 @@ export class BoardPage {
   // Opens a claude:// link through the board server, because the Browser pane does not pass the link to the Claude app.
   // A spec replaces it to see the link.
   openLink: (link: string) => void = link => void this.api.post(CLAUDE_OPEN_PATH, { link })
+  // How long the page waits between checks for the restarted server. A spec replaces it so it does not wait.
+  pause: (milliseconds: number) => Promise<void> = milliseconds => new Promise(done => setTimeout(done, milliseconds))
 
   constructor(send?: Send) {
     this.api = new BoardApi(this.store, send)
@@ -95,13 +100,25 @@ export class BoardPage {
     return this.chat.command(shown?.actionCommand(command) ?? command, shown?.name, shown?.worktree)
   }
 
-  // Restarts the one cdd server every chat and the board share on the code as it is now, then reads the board again.
-  async restartCdd(): Promise<void> {
-    const restarted = await this.api.post<{ is_restarted: boolean }>(CDD_RESTART_PATH)
-    if (!restarted) return
-    await Promise.all([this.reader.refresh(), this.chat.refresh()])
-    if (this.store.state.serverFailure) return
-    this.store.toast('cdd restarted on the current code')
+  // Brings the board and every chat onto the latest code: the server pulls, rebuilds, pins cdd, and restarts itself, and
+  // the page loads again from it.
+  async update(): Promise<void> {
+    if (this.store.state.isUpdating) return
+    this.store.change({ isUpdating: true })
+    this.store.toast('Updating: getting the latest code, rebuilding, and re-pinning cdd')
+    const updated = await this.api.post<{ is_updated: boolean }>(UPDATE_PATH)
+    if (updated && (await this.boardServerIsBack())) this.store.change({ isNewBuild: true })
+    this.store.change({ isUpdating: false })
+  }
+
+  // The server restarts after it answers, so the page waits for it to go away and then for the new one to answer.
+  private async boardServerIsBack(): Promise<boolean> {
+    for (let waited = 0; waited < SERVER_BACK_WITHIN_MILLISECONDS; waited += SERVER_BACK_CHECK_MILLISECONDS) {
+      await this.pause(SERVER_BACK_CHECK_MILLISECONDS)
+      if (await this.api.get<{ build: string }>(BUILD_PATH)) return true
+    }
+    this.store.toast('The board server did not come back after the update; run /board in a chat to start it.', true)
+    return false
   }
 
   openNewTicket(): Promise<void> {

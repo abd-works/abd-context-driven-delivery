@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from contextvars import ContextVar
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,6 +14,8 @@ if TYPE_CHECKING:
 _chat_id: ContextVar[str | None] = ContextVar("cdd_chat_id", default=None)
 _transcript_path: ContextVar[str | None] = ContextVar("cdd_transcript_path", default=None)
 _line_numbers: ContextVar[str | None] = ContextVar("cdd_transcript_lines", default=None)
+# A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.
+_CHAT_ID = re.compile(r"[0-9A-Za-z-]+")
 
 
 def set_chat_context(
@@ -108,5 +111,14 @@ def pop_chat_fields(arguments: dict[str, object] | None) -> dict[str, object]:
     ).strip()
     lines = str(args.pop("transcript_lines", "") or args.pop("_transcript_lines", "") or "").strip()
     if chat_id or transcript:
-        set_chat_context(chat_id or "unknown", transcript or "unknown", lines)
+        set_chat_context(chat_id or "unknown", transcript or claude_transcript_of(chat_id) or "unknown", lines)
     return args
+
+
+def claude_transcript_of(chat_id: str) -> str:
+    """A Claude Code chat sends only its id, which is its transcript's file name under the Claude projects folder."""
+    if not _CHAT_ID.fullmatch(chat_id):
+        return ""
+    projects = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "projects"
+    found = next(projects.glob(f"*/{chat_id}.jsonl"), None) if projects.is_dir() else None
+    return str(found) if found else ""

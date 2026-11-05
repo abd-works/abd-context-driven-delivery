@@ -63,7 +63,7 @@ Observed: `Ticket.new` calls `Session.new`; `board-page.ts` `openNewTicket`.
 
 ### (S) Person --> [Close Active Session](move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.md)
 
-Observed: Close on the active ticket's card sends `/space:session:close-session` to the chat, which calls `Session.close`; the ticket stays in its column. Moving the active ticket into Complete asks what to do with its work, then `Ticket.close` calls `Session.close` and moves the folder to `closed/`, so the ticket shows in Complete.
+Observed: Close on the active ticket's card sends `/space:session:close-session` to the chat, which calls `Session.close`; the ticket stays in its column. Moving the active ticket into Complete asks what to do with its work, then `Ticket.close` calls `Session.close` and moves the folder to `_complete/`, so the ticket shows in Complete.
 
 ### (S) Person --> [Move Ticket](move-work-forward-on-session-board/steer-ticket-sessions/move-ticket/move_ticket_story.test.md)
 

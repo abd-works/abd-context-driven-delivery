@@ -44,7 +44,7 @@ with story("Display Board"):
             pass
         with then("a band across the top of the page says The cdd server is not connected"):
             pass
-        with and_("the header offers Connect in place of Restart cdd"):
+        with and_("the header offers Update"):
             pass
     with scenario("Show a failing tool in a toast"):
         # Evidence: observed: board-client.spec 'with a tool failing' — 'should show no band', 'should show a toast'.
@@ -59,21 +59,33 @@ with story("Display Board"):
             pass
         with but_("no band says the cdd server is lost"):
             pass
-    with scenario("Restart cdd on the current code"):
-        # Evidence: observed: board-client.spec 'that a person has restarted cdd' — 'should say so in a toast'; board-page.ts restartCdd; packages/session-board/app.ts /api/cdd/restart calls cdd.restart on the one cdd server every chat shares (main 4771a635).
+    with scenario("Update the board and cdd to the latest code"):
+        # Evidence: observed: board-client.spec 'that a person has pressed Update'; board-page.ts update; packages/session-board/app.ts /api/update runs BoardUpdate (src/session-board/board-update.ts), then serve.ts restarts the board server.
         with given("the band says the cdd server is lost"):
             pass
-        with when("the Person restarts cdd"):
-            # Board page -> session board server: restart cdd
-            # session board server -> cdd.restart()  [External: cdd server]
-            # Board page -> Board.show()
-            # Board page -> Chat.list()
+        with when("the Person presses Update"):
+            # Board page -> session board server: update
+            # session board server -> git pull --ff-only  [External: git]
+            # session board server -> vite build  [External: vite]
+            # session board server -> install.py --pin-runtime  [External: cdd installer]
             pass
-        with then("the session board shows the [board](../../../.context/kanban-model.md#board) read again from the cdd server, reloaded on the current code"):
+        with then("the session board server gets the latest code, rebuilds the page, and pins the cdd server to it"):
             pass
-        with and_("the band is gone"):
+        with and_("the session board server restarts on the new code"):
             pass
-        with and_("a toast says cdd restarted on the current code"):
+        with and_("the page loads again from the restarted server"):
+            pass
+    with scenario("Say which update step failed"):
+        # Evidence: observed: board-client.spec 'with a step that fails'; board-update.ts UpdateStepFailed.
+        with given("the latest code cannot be pulled"):
+            pass
+        with when("the Person presses Update"):
+            # Board page -> session board server: update
+            # session board server <- UpdateStepFailed
+            pass
+        with then("a toast says Update failed at get latest, with the reason"):
+            pass
+        with and_("the page and the session board server keep running as they were"):
             pass
     with scenario("Keep the newer board when an older read answers late"):
         # Evidence: observed: board-client.spec 'Refresh Board After Tool Calls' — 'should keep the newer board when an older read answers late'; board-reader.ts refresh.

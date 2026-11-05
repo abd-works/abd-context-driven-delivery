@@ -9,8 +9,8 @@
  * A Given seeds the fixture project's `.sessions/`, where the board reads it; a When does what the person does on the
  * page; a Then reads what the person sees.
  *
- * Left out here: "Restart cdd on the current code" (losing the cdd server mid-run would take the shared board down for
- * every later spec), "Keep the newer board when an older read answers late" (a browser cannot hold one answer back;
+ * Left out here: "Update the board and cdd to the latest code" and "Say which update step failed" (an update really pulls,
+ * builds, and re-pins this checkout; board-client.spec drives it with the steps recorded), "Keep the newer board when an older read answers late" (a browser cannot hold one answer back;
  * board-client.spec drives the page's reads in order), and "Find the board from a chat" and "Name the active ticket on
  * the chat's status line" (the cdd-board mod in harness/chat-ui, not the board app, does them).
  */
@@ -83,15 +83,15 @@ test.describe('Display Board', () => {
 
     test.afterEach(() => stop())
 
-    // Fails today, most runs: a board whose CDD_PYTHON names no program often shows no band and keeps Restart cdd, as
+    // Fails today, most runs: a board whose CDD_PYTHON names no program often shows no band, as
     // story-actions.spec's own 'should show a band when cdd cannot be reached' also finds. The scenario words it "The
     // cdd server is not connected"; the band's text is "cdd is not connected".
     test('Then a band across the top of the page says The cdd server is not connected', async ({ page }) => {
       await expect(page.locator('.band-failure')).toContainText('cdd is not connected', { timeout: 15_000 })
     })
 
-    test('And the header offers Connect in place of Restart cdd', async ({ page }) => {
-      await expect(page.getByRole('button', { name: 'Connect' })).toBeVisible({ timeout: 15_000 })
+    test('And the header offers Update', async ({ page }) => {
+      await expect(page.getByRole('button', { name: 'Update' })).toBeVisible({ timeout: 15_000 })
     })
   })
 

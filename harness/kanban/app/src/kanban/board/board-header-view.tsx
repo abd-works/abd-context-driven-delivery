@@ -12,11 +12,8 @@ function HeaderActionsView() {
       <button className="action" disabled={!page.chat.canSend} onClick={() => void page.openNewTicket()}>
         + Ticket
       </button>
-      <button className="action" onClick={() => void page.reader.refreshPressed()}>
-        Refresh
-      </button>
-      <button className="action" title={state.serverFailure ? 'Start cdd and connect the board to it' : 'Restart cdd so it runs the code as it is now'} onClick={() => void page.restartCdd()}>
-        {state.serverFailure ? 'Connect' : 'Restart cdd'}
+      <button className="action" disabled={state.isUpdating} title="Get the latest code, rebuild the board, pin cdd to it, and reload this page" onClick={() => void page.update()}>
+        {state.isUpdating ? 'Updating…' : 'Update'}
       </button>
       <button className="icon-button" aria-label={label} title={label} onClick={() => page.layout.toggleRegion('board')}>
         <ExpandIcon isExpanded={isExpanded} />
