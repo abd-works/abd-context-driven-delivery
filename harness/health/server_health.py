@@ -3,25 +3,18 @@ from __future__ import annotations
 
 import socket
 from pathlib import Path
-from typing import TypedDict
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.hooks.hook_daemon import HookDaemon
 from harness.hooks.hook_server import HookServer
-from harness.installation.destination import language_adapter
+from harness.installation.destination import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 from scripts.instances import GRAPH_APP_PORTS
 
 PROBE_SECONDS = 0.2
 # The session board's own port, set in harness/kanban/app/packages/session-board/serve.ts.
 KANBAN_APP_PORTS = (8778,)
-
-
-class ServerHealthData(TypedDict):
-    kanban_app_port: int | None
-    graph_app_port: int | None
-    is_hook_server_running: bool
 
 
 @language_adapter(language="typescript")
@@ -58,23 +51,19 @@ class ServerHealth:
         return self
 
     @property
+    @data_field
     def kanban_app_port(self) -> int | None:
         return self._first_answering(self._kanban_ports)
 
     @property
+    @data_field
     def graph_app_port(self) -> int | None:
         return self._first_answering(self._graph_ports)
 
     @property
+    @data_field
     def is_hook_server_running(self) -> bool:
         return HookDaemon().live_address(HookServer.state_path(self._repo_root)) is not None
-
-    def to_json(self) -> ServerHealthData:
-        return {
-            "kanban_app_port": self.kanban_app_port,
-            "graph_app_port": self.graph_app_port,
-            "is_hook_server_running": self.is_hook_server_running,
-        }
 
     def _first_answering(self, ports: tuple[int, ...]) -> int | None:
         return next((port for port in ports if self._answers(port)), None)

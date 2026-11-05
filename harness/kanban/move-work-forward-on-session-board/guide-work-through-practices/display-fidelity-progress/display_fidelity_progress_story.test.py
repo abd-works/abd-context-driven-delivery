@@ -55,7 +55,7 @@ with story("Display Fidelity Progress"):
         with given("billing-report has nothing recorded in its [session log](../../../.context/kanban-model.md#session)"):
             pass
         with when("the session board reads billing-report"):
-            # Ticket -> Ticket.to_json() <- actions: each fidelity's generate, validate, review as to_do
+            # Ticket -> data_of(Ticket) <- actions: each fidelity's generate, validate, review as to_do
             pass
         with then("each Discovery tile marks Generate, Validate, and Review ○, its segment dim"):
             pass

@@ -62,7 +62,7 @@ with story("Display Ticket Card"):
         with and_("its story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance) has violations and its other Discovery fidelities are not started"):
             pass
         with when("the session board draws checkout-flow's [card](../../../.context/kanban-model.md#card) 13 hours later"):
-            # Board page -> Ticket.to_json(): title, last_activity, progress, practices
+            # Board page -> data_of(Ticket): title, last_activity, progress, practices
             pass
         with then("the card reads Checkout flow and 13 hours ago"):
             pass

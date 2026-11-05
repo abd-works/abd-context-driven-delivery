@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from harness.installation.destination import data_of
 from harness.installation.installer import Installer
 
 Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
@@ -45,7 +46,7 @@ class DomainTier:
     name = "domain"
 
     def open(self) -> World:
-        return World(project=SessionsProject(SURFACE_FIXTURE_PROJECT), Board=Board, Ticket=Ticket, BacklogItem=BacklogItem, Session=Session, Validate=Validate, Generate=Generate)
+        return World(project=SessionsProject(SURFACE_FIXTURE_PROJECT), Board=Board, Ticket=Ticket, BacklogItem=BacklogItem, Session=Session, Validate=Validate, Generate=Generate, data_of=data_of)
 
     def close(self, world: World) -> None:
         world.project.close()
@@ -66,6 +67,7 @@ class ServerTier:
             BacklogItem=BacklogItemTools(cdd),
             Validate=lambda: ActionPrompts(cdd, "validate"),
             Generate=lambda: ActionPrompts(cdd, "generate"),
+            data_of=_server_data_of,
         )
 
     def close(self, world: World) -> None:
@@ -81,7 +83,7 @@ class CddTools:
 
     def call(self, tool: str, **arguments: Any) -> Any:
         answered = self._server.invoke_tool(tool, arguments)
-        return json.loads(json.dumps(answered, default=lambda value: value.to_json()))
+        return json.loads(json.dumps(answered, default=data_of))
 
     def prompt(self, name: str, **arguments: Any) -> Any:
         return self._server.invoke_prompt(name, arguments)
@@ -100,7 +102,7 @@ class BoardTools:
     def show(self) -> BoardTools:
         return self
 
-    def to_json(self) -> dict:
+    def data(self) -> dict:
         return self._cdd.call("board.show")
 
     def set_wip_limit(self, stage: str, limit: int) -> BoardTools:
@@ -136,7 +138,7 @@ class TicketHandle:
         self._cdd = cdd
         self.name = name
 
-    def to_json(self) -> dict:
+    def data(self) -> dict:
         found = ticket_in(self._cdd.call("board.show"), self.name)
         if found is None:
             raise TicketNotFoundError(self.name)
@@ -175,7 +177,7 @@ class BacklogItemHandle:
         started = self._cdd.call("backlog-item.start", backlog_item=self.title, scope=scope, path=path)
         return TicketHandle(self._cdd, started["name"])
 
-    def to_json(self) -> dict:
+    def data(self) -> dict:
         backlog = next(column for column in self._cdd.call("board.show")["columns"] if column["name"] == "Backlog")
         found = next((item for item in backlog["items"] if item["title"] == self.title), None)
         if found is None:
@@ -194,6 +196,11 @@ class ActionPrompts:
         if prompt.startswith("_"):
             raise AttributeError(prompt)
         return lambda **arguments: self._cdd.prompt(f"{self._action}.{prompt}", **arguments)
+
+
+def _server_data_of(value: Any) -> Any:
+    """What a step reads: a handle's data as the server sends it now, and any other answer, already JSON, as it is."""
+    return value.data() if isinstance(value, (BoardTools, TicketHandle, BacklogItemHandle)) else value
 
 
 def _handle_of(cdd: CddTools, answered: Any) -> Any:

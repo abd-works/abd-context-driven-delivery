@@ -5,21 +5,12 @@ It lives under `_examples/`, which the install scan skips, so it never reaches a
 
 from __future__ import annotations
 
-from typing import Annotated, TypedDict
+from typing import Annotated
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
-from harness.installation.destination import SourceFile, edits, language_adapter
+from harness.installation.destination import SourceFile, data_field, edits, language_adapter
 from harness.mcp.mcp_server import mcp
-
-
-class NoteData(TypedDict):
-    name: str
-    title: str
-    text: str
-    is_pinned: bool
-    source: Annotated[str, SourceFile]
-    line: int | None
 
 
 @language_adapter(language="typescript", identity="name")
@@ -73,5 +64,33 @@ class Note:
         """Count the note's words; it answers with something other than the note, so the view shows the answer."""
         return len(self._text.split())
 
-    def to_json(self) -> NoteData:
-        return {"name": self._name, "title": self._title, "text": self._text, "is_pinned": self._is_pinned, "source": "notes/note.md", "line": 1}
+    @property
+    @data_field
+    def name(self) -> str:
+        return self._name
+
+    @property
+    @data_field
+    def title(self) -> str:
+        return self._title
+
+    @property
+    @data_field
+    def text(self) -> str:
+        return self._text
+
+    @property
+    @data_field
+    def is_pinned(self) -> bool:
+        return self._is_pinned
+
+    @property
+    @data_field
+    def source(self) -> Annotated[str, SourceFile]:
+        """The file the note was written from; a view opens it at line."""
+        return "notes/note.md"
+
+    @property
+    @data_field
+    def line(self) -> int | None:
+        return 1

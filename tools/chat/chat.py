@@ -7,11 +7,11 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Callable, Literal, TypedDict, TypeVar
+from typing import Callable, Literal, TypeVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.installation.destination import language_adapter
+from harness.installation.destination import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 
 # The mod checks in every second, so a chat silent for this long has gone.
@@ -39,26 +39,53 @@ MessageState = Literal["waiting", "taken", "shown", "done", "failed"]
 T = TypeVar("T")
 
 
-class ChatData(TypedDict):
-    id: str
-    name: str
-    is_busy: bool
-    folder: str
+class ChatCommand:
+    """A command a chat takes at its check-in: the message it came in, and what to do with its text."""
+
+    def __init__(self, message: str, kind: str, text: str) -> None:
+        self._message = message
+        self._kind = kind
+        self._text = text
+
+    @property
+    @data_field
+    def message(self) -> str:
+        return self._message
+
+    @property
+    @data_field
+    def kind(self) -> str:
+        return self._kind
+
+    @property
+    @data_field
+    def text(self) -> str:
+        return self._text
 
 
-class ChatCommandData(TypedDict):
-    message: str
-    kind: str
-    text: str
+class ChatMessage(ChatCommand):
+    """A message sent to a chat, as the board lists it: when it was sent, where it stands, and why it failed."""
 
+    def __init__(self, message: str, kind: str, text: str, sent_at: float, state: MessageState, reason: str) -> None:
+        super().__init__(message, kind, text)
+        self._sent_at = sent_at
+        self._state = state
+        self._reason = reason
 
-class ChatMessageData(TypedDict):
-    message: str
-    kind: str
-    text: str
-    sent_at: float
-    state: MessageState
-    reason: str
+    @property
+    @data_field
+    def sent_at(self) -> float:
+        return self._sent_at
+
+    @property
+    @data_field
+    def state(self) -> MessageState:
+        return self._state
+
+    @property
+    @data_field
+    def reason(self) -> str:
+        return self._reason
 
 
 class ChatNotConnectedError(LookupError):
@@ -100,28 +127,28 @@ class Chat:
     @mcp
     @agent_tool
     @noSessionLog
-    def list(cls) -> list[ChatData]:
+    def list(cls) -> list[Chat]:
         """List the chats whose cdd-board mod has checked in lately: each one's id, the title the app shows for it, and whether a turn is running."""
         folder = _chats_folder()
         chats = [cls(entry) for entry in sorted(folder.iterdir())] if folder.is_dir() else []
-        return [chat.to_json() for chat in chats if chat.is_connected]
+        return [chat for chat in chats if chat.is_connected]
 
     @mcp
     @agent_tool
     @noSessionLog
-    def send(self, kind: CommandKind, text: str) -> ChatData:
+    def send(self, kind: CommandKind, text: str) -> Chat:
         """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, and a command runs a slash command. A fill waits until the chat's turn has ended."""
         if not self.is_connected:
             raise ChatNotConnectedError(self.id)
         waiting = self._folder / WAITING
         waiting.mkdir(parents=True, exist_ok=True)
         (waiting / self._next_file_name()).write_text(json.dumps({"kind": kind, "text": text, "sent_at": self.clock()}), encoding="utf-8")
-        return self.to_json()
+        return self
 
     @mcp
     @agent_tool
     @noSessionLog
-    def messages(self) -> list[ChatMessageData]:
+    def messages(self) -> list[ChatMessage]:
         """List the latest messages sent to chat, newest first: what each one said, when it was sent, whether it waits, was taken, was shown in the chat, or failed, and why it failed."""
         sent = [(path, state) for state in MESSAGE_STATES for path in self._sent_in(state)]
         newest = sorted(sent, key=lambda entry: entry[0].name, reverse=True)[:KEPT_MESSAGES]
@@ -130,12 +157,12 @@ class Chat:
     @mcp
     @agent_tool
     @noSessionLog
-    def check_in(self, is_busy: bool = False, name: str = "", folder: str = "") -> list[ChatCommandData]:
+    def check_in(self, is_busy: bool = False, name: str = "", folder: str = "") -> list[ChatCommand]:
         """Check chat in, as its cdd-board mod does every second: say whether a turn is running, what to call the chat, and the folder it works in, and take the commands ready for it. A fill stays waiting while a turn runs, because one made during a turn can report success and show nothing."""
         with _checking_in(self._folder):
             return self._check_in(is_busy, name, folder)
 
-    def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommandData]:
+    def _check_in(self, is_busy: bool, name: str, folder: str) -> list[ChatCommand]:
         self._folder.mkdir(parents=True, exist_ok=True)
         state = self._state
         title, title_read = (_latest_title(self._transcript), self.clock()) if self.clock() - state.get("title_read", 0) > TITLE_READ_SECONDS else (state.get("title", ""), state["title_read"])
@@ -146,30 +173,30 @@ class Chat:
     @mcp
     @agent_tool
     @noSessionLog
-    def confirm(self, message: str, is_shown: bool, reason: str = "") -> ChatData:
+    def confirm(self, message: str, is_shown: bool, reason: str = "") -> Chat:
         """Say whether chat showed a message it took, as its cdd-board mod does once the message has entered the chat or been refused; reason says why it was refused."""
         taken = self._folder / TAKEN / f"{message}.json"
         if not taken.is_file():
-            return self.to_json()
+            return self
         if not is_shown:
             taken.write_text(json.dumps({**json.loads(taken.read_text(encoding="utf-8")), "reason": reason}), encoding="utf-8")
         self._move(taken, SHOWN if is_shown else FAILED)
-        return self.to_json()
+        return self
 
     @mcp
     @agent_tool
     @noSessionLog
-    def finish(self, message: str) -> ChatData:
+    def finish(self, message: str) -> Chat:
         """Say chat has finished working on a message it showed, as its cdd-board mod does once the chat's turn has ended."""
         shown = self._folder / SHOWN / f"{message}.json"
         if shown.is_file():
             self._move(shown, DONE)
-        return self.to_json()
+        return self
 
     @mcp
     @agent_tool
     @noSessionLog
-    def resend(self, message: str) -> ChatData:
+    def resend(self, message: str) -> Chat:
         """Put a message chat took but did not show back in its queue, so the chat takes it again at its next check-in."""
         for state in (TAKEN, FAILED):
             unshown = self._folder / state / f"{message}.json"
@@ -177,29 +204,42 @@ class Chat:
                 sent = json.loads(unshown.read_text(encoding="utf-8"))
                 unshown.write_text(json.dumps({key: value for key, value in sent.items() if key != "reason"}), encoding="utf-8")
                 self._move(unshown, WAITING)
-        return self.to_json()
+        return self
 
     @mcp
     @agent_tool
     @noSessionLog
-    def remove(self, message: str) -> ChatData:
+    def remove(self, message: str) -> Chat:
         """Remove a message sent to chat, whatever its state; one still waiting is never given to the chat."""
         for state in MESSAGE_STATES:
             (self._folder / state / f"{message}.json").unlink(missing_ok=True)
-        return self.to_json()
+        return self
 
     @property
+    @data_field
     def id(self) -> str:
         return self._folder.name
 
     @property
-    def is_connected(self) -> bool:
-        return self.clock() - self._state.get("seen", 0) < CHAT_GONE_SECONDS
-
-    def to_json(self) -> ChatData:
+    @data_field
+    def name(self) -> str:
         """The chat goes by the title the app shows for it, and by the name its mod sent until the app has given it one."""
         state = self._state
-        return {"id": self.id, "name": state.get("title") or state.get("name", ""), "is_busy": bool(state.get("is_busy", False)), "folder": state.get("folder", "")}
+        return state.get("title") or state.get("name", "")
+
+    @property
+    @data_field
+    def is_busy(self) -> bool:
+        return bool(self._state.get("is_busy", False))
+
+    @property
+    @data_field
+    def folder(self) -> str:
+        return self._state.get("folder", "")
+
+    @property
+    def is_connected(self) -> bool:
+        return self.clock() - self._state.get("seen", 0) < CHAT_GONE_SECONDS
 
     @property
     def _state(self) -> dict:
@@ -214,14 +254,14 @@ class Chat:
 
     # Oldest first. Each sent command is its own file, so a sender never writes a file the chat is reading. A taken command
     # waits in the taken folder until the chat confirms it, so the board can show what the chat never showed.
-    def _take_ready(self, is_busy: bool) -> list[ChatCommandData]:
-        taken: list[ChatCommandData] = []
+    def _take_ready(self, is_busy: bool) -> list[ChatCommand]:
+        taken: list[ChatCommand] = []
         for path in self._sent_in(WAITING):
             command = json.loads(path.read_text(encoding="utf-8"))
             if command["kind"] == "fill" and is_busy:
                 continue
             self._move(path, TAKEN)
-            taken.append({"message": path.stem, "kind": command["kind"], "text": command["text"]})
+            taken.append(ChatCommand(path.stem, command["kind"], command["text"]))
         self._forget_old_messages()
         return taken
 
@@ -255,9 +295,9 @@ class Chat:
         for path in handled[:-KEPT_MESSAGES]:
             path.unlink()
 
-    def _message(self, path: Path, state: MessageState) -> ChatMessageData:
+    def _message(self, path: Path, state: MessageState) -> ChatMessage:
         sent = json.loads(path.read_text(encoding="utf-8"))
-        return {"message": path.stem, "kind": sent["kind"], "text": sent["text"], "sent_at": sent.get("sent_at", 0.0), "state": state, "reason": sent.get("reason", "")}
+        return ChatMessage(path.stem, sent["kind"], sent["text"], sent.get("sent_at", 0.0), state, sent.get("reason", ""))
 
     # The app writes a chat's transcript under the folder of the project the chat started in.
     @property

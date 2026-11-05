@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Annotated, TypedDict
+from typing import Annotated
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.installation.destination import SourceFile, language_adapter
+from harness.installation.destination import SourceFile, data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 
 
@@ -30,26 +30,70 @@ class SessionFileNotFoundError(FileNotFoundError):
         super().__init__(f"no file or folder {path} in the session's roots")
 
 
-class FileManagerData(TypedDict):
-    workpath: str
-    roots: list[str]
+class FolderEntry:
+    """One entry of a listed folder: a folder or a file, with its path from the workpath and, for a file, its size."""
+
+    def __init__(self, name: str, path: str, is_folder: bool, size: int) -> None:
+        self._name = name
+        self._path = path
+        self._is_folder = is_folder
+        self._size = size
+
+    @property
+    @data_field
+    def name(self) -> str:
+        return self._name
+
+    @property
+    @data_field
+    def path(self) -> str:
+        return self._path
+
+    @property
+    @data_field
+    def is_folder(self) -> bool:
+        return self._is_folder
+
+    @property
+    @data_field
+    def size(self) -> int:
+        return self._size
 
 
-class FolderEntryData(TypedDict):
-    name: str
-    path: str
-    is_folder: bool
-    size: int
+class Folder:
+    """A listed folder, as a path from the workpath, with its entries."""
+
+    def __init__(self, folder: str, entries: list[FolderEntry]) -> None:
+        self._folder = folder
+        self._entries = list(entries)
+
+    @property
+    @data_field
+    def folder(self) -> str:
+        return self._folder
+
+    @property
+    @data_field
+    def entries(self) -> list[FolderEntry]:
+        return list(self._entries)
 
 
-class FolderData(TypedDict):
-    folder: str
-    entries: list[FolderEntryData]
+class FileText:
+    """The text of one file, with its path from the workpath; no text for a file that is not there."""
 
+    def __init__(self, path: str, text: str) -> None:
+        self._path = path
+        self._text = text
 
-class FileTextData(TypedDict):
-    path: Annotated[str, SourceFile]
-    text: str
+    @property
+    @data_field
+    def path(self) -> Annotated[str, SourceFile]:
+        return self._path
+
+    @property
+    @data_field
+    def text(self) -> str:
+        return self._text
 
 
 @language_adapter(language="typescript")
@@ -72,36 +116,34 @@ class FileManager:
         return Session.current().file_manager
 
     @property
+    @data_field
     def workpath(self) -> Path:
         return self._workpath
 
     @property
+    @data_field
     def roots(self) -> tuple[Path, ...]:
         return self._roots
 
     @mcp
     @agent_tool
     @noSessionLog
-    def list(self, folder: str = "") -> FolderData:
+    def list(self, folder: str = "") -> Folder:
         """List the entries of folder, a path from the session's workpath (the workpath when empty) inside one of its roots: folders first, then files, each with its path and size."""
         target = self._inside(folder)
         if not target.is_dir():
             raise SessionFileNotFoundError(folder)
         entries = sorted(target.iterdir(), key=lambda entry: (not entry.is_dir(), entry.name.lower()))
-        return {"folder": self._relative(target), "entries": [self._entry(entry) for entry in entries]}
+        return Folder(self._relative(target), [self._entry(entry) for entry in entries])
 
     @mcp
     @agent_tool
     @noSessionLog
-    def read(self, path: str) -> FileTextData:
-        """Return the text of path, a file inside one of the session's roots, named from its workpath."""
+    def read(self, path: str) -> FileText:
+        """Return the text of path, a file inside one of the session's roots, named from its workpath; no text when the file is not there, such as one deleted since a page listed it."""
         target = self._inside(path)
-        if not target.is_file():
-            raise SessionFileNotFoundError(path)
-        return {"path": self._relative(target), "text": target.read_text(encoding="utf-8", errors="replace")}
-
-    def to_json(self) -> FileManagerData:
-        return {"workpath": str(self._workpath), "roots": [str(root) for root in self._roots]}
+        text = target.read_text(encoding="utf-8", errors="replace") if target.is_file() else ""
+        return FileText(self._relative(target), text)
 
     def _inside(self, path: str) -> Path:
         """The path resolved from the workpath; a page names paths, so one outside every root is refused."""
@@ -114,6 +156,6 @@ class FileManager:
         """The path from the workpath, so a chosen root outside it reads back as `../reports/...`."""
         return "" if target == self._workpath else Path(os.path.relpath(target, self._workpath)).as_posix()
 
-    def _entry(self, entry: Path) -> FolderEntryData:
+    def _entry(self, entry: Path) -> FolderEntry:
         is_folder = entry.is_dir()
-        return {"name": entry.name, "path": self._relative(entry), "is_folder": is_folder, "size": 0 if is_folder else entry.stat().st_size}
+        return FolderEntry(entry.name, self._relative(entry), is_folder, 0 if is_folder else entry.stat().st_size)

@@ -87,7 +87,7 @@ def _(s):
 
     @s.then("the Backlog shows Gift cards with the text Sell gift cards.")
     def _(world):
-        items = column_in(world.Board.current().show().to_json(), "Backlog")["items"]
+        items = column_in(world.data_of(world.Board.current().show()), "Backlog")["items"]
         expect([(item["title"], item["text"]) for item in items]).to(equal([(GIFT_CARDS_IDEA.title, GIFT_CARDS_IDEA.text)]))
 
 
@@ -111,11 +111,11 @@ def _(s):
 
     @s.and_("Gift cards is still in the Backlog")
     def _(world):
-        expect_backlog(world.Board.current().show().to_json(), [GIFT_CARDS_IN_BACKLOG.heading])
+        expect_backlog(world.data_of(world.Board.current().show()), [GIFT_CARDS_IN_BACKLOG.heading])
 
     @s.when("the Person chooses src/visits as its root")
     def _(world):
-        world.started = world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading).start(path=VISITS_ROOT).to_json()
+        world.started = world.data_of(world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading).start(path=VISITS_ROOT))
 
     @s.then("the ticket gift-cards is In progress in Discovery with root src/visits")
     def _(world):
@@ -132,7 +132,7 @@ def _(s):
 
     @s.when("the Person starts Returns and refunds on the whole repository")
     def _(world):
-        world.started = world.BacklogItem.load(RETURNS_AND_REFUNDS.heading).start(scope="feature").to_json()
+        world.started = world.data_of(world.BacklogItem.load(RETURNS_AND_REFUNDS.heading).start(scope="feature"))
 
     @s.then("the ticket returns-and-refunds is In progress in Discovery")
     def _(world):
@@ -149,7 +149,7 @@ def _(s):
 
     @s.but_("the Backlog no longer shows Returns and refunds")
     def _(world):
-        expect_backlog(world.Board.current().show().to_json(), [])
+        expect_backlog(world.data_of(world.Board.current().show()), [])
 
 
 @shared_stories.scenario("Add Backlog Item", "Bring a ticket back from the Backlog with its work")
@@ -164,7 +164,7 @@ def _(s):
 
     @s.when("the Person starts Sign up")
     def _(world):
-        world.started = world.BacklogItem.load(SIGN_UP_HELD.title).start().to_json()
+        world.started = world.data_of(world.BacklogItem.load(SIGN_UP_HELD.title).start())
 
     @s.then("sign-up is back on the board with its session log and session.json")
     def _(world):
@@ -174,7 +174,7 @@ def _(s):
 
     @s.but_("no new ticket is opened")
     def _(world):
-        expect(tickets_on(world.Board.current().show().to_json())).to(equal([SIGN_UP_HELD.name]))
+        expect(tickets_on(world.data_of(world.Board.current().show()))).to(equal([SIGN_UP_HELD.name]))
 
 
 @shared_stories.scenario("Open Ticket Session", "Open a new ticket")
@@ -186,7 +186,7 @@ def _(s):
 
     @s.when("the Person opens a new ticket titled Pet visits")
     def _(world):
-        world.opened = world.Ticket.new(title=PET_VISITS_TICKET.title, scope=PET_VISITS_TICKET.scope).to_json()
+        world.opened = world.data_of(world.Ticket.new(title=PET_VISITS_TICKET.title, scope=PET_VISITS_TICKET.scope))
 
     @s.then("pet-visits is In progress in Discovery, titled Pet visits")
     def _(world):
@@ -199,7 +199,7 @@ def _(s):
 
     @s.and_("checkout-flow is still the active ticket")
     def _(world):
-        expect_active(world.Board.current().show().to_json(), CHECKOUT_FLOW.name)
+        expect_active(world.data_of(world.Board.current().show()), CHECKOUT_FLOW.name)
 
 
 @shared_stories.scenario("Open Ticket Session", "Open a ticket on a folder of the repository")
@@ -210,7 +210,7 @@ def _(s):
 
     @s.when("the Person opens a ticket titled Billing report on src/billing")
     def _(world):
-        world.opened = world.Ticket.new(title=BILLING_REPORT_ON_SRC_BILLING.title, scope=BILLING_REPORT_ON_SRC_BILLING.scope, path=BILLING_REPORT_ON_SRC_BILLING.path).to_json()
+        world.opened = world.data_of(world.Ticket.new(title=BILLING_REPORT_ON_SRC_BILLING.title, scope=BILLING_REPORT_ON_SRC_BILLING.scope, path=BILLING_REPORT_ON_SRC_BILLING.path))
 
     @s.then("billing-report's session works in src/billing")
     def _(world):
@@ -242,7 +242,7 @@ def _(s):
 
     @s.when("the Person chooses src/visits as checkout-flow's root")
     def _(world):
-        world.chosen = world.Ticket.load(CHECKOUT_FLOW.name).choose_root(path=VISITS_ROOT).to_json()
+        world.chosen = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).choose_root(path=VISITS_ROOT))
 
     @s.then("checkout-flow's root reads src/visits")
     def _(world):
@@ -262,7 +262,7 @@ def _(s):
 
     @s.when("the Person chooses src/billing for checkout-flow's Stories root")
     def _(world):
-        world.chosen = world.ticket.choose_practice_root(practice="stories", path=BILLING_ROOT).to_json()
+        world.chosen = world.data_of(world.ticket.choose_practice_root(practice="stories", path=BILLING_ROOT))
 
     @s.then("the Stories root reads src/billing, chosen by the Person")
     def _(world):
@@ -274,7 +274,7 @@ def _(s):
 
     @s.when("the Person puts Stories back on its default root")
     def _(world):
-        world.chosen = world.ticket.use_default_practice_root(practice="stories").to_json()
+        world.chosen = world.data_of(world.ticket.use_default_practice_root(practice="stories"))
 
     @s.then("the Stories root is the default again")
     def _(world):
@@ -290,7 +290,7 @@ def _(s):
 
     @s.when("the Person moves checkout-flow into Complete")
     def _(world):
-        world.workspace = world.ticket.workspace()
+        world.workspace = world.data_of(world.ticket.workspace())
 
     @s.then("a dialog headed Close session Checkout flow offers commit and push, chosen")
     def _(world):
@@ -298,7 +298,7 @@ def _(s):
 
     @s.when("the Person confirms")
     def _(world):
-        world.closed = world.ticket.close(leaving=["commit", "push"]).to_json()
+        world.closed = world.data_of(world.ticket.close(leaving=["commit", "push"]))
 
     @s.then("checkout-flow shows in Complete and is selected")
     def _(world):
@@ -310,7 +310,7 @@ def _(s):
 
     @s.and_("no ticket is active")
     def _(world):
-        expect_active(world.Board.current().show().to_json(), None)
+        expect_active(world.data_of(world.Board.current().show()), None)
 
 
 @shared_stories.scenario("Close Active Session", "Complete a ticket that has no branch of its own")
@@ -326,7 +326,7 @@ def _(s):
 
     @s.when("the Person moves checkout-flow into Complete and confirms")
     def _(world):
-        world.closed = world.Ticket.load(CHECKOUT_FLOW.name).close(leaving=[]).to_json()
+        world.closed = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).close(leaving=[]))
 
     @s.then("checkout-flow shows in Complete")
     def _(world):
@@ -349,7 +349,7 @@ def _(s):
 
     @s.when("the Person moves ready-to-move on")
     def _(world):
-        world.moved = world.Ticket.load(READY_TO_MOVE.name).move_next().to_json()
+        world.moved = world.data_of(world.Ticket.load(READY_TO_MOVE.name).move_next())
 
     @s.then("ready-to-move is In progress in Specification and selected")
     def _(world):
@@ -369,7 +369,7 @@ def _(s):
 
     @s.when("the Person moves move-me into Implementation's Done")
     def _(world):
-        world.moved = world.Ticket.load(MOVE_ME.name).move_to(stage="Implementation", done=True).to_json()
+        world.moved = world.data_of(world.Ticket.load(MOVE_ME.name).move_to(stage="Implementation", done=True))
 
     @s.then("move-me shows in Implementation's Done and is selected")
     def _(world):
@@ -384,7 +384,7 @@ def _(s):
 
     @s.when("the Person moves second-spec back")
     def _(world):
-        world.moved = world.Ticket.load(SECOND_SPEC.name).move_previous().to_json()
+        world.moved = world.data_of(world.Ticket.load(SECOND_SPEC.name).move_previous())
 
     @s.then("second-spec shows in Discovery's Done")
     def _(world):
@@ -403,11 +403,11 @@ def _(s):
 
     @s.then("the Backlog shows the backlog item Back to backlog and it is selected")
     def _(world):
-        expect_backlog(world.Board.current().show().to_json(), [BACK_TO_BACKLOG.title])
+        expect_backlog(world.data_of(world.Board.current().show()), [BACK_TO_BACKLOG.title])
 
     @s.but_("no stage shows back-to-backlog")
     def _(world):
-        expect(ticket_in(world.Board.current().show().to_json(), BACK_TO_BACKLOG.name)).to(be_none)
+        expect(ticket_in(world.data_of(world.Board.current().show()), BACK_TO_BACKLOG.name)).to(be_none)
 
 
 @shared_stories.scenario("Move Ticket", "Close a ticket moved on past Implementation")
@@ -423,7 +423,7 @@ def _(s):
 
     @s.when("the Person moves almost-shipped on into Complete")
     def _(world):
-        world.moved = world.Ticket.load(ALMOST_SHIPPED.name).move_next().to_json()
+        world.moved = world.data_of(world.Ticket.load(ALMOST_SHIPPED.name).move_next())
 
     @s.then("almost-shipped shows in Complete")
     def _(world):
@@ -442,7 +442,7 @@ def _(s):
 
     @s.when("the Person moves shipped-work back")
     def _(world):
-        world.moved = world.Ticket.load(SHIPPED_WORK.name).move_previous().to_json()
+        world.moved = world.data_of(world.Ticket.load(SHIPPED_WORK.name).move_previous())
 
     @s.then("shipped-work shows in Implementation's Done")
     def _(world):
@@ -475,7 +475,7 @@ def _(s):
 
     @s.and_("billing-report stays In progress in Discovery")
     def _(world):
-        expect_placed(world.ticket.to_json(), "Discovery", is_done=False)
+        expect_placed(world.data_of(world.ticket), "Discovery", is_done=False)
 
 
 @shared_stories.scenario("Activate Ticket", "Switch to another ticket, committing, pushing, and merging the one left")
@@ -491,7 +491,7 @@ def _(s):
 
     @s.when("the Person activates billing-report")
     def _(world):
-        world.workspace = world.ticket.workspace()
+        world.workspace = world.data_of(world.ticket.workspace())
 
     @s.then("a dialog headed Switch from Checkout flow to Billing report offers commit and push, chosen, and merge, not chosen")
     def _(world):
@@ -507,7 +507,7 @@ def _(s):
 
     @s.then("billing-report is the active ticket with a thick orange outline")
     def _(world):
-        expect_active(world.Board.current().show().to_json(), BILLING_REPORT.name)
+        expect_active(world.data_of(world.Board.current().show()), BILLING_REPORT.name)
 
     @s.and_("a toast says Checkout flow: committed, pushed, merged to main · Billing report: branch created · Billing report is now active")
     def _(world):
@@ -533,7 +533,7 @@ def _(s):
 
     @s.then("billing-report is the active ticket")
     def _(world):
-        expect_active(world.Board.current().show().to_json(), BILLING_REPORT.name)
+        expect_active(world.data_of(world.Board.current().show()), BILLING_REPORT.name)
 
     @s.and_("the branch checked out is as it was")
     def _(world):
@@ -563,7 +563,7 @@ def _(s):
 
     @s.then("billing-report is the active ticket")
     def _(world):
-        expect_active(world.Board.current().show().to_json(), BILLING_REPORT.name)
+        expect_active(world.data_of(world.Board.current().show()), BILLING_REPORT.name)
 
     @s.but_("nothing is committed on checkout-flow's branch")
     def _(world):
@@ -587,7 +587,7 @@ def _(s):
 
     @s.and_("billing-report is the active ticket")
     def _(world):
-        expect_active(world.Board.current().show().to_json(), BILLING_REPORT.name)
+        expect_active(world.data_of(world.Board.current().show()), BILLING_REPORT.name)
 
 
 @shared_stories.scenario("Split Ticket Into Child Tickets", "Ask the chat to split a ticket into child tickets")
@@ -601,7 +601,7 @@ def _(s):
 
     @s.when("the chat opens a child ticket Enter card details with parent checkout-flow")
     def _(world):
-        world.opened = world.Ticket.new(title=ENTER_CARD_DETAILS.title, scope=ENTER_CARD_DETAILS.scope, parent=ENTER_CARD_DETAILS.parent).to_json()
+        world.opened = world.data_of(world.Ticket.new(title=ENTER_CARD_DETAILS.title, scope=ENTER_CARD_DETAILS.scope, parent=ENTER_CARD_DETAILS.parent))
 
     @s.then("enter-card-details is In progress in Discovery")
     def _(world):
@@ -624,7 +624,7 @@ def _(s):
 
     @s.then("no column shows pet-visits")
     def _(world):
-        expect(ticket_in(world.Board.current().show().to_json(), PET_VISITS.name)).to(be_none)
+        expect(ticket_in(world.data_of(world.Board.current().show()), PET_VISITS.name)).to(be_none)
 
     @s.and_("its folder is in .sessions/_archive/pet-visits")
     def _(world):
@@ -662,7 +662,7 @@ def _(s):
 
     @s.when("the Person selects checkout-flow")
     def _(world):
-        world.selected = world.ticket.to_json()
+        world.selected = world.data_of(world.ticket)
 
     @s.then("the details read Latest handoff: .sessions/checkout-flow/handoff-20261101T120000.md")
     def _(world):
@@ -670,7 +670,7 @@ def _(s):
 
     @s.when("the Person opens the handoff")
     def _(world):
-        world.opened = world.ticket.read_file(path=world.selected["handoff"])
+        world.opened = world.data_of(world.ticket.read_file(path=world.selected["handoff"]))
 
     @s.then("the files panel shows the handoff in a tab with its text # Handoff")
     def _(world):
@@ -685,7 +685,7 @@ def _(s):
 
     @s.when("the Person selects billing-report")
     def _(world):
-        world.selected = world.Ticket.load(BILLING_REPORT.name).to_json()
+        world.selected = world.data_of(world.Ticket.load(BILLING_REPORT.name))
 
     @s.then("the details say No handoff yet")
     def _(world):

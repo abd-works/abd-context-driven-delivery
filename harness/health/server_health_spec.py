@@ -16,6 +16,7 @@ from harness.installation.installer import Installer
 Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from harness.health.server_health import ServerHealth  # noqa: E402
+from harness.installation.destination import data_of  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 
 
@@ -44,12 +45,12 @@ with description("server health") as self:
             self.listener.close()
 
         with it("should report the port the graph app answers on"):
-            expect(self.health.report().to_json()["graph_app_port"]).to(equal(self.port))
+            expect(data_of(self.health.report())["graph_app_port"]).to(equal(self.port))
 
     with context("with nothing listening on the graph app's ports"):
         with it("should report no graph app port"):
             health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(closed_port(),))
-            expect(health.report().to_json()["graph_app_port"]).to(be_none)
+            expect(data_of(health.report())["graph_app_port"]).to(be_none)
 
     with context("with the Kanban app listening on its port"):
         with before.each:
@@ -63,23 +64,23 @@ with description("server health") as self:
 
         with it("should report the port the Kanban app answers on"):
             health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(self.port,))
-            expect(health.report().to_json()["kanban_app_port"]).to(equal(self.port))
+            expect(data_of(health.report())["kanban_app_port"]).to(equal(self.port))
 
     with context("with nothing listening on the Kanban app's port"):
         with it("should report no Kanban app port"):
             health = ServerHealth(self.root, graph_ports=(closed_port(),), kanban_ports=(closed_port(),))
-            expect(health.report().to_json()["kanban_app_port"]).to(be_none)
+            expect(data_of(health.report())["kanban_app_port"]).to(be_none)
 
     with context("with no hook server state in the project"):
         with it("should report the hook server is not running"):
-            expect(ServerHealth(self.root).report().to_json()["is_hook_server_running"]).to(be_false)
+            expect(data_of(ServerHealth(self.root).report())["is_hook_server_running"]).to(be_false)
 
     with context("with a hook server state file whose process has gone"):
         with it("should report the hook server is not running"):
             state = self.root / ".cursor" / "hook-server.json"
             state.parent.mkdir()
             state.write_text(json.dumps({"port": closed_port()}), encoding="utf-8")
-            expect(ServerHealth(self.root).report().to_json()["is_hook_server_running"]).to(be_false)
+            expect(data_of(ServerHealth(self.root).report())["is_hook_server_running"]).to(be_false)
 
     with context("called through the MCP server"):
         with before.each:
@@ -92,7 +93,7 @@ with description("server health") as self:
 
         with it("should answer the band's call with every part"):
             result = self.server.invoke_tool("server-health.report", {})
-            answer = json.loads(json.dumps(result, default=lambda value: value.to_json()))
+            answer = json.loads(json.dumps(result, default=data_of))
             expect(sorted(answer)).to(equal(["graph_app_port", "is_hook_server_running", "kanban_app_port"]))
 
         with it("should leave the session log alone"):

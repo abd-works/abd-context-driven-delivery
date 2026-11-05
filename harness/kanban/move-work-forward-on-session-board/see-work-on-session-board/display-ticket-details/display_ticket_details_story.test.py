@@ -22,7 +22,7 @@ with story("Display Ticket Details"):
             pass
         with when("the Person selects billing-report's card"):
             # Person -> TicketClient.select()
-            # Board page -> Ticket.to_json()
+            # Board page -> data_of(Ticket)
             pass
         with then("the details show Billing report, root whole repository, and Discovery · in progress"):
             pass
@@ -59,7 +59,7 @@ with story("Display Ticket Details"):
         with given("the [ticket](../../../.context/kanban-model.md#ticket--card) child has scope story and parent epic in its session.json"):
             pass
         with when("the Person selects child's card"):
-            # Board page -> Ticket.to_json(): scope, parent
+            # Board page -> data_of(Ticket): scope, parent
             pass
         with then("the details read child · story of epic"):
             pass

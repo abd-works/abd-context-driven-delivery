@@ -53,6 +53,6 @@ class AnnotateWhatTypeScriptReads(PracticeGraphRule):
 
     def check(self, node, context) -> list[str]:
         return [
-            f"{node.source.file}:{line}: `{operation}` returns dict[str, Any]; annotate it with a TypedDict."
+            f"{node.source.file}:{line}: `{operation}` returns dict[str, Any]; return a domain object whose properties are marked with @data_field."
             for line, operation in node.get_fact("open_results", [])
         ]

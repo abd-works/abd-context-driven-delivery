@@ -1085,6 +1085,15 @@ class Repo:
             return name in self._branch_names
         return bool(self._git("branch", "--list", name).strip())
 
+    def path_from_top(self, path: Path | str) -> str:
+        """path as written from the repository's top, empty for the top itself, or as it is when it lies outside the
+        repository, where a session may work."""
+        given = Path(path)
+        if not given.is_relative_to(self.root):
+            return given.as_posix()
+        relative = given.relative_to(self.root).as_posix()
+        return "" if relative == "." else relative
+
     def files_changed_on(self, branch: str) -> list[str]:
         """Paths from the repository root that ``branch`` changed since it left the default branch, with uncommitted changes when it is checked out."""
         if not self.has_branch(branch):

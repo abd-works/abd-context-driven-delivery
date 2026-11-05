@@ -14,7 +14,7 @@ from expects import be, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from space.session import Session
-from tools.file_manager.file_manager import FileManager, PathOutsideRootsError, SessionFileNotFoundError
+from tools.file_manager.file_manager import FileManager, PathOutsideRootsError
 
 ORDER = b"export class Order {}\n"
 
@@ -50,18 +50,18 @@ with description("a session's file manager"):
     with context("that lists a folder"):
 
         with it("should list folders before files"):
-            expect([entry["name"] for entry in self.files.list()["entries"]]).to(equal(["src", "README.md"]))
+            expect([entry.name for entry in self.files.list().entries]).to(equal(["src", "README.md"]))
 
         with it("should give each entry its path from the workpath"):
-            expect(self.files.list("src")["entries"][0]["path"]).to(equal("src/order.ts"))
+            expect(self.files.list("src").entries[0].path).to(equal("src/order.ts"))
 
         with it("should give each file its size"):
-            expect(self.files.list("src")["entries"][0]["size"]).to(equal(len(ORDER)))
+            expect(self.files.list("src").entries[0].size).to(equal(len(ORDER)))
 
     with context("that reads a file"):
 
         with it("should return the file's text"):
-            expect(self.files.read("src/order.ts")["text"]).to(equal(ORDER.decode()))
+            expect(self.files.read("src/order.ts").text).to(equal(ORDER.decode()))
 
     with context("with roots narrower than the workpath"):
 
@@ -69,7 +69,7 @@ with description("a session's file manager"):
             self.files = FileManager(self.workpath, (self.workpath / "src",))
 
         with it("should read a file under a root"):
-            expect(self.files.read("src/order.ts")["path"]).to(equal("src/order.ts"))
+            expect(self.files.read("src/order.ts").path).to(equal("src/order.ts"))
 
         with it("should refuse a file in the workpath outside every root"):
             expect(lambda: self.files.read("README.md")).to(raise_error(PathOutsideRootsError))
@@ -84,5 +84,5 @@ with description("a session's file manager"):
 
     with context("that is asked for a file that is not there"):
 
-        with it("should say no such file is in the session's roots"):
-            expect(lambda: self.files.read("src/missing.ts")).to(raise_error(SessionFileNotFoundError))
+        with it("should give no text, such as for a file deleted since a page listed it"):
+            expect(self.files.read("src/missing.ts").text).to(equal(""))

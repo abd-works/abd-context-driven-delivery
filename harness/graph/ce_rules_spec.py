@@ -280,6 +280,11 @@ export function refreshChatBar($: EngineInterface): void {}
     with context("prefer-instance-operations"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("prefer-instance-operations")
+        with it("should accept a classmethod named current that loads the running call's subject"):
+            rule = ce_rule_by_slug("prefer-instance-operations")
+            source = "class Board:\n    @classmethod\n    def current(cls) -> 'Board':\n        return cls()\n"
+            practice, root = practice_from_files({"board.py": source})
+            expect(violations_for_rule(rule, practice, root)).to(equal([]))
     with context("keep-classes-single-responsibility"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("keep-classes-single-responsibility")
@@ -316,6 +321,11 @@ export class Billing {
             hits = violations_for_rule(rule, practice, root)
             expect(hits).to(contain("Parameter 'maxAttempts' is missing a type annotation."))
             expect(" ".join(hits)).not_to(contain("retry"))
+        with it("should not flag the cls of a Python classmethod"):
+            rule = ce_rule_by_slug("use-typed-signatures")
+            source = "class Ticket:\n    @classmethod\n    def load(cls, ticket: str) -> 'Ticket':\n        return cls()\n"
+            practice, root = practice_from_files({"ticket.py": source})
+            expect(violations_for_rule(rule, practice, root)).to(equal([]))
         with it("should treat withXxx client field changes as properties"):
             rule = ce_rule_by_slug("use-typed-signatures")
             source = """

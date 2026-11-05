@@ -13,6 +13,7 @@ for path in (_HERE, _REPO):
         sys.path.insert(0, str(path))
 
 from expects import be_above, contain, equal, expect
+from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from graph import Graph
@@ -107,7 +108,7 @@ with description("a working copy scan") as self:
     with before.all:
         self.root = _working_copy()
         self.graph = Graph()
-        self.graph.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}, force=True)
+        data_of(self.graph.load_working_copy(str(self.root), {"clean_engineering": str(self.root)}, force=True))
 
     with after.all:
         shutil.rmtree(self.root, ignore_errors=True)
@@ -129,22 +130,22 @@ with description("a working copy scan") as self:
             expect(_module_names(self.graph)).to(equal(["billing", "orders"]))
 
         with it("should pass named-seam-and-constraint on a modules.md card"):
-            returned = self.graph.return_nodes({"types": ["Module"], "name": "orders"})
+            returned = data_of(self.graph.return_nodes({"types": ["Module"], "name": "orders"}))
             rows = [rule for node in returned for rule in node["rules"] if rule["name"] == "named-seam-and-constraint"]
             expect(len(rows)).to(be_above(0))
             expect({rule["status"] for rule in rows}).to(equal({"passing"}))
 
     with context("returning violations"):
         with it("should return only failing rule rows when the filter asks for violations"):
-            returned = self.graph.return_nodes({"practice": "clean_engineering", "violations": True})
+            returned = data_of(self.graph.return_nodes({"practice": "clean_engineering", "violations": True}))
             expect(len(returned)).to(be_above(0))
             statuses = {rule["status"] for node in returned for rule in node["rules"]}
             expect(statuses).to(equal({"violating"}))
 
         with it("should keep only nodes under the given path"):
-            returned = self.graph.return_nodes({"practice": "clean_engineering", "violations": True, "paths": ["src/billing"]})
+            returned = data_of(self.graph.return_nodes({"practice": "clean_engineering", "violations": True, "paths": ["src/billing"]}))
             expect("place" in [node["name"] for node in returned]).to(equal(False))
-            returned = self.graph.return_nodes({"practice": "clean_engineering", "violations": True, "paths": ["src/orders"]})
+            returned = data_of(self.graph.return_nodes({"practice": "clean_engineering", "violations": True, "paths": ["src/orders"]}))
             expect([node["name"] for node in returned]).to(contain("place"))
 
     with context("limited to the edited files"):
@@ -152,7 +153,7 @@ with description("a working copy scan") as self:
             self.saved = self.root / ".context" / "graph.json"
             self.saved_stamp = self.saved.stat().st_mtime
             self.scoped = Graph()
-            self.scoped.load_files(str(self.root), ["clean_engineering"], ["src/orders/order.ts", "src/billing"])
+            data_of(self.scoped.load_files(str(self.root), ["clean_engineering"], ["src/orders/order.ts", "src/billing"]))
 
         with it("should read only the classes in those files and folders"):
             expect(_class_names(self.scoped)).to(equal(["Invoice", "Order"]))
@@ -161,7 +162,7 @@ with description("a working copy scan") as self:
             expect(_module_names(self.scoped)).to(equal(["billing", "orders"]))
 
         with it("should run the rules on those files"):
-            returned = self.scoped.return_nodes({"practice": "clean_engineering", "violations": True})
+            returned = data_of(self.scoped.return_nodes({"practice": "clean_engineering", "violations": True}))
             expect([node["name"] for node in returned]).to(contain("place"))
 
         with it("should leave the saved graph alone"):
@@ -170,7 +171,7 @@ with description("a working copy scan") as self:
     with context("limited to the loaded folder itself, named as ."):
         with before.all:
             self.whole = Graph()
-            self.whole.load_files(str(self.root), ["clean_engineering"], ["."])
+            data_of(self.whole.load_files(str(self.root), ["clean_engineering"], ["."]))
 
         with it("should read every class in the folder"):
             expect(_class_names(self.whole)).to(equal(_class_names(self.graph)))
@@ -178,7 +179,7 @@ with description("a working copy scan") as self:
     with context("limited to an edited story map markdown file"):
         with before.all:
             self.story_map = Graph()
-            self.story_map.load_files(str(self.root), ["stories"], ["board/.context/story-map.md"])
+            data_of(self.story_map.load_files(str(self.root), ["stories"], ["board/.context/story-map.md"]))
 
         with it("should keep the story map's path from the folder on each story"):
             expect([node.source.file for node in _story_nodes(self.story_map, "Draw Columns")]).to(
@@ -197,7 +198,7 @@ with description("a working copy scan") as self:
     with context("limited to an edited story map diagram"):
         with before.all:
             self.diagram = Graph()
-            self.diagram.load_files(str(self.root), ["stories"], ["board/.context/story-map.drawio"])
+            data_of(self.diagram.load_files(str(self.root), ["stories"], ["board/.context/story-map.drawio"]))
 
         with it("should keep the diagram's path from the folder on each story"):
             expect([node.source.file for node in _story_nodes(self.diagram, "Open Board")]).to(
@@ -211,7 +212,7 @@ with description("a working copy scan") as self:
     with context("limited to an edited Python story test"):
         with before.all:
             self.story_test = Graph()
-            self.story_test.load_files(str(self.root), ["stories"], [_STORY_TEST_PATH])
+            data_of(self.story_test.load_files(str(self.root), ["stories"], [_STORY_TEST_PATH]))
             self.scenarios = _story_nodes(self.story_test, "Open the board from a chat")
 
         with it("should read its scenario under the story of the same name on the story map in a folder above it"):
@@ -233,11 +234,11 @@ with description("a working copy scan") as self:
     with context("limited to a story map in both formats and its story test"):
         with before.all:
             self.both_formats = Graph()
-            self.both_formats.load_files(
+            data_of(self.both_formats.load_files(
                 str(self.root),
                 ["stories"],
                 ["board/.context/story-map.md", "board/.context/story-map.drawio", _STORY_TEST_PATH],
-            )
+            ))
 
         with it("should count the scenario on the story in each format"):
             expect(
@@ -250,7 +251,7 @@ with description("a working copy scan") as self:
             cwd = os.getcwd()
             os.chdir(_REPO)
             try:
-                self.relative.load_working_copy(str(self.root), {"clean_engineering": "src"}, force=True)
+                data_of(self.relative.load_working_copy(str(self.root), {"clean_engineering": "src"}, force=True))
             finally:
                 os.chdir(cwd)
 

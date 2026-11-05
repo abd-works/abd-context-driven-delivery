@@ -54,7 +54,7 @@ def _(s):
 
     @s.when("the session board reads pet-visits")
     def _(world):
-        world.read = world.Ticket.load(PET_VISITS.name).to_json()
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
     @s.then("the story_map tile marks Generate ✓ and Validate and Review ○")
     def _(world):
@@ -73,7 +73,7 @@ def _(s):
 
     @s.when("the session board reads pet-visits")
     def _(world):
-        world.read = world.Ticket.load(PET_VISITS.name).to_json()
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
     @s.then("the story_map tile marks Validate as violations and its segment shows in the violations colour")
     def _(world):
@@ -96,7 +96,7 @@ def _(s):
 
     @s.when("the session board reads pet-visits")
     def _(world):
-        world.read = world.Ticket.load(PET_VISITS.name).to_json()
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
     @s.then("the story_map tile marks Generate ✓, Validate ✓, and Review ○")
     def _(world):
@@ -111,7 +111,7 @@ def _(s):
 
     @s.when("the session board reads billing-report")
     def _(world):
-        world.read = world.Ticket.load(BILLING_REPORT.name).to_json()
+        world.read = world.data_of(world.Ticket.load(BILLING_REPORT.name))
 
     @s.then("each Discovery tile marks Generate, Validate, and Review ○, its segment dim")
     def _(world):
@@ -128,7 +128,7 @@ def _(s):
 
     @s.when("the Person turns DDD off for checkout-flow")
     def _(world):
-        world.chosen = world.Ticket.load(CHECKOUT_FLOW.name).enable_practice(practice="ddd", is_enabled=False).to_json()
+        world.chosen = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).enable_practice(practice="ddd", is_enabled=False))
 
     @s.then("a toast says DDD off for Checkout flow · saved to .sessions/checkout-flow/session.json")
     def _(world):
@@ -152,7 +152,7 @@ def _(s):
 
     @s.when("the session board reads pet-visits")
     def _(world):
-        world.read = world.Ticket.load(PET_VISITS.name).to_json()
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
     # Fails today: the board has five practices, so with DDD and UX off pet-visits still needs Clean Engineering's
     # modules and BDD's behavior in Discovery. The scenario comes from kanban_spec's board of Stories, DDD, and UX.
@@ -169,7 +169,7 @@ def _(s):
 
     @s.when("the Person marks pet-visits done in Discovery")
     def _(world):
-        world.moved = world.Ticket.load(PET_VISITS.name).move_next().to_json()
+        world.moved = world.data_of(world.Ticket.load(PET_VISITS.name).move_next())
 
     @s.then("pet-visits shows in Discovery's Done")
     def _(world):
@@ -188,7 +188,7 @@ def _(s):
 
     @s.when("the Person moves ready-to-move back into Discovery's In progress")
     def _(world):
-        world.moved = world.Ticket.load(READY_TO_MOVE.name).move_to(stage="Discovery").to_json()
+        world.moved = world.data_of(world.Ticket.load(READY_TO_MOVE.name).move_to(stage="Discovery"))
 
     @s.then("ready-to-move shows In progress in Discovery")
     def _(world):
@@ -203,7 +203,7 @@ def _(s):
 
     @s.when("the session board reads pet-visits")
     def _(world):
-        world.read = world.Ticket.load(PET_VISITS.name).to_json()
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
     @s.then("pet-visits shows in Specification's Done")
     def _(world):
@@ -218,7 +218,7 @@ def _(s):
 
     @s.when("the Person opens help on the story_map fidelity")
     def _(world):
-        world.help = world.Board.current().help(practice="stories", fidelity="story_map")
+        world.help = world.data_of(world.Board.current().help(practice="stories", fidelity="story_map"))
 
     @s.then("a side panel shows story_map's overview, guidance, and rules such as verb-noun-format")
     def _(world):
@@ -242,7 +242,7 @@ def _(s):
 
     @s.when("the Person opens help on the Stories practice")
     def _(world):
-        world.help = world.Board.current().help(practice="stories", fidelity="")
+        world.help = world.data_of(world.Board.current().help(practice="stories", fidelity=""))
 
     @s.then("a side panel shows Practice overview and SHARED RULES such as do-not-invent-requirements")
     def _(world):
@@ -267,7 +267,7 @@ def _(s):
 
     @s.when("the Person opens help on the ddd model fidelity")
     def _(world):
-        world.help = world.Board.current().help(practice="ddd", fidelity="model")
+        world.help = world.data_of(world.Board.current().help(practice="ddd", fidelity="model"))
 
     @s.then("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/ddd.html")
     def _(world):
@@ -284,8 +284,8 @@ def _(s):
     @s.when("the Person runs billing-report's next step")
     def _(world):
         ticket = world.Ticket.load(BILLING_REPORT.name)
-        world.before = ticket.to_json()
-        default_format = column_in(world.Board.current().show().to_json(), "Discovery")["default_formats"][world.before["next"]]
+        world.before = world.data_of(ticket)
+        default_format = column_in(world.data_of(world.Board.current().show()), "Discovery")["default_formats"][world.before["next"]]
         world.commands = ticket.generate_commands(fidelities=[world.before["next"]], formats=[default_format])
 
     @s.then("Run next read Run next: generate before it ran")
@@ -313,8 +313,8 @@ def _(s):
     @s.when("the Person runs checkout-flow's next step")
     def _(world):
         ticket = world.Ticket.load(CHECKOUT_FLOW.name)
-        world.before = ticket.to_json()
-        world.report = ticket.report(fidelity=world.before["next"])
+        world.before = world.data_of(ticket)
+        world.report = world.data_of(ticket.report(fidelity=world.before["next"]))
 
     @s.then("Run next read Run next: fix violations")
     def _(world):
@@ -339,7 +339,7 @@ def _(s):
     @s.when("the Person runs billing-report's next step")
     def _(world):
         ticket = world.Ticket.load(BILLING_REPORT.name)
-        world.reviewed = ticket.finish_review(fidelities=[ticket.to_json()["next"]]).to_json()
+        world.reviewed = world.data_of(ticket.finish_review(fidelities=[world.data_of(ticket)["next"]]))
 
     @s.then("billing-report's story_map marks Review ✓")
     def _(world):
@@ -358,7 +358,7 @@ def _(s):
 
     @s.when("the session board reads pet-visits")
     def _(world):
-        world.read = world.Ticket.load(PET_VISITS.name).to_json()
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
     @s.then("Run next reads Run next: review on stories-story_map")
     def _(world):
@@ -373,7 +373,7 @@ def _(s):
 
     @s.when("the session board reads pet-visits")
     def _(world):
-        world.read = world.Ticket.load(PET_VISITS.name).to_json()
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
     @s.then("Run next says Nothing to run next")
     def _(world):

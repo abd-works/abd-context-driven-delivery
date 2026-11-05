@@ -23,7 +23,7 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
 
 from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
-from harness.installation.destination import Destination, Installation
+from harness.installation.destination import Destination, Installation, data_fields_of, data_of
 from harness.mcp.restart_gate import RestartGate
 
 logger = logging.getLogger(__name__)
@@ -1219,7 +1219,9 @@ class McpHost:
 
     @staticmethod
     def _json_default(value: object) -> object:
-        converter = getattr(value, "to_mcp_result", None) or getattr(value, "to_json", None)
+        if data_fields_of(type(value)):
+            return data_of(value)
+        converter = getattr(value, "to_mcp_result", None)
         if callable(converter):
             return converter()
         if isinstance(value, Path):

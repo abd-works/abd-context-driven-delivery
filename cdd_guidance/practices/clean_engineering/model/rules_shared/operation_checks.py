@@ -41,6 +41,7 @@ _STATIC_FACTORY_NAMES = frozenset({"instance", "create"})
 _STATIC_FACTORY_EXTRA_NAMES = frozenset(
     {
         "fromRequest",
+        "current",
     }
 )
 _CAMEL_FROM_FACTORY = re.compile(r"^from[A-Z]")

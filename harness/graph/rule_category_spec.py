@@ -8,6 +8,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from expects import be_above, contain, equal, expect
+from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from graph import Graph, Node, Source
@@ -42,26 +43,26 @@ with description("rule categories"):
                 node.parent = self.practice.root_node
 
         with it("should attach the parameter rule to the operation that fails it"):
-            rule = rule_on(self.failure.serialize(), "limit-operation-parameters")
+            rule = rule_on(data_of(self.failure.serialize()), "limit-operation-parameters")
             expect(rule["status"]).to(equal("violating"))
             expect(rule["violations"][0]["message"]).to(
                 contain("takes 4 parameters (maximum 3, excluding self)")
             )
 
         with it("should attach the parameter rule to the operation that passes it"):
-            expect(rule_on(self.register.serialize(), "limit-operation-parameters")["status"]).to(equal("passing"))
+            expect(rule_on(data_of(self.register.serialize()), "limit-operation-parameters")["status"]).to(equal("passing"))
 
         with it("should leave the class rule off an operation"):
-            category = next(child for child in self.failure.serialize()["children"] if child["name"] == "rules")
+            category = next(child for child in data_of(self.failure.serialize())["children"] if child["name"] == "rules")
             names = [child["name"] for child in category["children"]]
             expect("use-explicit-dependencies" in names).to(equal(False))
 
         with it("should attach the class rule to the class"):
-            rule = rule_on(self.account.serialize(), "use-explicit-dependencies")
+            rule = rule_on(data_of(self.account.serialize()), "use-explicit-dependencies")
             expect(rule["status"]).to(equal("passing"))
 
         with it("should leave the parameter rule off the class"):
-            category = next(child for child in self.account.serialize()["children"] if child["name"] == "rules")
+            category = next(child for child in data_of(self.account.serialize())["children"] if child["name"] == "rules")
             names = [child["name"] for child in category["children"]]
             expect("limit-operation-parameters" in names).to(equal(False))
 
@@ -71,19 +72,19 @@ with description("rule categories"):
                 self.graph.filter.select_violations()
 
             with it("should attach the violation on the serialized operation"):
-                rule = rule_on(self.failure.serialize(), "limit-operation-parameters")
+                rule = rule_on(data_of(self.failure.serialize()), "limit-operation-parameters")
                 expect(rule["status"]).to(equal("violating"))
                 expect(len(rule["violations"])).to(be_above(0))
 
             with it("should leave the passing rule off the serialized operation"):
-                names = [child["name"] for child in self.register.serialize()["children"]]
+                names = [child["name"] for child in data_of(self.register.serialize())["children"]]
                 expect("rules" in names).to(equal(False))
 
             with it("should attach that violation on the nodes the filter returns"):
                 self.practice.by_id[self.failure.node_id] = self.failure
                 self.practice.by_id[self.register.node_id] = self.register
                 self.practice.nodes["Operation"] = [self.failure, self.register]
-                returned = self.graph.return_nodes()
+                returned = data_of(self.graph.return_nodes())
                 failure = next(node for node in returned if node["name"] == "failure")
                 expect([rule["status"] for rule in failure["rules"]]).to(equal(["violating"]))
                 expect("register" in [node["name"] for node in returned]).to(equal(False))

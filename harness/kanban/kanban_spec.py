@@ -13,6 +13,7 @@ Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from bdd.bdd import Bdd  # noqa: E402
 from ddd.ddd import Ddd  # noqa: E402
+from harness.installation.destination import data_of  # noqa: E402
 from harness.kanban.board import Board, Card, ColumnNotFoundError  # noqa: E402
 from harness.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Repo  # noqa: E402
@@ -159,7 +160,7 @@ with description("a board") as self:
             expect([card.column.name for card in self.board.cards]).to(equal(["Discovery", "Discovery", "Complete", "Backlog"]))
 
         with it("should list every column with its tickets or items"):
-            expect([column["name"] for column in self.board.to_json()["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
+            expect([column["name"] for column in data_of(self.board)["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
 
 with description("a backlog item") as self:
     with after.each:

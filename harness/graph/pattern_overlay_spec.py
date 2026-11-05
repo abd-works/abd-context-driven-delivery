@@ -8,6 +8,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from expects import equal, expect
+from harness.installation.destination import data_of  # noqa: E402
 from mamba import description, it
 
 from graph import Edge, EdgeType, Node, PracticeGraph, Source, normalize_overlay, resolve_overlay_root
@@ -44,7 +45,7 @@ with description("pattern overlays"):
         sample = _HERE / "_examples" / "input"
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
-        graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True)
+        data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
         names = {node.type for node in graph.practice("ddd").by_id.values()}
         expect("NodeRoot" in names).to(equal(True))
         expect("ClientRoot" in names).to(equal(True))
@@ -57,7 +58,7 @@ with description("pattern overlays"):
         sample = _HERE / "_examples" / "input"
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
-        graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True)
+        data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
         domain_nodes = [node for node in graph.practice("ddd").by_id.values() if node.type == "NodeRoot"]
         expect(len(domain_nodes) > 0).to(equal(True))
         node = domain_nodes[0]
@@ -70,8 +71,8 @@ with description("pattern overlays"):
         sample = _HERE / "_examples" / "input"
         graph = Graph()
         roots = {name: str(sample) for name in ("clean_engineering", "stories", "ddd", "bdd", "ux")}
-        graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True)
-        ddd_tree = graph.practice("ddd").root_node.serialize()
+        data_of(graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
+        ddd_tree = data_of(graph.practice("ddd").root_node.serialize())
 
         def walk(node):
             yield node

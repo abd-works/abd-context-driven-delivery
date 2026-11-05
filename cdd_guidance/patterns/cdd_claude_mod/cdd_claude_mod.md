@@ -20,7 +20,7 @@ class Report:
 | Python | Mod |
 |---|---|
 | `class Report` | `ReportClient` in `report-client.ts`, `ReportView` in `report-view.tsx` |
-| `to_json()` | `ReportData` from the language adapter, and one client property for each field a view paints |
+| Properties marked `@data_field` | `ReportData` from the language adapter, and one client property for each field a view paints |
 | `@mcp @agent_tool def publish` | `publish($, report, audience)` exported beside the client, the MCP tool `report.publish`, and a control in the view |
 | `report: str` | The `ReportClient` the view is painting, which the action reads the identity from |
 | `audience: str` | An argument of `publish($, report, audience)`, and an input in the view |
@@ -30,9 +30,9 @@ Every domain component has the same pieces, and each piece has one job.
 | Layer | File | Role |
 |---|---|---|
 | Domain | `harness/<domain>/*.py`, `space/<domain>/*.py` | The Python classes. Every rule and decision lives here, including how state is kept. |
-| Tool | `harness/<domain>/<object>.py` | The toolset named after the object, so its tools read `{object}.{operation}`. One `@mcp @agent_tool` operation per thing a person or agent does. Parses names, calls the domain, returns `to_json()`. |
+| Tool | `harness/<domain>/<object>.py` | The toolset named after the object, so its tools read `{object}.{operation}`. One `@mcp @agent_tool` operation per thing a person or agent does. Parses names, calls the domain, returns the domain object, which MCP sends as its data fields. |
 | Generated | `.mcp.json`, `.claude/skills/`, `.claude/commands/` | Written by the installer from the tool's annotations. Never edited. |
-| Contract | The language adapter, `@cdd/<source folders>/<object>` | `{Object}Data`, the shape `to_json()` returns, generated from Python and imported with `import type`. `pane/types/index.d.ts` declares `PluginState` for every atom, and each atom's JSON type wraps the imported data. |
+| Contract | The language adapter, `@cdd/<source folders>/<object>` | `{Object}Data`, the class's data fields as MCP sends them, generated from Python and imported with `import type`. `pane/types/index.d.ts` declares `PluginState` for every atom, and each atom's JSON type wraps the imported data. |
 | Client | `pane/hooks/<domain>/<object>-client.ts` | `{Object}Client` and its actions. The class mirrors one Python object's properties for display and holds no `$`. Each action is a plain exported function in the same file, such as `moveNext($, ticket)`, that calls one tool through `$.mcp.call`. |
 | View | `pane/hooks/<domain>/<screen>-view.tsx` | `{Screen}View`. A plain function that takes `$` and a client, paints the client, and hands presses to the client's actions. Decides nothing. |
 | Surface module | `pane/hooks/<domain>/<part>.tsx` | A `ClientModule`, only for what a Button cannot do, such as a press anywhere on a card. |
@@ -46,7 +46,7 @@ Every domain component has the same pieces, and each piece has one job.
 3. The action calls one MCP tool with `$.mcp.call`.
 4. The tool loads the domain object and runs the operation of the same name.
 5. The domain object changes its own state.
-6. The tool returns `to_json()`.
+6. The tool returns the object, and MCP sends its data fields.
 7. The action writes that JSON to its atom, and the write redraws every view that reads it.
 8. The next draw builds a new client from the new JSON.
 
@@ -59,7 +59,7 @@ classDiagram
   class Ticket {
     <<Python>>
     +move_next()
-    +to_json()
+    +column_name «data field: column»
   }
   class TicketTool {
     <<mcp agent_tool>>
@@ -116,7 +116,7 @@ sequenceDiagram
   Action->>Tool: ticket.move_next(ticket)
   Tool->>Domain: move_next()
   Domain->>Files: write session log line
-  Domain-->>Tool: to_json()
+  Domain-->>Tool: itself, sent as its data fields
   Tool-->>Action: JSON
   Action->>Action: update atom
   Action-->>View: redraw
@@ -196,7 +196,7 @@ export async function moveNext($: EngineInterface, ticket: TicketClient): Promis
 }
 ```
 
-**MCP tool**, `ticket.move_next`. The marks sit on the domain operation itself. The toolset's `@tool_subject` loader finds the ticket the call names, so the tool takes the loader's arguments and the operation's together, and the MCP server returns the operation's result as `to_json()`.
+**MCP tool**, `ticket.move_next`. The marks sit on the domain operation itself. The toolset's `@tool_subject` loader finds the ticket the call names, so the tool takes the loader's arguments and the operation's together, and the MCP server sends the object the operation returns as its data fields.
 
 ```python
 @agent_toolset
@@ -270,7 +270,7 @@ The canvas and the story map are designed upstream by `ux` and `stories`. `gener
 1. Follow **session_guidance**. Start from the Python: name the classes this slice exposes, read their `.context/`, and list their `@mcp @agent_tool` operations, because that list decides the client's operations and the view's controls.
 2. Add any missing domain operation and its Mamba spec first. Specs first, small RED cycles.
 3. Add the `@mcp @agent_tool` operation on the `{Object}` toolset and its tool spec. Run `python scripts/install.py --ide Claude` so the generated skills, commands, and MCP entry follow.
-4. Annotate `to_json()` with a `TypedDict`, mark the class with `@language_adapter(language="typescript")`, and install, so `{Object}Data` follows.
+4. Mark each property the mod reads with `@data_field`, mark the class with `@language_adapter(language="typescript")`, and install, so `{Object}Data` follows.
 5. Add `{Object}Client` properties and operations for what this slice displays and does, then the view that paints them. Scaffold from `templates/`.
 6. Connect events in `register.tsx`.
 7. Run `claude plugin validate`, `tsc -p`, and `claude plugin test` on the mod folder, and Mamba on the Python specs.
@@ -312,7 +312,7 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`tool-matches-the-object`** — Name the toolset after the Python object it acts on, so the MCP tool reads `ticket.move_next`. A tool named after the component gathers every object's operations into one toolset, and a reader searching for `ticket` misses it.
 - **`same-verb-across-layers`** — Use the same verb and noun from client to domain: `moveNext`, `ticket.move_next`, `Ticket.move_next`. A reader can then follow an action by searching one word.
 - **`preserve-arg-names-across-layers`** — Argument names stay the same across layers, with only the casing changing. Renaming at a boundary hides which value is which.
-- **`tool-stays-thin`** — A tool operation finds the domain object, calls one operation, and returns `to_json()`. Logic in a tool cannot be reached by anything that calls the domain directly.
+- **`tool-stays-thin`** — A tool operation finds the domain object, calls one operation, and returns the object it answers with, which MCP sends as its data fields. Logic in a tool cannot be reached by anything that calls the domain directly.
 - **`mcp-calls-only-on-the-client`** — `$.mcp.call` appears only in a client's file, in one function its actions share. Views and Boot call actions, so there is one place to handle a failed call.
 - **`fail-loud-on-mcp`** — When a call fails or the server is missing, show the person what failed and how to fix it. Drawing old state as if it were current misleads them into acting on it.
 - **`every-action-reaches-the-agent-the-same-way`** — A person and the agent trigger the same MCP tool, so what the mod shows and what the agent does cannot disagree.

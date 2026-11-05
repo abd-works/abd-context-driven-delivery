@@ -13,7 +13,7 @@ _FAULTY_NODE = "import { TicketAdapter } from '@cdd/harness/kanban/ticket'\nimpo
 _FAULTY_CONNECTION = "export class CddConnectionNode {\n  call(tool: string) { return this.client.callTool({ name: tool }) }\n}\n"
 _FAULTY_ADAPTER = "import type { TicketData } from '@cdd/harness/kanban/ticket'\nexport class TicketAdapter {}\n"
 _REPAIRED_ROUTE = "app.use('/api', cddRoutes(cdd, [...ticketRoutes]))\n"
-_FAULTY_PYTHON = "@language_adapter(language=\"typescript\")\n@agent_toolset\nclass Thing:\n    @mcp\n    @agent_tool\n    def show(self) -> dict[str, Any]:\n        return {}\n\n    def to_json(self) -> dict[str, Any]:\n        return {}\n"
+_FAULTY_PYTHON = "@language_adapter(language=\"typescript\")\n@agent_toolset\nclass Thing:\n    @mcp\n    @agent_tool\n    def show(self) -> dict[str, Any]:\n        return {}\n"
 _FAULTY_SHARED = "import { TicketNode } from '@src/kanban/ticket/ticket-node'\n"
 _FAULTY_E2E = "itBehavesLike(a, b)\nawait page.route('x', y)\n"
 

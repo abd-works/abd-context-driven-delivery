@@ -61,7 +61,7 @@ def _(s):
 
     @s.when("the Person lists checkout-flow's story_map files")
     def _(world):
-        world.files = world.Ticket.load(CHECKOUT_FLOW.name).files(fidelities=[STORY_MAP])
+        world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).files(fidelities=[STORY_MAP]))
 
     # Fails today: the story map's markdown is declared at .context/story-map.md, so the list names that, not there.
     @s.then("the files panel lists tests/story-map.md as there")
@@ -89,7 +89,7 @@ def _(s):
 
     @s.when("the Person lists pet-visits' bdd behavior files")
     def _(world):
-        world.files = world.Ticket.load(PET_VISITS.name).files(fidelities=["bdd-behavior"])
+        world.files = world.data_of(world.Ticket.load(PET_VISITS.name).files(fidelities=["bdd-behavior"]))
 
     @s.then("the files panel lists src/mine_spec.py")
     def _(world):
@@ -125,7 +125,7 @@ def _(s):
 
     @s.when("the Person browses checkout-flow's session folder")
     def _(world):
-        world.files = world.Ticket.load(CHECKOUT_FLOW.name).session_files()
+        world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session_files())
 
     @s.then("the files panel lists .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md under its folder")
     def _(world):
@@ -142,8 +142,8 @@ def _(s):
     @s.when("the Person views checkout-flow's story_map files")
     def _(world):
         ticket = world.Ticket.load(CHECKOUT_FLOW.name)
-        world.files = ticket.files(fidelities=[STORY_MAP])[STORY_MAP]
-        world.opened = ticket.read_file(path=STORY_MAP_FILE)
+        world.files = world.data_of(ticket.files(fidelities=[STORY_MAP]))[STORY_MAP]
+        world.opened = world.data_of(ticket.read_file(path=STORY_MAP_FILE))
 
     # Fails today: the story map's formats are declared at .context/story-map.md and .context/story-map.drawio.
     @s.then("the files panel shows the tabs tests/story-map.md and tests/story-map.drawio")
@@ -182,7 +182,7 @@ def _(s):
 
     @s.when("the Person reviews story_map on billing-report")
     def _(world):
-        world.reviewed = world.Ticket.load(BILLING_REPORT.name).finish_review(fidelities=[STORY_MAP]).to_json()
+        world.reviewed = world.data_of(world.Ticket.load(BILLING_REPORT.name).finish_review(fidelities=[STORY_MAP]))
 
     @s.then("billing-report's session log ends with review Stories story_map")
     def _(world):
@@ -201,7 +201,7 @@ def _(s):
 
     @s.when("the session board reads pet-visits")
     def _(world):
-        world.read = world.Ticket.load(PET_VISITS.name).to_json()
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
     @s.then("the story_map tile marks Review ○")
     def _(world):
@@ -235,7 +235,7 @@ def _(s):
 
     @s.when("the session board reads pet-visits")
     def _(world):
-        world.read = world.Ticket.load(PET_VISITS.name).to_json()
+        world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
     @s.then("pet-visits waits in Discovery's Done")
     def _(world):

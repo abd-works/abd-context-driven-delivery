@@ -2303,11 +2303,8 @@ it should list every column with its tickets or items
 <- BacklogItem
 -> Board.current("pet-visits")
 <- Board
--> Board.to_json()
-  -> Column.to_json()
-    -> Card.to_json()
-    <- dict
-  <- dict
+-> data_of(Board)
+  <- the board's data fields, each column and card as its own data
 <- dict
 ```
 
@@ -3975,7 +3972,7 @@ it should take the ticket's name on every ticket tool that acts on one
 // the graph holds no operation this observation calls
 ```
 
-#### whose JSON is compared with the shapes in data.py
+#### whose JSON is compared with the data fields each class marks
 
 ```
 it should return exactly the fields TicketData names
