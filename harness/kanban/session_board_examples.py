@@ -134,7 +134,7 @@ PRICING_RULES = SessionSeed("pricing-rules", "Pricing rules", (MOVED_INTO_SPECIF
 READY_TO_MOVE = SessionSeed("ready-to-move", "Ready to move", (f"{STAMP} done Discovery no-chat",))
 SECOND_SPEC = SessionSeed("second-spec", "Second spec", (MOVED_INTO_SPECIFICATION,))
 ALMOST_SHIPPED = SessionSeed("almost-shipped", "Almost shipped", (f"{STAMP} move Implementation no-chat", f"{STAMP} done Implementation no-chat"))
-SHIPPED_WORK = SessionSeed("shipped-work", "Shipped work", folder="closed")
+SHIPPED_WORK = SessionSeed("shipped-work", "Shipped work", folder="_complete")
 SEARCH_THE_CATALOG = BacklogFileSeed("search-the-catalog.md", "Search the catalog", "An idea.")
 SURFACE_FIXTURE_PROJECT = "cdd-board-surface-fixture"
 SURFACE_FIXTURE_TICKETS = (CHECKOUT_FLOW, BILLING_REPORT, MOVE_ME, BACK_TO_BACKLOG, PRICING_RULES, READY_TO_MOVE, SECOND_SPEC, ALMOST_SHIPPED, SHIPPED_WORK)
@@ -142,7 +142,7 @@ SURFACE_FIXTURE_TICKETS = (CHECKOUT_FLOW, BILLING_REPORT, MOVE_ME, BACK_TO_BACKL
 # The scenarios' own sessions.
 PET_VISITS = SessionSeed("pet-visits", "Pet visits")
 SIGN_UP = SessionSeed("sign-up", "Sign up")
-BROWSE_PETS = SessionSeed("browse-pets", "Browse pets", folder="closed")
+BROWSE_PETS = SessionSeed("browse-pets", "Browse pets", folder="_complete")
 OLD_SPIKE = SessionSeed("old-spike", "Old spike", folder="_archive")
 MAIN = SessionSeed("main", "Main")
 BROKEN = SessionSeed("broken", "Broken")

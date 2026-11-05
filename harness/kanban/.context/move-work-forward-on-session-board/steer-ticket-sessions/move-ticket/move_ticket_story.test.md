@@ -35,7 +35,7 @@
 *And* almost-shipped is not the active ticket
 *When* the Person moves almost-shipped on into Complete
 *Then* almost-shipped shows in Complete
-*And* its folder is in .sessions/closed/almost-shipped
+*And* its folder is in .sessions/_complete/almost-shipped
 
 #### Scenario: Reopen a ticket moved back out of Complete
 

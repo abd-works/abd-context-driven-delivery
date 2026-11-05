@@ -317,7 +317,7 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: its session ends, its folder moves to closed/, and it shows in Complete. leaving names what to do with its work first: commit, push, merge."""
+        """Close ticket: its session ends, its folder moves to _complete/, and it shows in Complete. leaving names what to do with its work first: commit, push, merge."""
         self.leave(leaving or [])
         self._session.close()
         return Ticket(self._session.move_to_closed(), self._board)

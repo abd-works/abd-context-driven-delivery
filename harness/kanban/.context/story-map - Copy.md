@@ -105,7 +105,7 @@ Observed: `Ticket.new` calls `Session.new`; `board-page.ts` `openNewTicket`.
 
 ### (S) Person --> [Close Active Session](move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.py)
 
-Observed: Close on the active ticket asks what to do with its work, then `Ticket.close` calls `Session.close` and moves the folder to `closed/`, so the ticket shows in Complete.
+Observed: Close on the active ticket asks what to do with its work, then `Ticket.close` calls `Session.close` and moves the folder to `_complete/`, so the ticket shows in Complete.
 
 ### (S) Person --> [Restrict Actions To Active Session](move-work-forward-on-session-board/steer-ticket-sessions/restrict-actions-to-active-session/restrict_actions_to_active_session_story.test.py)
 

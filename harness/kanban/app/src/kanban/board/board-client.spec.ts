@@ -31,7 +31,7 @@ const until = async (isReady: () => boolean): Promise<void> => {
 const toastsOf = (page: { store: { state: { toasts: { text: string }[] } } }): string[] => page.store.state.toasts.map(toast => toast.text)
 
 // A session closed under the name of one still open.
-const closedTwinOf = (name: string, title: string) => board.writeSession({ name, title, folder: join('closed', name) })
+const closedTwinOf = (name: string, title: string) => board.writeSession({ name, title, folder: join('_complete', name) })
 
 describe('Display Board', () => {
   describe('Display Connected Status', () => {

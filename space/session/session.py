@@ -37,7 +37,7 @@ _OUTPUT_PATTERN_MARKS = {"*", "{"}
 CONTEXT_FOLDER = ".context"
 _MAIN_SESSION_NAME = "main"
 _LEGACY_REPO_SESSIONS_DIR = "sessions"
-_CLOSED_FOLDER = "closed"
+_COMPLETE_FOLDER = "_complete"
 _ARCHIVE_FOLDER = "_archive"
 _BACKLOG_FOLDER = "_backlog"
 _BOARD_FILE = "_board.json"
@@ -432,18 +432,18 @@ class Session:
         sessions = cls.sessions_dir(repo_path)
         if not sessions.is_dir():
             return []
-        skipped = {_CLOSED_FOLDER, _MAIN_SESSION_NAME}
+        skipped = {_COMPLETE_FOLDER, _MAIN_SESSION_NAME}
         open_folders = [
             folder for folder in sorted(sessions.iterdir())
             if folder.is_dir() and folder.name not in skipped and not folder.name.startswith("_")
         ]
-        closed = sessions / _CLOSED_FOLDER
+        closed = sessions / _COMPLETE_FOLDER
         closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
         return open_folders + closed_folders
 
     @property
     def is_closed(self) -> bool:
-        return self.session_path is not None and self.session_path.parent.name == _CLOSED_FOLDER
+        return self.session_path is not None and self.session_path.parent.name == _COMPLETE_FOLDER
 
     @property
     def session_file(self) -> Path:
@@ -529,14 +529,14 @@ class Session:
         return Path(self._default_output_paths(guidance, practice)[0][0])
 
     def move_folder_to(self, parent: Path) -> Session:
-        """Move this session's folder under ``parent``, such as ``.sessions/closed/``."""
+        """Move this session's folder under ``parent``, such as ``.sessions/_complete/``."""
         parent.mkdir(parents=True, exist_ok=True)
         destination = parent / self.name
         shutil.move(str(self.session_path), str(destination))
         return type(self).load(destination, self.repo_path)
 
     def move_to_closed(self) -> Session:
-        return self.move_folder_to(self.sessions_dir(self.repo_path) / _CLOSED_FOLDER)
+        return self.move_folder_to(self.sessions_dir(self.repo_path) / _COMPLETE_FOLDER)
 
     def move_to_archive(self) -> Session:
         return self.move_folder_to(self.sessions_dir(self.repo_path) / _ARCHIVE_FOLDER)

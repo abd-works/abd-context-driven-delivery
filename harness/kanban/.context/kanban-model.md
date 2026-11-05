@@ -75,7 +75,7 @@ Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built y
 + << composition >> columns: list[Column]
 	// always Backlog, then one Stage for each stage name in `stages.py`, then Complete
 + << composition >> tickets: list[Ticket]
-	// one per folder in `.sessions/` and `.sessions/closed/`; `main` and folders whose names start with `_` are left out
+	// one per folder in `.sessions/` and `.sessions/_complete/`; `main` and the other folders whose names start with `_` are left out
 	-> Session.all_in
 + << aggregation >> backlog_items: list[BacklogItem]
 	// every markdown file in the repository's `.sessions/_backlog/`
@@ -264,7 +264,7 @@ The base type of Ticket and BacklogItem.
 	// `ticket.use_default_practice_root`
 	-> Session.use_default_practice_root
 + close(leaving: list[str]): Ticket
-	// after closing, its session is closed, its folder is in `closed/`, and its column is Complete. leaving names commit, push, merge
+	// after closing, its session is closed, its folder is in `_complete/`, and its column is Complete. leaving names commit, push, merge
 	-> Ticket.leave
 	-> Session.close
 	-> Session.move_to_closed
@@ -458,7 +458,7 @@ The repository the board shows. Only the members the board's work depends on are
 + is_clone: bool
 	// whether git works here: a `.git` folder holding a HEAD, or a linked worktree's `.git` file. An empty `.git` folder only marks a project's root
 + << composition >> sessions: list[Session]
-	// Intended, replaces `Session.all_in`: every session in `.sessions/` and `.sessions/closed/`. The main session is not listed, and folders whose names start with `_` are not sessions
+	// Intended, replaces `Session.all_in`: every session in `.sessions/` and `.sessions/_complete/`. The main session is not listed, and folders whose names start with `_`, other than `_complete`, are not sessions
 + current_session: Session
 	// Intended: the session saved in `.sessions/session.json`, else the main session
 ----
@@ -566,7 +566,7 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 + load(session_path: Path, repo_path: Path): Session
 	// the session kept in a folder, read without becoming current
 + move_folder_to(parent: Path): Session
-	// moves the session's folder under parent, such as `.sessions/closed/`
+	// moves the session's folder under parent, such as `.sessions/_complete/`
 + all_in(repo_path: Path): list[Session]
 	// the repo's work sessions, open then closed: not main, and not the folders the sessions share. Goes when Intended `Repo.sessions` is built
 + backlog_folder(repo_path: Path): Path
