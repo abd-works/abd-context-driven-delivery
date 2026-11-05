@@ -12,6 +12,7 @@ const RUN_NEXT_COMMANDS: Record<string, string> = {
 // Steps the board does itself rather than sending to a chat: fixing violations opens the report, and a review is the
 // person's own approval.
 const STEPS_WITHOUT_CHAT = ['satisfy', 'review']
+const CLOSE_SESSION_COMMAND = '/space:session:close-session'
 
 const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogItemData => !('column' in moved)
 
@@ -146,6 +147,24 @@ export class TicketClient extends TicketClientGenerated {
     this.page.board.select(this.address)
   }
 
+  // A person clicking the ticket: it opens in the details, and the board's commands go to its chat, the one working in its
+  // worktree. With no chat there yet, a new one opens there, after the worktree when the ticket has none. A ticket in
+  // Complete has closed its work, so it gets no new branch, worktree, or chat.
+  async choose(): Promise<void> {
+    this.select()
+    const chat = this.page.chat.chatFor(this.name, this.worktree)
+    if (chat) return this.page.chat.choose(chat.id)
+    if (this.isClosed || !this.page.chat.beginOpening(this.name)) return
+    this.page.chat.startFor(this.name, await this.worktreeOpened())
+  }
+
+  private async worktreeOpened(): Promise<string> {
+    if (this.worktree) return this.worktree
+    const opened = await this.openWorktree()
+    await this.page.reader.refresh()
+    return opened?.worktree ?? ''
+  }
+
   override async moveNext(): Promise<this | null> {
     return this.followed(await super.moveNext())
   }
@@ -203,11 +222,16 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   fillSplit(): Promise<void> {
-    return this.page.chat.fill(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.new with parent ${this.name} for each story.`)
+    return this.page.chat.fill(`Split ticket ${this.name} into child tickets, one per story on its story map: call ticket.create with parent ${this.name} for each story.`, this.name, this.worktree)
+  }
+
+  // Closing ends the chat's session and leaves the ticket where it is; moving it into Complete is what completes it.
+  closeSession(): Promise<void> {
+    return this.page.chat.command(CLOSE_SESSION_COMMAND, this.name, this.worktree)
   }
 
   fillHandoff(): Promise<void> {
-    return this.page.chat.fill(`Write a handoff for ticket ${this.name} with /space-handoff-handoff-session.`)
+    return this.page.chat.fill(`Write a handoff for ticket ${this.name} with /space-handoff-handoff-session.`, this.name, this.worktree)
   }
 
   get canRunNext(): boolean {
@@ -220,7 +244,7 @@ export class TicketClient extends TicketClientGenerated {
     const slug = this.next ?? ''
     if (this.nextAction === 'satisfy') return this.page.panels.openReport(this.name, slug)
     if (this.nextAction === 'review') return this.review(slug)
-    if (this.nextAction !== 'generate') return this.page.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${guidanceSlug(slug)}`))
+    if (this.nextAction !== 'generate') return this.page.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${guidanceSlug(slug)}`), this.name, this.worktree)
     const format = this.stageRequiring(slug)?.defaultFormats[slug]
     await this.page.tileActions.runCommandsOf(this.name, [slug], format ? [format] : [])
   }

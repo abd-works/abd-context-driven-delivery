@@ -129,10 +129,10 @@ Evaluate the current context against this rule (story-map-links-to-markdown):
 - story-map.md:32 `Arrange Board And Details` and story-map.md:172 `Display Violations Band`: a bare "Observed." with no source.
 
 ### `four-to-nine-children` — Fail
-Graph rule: `Steer Ticket Sessions` (story-map.md:54) has 10 Stories, one over the band.
+- story-map.md:54 `Steer Ticket Sessions`: the graph rule finds 10 Stories, one over the band.
 
 ### `branch-on-mechanical-uniqueness` — Fail
-story-map.md:178 `List Ticket Files` says "the folder mode of the files panel", which is the mechanic of `Browse Ticket Folder` (story-map.md:182). Either 178 means the list mode, or the two Stories are one mechanic.
+- story-map.md:178 `List Ticket Files` says "the folder mode of the files panel", which is the mechanic of `Browse Ticket Folder` (story-map.md:182). Either 178 means the list mode, or the two Stories are one mechanic.
 
 ### `story-name-captures-system-mechanic` — Fail
 `View Files` (line 184) does not say which files; `Send Sketch Iterate Or Document` (line 148) names three commands instead of the one thing sent.

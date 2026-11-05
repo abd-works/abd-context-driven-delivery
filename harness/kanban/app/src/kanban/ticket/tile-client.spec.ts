@@ -9,10 +9,10 @@ import { cellPlace, headPlace } from './tile-client'
 import { chipsOf, chosenFormats, defaultPicks } from './tile-formats'
 
 // billing-report is made the active ticket: nothing is recorded on it yet. The project's story map,
-// tests/story-map.md, is its markdown; a spec removes it for a ticket with nothing generated.
+// .context/story-map.md, is its markdown; a spec removes it for a ticket with nothing generated.
 const TICKET = 'billing-report'
 const SLUG = 'stories-story_map'
-const STORY_MAP = 'tests/story-map.md'
+const STORY_MAP = '.context/story-map.md'
 const TWO_SLUGS = [SLUG, 'ddd-bounded_context']
 const PLACE = cellPlace('Discovery', SLUG)
 const OTHER_SLUG = 'ddd-bounded_context'
@@ -131,7 +131,7 @@ describe('Validate Fidelity', () => {
   })
 
   it('should link to the report of the fidelity left with violations', async () => {
-    board.logOn(TICKET, 'validate Stories story_map', 'validate ddd bounded_context graph-rule domain-nouns-only tests/story-map.md:6')
+    board.logOn(TICKET, 'validate Stories story_map', 'validate ddd bounded_context graph-rule domain-nouns-only .context/story-map.md:6')
     board.write(`.sessions/${TICKET}/validation-reports/stories-story-map-20261101T100000.md`, '# Graph rule validation\n')
     board.write(`.sessions/${TICKET}/validation-reports/ddd-bounded-context-20261101T100000.md`, '# Graph rule validation\n')
     const { page, ticket } = await activeTicketPage()

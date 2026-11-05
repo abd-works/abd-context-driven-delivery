@@ -1,6 +1,6 @@
 """Workspace MCP probe for ``/agent-tools-diagnostics``.
 
-Uses the **live** CDD stdio ``McpHost`` already running in Cursor — ping, light invoke, and
+Uses the **live** cdd server's ``McpHost``, the one every chat talks to — ping, light invoke, and
 heavy invoke (``cdd-diagnostic`` fixtures) all call ``host.dispatch`` on that host. Tests
 without a live host use ``probe_agent_tools_standalone`` (one-off host, not used in MCP).
 """

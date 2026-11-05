@@ -9,6 +9,7 @@ import { boardRoutes } from '@cdd/harness/kanban/board'
 import { ticketRoutes } from '@cdd/harness/kanban/ticket'
 import { chatRoutes } from '@cdd/tools/chat/chat'
 import { cddRoutes } from '@src/session-board/cdd-routes'
+import { ClaudeLink } from '@src/session-board/claude-link'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'
 
 // The header forces a preflight, which this server never answers, so a page on another site cannot post here.
@@ -24,15 +25,18 @@ const onlyThisMachine = (port: number) => (request: Request, _response: Response
   next(isLocalHost && !isForeignPost ? undefined : new HttpException(FORBIDDEN, 'Refused: this server answers only its own page and mod on this machine.'))
 }
 
-export function createApp(cdd: CddConnection, port: number, staticRoot: string): Express {
+export function createApp(cdd: CddConnection, port: number, staticRoot: string, claudeLink = new ClaudeLink()): Express {
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
-  // A cdd server keeps the code it started with, so a person restarts it to pick up changed Python. The next call starts
-  // a fresh one.
+  // The one cdd server keeps the code it started with, so a person restarts it to pick up changed Python. It reloads in
+  // place, so every chat connected to it gets the new code too.
   app.post('/api/cdd/restart', async (_request, response) => {
-    await cdd.close()
-    response.json({ is_restarted: true })
+    response.json(await cdd.call<{ is_restarted: boolean }>('cdd.restart', {}))
+  })
+  app.post('/api/claude/open', (request, response) => {
+    claudeLink.open(request.body?.link)
+    response.json({ is_opened: true })
   })
   // The built page names its hashed script, so the text of index.html changes with every build. An open page compares it
   // with the build it loaded and reloads itself on a new one.

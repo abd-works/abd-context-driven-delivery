@@ -25,26 +25,27 @@
 
 ### ticket
 
-- The visual representation of one session on the board, with its title, scope, and *lineage* (the ticket it was split from). It holds no work of its own: every question about work goes to its session.
+- The visual representation of one session on the board, with its title, scope, and *parent* (the ticket it was split from). It holds no work of its own: every question about work goes to its session.
 - Starts in the earliest stage its session shows work in, or Discovery when nothing is done yet. After that it moves only when a person moves it.
+- Its work goes on in its own *worktree*, a checkout of its branch beside the repository, and its *chat* is the chat working in that worktree. Clicking a ticket on the board sends the board's commands to that chat, shown under the ticket's name; when no chat works there yet, the board opens a new chat in the Claude app on the worktree from a `claude://code/new` link, whose prompt asks it to take the ticket's name as its title, opening the worktree first if the ticket has none. The app asks the person to confirm the folder and send, because it starts no session on its own.
 - **Invariant:** a ticket never moves to another column by itself. A person moves it, by dragging it or moving it on and back, whatever its session's work, and the move is written to its session log with the stage it enters.
 
 ### session
 
 - Has the work that is done. It knows its past work by reading its own log, and it finds the files that work produced by asking the knowledge graph.
-- Works in one folder of the repository, its *workpath* (the board calls it the ticket's *root*); the whole repository until a person chooses one. Each practice writes under its own folder: the root a person chose for that practice, or else the workpath plus the practice's default folder.
+- Works in one folder of the repository, its *workpath*; the whole repository until a person chooses one. Each practice writes under its own folder, its *practice root*: the folder a person chose for that practice, or else the workpath plus the practice's default folder.
 - Its *work required* is every fidelity of its active practices. A practice is active until a person turns it off for this session, so tickets can work on different practices on one board.
 - Each fidelity goes through the same actions in order: Generate, Validate, then Review, where a person approves it. Each action on a fidelity is to do, in progress, or done.
-- A fidelity is done when every action is done. Validate is done when its latest activity on that fidelity names no graph-rule violations. The AI-judged rules are not written to the log; the person checks them in Review, which counts only after Validate is done.
+- A fidelity is done when every action is done. Validate is done when its latest activity on that fidelity names no graph-rule violations and the judgment the validating agent added to its latest report fails no rule. The person checks the AI-judged rules in Review, which counts only after Validate is done.
 - *Next action* is what Run next does on a ticket: on the first fidelity not done in its stage or any stage before it, earliest stage first, the first of generate, validate, and review not done. Violations hold a session on that fidelity, because Review needs a clean Validate, so the next action is satisfy until they are fixed.
 
 ### activity
 
-- One thing that happened in a session, read from one line of its log: when, which action on which fidelity and format, or which stage a person moved the ticket into. A move writes `move <stage>`; logs from before that word say `pull <stage>`, and both are read.
+- One thing that happened in a session, read from one line of its log: when, which action on which fidelity and format, or which stage a person moved the ticket into. A move writes `move <stage>`.
 
 ### backlog item
 
-- An idea not yet started: one markdown file per idea in `.sessions/_backlog/`, added by a person. The Backlog column shows them. Starting one asks for the folder its session works in, then opens a ticket for it.
+- An idea not yet started: one markdown file per idea in `.sessions/_backlog/`, added by a person. The Backlog column shows them. Starting one asks for the workpath of its session, then opens a ticket for it.
 - A ticket moved into the Backlog, from any column, keeps its whole folder there as `_backlog/<name>/<name>.md` beside its log and history, and that folder is a backlog item. Starting its item brings the ticket back with that work.
 
 ### the work behind a ticket
@@ -62,20 +63,20 @@ Build order: `Column` → `Stage` → `Backlog` → `Card` → `Ticket` → `Fid
 
 Purpose, seam, dependencies, and constraint: `.context/module-context.md`.
 
-Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built yet, the Board canvas at https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN (Version 72). A class or member whose note starts "Intended" is not in the code yet, and `kanban-model.drawio` leaves it out. Everything else mirrors the code, and the diagram draws exactly that. The modules after `harness/kanban` show only the members the board's work depends on.
+Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built yet, the Board canvas at https://claude.ai/artifact/LGLk189R4aZ14bgwcWRiPN (Version 72). A class or member whose note starts "Intended" is not in the code yet, and `kanban-model.drawio` leaves it out. An Intended member that takes over from a member the code has says so ("Intended, replaces `Ticket.report`"), and the code's member stays in this model and the diagram until the Intended one is built. Everything else mirrors the code, and the diagram draws exactly that. The modules after `harness/kanban` show only the members the board's work depends on.
 
 ## Board
 
-+ Board(repo_root: Path, practices: list[PracticeGuidance])
++ Board(repo: Repo, practices: list[PracticeGuidance])
 ------
-+ repo_root: Path
 + << association >> repo: Repo
-	// the repository the sessions folder sits in
+	// the repository the sessions folder sits in; its root is the one root the board knows
 + practices: list[PracticeGuidance]
 + << composition >> columns: list[Column]
-	// always Backlog, then one Stage for each stage name, then Complete
+	// always Backlog, then one Stage for each stage name in `stages.py`, then Complete
 + << composition >> tickets: list[Ticket]
 	// one per folder in `.sessions/` and `.sessions/closed/`; `main` and folders whose names start with `_` are left out
+	-> Session.all_in
 + << aggregation >> backlog_items: list[BacklogItem]
 	// every markdown file in the repository's `.sessions/_backlog/`
 + cards: list[Card]
@@ -88,22 +89,32 @@ Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built y
 	// the project, the active ticket's name, and every column with its tickets or items; the shape the board app and other IDEs read
 	-> Column.to_json
 + load(repo_root: Path): Board
-	// a board with every practice chosen; the practices are built once per process, because they do not change between tool calls
+	// the board of the repository at repo_root with every practice chosen; the practices are built once per process, because they do not change between tool calls
 + current(): Board
-	// the board of the project being worked on, found the way sessions find it: the checkout holding `CDD_PROJECT`, else the current folder. The `@tool_subject` of the `board.*` tools
+	// the `@tool_subject` of the `board.*` tools: the board of the project the request names. One cdd server answers every chat, so it reads the project from each request's `X-CDD-Project` header and runs the call inside `space.work_state.working_on(project)`, which is what `project_checkout()` returns for that call. Intended: the server passes that project to the tool subject as an argument, so the board takes it as an input instead of reading it from the call
+	-> Board.load
 + show(): Board
 	// `board.show`
 + set_wip_limit(stage: str, limit: int): Board
 	// `board.set_wip_limit`: saved in `.sessions/_board.json`
 + wip_limit(stage: str): int
++ worktree_of(ticket: str): Path
+	// the worktree that has ticket's branch checked out; none when it has none. The worktrees are listed once per board read, because the board is read after every call, and a project that is no git clone has none
+	-> Repo.is_clone
+	-> Repo.list_worktrees
 	// 3 until a person sets it
 + folders(path: str): list[str]
-	// `board.folders`: the folders inside one folder of the repository, as paths from the project, for a person choosing a root; installed packages, caches, and hidden folders are left out
+	// `board.folders`: the folders inside one folder of the repository, as paths from the project, for a person choosing a workpath or a practice root; installed packages, caches, and hidden folders are left out
 + help(practice: str, fidelity: str): dict
-	// `board.help`: the practice, fidelity, and stage, with the overview, guidance, rules, and forge page
+	// `board.help`: the practice, fidelity, and stage, with the overview, guidance, rules, and forge page. Refuses a practice or fidelity it does not have with `PracticeNotFoundError` or `FidelityNotFoundError`
+	-> Board.practice
++ practice(key: str): PracticeGuidance
+	// the practice whose folder name is key, such as `clean_engineering`; raises `PracticeNotFoundError` for one the board does not have
+	-> PracticeGuidance.key
 + ticket(name: str): Ticket
 + backlog_item(title: str): BacklogItem
 + column(name: str): Column
+	// raises `ColumnNotFoundError` for a column the board does not have
 
 ## Column
 
@@ -132,9 +143,9 @@ Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built y
 ------
 + actions: list[str]
 	// generate, validate, and review, in that order, named as the session log names them
-+ practices: list[PracticeGuidance]
 + work_required: list[FidelityGuidance]
-	// every fidelity of every chosen practice whose stage is this stage
+	// every fidelity of every chosen practice whose stage is this stage. It stays while each tile reads its formats from the stage; once Intended `Session.work_required` is built, each ticket gives its own fidelities' formats and this list goes, so one list says what is required
+	-> Board.practices
 + next_stage: Stage
 	// none after Implementation
 + previous_stage: Stage
@@ -146,6 +157,8 @@ Sources: `board.py`, `ticket.py`, `backlog_item.py`, and for what is not built y
 + wip_limit: int
 ----
 + to_json(): dict
+	-> Stage.in_progress
+	-> Stage.done
 	-> Card.to_json
 
 ## Card
@@ -172,21 +185,29 @@ The base type of Ticket and BacklogItem.
 	// never moves to another column by itself
 ------
 + << association >> session: Session
+	// held by the ticket alone: callers ask the ticket, and the ticket asks its session
 + name: str
+	// its session's name; a ticket is an agent toolset, whose own name is the toolset's, so without this it would answer "ticket"
 	-> Session.name
 + title: str
+	-> Session.title
 + scope: str
-+ << association >> lineage: Ticket
+	-> Session.scope
++ << association >> parent: Ticket
+	// the ticket this one was split from
+	-> Session.parent
 + practices: dict[str, bool]
 	// whether this ticket works on each of the board's practices
 	-> Session.active_practices
 + << composition >> progress: list[FidelityProgress]
-	// one per fidelity the board requires, in stage order, read from the session log each time
+	// one per fidelity the board requires, in stage order, read from the session log each time; a judgment in the fidelity's latest report that fails a rule fails a validate the log shows passing
+	-> FidelityProgress.from_log
+	-> Judgment.from_report
 + column: Column
-	// Complete once its session is closed; otherwise the stage named by its latest `move` or `pull` line; before any move, the earliest stage its log shows work in, or Discovery
+	// Complete once its session is closed; otherwise the stage named by its latest `move` line; before any move, the earliest stage its log shows work in, or Discovery
 + is_done: bool
 	// true only in a stage: when a person marked it done there, or, with no mark since entering, when all its enabled work there is done
-+ next: FidelityProgress
++ next_fidelity: FidelityProgress
 	// the first fidelity not done in its stage or any stage before it, earliest stage first, because later work builds on it; none once it is done in its stage
 + next_action: str
 	// generate, validate, or review on the next fidelity; satisfy while it has violations
@@ -194,94 +215,130 @@ The base type of Ticket and BacklogItem.
 	// the timestamp of its log's latest line
 + latest_handoff: str
 + reports: dict[str, str]
+	-> FidelityProgress.reports_among
 + violation_counts: dict[str, int]
-+ root: str
-	// the folder its session works in, as a path from the project; empty for the whole repository
++ workpath: str
+	// its session's workpath, as a path from the project; empty for the whole repository
 	-> Session.workpath
++ worktree: str
+	// the folder of its own worktree, where its chat works; empty while it has none. The board picks the chat working in this folder, or a folder inside it, when a person clicks the ticket
+	-> Board.worktree_of
 + practice_roots: dict[str, PracticeRoot]
 	// where each practice writes, as a path from the project, and whether a person chose it or it is the default
 	-> Session.practice_root
-	-> Session.has_chosen_output_root
+	-> Session.has_chosen_practice_root
++ session_file: str
+	// its session's `session.json` as a path from the project; every command the board sends names it, because a command runs in whichever chat it is sent to
+	-> Session.session_file
 ----
 + move_next(): Ticket
 	// a person's move on, whatever its session's work: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Implementation it closes
+	-> Ticket.close
 + move_previous(): Ticket | BacklogItem
-	// a person's move back: from Done it writes `in-progress <stage>`, from In progress it writes `move <previous stage>` and `done <previous stage>`; out of Complete its session reopens in Implementation's Done; out of Discovery it moves into the Backlog and returns its BacklogItem, its folder kept under `_backlog/`, and it stops being the active ticket
+	// a person's move back: from Done it writes `in-progress <stage>`, from In progress it writes `move <previous stage>` and `done <previous stage>`; out of Complete it reopens, and out of Discovery it returns to the Backlog
+	-> Stage.previous_stage
+	-> Ticket.reopen
+	-> Ticket.return_to_backlog
 + move_to(stage: str, done: bool): Ticket | BacklogItem
-	// a person's drag into a stage's In progress or Done, written as `move <stage>` and the mark; into the Backlog from any column it returns the BacklogItem its folder becomes
-	-> BacklogItem.holding
+	// a person's drag into a stage's In progress or Done, written as `move <stage>` and the mark; into the Backlog from any column it returns to the Backlog
+	-> Ticket.return_to_backlog
++ reopen(): Ticket
+	// out of Complete into Implementation's Done: its session reopens
+	-> Session.reopen
++ return_to_backlog(): BacklogItem
+	// its session closes and its whole folder becomes a backlog item under `_backlog/`, so starting the item brings the ticket back with its work; it stops being the active ticket
+	-> Session.close
+	-> Session.move_to_backlog
+	-> BacklogItem.from_ticket
+	-> BacklogItem.write_if_missing
 + finish_review(fidelities: list[str]): Ticket
-	// `ticket.finish_review`: a person's approval, one `review <Practice> <fidelity>` line each; it counts once that fidelity's latest Validate has passed. Refuses a fidelity the ticket does not have, writing none
+	// `ticket.finish_review`: a person's approval, one `review <Practice> <fidelity>` line each; it counts once that fidelity's latest Validate has passed. Raises `FidelityNotFoundError` for a fidelity the ticket does not have, writing none
 	-> Ticket.record
-+ choose_root(path: str): Ticket
-	// `ticket.choose_root`: the folder its session works in
-	-> Session.change_workpath
++ choose_workpath(path: str): Ticket
+	// `ticket.choose_workpath`: the folder its session works in
+	-> Session.choose_workpath
 + choose_practice_root(practice: str, path: str): Ticket
 	// `ticket.choose_practice_root`: where that practice writes for this ticket
-	-> Session.choose_output_root
+	-> Session.choose_practice_root
 + use_default_practice_root(practice: str): Ticket
 	// `ticket.use_default_practice_root`
-	-> Session.forget_output_root
+	-> Session.use_default_practice_root
 + close(leaving: list[str]): Ticket
-	// after closing, its session is closed and its column is Complete; calls Session.close, then moves the session's folder to `closed/`. leaving names commit, push, merge
+	// after closing, its session is closed, its folder is in `closed/`, and its column is Complete. leaving names commit, push, merge
+	-> Ticket.leave
 	-> Session.close
-	-> Session.move_to
+	-> Session.move_to_closed
 + archive(): Ticket
 	// after archiving, its session is closed and its folder is in `_archive/`, off the board
 	-> Session.close
-	-> Session.move_to
+	-> Session.move_to_archive
 + load(ticket: str): Ticket
-	// the `@tool_subject` of the `ticket.*` tools: finds the ticket a tool call names
-+ new(title: str, scope: str, parent: str, path: str): Ticket
-	// `ticket.new`: a new ticket is in Discovery, in progress, until its log shows work in a later stage. Does not become the current session
+	// the `@tool_subject` of the `ticket.*` tools: finds the ticket a tool call names; ticket holds that ticket's name
++ create(title: str, scope: str, parent: str, path: str): Ticket
+	// `ticket.create`: a new ticket is in Discovery, in progress, until its log shows work in a later stage. Does not become the current session
 	-> Session.new
 + activate(leaving: list[str], opening: list[str]): Ticket
-	// `ticket.activate`: leaving names what to do with the active ticket's work; opening names branch and worktree
+	// `ticket.activate`: the active ticket leaves its work as leaving says, this ticket opens what opening names, and its session becomes current
+	-> Ticket.leave
+	-> Ticket.open_workspace
+	-> Session.switch
++ leave(leaving: list[str])
+	// commits, pushes, and merges as leaving names, only when the ticket's own branch is checked out
+	-> Repo.push_commit
+	-> Repo.close_branch
++ open_workspace(opening: list[str])
+	// opens the ticket's branch and its worktree, as opening names
 	-> Repo.switch_branch
 	-> Repo.switch_worktree
-	-> Session.switch
++ open_worktree(): Ticket
+	// `ticket.open_worktree`: opens its own worktree beside the repository, creating its branch when missing, and leaves the open session as it is; the ticket comes back from a new board read, which lists the new worktree
+	-> Branch.open_in_worktree
 + workspace(): dict
 	// `ticket.workspace`: whether it has its branch and worktree, and whether the ticket being left is on its branch
+	-> Repo.has_branch
+	-> Repo.worktree_for
 + violations(): dict
 	// `ticket.violations`: the rules of every fidelity with violations, each naming its fidelity, a rule the practice's fidelities share listed once
+	-> Ticket.report
 + enable_practice(practice: str, is_enabled: bool): Ticket
-	// `ticket.enable_practice`
-	-> PracticeSessionOutput.enabled
+	// `ticket.enable_practice`: raises `PracticeNotFoundError` for a practice the board does not have
+	-> Session.enable_practice
 + files(fidelities: list[str]): dict
-	// `ticket.files`: the declared files by format of the fidelities asked for, with whether each exists. A named part of a path, such as `{module}`, matches folders at any depth, `.context` folders included. A pattern in the whole repository lists only what the ticket's branch changed
+	// `ticket.files`: the declared files by format of the fidelities asked for, with whether each exists. A named part of a path, such as `{module}`, matches folders at any depth, `.context` folders included. A pattern in the whole repository lists only what the ticket's branch changed. Intended: `Session.files` takes this over and the tool asks the ticket's session
 	-> Session.fidelity_outputs
 	-> Repo.files_changed_on
 + session_files(): list[dict]
 	// `ticket.session_files`: every file in its session folder: the log, handoffs, kept notes, and validation reports
 + read_file(path: str): dict
-	// `ticket.read_file`: refuses a path outside the repository
+	// `ticket.read_file`: no text for a file that is gone, such as one deleted since the board listed it; raises `FileOutsideRepositoryError` for a path outside the repository. Intended: `Session.read_file` takes this over
 + report(fidelity: str): dict
-	// `ticket.report`: the latest report, with the rules broken on the nodes of the graph saved beside it. A report with no saved graph lists no rules and says so
-	-> Graph.write_json
+	// `ticket.report`: the latest report, with the rules broken on the nodes of the graph saved beside it, then each rule its judgment fails. A report with no saved graph lists no graph rules and says so. Intended: `Session.report` takes this over, so the ticket only asks its session
+	-> Judgment.from_report
 + generate_commands(fidelities: list[str], formats: list[str]): list[str]
-	// `ticket.generate_commands`: renders the earlier fidelity first when a format is new to it
+	// `ticket.generate_commands`: renders the earlier fidelity first when a format is new to it; raises `FidelityNotFoundError` for a fidelity the ticket does not have. Intended: `Generate.commands_for` takes this over
++ keep_file(file: Path): Path
+	// keeps a file, such as a started backlog item's idea, with the ticket's work
+	-> Session.keep_file
 + record(entry: str)
 	// appends a timestamped line to the session log
-+ keep(file: Path): Path
-	// moves a file, such as a started backlog item's text, into its session folder
 + to_json(): dict
-	// its fields and column, with its session's work, next action, handoff, reports, roots, and the actions allowed on each fidelity: generate always, validate and review once any action on it is recorded
+	// its fields and column, with its session's work, next action, handoff, reports, workpath, worktree, practice roots, and the actions allowed on each fidelity: generate always, validate and review once any action on it is recorded
 
 ## FidelityProgress
 
-How far one fidelity has got through its stage's actions on one ticket, read from session log lines.
+How far one fidelity has got through its stage's actions on one ticket, read from session log lines. Intended: `Session.action_states` and `Session.violations` take this over, reading the log once through `Activity`, and the ticket asks its session; until then the ticket builds one of these for each fidelity with `from_log`.
 
 + FidelityProgress(fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool)
 ------
 + << association >> fidelity: FidelityGuidance
 + stage: Stage
 + practice: str
+	-> PracticeGuidance.key
 + done_actions: list[str]
 + remaining_actions: list[str]
 + has_violations: bool
 + is_done: bool
 + slug: str
-+ report_files: str
 + rule_descriptions: dict[str, str]
 	// each rule's text by slug, this fidelity's own winning over the practice's
 + state: str
@@ -291,6 +348,23 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 ----
 + from_log(fidelity: FidelityGuidance, stage: Stage, lines: list[str]): FidelityProgress
 	// finds the fidelity by name, never by position
++ reports_among(reports: list[Path]): list[Path]
+	// this fidelity's dated validation reports among the session's, in the order given
++ with_violations(): FidelityProgress
+	// the same progress with its latest validate failed, for a judgment that fails a rule
+
+## Judgment
+
+One rule the judgment in a validation report fails, in one judged file, with its findings in the shape the board shows any violation.
+
+------
++ file: str
++ rule: str
++ findings: list[dict]
+	// each finding at the file and line it names, when it names them
+----
++ from_report(text: str): list[Judgment]
+	// the rules a report's judgment fails, read from the `## Judgment` sections validate.md asks for; none when the report has none
 
 ## BacklogItem : Card
 
@@ -308,13 +382,16 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 ----
 + load(backlog_item: str): BacklogItem
 	// the `@tool_subject` of the `backlog-item.*` tools
-+ add(title: str, text: str): BacklogItem
-	// `backlog-item.add`: writes one markdown file to `_backlog/`, the title as its heading and the text under it
-+ holding(ticket: Ticket, board: Board): BacklogItem
++ create(title: str, text: str): BacklogItem
+	// `backlog-item.create`: writes one markdown file to `_backlog/`, the title as its heading and the text under it
++ from_ticket(ticket: Ticket, board: Board): BacklogItem
 	// the item a ticket moved into the Backlog waits in: `_backlog/<name>/<name>.md`, inside the ticket's kept folder
++ write_if_missing(title: str)
+	// gives an item whose ticket never had an idea file one holding its title, so it shows in the Backlog
 + start(scope: str, path: str): Ticket
-	// `backlog-item.start`: path is the folder the new ticket's session works in. An item a ticket was moved into returns that ticket with its folder, log, and progress; a new item's file moves into the new session folder
-	-> Ticket.new
+	// `backlog-item.start`: path is the workpath of the new ticket's session. An item a ticket was moved into returns that ticket with its folder, log, and progress; a new item's file moves into the new session folder
+	-> Ticket.create
+	-> Ticket.keep_file
 + move_next(): Ticket
 	// a person's move forward: starts the item
 + move_previous(): BacklogItem
@@ -329,7 +406,44 @@ Where one practice writes for a ticket: a value the ticket reports, not stored o
 + root: str
 	// a path from the project
 + is_chosen: bool
-	// a person chose it; otherwise it is the ticket's root plus the practice's default folder
+	// a person chose it; otherwise it is the session's workpath plus the practice's default folder
+----
+
+## ColumnNotFoundError : LookupError
+
+A caller named a column the board does not have.
+
+------
++ column: str
+----
+
+## PracticeNotFoundError : LookupError
+
+A caller named a practice, such as `clean_engineering`, that the board does not have.
+
+------
++ practice: str
++ within: str
+	// what was searched: the board or a ticket
+----
+
+## FidelityNotFoundError : LookupError
+
+A caller named a fidelity, such as `stories-story_map`, that a ticket or a practice does not have.
+
+------
++ fidelity: str
++ within: str
+	// the ticket or practice searched, so a caller can say which request was refused
+----
+
+## FileOutsideRepositoryError : ValueError
+
+A tool asked a ticket for a file outside its repository.
+
+------
++ path: str
++ ticket: str
 ----
 
 # space/repo
@@ -341,8 +455,10 @@ The repository the board shows. Only the members the board's work depends on are
 + Repo(root: Path)
 ------
 + root: Path
++ is_clone: bool
+	// whether git works here: a `.git` folder holding a HEAD, or a linked worktree's `.git` file. An empty `.git` folder only marks a project's root
 + << composition >> sessions: list[Session]
-	// Intended: every session in `.sessions/` and `.sessions/closed/`. The main session is not listed, and folders whose names start with `_` are not sessions
+	// Intended, replaces `Session.all_in`: every session in `.sessions/` and `.sessions/closed/`. The main session is not listed, and folders whose names start with `_` are not sessions
 + current_session: Session
 	// Intended: the session saved in `.sessions/session.json`, else the main session
 ----
@@ -350,6 +466,7 @@ The repository the board shows. Only the members the board's work depends on are
 + files_changed_on(branch: str): list[str]
 	// what the branch changed since it left the default branch, with uncommitted changes when it is checked out
 + worktree_for(branch: str): Worktree
++ list_worktrees(): list[Worktree]
 + switch_branch(name: str): str
 	// commits and pushes the branch being left, and leaves the default branch committed but not pushed
 + switch_worktree(name: str): str
@@ -372,6 +489,13 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 	// the folder of the repository the session works on; every artifact path is relative to it. The main session's is the repository
 + session_path: Path
 	// `.sessions/{name}/`, holding `session.log`, `session.json`, `handoff-*.md`, and `validation-reports/`
++ session_file: Path
+	// its `session.json`, which holds its title, scope, parent, workpath, practice roots, and practices; callers ask for a named value, so the file's layout stays the session's own
++ title: str
++ scope: str
+	// feature, story, or slice
++ parent: str
+	// the name of the session this one was split from
 + << composition >> practices: dict[str, PracticeSessionOutput]
 	// every practice CDD has, by practice key, opened or not
 + active_practices: list[PracticeSessionOutput]
@@ -380,65 +504,82 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 + opened_practices: list[PracticeSessionOutput]
 	// the practices this session has asked for, which its log lines name
 + work_required: list[FidelityGuidance]
-	// Intended, moved from the board: every fidelity of its active practices, in stage order
+	// Intended, replaces `Stage.work_required`: every fidelity of its active practices, in stage order
 	-> Session.active_practices
 	-> PracticeGuidance.fidelities
 + << composition >> activities: list[Activity]
 	// Intended: one for each line of `session.log`, oldest first, read each time
 + latest_handoff: Path
-	// Intended, moved from the ticket: the newest `handoff-*.md`; none when it has none
+	// Intended, replaces `Ticket.latest_handoff`: the newest `handoff-*.md`; none when it has none
 + next_action: GuidanceAction
-	// Intended, moved from the ticket: the first action not done on the first fidelity not done; satisfy while that fidelity has violations, so Run next never validates again over open violations
+	// Intended, replaces `Ticket.next_action`: the first action not done on the first fidelity not done; satisfy while that fidelity has violations, so Run next never validates again over open violations
++ is_closed: bool
++ main_session: str
++ default_wip: int
 ----
 + practice(name: str): PracticeSessionOutput
 + action_states(fidelity: FidelityGuidance): dict[GuidanceAction, ActionState]
-	// Intended: one state for each of Generate, Validate, and Review, in order, read from its activities on this fidelity
+	// Intended, replaces `FidelityProgress.action_states`: one state for each of Generate, Validate, and Review, in order, read from its activities on this fidelity
 	-> Activity.action
 + is_stage_done(stage: StageName): bool
 	// Intended: every required fidelity of that stage has every action done
 	-> Session.action_states
 + violations(fidelity: FidelityGuidance): list[str]
-	// Intended: the violations of its latest Validate on this fidelity
+	// Intended, replaces `FidelityProgress.has_violations`: the violations of its latest Validate on this fidelity
 	-> Activity.violations
 + reports(fidelity: FidelityGuidance): list[Path]
-	// Intended, moved from the ticket: this fidelity's dated files in `validation-reports/`, newest last
+	// Intended, replaces `Ticket.reports`: this fidelity's dated files in `validation-reports/`, newest last
++ report(fidelity: FidelityGuidance): dict
+	// Intended, replaces `Ticket.report`: the latest report with the rules broken on the nodes of the graph saved beside it, then each rule its judgment fails; the `ticket.report` tool asks the ticket's session
+	-> Session.reports
+	-> Graph.saved_violations
+	-> Judgment.from_report
++ files(fidelities: list[FidelityGuidance]): dict
+	// Intended, replaces `Ticket.files`: the declared files by format of each fidelity, with whether each exists
+	-> Session.fidelity_outputs
++ read_file(path: str): str
+	// Intended, replaces `Ticket.read_file`: the text of a file in the repository, none for one that is gone; raises `FileOutsideRepositoryError` for a path outside it
 + artifacts(fidelity: FidelityGuidance): list[Path]
 	// Intended: the files this fidelity produced, for the list, folder, and files on the card
 	-> PracticeSessionOutput.artifacts
-+ fidelity_outputs(guidance: PracticeGuidance): dict
-	// where the active fidelity's artifacts are saved under the workpath, with the overrides in `session.json`
++ fidelity_outputs(guidance: PracticeGuidance, fidelity: FidelityGuidance): dict
+	// where fidelity's artifacts are saved under the workpath, with the overrides in `session.json`; the practice's active fidelity when none is named. Naming it leaves the practice as it is, because the board's practices are shared by every call
 	-> FidelityGuidance.outputs
 + active_name(repo_path: Path): str
 	// the session saved as open on the repository; main when none is named. The one place that reads `session` from `.sessions/session.json`
-+ change_workpath(workpath: Path)
-	// work in another folder of the repository from now on, saved in `session.json`
-+ choose_output_root(practice: str, root: Path)
-	// write that practice's files under root, saved in `session.json` relative to the workpath
-+ forget_output_root(practice: str)
-	// write that practice's files under its default root again
-+ has_chosen_output_root(practice: str): bool
++ choose_workpath(workpath: Path)
+	// work in another folder of the repository from now on, saved in `session.json`; a chosen practice root keeps naming the same folder
++ choose_practice_root(practice: str, root: Path): Path
+	// write that practice's files under root, saved in `session.json` relative to the workpath, and return the practice root now in use. Raises `PracticeRootInContextError` for a root inside a `.context` folder, because the practice's documents already go in its root's own `.context`
++ use_default_practice_root(practice: str)
+	// write that practice's files under its default practice root again
++ has_chosen_practice_root(practice: str): bool
 + practice_root(guidance: PracticeGuidance, practice: str): Path
-	// the root a person chose for the practice, else the workpath plus the practice's default folder from `.context/config.json` or the practice itself
-+ new(name: str, workpath: Path, repo_path: Path, fields: dict, is_current: bool): str
-	// opens a session folder with `fields` in its `session.json`; is_current False leaves the current session as it is
-+ at(session_path: Path, repo_path: Path): Session
+	// the practice root a person chose, else the workpath plus the practice's default folder from `.context/config.json` or the practice itself
++ enable_practice(practice: str, is_enabled: bool)
+	// turn a practice on or off for this session, saved in `session.json`
+	-> PracticeSessionOutput.enabled
++ keep_file(file: Path): Path
+	// moves a file, such as a started backlog item's idea, into the session folder, where it stays with the session's work until it becomes lasting context
++ new(name: str, workpath: Path, repo_path: Path, is_current: bool, title: str, scope: str, parent: str): str
+	// opens a session folder with its title, scope, and parent in `session.json`; is_current False leaves the current session as it is
++ load(session_path: Path, repo_path: Path): Session
 	// the session kept in a folder, read without becoming current
-+ fields: dict
-	// what `session.json` holds, read each time
-+ save_fields(fields)
-+ move_to(parent: Path): Session
++ move_folder_to(parent: Path): Session
+	// moves the session's folder under parent, such as `.sessions/closed/`
 + all_in(repo_path: Path): list[Session]
-	// the repo's work sessions, open then closed: not main, and not the folders the sessions share
+	// the repo's work sessions, open then closed: not main, and not the folders the sessions share. Goes when Intended `Repo.sessions` is built
 + backlog_folder(repo_path: Path): Path
 + board_file(repo_path: Path): Path
 + timestamp(moment: datetime): str
-+ is_closed: bool
 + move_to_closed(): Session
+	-> Session.move_folder_to
 + move_to_archive(): Session
+	-> Session.move_folder_to
 + move_to_backlog(): Session
+	-> Session.move_folder_to
 + reopen(): Session
-+ main_session: str
-+ default_wip: int
+	-> Session.move_folder_to
 + close()
 	// ends the session; when it is the current one, the repository goes back to the main session
 + log_guidance_action(action: str, guidance_items: list)
@@ -450,16 +591,24 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 ------
 + name: str
 + << association >> guideline: PracticeGuidance
-	// loaded on first use, like output_paths and graph, because the board reads enabled after every cdd call and needs none of them
+	// loaded on first use, like graph, because the board reads enabled after every cdd call and needs neither
 + << composition >> graph: Graph
 	// the knowledge graph of this practice's artifacts in the session
-+ output_paths: list
 + enabled: bool
 	// whether the session works on this practice; setting it saves it in the `practices` field of `session.json`. True until set
 ----
 + artifacts(fidelity: FidelityGuidance): list[Path]
 	// Intended: asks this practice's knowledge graph which files that fidelity's nodes came from
 	-> Graph.files_of
+
+## PracticeRootInContextError : ValueError
+
+A practice root was chosen inside a `.context` folder, which would put the practice's code among its documents.
+
+------
++ practice: str
++ root: Path
+----
 
 ## ActionState : Enum
 
@@ -486,7 +635,7 @@ Intended: a value object, so readers of the session log get typed values instead
 + paths: list[Path]
 + violations: list[str]
 	// the `graph-rule` entries on a validate line
-+ entered_stage: str
++ entered_stage: StageName
 	// the stage a person moved the ticket into; none on an action line
 ----
 + from_log_line(line: str, session: Session): Activity
@@ -500,6 +649,8 @@ The practices, their fidelities, and their rules: what a ticket has to get done.
 ## PracticeGuidance
 
 ------
++ key: str
+	// the practice's folder name, such as `clean_engineering`: how session log action lines and `session.json` name the practice
 + << composition >> fidelities: list[FidelityGuidance]
 + << composition >> rules: RulesCollection
 	// the rules shared by every fidelity of this practice
@@ -510,7 +661,7 @@ The practices, their fidelities, and their rules: what a ticket has to get done.
 ------
 + name: str
 + stage: str
-	// which stage requires this fidelity, read from the fidelity's section in the practice markdown. A StageName in place of a string is still to come
+	// which stage requires this fidelity, one of the names in `stages.py`, read from the fidelity's section in the practice markdown. Intended: a `StageName` in place of the string
 + outputs: dict
 	// the artifacts this fidelity produces: a file, pattern, or folder per format, relative to the session's workpath
 + << composition >> rules: RulesCollection
@@ -533,7 +684,7 @@ The practices, their fidelities, and their rules: what a ticket has to get done.
 
 ## StageName : Enum
 
-Intended: an enum in place of the three string constants in `stages.py`, so a stage can only be one of these. `STAGE_NAMES` in `harness/kanban/board.py` goes, because it repeats them.
+Intended: an enum in place of the three string constants in `stages.py`, so a stage can only be one of these. The board already builds its stage columns from those constants rather than a list of its own.
 
 ------
 + DISCOVERY
@@ -561,6 +712,9 @@ Intended: an enum in place of the three string constants in `stages.py`, so a st
 	// the agent writes the fidelity's artifacts where its outputs say. A guidance string can carry its format (`stories-scenarios format=python`). Reads the rules without running Validate, so it logs only its own `generate` line
 	-> Validate.rules_of
 	-> Session.fidelity_outputs
++ commands_for(session: Session, fidelities: list[FidelityGuidance], formats: list[str]): list[str]
+	// Intended, replaces `Ticket.generate_commands`: the commands that generate fidelities in formats, rendering the earlier fidelity first when a format is new to it
+	-> Session.files
 
 ## Validate : GuidanceAction
 
@@ -590,7 +744,9 @@ The knowledge graph: the artifacts read into nodes, with each practice's rules r
 	-> Node.fidelity
 	-> Node.source
 + write_json(path: str): str
-	// the graph with every node's rule hits; `violations_from_graph_json_files` reads it back
+	// the graph with every node's rule hits, saved beside the report Validate writes
++ saved_violations(path: Path, practice: str): dict[str, list[dict]]
+	// Intended, replaces the Validate action's module functions `violations_from_graph_json_files` and `violations_by_rule`: each broken rule's hits in a graph `write_json` saved, by rule slug, so the graph that writes the file also reads it back
 
 ## PracticeGraph
 
@@ -623,18 +779,20 @@ The knowledge graph: the artifacts read into nodes, with each practice's rules r
 
 The schema rules for one node. Violations live on each GraphRule.
 
-+ GraphRulesCollection(node: Node, entries: dict[str, GraphRule], parent)
++ GraphRulesCollection(node: Node, entries: dict[str, GraphRule])
 ------
 + node: Node
 + << composition >> entries: dict[str, GraphRule]
-----
-+ slugs(): list[str]
-+ violations(): list[tuple[str, str]]
++ slugs: list[str]
++ violations: list[tuple[str, str]]
+	// each violation on the node as its rule's slug and its message
 	-> GraphRule.violations
-+ failed_slugs(): list[str]
-+ passing_slugs(): list[str]
-+ graph_rules(): Iterator[GraphRule]
-+ record_violation(slug: str, message: str, file: str, start: int, end: int)
++ failed_slugs: list[str]
++ passing_slugs: list[str]
++ graph_rules: list[GraphRule]
+----
++ record_violation(slug: str, message: str)
+	// keeps the violation at the node's source; a slug the node has no rule for records nothing, since the rule does not apply to it
 	-> GraphRule.record
 + clear_violations()
 
@@ -650,17 +808,18 @@ One schema rule on a node, the guidance Rule of the same slug with its executabl
 + violations: list[str]
 + hits: list[dict]
 	// each violation's message, file, start, and end
++ is_failing: bool
 ----
-+ record(message: str, file: str, start: int, end: int)
++ record(message: str, source: Source)
+	// keeps message as a violation at source, the node's place in its file
 + clear_violations()
-+ failing(): bool
 
 ---
 
 **Open**
 
 - Starting a ticket's session (its folder and branch) stays with `space/session` and `space/repo`; the board reads what they write and does not call them.
-- The path of a violation: `Validate.validate` -> `Graph.load_files` -> `PracticeGraph.apply_rules` -> `Node.rules`, on a `GraphRule`, saved by `Graph.write_json` beside the report, and read back by `Ticket.report`.
+- The path of a violation: `Validate.validate` -> `Graph.load_files` -> `PracticeGraph.apply_rules` -> `Node.rules`, on a `GraphRule`, saved by `Graph.write_json` beside the report, and read back for `Ticket.report` by the Validate action's reader until Intended `Graph.saved_violations` and `Session.report` take that over.
 - `Validate` with an explicit graph file and paths filters its report to those paths; the saved graph holds the whole file, so `Ticket.report` lists every violation of the practice in it.
 - Review is the ticket's own operation, `Ticket.finish_review`, not an action an agent runs: a person approves on the board, and the ticket writes the `review` line it later reads back like any other action line.
 - A person's move to Done is written as `done <stage>` and back as `in-progress <stage>`. The latest mark since entering the stage wins; with no mark, `is_done` is derived from progress.
@@ -668,9 +827,10 @@ One schema rule on a node, the guidance Rule of the same slug with its executabl
 - `Stage.to_json` gives each fidelity's formats and `default_formats`, which is how a tile knows which chip to open with.
 - Locking is page state, not a board rule: with Active session only on, the board app turns off what sends commands to a chat for every ticket other than `Board.active`; moving a card stays on. The page reads `active` from `Board.to_json` and holds the switch itself.
 - Ticket-wide Run sends one action across a ticket's enabled practices at its current stage. It is a command the board app sends to a chat, so it needs no operation here beyond `Ticket.practices`.
-- `FidelityProgress` and `Stage.work_required` stay until `Session` takes over what they do, and the ticket stops reading the log itself.
+- `FidelityProgress` and `Stage.work_required` stay until Intended `Session.action_states`, `Session.violations`, and `Session.work_required` are built; then the ticket stops reading the log itself and one list says what is required.
 - `Session.fidelity_outputs` reads the session it is called on, so `Repo.sessions` must give sessions that can be read without one becoming the current session. `Session` today has one in-memory current, and opening one saves it as current.
-- `space/repo` already has a class named `Ticket`, a GitHub issue. It is a different concept from the board's Ticket and needs a different name in one of the two modules.
+- The GitHub issue class in `space/repo` is `ProjectTicket`, with `ProjectTicketState` and `ProjectTicketNotFoundError`, so `Ticket` names only the board's card.
 - Generate takes its format inside the guidance string (`format=python`) rather than as an argument of its own; a separate `format` argument is still to be decided.
-- One word each is still to be chosen for two ideas: the folder a session works in is the ticket's `root` and the session's `workpath`, and the folder a practice writes under is a `practice root` on the ticket and an `output root` on the session. `move_to` also names both a column move (`Ticket`) and a folder move (`Session`).
-- `Ticket` carries files, reports, roots, and review alongside its moves; the Intended members on `Session` are where files, reports, and the log reading go.
+- One word each: the folder a session works in is its workpath, on the ticket and the session alike, and the folder a practice writes under is its practice root. A card moves with `move_next`, `move_previous`, and `move_to`; a session's folder moves with `move_folder_to`. Every object a tool call names is found with `load`, except the board, found with `current` until the project reaches it as an argument.
+- `Ticket` holds a card's moves, its review, and its lifecycle; its files, file reading, report, and generate commands are Intended to move to `Session.files`, `Session.read_file`, `Session.report`, and `Generate.commands_for`. The `ticket.*` tools keep their names because the board app and the chat pane send them, and each will ask the ticket's session.
+- Left as they are, each for a reason another rule gives: `Ticket.create` and `Session.new` take every field a new ticket or session is made from, which `limit-operation-parameters` allows a creation factory. `Ticket.name` stays beside `Ticket.session`, because a ticket is an agent toolset whose own name would otherwise answer "ticket". `Ticket.load(ticket)` keeps its parameter name, because the tool layer makes it the argument every `ticket.*` call sends and renaming it changes every call the board app and chat pane make. `Board.current` reads the project from the call rather than taking it as an input, because a `@tool_subject` takes only the tool's own arguments; passing the project needs that change in `harness/agent_tools`.

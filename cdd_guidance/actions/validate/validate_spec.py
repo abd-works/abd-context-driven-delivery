@@ -221,7 +221,17 @@ with description("a validate action on practice guidance") as self:
         # The session board lists the agent's judgment beside the graph's hits only when it is written in this shape.
         with it("should tell the agent to write its judgment under the judged file, one heading per failed rule"):
             report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
-            expect(report).to(contain("## Judgment — `path/of/the/judged/file.md`\n\n   ### `rule-slug` — Fail\n   - story-map.md:86"))
+            expect(report).to(contain("## Judgment — `harness/kanban/.context/story-map.md`\n\n   ### `rule-slug` — Fail\n   - story-map.md:86"))
+
+        # The board opens a finding's file in this project, so a path anywhere else cannot be opened.
+        with it("should tell the agent to name the judged file by its path from the project's root"):
+            report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
+            expect(report).to(contain("as a path from the project's root"))
+
+        # The board opens each finding at one line, so a range or a second place would be lost.
+        with it("should tell the agent to give each finding one file and one line"):
+            report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
+            expect(report).to(contain("a finding at two places is two bullets"))
 
         # The session board reads a fidelity's latest validate line, so a second, clean line would hide the violations.
         with context("that has been validated"):
@@ -357,3 +367,31 @@ with description("a validate action on practice guidance") as self:
             report = self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
             saved = next((self.session / "validation-reports").glob("ddd-tactics-*.md"))
             expect(report).to(contain(str(saved)))
+
+
+with description("two validate calls running at once on one action") as self:
+    with before.each:
+        import threading
+
+        from validate.validate import Validate
+
+        action = Validate()
+        self.wrong = []
+
+        def validate_repeatedly(slug, own_rule, other_rule):
+            for _ in range(4):
+                report = action.validate(slug)
+                if own_rule not in report or other_rule in report:
+                    self.wrong.append(slug)
+
+        calls = [
+            threading.Thread(target=validate_repeatedly, args=("stories-story-map", "verb-noun-format", "hide-inner-details")),
+            threading.Thread(target=validate_repeatedly, args=("clean-engineering-model", "hide-inner-details", "verb-noun-format")),
+        ]
+        for call in calls:
+            call.start()
+        for call in calls:
+            call.join()
+
+    with it("should check each call against the rules of its own guidance"):
+        expect(self.wrong).to(equal([]))

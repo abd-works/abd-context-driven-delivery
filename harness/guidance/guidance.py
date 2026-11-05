@@ -186,6 +186,12 @@ class PracticeGuidance(Guidance):
         """Shared rules as a collection."""
 
     @property
+    def key(self) -> str:
+        """The practice's folder name, such as `clean_engineering`: how session log action lines and session.json name
+        the practice."""
+        return Path(inspect.getfile(type(self))).parent.name
+
+    @property
     def context_index_key(self) -> str:
         return AssetLocator(self, "").class_file_directory().name
 
@@ -610,19 +616,9 @@ class FidelityGuidance(Guidance):
             self.format = self._default_format
 
     @property
-    def output_root(self) -> str:
-        """The folder this fidelity's outputs sit under, from its yaml."""
-        return str(self.outputs.get("root", ""))
-
-    @property
-    def output_files(self) -> dict[str, str | list[str]]:
-        """Each format's file, pattern, or folder, from its yaml."""
-        return {label: value for label, value in self.outputs.items() if label != "root"}
-
-    @property
     def default_output(self) -> str | list[str]:
         """The output of this fidelity's default format."""
-        return self.output_files.get(self.default_format, "")
+        return self.outputs.get(self.default_format, "")
 
     @property
     def clean_engineering(self) -> FidelityGuidance | None:

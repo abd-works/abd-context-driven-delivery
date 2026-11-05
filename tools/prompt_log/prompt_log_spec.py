@@ -22,7 +22,8 @@ _CURSOR = _REPO_ROOT / ".cursor"
 _RULE = _CURSOR / "rules" / "character-driven-development.mdc"
 _SKILL = _CURSOR / "skills" / "practices" / "bdd" / "bdd-behavior" / "SKILL.md"
 _AGENT = _CURSOR / "agents" / "engineer.md"
-_BEHAVIOR_RULE = _CURSOR / "rules" / "practices" / "bdd" / "behavior.mdc"
+_BEHAVIOR_RULE = _CURSOR / "rules" / "practices" / "bdd" / "bdd-behavior.mdc"
+_BEHAVIOR_RULE_CONTENT = "#### Rules\n\n- **`state-not-when`** — Nest by the state that enables an observation.\n"
 
 
 with description("a path classifier for prompt audit"):
@@ -66,7 +67,7 @@ with description("a prompt log hook"):
                 expect(out).to(equal({"continue": True}))
                 expect(text).to(contain("beforeSubmitPrompt"))
                 expect(text).to(contain("[rule]"))
-                expect(text).to(contain("behavior.mdc"))
+                expect(text).to(contain("bdd-behavior.mdc"))
                 expect(text).to(contain("[skill]"))
                 expect(text).to(contain("SKILL.md"))
 
@@ -74,7 +75,7 @@ with description("a prompt log hook"):
         with it("should record the rule path and content size"):
             with tempfile.TemporaryDirectory() as tmp:
                 log_file = Path(tmp) / "prompt-log.txt"
-                content = _BEHAVIOR_RULE.read_text(encoding="utf-8")
+                content = _BEHAVIOR_RULE_CONTENT
                 payload = {
                     "hook_event_name": "beforeReadFile",
                     "conversation_id": "conv-test-002",
@@ -91,7 +92,7 @@ with description("a prompt log hook"):
                 expect(out).to(equal({"permission": "allow"}))
                 expect(text).to(contain("beforeReadFile"))
                 expect(text).to(contain("READ [rule]"))
-                expect(text).to(contain("behavior.mdc"))
+                expect(text).to(contain("bdd-behavior.mdc"))
                 expect(text).to(contain(f"size: {len(content)} chars"))
 
     with context("that handles a preToolUse Read of a skill file"):

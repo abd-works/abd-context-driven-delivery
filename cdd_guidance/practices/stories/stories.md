@@ -35,9 +35,8 @@ Whenever you define or change user interactions and resulting system behavior, a
 default_format: markdown
 stage: discovery
 outputs:
-  root: tests
-  markdown: story-map.md
-  drawio: story-map.drawio
+  markdown: ".context/story-map.md"
+  drawio: ".context/story-map.drawio"
 ```
 
 #### Overview
@@ -93,11 +92,10 @@ If this change will not stay here, follow `practices/stories.mdc`.
 default_format: python
 stage: specification
 outputs:
-  root: tests
   python: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.py"
   typescript: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts"
-  markdown: "{epic}/{sub-epic}/{story}/{story_snake}_story.test.md"
-  realization: "{scope}-realization.md"
+  markdown: ".context/{epic}/{sub-epic}/{story}/{story_snake}_story.test.md"
+  realization: ".context/{scope}-scenario-realization.md"
 ```
 
 #### Overview
@@ -158,7 +156,9 @@ After the Given/When/Then text is agreed, **produce scenario realizations by def
 - **Markdown:** a ` ```realization ` fenced block immediately under the **When** or expandable **Then** step (`templates/md/scenarios.md`).
 - **Code channels:** the stories model carries `realization` on each interaction in regenerable spec data and `#` call-graph comments under the matching `when` / `then` in story tests (`practices/stories/model`).
 
-Place one `{scope-kebab-case}-realization.md` per scope when the user wants a consolidated document; otherwise keep realizations inline in the scenario file. Realizations are specification evidence — they do not replace executable acceptance tests.
+Place one `{scope-kebab-case}-scenario-realization.md` per scope when the user wants a consolidated document; otherwise keep realizations inline in the scenario file. Realizations are specification evidence — they do not replace executable acceptance tests.
+
+A scenario realization is not the BDD realization. The scenario realization follows the story map: each Scenario's Given/When/Then, with the call graph under the step that acts. The BDD realization (`@bdd` `#realization`, `{scope}-bdd-realization.md`) follows the spec files: each `it should`, with the call graph its test runs. The two use the same `->` / `<-` notation and name the same operations, so they live in separate files, because a reader has to know whether a graph realizes a Scenario or an observation.
 
 ---
 
@@ -169,7 +169,6 @@ default_format: python
 stage: implementation
 clean_engineering: code
 outputs:
-  root: tests
   python:
     - "{sub_epic_slug}.story.shared.py"
     - "{sub_epic_slug}.story.domain.spec.py"
@@ -195,7 +194,7 @@ Ask which concrete case proves the outcome, which system already holds the start
 
 Apply `@stories` `#scenarios` § Guidance and § Rules to acceptance tests. Use the **Test shape ladder** in the `testing-approach` rule under `clean_engineering/rules/`: start with the real application when it is available, use deterministic external-system stubs while developing, and replace them with end-to-end boundaries when requested.
 
-When scenario realizations exist (inline or `{scope}-realization.md`), treat them as the agreed call graph for the **When** under test: implement and assert through the outermost domain entry point and named collaborators the realization names — do not re-route through test-only helpers that the realization stripped away.
+When scenario realizations exist (inline or `{scope}-scenario-realization.md`), treat them as the agreed call graph for the **When** under test: implement and assert through the outermost domain entry point and named collaborators the realization names — do not re-route through test-only helpers that the realization stripped away.
 
 **Develop the behaviour, not only the test.** Acceptance-test work owns both the executable specification and the production code that satisfies it. Represent each named scenario example as one code fixture, and do not invent fixture values the scenario does not name. Take one Scenario at a time: write the failing acceptance test, invoke the Clean Engineering companion at `code` fidelity, implement the smallest production change that can pass, rerun the test, refactor when it is green, and then continue to the next behaviour. After two failed fix attempts, diagnose the failure before changing more code.
 

@@ -4,8 +4,28 @@ import type { BoardApi } from '../board/board-api'
 import type { BoardStore } from '../board/board-store'
 
 const SHOWN_COMMAND = 80
+// A ticket's new chat is not opened again for this long, while the person confirms it and it checks in.
+const STARTING_CHAT_MILLISECONDS = 120_000
+// The Claude app opens a new session on a folder from this link, with its prompt filled in for the person to send.
+const NEW_CHAT_LINK = 'claude://code/new'
 
-type CommandKind = 'submit' | 'fill' | 'command' | 'restart_cdd'
+// A folder as the mod and as git each write it, so the two compare: one kind of slash, no trailing one, one case.
+const folderKey = (folder: string): string => folder.replaceAll('\\', '/').replace(/\/+$/, '').toLowerCase()
+
+// A chat works in a checkout from its root or from any folder inside it, since its working folder can move.
+export const isWorkingIn = (chatFolder: string, checkout: string): boolean => {
+  if (!chatFolder || !checkout) return false
+  const [chat, root] = [folderKey(chatFolder), folderKey(checkout)]
+  return chat === root || chat.startsWith(`${root}/`)
+}
+
+// The link that opens a ticket's new chat on its worktree. The link names no title, so its prompt asks for the ticket's.
+export const newChatLink = (ticket: string, worktree: string): string => {
+  const prompt = `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket.`
+  return `${NEW_CHAT_LINK}?folder=${encodeURIComponent(worktree)}&q=${encodeURIComponent(prompt)}`
+}
+
+type CommandKind = 'submit' | 'fill' | 'command'
 
 const shortened = (text: string): string => (text.length > SHOWN_COMMAND ? `${text.slice(0, SHOWN_COMMAND)}…` : text)
 
@@ -14,6 +34,7 @@ export class ChatClient {
   constructor(
     private readonly store: BoardStore,
     private readonly api: BoardApi,
+    private readonly openLink: (link: string) => void,
   ) {}
 
   get canSend(): boolean {
@@ -34,6 +55,39 @@ export class ChatClient {
     const picked = chats.find(chat => chat.id === pickedChat) ?? chats[0]
     this.store.change({ chats, targetChat: picked?.id ?? null })
     await this.readMessages()
+  }
+
+  // A ticket's chat: the connected chat working in its worktree or a folder inside it, else the chat titled by the ticket,
+  // which the board names it when it opens it. A chat whose mod is older than the folder it works in sends none.
+  chatFor(ticket: string, worktree: string): ChatData | undefined {
+    const { chats } = this.store.state
+    return chats.find(chat => isWorkingIn(chat.folder, worktree)) ?? chats.find(chat => !chat.folder && chat.name === ticket)
+  }
+
+  // Opening a ticket's worktree and then its chat in the Claude app takes a while, so the click shows at once that the chat
+  // is on its way. Until it checks in, clicking the ticket again opens no second one.
+  beginOpening(ticket: string): boolean {
+    if (this.isOpeningFor(ticket)) return false
+    this.store.change({ startingChats: { ...this.store.state.startingChats, [ticket]: Date.now() } })
+    this.store.toast(`Opening the chat of ${ticket}…`)
+    return true
+  }
+
+  isOpeningFor(ticket: string): boolean {
+    const asked = this.store.state.startingChats[ticket]
+    if (asked === undefined || Date.now() - asked >= STARTING_CHAT_MILLISECONDS) return false
+    return !this.store.state.chats.some(chat => chat.name === ticket)
+  }
+
+  // A ticket's new chat opens in the Claude app on the ticket's worktree; the app asks the person to confirm the folder and send.
+  startFor(ticket: string, worktree: string): void {
+    if (!worktree) {
+      const { [ticket]: _given, ...starting } = this.store.state.startingChats
+      this.store.change({ startingChats: starting })
+      return
+    }
+    this.openLink(newChatLink(ticket, worktree))
+    this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
   }
 
   choose(chat: string): void {
@@ -71,22 +125,22 @@ export class ChatClient {
 
   // A prompt that starts with / is a command, which runs the skill. The whole command is named, because what is cut off
   // is often the session it ran on.
-  command(text: string): Promise<void> {
+  command(text: string, ticket = '', worktree = ''): Promise<void> {
+    this.chooseChatFor(ticket, worktree)
     return this.send('command', text, `Sent to ${this.targetName}: ${text}`)
   }
 
   // A fill waits for the chat while a turn runs, so the person is told it has not reached the prompt yet.
-  fill(text: string): Promise<void> {
+  fill(text: string, ticket = '', worktree = ''): Promise<void> {
+    this.chooseChatFor(ticket, worktree)
     const wait = this.target?.is_busy ? ' It goes in when this turn ends.' : ''
     return this.send('fill', text, `Queued for the prompt of ${this.targetName}, for you to review: ${shortened(text)}${wait}`)
   }
 
-  // Every chat runs its own cdd server, which keeps the code it started with, so each connected chat is asked to restart
-  // its own.
-  async restartCdd(): Promise<void> {
-    const { chats } = this.store.state
-    for (const chat of chats) await ChatClientGenerated.named(this.api, chat.id).send('restart_cdd', '')
-    if (chats.length) this.store.toast(`Asked ${chats.length === 1 ? chats[0]!.name || chats[0]!.id : `${chats.length} chats`} to restart cdd`)
+  // A ticket's command goes to the chat working in its worktree when one is connected, whichever chat was picked last.
+  private chooseChatFor(ticket: string, worktree: string): void {
+    const chat = this.chatFor(ticket, worktree)
+    if (chat && chat.id !== this.store.state.targetChat) this.choose(chat.id)
   }
 
   private async send(kind: CommandKind, text: string, sent: string): Promise<void> {

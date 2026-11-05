@@ -13,6 +13,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.bdd.bdd import Bdd
+from cdd_guidance.practices.bdd.model.code_spec_model import TypeScriptBddModel
 
 _CART_PYTHON = '''\
 from expects import equal, expect
@@ -115,6 +116,16 @@ a cart
     ```
 """
 
+_PLAYWRIGHT = """\
+import { expect, test } from '@playwright/test'
+
+test.describe('a receipt', () => {
+  test('should print the store name', async ({ page }) => {
+    await expect(page.getByText('SHOP')).toBeVisible()
+  })
+})
+"""
+
 _PYTHON_ASSERT = "expect(self.cart.items).to(equal([]))"
 
 
@@ -163,6 +174,13 @@ with description("a spec rendered to code"):
                     expect(_render("typescript", _HAND_WRITTEN_TYPESCRIPT, "typescript")).to(
                         equal(_HAND_WRITTEN_TYPESCRIPT)
                     )
+
+        with context("with playwright's test.describe and test blocks"):
+            with it("should read each test under its test.describe as an observation"):
+                spec = TypeScriptBddModel().parse_code(_PLAYWRIGHT)
+                expect([(node.type, node.name) for node in spec.behavior_nodes()]).to(
+                    equal([("Description", "a receipt"), ("Observation", "should print the store name")])
+                )
 
     with context("that was read from a sketch"):
         with context("that is rendered to python"):

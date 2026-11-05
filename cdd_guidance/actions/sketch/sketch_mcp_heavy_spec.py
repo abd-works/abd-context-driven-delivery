@@ -20,7 +20,7 @@ with description("an MCP sketch prompt"):
         from harness.mcp.mcp_server import McpHost
 
         repo = Path(__file__).resolve().parents[3]
-        host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
+        host = McpHost.standup(repo=repo)
         prose = "Three client perspectives: prospect onboarding and active account."
         result = str(host._runtime.invoke_prompt("sketch.sketch", {"guidance": prose}))
         expect(result).to(contain("Conduct a relentless grilling interview"))
@@ -30,7 +30,7 @@ with description("an MCP sketch prompt"):
         from harness.mcp.mcp_server import McpHost
 
         repo = Path(__file__).resolve().parents[3]
-        host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
+        host = McpHost.standup(repo=repo)
         result = str(
             host._runtime.invoke_prompt(
                 "sketch.sketch",
@@ -43,7 +43,7 @@ with description("an MCP sketch prompt"):
         from harness.mcp.mcp_server import McpHost
 
         repo = Path(__file__).resolve().parents[3]
-        host = McpHost.standup(repo / ".cursor" / "mcp.json", repo=repo)
+        host = McpHost.standup(repo=repo)
         result = str(
             host._runtime.invoke_prompt(
                 "sketch.sketch",

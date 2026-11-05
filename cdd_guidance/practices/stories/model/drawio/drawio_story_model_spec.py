@@ -125,6 +125,33 @@ with description("a DrawIO Story Map") as self:
                 equal(["Customer"])
             )
 
+    # draw.io saves cells back to front, so bringing one forward or back moves it in the file without moving it on screen.
+    with context("that has been rendered and saved with its cells in reverse order"):
+        with before.each:
+            self.original = DrawIOStoryModelFixture().with_4_epics_and_3_epics_and_1_story()
+            first_sub_epic = self.original.epics[0].epics[0]
+            first_sub_epic.append_story(DrawIOStory("Story 1.1.2", 2, StoryType.USER))
+            first_sub_epic.stories[1].actors = ["Customer"]
+            tree = ET.fromstring(self.original.clone())
+            root = tree.find(".//root")
+            cells = list(root)[2:]
+            for cell in cells:
+                root.remove(cell)
+            root.extend(reversed(cells))
+            self.parsed = self.drawio.load(ET.tostring(tree, encoding="unicode"))
+
+        with it("should read every Epic in left-to-right order"):
+            expect([epic.name for epic in self.parsed.epics]).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
+
+        with it("should read each sub-epic under the Epic it sits beneath"):
+            expect([sub.name for sub in self.parsed.epics[0].epics]).to(equal(["Epic 1.1", "Epic 1.2", "Epic 1.3"]))
+
+        with it("should read each Story under the sub-epic it sits beneath, left to right"):
+            expect([story.name for story in self.parsed.epics[0].epics[0].stories]).to(equal(["Story 1.1.1", "Story 1.1.2"]))
+
+        with it("should keep the actor shown above a Story"):
+            expect(self.parsed.epics[0].epics[0].stories[1].actors).to(equal(["Customer"]))
+
     with context("that is not a valid DrawIO document"):
         with context("the parse"):
             with it("should be rejected"):

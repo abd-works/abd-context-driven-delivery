@@ -13,13 +13,13 @@ import {
   refreshHealth,
   refreshHealthSoon,
   runInstall,
+  SERVER,
   togglePin,
 } from './health/server-health-client'
 import { ServerHealthBandView } from './health/server-health-view'
 
 // Connects this chat to cdd's chat tools, which the board sends commands through. The rules live in the cdd server.
 const PLUGIN = 'cdd-board'
-const SERVER = 'cdd'
 const BOARD_URL = 'http://127.0.0.1:8778'
 // The board refuses a POST without this header, so another page cannot act on it.
 const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
@@ -76,16 +76,6 @@ function submitted($: EngineInterface, text: string): Promise<string> {
   return Promise.race([submitting, after($, REFUSED_WITHIN_MILLISECONDS, '')])
 }
 
-// The chat's cdd server keeps the code it started with; cdd.restart reloads it in place, on the same connection. A server
-// started before cdd.restart existed has no such tool, and only reconnecting it in /mcp loads the code that does.
-const NO_RESTART_TOOL = 'this chat\'s cdd server started before cdd.restart existed: reconnect cdd once in /mcp'
-
-async function restartedCdd($: EngineInterface): Promise<string> {
-  const result = await $.mcp.call(SERVER, 'cdd.restart', {}).catch(() => null)
-  if (!result) return NO_RESTART_TOOL
-  return result.isError ? `cdd.restart failed: ${result.content[0]?.text ?? 'no reason given'}` : ''
-}
-
 // The engine refuses a plugin's command in some states, such as after the person stopped the session and has typed
 // nothing since. The command then waits in the prompt box for the person to send, so it is never lost; once they send
 // it, its turn finishes it like any other.
@@ -101,35 +91,29 @@ async function ranOrFilled($: EngineInterface, chat: string, command: ChatComman
 // Why the chat did not show the command, or nothing once it did.
 function shown($: EngineInterface, chat: string, command: ChatCommandData): Promise<string> {
   if (command.kind === 'fill') return filled($, command.text).catch(reasonOf)
-  if (command.kind === 'restart_cdd') return restartedCdd($).catch(reasonOf)
   return command.text.startsWith('/') ? ranOrFilled($, chat, command) : submitted($, command.text)
 }
 
-// What a person reads for a message: a restart has no text of its own.
-const labelOf = (command: ChatCommandData): string => (command.kind === 'restart_cdd' ? 'restart cdd' : command.text)
-
 // The board shows each message as shown or failed, so a message the chat could not take is never silent. A fill waits
-// for the person to send it, and a restart is over once cdd answers, so only a command or a submit has work for the chat
-// to finish.
+// for the person to send it, so only a command or a submit has work for the chat to finish.
 async function run($: EngineInterface, chat: string, command: ChatCommandData): Promise<void> {
   const hasTurn = command.kind === 'command' || command.kind === 'submit'
-  $.ui.toast(`Board message arrived: ${labelOf(command)}`)
+  $.ui.toast(`Board message arrived: ${command.text}`)
   if (hasTurn) unfinished.set(command.message, turnsStarted)
   const reason = await shown($, chat, command)
-  $.ui.toast(reason ? `Board message failed: ${reason}: ${labelOf(command)}` : `Board sent: ${labelOf(command)}`)
+  $.ui.toast(reason ? `Board message failed: ${reason}: ${command.text}` : `Board sent: ${command.text}`)
   if (reason) unfinished.delete(command.message)
   await post($, chat, 'confirm', { message: command.message, is_shown: !reason, reason })
-  if (!reason && command.kind === 'restart_cdd') await post($, chat, 'finish', { message: command.message })
 }
 
 function post($: EngineInterface, chat: string, operation: string, body: object) {
   return $.http.fetch(`${BOARD_URL}/api/chat/${encodeURIComponent(chat)}/${operation}`, { method: 'POST', headers: BOARD_HEADERS, body: JSON.stringify(body) })
 }
 
-// Checks in through the board's own cdd server, which runs chat.check_in. A chat's cdd server keeps the code it started
-// with, so one started before the chat tools existed could never check in; the board always runs the current code.
+// Checks in through the board, which runs chat.check_in on the cdd server every chat shares. The folder the chat works in
+// lets the board find a ticket's chat: the one working in the ticket's worktree.
 async function checkIn($: EngineInterface, chat: string): Promise<void> {
-  const answer = await post($, chat, 'check-in', { is_busy: isBusy, name: chatName })
+  const answer = await post($, chat, 'check-in', { is_busy: isBusy, name: chatName, folder: await $.session.cwd() })
   if (!answer.ok) return
   for (const command of JSON.parse(answer.text) as ChatCommandData[]) await run($, chat, command)
 }

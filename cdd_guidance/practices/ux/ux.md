@@ -68,7 +68,6 @@ Whenever you name screens, attach stories, or import domain terms on the UX surf
 default_format: drawio
 stage: discovery
 outputs:
-  root: ux
   drawio: "{epic}/.context/information-architecture.drawio"
   markdown: "{epic}/.context/ux-context.md"
 ```
@@ -129,7 +128,6 @@ If this change will not stay here, follow `practices/ux.mdc`.
 default_format: html
 stage: specification
 outputs:
-  root: ux
   html: "{epic}/{user_goal}.html"
 ```
 
@@ -188,7 +186,6 @@ If this change will not stay here, follow `practices/ux/ux-ia.mdc`.
 default_format: html
 stage: implementation
 outputs:
-  root: src
   typescript: "**/*View.tsx"
   javascript: "**/*View.jsx"
 ```

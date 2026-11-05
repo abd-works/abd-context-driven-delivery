@@ -68,6 +68,7 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <CardMarkView ticket={ticket} />
       <div className="ticket-title-line">
         <div className="ticket-title">{ticket.title}</div>
+        {page.chat.isOpeningFor(ticket.name) ? <span className="progress-wheel" role="status" title="Opening its chat in the Claude app" aria-label="Opening its chat" /> : null}
         <SplitActionView ticket={ticket} />
       </div>
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
@@ -108,12 +109,15 @@ function SplitActionView({ ticket }: { ticket: TicketClient }) {
 function SessionActionsView({ ticket }: { ticket: TicketClient }) {
   const { page } = useBoard()
   const cannotFill = useCannotFill(ticket)
-  const toggle = ticket.isActive ? { action: 'close', label: 'Close', hint: 'Close this session' } : { action: 'activate', label: 'Activate', hint: 'Activate this session' }
   return (
     <span className="file-views">
       <SessionActionView action="next" label={ticket.runNextLabel} hint={ticket.runNextHint} isOff={!ticket.canRunNext} onPress={() => ticket.runNext()} />
       <SessionActionView action="handoff" label="Handoff" hint="Write a handoff for this session" isOff={cannotFill} onPress={() => ticket.fillHandoff()} />
-      <SessionActionView action={toggle.action} label={toggle.label} hint={toggle.hint} isOff={ticket.isClosed} onPress={() => page.activation.start(ticket, ticket.isActive)} />
+      {ticket.isActive ? (
+        <SessionActionView action="close" label="Close" hint="Close this session in the chat" isOff={cannotFill} onPress={() => ticket.closeSession()} />
+      ) : (
+        <SessionActionView action="activate" label="Activate" hint="Activate this session" isOff={ticket.isClosed} onPress={() => page.activation.start(ticket, false)} />
+      )}
     </span>
   )
 }
@@ -188,7 +192,7 @@ export function TicketCardView({ ticket, spot }: { ticket: TicketClient; spot: C
       draggable={isDraggable}
       onDragStart={dragStarted}
       onDragEnd={dragEnded}
-      onClick={() => ticket.select()}
+      onClick={() => void ticket.choose()}
       style={{ borderColor: borderColorOf(ticket, isSelected), borderWidth: ticket.isActive ? ACTIVE_BORDER_WIDTH : 1 }}
     >
       {/* Chrome starts no drag on a button, and this one covers the card, so it carries the card's drag. */}

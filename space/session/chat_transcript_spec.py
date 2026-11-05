@@ -63,9 +63,9 @@ with description("chat transcript helpers"):
                     json.dumps({"role": "user", "message": {"content": [{"type": "text", "text": "question"}]}}),
                     encoding="utf-8",
                 )
-                Session._current = None
+                Session.forget_current()
                 Session.new("alpha", work, repo)
-                session = Session.current()
+                session = Session.current(repo)
                 session._append_log("--- 1")
                 chat_id = "b4c2a422-7199-47ce-9656-c0429af8adb8"
                 log_line = f"2026-10-20T12:00:00Z sketch {work / 'a.py'} {chat_id} {transcript} 1"

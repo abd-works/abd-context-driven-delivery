@@ -17,27 +17,28 @@ export class BoardApi {
     private readonly send: Send = sendWithFetch,
   ) {}
 
+  // A route the board server answers itself, such as its build: the answer says nothing about whether cdd is back.
   get<T>(path: string): Promise<T | null> {
-    return this.call<T>(path)
+    return this.call<T>(path, undefined, false)
   }
 
   post<T>(path: string, body: unknown = {}): Promise<T | null> {
-    return this.call<T>(path, { method: 'POST', headers: { [BOARD_HEADER]: '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    return this.call<T>(path, { method: 'POST', headers: { [BOARD_HEADER]: '1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, true)
   }
 
-  private async call<T>(path: string, init?: RequestInit): Promise<T | null> {
+  private async call<T>(path: string, init: RequestInit | undefined, reachesCdd: boolean): Promise<T | null> {
     const response = await this.send(`${API_ROOT}${path}`, init).catch(() => null)
     if (!response) {
       this.store.change({ serverFailure: 'The session board server is not answering.' })
       return null
     }
     const body = (await response.json().catch(() => null)) as (T & { error?: string }) | null
-    if (response.ok) return this.accepted(body)
+    if (response.ok) return reachesCdd ? this.accepted(body) : body
     this.refused(response.status, body?.error ?? `The server answered ${response.status}.`)
     return null
   }
 
-  // Every route reaches cdd, so any answer says cdd is back.
+  // A route that reaches cdd answered, so cdd is back.
   private accepted<T>(body: T): T {
     if (this.store.state.serverFailure) this.store.change({ serverFailure: null })
     return body

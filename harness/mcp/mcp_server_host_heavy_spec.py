@@ -1,11 +1,12 @@
-"""Infrastructure spec — stdio MCP host wired to the CDD runtime."""
+"""Infrastructure spec — the one cdd server, over HTTP, answering chats from many projects."""
 
 import asyncio
 import contextlib
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
-from datetime import timedelta
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -17,17 +18,20 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _path)
 
 import anyio
+import httpx
 from expects import contain, equal, expect
-from mamba import context, description, it
-from mcp import ClientSession, McpError, StdioServerParameters, types
-from mcp.client.stdio import stdio_client
+from mamba import after, before, context, description, it
+from mcp import McpError, types
+
+from harness.mcp.spec_support import SpecServer
 
 _LINGER_SECONDS = 1
 _HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
 _ECHO = "echo_instructions.echo_instructions:EchoInstructions"
-_PARAMETER_TYPES = (
-    "harness.mcp._examples.parameter_types.parameter_types:ParameterTypes"
-)
+_PARAMETER_TYPES = "harness.mcp._examples.parameter_types.parameter_types:ParameterTypes"
+_RENDER = "cdd_guidance.actions.render.render:Render"
+_SESSION = "space.session.session:Session"
+_TOOLSETS = (_HOSTING_DEMO, _ECHO, _PARAMETER_TYPES, _RENDER, _SESSION)
 _ECHO_ARGUMENTS = {
     "text": "parcel",
     "count": 2,
@@ -45,58 +49,37 @@ _ECHO_ARGUMENTS = {
     "counted_fields": {"n": 3},
     "listed_fields": {"ns": [1, 2]},
 }
-_VENV_PYTHON = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
-_PYTHON = _VENV_PYTHON if _VENV_PYTHON.is_file() else Path(sys.executable)
-_PYTHONPATH = ";".join(
-    [
-        str(_REPO_ROOT),
-        str(_REPO_ROOT / "tools"),
-        str(_REPO_ROOT / "cdd_guidance" / "practices"),
-        str(_REPO_ROOT / "cdd_guidance" / "actions"),
-    ]
-)
-
-def _run_async(coro):
-    return asyncio.run(coro)
 
 
-class StdioHostProbe:
-    def host_params(self, toolsets: str) -> StdioServerParameters:
-        return StdioServerParameters(
-            command=str(_PYTHON),
-            args=["-m", "harness.mcp", "--toolsets", toolsets],
-            cwd=str(_REPO_ROOT),
-            env={
-                **__import__("os").environ,
-                "PYTHONPATH": _PYTHONPATH,
-                "PYTHONPYCACHEPREFIX": str(_REPO_ROOT / ".pycache"),
-            },
-        )
+def _text(result) -> str:
+    return result.content[0].text
+
+
+class ChatProbe:
+    """What one chat does against the server, each in a project folder of its own so no call sees another's state."""
+
+    def __init__(self, server: SpecServer) -> None:
+        self.server = server
+
+    def run(self, action, project: Path | None = None, seconds: float | None = None):
+        folder = project or Path(tempfile.mkdtemp(prefix="cdd-chat-"))
+
+        async def in_chat():
+            async with self.server.chat(folder, seconds) as session:
+                return await action(session)
+
+        return asyncio.run(in_chat())
 
     async def increment_then_read_twice(self, session):
-        await session.call_tool(
-            "hosting-demo.increment", arguments={"step": 4}
-        )
-        first = await session.call_tool(
-            "hosting-demo.read_count", arguments={}
-        )
-        await session.call_tool(
-            "hosting-demo.increment", arguments={"step": 1}
-        )
-        second = await session.call_tool(
-            "hosting-demo.read_count", arguments={}
-        )
+        await session.call_tool("hosting-demo.increment", arguments={"step": 4})
+        first = await session.call_tool("hosting-demo.read_count", arguments={})
+        await session.call_tool("hosting-demo.increment", arguments={"step": 1})
+        second = await session.call_tool("hosting-demo.read_count", arguments={})
         return _text(first), _text(second)
 
     async def exercise(self, session):
-        await session.call_tool(
-            "hosting-demo.plan_work",
-            arguments={"concept": "widgets"},
-        )
-        read_count = await session.call_tool(
-            "hosting-demo.read_count", arguments={}
-        )
-        return _text(read_count)
+        await session.call_tool("hosting-demo.plan_work", arguments={"concept": "widgets"})
+        return _text(await session.call_tool("hosting-demo.read_count", arguments={}))
 
     async def cancel_running_call_then_ping(self, session):
         request_id = session._request_id
@@ -128,260 +111,221 @@ class StdioHostProbe:
         return _text(await session.call_tool("cdd.ping", arguments={}))
 
 
-async def _with_session(toolsets: str, action, seconds: float | None = None):
-    timeout = None if seconds is None else timedelta(seconds=seconds)
-    async with stdio_client(StdioHostProbe().host_params(toolsets)) as (read_stream, write_stream):
-        async with ClientSession(read_stream, write_stream, read_timeout_seconds=timeout) as session:
-            await session.initialize()
-            return await action(session)
+class TwoWorktrees:
+    """A repository with two worktrees, as two chats working on one project's branches see it."""
 
-def _text(result) -> str:
-    return result.content[0].text
+    def __init__(self) -> None:
+        self.root = Path(tempfile.mkdtemp(prefix="cdd-worktrees-")).resolve()
+        self.main = self.root / "main"
+        self.first = self.root / "first"
+        self.second = self.root / "second"
 
-with description("an MCP host over stdio"):
-    with context("that has started with no toolsets loaded"):
+    def create(self) -> None:
+        self.main.mkdir()
+        self._git(self.main, "init", "--quiet", "--initial-branch", "main")
+        (self.main / "README.md").write_text("project\n", encoding="utf-8")
+        self._git(self.main, "add", "README.md")
+        self._git(self.main, "-c", "user.name=spec", "-c", "user.email=spec@example.com", "commit", "--quiet", "-m", "start")
+        self._git(self.main, "worktree", "add", "--quiet", "-b", "first", str(self.first))
+        self._git(self.main, "worktree", "add", "--quiet", "-b", "second", str(self.second))
+
+    def remove(self) -> None:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def saved_session(self, worktree: Path) -> str:
+        return json.loads((worktree / ".sessions" / "session.json").read_text(encoding="utf-8"))["session"]
+
+    def _git(self, folder: Path, *arguments: str) -> None:
+        subprocess.run(["git", *arguments], cwd=folder, check=True, capture_output=True)
+
+
+with description("the cdd server") as self:
+    with before.all:
+        self.server = SpecServer(_TOOLSETS)
+        self.started = self.server.start()
+        self.chat = ChatProbe(self.server)
+
+    with after.all:
+        self.server.stop()
+
+    with context("that a chat has connected"):
         with it("should expose the built-in health-check tool"):
-            tools = _run_async(
-                _with_session("", lambda session: session.list_tools())
-            )
+            tools = self.chat.run(lambda session: session.list_tools())
             expect([tool.name for tool in tools.tools]).to(contain("cdd.ping"))
 
         with it("should expose the built-in restart tool"):
-            tools = _run_async(_with_session("", lambda session: session.list_tools()))
+            tools = self.chat.run(lambda session: session.list_tools())
             expect([tool.name for tool in tools.tools]).to(contain("cdd.restart"))
 
         with it("should answer cdd.ping with pong"):
-            result = _run_async(
-                _with_session(
-                    "",
-                    lambda session: session.call_tool("cdd.ping", arguments={}),
-                )
-            )
+            result = self.chat.run(lambda session: session.call_tool("cdd.ping", arguments={}))
             expect(_text(result)).to(equal("pong"))
 
         with it("should answer the Cursor underscore alias cdd_ping with pong"):
-            result = _run_async(
-                _with_session(
-                    "",
-                    lambda session: session.call_tool("cdd_ping", arguments={}),
-                )
-            )
+            result = self.chat.run(lambda session: session.call_tool("cdd_ping", arguments={}))
             expect(_text(result)).to(equal("pong"))
 
-    with context("that has started with the HostingDemo toolset"):
         with it("should list HostingDemo @agent_tool operations"):
-            tools = _run_async(
-                _with_session(_HOSTING_DEMO, lambda session: session.list_tools())
-            )
-            names = [tool.name for tool in tools.tools]
+            names = [tool.name for tool in self.chat.run(lambda session: session.list_tools()).tools]
             expect(names).to(contain("hosting-demo.increment"))
             expect(names).to(contain("hosting-demo.read_count"))
 
         with it("should list no prompts when every enrolled operation is a tool"):
-            prompts = _run_async(
-                _with_session(_HOSTING_DEMO, lambda session: session.list_prompts())
-            )
+            prompts = self.chat.run(lambda session: session.list_prompts())
             expect([prompt.name for prompt in prompts.prompts]).to(equal([]))
 
-        with it("should list HostingDemo operations in list_tools for host invocation"):
-            tools = _run_async(
-                _with_session(_HOSTING_DEMO, lambda session: session.list_tools())
-            )
-            expect([tool.name for tool in tools.tools]).to(
-                contain("hosting-demo.plan_work")
-            )
-
-        with it("should retain toolset state across calls in one process"):
-            first, second = _run_async(
-                _with_session(
-                    _HOSTING_DEMO,
-                    StdioHostProbe().increment_then_read_twice,
-                )
-            )
+        with it("should retain toolset state across calls on one project"):
+            first, second = self.chat.run(self.chat.increment_then_read_twice)
             expect(first).to(equal("4"))
             expect(second).to(equal("5"))
 
         with context("with a HostingDemo operation that calls another @agent_tool"):
             with it("should run orchestration through tools/call"):
-                result = _run_async(
-                    _with_session(
-                        _HOSTING_DEMO,
-                        lambda session: session.call_tool(
-                            "hosting-demo.plan_work",
-                            arguments={"concept": "widgets"},
-                        ),
-                    )
+                result = self.chat.run(
+                    lambda session: session.call_tool("hosting-demo.plan_work", arguments={"concept": "widgets"})
                 )
                 payload = json.loads(_text(result))
                 expect(payload["concept"]).to(equal("widgets"))
                 expect(payload["count"]).to(equal(2))
 
             with it("should advance toolset state from orchestrated @agent_tool calls"):
-                expect(
-                    _run_async(_with_session(_HOSTING_DEMO, StdioHostProbe().exercise))
-                ).to(equal("2"))
-
-        with context("that has been restarted"):
-            with it("should start its toolsets again on the code as it is now"):
-                expect(_run_async(_with_session(_HOSTING_DEMO, StdioHostProbe().increment_restart_then_read))).to(equal("0"))
-
-            with it("should keep answering on the same connection"):
-                expect(_run_async(_with_session(_HOSTING_DEMO, StdioHostProbe().restart_then_ping))).to(equal("pong"))
+                expect(self.chat.run(self.chat.exercise)).to(equal("2"))
 
         with context("that has had a running tool call cancelled by the client"):
             with it("should keep answering later calls"):
-                expect(
-                    _run_async(
-                        _with_session(_HOSTING_DEMO, StdioHostProbe().cancel_running_call_then_ping)
-                    )
-                ).to(equal("pong"))
+                expect(self.chat.run(self.chat.cancel_running_call_then_ping)).to(equal("pong"))
 
-    with context("that has started with the Echo toolset"):
-        with it("should invoke a real @agent_tool through the MCP wire"):
-            result = _run_async(
-                _with_session(
-                    _ECHO,
-                    lambda session: session.call_tool(
-                        "echo-instructions.fence", arguments={"body": "hello mcp"}
-                    ),
+        with context("that has invoked a real @agent_tool through the MCP wire"):
+            with it("should return what the tool returned"):
+                result = self.chat.run(
+                    lambda session: session.call_tool("echo-instructions.fence", arguments={"body": "hello mcp"})
                 )
-            )
-            expect("hello mcp" in _text(result)).to(equal(True))
+                expect("hello mcp" in _text(result)).to(equal(True))
 
-    with context("that has started with the ParameterTypes toolset"):
-        with it("should advertise a list parameter as a JSON Schema array"):
-            tools = _run_async(
-                _with_session(_PARAMETER_TYPES, lambda session: session.list_tools())
-            )
-            echo = next(tool for tool in tools.tools if tool.name == "parameter-types.echo")
-            expect(echo.inputSchema["properties"]["items"]["type"]).to(equal("array"))
+        with context("with the ParameterTypes toolset"):
+            with it("should advertise a list parameter as a JSON Schema array"):
+                tools = self.chat.run(lambda session: session.list_tools())
+                echo = next(tool for tool in tools.tools if tool.name == "parameter-types.echo")
+                expect(echo.inputSchema["properties"]["items"]["type"]).to(equal("array"))
 
-        with it("should advertise a dict parameter as a JSON Schema object"):
-            tools = _run_async(
-                _with_session(_PARAMETER_TYPES, lambda session: session.list_tools())
-            )
-            echo = next(tool for tool in tools.tools if tool.name == "parameter-types.echo")
-            expect(echo.inputSchema["properties"]["fields"]["type"]).to(equal("object"))
+            with it("should advertise a dict parameter as a JSON Schema object"):
+                tools = self.chat.run(lambda session: session.list_tools())
+                echo = next(tool for tool in tools.tools if tool.name == "parameter-types.echo")
+                expect(echo.inputSchema["properties"]["fields"]["type"]).to(equal("object"))
 
-        with it("should advertise a boolean parameter as JSON Schema boolean"):
-            tools = _run_async(
-                _with_session(_PARAMETER_TYPES, lambda session: session.list_tools())
-            )
-            echo = next(tool for tool in tools.tools if tool.name == "parameter-types.echo")
-            expect(echo.inputSchema["properties"]["flag"]["type"]).to(equal("boolean"))
+            with it("should advertise a boolean parameter as JSON Schema boolean"):
+                tools = self.chat.run(lambda session: session.list_tools())
+                echo = next(tool for tool in tools.tools if tool.name == "parameter-types.echo")
+                expect(echo.inputSchema["properties"]["flag"]["type"]).to(equal("boolean"))
 
-        with it("should return a list argument unchanged"):
-            result = _run_async(
-                _with_session(
-                    _PARAMETER_TYPES,
-                    lambda session: session.call_tool(
-                        "parameter-types.echo", arguments=_ECHO_ARGUMENTS
-                    ),
+            with it("should return every argument type unchanged"):
+                result = self.chat.run(
+                    lambda session: session.call_tool("parameter-types.echo", arguments=_ECHO_ARGUMENTS)
                 )
-            )
-            expect(json.loads(_text(result))["items"]).to(equal(["a", "b"]))
-
-        with it("should return a boolean argument unchanged"):
-            result = _run_async(
-                _with_session(
-                    _PARAMETER_TYPES,
-                    lambda session: session.call_tool(
-                        "parameter-types.echo", arguments=_ECHO_ARGUMENTS
-                    ),
+                echoed = json.loads(_text(result))
+                expect({key: echoed[key] for key in ("items", "flag", "fields", "count", "ratio", "nested_items")}).to(
+                    equal({key: _ECHO_ARGUMENTS[key] for key in ("items", "flag", "fields", "count", "ratio", "nested_items")})
                 )
-            )
-            expect(json.loads(_text(result))["flag"]).to(equal(True))
 
-        with it("should return a dict argument unchanged"):
-            result = _run_async(
-                _with_session(
-                    _PARAMETER_TYPES,
-                    lambda session: session.call_tool(
-                        "parameter-types.echo", arguments=_ECHO_ARGUMENTS
-                    ),
+            with it("should invoke a Sequence parameter with a JSON array"):
+                result = self.chat.run(
+                    lambda session: session.call_tool("parameter-types.echo_sequence", arguments={"value": ["stop", "drop"]})
                 )
-            )
-            expect(json.loads(_text(result))["fields"]).to(equal({"city": "depot"}))
+                expect(json.loads(_text(result))).to(equal(["stop", "drop"]))
 
-        with it("should return an integer argument unchanged"):
-            result = _run_async(
-                _with_session(
-                    _PARAMETER_TYPES,
-                    lambda session: session.call_tool(
-                        "parameter-types.echo", arguments=_ECHO_ARGUMENTS
-                    ),
+            with it("should invoke a Mapping parameter with a JSON object"):
+                result = self.chat.run(
+                    lambda session: session.call_tool("parameter-types.echo_mapping", arguments={"value": {"n": 3}})
                 )
+                expect(json.loads(_text(result))).to(equal({"n": 3}))
+
+        with context("that renders from a file path"):
+            with it("should return the render within 10 seconds"):
+                folder = Path(tempfile.mkdtemp(prefix="mcp-render-path-"))
+                sketch = folder / "cart-sketch.md"
+                sketch.write_text("Cart\n  owner\n", encoding="utf-8")
+                arguments = {"guidance": ["clean-engineering-model"], "format": "python", "source": "sketch", "paths": [str(sketch)]}
+                result = self.chat.run(lambda session: session.call_tool("render.render", arguments=arguments), folder, 10)
+                expect(_text(result)).to(contain("Cart"))
+
+    with context("that two chats in different worktrees have connected"):
+        with before.each:
+            self.worktrees = TwoWorktrees()
+            self.worktrees.create()
+            self.chat.run(lambda session: session.call_tool("session.switch", arguments={"name": "alpha"}), self.worktrees.first)
+            self.chat.run(lambda session: session.call_tool("session.switch", arguments={"name": "beta"}), self.worktrees.second)
+
+        with after.each:
+            self.worktrees.remove()
+
+        with it("should answer both chats from the one server process"):
+            projects = self.server.daemon.ping["projects"]
+            expect(self.server.daemon.ping["pid"]).to(equal(self.started["pid"]))
+            expect(projects).to(contain(str(self.worktrees.first), str(self.worktrees.second)))
+
+        with it("should save each chat's session in its own worktree"):
+            saved = (self.worktrees.saved_session(self.worktrees.first), self.worktrees.saved_session(self.worktrees.second))
+            expect(saved).to(equal(("alpha", "beta")))
+
+        with it("should give each chat its own worktree's session"):
+            def current(worktree: Path) -> str:
+                result = self.chat.run(lambda session: session.call_tool("session.current", arguments={}), worktree)
+                return json.loads(_text(result))["name"]
+
+            expect((current(self.worktrees.first), current(self.worktrees.second))).to(equal(("alpha", "beta")))
+
+        with it("should keep one worktree's toolset state out of the other"):
+            self.chat.run(lambda session: session.call_tool("hosting-demo.increment", arguments={"step": 7}), self.worktrees.first)
+            second = self.chat.run(lambda session: session.call_tool("hosting-demo.read_count", arguments={}), self.worktrees.second)
+            expect(_text(second)).to(equal("0"))
+
+    # Claude Code runs a chat's header helper again only when the server answers 401, so a chat that connected while
+    # the helper could not run gets its project named on the next try instead of failing every call.
+    with context("that a chat names no project"):
+        with before.each:
+            self.answer = httpx.post(self.server.url, json={"jsonrpc": "2.0", "id": 1, "method": "ping"}, headers={"Accept": "application/json, text/event-stream"})
+
+        with it("should refuse the connection as unauthorized"):
+            expect(self.answer.status_code).to(equal(401))
+
+        with it("should say which header is missing"):
+            expect(self.answer.text).to(contain("X-CDD-Project"))
+
+    with context("that has been restarted"):
+        with it("should start its toolsets again on the code as it is now"):
+            expect(self.chat.run(self.chat.increment_restart_then_read)).to(equal("0"))
+
+        with it("should keep answering on the same connection"):
+            expect(self.chat.run(self.chat.restart_then_ping)).to(equal("pong"))
+
+        with it("should still be the same process"):
+            self.chat.run(self.chat.restart_then_ping)
+            expect(self.server.daemon.ping["pid"]).to(equal(self.started["pid"]))
+
+
+with description("the cdd connect script") as self:
+    with before.each:
+        self.server = SpecServer((_HOSTING_DEMO,))
+        self.server.install()
+        self.project = Path(tempfile.mkdtemp(prefix="cdd-connect-")).resolve()
+
+    with after.each:
+        self.server.stop()
+        shutil.rmtree(self.project, ignore_errors=True)
+
+    with context("that an IDE runs in a chat's folder while no server answers"):
+        with before.each:
+            done = subprocess.run(
+                [sys.executable, str(self.server.home.connect_script)],
+                cwd=self.project,
+                capture_output=True,
+                text=True,
+                timeout=120,
             )
-            expect(json.loads(_text(result))["count"]).to(equal(2))
+            self.headers = json.loads(done.stdout)
 
-        with it("should return a float argument unchanged"):
-            result = _run_async(
-                _with_session(
-                    _PARAMETER_TYPES,
-                    lambda session: session.call_tool(
-                        "parameter-types.echo", arguments=_ECHO_ARGUMENTS
-                    ),
-                )
-            )
-            expect(json.loads(_text(result))["ratio"]).to(equal(1.5))
+        with it("should start the server"):
+            expect(self.server.daemon.is_running).to(equal(True))
 
-        with it("should return a nested list argument unchanged"):
-            result = _run_async(
-                _with_session(
-                    _PARAMETER_TYPES,
-                    lambda session: session.call_tool(
-                        "parameter-types.echo", arguments=_ECHO_ARGUMENTS
-                    ),
-                )
-            )
-            expect(json.loads(_text(result))["nested_items"]).to(equal([["a"]]))
-
-        with it("should invoke a Sequence parameter with a JSON array"):
-            result = _run_async(
-                _with_session(
-                    _PARAMETER_TYPES,
-                    lambda session: session.call_tool(
-                        "parameter-types.echo_sequence",
-                        arguments={"value": ["stop", "drop"]},
-                    ),
-                )
-            )
-            expect(json.loads(_text(result))).to(equal(["stop", "drop"]))
-
-        with it("should invoke a Mapping parameter with a JSON object"):
-            result = _run_async(
-                _with_session(
-                    _PARAMETER_TYPES,
-                    lambda session: session.call_tool(
-                        "parameter-types.echo_mapping",
-                        arguments={"value": {"n": 3}},
-                    ),
-                )
-            )
-            expect(json.loads(_text(result))).to(equal({"n": 3}))
-
-_RENDER = "cdd_guidance.actions.render.render:Render"
-
-
-with description("an MCP host rendering from a file path"):
-    with it("should return the render within 10 seconds"):
-        folder = Path(tempfile.mkdtemp(prefix="mcp-render-path-"))
-        sketch = folder / "cart-sketch.md"
-        sketch.write_text("Cart\n  owner\n", encoding="utf-8")
-
-        result = _run_async(
-            _with_session(
-                _RENDER,
-                lambda session: session.call_tool(
-                    "render.render",
-                    arguments={
-                        "guidance": ["clean-engineering-model"],
-                        "format": "python",
-                        "source": "sketch",
-                        "paths": [str(sketch)],
-                    },
-                ),
-                seconds=10,
-            )
-        )
-        expect(_text(result)).to(contain("Cart"))
+        with it("should name the chat's folder as the project"):
+            expect(self.headers).to(equal({"X-CDD-Project": str(self.project)}))

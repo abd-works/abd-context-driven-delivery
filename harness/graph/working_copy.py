@@ -64,6 +64,8 @@ def fill_working_copy(graph: Graph) -> None:
     clean = graph.practice("clean_engineering") if "clean_engineering" in graph.practices else None
     with schema_sync_paused():
         classes = _record_clean(clean, source) if clean is not None else []
+        if clean is not None:
+            _record_clean_models(clean, source)
         if "ddd" in graph.practices:
             _record_ddd(graph.practice("ddd"), source, classes)
     if "stories" in graph.practices:
@@ -75,6 +77,8 @@ def fill_working_copy(graph: Graph) -> None:
         _offer(graph.practice("bdd"), ["Spec", "Description", "Context", "Observation"])
         with schema_sync_paused():
             _record_bdd(graph.practice("bdd"), source)
+        if clean is not None:
+            _record_bdd_edges(graph)
     if "ux" in graph.practices:
         _report(graph, "ux · node types")
         _offer(graph.practice("ux"), ["UxMap", "Screen"])
@@ -201,6 +205,64 @@ def _record_clean(practice, root: Path) -> list[dict]:
     practice.apply_edges(edges)
     practice.loaded = ["nodes", "edges", "rules"]
     return parsed
+
+
+def _record_clean_models(practice, root: Path) -> None:
+    """The Clean Engineering model documents for the folders in scope, `{folder}/.context/*-model.md`. A member the code
+    also defines gets the model's word on it as facts: its interactions, parameters, and return type. Every member the
+    model describes is kept on the practice under `model_members`, by `Class.member`, so a realization can follow an
+    interaction into a class the load left out without a second copy of the class among the code's nodes."""
+    from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
+
+    code_members: dict[tuple[str, str], list] = {}
+    for node in practice.by_id.values():
+        if node.type in {"Operation", "Property"}:
+            code_members.setdefault((_owner_of(node), node.name), []).append(node)
+    described: dict[str, dict] = {}
+    for file in _model_files(practice.graph, root):
+        relative = file.relative_to(root).as_posix()
+        _report(practice.graph, f"clean_engineering · model · {relative}")
+        model = MarkdownCleanEngineeringModel(name="", sequential_order=1).parse(file.read_text(encoding="utf-8"))
+        for module in model.modules:
+            for oclass in module.classes:
+                members = [("Property", member) for member in oclass.properties] + [("Operation", member) for member in oclass.operations]
+                for kind, member in members:
+                    facts = {
+                        "kind": kind,
+                        "interactions": list(getattr(member, "callees", [])),
+                        "model_parameters": [[parameter.name, (parameter.type_hint or "").strip()] for parameter in getattr(member, "parameters", [])],
+                        "model_returns": (getattr(member, "return_type", "") or getattr(member, "type_hint", "") or "").strip(),
+                        "model_file": relative,
+                    }
+                    described[f"{oclass.name}.{member.name}"] = facts
+                    for node in code_members.get((oclass.name, member.name), ()):
+                        for key in ("interactions", "model_parameters", "model_returns", "model_file"):
+                            node.set_fact(key, facts[key])
+    if described:
+        practice.root_node.set_fact("model_members", described)
+
+
+def _model_files(graph: Graph, root: Path) -> list[Path]:
+    """The model documents beside the code in scope: each scoped folder's and each of its parents' `.context/*-model.md`,
+    up to the root. `.context` is a skipped folder, so the code scan never reaches them."""
+    edited = graph.edited_files()
+    if edited is None:
+        folders = set()
+        for dirpath, dirnames, _files in os.walk(root):
+            dirnames[:] = [name for name in dirnames if not skips_folder(name)]
+            folders.add(Path(dirpath))
+    else:
+        folders = set()
+        for path in edited:
+            folder = path if path.is_dir() else path.parent
+            while folder == root or root in folder.parents:
+                folders.add(folder)
+                if folder == root:
+                    break
+                folder = folder.parent
+    named = {path for path in (edited or []) if path.name.endswith("-model.md")}
+    found = {model for folder in folders for model in (folder / ".context").glob("*-model.md")} | named
+    return sorted(found)
 
 
 def _code_files(graph: Graph, root: Path) -> list[Path]:
@@ -779,6 +841,129 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
             if re.search(rf"\.{re.escape(prop.name)}\b", text):
                 _edge(stories, "retrievedUsing", 11, "relationship", example, prop)
                 _edge(clean, "retrievedUsing", 11, "relationship", prop, example)
+
+
+# A member read that is not a call: `ticketOn(page, OTHER).isLocked`, `stage.actions`.
+_MEMBER_READ = re.compile(r"\.([\w$]+)\b(?!\s*\()")
+_BARE_CALL = re.compile(r"(?<![.\w])([A-Za-z_]\w*)\s*\(")
+# A tool called by its name, `<toolset>.<operation>`: `call("ticket.move_next", ticket="pet-visits")`.
+_TOOL_NAMED = re.compile(r"""\b(\w+)\(\s*["']([a-z][a-z-]*)\.([a-zA-Z_]+)["']""")
+
+
+def _owner_of(member) -> str:
+    """The class a member belongs to, the last part of its id: a recorded relationship holds it under that edge's group."""
+    return member.node_id.rsplit(":", 1)[-1]
+
+
+def snake_case(name: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
+
+def kebab_case(name: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", "-", name).lower()
+
+
+def _is_test_support(path: str) -> bool:
+    """Spec files and the helpers only specs use: they drive the code under test, so an observation never invokes them."""
+    from cdd_guidance.practices.bdd.model.spec_source import is_spec_file
+
+    return is_spec_file(Path(path)) or "/tests/" in f"/{path}" or "/test-utils/" in f"/{path}" or "page-driver" in path
+
+
+def _record_bdd_edges(graph: Graph) -> None:
+    """Each observation invokes the operations and properties its realization starts from: what the nearest enclosing
+    setup calls, the event the observation follows, and what the observation's own body calls or reads. A name matches
+    only code in the spec's own language, and never a spec or a test helper."""
+    bdd = graph.practice("bdd")
+    clean = graph.practice("clean_engineering")
+    members_by_name: dict[tuple[bool, str], list] = {}
+    for node in clean.by_id.values():
+        if node.type in {"Operation", "Property"} and node.source.file and not _is_test_support(node.source.file):
+            members_by_name.setdefault((node.source.file.endswith(".py"), node.name), []).append(node)
+    behavior = [node for node in bdd.by_id.values() if node.type in {"Description", "Context", "Observation"} and node.source.file]
+    by_file: dict[str, list] = {}
+    for node in behavior:
+        by_file.setdefault(node.source.file, []).append(node)
+    lines_by_file: dict[str, list[str]] = {}
+    for file, nodes in by_file.items():
+        nodes.sort(key=lambda node: node.source.start_line)
+        is_python = file.endswith(".py")
+        path = graph._folder / file if graph._folder is not None else None
+        lines = lines_by_file.setdefault(file, path.read_text(encoding="utf-8").splitlines() if path and path.is_file() else [])
+        starts = [node.source.start_line for node in nodes]
+        for index, node in enumerate(nodes):
+            if node.type != "Observation":
+                continue
+            own = "\n".join(lines[node.source.start_line - 1 : node.source.end_line])
+            invoked = _invoked_in(own, is_python, members_by_name)
+            for setup in _enclosing_setups(nodes, starts, index, lines):
+                found = _invoked_in(setup, is_python, members_by_name)
+                if found:
+                    invoked = found + [member for member in invoked if member not in found]
+                    break
+            for member in invoked:
+                _edge(bdd, "invokes", 12, "relationship", node, member)
+                _edge(clean, "invokedBy", 9, "relationship", member, node)
+
+
+def _invoked_in(text: str, is_python: bool, members_by_name: dict) -> list:
+    """The members text reaches, in the order it names them, one per class and name; a tool it calls by name
+    (`call("ticket.move_next", …)`) is that toolset's operation, and the call carrying it is transport, not the act."""
+    invoked: list = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(member) -> None:
+        key = (_owner_of(member), member.name)
+        if key not in seen:
+            seen.add(key)
+            invoked.append(member)
+
+    transports: set[str] = set()
+    for match in _TOOL_NAMED.finditer(text):
+        transports.add(match.group(1))
+        operation = snake_case(match.group(3))
+        for member in members_by_name.get((is_python, operation), ()):
+            if member.type == "Operation" and kebab_case(_owner_of(member)) == match.group(2):
+                add(member)
+    code = re.sub(r"""(['"`])(?:\\.|(?!\1).)*\1""", '""', text)
+    # A mamba spec keeps its fixtures on `self`; `self.project` is the spec's own state, not a member of the code.
+    code = re.sub(r"\bself\.(\w+)", r"\1", code)
+    calls = _MEMBER_CALL.findall(code) + _BARE_CALL.findall(code)
+    reads = set(_MEMBER_READ.findall(code)) - set(calls)
+    for name in dict.fromkeys(_ordered_names(code)):
+        members = [
+            member for member in members_by_name.get((is_python, name), ())
+            # A module function is reached by calling it; a read with its name belongs to some object's field.
+            if not (name in reads and _owner_of(member) == "_module")
+        ]
+        owners = {_owner_of(member) for member in members}
+        # A name more than two classes share, such as `column`, does not say which one the observation reaches; a read,
+        # which has no call to narrow it, links only when one class owns the name.
+        if name in transports or len(owners) > (1 if name in reads else 2):
+            continue
+        # A getter is both an operation and a property of one class; the operation is the one that runs.
+        for member in sorted(members, key=lambda member: member.type != "Operation"):
+            add(member)
+    return invoked
+
+
+def _ordered_names(code: str) -> list[str]:
+    """Every member name code calls or reads, in the order it names them."""
+    found = [(match.start(1), match.group(1)) for pattern in (_MEMBER_CALL, _MEMBER_READ, _BARE_CALL) for match in pattern.finditer(code)]
+    return [name for _start, name in sorted(found)]
+
+
+def _enclosing_setups(nodes: list, starts: list[int], index: int, lines: list[str]) -> list[str]:
+    """The setup text of each describe or context around nodes[index], innermost first: its lines up to its first child."""
+    observation = nodes[index]
+    setups = []
+    for position in range(index - 1, -1, -1):
+        parent = nodes[position]
+        if parent.type == "Observation" or parent.source.end_line < observation.source.end_line:
+            continue
+        first_child = next((start for start in starts[position + 1 :] if start > parent.source.start_line), parent.source.end_line)
+        setups.append("\n".join(lines[parent.source.start_line : first_child - 1]))
+    return setups
 
 
 def _edge(practice, kind: str, order: int, display: str, parent, child) -> None:

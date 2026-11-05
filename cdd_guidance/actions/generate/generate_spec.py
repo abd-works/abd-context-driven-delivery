@@ -23,7 +23,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.mcp.mcp_server import McpServer
 from space.session import Session
-from space.session.throwaway_project import ThrowawayProject
+from space.session.throwaway_project import ProjectCall, ThrowawayProject
 
 
 def _expanded_generate(action, arguments):
@@ -49,6 +49,7 @@ with description("a generate action on practice guidance") as self:
         self.action = Generate()
 
     with after.each:
+        ProjectCall.close_all()
         self.throwaway.close()
 
     with context("with a fidelity active"):
@@ -72,32 +73,34 @@ with description("a generate action on practice guidance") as self:
     with context("with no named session on the project"):
         with before.each:
             self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
+            ProjectCall(self.project)
             (self.project / ".git").mkdir()
-            Session._current = None
+            Session.forget_current()
             Session.current(self.project)
 
         with after.each:
-            Session._current = None
+            Session.forget_current()
             shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should say where each format of the artifact is saved in the main session"):
             prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
-            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/tests/story-map.md"))
+            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/.context/story-map.md"))
 
     with context("with a session open"):
         with before.each:
             self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
+            ProjectCall(self.project)
             (self.project / ".git").mkdir()
-            Session._current = None
+            Session.forget_current()
             Session.new("alpha", self.project, self.project)
 
         with after.each:
-            Session._current = None
+            Session.forget_current()
             shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should say where each format of the artifact is saved"):
             prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
-            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/tests/story-map.md"))
+            expect(prose).to(contain(f"{self.project.resolve().as_posix()}/.context/story-map.md"))
 
         with context("that an MCP call names a guidance slug"):
             with before.each:

@@ -11,7 +11,7 @@ import { createFixtureRepo, resetSessions } from '../fixture-repo'
 const REMOVE_RETRIES = 20
 const REMOVE_RETRY_MILLISECONDS = 250
 
-// A throwaway repository with no remote and a real cdd server on it, so the server tier's moves and closes touch only this.
+// A throwaway repository with no remote on the run's cdd server, so the server tier's moves and closes touch only this.
 export class CddProject {
   readonly root = mkdtempSync(join(tmpdir(), 'cdd-board-server-tier-'))
   readonly cdd: CddConnection

@@ -32,3 +32,8 @@ with description("satisfy on practice guidance") as self:
         expect(text).to(contain("vocabulary-traces-to-source"))
         expect(text).to(contain("generate_fixes_from_validate"))
         expect(text).to(contain("Fixes"))
+
+    # A fix in one format alone leaves the fidelity's other formats still breaking the rule.
+    with it("should tell the agent to fix every format of the fidelity: documents, diagrams, and code"):
+        text = Satisfy().satisfy([CleanEngineering(fidelity="model", format="markdown")])
+        expect(text).to(contain("A violation is fixed only when every format of the fidelity agrees: its documents, its diagrams, and its code."))

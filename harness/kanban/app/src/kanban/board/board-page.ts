@@ -1,13 +1,14 @@
 import type { BacklogItemData } from '@cdd/harness/kanban/backlog-item'
 import type { BoardData } from '@cdd/harness/kanban/board'
 import type { ReportRuleData, TicketData, ViolationData } from '@cdd/harness/kanban/ticket'
+import type { ChatData } from '@cdd/tools/chat/chat'
 
 import { BacklogDraftClient, BacklogItemClient } from '../backlog-item/backlog-item-client'
-import { ChatClient } from '../chat/chat-client'
+import { ChatClient, isWorkingIn } from '../chat/chat-client'
 import { ActivationClient } from '../ticket/activation-client'
 import { FilesPanelClient } from '../ticket/files-panel-client'
 import { OpenCardClient } from '../ticket/open-card-client'
-import { fixRulePrompt, fixViolationPrompt } from '../ticket/report-client'
+import { fixReportPrompt, fixRulePrompt, fixViolationPrompt, type ReportClient } from '../ticket/report-client'
 import { RootChoiceClient } from '../ticket/root-choice-client'
 import { TicketClient } from '../ticket/ticket-client'
 import { TileActionsClient } from '../ticket/tile-actions-client'
@@ -23,6 +24,7 @@ import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
 const CDD_RESTART_PATH = '/cdd/restart'
+const CLAUDE_OPEN_PATH = '/claude/open'
 const NOT_READ_YET: BoardData = { project: '', active: null, columns: [] }
 
 // Everything the page's views act through, wired once.
@@ -42,9 +44,13 @@ export class BoardPage {
   readonly roots = new RootChoiceClient(this)
   readonly draft = new BacklogDraftClient(this)
 
+  // Opens a claude:// link through the board server, because the Browser pane does not pass the link to the Claude app.
+  // A spec replaces it to see the link.
+  openLink: (link: string) => void = link => void this.api.post(CLAUDE_OPEN_PATH, { link })
+
   constructor(send?: Send) {
     this.api = new BoardApi(this.store, send)
-    this.chat = new ChatClient(this.store, this.api)
+    this.chat = new ChatClient(this.store, this.api, link => this.openLink(link))
     this.panels = new SidePanelClient(this.store, this.api)
     this.files = new FilesPanelClient(this.store, this.api)
     this.build = new BuildClient(this.store, this.api)
@@ -58,6 +64,11 @@ export class BoardPage {
     await Promise.all([this.tiles.reload(), this.panels.reload(), this.files.reload()])
   }
 
+  // A chat working in a ticket's worktree goes by the ticket's name.
+  chatName(chat: ChatData): string {
+    return this.board.tickets.find(ticket => isWorkingIn(chat.folder, ticket.worktree))?.name ?? (chat.name || chat.id)
+  }
+
   ticket(json: TicketData): TicketClient {
     return new TicketClient(json, this)
   }
@@ -67,31 +78,34 @@ export class BoardPage {
   }
 
   fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData): Promise<void> {
-    return this.chat.command(this.actionCommandFor(ticket, fixViolationPrompt(rule, violation)))
+    return this.sendActionFor(ticket, fixViolationPrompt(rule, violation))
   }
 
-  fixRule(ticket: string, rule: ReportRuleData): Promise<void> {
-    return this.chat.command(this.actionCommandFor(ticket, fixRulePrompt(rule)))
+  fixRule(ticket: string, report: ReportClient, rule: ReportRuleData): Promise<void> {
+    return this.sendActionFor(ticket, fixRulePrompt(report, rule))
   }
 
-  // A report's fixes are for the ticket whose report it is, so they name that ticket's session.
-  private actionCommandFor(ticket: string, command: string): string {
-    return this.board.tickets.find(shown => shown.name === ticket)?.actionCommand(command) ?? command
+  fixReport(ticket: string, report: ReportClient): Promise<void> {
+    return this.sendActionFor(ticket, fixReportPrompt(report))
   }
 
-  // Stops the board's cdd server and reads the board again, which starts a fresh one on the code as it is now, then asks
-  // every connected chat to restart its own.
+  // A report's fixes are for the ticket whose report it is, so they name that ticket's session and go to its chat.
+  private sendActionFor(ticket: string, command: string): Promise<void> {
+    const shown = this.board.tickets.find(candidate => candidate.name === ticket)
+    return this.chat.command(shown?.actionCommand(command) ?? command, shown?.name, shown?.worktree)
+  }
+
+  // Restarts the one cdd server every chat and the board share on the code as it is now, then reads the board again.
   async restartCdd(): Promise<void> {
     const restarted = await this.api.post<{ is_restarted: boolean }>(CDD_RESTART_PATH)
     if (!restarted) return
     await Promise.all([this.reader.refresh(), this.chat.refresh()])
     if (this.store.state.serverFailure) return
     this.store.toast('cdd restarted on the current code')
-    await this.chat.restartCdd()
   }
 
   openNewTicket(): Promise<void> {
-    return this.chat.fill('Open a new ticket with ticket.new, titled: ')
+    return this.chat.fill('Open a new ticket with ticket.create, titled: ')
   }
 
   start(): () => void {

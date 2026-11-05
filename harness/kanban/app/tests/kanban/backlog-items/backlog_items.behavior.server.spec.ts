@@ -22,7 +22,7 @@ class BacklogItemsAdapterDriver implements BacklogItemsDriver {
   }
 
   async add(title: string, text: string): Promise<void> {
-    await BacklogItemAdapter.add(project.cdd, title, text)
+    await BacklogItemAdapter.create(project.cdd, title, text)
   }
 
   async start(title: string): Promise<void> {

@@ -167,6 +167,14 @@ with description("a working copy scan") as self:
         with it("should leave the saved graph alone"):
             expect(self.saved.stat().st_mtime).to(equal(self.saved_stamp))
 
+    with context("limited to the loaded folder itself, named as ."):
+        with before.all:
+            self.whole = Graph()
+            self.whole.load_files(str(self.root), ["clean_engineering"], ["."])
+
+        with it("should read every class in the folder"):
+            expect(_class_names(self.whole)).to(equal(_class_names(self.graph)))
+
     with context("limited to an edited story map markdown file"):
         with before.all:
             self.story_map = Graph()

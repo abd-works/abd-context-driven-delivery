@@ -198,24 +198,57 @@ min-body-chars: 120
 </ul>
 <h2>Loop</h2>
 <ol>
-<li><strong>Locate a template</strong> — tiered discovery (see below).</li>
-<li><strong>Draft</strong> — rough shape inspired by the template.</li>
-<li><strong>Present, persist, and pause for review</strong> — show the sketch in chat with a short explanation, then <strong>immediately</strong> <code>save_sketch</code> to <code>{destination}/.context/{slug}-sketch.md</code>, then <strong>immediately</strong> <code>review_sketch</code>: pause so the person can look at it; AskQuestion whether it is correct; if not, AskQuestion what mistakes it made, correct them, <code>save_sketch</code> again, and re-enter review. Do <strong>not</strong> ask the next grill question until the person confirms the sketch is correct. A sketch that exists only in chat is a defect; skipping review is a defect.</li>
-<li><strong>Extend the next branch</strong> — only after confirmed-correct review, pick the next unresolved branch (or batched peers), sketch your recommended shape, and explain why. One branch (or one batched frame) at a time.</li>
-<li><strong>Refine and overwrite</strong> — regenerate the sketch showing what changed <strong>and</strong> incorporating every mistake named in prior <code>review_sketch</code> rounds, then <strong>immediately</strong> <code>save_sketch</code> again (same path), then <strong>immediately</strong> <code>review_sketch</code> again. Do not batch saves; do not wait until the session ends; do not regenerate as if named mistakes never happened.</li>
-<li><strong>Repeat</strong> 4–5 until either the user says done, or every branch of the design tree has been sketched and reasoned out. Ask a question only when a branch genuinely cannot be resolved by sketching a recommendation. Batch very similar questions so the loop does not run forever. Use grilling to validate what the sketch claimed — sketch and grill must not run disconnected.</li>
+<li><strong>Views</strong> — if the user already named the practices or fidelities, those are the views. Proceed. Otherwise AskQuestion which views to sketch, then proceed.</li>
+<li><strong>Shell</strong> — in that same turn, write the high-level shell and <code>save_sketch</code>. Follow each active fidelity&#x27;s <strong>Scaffold</strong> section for the level of detail, and that practice&#x27;s sketch template for the notation. When the active fidelity has no <strong>Scaffold</strong> section, use the <strong>Scaffold</strong> section of the earlier fidelity in that same practice. One section per active practice in the same file: <code>stories:</code>, <code>domain driven design:</code>, <code>user experience:</code>, <code>behavior driven development:</code>, and <code>clean engineering:</code> only when CE is active <strong>without</strong> DDD. No theme blocks.</li>
+<li><strong>Themes</strong> — list the themes in priority order and AskQuestion which theme to start with.</li>
+<li><strong>Grill that theme</strong> — ask three or four questions, then stop. See <strong>When asking a question</strong>. Do not sketch the theme during these questions.</li>
+<li><strong>Sketch</strong> — fold those answers into the existing practice sections, using each practice&#x27;s sketch template. <code>save_sketch</code>, then <code>review_sketch</code>.</li>
+<li><strong>Bottom of the theme</strong> — after <code>review_sketch</code> confirms the sketch, ask whether to get deeper on this theme, explore another theme, or <strong>render</strong> the sketch at the fidelity just finished. Update that theme&#x27;s status in the sketch file.</li>
 </ol>
-<h3>Sketch cadence — question budget before first sketch</h3>
-<p><strong>Sketch early. A sketch with placeholders beats one more question.</strong></p>
-<p>If you reach 3 questions without having shown any shape: stop, draft what you know, mark gaps with <code>?</code>, then ask. Do not ask a fourth question before the first sketch exists.</p>
-<h2>When asking a question (grill inside sketch)</h2>
-<p>Bare option lists are not allowed. The user must be able to decide from the concepts in play — not from intuition about unlabeled choices.</p>
-<p>For every question:</p>
+<p>Carry forward every mistake named in review. Correct the sketch. Do not regenerate as if those mistakes never happened.</p>
+<h2>Fidelity</h2>
+<p>Sketches start at <strong>discovery</strong>. Load the <strong>Rules</strong> for each active practice at the fidelity you are in. The level of detail stays at that fidelity. Each practice names discovery differently:</p>
+<p>You may dip into the next fidelity&#x27;s <strong>Sketch</strong> section and <strong>Rules</strong> when a question needs it. Then return. The goal is to finish the fidelity you are on. Often that means exploring at the next level but that does not mean you&#x27;re at the next fidelity — load the fidelity and its rules as needed, then go back to the previous.</p>
+<p>Keep a theme list at the bottom of the sketch file. Every theme has a collection of check boxes beside each other -&gt;<code>scaffold done</code>, <code>discovery done</code>, <code>specification done</code>, or <code>implementation done</code>. The shell sets each theme to <code>scaffold</code>. Update the status when that stage is finished. You may add new themes at the request of the user or as you discover new themes you should validate with the user whenever you want to add new themes.</p>
+<p>At the bottom of a theme, AskQuestion:</p>
+<ul>
+<li>Get deeper on this theme — move that theme to the next stage in the table and keep working it.</li>
+<li>Explore another theme — return to the theme list.</li>
+<li>Render the sketch — turn the approved sketch into formal artifacts (see <strong>Render from sketch</strong> below).</li>
+</ul>
+<h2>Render from sketch</h2>
+<p>When a theme passes through a fidelity (<code>scaffold done</code>, <code>discovery done</code>, <code>specification done</code>, or <code>implementation done</code>), ask whether to <strong>render</strong> the sketch into official artifacts. The sketch file is the source — render transforms it; do not re-author from chat.</p>
+<p><strong>Default:</strong> use <strong><code>/sketch_render</code></strong> or the <code>SketchRender</code> toolset (<code>actions/sketch_render/sketch_render.md</code>). Same grill-and-sketch loop as <code>/sketch</code>; after <code>review_sketch</code> confirms the sketch:</p>
 <ol>
-<li><strong>Frame</strong> — name the sketch branch and ground the decision in the active practice concepts (e.g. for clean_engineering modules: high-cohesion, low-coupling, named-seam-and-constraint, deep-module, complexity-absorption; for OOAD: class vs property vs operation, composition/aggregation/association, single responsibility). Pull those concepts from the wrapped agent&#x27;s material / fidelity docs, not from generic advice. Do not paste or restate prior grill-answer bodies into the AskQuestion text — cite <code>grill-answers.md</code> by path or heading if needed; the sketch file already holds what was agreed.</li>
-<li><strong>Options with rationale</strong> — 3–5 choices; recommended first; each option gets one short concept-tied rationale (what it does to the seam, ownership, or coupling). End with &quot;Other / I&#x27;ll specify.&quot;</li>
-<li><strong>One question</strong> — wait for the answer, then regenerate the sketch showing exactly what changed.</li>
+<li><strong>AskQuestion</strong> whether to render now (unless the user already asked to render). Do <strong>not</strong> ask which single format to pick — each stage has a <strong>required pair</strong> (below). Only deviate when the user explicitly names a different format set.</li>
 </ol>
+<p><code>build_render_calls</code> must receive <strong>both</strong> formats for the active stage when the listed practice supports them. Skip a format when that practice has no sketch transform for it (<code>SKETCH_RENDER_FORMATS</code> in <code>sketch_render.py</code>).</p>
+<p>Do not render UX as markdown from a multi-lens sketch file — that output is notes-only, not IA.</p>
+<ol>
+<li><strong><code>build_render_calls</code></strong> — pass the approved sketch path and the stage&#x27;s required format list (e.g. <code>[&quot;drawio&quot;, &quot;markdown&quot;]</code> at discovery). Returns JSON: one <code>render.render</code> entry per practice × format. Each entry carries the <strong>full sketch file</strong> as <code>content</code> with <code>source: sketch</code> so each practice parses only its own <code>##</code> section.</li>
+</ol>
+<ol>
+<li><strong><code>render_approved_sketch</code></strong> — run that JSON in a background sub-agent (non-blocking). Each call is <code>render.render(guidance: {toolset, fidelity}, format, content, source=sketch)</code>. Then follow <code>render.place_rendered</code> on the written files.</li>
+</ol>
+<p>Do not invent render parameters in the sub-agent — <code>build_render_calls</code> owns them.</p>
+<p><strong>During an ongoing <code>/sketch</code> session</strong> (without the full <code>sketch_render</code> wrapper), after the user asks to render:</p>
+<ol>
+<li>Confirm the sketch with <code>review_sketch</code> if that gate has not passed yet.</li>
+<li>Use the required format pair for the active stage (discovery → <code>drawio</code> + <code>markdown</code>; specification → <code>typescript</code> + <code>markdown</code>).</li>
+<li>Call <code>SketchRender.build_render_calls(formats, sketch_path)</code> then <code>SketchRender.render_approved_sketch(render_calls)</code>.</li>
+</ol>
+<p><strong>When render is not enough</strong> — use <code>generate.generate</code> only when the user explicitly wants a fresh AI-authored pass that does not transform the sketch file (rare). Normal sketch completion is <strong>render</strong>, not generate.</p>
+<h3>Shell before questions</h3>
+<p>The shell is the first file. Zero questions before it when the user has already named the subject and the views. Mark anything still unknown with <code>?</code> or <code>* approx</code>.</p>
+<p>Practice Rules for the fidelity you are in apply when sketching after the three or four answers. They do not apply to the shell. At the start, that fidelity is discovery: <code>story_map</code>, <code>modules</code>, <code>bounded_context</code>, <code>ia</code>, or <code>behavior</code>, for whichever practices are active.</p>
+<h2>When asking a question (grill inside sketch)</h2>
+<p>Ask questions that the active guidance is designed to answer. See the <strong>Sketch</strong> section of that fidelity. Ask three or four of those questions, then sketch. Do not start by asking mechanical questions &quot;EG how would you like to break up the stories&quot; Unless it&#x27;s germane to answering a specific business outcome. Focus first on questions that speak to outcomes, activities, steps, state, structure, and experience; Then drill into the more mechanical asects afterwards.</p>
+<p>Each question is one of these:</p>
+<ul>
+<li>A recommended choice, with options, asked with AskQuestion.</li>
+<li>Or the same kind of question after you have read context. Still ask. Link to the recommendation source and location at the file you read.</li>
+</ul>
+<p>Do not skip the question because you found an answer. Do not sketch between these questions.</p>
 <p><strong>Always use the AskQuestion tool</strong> — never list options as plain chat text. One tool call = one question:</p>
 <pre><code>AskQuestion:
   title: &quot;Grill — {theme name}&quot;
@@ -225,14 +258,14 @@ min-body-chars: 120
     - {option b — rationale}
     - {option c — rationale}
     - Other / I&#x27;ll specify</code></pre>
-<p>Question shape (frame + options) comes from <code>grill_with_context</code>, which <code>@sketch</code> pulls in explicitly. This section owns sketch show/persist cadence only.</p>
+<p>Question shape is the AskQuestion block above. What to ask is the <strong>Sketch</strong> section of the active fidelity.</p>
 <h2>Template discovery (tiered)</h2>
 <ol>
-<li><strong>Session context</strong> — templates or examples the caller passed in at invocation time. Owned by the current session. Highest priority: a user pasting an example in chat immediately shapes the sketch.</li>
-<li><strong>Convention (wrapped agent&#x27;s own template)</strong> — <code>{agent_dir}/templates/<em>-sketch.</em></code> inside the wrapped agent&#x27;s <code>templates/</code> folder (e.g. <code>bdd/templates/bdd-sketch.md</code>). Owned by whoever wrote that agent; lets each agent shape its own sketches without touching the sketch toolset.</li>
-<li><strong>Default (built-in fallback)</strong> — <code>sketch/templates/sketch-template.md</code> shipped inside the sketch toolset itself. Owned by this toolset; used only when nobody upstream supplied a template.</li>
+<li><strong>Pasted example</strong> — an example the user pasted in the chat. Use that shape.</li>
+<li><strong>Practice template</strong> — <code>practices/{practice}/templates/*-sketch.md</code> for each active practice (stories, clean engineering, DDD, UX).</li>
+<li><strong>Built-in</strong> — <code>actions/sketch/templates/sketch-template.md</code>, only when that practice has no sketch template.</li>
 </ol>
-<p>If none of the above yield a template, the sketcher invents a shape for the domain at hand — explicitly a fallback, not a design target.</p>
+<p>If no template is found, say so and stop. Do not invent a notation.</p>
 <h2>Persistence lifecycle</h2>
 <ul>
 <li><strong>Session-rooted paths:</strong> when chained from a Context generator, read the host <strong><code>active</code></strong> resource.</li>
@@ -241,55 +274,61 @@ min-body-chars: 120
 <li>Generated code for that module → <code>{session}/{module}/</code> (not under <code>.context/</code>)</li>
 <li>Sketches live at <code>{destination}/.context/{slug}-sketch.md</code>. The slug names the subject, not the practice. When the session sketches more than one practice or guidance together (clean-engineering-model and bdd-behavior, object model and BDD), put every lens in that one file so the pairing stays visible; do not add <code>{slug}-bdd-sketch.md</code> beside it.</li>
 <li><code>.context/</code> is created inside the destination if it does not already exist.</li>
-<li><strong>Hard rule:</strong> call <code>save_sketch</code> as soon as the first interim draft exists; overwrite on every regeneration; call <code>review_sketch</code> after every <code>save_sketch</code> and do not ask the next grill question until the person confirms the sketch is correct. Never defer persistence or review to the end of the grill.</li>
+<li><strong>Hard rule:</strong> <code>save_sketch</code> the shell in the same turn it is written. After three or four grill answers, sketch the theme into that same file, <code>save_sketch</code> again, then <code>review_sketch</code>. Do not ask the next theme until that review confirms the sketch. The three or four grill questions happen before that sketch, not after a review.</li>
 <li><strong>Carry-forward mistakes:</strong> mistakes named in review — bad assumptions, poor performance, poor hygiene, or anything else — must shape the next sketch. Correct the model; do not regenerate as if those mistakes never happened.</li>
 <li>They persist until a formal artifact absorbs their content.</li>
 <li>Retirement is manual for now — remove the sketch when the formal artifact fully captures its intent.</li>
 </ul>
 <h2>Multi-lens sketching</h2>
-<p>When sketching across multiple practices or guidances (Stories / DDD / UX / Modules / BDD, or clean-engineering-model with bdd-behavior):</p>
+<p>When more than one practice is active (Stories, Clean Engineering, Domain Driven Design, User Experience, Behavior Driven Development), they share one sketch file. Each practice has one section. A theme is worked inside those sections. It does not get its own block.</p>
+<p>When <strong>Domain Driven Design</strong> is active, follow <code>practices/ddd/ddd.md</code> under <strong>Sketch</strong> at the active fidelity for how module seams and aggregate-root operations fold into <code>domain driven design:</code>.</p>
+<pre><code>## stories:
+## clean engineering:
+## domain driven design:
+## user experience:
+## behavior driven development:</code></pre>
+<p>Omit a section when that practice is not active. Use that practice&#x27;s sketch template inside its section. Do not invent a notation.</p>
+<h3>Headings carry the hierarchy</h3>
+<p>Each practice section is a <code>##</code> heading. Inside it, the practice&#x27;s tree nests through deeper headings — <code>###</code> for the top of that practice&#x27;s shape, <code>####</code> for its children, and so on — so every epic, module, context, journey, and subject folds on its own. Detail that has not earned a heading sits in a fenced block under the heading that owns it. Each practice&#x27;s sketch template names which heading depth holds what.</p>
+<p>Prose that is not part of a practice&#x27;s tree — open questions, what is settled, false cognates, the theme list — is its own <code>##</code> section beside the practice sections, never a heading inside one.</p>
 <h3>Rules</h3>
 <ul>
-<li><strong><code>confirm-lenses-before-sketch</code></strong> — <strong>Hard gate.</strong> Before any scaffold or sketch, use AskQuestion (allow_multiple: true) to confirm which lenses are active. Present them by sketch label. Do not proceed until confirmed. All active lenses are recommended by default; user removes out-of-scope ones.</li>
-<li><strong><code>scaffold-before-content</code></strong> — <strong>Hard gate.</strong> Read the engagement sketch template (<code>templates/cdd-sketch.md</code> for CDD) and each active child&#x27;s <code>sketch_template</code> <strong>before</strong> writing the sketch file. Do not invent a free-prose <code>sketch.md</code>.</li>
-<li><strong><code>grill-before-theme-detail</code></strong> — <strong>Hard gate.</strong> Before writing any non-scaffold content for a theme, run at least one grill round on that theme&#x27;s open questions. The session-level lens confirmation does NOT substitute for this per-theme grill.</li>
-<li><strong><code>one-sketch-per-engagement</code></strong> — One sketch file per engagement. Put every active practice and guidance in that file. Deepening fidelity updates <code>fidelity:</code> at the top and deepens blocks in place. Never create a new file for a new fidelity, practice, or guidance.</li>
-<li><strong><code>scaffold-is-sketch-outline</code></strong> — <strong>Hard gate.</strong> Scaffold is the first outline pass of that same sketch file. Never create a separate scaffold artifact and never create standalone scaffold heading sections outside theme blocks.</li>
-<li><strong><code>scaffold-before-detail</code></strong> — A scaffold pass is required when the ask is greenfield, spans multiple themes/epics/modules, or no whole-design scaffold exists. Not required for a single narrow theme in an already-scaffolded design. Mark every scaffold line <code>&lt; scaffold</code>. Never scaffold and detail in the same pass.</li>
-<li><strong><code>scaffold-per-epic-not-mega-block</code></strong> — One <code>=========</code> theme block per epic (or sub-epic for large systems). Do not group all epics into a single mega-theme block.</li>
-<li><strong><code>detail-updates-scaffold-in-place</code></strong> — When detailing a theme, update scaffold lines within the existing <code>=========</code> block. Remove <code>&lt; scaffold</code> from filled lines. Never create a second parallel block for the same epic — one epic = one theme block for its lifetime.</li>
-<li><strong><code>lens-from-child-template</code></strong> — Every lens block body must use that lens&#x27;s own sketch notation (from child <code>sketch_template</code>). No free prose inside <code>stories:</code> / <code>ddd:</code> / <code>ux:</code> / <code>ce:</code> / <code>bdd:</code>. Use <code>* approx …</code> or omit the block if the content is not yet known.</li>
+<li><strong><code>views-already-named</code></strong> — When the user names the practices or fidelities, do not ask which views. Proceed to the shell.</li>
+<li><strong><code>shell-before-questions</code></strong> — The first save is the shell. Its level of detail is that fidelity&#x27;s <strong>Scaffold</strong> section. Its notation is the practice sketch template. Do not read practice Rules to produce the shell.</li>
+<li><strong><code>themes-after-shell</code></strong> — After the shell is saved, give a prioritized theme list and ask which theme to start.</li>
+<li><strong><code>grill-then-sketch</code></strong> — On the chosen theme, ask three or four questions from that fidelity&#x27;s <strong>Sketch</strong> section, using that fidelity&#x27;s <strong>Rules</strong>. Then sketch. Sketching edits the existing <code>stories:</code>, <code>clean engineering:</code>, <code>domain driven design:</code>, <code>user experience:</code>, and <code>behavior driven development:</code> sections. Stay at discovery until the user asks to go deeper.</li>
+<li><strong><code>theme-status</code></strong> — The sketch file lists every theme and its status: <code>scaffold</code>, <code>scaffold done</code>, <code>discovery done</code>, <code>specification done</code>, or <code>implementation done</code>.</li>
+<li><strong><code>deeper-or-another-or-render</code></strong> — After review, ask whether to get deeper on this theme, explore another theme, or render the sketch at the fidelity just finished.</li>
+<li><strong><code>render-from-sketch</code></strong> — When a theme finishes a fidelity, offer render. Use <code>SketchRender.build_render_calls</code> and <code>render_approved_sketch</code> (or <code>/sketch_render</code> end-to-end). Pass the sketch file as <code>content</code> with <code>source: sketch</code> — straight render from sketch, not <code>generate.generate</code>. Discovery always renders <strong>drawio and markdown</strong>; specification always renders <strong>typescript and markdown</strong>.</li>
+<li><strong><code>one-sketch-per-engagement</code></strong> — One sketch file. Deepen it in place. Do not add a second file per fidelity or practice.</li>
+<li><strong><code>lens-from-child-template</code></strong> — Section bodies use that practice&#x27;s sketch template. No free prose inside <code>stories:</code> / <code>clean engineering:</code> / <code>domain driven design:</code> / <code>user experience:</code> / <code>behavior driven development:</code>.</li>
+<li><strong><code>headings-carry-the-hierarchy</code></strong> — Nest each practice&#x27;s tree through markdown headings below its <code>##</code> section, at the depths that practice&#x27;s template names. Keep leaf detail in a fenced block under the heading that owns it. Open questions, settled decisions, and the theme list are their own <code>##</code> sections, not headings inside a practice section.</li>
 </ul>
-<h3>Scaffold level by lens</h3>
-<h3>Common mistakes (multi-lens)</h3>
+<h3>Common mistakes</h3>
 <ul>
-<li>❌ Skipping the lens confirmation gate before scaffold or sketch</li>
-<li>❌ Writing the sketch file before reading the sketch template and child <code>sketch_template</code>s</li>
-<li>❌ Skipping the per-theme grill — lens confirmation does not substitute for it</li>
-<li>❌ Creating a new sketch file when moving to a deeper fidelity — deepen in place</li>
-<li>❌ Creating a second sketch file for another practice or guidance (<code>{slug}-bdd-sketch.md</code> beside <code>{slug}-sketch.md</code>) — put both in the same file</li>
-<li>❌ Creating a separate scaffold artifact for the same engagement</li>
-<li>❌ Adding top-level scaffold sections outside theme blocks (<code>## Stories Scaffold</code>, <code>## DDD Scaffold</code>, etc.)</li>
-<li>❌ Creating a new theme block when detailing — update scaffold lines in the existing block</li>
-<li>❌ Grouping all epics into one mega-theme block — one block per epic</li>
-<li>❌ Scaffolding and detailing in the same pass</li>
-<li>❌ Scaffolding one lens only when other active lenses also need a whole-system map</li>
-<li>❌ Leaving scaffold lines without the <code>&lt; scaffold</code> marker</li>
-<li>❌ Writing free prose inside lens blocks — child notation only</li>
-<li>❌ Working multiple themes at once — finish one, then move to the next</li>
+<li>❌ Asking which views when the user already named them</li>
+<li>❌ Designing stories, classes, or rules before the shell file exists</li>
+<li>❌ A <code>=========</code> block per theme — themes are a queue, not sections</li>
+<li>❌ Asking the user to pick a story split, a class, or a property</li>
+<li>❌ Sketching after one question — wait for three or four</li>
+<li>❌ A second sketch file for another practice</li>
+<li>❌ Rendering only one format at discovery (markdown without drawio) or specification (typescript without markdown)</li>
 </ul>
 <hr>
 <h2>Composition — how sketch chains with other actions</h2>
 <p><code>@sketch</code> <strong>explicitly calls</strong> <code>grill_with_context</code>, then chains <code>sketch_session</code>. Expansion order:</p>
 <pre><code>grill_with_context  ← pure Q-loop (no sketch advice)
 sketch_session      ← template + save_sketch cadence
-base action body    ← e.g. Context.sketch → self.generate()</code></pre>
-<p>Base <code>Context</code> exposes peer entry points: <code>generate</code> (plain), <code>grill</code>, <code>sketch</code>, <code>iterate</code>. Domains inherit them; do not re-decorate domain <code>generate</code> with <code>@sketch</code> / <code>@grill_with_context</code>.</p></section>
+base action body    ← e.g. Context.sketch (persist only; render is separate)</code></pre>
+<p><code>@sketch_render</code> chains the same sketch loop, then <strong><code>build_render_calls</code> → <code>render_approved_sketch</code></strong> on approval. See <code>actions/sketch_render/sketch_render.md</code>.</p>
+<p>Base <code>Context</code> exposes peer entry points: <code>generate</code> (plain), <code>grill</code>, <code>sketch</code>, <code>sketch_render</code>, <code>iterate</code>. Domains inherit them; do not re-decorate domain <code>generate</code> with <code>@sketch</code> / <code>@grill_with_context</code>. After sketch approval, prefer <strong><code>sketch_render</code></strong> over <code>generate</code> for formal artifacts.</p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>sketch — module context</h1>
 <h2>Purpose</h2>
-<p><code>Sketch</code> produces a rough, persisted draft of a formal artifact through an interactive grill loop before any generate step runs. It locates a sketch template via tiered discovery (caller-supplied → agent-dir convention → built-in default), writes interim <code>{slug}-sketch.md</code> files to the session docs dir after every two or three grill answers, and overwrites the same path on each refinement. Leaving a sketch only in chat is treated as a defect; the file under the docs dir is the working record. <code>sketch(tools)</code> is the practice sketch body (open, record decisions, sketch_session, generate) run once per passed context tool via inherited <code>AgenticToolset.context_tools</code>. <code>/sketch</code> invokes this toolset — not each context tool&#x27;s host <code>sketch</code>.</p>
+<p><code>Sketch</code> produces a rough, persisted draft of a formal artifact through an interactive grill loop. It locates a sketch template via tiered discovery (caller-supplied → agent-dir convention → built-in default), writes interim <code>{slug}-sketch.md</code> files to the session docs dir after every two or three grill answers, and overwrites the same path on each refinement. Leaving a sketch only in chat is treated as a defect; the file under the docs dir is the working record. <code>/sketch</code> invokes this toolset — not each context tool&#x27;s host <code>sketch</code>. When a fidelity is finished, formal artifacts come from <strong><code>/sketch_render</code></strong> (straight <code>render.render</code> from the sketch markdown) — see <code>actions/sketch_render</code> and <code>actions/sketch/sketch.md</code> → <strong>Render from sketch</strong>. Use <code>generate</code> only when the user explicitly wants a fresh AI-authored pass outside that transform.</p>
 <h2>Seam</h2>
-<p><code>Sketch</code></p>
+<p><code>Sketch</code>, <code>SketchOutline</code>, <code>SketchLens</code></p>
+<h2>Constraint</h2>
+<p>A caller asks for one practice&#x27;s section and reads the indented body it already understands. Callers do not reach for heading depths, fence markers, or section boundaries themselves.</p>
 <h2>Dependencies</h2>
 <p><code>grill_context.grill_context</code>, <code>harness.agent_tools</code>, <code>tools.tool</code>, <code>sessions</code></p>
 <h2>Public API</h2>
@@ -299,6 +338,9 @@ base action body    ← e.g. Context.sketch → self.generate()</code></pre>
 <li><code>list_sketches</code></li>
 <li><code>sketch_session(slug, destination, agent_dir)</code></li>
 <li><code>sketch(tools)</code> — practice sketch body once per passed context tool</li>
+<li><code>SketchOutline(text, nesting_indent)</code> — read one practice&#x27;s section as indented lines</li>
+<li><code>SketchOutline.holds(lens)</code> / <code>SketchOutline.body_for(lens)</code></li>
+<li><code>SketchLens.stories</code>, <code>.clean_engineering</code>, <code>.domain_driven_design</code>, <code>.user_experience</code>, <code>.behavior_driven_development</code>, <code>.every</code></li>
 </ul>
 <h2>Mechanism</h2>
 <p>Persist-on-draft cadence — <code>save_sketch</code> is called immediately on the first draft and again after every subsequent pair of grill answers; <code>find_template</code> uses tiered discovery so host toolsets can supply a domain-specific template alongside their module.</p></section>
@@ -318,12 +360,13 @@ base action body    ← e.g. Context.sketch → self.generate()</code></pre>
 </ul>
 <p>2b. <strong><code>do-not-invent-requirements</code></strong> — Do not invent requirements or status/maintenance signals absent from source / the ask. Prefer the existing gap/fallback over minting a new state.</p>
 <ol>
-<li><strong><code>sources-scoped-to-generated-context</code></strong> — Hang <code><strong>Sources / context:</strong></code> on the node they ground: epic / sub-epic / feature / module, or a lower item (scenario, class, screen, component, …). Root or parent-level Sources are fine when those files apply to the <strong>entire</strong> artifact or subtree.</li>
+<li><strong><code>sources-scoped-to-generated-context</code></strong> — Hang <code><strong>Sources / context:</strong></code> on the node they ground: epic / sub-epic / module, or a lower item (scenario, class, screen, component, …). Root or parent-level Sources are fine when those files apply to the <strong>entire</strong> artifact or subtree.</li>
 <li>Apply all guidance and named rules in each <strong>context</strong> — each bullet is a requirement.</li>
-<li>Match <strong>examples</strong> for shape, depth, and tone.</li>
-<li>Fill the <strong>template</strong> scaffold and save the artifact under the session layout from <code>session_guidance</code>.</li>
+<li>Match practice <strong>examples</strong> for shape, depth, and tone.</li>
+<li><strong>Code from another format — render the scaffold first.</strong> This step applies only when the artifact you are writing is code and the source artifact is another format (markdown or a diagram). Call the Render action before any implementation: MCP tool <code>render.render(guidance, format, content, source)</code> or slash command <code>/render</code>. Pass <code>format</code> as the code format, <code>source</code> as the source artifact&#x27;s format, and <code>content</code> as that artifact. The returned code is the scaffold — modules, types, and operation signatures taken from the model. Write the behavior inside that scaffold. Where existing code disagrees with that scaffold, the scaffold wins: the render is what keeps the design.</li>
+<li>Fill the practice <strong>template</strong> scaffold and save the artifact under the session layout from <code>session_guidance</code>.</li>
 </ol>
-<p>6b. <strong>Large job — several turns.</strong> Decide the source from the <strong>ask</strong> and what this session already produced (a sketch, a model, a format to transform — not a locked default). If that source is a whole model, sketch, or similarly large artifact, implement <strong>one slice</strong> in this invoke, then stop. <code>finish_turn</code> closes this turn. Continue in later generate or iterate turns — even if the user asked for everything once. Filling the whole artifact in one generate is a defect (same class as dumping a map in one iterate tick). A small implied source may finish in one turn. Do not treat a red full-tree <strong>validate</strong> as permission to finish the rest in this invoke; validate the slice you wrote.</p>
+<p>7b. <strong>Large job — several turns.</strong> Decide the source from the <strong>ask</strong> and what this session already produced (a sketch, a model, a format to transform — not a locked default). If that source is a whole model, sketch, or similarly large artifact, implement <strong>one slice</strong> in this invoke, then stop. <code>finish_turn</code> closes this turn. Continue in later generate or iterate turns — even if the user asked for everything once. Filling the whole artifact in one generate is a defect (same class as dumping a map in one iterate tick). A small implied source may finish in one turn. Do not treat a red full-tree <strong>validate</strong> as permission to finish the rest in this invoke; validate the slice you wrote.</p>
 <ol>
 <li>Follow any extra build steps included in your instructions when present.</li>
 <li>Run <strong>validate</strong> on what this turn wrote. If the job is one slice, a remaining gap in the rest of the source is the next turn, not this one. If the implied source was small enough for one turn and validate fails, fix the artifact and <strong>validate</strong> again until it passes.</li>
@@ -371,19 +414,21 @@ base action body    ← e.g. Context.sketch → self.generate()</code></pre>
 <ol>
 <li>Read the appropriate practice and fidelity level guidlines and rules. Scope judgment to artifacts passed into context.</li>
 <li>Use each <strong>practice</strong> as the rubric — report pass/fail per named practice fidelty and named rule with brief evidence.</li>
-<li>Do not fix. Report failures for fixing, then write a matchinh validate report.</li>
+<li>When <strong>paths</strong> names the files being edited, the graph is built from just those files as they are now, and its rules run on them. Pass the files you wrote, not the whole tree. Without <strong>paths</strong>, when <strong>graph</strong> is <code>true</code>, read the workspace&#x27;s saved graph (<code>.context/graph.json</code>, written by <code>graph_load_working_copy</code>); when it is a path (or list of paths), read that <code>graph_return_nodes</code> JSON or saved graph. Append a <strong>Graph rule validation</strong> report for each guidance&#x27;s practice. Each rule is one section: heading, rule text, any graph hits (<strong>[graph rule]</strong>), then the AI judgment prompt for that rule.</li>
+<li>Collection validate on graph-backed practices reads the working copy and reports each rule hit. A single base Rule is instruction text only.</li>
+<li>Do not fix. Report failures for fixing, then add your judgment for each rule to the report this action saved, so the board links to the whole result. It names the report&#x27;s path at the end of its reply; without a session, write a matching validate report.</li>
 </ol></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><p>No module-context.md yet.</p></section>
 <header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">satisfy</h1></header>
 <section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>satisfy</code> in the request</p></section>
 <section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><p>Calls nothing else directly.</p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><h1>Satisfy</h1>
-<p>Satisfy runs in <strong>tool mode</strong>: it does not inline a recipe. It hands you two tool calls to make yourself, in order — first find the problems, then fix them.</p>
+<p>One MCP call runs <strong>validate</strong> for every applicable rule on the bound guidance, then appends <strong>generate_fixes_from_validate</strong> instructions. Your job is to apply those fixes in the repo and loop until validate is clean.</p>
 <ol>
-<li><strong><code>validate</code></strong> — run this first. Judge the artifact under the generator <strong><code>active</code></strong> root against the <strong>contexts</strong> and every named rule, and call <strong><code>scan</code></strong> on the session-rooted paths. Produce the full list of violations and coverage gaps. Do not fix anything in this step.</li>
-<li><strong><code>generate_fixes_from_validate</code></strong> — run this second, once you hold the validate report. Follow <strong><code>session_guidance</code></strong> and edit only under that layout. Generate any missing artifacts (a missing <code>.context/module-context.md</code> IS a violation — create it at the current fidelity: thin at modules with Purpose, Seam, Dependencies; full at model with + Primary use case, Rationale, Public API), then fix every reported violation in the same paths — do not invent a divergent folder.</li>
+<li><strong>Validate (already in this response)</strong> — Judge artifacts under the generator <strong><code>active</code></strong> root against <strong>contexts</strong> and every named rule. Call <strong><code>scan</code></strong> on session-rooted paths when the practice provides it. List pass/fail per rule with evidence. Do not skip rules.</li>
+<li><strong>Generate fixes (instructions below validate)</strong> — Follow <strong><code>session_guidance</code></strong> and edit only under that layout. Create missing artifacts (for example <code>.context/module-context.md</code> at the current fidelity). Fix every violation validate named. Do not invent a divergent folder.</li>
 </ol>
-<p>When done, run <strong><code>validate</code></strong> again and repeat the two-call loop until it passes.</p></section>
+<p>When done, run <strong><code>validate</code></strong> again on the same guidance. Repeat until clean, then report <strong>Fixes</strong>: each file touched and which rule slug each change addressed.</p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><p>No module-context.md yet.</p></section>
 <header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">repair</h1></header>
 <section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>repair</code> in the request</p></section>
@@ -450,9 +495,9 @@ base action body    ← e.g. Context.sketch → self.generate()</code></pre>
 <section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>createRule</code> in the request</p></section>
 <section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><p>Calls nothing else directly.</p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><h1>Create Rule</h1>
-<p>One action. Do not call this if <strong>scan</strong> already reports a failure that matches the mistake. Do not call this to mint a ban-list rule for a one-off invented shape, or until you have checked that the existing <strong>contexts</strong>, <strong>examples</strong>, <strong>template</strong>, and generator/seed cannot steer the failure.</p>
-<p>Take <strong>failed</strong> (what went wrong on the asset) and <strong>wanted</strong> (what should have happened). Using <strong>contexts</strong>, <strong>examples</strong>, and <strong>template</strong>, evaluate a new named rule and a matching scanner that can detect that failure deterministically — only when the failure is mechanical and that existing surface cannot carry it.</p>
-<p>Write the rule and the scanner into <strong>this tool</strong> (the context tool&#x27;s own guidance and <code>scanners/</code>). Then <strong>run that rule</strong> via <strong>scan</strong> on the asset and <strong>detect a failure that matches the mistake</strong>. If scan is clean, or the failures are not this mistake, the rule/scanner is not done.</p></section>
+<p>One action. Do not call this if <strong>validate</strong> already reports a failure that matches the mistake. Do not call this to mint a ban-list rule for a one-off invented shape, or until you have checked that the existing <strong>contexts</strong>, <strong>examples</strong>, <strong>template</strong>, and generator/seed cannot steer the failure.</p>
+<p>Take <strong>failed</strong> (what went wrong on the asset) and <strong>wanted</strong> (what should have happened). Using <strong>contexts</strong>, <strong>examples</strong>, and <strong>template</strong>, evaluate a new named rule that can detect that failure — only when the failure is mechanical and that existing surface cannot carry it.</p>
+<p>Write the rule into <strong>this tool</strong> (the context tool&#x27;s own guidance). Then <strong>run collection validate</strong> on the asset and <strong>detect a failure that matches the mistake</strong>. If validate is clean, or the failures are not this mistake, the rule is not done.</p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><p>No module-context.md yet.</p></section>
 </div>
 </div>

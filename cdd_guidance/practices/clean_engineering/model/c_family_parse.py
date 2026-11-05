@@ -24,6 +24,11 @@ _CTOR_RE = re.compile(r"constructor\s*\(([^)]*)\)\s*\{")
 _TOP_FN_RE = re.compile(
     r"(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*[^{]+)?\s*\{",
 )
+# A function a file defines as a top-level constant: `export const ticketOn = (page: BoardPage, name: string): TicketClient => …`.
+_TOP_ARROW_RE = re.compile(
+    r"^(?:export\s+)?const\s+(\w+)\s*(?::[^=\n]+)?=\s*(?:async\s*)?\(([^)]*)\)\s*(?::\s*([^=\n]+?))?\s*=>\s*",
+    re.M,
+)
 _CALL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
 # A name after ``new`` is constructed, not called.
 _CONSTRUCTION_RE = re.compile(r"\bnew\s+$")
@@ -144,7 +149,27 @@ class CFamilyParse:
             op = Operation(name=match.group(1), parameters=self._split_params(match.group(2) or ""))
             op.line = self._line_at(self._text, match.start())
             ops.append(self._operation_from_body(op, body))
-        return ops
+        for match in _TOP_ARROW_RE.finditer(self._text):
+            if any(start <= match.start() <= end for start, end in class_spans):
+                continue
+            body = self._arrow_body(match.end())
+            op = Operation(
+                name=match.group(1),
+                parameters=self._split_params(match.group(2) or ""),
+                return_type=(match.group(3) or "").strip(),
+            )
+            op.line = self._line_at(self._text, match.start())
+            ops.append(self._operation_from_body(op, body))
+        return sorted(ops, key=lambda op: op.line)
+
+    def _arrow_body(self, start: int) -> str:
+        """An arrow function's body: its braces when it has them, else the expression on the rest of its line."""
+        if self._text.startswith("{", start):
+            body, _rel = self._brace_body(self._text, start)
+            if body is not None:
+                return body
+        line_end = self._text.find("\n", start)
+        return self._text[start : line_end if line_end >= 0 else len(self._text)]
 
     def _class_spans(self) -> list[tuple[int, int]]:
         spans: list[tuple[int, int]] = []
@@ -156,16 +181,22 @@ class CFamilyParse:
 
     def _methods_from_body(self, class_body: str, class_name: str) -> list[Operation]:
         ops: list[Operation] = []
-        for match in _METHOD_RE.finditer(class_body):
+        position = 0
+        while (match := _METHOD_RE.search(class_body, position)) is not None:
             name = match.group(1)
-            if match.start() > 0 and class_body[match.start() - 1] == ".":
-                continue
-            if name in {"if", "for", "while", "switch", "catch", "class", "constructor"}:
+            name_start = match.start(1)
+            # A name after a dot is a call on something (`this.store.change(`), not a method this class declares. The
+            # check reads the character before the name, since a match can open on the full stop ending a comment above.
+            if (name_start > 0 and class_body[name_start - 1] == ".") or name in {"if", "for", "while", "switch", "catch", "class", "constructor"}:
+                position = name_start + len(name)
                 continue
             op_name = "constructor" if class_name and name == class_name else name
-            method_body, _rel = self._brace_body(class_body, match.end() - 1)
+            method_body, body_start = self._brace_body(class_body, match.end() - 1)
             if method_body is None:
+                position = name_start + len(name)
                 continue
+            # Reading on after the body keeps a statement inside it, such as `for (…) {`, from being taken for the next header.
+            position = body_start + len(method_body) + 1
             op = Operation(
                 name=op_name,
                 parameters=self._split_params(match.group(2) or ""),

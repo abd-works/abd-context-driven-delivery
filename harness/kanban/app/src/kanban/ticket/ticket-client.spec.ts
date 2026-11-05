@@ -235,3 +235,174 @@ describe('Write Ticket Handoff', () => {
     expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-handoff-handoff-session.' }])
   })
 })
+
+describe('Close Active Session', () => {
+  async function closed() {
+    const { page } = await board.page()
+    const chat = await board.connectChat(page)
+    await ticketOn(page, ACTIVE).closeSession()
+    return { page, chat }
+  }
+
+  it('should send the close session command to the chat', async () => {
+    const { chat } = await closed()
+    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session' }])
+  })
+
+  it('should leave the ticket in its column', async () => {
+    const { page } = await closed()
+    expect(ticketOn(page, ACTIVE).column).toBe('Discovery')
+  })
+})
+
+// A ticket's chat is the chat working in the ticket's worktree, so a person clicking the ticket sends to it.
+describe('Open Ticket Chat', () => {
+  describe("with a chat working in the ticket's worktree", () => {
+    async function clicked() {
+      const { page } = await board.page()
+      await board.connectChat(page, 'other-chat')
+      const worktree = board.openWorktree(ACTIVE)
+      await board.chat('ticket-chat', 'abd · first words', worktree).checkIn()
+      await page.chat.refresh()
+      await page.reader.refresh()
+      await ticketOn(page, ACTIVE).choose()
+      return page
+    }
+
+    it("should send the board's commands to that chat", async () => {
+      expect((await clicked()).store.state.targetChat).toBe('ticket-chat')
+    })
+
+    it('should name that chat by the ticket', async () => {
+      const page = await clicked()
+      const chat = page.store.state.chats.find(entry => entry.id === 'ticket-chat')!
+      expect(page.chatName(chat)).toBe(ACTIVE)
+    })
+  })
+
+  // A person can act on a ticket from its card or its report without clicking the ticket first.
+  describe('with another chat picked last', () => {
+    async function closedWithoutClicking() {
+      const { page } = await board.page()
+      await board.connectChat(page, 'other-chat')
+      const worktree = board.openWorktree(ACTIVE)
+      const ticketChat = board.chat('ticket-chat', 'abd · first words', worktree)
+      await ticketChat.checkIn()
+      await page.chat.refresh()
+      await page.reader.refresh()
+      page.chat.choose('other-chat')
+      await ticketOn(page, ACTIVE).closeSession()
+      return ticketChat
+    }
+
+    it("should send the ticket's command to the ticket's chat", async () => {
+      expect(await (await closedWithoutClicking()).checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session' }])
+    })
+  })
+
+  // A chat's working folder can move into a folder of its checkout, and it still works on that checkout's ticket.
+  describe("with a chat working in a folder inside the ticket's worktree", () => {
+    it("should send the board's commands to that chat", async () => {
+      const { page } = await board.page()
+      await board.connectChat(page, 'other-chat')
+      const worktree = board.openWorktree(ACTIVE)
+      await board.chat('ticket-chat', 'abd · first words', `${worktree}\\harness\\kanban`).checkIn()
+      await page.chat.refresh()
+      await page.reader.refresh()
+      await ticketOn(page, ACTIVE).choose()
+      expect(page.store.state.targetChat).toBe('ticket-chat')
+    })
+  })
+
+  // A chat whose mod is older than the folder it works in sends none; the board titled it by its ticket when it opened it.
+  describe("with a chat titled by the ticket that names no folder", () => {
+    async function clicked() {
+      const { page } = await board.page()
+      const opened: string[] = []
+      page.openLink = link => opened.push(link)
+      await board.connectChat(page, 'other-chat')
+      board.openWorktree(ACTIVE)
+      await board.chat('ticket-chat', ACTIVE, '').checkIn()
+      await page.chat.refresh()
+      await page.reader.refresh()
+      await ticketOn(page, ACTIVE).choose()
+      return { page, opened }
+    }
+
+    it("should send the board's commands to that chat", async () => {
+      expect((await clicked()).page.store.state.targetChat).toBe('ticket-chat')
+    })
+
+    it('should open no new chat', async () => {
+      expect((await clicked()).opened).toHaveLength(0)
+    })
+  })
+
+  // The app opens a new session on a folder from a claude://code/new link; the person confirms the folder and sends.
+  describe("with no chat working in the ticket's worktree", () => {
+    async function clicked(times = 1) {
+      const { page } = await board.page()
+      const opened: string[] = []
+      page.openLink = link => opened.push(link)
+      const worktree = board.openWorktree(ACTIVE)
+      await page.reader.refresh()
+      for (let click = 0; click < times; click++) await ticketOn(page, ACTIVE).choose()
+      return { worktree, opened }
+    }
+
+    it("should open a new chat on the ticket's worktree", async () => {
+      const { worktree, opened } = await clicked()
+      expect(new URL(opened[0]!).searchParams.get('folder')).toBe(worktree)
+    })
+
+    it("should ask the new chat to take the ticket's name as its title", async () => {
+      const { opened } = await clicked()
+      expect(new URL(opened[0]!).searchParams.get('q')).toContain(`Title this session "${ACTIVE}"`)
+    })
+
+    // Opening the worktree and the Claude app takes a while, so the click shows at once that the chat is on its way.
+    it("should show the ticket's chat as opening", async () => {
+      const { page } = await board.page()
+      page.openLink = () => undefined
+      board.openWorktree(ACTIVE)
+      await page.reader.refresh()
+      await ticketOn(page, ACTIVE).choose()
+      expect(page.chat.isOpeningFor(ACTIVE)).toBe(true)
+    })
+
+    it('should open it only once while that chat starts', async () => {
+      expect((await clicked(2)).opened).toHaveLength(1)
+    })
+  })
+
+  describe('with a ticket that has no worktree yet', () => {
+    async function clicked() {
+      const { page } = await board.page()
+      const opened: string[] = []
+      page.openLink = link => opened.push(link)
+      await ticketOn(page, ACTIVE).choose()
+      return { page, opened }
+    }
+
+    it('should open its worktree', async () => {
+      const { page } = await clicked()
+      expect(ticketOn(page, ACTIVE).worktree).not.toBe('')
+    })
+
+    it('should open the new chat on that worktree', async () => {
+      const { page, opened } = await clicked()
+      expect(new URL(opened[0]!).searchParams.get('folder')).toBe(ticketOn(page, ACTIVE).worktree)
+    })
+  })
+
+  // A ticket in Complete has closed its work, so clicking it opens no branch, worktree, or chat for it.
+  describe('with a ticket in Complete', () => {
+    it('should open no new chat', async () => {
+      const { page } = await board.page()
+      const opened: string[] = []
+      page.openLink = link => opened.push(link)
+      await page.board.tickets.find(ticket => ticket.name === 'shipped-work')!.choose()
+      expect(opened).toEqual([])
+    })
+  })
+})

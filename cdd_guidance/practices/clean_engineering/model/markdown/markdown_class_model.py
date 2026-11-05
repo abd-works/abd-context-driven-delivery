@@ -132,6 +132,8 @@ class MarkdownOoadClass(OoadClass):
             lines.append("------")
             for property_row in self.properties:
                 lines.append(self._property_line(property_row))
+                for callee in property_row.callees:
+                    lines.append(f"\t-> {callee}")
                 for note in property_notes(property_row):
                     lines.append(f"\t// {note}")
             lines.append("----")
@@ -716,6 +718,8 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                     take_property_note(props[-1], stripped[2:])
                 continue
             if stripped.startswith("->"):
+                if props:
+                    props[-1].callees.append(stripped[2:].strip())
                 continue
             original = stripped
             stripped, rel_kind = self._strip_ce_prefix(stripped)

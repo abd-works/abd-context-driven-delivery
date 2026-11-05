@@ -2,8 +2,8 @@
 
 Writes handoff-{timestamp}.md into the session folder of the project being worked on:
 ``{work folder}/.sessions/{current session}/``, or ``{work folder}/.sessions/main/`` when the
-project has no named current session. The work folder is the checkout of ``CDD_PROJECT`` (the project
-the MCP host serves), else the process cwd, as :meth:`Session.current_folder` resolves it.
+project has no named current session. The work folder is the checkout of the project the calling chat
+works on, as :meth:`Session.current_folder` resolves it.
 No archiving, no latest pointer — one timestamped file per call.
 """
 from __future__ import annotations

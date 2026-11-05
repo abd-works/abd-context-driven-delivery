@@ -960,10 +960,13 @@ class StoryModel(StoryNode):
 
     @staticmethod
     def _nearest_map(folder):
-        """The story map in *folder* or the nearest folder above it: its markdown when it has one, since a drawio of
-        the same map would add every Story twice."""
+        """The story map in *folder* or the nearest folder above it, or in that folder's ``.context``, where documents
+        go while code sits straight in the folder: its markdown when it has one, since a drawio of the same map would
+        add every Story twice."""
         for candidate in (folder, *folder.parents):
-            maps = sorted(path.resolve() for path in candidate.iterdir() if is_story_map_file(path))
+            context = candidate / ".context"
+            beside = list(context.iterdir()) if context.is_dir() else []
+            maps = sorted(path.resolve() for path in [*candidate.iterdir(), *beside] if is_story_map_file(path))
             if maps:
                 markdown = [path for path in maps if path.suffix.lower() == ".md"]
                 return (markdown or maps)[0]

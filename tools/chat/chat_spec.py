@@ -4,7 +4,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from threading import Thread
+from threading import Barrier, Thread
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 for _root in (_REPO_ROOT, _REPO_ROOT / "tools"):
@@ -19,6 +19,7 @@ from chat.chat import Chat, ChatNotConnectedError
 CHAT = "ad6c04ab-chat"
 CLOCK = [1000.0]
 CONCURRENT_CHECK_INS = 200
+MANY_COMMANDS = 40
 
 
 def _said(commands: list) -> list[tuple[str, str]]:
@@ -93,6 +94,17 @@ with description("a chat") as self:
         with it("should go by the name its mod sent while the app has given it no title"):
             expect(Chat.list()[0]["name"]).to(equal("repo · first words"))
 
+        with it("should name no folder while its mod has sent none"):
+            expect(Chat.list()[0]["folder"]).to(equal(""))
+
+        # The board finds a ticket's chat by the worktree the chat works in.
+        with context("from the folder it works in"):
+            with before.each:
+                Chat.load(CHAT).check_in(is_busy=False, name="repo · first words", folder="C:/dev/repo-checkout-flow")
+
+            with it("should name that folder"):
+                expect(Chat.list()[0]["folder"]).to(equal("C:/dev/repo-checkout-flow"))
+
         with context("with a title the app wrote into its transcript, read at a later check-in"):
             with before.each:
                 folder = self.projects / "C--dev-repo"
@@ -139,6 +151,33 @@ with description("a chat") as self:
             with it("should get it only once"):
                 Chat.load(CHAT).check_in(is_busy=True)
                 expect(Chat.load(CHAT).check_in(is_busy=True)).to(be_empty)
+
+            # A mod that reloads checks in twice at once, and one cdd server answers both.
+            with context("among many, at two check-ins at once"):
+                with before.each:
+                    for number in range(MANY_COMMANDS):
+                        Chat.load(CHAT).send("command", f"/actions-validate {number}")
+                    self.failures, self.taken = [], []
+                    together = Barrier(2)
+
+                    def check_in() -> None:
+                        together.wait(timeout=5)
+                        try:
+                            self.taken.extend(Chat.load(CHAT).check_in(is_busy=True))
+                        except Exception as failure:
+                            self.failures.append(failure)
+
+                    both = [Thread(target=check_in) for _ in range(2)]
+                    for thread in both:
+                        thread.start()
+                    for thread in both:
+                        thread.join()
+
+                with it("should take both check-ins"):
+                    expect(self.failures).to(be_empty)
+
+                with it("should hand each command to only one of them"):
+                    expect(len(self.taken)).to(equal(MANY_COMMANDS + 1))
 
             # (S) Person --> View Chat Messages
             with it("should show the command waiting among its messages"):

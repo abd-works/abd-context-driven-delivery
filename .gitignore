@@ -37,7 +37,8 @@ harness/installation/.install-state.json
 # The main session runs on every branch, so its log and machine paths stay out of git
 .sessions/main/session.json
 .sessions/main/session.log
-.sessions/main/session.err
+# Error traces name machine paths and grow with every failure, so no session commits them
+.sessions/**/session.err
 .sessions/main/validation-reports/
 .context/prompt-log.txt
 .context/hooks/turn/auto_turn.last_run.json
@@ -74,6 +75,7 @@ tools/prompt_log/prompt_log.debug
 
 # Virtualenv & Secrets
 .venv/
+.venv-*/
 conf/*
 !conf/.secrets.example
 *.secrets.txt

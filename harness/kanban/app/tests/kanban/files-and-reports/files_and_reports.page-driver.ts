@@ -46,12 +46,14 @@ export class FilesAndReportsPageDriver implements FilesAndReportsDriver {
 
   async generatedFilesOf(ticket: string, fidelity: string): Promise<string[]> {
     await this.openFilesList(ticket, fidelity)
-    return this.filesPanel.locator('.file-link').allInnerTexts()
+    // The folder view shows each file by its name within its folder; its path from the project is on the entry.
+    const entries = await this.filesPanel.locator('.folder-entry').all()
+    return Promise.all(entries.map(async entry => (await entry.getAttribute('data-path')) ?? ''))
   }
 
   async textOfFile(ticket: string, fidelity: string, path: string): Promise<string> {
     await this.openFilesList(ticket, fidelity)
-    await this.filesPanel.getByRole('button', { name: path, exact: true }).click()
+    await this.filesPanel.locator(`.folder-entry[data-path="${path}"]`).click()
     await expect(this.filesPanel.locator('.line-text').first()).not.toHaveText('Not generated yet.')
     return this.filesPanel.locator('.file-lines').innerText()
   }

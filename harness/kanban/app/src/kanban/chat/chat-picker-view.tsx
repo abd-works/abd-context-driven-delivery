@@ -9,7 +9,7 @@ export function ChatPickerView() {
       <select className="chat-picker" aria-label="Chat to send commands to" value={state.targetChat ?? ''} onChange={event => page.chat.choose(event.target.value)}>
         {state.targetChat ? null : <option value="">Pick a chat</option>}
         {state.chats.map(chat => {
-          const shown = chat.name || chat.id
+          const shown = page.chatName(chat)
           return (
             <option key={chat.id} value={chat.id} title={chat.id}>
               {chat.is_busy ? `${shown} (busy)` : shown}

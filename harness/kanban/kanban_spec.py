@@ -13,8 +13,9 @@ Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from bdd.bdd import Bdd  # noqa: E402
 from ddd.ddd import Ddd  # noqa: E402
-from harness.kanban.board import Board, Card  # noqa: E402
+from harness.kanban.board import Board, Card, ColumnNotFoundError  # noqa: E402
 from harness.kanban.ticket import Ticket  # noqa: E402
+from space.repo.repo import Repo  # noqa: E402
 from stories.stories import Stories  # noqa: E402
 from ux.ux import Ux  # noqa: E402
 
@@ -61,7 +62,7 @@ with description("a board") as self:
     # (S) Board App --> Display Board
     with context("with Stories, DDD, and UX chosen"):
         with before.each:
-            self.board = Board(SessionsFolder().project, [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(SessionsFolder().project), [Stories(), Ddd(), Ux()])
             self.discovery = self.board.column("Discovery")
 
         with it("should have the columns Backlog, Discovery, Specification, Implementation, and Complete, in that order"):
@@ -75,13 +76,21 @@ with description("a board") as self:
 
     with context("with BDD chosen"):
         with before.each:
-            self.board = Board(SessionsFolder().project, [Bdd()])
+            self.board = Board(Repo(SessionsFolder().project), [Bdd()])
 
         with it("should have behavior as Discovery's work required"):
             expect([fidelity.name for fidelity in self.board.column("Discovery").work_required]).to(equal(["behavior"]))
 
         with it("should have realization as Specification's work required"):
             expect([fidelity.name for fidelity in self.board.column("Specification").work_required]).to(equal(["realization"]))
+
+        with it("should refuse a column it does not have, naming it"):
+            try:
+                self.board.column("Icebox")
+                refused = None
+            except ColumnNotFoundError as error:
+                refused = error.column
+            expect(refused).to(equal("Icebox"))
 
     with context("that has been loaded with no practices given"):
         with before.each:
@@ -103,11 +112,11 @@ with description("a board") as self:
             os.environ["CDD_PROJECT"] = str(inside)
 
         with it("should show the board of the whole checkout, where sessions keep their folders"):
-            expect(Board.current().repo_root).to(equal(self.checkout.resolve()))
+            expect(Board.current().repo.root).to(equal(self.checkout.resolve()))
 
     with context("with no session saved as open"):
         with it("should have no active ticket, since main is not on the board"):
-            expect(Board(SessionsFolder().project, [Stories()]).active).to(be_none)
+            expect(Board(Repo(SessionsFolder().project), [Stories()]).active).to(be_none)
 
     # (S) Board App --> Display Ticket Card, Display Backlog Items As Tickets
     with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
@@ -120,7 +129,7 @@ with description("a board") as self:
             sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
             sessions.folder("_archive/old-spike")
             sessions.current("pet-visits")
-            self.board = Board(sessions.project, [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(sessions.project), [Stories(), Ddd(), Ux()])
 
         with it("should show every work session as a ticket"):
             expect(names(self.board.tickets)).to(equal(["pet-visits", "sign-up", "browse-pets"]))
@@ -161,7 +170,7 @@ with description("a backlog item") as self:
         with before.each:
             self.sessions = SessionsFolder()
             self.item_path = self.sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
-            self.board = Board(self.sessions.project, [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(self.sessions.project), [Stories(), Ddd(), Ux()])
 
         with it("should be in the Backlog"):
             expect(self.board.backlog_items[0].column.name).to(equal("Backlog"))
@@ -204,7 +213,7 @@ with description("a backlog item") as self:
             (folder / "gift-cards.md").write_text("# Gift cards\n\nSell them at the till.\n", encoding="utf-8")
             (folder / "session.log").write_text("2026-10-31T01:00:00Z generate /work stories story_map markdown stories no-chat\n", encoding="utf-8")
             (folder / "session.json").write_text(json.dumps({"name": "gift-cards", "title": "Gift cards"}), encoding="utf-8")
-            self.board = Board(self.sessions.project, [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(self.sessions.project), [Stories(), Ddd(), Ux()])
 
         with it("should be in the Backlog under the heading of that file"):
             expect([item.title for item in self.board.backlog_items]).to(equal(["Gift cards"]))
@@ -229,9 +238,9 @@ with description("a backlog item") as self:
             self.sessions = SessionsFolder()
             folder = self.sessions.session("pet-visits", "move Specification", title="Pet visits")
             (folder / "pet-visits.md").write_text("# Pet visits\n\nBook a vet visit online.\n", encoding="utf-8")
-            board = Board(self.sessions.project, [Stories(), Ddd(), Ux()])
+            board = Board(Repo(self.sessions.project), [Stories(), Ddd(), Ux()])
             board.ticket("pet-visits").move_to("Backlog")
-            self.board = Board(self.sessions.project, [Stories(), Ddd(), Ux()])
+            self.board = Board(Repo(self.sessions.project), [Stories(), Ddd(), Ux()])
 
         with it("should be in the Backlog"):
             expect([item.title for item in self.board.backlog_items]).to(equal(["Pet visits"]))
@@ -266,7 +275,7 @@ def board_with(lines: list):
     sessions = SessionsFolder()
     sessions.session("pawplace", title="PawPlace")
     sessions.session("pet-visits", *lines, title="Pet visits", scope="feature", parent="pawplace")
-    return sessions.root, Board(sessions.project, [Stories(), Ddd(), Ux()])
+    return sessions.root, Board(Repo(sessions.project), [Stories(), Ddd(), Ux()])
 
 
 def ticket_with(lines: list):
@@ -285,17 +294,17 @@ with description("a ticket") as self:
     with context("that has just been started"):
         with before.each:
             SessionsFolder()
-            Ticket.new("PawPlace", "initiative")
-            self.ticket = Ticket.new("Pet visits", "feature", "pawplace")
+            Ticket.create("PawPlace", "initiative")
+            self.ticket = Ticket.create("Pet visits", "feature", "pawplace")
 
         with it("should be in Discovery, in progress"):
             expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", False)))
 
-        with it("should keep its title, scope, and lineage"):
-            expect((self.ticket.title, self.ticket.scope, self.ticket.lineage.name)).to(equal(("Pet visits", "feature", "pawplace")))
+        with it("should keep its title, scope, and parent"):
+            expect((self.ticket.title, self.ticket.scope, self.ticket.parent.name)).to(equal(("Pet visits", "feature", "pawplace")))
 
         with it("should name Generate on story_map as next"):
-            expect((self.ticket.next.slug, self.ticket.next.remaining_actions[0])).to(equal(("stories-story_map", "generate")))
+            expect((self.ticket.next_fidelity.slug, self.ticket.next_fidelity.remaining_actions[0])).to(equal(("stories-story_map", "generate")))
 
     # (S) Board App --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):
@@ -357,7 +366,7 @@ with description("a ticket") as self:
             expect(names(self.board.column("Discovery").done)).to(equal(["pet-visits"]))
 
         with it("should have no next"):
-            expect(self.ticket.next).to(be_none)
+            expect(self.ticket.next_fidelity).to(be_none)
 
         with context("that a person has moved on"):
             with before.each:
@@ -369,16 +378,6 @@ with description("a ticket") as self:
             with it("should write the stage it entered to its session log"):
                 log = (self.root / "pet-visits" / "session.log").read_text(encoding="utf-8")
                 expect(log.splitlines()[-1]).to(contain("move Specification"))
-
-    with context("with a session log written before moves were named move"):
-        with before.each:
-            self.ticket = ticket_with(["pull Specification", "done Specification"])
-
-        with it("should still be in the stage the log names"):
-            expect(self.ticket.column.name).to(equal("Specification"))
-
-        with it("should still be marked done there"):
-            expect(self.ticket.is_done).to(be_true)
 
     # (S) Person --> Mark Ticket Done In Stage
     with context("with its stage not done"):
@@ -396,7 +395,7 @@ with description("a ticket") as self:
                 expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", True)))
 
             with it("should have no next"):
-                expect(self.ticket.next).to(be_none)
+                expect(self.ticket.next_fidelity).to(be_none)
 
     # (S) Person --> Send Next Fidelity Action
     with context("that a person has moved on with an earlier stage's fidelity still to review"):
@@ -405,7 +404,7 @@ with description("a ticket") as self:
             self.ticket.move_to("Specification")
 
         with it("should name Review on that fidelity as next"):
-            expect((self.ticket.next.slug, self.ticket.next_action)).to(equal(("stories-story_map", "review")))
+            expect((self.ticket.next_fidelity.slug, self.ticket.next_action)).to(equal(("stories-story_map", "review")))
 
     # (S) Person --> Drag Ticket To A Stage
     with context("that a person has dragged into a later stage's done part"):

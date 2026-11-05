@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
+
+from space.work_state import working_on
 
 _SESSION_PROBE_NAME = "guidance-probe"
 _CDD_REPO = Path(__file__).resolve().parents[2]
@@ -17,28 +18,30 @@ def probe_session_log() -> dict[str, Any]:
     from harness.installation.bootstrap import ensure_import_path
 
     ensure_import_path(_CDD_REPO)
-    prior_repo = os.environ.get("CDD_REPO")
-    prior_project = os.environ.get("CDD_PROJECT")
     repo = Path(tempfile.mkdtemp(prefix="cdd-session-probe-"))
-    try:
-        (repo / ".git").mkdir()
-        work = repo / "work"
-        work.mkdir()
-        os.environ["CDD_REPO"] = str(repo)
-        os.environ["CDD_PROJECT"] = str(work)
-        from space.session import Session
+    (repo / ".git").mkdir()
+    work = repo / "work"
+    work.mkdir()
+    # The probe runs inside the one cdd server, so it names its own project and chat for this call only; every other
+    # chat's calls keep theirs.
+    with working_on(work):
+        return _probe_in(repo, work)
 
-        Session._current = None
+
+def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
+    from space.session import Session
+    from space.session.chat_context import set_chat_context
+
+    try:
+        Session.forget_current(repo)
         Session.new(_SESSION_PROBE_NAME, work, repo)
         session = Session.current()
         chats = session.session_path / "chats"
         chats.mkdir(parents=True, exist_ok=True)
         transcript = chats / "guidance-probe.md"
         transcript.write_text("guidance diagnostics probe\n", encoding="utf-8")
-        os.environ["CDD_CONVERSATION_ID"] = "guidance-probe"
-        os.environ["CDD_TRANSCRIPT_PATH"] = str(transcript)
-        os.environ["CDD_TRANSCRIPT_LINES"] = "1"
-        Session._current = None
+        set_chat_context("guidance-probe", transcript, "1")
+        Session.forget_current(repo)
 
         from generate.generate import Generate
         from validate.validate import Validate
@@ -75,17 +78,7 @@ def probe_session_log() -> dict[str, Any]:
     except Exception as exc:
         return _fail(_failure_text(exc))
     finally:
-        from space.session import Session
-
-        if prior_repo is None:
-            os.environ.pop("CDD_REPO", None)
-        else:
-            os.environ["CDD_REPO"] = prior_repo
-        if prior_project is None:
-            os.environ.pop("CDD_PROJECT", None)
-        else:
-            os.environ["CDD_PROJECT"] = prior_project
-        Session._current = None
+        Session.forget_current(repo)
         shutil.rmtree(repo, ignore_errors=True)
 
 
