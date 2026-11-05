@@ -1,2 +1,8 @@
 2026-11-04 story-map.md: I named band Stories after board tickets (Open Ticket Session, Activate Ticket, Display Ticket Card, Move Ticket, List Ticket Files, Browse Ticket Folder). The band has no concept of a ticket; the person works in sessions. Correction: Create New Session and Open Session, and "session" wherever the board says ticket; `ticket.*` tool names stay as the tools the band calls.
 2026-11-04 story-map.md: I named the action-button Story "Send Next Fidelity Action" after the board. The band invokes the action rather than sending it to a chat. Correction: "Invoke Next Fidelity Action".
+Mistake: wrote the Clean Engineering model in Python as one file, harness/chat-ui/.context/chat-band-model.py.
+Correction: the Python model goes in the module folder, one file per class family named after it ({module}/{family_slug}.py): harness/chat-ui/pane/ticket_client.py and stage_strip_view.py.
+Mistake: the model redeclared TicketClient, its fields, and actions that already exist: Ticket and Board from the language adapter, and the actions in the retired kanban pane's ticket-client.ts and side-panel-client.ts.
+Correction: the model holds only what is new, StageStripView and its stripView atom, and names the reused classes and actions instead of redeclaring them.
+Mistake: wrote the chat bar's model as Python files (session_client.py, stage_strip_view.py, register.py) in the pane.
+Correction: a Claude Code mod's model is TypeScript shells in pane/hooks/, shaped as ChatBar holding the reused ServerHealth, FidelityClient, and StageClient: hooks/chat-bar/chat-bar-client.ts and chat-bar-view.tsx, with the chatBar atom in types/index.d.ts.
