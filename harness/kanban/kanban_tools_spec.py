@@ -58,7 +58,7 @@ STORY_MAP_GRAPH = {
     },
 }
 # A report as validate saves it, with the judgment the validating agent added: a rule the graph already hit, a failed rule
-# with two findings, and a rule with one finding.
+# with two findings in the map and one in its drawio, and a rule with one finding followed by a list of passing rules.
 JUDGED_REPORT = """# Graph rule validation
 
 ## Judgment — `docs/map.md`
@@ -76,6 +76,14 @@ Graph rule: the story at line 12 opens with a noun.
 
 ### `story-name-captures-system-mechanic` — Fail
 - map.md:3 `Do Stuff` does not say what it does.
+
+**Passes:**
+- verb-noun-format: every name is a verb and a noun.
+
+## Judgment — `docs/map.drawio`
+
+### `do-not-invent-requirements` — Fail
+- map.drawio:2 `Open Board`: no source names the board command.
 
 ### Passes
 Everything else.
@@ -403,9 +411,13 @@ with description("the board tools") as self:
                     report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
                     expect([rule["name"] for rule in report["rules"]]).to(equal(["verb-noun-format", "do-not-invent-requirements", "story-name-captures-system-mechanic"]))
 
-                with it("should count each finding of a judged rule"):
+                with it("should count each finding of a judged rule in every judged file"):
                     report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
-                    expect(report["rules"][1]["count"]).to(equal(2))
+                    expect(report["rules"][1]["count"]).to(equal(3))
+
+                with it("should not read the passing rules listed after a judged rule as its findings"):
+                    report = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")
+                    expect(report["rules"][2]["count"]).to(equal(1))
 
                 with it("should give a judged finding the judged file and its line"):
                     finding = self.project.call("ticket.report", ticket="pet-visits", fidelity="stories-story_map")["rules"][1]["violations"][0]
@@ -790,7 +802,7 @@ with description("the board tools") as self:
                 expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("satisfy"))
 
             with it("should count each finding of the judgment"):
-                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-story_map": 4}))
+                expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-story_map": 5}))
 
         with context("that a person has finished reviewing"):
             with before.each:

@@ -1384,6 +1384,30 @@ class Session:
             if part
         )
 
+    def last_generated_format(self, guidance: PracticeGuidance) -> str:
+        """The format the latest generate of guidance's fidelity wrote, read from its line in session.log, which lists the
+        practices, then their fidelities, then their formats; empty when no generate line names that fidelity."""
+        practice = self._practice_key_for_instance(guidance)
+        fidelity = self._fidelity_name(guidance)
+        log = self.session_path / "session.log" if self.session_path else None
+        if not practice or not fidelity or log is None or not log.is_file():
+            return ""
+        for line in reversed(log.read_text(encoding="utf-8").splitlines()):
+            words = line.replace(", ", ",").split(" ")
+            if len(words) > 1 and words[1] == "generate":
+                written = self._written_format(words[2:], practice, fidelity)
+                if written:
+                    return written
+        return ""
+
+    @staticmethod
+    def _written_format(words: list[str], practice: str, fidelity: str) -> str:
+        for practices, fidelities, formats in zip(words, words[1:], words[2:]):
+            named = list(zip(practices.split(","), fidelities.split(","), formats.split(",")))
+            if (practice, fidelity) in [(name, opened) for name, opened, _ in named]:
+                return next(written for name, opened, written in named if (name, opened) == (practice, fidelity))
+        return ""
+
     def _fidelity_name(self, guidance: PracticeGuidance) -> str:
         current = getattr(getattr(guidance, "fidelities", None), "current", None)
         if current is None:

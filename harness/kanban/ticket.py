@@ -385,7 +385,7 @@ class Ticket(Card):
     @agent_tool
     @noSessionLog
     def finish_review(self, fidelities: list[str]) -> Ticket:
-        """Record that a person has reviewed and approved fidelities, slugs such as stories-story_map, on ticket: one review line each in its session log. A review counts once its fidelity's latest Validate has passed, and a fidelity whose actions are all done is done in its stage."""
+        """Record that a person has reviewed and approved fidelities, slugs such as stories-story_map, on ticket: one review line each in its session log. A review counts until the fidelity is validated again, and a fidelity whose actions are all done is done in its stage."""
         approved = [self._progress_of(slug).fidelity for slug in fidelities]
         for fidelity in approved:
             self.record(f"{REVIEW} {type(fidelity.practice_guidance).__name__} {fidelity.name}")
@@ -651,11 +651,12 @@ class Ticket(Card):
         ]
 
     def _judged_rules(self, text: str, progress: FidelityProgress) -> list[ReportRuleData]:
-        """Each rule the judgment in a report fails, with its findings at the judged file's lines."""
-        return [
-            self._report_rule(progress, judgment.rule, [self._judged_violation(judgment.file, finding) for finding in judgment.findings])
-            for judgment in Judgment.from_report(text)
-        ]
+        """Each rule the judgment in a report fails, once however many judged files fail it, with its findings at the
+        judged files' lines."""
+        findings: dict[str, list[ViolationData]] = {}
+        for judgment in Judgment.from_report(text):
+            findings.setdefault(judgment.rule, []).extend(self._judged_violation(judgment.file, finding) for finding in judgment.findings)
+        return [self._report_rule(progress, rule, violations) for rule, violations in findings.items()]
 
     def _report_rule(self, progress: FidelityProgress, name: str, violations: list[ViolationData]) -> ReportRuleData:
         """One broken rule of a report, in the one shape the board reads for graph hits and judged findings alike."""
@@ -733,7 +734,7 @@ class FidelityProgress:
     """*FidelityProgress* is how far one fidelity has got through its stage's actions on one ticket."""
 
     # Validate is done when its latest line names no graph-rule violations and, as the ticket judges it, the latest
-    # report's judgment fails no rule; review is done only after that.
+    # report's judgment fails no rule. Review is done once a person reviews after the latest validate, passed or not.
 
     def __init__(self, fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool) -> None:
         self._fidelity = fidelity
@@ -749,7 +750,7 @@ class FidelityProgress:
         latest_validation = validations[-1] if validations else None
         has_violations = latest_validation is not None and GRAPH_RULE_VIOLATION in lines[latest_validation]
         validated = latest_validation is not None and not has_violations
-        reviewed = validated and any(verb == REVIEW and index > latest_validation for index, verb in naming)
+        reviewed = any(verb == REVIEW and (latest_validation is None or index > latest_validation) for index, verb in naming)
         done_verbs = {verb for _, verb in naming if verb == GENERATE}
         done_verbs |= {VALIDATE} if validated else set()
         done_verbs |= {REVIEW} if reviewed else set()
@@ -798,8 +799,8 @@ class FidelityProgress:
         return self.slug_of(self._fidelity)
 
     def with_violations(self) -> FidelityProgress:
-        """This progress with its latest validate failed, so validate and review are to do again."""
-        return FidelityProgress(self._fidelity, self._stage, [action for action in self._done_actions if action == GENERATE], True)
+        """This progress with its latest validate failed, so validate is to do again; a person's review stands."""
+        return FidelityProgress(self._fidelity, self._stage, [action for action in self._done_actions if action in (GENERATE, REVIEW)], True)
 
     def slug_of(self, fidelity: FidelityGuidance) -> str:
         return f"{self.practice}-{fidelity.name}"
@@ -886,8 +887,8 @@ class Judgment:
                 judgments.append(current)
             elif line.startswith("#"):
                 current = None
-            elif current and line.strip():
-                current._add_finding_from(line.strip())
+            elif current and line.strip() and not current._add_finding_from(line.strip()):
+                current = None
         return judgments
 
     @property
@@ -903,12 +904,12 @@ class Judgment:
         """Each finding at the file and line it names, when it names them; its source is read by whoever shows it."""
         return list(self._findings)
 
-    def _add_finding_from(self, line: str) -> None:
-        """A bullet is a finding; a paragraph under a rule with no bullets is its one finding, and a paragraph after a
-        bullet continues that bullet."""
+    def _add_finding_from(self, line: str) -> bool:
+        """A bullet is a finding, and a paragraph under a rule with no bullets is its one finding. A paragraph after the
+        findings ends the rule, so a Passes list the agent adds after its judgment is not read as findings."""
         bullet = FINDING_LINE.match(line)
         if bullet is None and self._findings:
-            return
+            return False
         located = bullet if bullet and bullet["line"] else None
         self._findings.append({
             "location": located["file"] if located else "",
@@ -916,6 +917,7 @@ class Judgment:
             "message": bullet["message"] if bullet else line,
             "source": [],
         })
+        return True
 
 
 SKIPPED_FOLDERS = frozenset({"node_modules"})

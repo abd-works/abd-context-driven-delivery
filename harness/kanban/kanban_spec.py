@@ -356,6 +356,14 @@ with description("a ticket") as self:
             with it("should not count the review"):
                 expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "validate"]))
 
+        # A person who clicks Review has reviewed the output, whatever its validate found.
+        with context("that was reviewed after a validate that found violations"):
+            with before.each:
+                self.lines += [VALIDATE_STORY_MAP_WITH_VIOLATIONS, REVIEW_STORY_MAP]
+
+            with it("should count the review"):
+                expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "review"]))
+
     # (S) Person --> Review Fidelity, Complete Stage Work; (S) Person --> Move Ticket
     with context("with every required fidelity in its stage done"):
         with before.each:
