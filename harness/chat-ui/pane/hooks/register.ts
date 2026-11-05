@@ -17,6 +17,7 @@ import {
   togglePin,
 } from './health/server-health-client'
 import { ServerHealthBandView } from './health/server-health-view'
+import { withChatNamed } from './session/session-log-client'
 
 // Connects this chat to cdd's chat tools, which the board sends commands through. The rules live in the cdd server.
 const PLUGIN = 'cdd-board'
@@ -214,6 +215,8 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'board' }, async $ => ({ text: await openedBoard($) }))
+
+  on('tool.call', async ($, e, next) => next(await withChatNamed($, e)))
 
   on('turn.start', async ($, e, next) => {
     if (!e.agentId) {

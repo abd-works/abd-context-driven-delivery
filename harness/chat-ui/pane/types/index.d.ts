@@ -1,9 +1,10 @@
-﻿import type { ServerHealthData } from '@cdd/harness/health/server-health'
+// `claude plugin validate` holds this contract to one self-contained file, so it imports nothing. Each atom's tool
+// answer is typed as the language adapter's data where its client file reads it: ServerHealthData.
 
-// What the server health band keeps between draws. The report's shape is the generated ServerHealthData, imported above.
+// What the server health band keeps between draws. report is server-health.report's answer.
 export type ServerHealthJson = {
   connection: 'connected' | 'reconnecting' | 'disconnected' | 'tools-missing'
-  report: ServerHealthData | null
+  report: object | null
   toolCount: number
   problem: string | null
   attempt: number
