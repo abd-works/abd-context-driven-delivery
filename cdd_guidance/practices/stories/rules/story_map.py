@@ -38,7 +38,8 @@ class FourToNineChildren(PracticeGraphRule):
 
 
 class StoryScenariosOneToFour(PracticeGraphRule):
-    """Code scenarios on a story: 1 to 7. More than seven and the story is huge."""
+    """Code scenarios on a story: at most 7. More than seven and the story is huge. A story with none
+    has not had its scenarios written yet, which is ordinary while the map is ahead of the scenarios."""
 
     slug = "story-scenarios-one-to-four"
     node_types = ("Story",)
@@ -50,11 +51,9 @@ class StoryScenariosOneToFour(PracticeGraphRule):
         if count is None:
             return []
         count = int(count)
-        if 1 <= count <= _MOST_SCENARIOS:
+        if count <= _MOST_SCENARIOS:
             return []
-        if count > _MOST_SCENARIOS:
-            return [f"story {node.name!r}: {count} scenarios — story is huge (target 1-{_MOST_SCENARIOS})"]
-        return [f"story {node.name!r}: {count} scenarios (target 1-{_MOST_SCENARIOS})"]
+        return [f"story {node.name!r}: {count} scenarios — story is huge (target 1-{_MOST_SCENARIOS})"]
 
 
 class KebabCasePaths(PracticeGraphRule):

@@ -65,9 +65,8 @@ with description("story scenario count"):
             hits = StoryScenariosOneToFour().check(_story_node("Pick Number", 8), None)
             expect(hits).to(equal(["story 'Pick Number': 8 scenarios — story is huge (target 1-7)"]))
 
-        with it("should flag a story with no scenarios"):
-            hits = StoryScenariosOneToFour().check(_story_node("Enter Validation Code", 0), None)
-            expect(hits).to(equal(["story 'Enter Validation Code': 0 scenarios (target 1-7)"]))
+        with it("should accept a story with no scenarios, whose scenarios are not written yet"):
+            expect(StoryScenariosOneToFour().check(_story_node("Enter Validation Code", 0), None)).to(equal([]))
 
     with context("a story that records its scenario count"):
         with it("should not mark two scenarios as a 4-9 child-band error"):
@@ -78,7 +77,7 @@ with description("story scenario count"):
             expect(story.child_band).to(equal(""))
 
     with context("schema"):
-        with it("should size story scenarios with the 1-7 rule"):
+        with it("should size story scenarios with the at-most-seven rule"):
             expect(slugs_for_type("stories", "Story")).to(contain("story-scenarios-one-to-four"))
             expect("four-to-nine-children" in slugs_for_type("stories", "Story")).to(equal(False))
 
