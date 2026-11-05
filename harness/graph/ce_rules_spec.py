@@ -264,6 +264,19 @@ export class AccountCredentialsClient {
             )
             hits = violations_for_rule(rule, practice, root)
             expect(hits).not_to(equal([]))
+        # A Claude Code mod hands every hook its engine as $, the name the mod API documents.
+        with it("should allow the engine a Claude Code mod hands its hooks as $"):
+            rule = ce_rule_by_slug("use-intention-revealing-names")
+            source = """
+export function refreshChatBar($: EngineInterface): void {}
+"""
+            practice, root = practice_from_source(
+                source,
+                lang="typescript",
+                filename="chat-bar-client.ts",
+            )
+            hits = violations_for_rule(rule, practice, root)
+            expect(hits).to(equal([]))
     with context("prefer-instance-operations"):
         with it("should flag faultyAsset and accept repairedAsset"):
             _example_pair("prefer-instance-operations")
