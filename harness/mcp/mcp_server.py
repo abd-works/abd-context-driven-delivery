@@ -749,6 +749,27 @@ class McpServer:
         return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments)
 
 
+class _ProjectNamedOnly:
+    """The ``/mcp`` endpoint for requests that name their project. Claude Code runs a chat's header helper again only
+    when the server answers 401, so a chat that connected while the helper could not run, such as during a restart or
+    an install, names its project on the next try instead of failing every call."""
+
+    def __init__(self, app: Any) -> None:
+        from harness.mcp.mcp_daemon import PROJECT_HEADER
+
+        self._app = app
+        self._header = PROJECT_HEADER.lower().encode("latin-1")
+        self._refusal = {"error": f"name the chat's project in the {PROJECT_HEADER} header"}
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        from starlette.responses import JSONResponse
+
+        if scope["type"] == "http" and not any(name == self._header and value for name, value in scope["headers"]):
+            await JSONResponse(self._refusal, status_code=401)(scope, receive, send)
+            return
+        await self._app(scope, receive, send)
+
+
 class ProjectNotNamed(Exception):
     """A tool call arrived without the ``X-CDD-Project`` header, so the server cannot tell which project it is for."""
 
@@ -1240,7 +1261,7 @@ class McpHost:
             )
 
         return Starlette(
-            routes=[Route(PING_PATH, ping), Route(MCP_PATH, endpoint=StreamableHTTPASGIApp(manager))],
+            routes=[Route(PING_PATH, ping), Route(MCP_PATH, endpoint=_ProjectNamedOnly(StreamableHTTPASGIApp(manager)))],
             lifespan=lambda _app: manager.run(),
         )
 

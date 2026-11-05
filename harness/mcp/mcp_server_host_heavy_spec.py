@@ -18,6 +18,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _path)
 
 import anyio
+import httpx
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 from mcp import McpError, types
@@ -278,16 +279,17 @@ with description("the cdd server") as self:
             second = self.chat.run(lambda session: session.call_tool("hosting-demo.read_count", arguments={}), self.worktrees.second)
             expect(_text(second)).to(equal("0"))
 
+    # Claude Code runs a chat's header helper again only when the server answers 401, so a chat that connected while
+    # the helper could not run gets its project named on the next try instead of failing every call.
     with context("that a chat names no project"):
-        with it("should refuse a project's tool and say which header is missing"):
-            async def read_count(session):
-                return await session.call_tool("hosting-demo.read_count", arguments={})
+        with before.each:
+            self.answer = httpx.post(self.server.url, json={"jsonrpc": "2.0", "id": 1, "method": "ping"}, headers={"Accept": "application/json, text/event-stream"})
 
-            async def without_project():
-                async with self.server.chat(None) as session:
-                    return await read_count(session)
+        with it("should refuse the connection as unauthorized"):
+            expect(self.answer.status_code).to(equal(401))
 
-            expect(_text(asyncio.run(without_project()))).to(contain("X-CDD-Project"))
+        with it("should say which header is missing"):
+            expect(self.answer.text).to(contain("X-CDD-Project"))
 
     with context("that has been restarted"):
         with it("should start its toolsets again on the code as it is now"):
