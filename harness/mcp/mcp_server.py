@@ -188,6 +188,10 @@ class UserMcpConfig:
         return base / "Code" / "User"
 
 
+# Claude Code names the cdd plugin's tools mcp__plugin_cdd_cdd__{tool}, so this one entry allows every one of them.
+CLAUDE_TOOLS_PERMISSION = "mcp__plugin_cdd_cdd"
+
+
 class McpInstallation(Installation):
     """Record ``@Mcp`` ops, write ``mcp.json``, enroll at server start."""
 
@@ -246,6 +250,10 @@ class McpInstallation(Installation):
         if self.ide == "Claude" and self.user_config is not None:
             self.allow_cdd_tools(self.user_config.folder / "settings.json")
             self.drop_project_cdd_server()
+            self.drop_user_cdd_server()
+            for written in self.server_home.write_claude_plugin(self._claude_plugin_server()):
+                self.track_write(written)
+            return
         manifest = self._server_manifest()
         if self._has_cdd_entry(dest, manifest):
             self.track_write(dest)
@@ -266,9 +274,9 @@ class McpInstallation(Installation):
             return
         permissions = data.setdefault("permissions", {})
         allow = permissions.setdefault("allow", [])
-        if "mcp__cdd" in allow:
+        if CLAUDE_TOOLS_PERMISSION in allow:
             return
-        allow.append("mcp__cdd")
+        allow.append(CLAUDE_TOOLS_PERMISSION)
         settings.parent.mkdir(parents=True, exist_ok=True)
         settings.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -289,6 +297,28 @@ class McpInstallation(Installation):
         else:
             project_config.unlink()
 
+    def drop_user_cdd_server(self) -> None:
+        """Claude Code runs a user-level entry's headersHelper in ``~/.claude`` for every chat, so the entry names no
+        chat's project; the cdd plugin replaces it. ``~/.claude.json`` holds the app's own state too, so only ``cdd`` goes."""
+        user = self.user_config
+        try:
+            data = json.loads(user.path.read_text(encoding="utf-8")) if user is not None and user.path.is_file() else None
+        except (OSError, json.JSONDecodeError):
+            return
+        servers = data.get("mcpServers") if isinstance(data, dict) else None
+        if not isinstance(servers, dict) or "cdd" not in servers:
+            return
+        del servers["cdd"]
+        user.path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+    def _claude_plugin_server(self) -> dict[str, Any]:
+        """The cdd server as the cdd plugin declares it: Claude Code fills in ``${CLAUDE_PROJECT_DIR}`` with the chat's
+        folder and passes it to the connect script."""
+        from harness.mcp.mcp_daemon import McpDaemon
+
+        home = self.server_home
+        return {"type": "http", "url": McpDaemon().url, "headersHelper": f'"{home.python}" "{home.connect_script}" "${{CLAUDE_PROJECT_DIR}}"'}
+
     def _server_manifest(self) -> dict[str, Any]:
         """The one ``cdd`` entry: the shared server's URL plus how each request names its project. A user-level entry
         serves every project, so it names the open one; a temp install tree names its own."""
@@ -298,9 +328,6 @@ class McpInstallation(Installation):
         user = self.user_config
         if user is None:
             server["headers"] = {PROJECT_HEADER: str(self._project_root().resolve())}
-        elif self.ide == "Claude":
-            # Claude Code runs the helper in the chat's own folder before it connects, and sends what it prints.
-            server["headersHelper"] = f'"{self.server_home.python}" "{self.server_home.connect_script}"'
         else:
             server["headers"] = {PROJECT_HEADER: user.project_folder}
         if self.ide == "Cursor":
@@ -733,6 +760,20 @@ class ProjectNotNamed(Exception):
         self.tool = tool
 
 
+class ProjectIsClaudeSettings(Exception):
+    """A tool call named Claude Code's own settings folder as its project. A user-level cdd entry does that for every
+    chat, because Claude Code runs its headersHelper there, so the call would act on a board no chat works on."""
+
+    def __init__(self, tool: str, folder: Path) -> None:
+        super().__init__(
+            f"{tool} named {folder} as its project, which is Claude Code's settings folder, not this chat's folder. "
+            "The cdd entry in ~/.claude.json causes this: run python scripts/install.py --ide Claude from a CDD checkout, "
+            "which replaces it with the cdd plugin, then reconnect cdd in this chat with /mcp."
+        )
+        self.tool = tool
+        self.folder = folder
+
+
 class _CddProtocolServer(Server):
     """The MCP protocol server, telling every client that a restart can change the tool list."""
 
@@ -1049,10 +1090,12 @@ class McpHost:
         except LookupError:
             request = None
         named = request.headers.get(PROJECT_HEADER) if request is not None else None
+        if tool in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
+            return Path(named) if named else None
+        if named and Path(named).resolve() == UserMcpConfig("Claude").folder.resolve():
+            raise ProjectIsClaudeSettings(tool, Path(named))
         if named:
             return Path(named)
-        if tool in (BUILTIN_PING_TOOL, BUILTIN_RESTART_TOOL):
-            return None
         raise ProjectNotNamed(tool)
 
     def _dispatch_reporting(

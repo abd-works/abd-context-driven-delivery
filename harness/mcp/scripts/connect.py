@@ -1,7 +1,8 @@
 """Run by an IDE before it connects to the cdd server: start the server when none answers, then name the project.
 
-The installer copies this file to ``~/.cdd/connect.py``, and Claude Code runs it in the chat's own folder as the cdd
-entry's ``headersHelper``. It prints the headers to send, so every request says which project its chat works on."""
+The installer copies this file to ``~/.cdd/connect.py``. In Claude Code the cdd plugin runs it as its server's
+``headersHelper`` with the chat's folder as its argument. It prints the headers to send, so every request says which
+project its chat works on."""
 from __future__ import annotations
 
 import json
@@ -19,7 +20,14 @@ def main() -> None:
     from harness.mcp.mcp_daemon import PROJECT_HEADER, McpDaemon
 
     McpDaemon(CddHome(HOME)).ensure()
-    print(json.dumps({PROJECT_HEADER: os.getcwd()}))
+    print(json.dumps({PROJECT_HEADER: project_folder(sys.argv[1:])}))
+
+
+def project_folder(arguments: list[str]) -> str:
+    """The chat's folder: the cdd plugin passes ``${CLAUDE_PROJECT_DIR}``, which Claude Code fills in with it. An IDE
+    that passes nothing runs this script in the open project. Text still reading ``${`` was never filled in."""
+    named = arguments[0] if arguments else ""
+    return named if named and not named.startswith("${") else os.getcwd()
 
 
 if __name__ == "__main__":

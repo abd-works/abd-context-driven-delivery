@@ -27,6 +27,20 @@ def checkout_holding(path: Path | str) -> Path:
     return resolved
 
 
+def main_checkout_of(checkout: Path | str) -> Path:
+    """The repository's main checkout. A linked worktree's ``.git`` is a file naming its git folder, whose
+    ``commondir`` leads back to the main checkout's ``.git``; any other checkout is its own main checkout."""
+    root = Path(checkout).resolve()
+    marker = root / ".git"
+    if not marker.is_file():
+        return root
+    worktree_git = (root / marker.read_text(encoding="utf-8").split("gitdir:", 1)[-1].strip()).resolve()
+    common = worktree_git / "commondir"
+    if not common.is_file():
+        return root
+    return (worktree_git / common.read_text(encoding="utf-8").strip()).resolve().parent
+
+
 def project_folder() -> Path:
     """The folder of the project being worked on: the one the running call names, else ``CDD_PROJECT``, else the
     current folder.
@@ -43,6 +57,12 @@ def project_checkout() -> Path:
     """The checkout holding the project being worked on. Sessions, the board, and every tool that finds
     ``.sessions/`` start here, so they all find the same one."""
     return checkout_holding(project_folder())
+
+
+def board_checkout() -> Path:
+    """The checkout whose ``.sessions/`` holds the board. A ticket's worktree is a linked worktree of the project, so
+    a chat working there reads the same board as one in the main checkout."""
+    return main_checkout_of(project_checkout())
 
 
 @contextmanager

@@ -13,13 +13,13 @@ import {
   refreshHealth,
   refreshHealthSoon,
   runInstall,
+  SERVER,
   togglePin,
 } from './health/server-health-client'
 import { ServerHealthBandView } from './health/server-health-view'
 
 // Connects this chat to cdd's chat tools, which the board sends commands through. The rules live in the cdd server.
 const PLUGIN = 'cdd-board'
-const SERVER = 'cdd'
 const BOARD_URL = 'http://127.0.0.1:8778'
 // The board refuses a POST without this header, so another page cannot act on it.
 const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }

@@ -8,6 +8,9 @@ import sys
 from pathlib import Path
 
 CDD_HOME_ENV = "CDD_HOME"
+CLAUDE_MARKETPLACE = "cdd-home"
+CLAUDE_PLUGIN = "cdd"
+CLAUDE_PLUGIN_DESCRIPTION = "Connects every Claude Code chat to the one cdd server, naming the chat's folder as its project"
 # A commit without the server cannot serve chats, so pinning one would leave every chat without cdd.
 SERVER_MODULE = "harness/mcp/mcp_daemon.py"
 # The folders under a checkout that hold importable packages, beside the checkout root itself.
@@ -62,6 +65,29 @@ class CddHome:
     def connect_script(self) -> Path:
         """The command an IDE runs before it connects: it starts the server when none answers and names the project."""
         return self.folder / "connect.py"
+
+    @property
+    def claude_plugins(self) -> Path:
+        """The local marketplace holding the ``cdd`` plugin, which declares the cdd server for every Claude Code chat."""
+        return self.folder / "claude-plugins"
+
+    def write_claude_plugin(self, server: dict[str, object]) -> list[Path]:
+        """Write the ``cdd`` plugin and its marketplace. A server a plugin declares gets ``${CLAUDE_PROJECT_DIR}`` filled
+        in with the chat's folder, which a user-level entry never sees. Returns the files written."""
+        plugin = self.claude_plugins / CLAUDE_PLUGIN
+        files = {
+            self.claude_plugins / ".claude-plugin" / "marketplace.json": {
+                "name": CLAUDE_MARKETPLACE,
+                "owner": {"name": "cdd"},
+                "plugins": [{"name": CLAUDE_PLUGIN, "source": f"./{CLAUDE_PLUGIN}", "description": CLAUDE_PLUGIN_DESCRIPTION}],
+            },
+            plugin / ".claude-plugin" / "plugin.json": {"name": CLAUDE_PLUGIN, "version": "1.0.0", "description": CLAUDE_PLUGIN_DESCRIPTION},
+            plugin / ".mcp.json": {"mcpServers": {"cdd": server}},
+        }
+        for path, content in files.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(content, indent=2) + "\n", encoding="utf-8")
+        return list(files)
 
     @property
     def pinned_checkout(self) -> Path:

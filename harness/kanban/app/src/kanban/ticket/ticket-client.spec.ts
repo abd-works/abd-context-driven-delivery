@@ -280,6 +280,26 @@ describe('Open Ticket Chat', () => {
     })
   })
 
+  // A person can act on a ticket from its card or its report without clicking the ticket first.
+  describe('with another chat picked last', () => {
+    async function closedWithoutClicking() {
+      const { page } = await board.page()
+      await board.connectChat(page, 'other-chat')
+      const worktree = board.openWorktree(ACTIVE)
+      const ticketChat = board.chat('ticket-chat', 'abd · first words', worktree)
+      await ticketChat.checkIn()
+      await page.chat.refresh()
+      await page.reader.refresh()
+      page.chat.choose('other-chat')
+      await ticketOn(page, ACTIVE).closeSession()
+      return ticketChat
+    }
+
+    it("should send the ticket's command to the ticket's chat", async () => {
+      expect(await (await closedWithoutClicking()).checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session' }])
+    })
+  })
+
   // A chat's working folder can move into a folder of its checkout, and it still works on that checkout's ticket.
   describe("with a chat working in a folder inside the ticket's worktree", () => {
     it("should send the board's commands to that chat", async () => {

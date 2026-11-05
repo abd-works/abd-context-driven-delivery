@@ -10,7 +10,7 @@ const BAND = {
 } as const
 
 const HEALTHY = { kanban_app_port: 8778, graph_app_port: 5173, is_hook_server_running: false }
-const CDD_TOOLS = Array.from({ length: 116 }, (_, index) => ({ name: `mcp__cdd__tool_${index}`, description: '', mcp: true }))
+const CDD_TOOLS = Array.from({ length: 116 }, (_, index) => ({ name: `mcp__plugin_cdd_cdd__tool_${index}`, description: '', mcp: true }))
 
 type Engine = { serverLost: boolean; report: unknown; rawText: string | null; calls: string[] }
 
@@ -27,7 +27,7 @@ const engine = (on: any): Engine => {
   on('tool.list', () => ({ value: CDD_TOOLS }))
   on('mcp.call', (_: unknown, e: { tool: string }) => {
     stub.calls.push(e.tool)
-    if (stub.serverLost) throw new Error('no connected MCP tool on a server named "cdd"')
+    if (stub.serverLost) throw new Error('no connected MCP tool on a server named "plugin:cdd:cdd"')
     if (e.tool !== 'server-health.report') return { value: { content: [], isError: true } }
     if (stub.rawText !== null) return { value: { content: [{ type: 'text', text: stub.rawText }], isError: false } }
     return answer(stub.report)

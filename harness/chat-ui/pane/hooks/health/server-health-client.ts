@@ -5,10 +5,12 @@ import type { ServerHealthData } from '@cdd/harness/health/server-health'
 
 import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
 
-export const SERVER = 'cdd'
+// The cdd plugin declares the server, and Claude Code names a plugin's server plugin:{plugin}:{server}.
+export const SERVER = 'plugin:cdd:cdd'
 export const REPORT_TOOL = 'server-health.report'
 export const RECONNECT_TRIES = 3
-const TOOL_PREFIX = `mcp__${SERVER}__`
+// Its tools are named mcp__plugin_{plugin}_{server}__{tool}.
+const TOOL_PREFIX = 'mcp__plugin_cdd_cdd__'
 const RECONNECT_WAIT_MS = 2000
 const INSTALL_TIMEOUT_MS = 600000
 const FIRST_LOOK_WAIT_MS = 5000

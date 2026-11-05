@@ -78,20 +78,21 @@ export class BoardPage {
   }
 
   fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData): Promise<void> {
-    return this.chat.command(this.actionCommandFor(ticket, fixViolationPrompt(rule, violation)))
+    return this.sendActionFor(ticket, fixViolationPrompt(rule, violation))
   }
 
   fixRule(ticket: string, report: ReportClient, rule: ReportRuleData): Promise<void> {
-    return this.chat.command(this.actionCommandFor(ticket, fixRulePrompt(report, rule)))
+    return this.sendActionFor(ticket, fixRulePrompt(report, rule))
   }
 
   fixReport(ticket: string, report: ReportClient): Promise<void> {
-    return this.chat.command(this.actionCommandFor(ticket, fixReportPrompt(report)))
+    return this.sendActionFor(ticket, fixReportPrompt(report))
   }
 
-  // A report's fixes are for the ticket whose report it is, so they name that ticket's session.
-  private actionCommandFor(ticket: string, command: string): string {
-    return this.board.tickets.find(shown => shown.name === ticket)?.actionCommand(command) ?? command
+  // A report's fixes are for the ticket whose report it is, so they name that ticket's session and go to its chat.
+  private sendActionFor(ticket: string, command: string): Promise<void> {
+    const shown = this.board.tickets.find(candidate => candidate.name === ticket)
+    return this.chat.command(shown?.actionCommand(command) ?? command, shown?.worktree)
   }
 
   // Restarts the one cdd server every chat and the board share on the code as it is now, then reads the board again.

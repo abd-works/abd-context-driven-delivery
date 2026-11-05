@@ -551,7 +551,8 @@ class Installer:
     def ensure_runtimes(self) -> dict[str, Any]:
         """Start the hook daemon and the cdd server; fail if either stays down."""
         if self.ide == "Claude":
-            return {"hook": "not installed", "mcp": self._ensure_mcp_runtime(), "board": self._install_board_plugin()}
+            mcp = self._ensure_mcp_runtime()
+            return {"hook": "not installed", "mcp": mcp, "cdd plugin": self._install_cdd_plugin(), "board": self._install_board_plugin()}
         hook_pid = self._ensure_hook_runtime()
         mcp = self._ensure_mcp_runtime()
         print(
@@ -588,6 +589,25 @@ class Installer:
         if self._BOARD_PLUGIN in self._run_claude(claude, "plugin", "list"):
             return "installed"
         print(f"{self._BOARD_PLUGIN} not installed: claude plugin install did not take", file=sys.stderr)
+        return "missing"
+
+    def _install_cdd_plugin(self) -> str:
+        """Install the ``cdd`` plugin from ``~/.cdd/`` at user level. It declares the cdd server for every chat, so
+        without it Claude Code has no cdd at all: a miss is printed with the command to run by hand."""
+        from harness.mcp.cdd_home import CLAUDE_MARKETPLACE, CLAUDE_PLUGIN, CddHome
+
+        plugin = f"{CLAUDE_PLUGIN}@{CLAUDE_MARKETPLACE}"
+        claude = self._claude_cli()
+        marketplace = CddHome().claude_plugins
+        if claude is None:
+            print(f"{plugin} not installed: no claude command found. Run: claude plugin marketplace add {marketplace}", file=sys.stderr)
+            return "missing"
+        self._run_claude(claude, "plugin", "marketplace", "add", str(marketplace))
+        self._run_claude(claude, "plugin", "install", plugin, "--scope", "user")
+        self._run_claude(claude, "plugin", "update", plugin, "--scope", "user")
+        if plugin in self._run_claude(claude, "plugin", "list"):
+            return "installed"
+        print(f"{plugin} not installed: claude plugin install did not take", file=sys.stderr)
         return "missing"
 
     def _claude_cli(self) -> str | None:

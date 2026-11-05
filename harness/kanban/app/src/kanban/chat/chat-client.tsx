@@ -107,14 +107,22 @@ export class ChatClient {
 
   // A prompt that starts with / is a command, which runs the skill. The whole command is named, because what is cut off
   // is often the session it ran on.
-  command(text: string): Promise<void> {
+  command(text: string, worktree = ''): Promise<void> {
+    this.chooseChatIn(worktree)
     return this.send('command', text, `Sent to ${this.targetName}: ${text}`)
   }
 
   // A fill waits for the chat while a turn runs, so the person is told it has not reached the prompt yet.
-  fill(text: string): Promise<void> {
+  fill(text: string, worktree = ''): Promise<void> {
+    this.chooseChatIn(worktree)
     const wait = this.target?.is_busy ? ' It goes in when this turn ends.' : ''
     return this.send('fill', text, `Queued for the prompt of ${this.targetName}, for you to review: ${shortened(text)}${wait}`)
+  }
+
+  // A ticket's command goes to the chat working in its worktree when one is connected, whichever chat was picked last.
+  private chooseChatIn(worktree: string): void {
+    const chat = this.chatIn(worktree)
+    if (chat && chat.id !== this.store.state.targetChat) this.choose(chat.id)
   }
 
   private async send(kind: CommandKind, text: string, sent: string): Promise<void> {

@@ -16,7 +16,7 @@ from harness.kanban.data import BoardData, ColumnData, HelpData
 from harness.mcp.mcp_server import mcp
 from cdd_guidance.practices.stages import DISCOVERY, IMPLEMENTATION, SPECIFICATION
 from space.session import Session
-from space.work_state import project_checkout
+from space.work_state import board_checkout
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
@@ -90,9 +90,9 @@ class Board:
     @tool_subject
     def current(cls) -> Board:
         """The board of the project the running call names. One cdd server answers every chat, so it reads the
-        project from each request's X-CDD-Project header and runs the call inside working_on(project), which is
-        what project_checkout() returns here."""
-        return cls.load(project_checkout())
+        project from each request's X-CDD-Project header and runs the call inside working_on(project). A chat in a
+        ticket's worktree reads the board of the project's main checkout, where every ticket's session lives."""
+        return cls.load(board_checkout())
 
     @classmethod
     def _every_practice(cls) -> tuple[PracticeGuidance, ...]:

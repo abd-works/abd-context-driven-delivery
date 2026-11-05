@@ -585,26 +585,38 @@ with description("an MCP install that deploys to the IDE's user-level config") a
     with context("for Claude Code"):
         with before.each:
             self.config = self.root / ".claude.json"
-            self.config.write_text(json.dumps({"projects": {"x": {}}, "mcpServers": {}}), encoding="utf-8")
+            old_entry = {"type": "http", "url": McpDaemon().url, "headersHelper": "python connect.py"}
+            self.config.write_text(
+                json.dumps({"projects": {"x": {}}, "mcpServers": {"cdd": old_entry, "miro-mcp": {"url": "https://example"}}}),
+                encoding="utf-8",
+            )
             self.installation = _user_level_installation("Claude")
             self.installation.write_mcp_manifest()
             self.data = json.loads(self.config.read_text(encoding="utf-8"))
+            self.plugin = self.root / ".cdd" / "claude-plugins"
+            self.server = json.loads((self.plugin / "cdd" / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["cdd"]
 
-        with it("should write the cdd server into ~/.claude.json at user scope"):
-            expect(self.installation.manifest_path).to(equal(self.config))
-            expect("cdd" in self.data["mcpServers"]).to(equal(True))
+        with it("should take the cdd server out of ~/.claude.json, where every chat would name ~/.claude"):
+            expect("cdd" in self.data["mcpServers"]).to(equal(False))
+
+        with it("should keep the user's other servers in that file"):
+            expect("miro-mcp" in self.data["mcpServers"]).to(equal(True))
 
         with it("should keep Claude Code's own state in that file"):
             expect(self.data["projects"]).to(equal({"x": {}}))
 
-        with it("should point at the one cdd server over HTTP"):
-            expect(self.data["mcpServers"]["cdd"]["url"]).to(equal(McpDaemon().url))
+        with it("should list the cdd plugin in the marketplace under ~/.cdd"):
+            marketplace = json.loads((self.plugin / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+            expect([plugin["name"] for plugin in marketplace["plugins"]]).to(equal(["cdd"]))
 
-        with it("should name the chat's folder through the connect script in ~/.cdd"):
-            expect(self.data["mcpServers"]["cdd"]["headersHelper"]).to(contain(str(self.root / ".cdd" / "connect.py")))
+        with it("should point the plugin's cdd server at the one cdd server over HTTP"):
+            expect(self.server["url"]).to(equal(McpDaemon().url))
 
-        with it("should name no checkout, so every chat talks to the same server"):
-            expect(sorted(self.data["mcpServers"]["cdd"])).to(equal(["headersHelper", "type", "url"]))
+        with it("should run the connect script in ~/.cdd"):
+            expect(self.server["headersHelper"]).to(contain(str(self.root / ".cdd" / "connect.py")))
+
+        with it("should pass the chat's folder to the connect script"):
+            expect(self.server["headersHelper"]).to(contain('"${CLAUDE_PROJECT_DIR}"'))
 
         with context("that is installed again from another checkout"):
             with before.each:
@@ -643,19 +655,19 @@ with description("an MCP install that deploys to the IDE's user-level config") a
 
         with it("should allow the cdd tools in ~/.claude/settings.json"):
             settings = json.loads((self.root / ".claude" / "settings.json").read_text(encoding="utf-8"))
-            expect(settings["permissions"]["allow"]).to(equal(["mcp__cdd"]))
+            expect(settings["permissions"]["allow"]).to(equal(["mcp__plugin_cdd_cdd"]))
 
         with context("with settings the user already has"):
             with before.each:
                 self.settings = self.root / ".claude" / "settings.json"
                 self.settings.write_text(
-                    json.dumps({"model": "x", "permissions": {"allow": ["Read", "mcp__cdd"]}}), encoding="utf-8"
+                    json.dumps({"model": "x", "permissions": {"allow": ["Read", "mcp__plugin_cdd_cdd"]}}), encoding="utf-8"
                 )
                 self.installation.write_mcp_manifest()
                 self.saved = json.loads(self.settings.read_text(encoding="utf-8"))
 
             with it("should keep the user's settings and not repeat the entry"):
-                expect(self.saved).to(equal({"model": "x", "permissions": {"allow": ["Read", "mcp__cdd"]}}))
+                expect(self.saved).to(equal({"model": "x", "permissions": {"allow": ["Read", "mcp__plugin_cdd_cdd"]}}))
 
     with context("for VS Code"):
         with before.each:
