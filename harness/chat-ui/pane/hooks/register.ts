@@ -1,4 +1,3 @@
-import type { BoardData } from '@cdd/harness/kanban/board'
 import type { TicketData } from '@cdd/harness/kanban/ticket'
 import type { ChatCommandData } from '@cdd/tools/chat/chat'
 import type { EngineInterface, Register } from 'claude-code'
@@ -13,10 +12,12 @@ import {
   refreshHealth,
   refreshHealthSoon,
   runInstall,
-  SERVER,
   togglePin,
 } from './health/server-health-client'
 import { ServerHealthBandView } from './health/server-health-view'
+import { currentChatBar, currentChatBarView, refreshChatBar } from './chat-bar/chat-bar-client'
+import { ChatBarView } from './chat-bar/chat-bar-view'
+import { currentActionPicker, currentFidelityFiles } from './chat-bar/fidelity-client'
 
 // Connects this chat to cdd's chat tools, which the board sends commands through. The rules live in the cdd server.
 const PLUGIN = 'cdd-board'
@@ -26,6 +27,7 @@ const BOARD_HEADERS = { 'X-CDD-Board': '1', 'Content-Type': 'application/json' }
 const CHECK_IN_MILLISECONDS = 1000
 
 const NAME_CHARACTERS = 48
+const CDD_TOOL = /^mcp__(plugin_cdd_)?cdd__/
 
 let isBusy = false
 let chatName = ''
@@ -144,14 +146,13 @@ const statusOf = (ticket: TicketData): string => {
   return [ticket.name, ticket.column, ticket.next ? `next: ${ticket.next}` : ticket.is_done ? 'done' : '', violations ? `${violations} with violations` : ''].filter(Boolean).join(' · ')
 }
 
-// The cdd server can still be connecting at session start, so a failed read waits for the next event.
+// The status line, the system prompt and the chat bar read the same ChatBarClient. The cdd server can still be
+// connecting at session start; the chat bar then shows why, and the next event reads again.
 async function readActive($: EngineInterface): Promise<void> {
-  const result = await $.mcp.call(SERVER, 'board.show', {}).catch(() => null)
-  const text = result?.content[0]?.text
-  if (!text || result.isError) return
-  const board = JSON.parse(text) as BoardData
-  const tickets = board.columns.flatMap(column => [...(column.in_progress ?? []), ...(column.done ?? []), ...(column.tickets ?? [])])
-  const found = tickets.find(ticket => ticket.name === board.active)
+  await refreshChatBar($)
+  const bar = await currentChatBar($)
+  if (bar.problem) return
+  const found = bar.session ?? undefined
   // The system prompt is cached; when the active ticket's summary changes, it is composed again next turn.
   if ((found && statusOf(found)) !== (active && statusOf(active))) await $.ui.invalidate('prompt.section')
   active = found
@@ -235,8 +236,15 @@ export const register: Register = on => {
     return finished
   })
 
+  // The agent changes the board through cdd's tools without telling the mod, so a cdd tool call that finishes reads it again.
+  on('tool.call', async ($, e, next) => {
+    const ran = await next(e)
+    if (CDD_TOOL.test(e.tool)) await refreshChatBar($)
+    return ran
+  })
+
   on('prompt.submit', async ($, e, next) => {
-    await refreshHealth($)
+    await Promise.all([refreshHealth($), refreshChatBar($)])
     return next(e)
   })
 
@@ -255,7 +263,9 @@ export const register: Register = on => {
       install: await currentInstall($),
       actions,
     }
-    return ServerHealthBandView($.ui.resolve(e), band)
+    const elements = $.ui.resolve(e)
+    const draw = { bar: await currentChatBar($), view: await currentChatBarView($), picker: await currentActionPicker($), files: await currentFidelityFiles($) }
+    return ChatBarView($, elements, ServerHealthBandView(elements, band), draw, e.props.bodyColumns)
   })
 
   on('prompt.compose', async ($, e, next) => {

@@ -47,7 +47,7 @@ Mirrors Display Fidelity Progress and Display Violations Band: one dot per pract
 
 ### (S) Person --> Display Session Card
 
-Mirrors Display Ticket Card: hovering the session name opens the card over the strip, each fidelity's name and state over its dot and the stage name over the stage icons (CDR "Session name and session list").
+Mirrors Display Ticket Card and Browse Ticket Folder: hovering the session name opens the card over the strip, each fidelity's name and state over its dot, the stage name over the stage icons, and each fidelity's folders beside it (CDR "Session name and session list").
 
 ### (S) Person --> Open Board
 
@@ -89,8 +89,6 @@ Mirrors Open Practice Tile at stage level: clicking a stage icon shows that stag
 
 Mirrors Move Ticket, forward only: once every fidelity of the stage is reviewed, the action button calls `ticket.move_next` (CDR "Action button and ▾ picker").
 
-## (E) Review Fidelity Outputs
-
 ### (S) Person --> List Session Files
 
 Mirrors List Ticket Files, for the focused fidelity only: files opens a tab per file `ticket.files` declares (CDR "Handoff, files, close").
@@ -98,10 +96,6 @@ Mirrors List Ticket Files, for the focused fidelity only: files opens a tab per 
 ### (S) Person --> View Fidelity Files
 
 Mirrors View Fidelity Files: each tab's text comes from `ticket.read_file` (CDR "Handoff, files, close").
-
-### (S) Chat Bar --> Browse Session Folder
-
-Mirrors Browse Ticket Folder: the session card shows each fidelity's folders beside it (CDR "Session name and session list").
 
 ### (S) Person --> Review Fidelity
 

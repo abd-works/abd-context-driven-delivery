@@ -1,0 +1,52 @@
+import { expect } from 'claude-code/testing'
+
+import { called, cdd, findText, openChatBar, textOf } from '../../../chat-bar-world'
+import { scenario, story } from '../../../story-test'
+
+// Epic: Move Work Forward From Chat Bar
+// Sub-epic: Guide Work Through Practices
+// Map: ../../../../../.context/story-map.md#s-person----view-fidelity-files
+// Model: ../../../../../../kanban/.context/kanban-model.md
+// Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
+
+// (S) Person --> View Fidelity Files
+story('View Fidelity Files', () => {
+  scenario('Read a file into its tab', ({ given, when, then }) => {
+    // Evidence: inferred: mirrors View Fidelity Files, kanban_tools_spec "should return the file's text"; no chat bar code yet
+    given('the tab pane/hooks/chat-bar/chat-bar-client.ts is open', async ($, on, scene) => {
+      scene.world = cdd(on)
+      scene.world.answers['ticket.files'] = { 'clean_engineering-model': { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-client.ts', exists: true }] } }
+      scene.world.answers['ticket.read_file'] = { path: 'pane/hooks/chat-bar/chat-bar-client.ts', text: '// Model shell for the chat bar\nexport class ChatBarClient {}' }
+      scene.ui = await openChatBar($)
+      await scene.ui.press({ key: 'dot-clean_engineering-model' })
+      await scene.ui.press({ key: 'files-button' })
+    })
+    when('the Person views the tab', async ($, on, scene) => {
+      await scene.ui.press({ key: 'file-pane/hooks/chat-bar/chat-bar-client.ts' })
+    })
+    // file tab press -> showFile($, path) -> $.mcp.call('ticket.read_file', { ticket: 'checkout-flow', path: 'pane/hooks/chat-bar/chat-bar-client.ts' }) -> Ticket.read_file()
+    then("the tab shows the file's text, starting // Model shell for the chat bar", async ($, on, scene) => {
+      expect(textOf(await findText(scene.ui, /^\/\/ Model shell/))).toBe('// Model shell for the chat bar')
+      expect(called(scene.world, 'ticket.read_file')).toEqual({ ticket: 'checkout-flow', path: 'pane/hooks/chat-bar/chat-bar-client.ts' })
+      await scene.ui.unmount()
+    })
+  })
+  scenario('Refuse a file outside the repository', ({ given, when, then }) => {
+    // Evidence: inferred: mirrors kanban_tools_spec 'should refuse a file outside the repository, naming the path and the ticket'
+    given("checkout-flow's repository is the project folder", async ($, on, scene) => {
+      scene.world = cdd(on)
+      scene.world.answers['ticket.files'] = { 'clean_engineering-model': { typescript: [{ path: '../secrets.txt', exists: false }] } }
+      scene.world.refusals['ticket.read_file'] = '../secrets.txt is not a file in this repository'
+    })
+    when('a file outside the repository is asked for', async ($, on, scene) => {
+      scene.ui = await openChatBar($)
+      await scene.ui.press({ key: 'dot-clean_engineering-model' })
+      await scene.ui.press({ key: 'files-button' })
+    })
+    // $.mcp.call('ticket.read_file', { ticket: 'checkout-flow', path: '../secrets.txt' }) <- FileOutsideRepositoryError
+    then('the tab says ../secrets.txt is not a file in this repository', async ($, on, scene) => {
+      expect(textOf(await findText(scene.ui, /secrets/))).toBe('../secrets.txt is not a file in this repository')
+      await scene.ui.unmount()
+    })
+  })
+})

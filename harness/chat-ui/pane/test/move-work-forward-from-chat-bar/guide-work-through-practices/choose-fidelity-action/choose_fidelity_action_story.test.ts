@@ -1,0 +1,37 @@
+import { expect } from 'claude-code/testing'
+
+import { buttonKeys, cdd, drawn, openChatBar } from '../../../chat-bar-world'
+import { scenario, story } from '../../../story-test'
+
+// Epic: Move Work Forward From Chat Bar
+// Sub-epic: Guide Work Through Practices
+// Map: ../../../../../.context/story-map.md#s-person----choose-fidelity-action
+// Model: ../../../../../../kanban/.context/kanban-model.md
+// Realizations: inline under each step, along the mod's line: view -> action($, client) -> MCP tool -> domain
+
+// (S) Person --> Choose Fidelity Action
+story('Choose Fidelity Action', () => {
+  scenario('Pick another action for the fidelity', ({ given, when, then }) => {
+    // Evidence: inferred: CDR 0001 'The picker offers every builder action'; no chat bar code yet
+    given("checkout-flow's ux-mockup is the selected fidelity", async ($, on, scene) => {
+      scene.world = cdd(on)
+      scene.ui = await openChatBar($)
+      await scene.ui.press({ key: 'dot-ux-mockup' })
+    })
+    when('the Person opens the action picker', async ($, on, scene) => {
+      await scene.ui.press({ key: 'action-picker' })
+    })
+    then('it offers generate, validate, review, iterate, sketch, render and document', async ($, on, scene) => {
+      expect(buttonKeys(await drawn(scene.ui, 'picker'))).toEqual(['pick-generate', 'pick-validate', 'pick-review', 'pick-iterate', 'pick-sketch', 'pick-render', 'pick-document'])
+    })
+    when('the Person chooses iterate', async ($, on, scene) => {
+      await scene.ui.press({ key: 'pick-iterate' })
+    })
+    // picker press -> chooseAction($, fidelity, 'iterate') -> runAction($, fidelity, 'iterate') -> $.command.run({ command: 'actions-iterate', args: 'ux-mockup' })
+    then('the chat runs /actions-iterate ux-mockup', async ($, on, scene) => {
+      expect(scene.world.sent).toContain('/actions-iterate ux-mockup')
+      expect(await drawn(scene.ui, 'picker')).toBeUndefined()
+      await scene.ui.unmount()
+    })
+  })
+})

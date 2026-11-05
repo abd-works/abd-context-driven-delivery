@@ -1,3 +1,4 @@
+import type { ServerHealthData } from '@cdd/harness/health/server-health'
 import type { HealthViewJson, InstallJson, ServerHealthJson } from '../../types'
 import { RECONNECT_TRIES, REPORT_TOOL, SERVER, ServerHealthClient } from './server-health-client'
 import type { EngineInterface } from 'claude-code'
@@ -48,7 +49,7 @@ const colourOf = (part: Part): string => (part.isUp ? BRAND.success : BRAND.mute
 const runningOn =(port: number | null): string => (port === null ? 'not running' : `running :${port}`)
 
 function partsOf({ report, toolCount }: ServerHealthJson): Part[] {
-  const { kanbanAppPort, graphAppPort, isHookServerRunning: isHookRunning } = new ServerHealthClient(report)
+  const { kanbanAppPort, graphAppPort, isHookServerRunning: isHookRunning } = new ServerHealthClient(report as ServerHealthData | null)
   return [
     { icon: '⬢', label: 'MCP host', value: 'running', isUp: true },
     { icon: '⚒', label: 'Tools', value: `${toolCount} loaded`, isUp: true },
@@ -120,7 +121,7 @@ function ButtonsView(elements: ElementTable, { health, view, install, actions }:
   return (
     <Box flexDirection="row" gap={1}>
       {view.areDetailsOpen ? <Button key="health-hide" label="Hide" onPress={actions.hideDetails} /> : <Button key="health-details" label="Details" onPress={actions.openDetails} />}
-      {canInstall && (view.areDetailsOpen || !isDisconnected) ? <Button key="health-install" label="Run install" onPress={actions.runInstall} /> : null}
+      {canInstall ? <Button key="health-install" label="Run install" onPress={actions.runInstall} /> : null}
       {isDisconnected ? <Button key="health-reconnect" label="Reconnect" variant="primary" onPress={actions.reconnect} /> : null}
     </Box>
   )

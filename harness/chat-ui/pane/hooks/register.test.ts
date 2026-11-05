@@ -186,7 +186,7 @@ test('Reconnect on a server still lost shows the try it is on', async ($, on) =>
 
   await ui.press({ key: 'health-reconnect' })
 
-  expect((await findText(ui, /Try 1 of 3/))?.text).toBe('Waiting for cdd to answer. Try 1 of 3.')
+  expect((await findText(ui, /Try 1 of 3/))?.text).toBe('Waiting for plugin:cdd:cdd to answer. Try 1 of 3.')
   await ui.unmount()
 })
 
