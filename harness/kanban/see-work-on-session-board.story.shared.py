@@ -9,7 +9,7 @@ harness/kanban/data.py that the board app draws from.
 
 Covered by the board app's TypeScript client specs in harness/kanban/app, not here, because they have no Python
 operation: Arrange Board And Details (all three); Arrange Side Panel (all four); Display Board "Say the cdd server is
-not connected", "Restart cdd on the current code", "Keep the newer board when an older read answers late", "Announce a
+not connected", "Update the board and cdd to the latest code", "Say which update step failed", "Keep the newer board when an older read answers late", "Announce a
 ticket that moved", "Announce a reviewed fidelity"; Display Ticket Card "Draw the card's title, age, and fidelity
 segments", "Name the active ticket on the chat's status line"; Display Ticket Details "Show the active ticket with no
 card pressed", "Show the ticket worked on last when none is active", "Say another session must be activated to act on

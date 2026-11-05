@@ -30,11 +30,6 @@ export class BoardReader {
     if (JSON.stringify(before) !== JSON.stringify(after)) await this.page.reloadOpen()
   }
 
-  async refreshPressed(): Promise<void> {
-    await this.refresh()
-    await this.page.reloadOpen()
-  }
-
   startPolling(): () => void {
     const timer = setInterval(() => void this.poll(), POLL_MILLISECONDS)
     void this.poll()

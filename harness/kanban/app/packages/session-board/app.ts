@@ -8,6 +8,8 @@ import { backlogItemRoutes } from '@cdd/harness/kanban/backlog-item'
 import { boardRoutes } from '@cdd/harness/kanban/board'
 import { ticketRoutes } from '@cdd/harness/kanban/ticket'
 import { chatRoutes } from '@cdd/tools/chat/chat'
+import { answer } from '@src/session-board/answer'
+import type { BoardUpdate } from '@src/session-board/board-update'
 import { cddRoutes } from '@src/session-board/cdd-routes'
 import { ClaudeLink } from '@src/session-board/claude-link'
 import { answerFailure, HttpException } from '@src/session-board/http-exception'
@@ -16,6 +18,7 @@ import { answerFailure, HttpException } from '@src/session-board/http-exception'
 export const BOARD_HEADER = 'x-cdd-board'
 const CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 const FORBIDDEN = 403
+const BAD_REQUEST = 400
 
 // This server can put prompts into a live chat, so only this machine's own page and mod may reach it. The Host check
 // stops a site pointing its own domain name at 127.0.0.1.
@@ -25,14 +28,17 @@ const onlyThisMachine = (port: number) => (request: Request, _response: Response
   next(isLocalHost && !isForeignPost ? undefined : new HttpException(FORBIDDEN, 'Refused: this server answers only its own page and mod on this machine.'))
 }
 
-export function createApp(cdd: CddConnection, port: number, staticRoot: string, claudeLink = new ClaudeLink()): Express {
+export function createApp(cdd: CddConnection, port: number, staticRoot: string, boardUpdate: BoardUpdate, claudeLink = new ClaudeLink()): Express {
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
-  // The one cdd server keeps the code it started with, so a person restarts it to pick up changed Python. It reloads in
-  // place, so every chat connected to it gets the new code too.
-  app.post('/api/cdd/restart', async (_request, response) => {
-    response.json(await cdd.call<{ is_restarted: boolean }>('cdd.restart', {}))
+  // The cdd server and this server both keep the code they started with, so one press gets the latest, rebuilds the page,
+  // pins cdd to it, and then restarts this server once the page has its answer.
+  app.post('/api/update', (_request, response, next) => {
+    response.on('finish', () => {
+      if (response.statusCode < BAD_REQUEST) boardUpdate.restart()
+    })
+    answer(() => boardUpdate.update())(_request, response, next)
   })
   app.post('/api/claude/open', (request, response) => {
     claudeLink.open(request.body?.link)

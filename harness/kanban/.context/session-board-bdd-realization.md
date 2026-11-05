@@ -91,24 +91,44 @@ Display Connected Status
     -> ChatClient.refresh()
     it should show a toast
     ```
-  that a person has restarted cdd
+  that a person has pressed Update
     ```
-    -> BoardPage.restartCdd()
-    -> ChatClient.restartCdd()
-    it should read the board again from a fresh cdd server
+    -> BoardPage.update()
+    -> BoardUpdate.update()
+      -> git pull --ff-only  [External: git]
+      -> vite build  [External: vite]
+      -> scripts/install.py --ide Claude --pin-runtime  [External: cdd installer]
+    it should get the latest code, rebuild the page, then pin cdd to it
     ```
     ```
-    -> BoardPage.restartCdd()
-    -> ChatClient.restartCdd()
-    it should say so in a toast
+    -> BoardPage.update()
+    -> BoardUpdate.restart()
+    it should restart the board server once the update has answered
     ```
-    with a chat connected
+    ```
+    -> BoardPage.update()
+    -> BoardPage.boardServerIsBack()
+    -> BoardStore.change({ isNewBuild: true })
+    it should load the page again from the restarted server
+    ```
+    with a step that fails
       ```
-      -> BoardPage.restartCdd()
-      -> ChatClient.restartCdd()
-      it should ask the chat to restart its own cdd
+      -> BoardPage.update()
+      -> BoardUpdate.update()
+      <- UpdateStepFailed
+      it should say in a toast which step failed
       ```
-
+      ```
+      -> BoardPage.update()
+      <- null
+      it should keep the page it has
+      ```
+      ```
+      -> BoardPage.update()
+      -> BoardUpdate.update()
+      <- UpdateStepFailed
+      it should keep the board server running
+      ```
 
 Refresh Board After Tool Calls
   ```
@@ -3260,7 +3280,7 @@ Say the cdd server is not connected
   ```
   ```
   // the graph holds no operation this observation calls
-  it And the header offers Connect in place of Restart cdd
+  it And the header offers Update
   ```
 
 

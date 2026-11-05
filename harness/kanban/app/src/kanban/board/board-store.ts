@@ -79,6 +79,8 @@ export type BoardState = {
   isMessagesOpen: boolean
   // The server serves a newer build than the page was loaded from.
   isNewBuild: boolean
+  // An update is getting the latest code, rebuilding, and re-pinning cdd, which takes a while; one press at a time.
+  isUpdating: boolean
 }
 
 export const EMPTY_DRAFT: BacklogDraft = { isOpen: false, title: '', text: '' }
@@ -115,6 +117,7 @@ const initialState = (): BoardState => ({
   messages: [],
   isMessagesOpen: false,
   isNewBuild: false,
+  isUpdating: false,
 })
 
 // Only conveniences are saved. Browser storage can be blocked or empty, and the page works the same without it.
