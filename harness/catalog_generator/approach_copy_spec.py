@@ -74,7 +74,6 @@ Subhead
 ### Discovery
 
 id: discovery
-board_key: discovery
 items: ZZ-CHIP
 
 ZZ-PARA
@@ -82,7 +81,6 @@ ZZ-PARA
 ### Specification
 
 id: specification
-board_key: spec
 items: Spec Chip
 
 Spec paragraph
@@ -90,7 +88,6 @@ Spec paragraph
 ### Implement
 
 id: implementation
-board_key: engineer
 items: Engineer Chip
 
 Engineer paragraph
@@ -119,7 +116,7 @@ with description("Catalog approach markdown folder"):
         source = Path(__file__).resolve().parent / "markdown" / "cdd-approach.md"
         expect(catalog.approach_md_path).to(equal(source))
         expect(source.is_file()).to(equal(True))
-        expect("CDD harness" in catalog._approach_copy().subhead).to(equal(True))
+        expect("CDD harness" in catalog.approach_copy.subhead).to(equal(True))
 
 
 with description("Catalog approach page"):
@@ -128,7 +125,6 @@ with description("Catalog approach page"):
         md = tmp / "cdd-approach.md"
         md.write_text(_MINIMAL_MD, encoding="utf-8")
         catalog = Catalog(out_root=str(tmp / "out"), approach_md_path=md)
-        catalog._board_tools = []
         catalog._write_approach_page()
         html = (tmp / "out" / "cdd-approach.html").read_text(encoding="utf-8")
         expect("HAND-EDITABLE-SUBHEAD" in html).to(equal(True))
@@ -147,7 +143,6 @@ with description("stage example links"):
     with it("copies those assets and expands them under the Iterate and Learn diagram"):
         tmp = Path(tempfile.mkdtemp())
         catalog = Catalog(out_root=str(tmp / "out"), approach_md_path=APPROACH_MARKDOWN)
-        catalog._board_tools = []
         catalog._write_approach_page()
         html = (tmp / "out" / "cdd-approach.html").read_text(encoding="utf-8")
         expect('id="approach-stage-examples"' in html).to(equal(True))

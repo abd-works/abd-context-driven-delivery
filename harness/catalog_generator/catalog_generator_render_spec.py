@@ -22,9 +22,10 @@ from harness.catalog_generator.catalog_generator import (
     CatalogContextTool,
     CatalogFidelity,
     CatalogTool,
+    CatalogPractice,
     CatalogUtility,
-    load_registry,
-    ActionResolution,
+    RegistryEntry,
+    SkillSlashName,
     resolve_lifecycle_actions,
 )
 from cdd_guidance.practices.ddd.ddd import Ddd
@@ -37,17 +38,11 @@ _REF = "abc123"
 with description("Render Action Page With Fixed Sections"):
     with description("given an action's own name, tools-called list, guide, and module overview"):
         with before.all:
-            self.resolutions = {r.name: r for r in resolve_lifecycle_actions()}
-            self.owner = ActionResolution.live_owner()
+            self.actions = {action.name: action for action in resolve_lifecycle_actions()}
             catalog_tool = CatalogTool(_REPO_URL, _REF)
-            hrefs = {name: f"actions/{name}.html" for name in self.resolutions}
+            hrefs = {name: action.href for name, action in self.actions.items()}
             self.catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
-            resolution = self.resolutions["repair"]
-            action = self.owner.tools["repair"]
-            self.catalog_action.action = action
-            self.catalog_action.owner = self.owner
-            self.catalog_action.source_dir = resolution.source_dir
-            self.page = self.catalog_action.generate_catalog()
+            self.page = self.catalog_action.generate_catalog(self.actions["repair"])
 
         with it("carries the Lifecycle action badge and a one-line used-as note"):
             expect("Lifecycle action" in self.page).to(be_true)
@@ -70,18 +65,14 @@ with description("Render Action Page With Fixed Sections"):
 with description("Render Fidelity Page With Quick-Invoke And Illustrated Example"):
     with description("given a fidelity's skill name, its own key, and the ten lifecycle actions"):
         with before.all:
-            self.resolutions = resolve_lifecycle_actions()
+            self.lifecycle_actions = resolve_lifecycle_actions()
             self.owner = Ddd()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
-            hrefs = {r.name: f"../actions/{r.name}.html" for r in self.resolutions}
+            hrefs = {action.name: f"../{action.href}" for action in self.lifecycle_actions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
-            self.catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.resolutions)
-            self.catalog_fidelity.skill_name = "ddd"
-            self.catalog_fidelity.fidelity = self.owner.fidelities["tactics"]
-            self.page = (
-                self.catalog_fidelity.section_0_html()
-                + self.catalog_fidelity.generate_catalog()
-            )
+            self.catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.lifecycle_actions)
+            practice = CatalogPractice(self.owner, skills=SkillSlashName([]))
+            self.page = self.catalog_fidelity.generate_catalog(practice, self.owner.fidelities["tactics"])
 
         with it("opens with the /{skill} <action> {fidelity} command line (HTML-escaped for a real browser)"):
             # A browser renders `<action>` visibly only if the HTML source
@@ -107,18 +98,15 @@ with description("Render Fidelity Page With Quick-Invoke And Illustrated Example
 with description("Render Context Tool Page"):
     with description("given one toolset's Purpose prose and its resolved fidelity cards"):
         with before.all:
-            self.resolutions = resolve_lifecycle_actions()
+            self.lifecycle_actions = resolve_lifecycle_actions()
             self.owner = Ddd()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
-            hrefs = {r.name: f"../actions/{r.name}.html" for r in self.resolutions}
+            hrefs = {action.name: f"../{action.href}" for action in self.lifecycle_actions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
-            catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.resolutions)
+            catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.lifecycle_actions)
             self.catalog_context_tool = CatalogContextTool(_REPO_URL, _REF, catalog_fidelity)
-            self.catalog_context_tool.owner = self.owner
-            self.catalog_context_tool.display_name = "Domain-Driven Design"
-            self.catalog_context_tool.skill_name = "ddd"
-            self.catalog_context_tool.fidelities = list(self.owner.fidelities.entries.values())
-            self.page = self.catalog_context_tool.generate_catalog()
+            practice = CatalogPractice(self.owner, skills=SkillSlashName([]))
+            self.page = self.catalog_context_tool.generate_catalog(practice)
 
         with it("shows the practice name, shared rules, and purpose prose"):
             expect("Domain-Driven Design" in self.page).to(be_true)
@@ -143,13 +131,12 @@ with description("Render Utility Page"):
     with description("given a utility's Purpose prose and its optional {utility}.md guide"):
         with before.all:
             catalog_tool = CatalogTool(_REPO_URL, _REF)
-            resolutions = resolve_lifecycle_actions()
-            hrefs = {r.name: f"actions/{r.name}.html" for r in resolutions}
+            lifecycle_actions = resolve_lifecycle_actions()
+            hrefs = {action.name: action.href for action in lifecycle_actions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             self.catalog_utility = CatalogUtility(_REPO_URL, _REF, catalog_tool, catalog_action)
-            self.catalog_utility.owner = Diagnose()
-            self.catalog_utility.display_name = "diagnose"
-            self.page = self.catalog_utility.generate_catalog()
+            diagnose = RegistryEntry("diagnose", Diagnose.__module__, "Diagnose", Diagnose)
+            self.page = self.catalog_utility.generate_catalog(diagnose)
 
         with it("shows the utility's Purpose/Seam prose"):
             expect("diagnose" in self.page).to(be_true)
@@ -160,10 +147,9 @@ with description("Render Hub Board With Actions And Utilities Rows"):
     with description("given the CDD header row, the five context-tool rows, and the assembled rows"):
         with before.all:
             self.tmp = Path(tempfile.mkdtemp())
-            context_tool_entries, utility_entries = load_registry()
             lifecycle_actions = resolve_lifecycle_actions()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
-            hrefs = {r.name: f"actions/{r.name}.html" for r in lifecycle_actions}
+            hrefs = {action.name: action.href for action in lifecycle_actions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, lifecycle_actions)
             catalog_context_tool = CatalogContextTool(_REPO_URL, _REF, catalog_fidelity)
@@ -176,11 +162,6 @@ with description("Render Hub Board With Actions And Utilities Rows"):
                 catalog_action=catalog_action,
                 catalog_utility=catalog_utility,
             )
-            self.action_owner = ActionResolution.live_owner()
-            self.catalog._context_tool_entries = context_tool_entries
-            self.catalog._utility_entries = utility_entries
-            self.catalog._lifecycle_actions = lifecycle_actions
-            self.catalog._action_owner = self.action_owner
             self.catalog._render_catalog()
             self.index_html = (self.tmp / "index.html").read_text(encoding="utf-8")
 
@@ -251,10 +232,9 @@ with description("Render Flat Grid Pages"):
     with description("given every rendered tool, fidelity, action, and utility card"):
         with before.all:
             self.tmp = Path(tempfile.mkdtemp())
-            context_tool_entries, utility_entries = load_registry()
             lifecycle_actions = resolve_lifecycle_actions()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
-            hrefs = {r.name: f"actions/{r.name}.html" for r in lifecycle_actions}
+            hrefs = {action.name: action.href for action in lifecycle_actions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, lifecycle_actions)
             catalog_context_tool = CatalogContextTool(_REPO_URL, _REF, catalog_fidelity)
@@ -267,11 +247,6 @@ with description("Render Flat Grid Pages"):
                 catalog_action=catalog_action,
                 catalog_utility=catalog_utility,
             )
-            self.action_owner = ActionResolution.live_owner()
-            self.catalog._context_tool_entries = context_tool_entries
-            self.catalog._utility_entries = utility_entries
-            self.catalog._lifecycle_actions = lifecycle_actions
-            self.catalog._action_owner = self.action_owner
             self.catalog._render_catalog()
 
         with it("lists every context tool, action, and utility card on its own grid page"):

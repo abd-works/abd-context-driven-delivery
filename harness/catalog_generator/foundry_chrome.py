@@ -23,35 +23,80 @@ _DEFAULT_BRAND = _COMMONS_SRC / "brand"
 _BRANDS_ROOT = _TEMPLATES / "brands"
 _FOUNDRY_CSS_SRC = _TEMPLATES / "foundry-catalog.css"
 
-# Stage columns — keys stay discovery/spec/engineer (code); labels are lowercase.
-STAGES: tuple[tuple[str, str], ...] = (
-    ("discovery", "discovery"),
-    ("spec", "specification"),
-    ("engineer", "implementation"),
-)
+@dataclass(frozen=True)
+class StageColumn:
+    """One column of the catalog board: the fidelity stage it holds and how the board draws it.
 
-# Scope shapes borrowed from Foundry: discovery←shaping, spec←exploration,
-# engineer←engineering.
-_STAGE_SCOPES: dict[str, dict[str, str]] = {
-    "discovery": {
-        "shape": "solution",
-        "name": "Whole solution",
-        "width": "wide / shallow",
-        "bullets": "outcomes · scope · boundaries",
-    },
-    "spec": {
-        "shape": "sprint",
-        "name": "Sprint",
-        "width": "narrow / deeper",
-        "bullets": "behaviour · design · logic",
-    },
-    "engineer": {
-        "shape": "story",
-        "name": "Story",
-        "width": "narrowest / deep",
-        "bullets": "tests · code · interface",
-    },
-}
+    ``stage`` is the value a ``FidelityGuidance.stage`` carries (discovery, specification, implementation). ``key``
+    is the column's name in the page markup and its scripts (discovery, spec, engineer), so the board scripts keep
+    working whatever the stage is called. The scope shape is the Foundry picture of how wide and deep the work is.
+    """
+
+    stage: str
+    key: str
+    title: str
+    scope_shape: str
+    scope_name: str
+    scope_width: str
+    scope_bullets: str
+    template_tokens: tuple[str, ...]
+
+    @property
+    def label(self) -> str:
+        """The lowercase column heading on the board."""
+        return self.title.lower()
+
+
+class StageColumns:
+    """The board's columns in the order the approach walks the stages; the one place a stage meets its board key."""
+
+    def __init__(self, columns: tuple[StageColumn, ...]) -> None:
+        self._columns = columns
+
+    def __iter__(self):
+        return iter(self._columns)
+
+    def of(self, stage: str) -> StageColumn | None:
+        """The column that holds fidelities whose stage is ``stage``; none for a stage the board has no column for."""
+        return next((column for column in self._columns if column.stage == stage), None)
+
+    @property
+    def stages(self) -> tuple[str, ...]:
+        return tuple(column.stage for column in self._columns)
+
+
+STAGE_COLUMNS = StageColumns((
+    StageColumn(
+        stage="discovery",
+        key="discovery",
+        title="Discovery",
+        scope_shape="solution",
+        scope_name="Whole solution",
+        scope_width="wide / shallow",
+        scope_bullets="outcomes · scope · boundaries",
+        template_tokens=("discovery",),
+    ),
+    StageColumn(
+        stage="specification",
+        key="spec",
+        title="Specification",
+        scope_shape="sprint",
+        scope_name="Sprint",
+        scope_width="narrow / deeper",
+        scope_bullets="behaviour · design · logic",
+        template_tokens=("exploration", "specification", "spec"),
+    ),
+    StageColumn(
+        stage="implementation",
+        key="engineer",
+        title="Implementation",
+        scope_shape="story",
+        scope_name="Story",
+        scope_width="narrowest / deep",
+        scope_bullets="tests · code · interface",
+        template_tokens=("engineering", "engineer"),
+    ),
+))
 
 _STORY_EXAMPLES = (
     Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / "stories" / "catalog-examples"
@@ -93,33 +138,24 @@ def stage_project_examples(
 
 
 def _project_example_dest_name(practice: str, stage_id: str, source: Path) -> str:
-    stem = source.stem.lower().replace(" ", "-")
-    suffix = source.suffix.lower()
-    canonical = {
-        ("stories", "discovery"): "story-map",
-        ("stories", "specification"): "scenarios",
-        ("stories", "implementation"): "acceptance-tests",
-        ("ddd", "discovery"): "bounded-context",
-        ("ddd", "specification"): "model",
-        ("ddd", "implementation"): "tactics",
-        ("ux", "discovery"): "information-architecture",
-        ("ux", "specification"): "mockup",
-        ("ux", "implementation"): "front-end-code",
-    }.get((practice, stage_id), stem)
-    return f"{canonical}{suffix}"
+    """The example's name in the catalog: the board label of the practice's fidelity at that stage, so every
+    project's examples land under the same names; the file's own stem when the practice has no such fidelity."""
+    from harness.guidance.practice_catalogue import PracticeCatalogue
+
+    fidelities = PracticeCatalogue.practice(practice).fidelities if PracticeCatalogue.has(practice) else ()
+    fidelity = next((fidelity for fidelity in fidelities if fidelity.stage == stage_id), None)
+    stem = display_label(fidelity.name) if fidelity is not None else source.stem.lower().replace(" ", "-")
+    return f"{stem}{source.suffix.lower()}"
 
 
 def approach_board_stages(path: str | Path | None = None) -> dict[str, dict]:
-    """Stage chips and paragraphs keyed by board column, from approach markdown."""
+    """Stage chips and paragraphs from approach markdown, keyed by the board column whose stage is the stage's id."""
     from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, load_approach_copy
 
     source = Path(path) if path is not None else APPROACH_MARKDOWN
     copy = load_approach_copy(source)
-    return {
-        stage["board_key"]: stage
-        for stage in copy.stages
-        if stage.get("board_key")
-    }
+    columns = ((STAGE_COLUMNS.of(stage["id"]), stage) for stage in copy.stages)
+    return {column.key: stage for column, stage in columns if column is not None}
 
 
 def stage_example_href(
@@ -142,73 +178,22 @@ def stage_example_href(
 def _board_stage(stages: dict[str, dict], stage_key: str) -> dict:
     return stages.get(stage_key) or {}
 
-# Board rows under the CDD header, in each discovered practice's catalog order.
-# register_practices fills these from the practices' own catalog cards; the
-# entries written here belong to the CDD header, not to any practice.
-FAMILY_ROW_ORDER: list[str] = []
-
-_FAM = {
-    "cdd": "aad-fam-delivery",
-}
-
-_FAM_LABEL = {
-    "cdd": "cdd",
-}
-
-# Kebab-case board labels (Foundry style).
+# Kebab-case board labels (Foundry style) for the names that do not read as their own kebab form.
 _DISPLAY_LABELS: dict[str, str] = {
     "cdd": "context-driven-delivery",
-    "discovery": "discovery",
-    "spec": "specification",
-    "engineer": "implementation",
-    "story_map": "story-map",
-    "scenarios": "scenarios",
-    "acceptance_tests": "acceptance-tests",
-    "bounded_context": "bounded-context",
-    "tactics": "tactics",
     "ia": "information-architecture",
-    "mockup": "mockup",
-    "front_end_code": "front-end-code",
-    "modules": "modules",
-    "model": "model",
-    "code": "code",
-    "behavior": "behavior",
-    "development": "development",
 }
-
-_PRACTICE_BLURBS: dict[str, str] = {}
-
-_SPEC_BLURBS: dict[str, str] = {}
-
-
-def register_practices(cards: list[tuple[str, dict]]) -> None:
-    """Board order, labels, colour families, and blurbs from each discovered practice's card."""
-    FAMILY_ROW_ORDER[:] = [name for name, _card in cards]
-    for name, card in cards:
-        _DISPLAY_LABELS[name] = card["label"]
-        _FAM[name] = card["family"]
-        _FAM_LABEL[name] = card["perspective"]
-        _PRACTICE_BLURBS[name] = card["blurb"]
-        _SPEC_BLURBS[name] = card["spec_blurb"]
 
 
 def display_label(key: str) -> str:
-    """Lowercase kebab-case for board tickets and practice rail chips."""
+    """Lowercase kebab-case for board tickets: a fidelity, action, or utility name."""
     if key in _DISPLAY_LABELS:
         return _DISPLAY_LABELS[key]
     return key.replace("_", "-").replace(" ", "-").strip().lower()
 
 
-def family_class(toolset_name: str) -> str:
-    return _FAM.get(toolset_name, "aad-fam-other")
-
-
-def family_perspective(toolset_name: str) -> str:
-    return _FAM_LABEL.get(toolset_name, "other")
-
-
 def approach_principle_grid(
-    practices: list[dict],
+    practices: list,
     kind: str,
     *,
     approach_md_path: str | Path | None = None,
@@ -216,101 +201,89 @@ def approach_principle_grid(
     example_sources: ProjectExampleSources | None = None,
     catalog_root: Path | None = None,
 ) -> str:
-    """Static board under one approach principle. ``kind`` is descriptions, windows, spec, or tickets."""
-    by_name = {t["toolset_name"]: t for t in practices}
+    """Static board under one approach principle. ``kind`` is descriptions, windows, spec, stages, or tickets.
+
+    ``practices`` are the catalog's practices; the rows follow the order of the practice catalogue."""
     from harness.guidance.practice_catalogue import PracticeCatalogue
 
-    rows = [by_name[name] for name in PracticeCatalogue.keys() if name in by_name]
+    by_key = {practice.key: practice for practice in practices}
+    rows = [by_key[key] for key in PracticeCatalogue.keys() if key in by_key]
+    if kind == "descriptions":
+        return _product_engineering_grid(rows, example_sources=example_sources, catalog_root=catalog_root)
+    if kind == "spec":
+        return _spec_grid(rows)
+    if kind == "windows":
+        return _approach_windows_html(stages, example_sources=example_sources, catalog_root=catalog_root)
+    if kind == "stages":
+        return _stages_grid(rows, approach_board_stages(approach_md_path))
+    return _tickets_grid(rows)
 
-    def practice_href(tool: dict) -> str:
-        return tool.get("href") or f"context-tools/{tool['toolset_name']}.html"
 
-    def label(tool: dict) -> str:
-        fam = family_perspective(tool["toolset_name"])
-        return (
-            f'<a class="approach-grid__label approach-grid__label--{html.escape(fam)}" '
-            f'href="{html.escape(practice_href(tool))}">'
-            f'{html.escape(display_label(tool["toolset_name"]))}</a>'
-        )
+_APPROACH_CDD_HEAD = (
+    '<a class="approach-grid__label approach-grid__label--cdd" href="cdd-approach.html">'
+    "context-driven-delivery</a>"
+)
 
-    cdd = by_name.get("cdd")
-    cdd_href = html.escape(practice_href(cdd) if cdd else "cdd-approach.html")
-    cdd_head = (
-        f'<a class="approach-grid__label approach-grid__label--cdd" href="{cdd_href}">'
-        "context-driven-delivery</a>"
+
+def _approach_label(practice) -> str:
+    return (
+        f'<a class="approach-grid__label approach-grid__label--{html.escape(practice.perspective)}" '
+        f'href="{html.escape(practice.href)}">'
+        f"{html.escape(practice.label)}</a>"
     )
 
-    if kind == "descriptions":
-        return _product_engineering_grid(
-            rows,
-            example_sources=example_sources,
-            catalog_root=catalog_root,
-        )
 
-    if kind == "spec":
-        body = []
-        for tool in rows:
-            body.append(label(tool))
-            body.append(
-                f'<div class="approach-grid__cell">{html.escape(_SPEC_BLURBS.get(tool["toolset_name"], ""))}</div>'
-            )
-        return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
+def _approach_column_head(column: StageColumn) -> str:
+    return (
+        f'<div class="approach-grid__head"><span class="approach-grid__shape approach-grid__shape--{column.scope_shape}"></span>'
+        f'<span class="approach-grid__head-title">{html.escape(column.label)}</span></div>'
+    )
 
-    if kind == "windows":
-        return _approach_windows_html(
-            stages,
-            example_sources=example_sources,
-            catalog_root=catalog_root,
-        )
 
-    if kind == "stages":
-        board_stages = approach_board_stages(approach_md_path)
-        heads = [cdd_head]
-        details = []
-        for stage_key, stage_label in STAGES:
-            stage = _board_stage(board_stages, stage_key)
-            fams = ("sdd", "uxd", "arc")
-            chips = "".join(
-                f'<li class="approach-grid__chip approach-grid__chip--{fams[i % 3]}">{html.escape(item)}</li>'
-                for i, item in enumerate(stage.get("items") or ())
-            )
-            paras = "".join(
-                f'<p>{html.escape(para)}</p>' for para in (stage.get("paras") or ())
-            )
-            shape = "solution" if stage_key == "discovery" else "sprint" if stage_key == "spec" else "story"
-            heads.append(
-                f'<div class="approach-grid__head"><span class="approach-grid__shape approach-grid__shape--{shape}"></span>'
-                f'<span class="approach-grid__head-title">{html.escape(stage_label)}</span></div>'
-            )
-            details.append(f'<div class="approach-grid__stage"><ul>{chips}</ul>{paras}</div>')
-        labels = "".join(label(tool) for tool in rows)
-        return (
-            '<div class="approach-grid approach-grid--stages">'
-            + "".join(heads)
-            + f'<div class="approach-grid__labels">{labels}</div>'
-            + "".join(details)
-            + "</div>"
-        )
+def _spec_grid(rows: list) -> str:
+    body = []
+    for practice in rows:
+        body.append(_approach_label(practice))
+        body.append(f'<div class="approach-grid__cell">{html.escape(practice.spec_blurb)}</div>')
+    return f'<div class="approach-grid approach-grid--span">{"".join(body)}</div>'
 
-    heads = [cdd_head]
-    for stage_key, stage_label in STAGES:
-        shape = "solution" if stage_key == "discovery" else "sprint" if stage_key == "spec" else "story"
-        heads.append(
-            f'<div class="approach-grid__head"><span class="approach-grid__shape approach-grid__shape--{shape}"></span>'
-            f'<span class="approach-grid__head-title">{html.escape(stage_label)}</span></div>'
+
+def _stages_grid(rows: list, board_stages: dict[str, dict]) -> str:
+    heads = [_APPROACH_CDD_HEAD]
+    details = []
+    fams = ("sdd", "uxd", "arc")
+    for column in STAGE_COLUMNS:
+        stage = _board_stage(board_stages, column.key)
+        chips = "".join(
+            f'<li class="approach-grid__chip approach-grid__chip--{fams[i % 3]}">{html.escape(item)}</li>'
+            for i, item in enumerate(stage.get("items") or ())
         )
-    body = heads
-    for tool in rows:
-        body.append(label(tool))
-        for stage_key, _stage_label in STAGES:
-            fid = (tool.get("fidelities") or {}).get(stage_key)
-            if fid:
-                body.append(
-                    f'<a class="approach-grid__ticket approach-grid__ticket--{html.escape(family_perspective(tool["toolset_name"]))}" '
-                    f'href="{html.escape(fid["href"])}">{html.escape(display_label(fid["key"]))}</a>'
-                )
-            else:
+        paras = "".join(f"<p>{html.escape(para)}</p>" for para in (stage.get("paras") or ()))
+        heads.append(_approach_column_head(column))
+        details.append(f'<div class="approach-grid__stage"><ul>{chips}</ul>{paras}</div>')
+    labels = "".join(_approach_label(practice) for practice in rows)
+    return (
+        '<div class="approach-grid approach-grid--stages">'
+        + "".join(heads)
+        + f'<div class="approach-grid__labels">{labels}</div>'
+        + "".join(details)
+        + "</div>"
+    )
+
+
+def _tickets_grid(rows: list) -> str:
+    body = [_APPROACH_CDD_HEAD] + [_approach_column_head(column) for column in STAGE_COLUMNS]
+    for practice in rows:
+        body.append(_approach_label(practice))
+        for column in STAGE_COLUMNS:
+            fidelity = practice.fidelity_in(column)
+            if fidelity is None:
                 body.append('<div class="approach-grid__ticket approach-grid__ticket--empty"></div>')
+                continue
+            body.append(
+                f'<a class="approach-grid__ticket approach-grid__ticket--{html.escape(practice.perspective)}" '
+                f'href="{html.escape(practice.fidelity_href(fidelity))}">{html.escape(display_label(fidelity.name))}</a>'
+            )
     return f'<div class="approach-grid approach-grid--tickets">{"".join(body)}</div>'
 
 
@@ -510,30 +483,26 @@ def _ticket(
     )
 
 
-def _family_toggle(display_name: str, toolset_name: str, href: str, *, header: bool = False) -> str:
+def _family_toggle(practice, href: str) -> str:
     """Practice-rail chip — opens that practice page. Does not filter the board."""
-    fam = family_class(toolset_name)
-    persp = family_perspective(toolset_name)
-    extra = " foundry-practice-col__card--header" if header else ""
+    persp = practice.perspective
     return (
-        f'<a class="kb-ticket aad-skill {fam} foundry-practice-col__card '
-        f'foundry-perspective-label foundry-family-toggle foundry-perspective-label--{persp}{extra}" '
-        f'data-family="{html.escape(toolset_name)}" data-perspective="{persp}" '
-        f'href="{html.escape(href)}" aria-pressed="false">{html.escape(display_name)}</a>'
+        f'<a class="kb-ticket aad-skill {practice.family} foundry-practice-col__card '
+        f'foundry-perspective-label foundry-family-toggle foundry-perspective-label--{persp}" '
+        f'data-family="{html.escape(practice.key)}" data-perspective="{persp}" '
+        f'href="{html.escape(href)}" aria-pressed="false">{html.escape(practice.label)}</a>'
     )
 
 
-def _scope_shape_html(stage_key: str) -> str:
-    scope = _STAGE_SCOPES[stage_key]
-    shape = scope["shape"]
-    name = scope["name"]
-    width = scope["width"]
-    bullets = scope["bullets"]
+def _scope_shape_html(column: StageColumn) -> str:
+    name = column.scope_name
+    width = column.scope_width
+    bullets = column.scope_bullets
     title = f"{name} — {width} — {bullets}"
     aria = f"{name}. {width}. {bullets.replace(' · ', ', ')}"
     return (
         f'<span class="kb-col-scope-shape-wrap">'
-        f'<span class="kb-col-scope-shape kb-col-scope-shape--{html.escape(shape)}" '
+        f'<span class="kb-col-scope-shape kb-col-scope-shape--{html.escape(column.scope_shape)}" '
         f'title="{html.escape(title)}" aria-label="{html.escape(aria)}"></span>'
         f'<span class="kb-col-shape-tooltip" role="tooltip">'
         f'<span class="kb-col-shape-tooltip__name">{html.escape(name)}</span>'
@@ -543,9 +512,9 @@ def _scope_shape_html(stage_key: str) -> str:
     )
 
 
-def _stage_col_detail_html(stage_key: str, stages: dict[str, dict]) -> str:
+def _stage_col_detail_html(column: StageColumn, stages: dict[str, dict]) -> str:
     """Approach chips + write-ups shown inside each column during tour stage 1."""
-    stage = _board_stage(stages, stage_key)
+    stage = _board_stage(stages, column.key)
     fams = ("sdd", "uxd", "arc")
     chips = "".join(
         f'<li class="tour-stage-detail__chip tour-stage-detail__chip--{fams[i % 3]}">'
@@ -557,21 +526,14 @@ def _stage_col_detail_html(stage_key: str, stages: dict[str, dict]) -> str:
         for para in (stage.get("paras") or ())
     )
     return (
-        f'<div class="tour-stage-detail" data-stage-detail="{html.escape(stage_key)}">'
+        f'<div class="tour-stage-detail" data-stage-detail="{html.escape(column.key)}">'
         f'<ul class="tour-stage-detail__chips">{chips}</ul>'
         f'{paras}'
         f"</div>"
     )
 
 
-def _stage_questions_html(
-    practices: list[dict],
-    stages: dict[str, dict],
-    *,
-    path_prefix: str = "",
-) -> str:
-    by_name = {t["toolset_name"]: t for t in practices}
-    cdd = by_name.get("cdd") or {}
+def _stage_questions_html(stages: dict[str, dict], *, path_prefix: str = "") -> str:
     cells = [
         '<div class="kanban-stage-questions__spacer">'
         '<button type="button" class="policy-boxes-toggle" aria-expanded="false" '
@@ -581,8 +543,8 @@ def _stage_questions_html(
         'stroke-width="1.75" stroke-linecap="square" stroke-linejoin="miter"/>'
         "</svg></button></div>"
     ]
-    for stage_key, _ in STAGES:
-        stage = _board_stage(stages, stage_key)
+    for column in STAGE_COLUMNS:
+        stage = _board_stage(stages, column.key)
         items = "".join(
             f'<li class="kanban-stage-questions__item">{html.escape(item)}</li>'
             for item in (stage.get("items") or ())
@@ -591,10 +553,9 @@ def _stage_questions_html(
             f'<p class="kanban-stage-questions__desc">{html.escape(para)}</p>'
             for para in (stage.get("paras") or ())
         )
-        fid = (cdd.get("fidelities") or {}).get(stage_key)
-        href = path_prefix + (fid["href"] if fid else f"fidelities/cdd-{stage_key}.html")
+        href = f"{path_prefix}fidelities/cdd-{column.key}.html"
         cells.append(
-            f'<a class="kanban-stage-questions__cell" data-stage="{html.escape(stage_key)}" '
+            f'<a class="kanban-stage-questions__cell" data-stage="{html.escape(column.key)}" '
             f'href="{html.escape(href)}">'
             f'<ul class="kanban-stage-questions__list">{items}</ul>'
             f'{paras}'
@@ -627,124 +588,45 @@ def _cdd_tour_panel_html() -> str:
 
 
 def render_hub_board(
-    practices: list[dict],
-    actions: list[dict],
-    utilities: list[dict],
+    practices: list,
+    actions: list,
+    utilities: list,
     *,
-    highlight_tool: str | None = None,
-    highlight_fidelity: str | None = None,
+    highlight_practice=None,
+    highlight_fidelity=None,
     path_prefix: str = "",
-    initial_family: str | None = None,
     approach_md_path: str | Path | None = None,
 ) -> str:
-    """Build the Foundry-style stage×tool kanban + policies + Actions/Utilities."""
+    """Build the Foundry-style stage×practice kanban + policies + Actions/Utilities.
+
+    ``practices`` are the catalog's practices in board order; ``actions`` and ``utilities`` are the lifecycle actions
+    and utilities, each with its ``name`` and page ``href``. A practice page highlights its practice; a fidelity page
+    highlights the fidelity too."""
     board_stages = approach_board_stages(approach_md_path)
-    by_name = {t["toolset_name"]: t for t in practices}
-    ordered = [by_name[n] for n in FAMILY_ROW_ORDER if n in by_name]
-    for t in practices:
-        if t["toolset_name"] == "cdd":
-            continue
-        if t["toolset_name"] not in {x["toolset_name"] for x in ordered}:
-            ordered.append(t)
-
-    cdd_tool = by_name.get("cdd")
-    cdd_tool_href = path_prefix + (cdd_tool["href"] if cdd_tool else "cdd-approach.html")
-
-    practice_bits = [
-        _family_toggle(
-            display_label(tool["toolset_name"]),
-            tool["toolset_name"],
-            path_prefix + tool["href"],
-            header=False,
-        )
-        for tool in ordered
+    practice_bits = [_family_toggle(practice, path_prefix + practice.href) for practice in practices]
+    cols = [
+        _board_column(column, practices, board_stages, path_prefix, highlight_practice, highlight_fidelity)
+        for column in STAGE_COLUMNS
     ]
-
-    cols = []
-    for stage_key, stage_label in STAGES:
-        rows = []
-        for tool in ordered:
-            fid = tool["fidelities"].get(stage_key)
-            fam = family_class(tool["toolset_name"])
-            persp = family_perspective(tool["toolset_name"])
-            if fid:
-                current = (
-                    highlight_tool == tool["toolset_name"]
-                    and highlight_fidelity == fid["key"]
-                )
-                ticket = _ticket(
-                    display_label(fid["key"]),
-                    path_prefix + fid["href"],
-                    fam,
-                    stage=stage_key,
-                    perspective=persp,
-                    current=current,
-                )
-                empty = ""
-            else:
-                ticket = ""
-                empty = " aad-skill-row--empty"
-            rows.append(
-                f'<div class="aad-skill-row {fam}{empty}" '
-                f'data-family="{html.escape(tool["toolset_name"])}">{ticket}</div>'
-            )
-        active = ""
-        cdd_fid = (cdd_tool or {}).get("fidelities", {}).get(stage_key)
-        if highlight_tool == "cdd" and highlight_fidelity and cdd_fid:
-            if cdd_fid.get("key") == highlight_fidelity:
-                active = " active"
-        elif highlight_tool and highlight_fidelity:
-            hit = (by_name.get(highlight_tool) or {}).get("fidelities", {}).get(stage_key)
-            if hit and hit.get("key") == highlight_fidelity:
-                active = " active"
-
-        stage_current = " kb-col-head--current" if active else ""
-        stage_meta = _board_stage(board_stages, stage_key)
-        example_href = stage_example_href(stage_meta, path_prefix=path_prefix)
-        label = html.escape(stage_label)
-        if example_href:
-            title = (
-                f'<a class="kb-col-head-title__link" href="{html.escape(example_href)}">{label}</a>'
-            )
-        else:
-            title = f"<span>{label}</span>"
-        cols.append(
-            f'<div class="kb-col{active}" data-id="col-{stage_key}" data-stage="{stage_key}">'
-            f'<div class="kb-col-head{stage_current}">'
-            f'<div class="kb-col-head-row">'
-            f"{_scope_shape_html(stage_key)}"
-            f'<span class="kb-col-head-title">{title}</span>'
-            f"</div></div>"
-            f"{_stage_col_detail_html(stage_key, board_stages)}"
-            f'{"".join(rows)}'
-            f"</div>"
-        )
-
     action_tickets = "".join(
-        _ticket(display_label(a["name"]), path_prefix + a["href"], "aad-fam-supporting")
-        for a in actions
+        _ticket(display_label(action.name), path_prefix + action.href, "aad-fam-supporting") for action in actions
     )
     utility_tickets = "".join(
-        _ticket(display_label(u["name"]), path_prefix + u["href"], "aad-fam-foundational")
-        for u in utilities
+        _ticket(display_label(utility.name), path_prefix + utility.href, "aad-fam-foundational")
+        for utility in utilities
     )
-
     attrs = ' data-cdd-always-expanded="1" data-cdd-no-stage-filter="1"'
-    if initial_family and initial_family != "cdd":
-        attrs += f' data-initial-family="{html.escape(initial_family)}"'
-    if highlight_fidelity and highlight_tool and highlight_tool != "cdd":
-        for stage_key, _ in STAGES:
-            hit = (by_name.get(highlight_tool) or {}).get("fidelities", {}).get(stage_key)
-            if hit and hit.get("key") == highlight_fidelity:
-                attrs += f' data-initial-stage="{html.escape(stage_key)}"'
-                break
-
+    if highlight_practice is not None:
+        attrs += f' data-initial-family="{html.escape(highlight_practice.key)}"'
+        highlighted = _highlighted_column(highlight_practice, highlight_fidelity)
+        if highlighted is not None:
+            attrs += f' data-initial-stage="{html.escape(highlighted.key)}"'
     cdd_head = (
         f'<a class="kb-ticket aad-skill aad-fam-delivery foundry-practice-col__card '
         f'foundry-practice-col__card--header foundry-practice-col__cdd-head '
         f'foundry-perspective-label foundry-perspective-label--cdd" '
         f'data-perspective="cdd" '
-        f'href="{html.escape(cdd_tool_href)}">{html.escape(display_label("cdd"))}</a>'
+        f'href="{html.escape(path_prefix + "cdd-approach.html")}">{html.escape(display_label("cdd"))}</a>'
     )
     practice_col = (
         '<div class="foundry-practice-col" aria-label="Context tools">'
@@ -752,18 +634,82 @@ def render_hub_board(
         + "".join(practice_bits)
         + "</div>"
     )
-
-    stage_questions = _stage_questions_html(
-        practices, board_stages, path_prefix=path_prefix
+    stage_questions = _stage_questions_html(board_stages, path_prefix=path_prefix)
+    return _BOARD_SHELL.format(
+        attrs=attrs,
+        practice_col=practice_col,
+        cols="".join(cols),
+        stage_questions=stage_questions,
+        action_tickets=action_tickets,
+        utility_tickets=utility_tickets,
     )
 
-    return f"""
+
+def _highlighted_column(practice, fidelity) -> StageColumn | None:
+    """The column holding ``fidelity`` on ``practice``'s row; none when no fidelity is highlighted."""
+    if fidelity is None:
+        return None
+    return next((column for column in STAGE_COLUMNS if practice.fidelity_in(column) is fidelity), None)
+
+
+def _board_column(
+    column: StageColumn,
+    practices: list,
+    board_stages: dict[str, dict],
+    path_prefix: str,
+    highlight_practice,
+    highlight_fidelity,
+) -> str:
+    rows = [_board_cell(column, practice, path_prefix, highlight_fidelity) for practice in practices]
+    highlighted = highlight_practice is not None and _highlighted_column(highlight_practice, highlight_fidelity)
+    active = " active" if highlighted is column else ""
+    stage_current = " kb-col-head--current" if active else ""
+    example_href = stage_example_href(_board_stage(board_stages, column.key), path_prefix=path_prefix)
+    label = html.escape(column.label)
+    if example_href:
+        title = f'<a class="kb-col-head-title__link" href="{html.escape(example_href)}">{label}</a>'
+    else:
+        title = f"<span>{label}</span>"
+    return (
+        f'<div class="kb-col{active}" data-id="col-{column.key}" data-stage="{column.key}">'
+        f'<div class="kb-col-head{stage_current}">'
+        f'<div class="kb-col-head-row">'
+        f"{_scope_shape_html(column)}"
+        f'<span class="kb-col-head-title">{title}</span>'
+        f"</div></div>"
+        f"{_stage_col_detail_html(column, board_stages)}"
+        f'{"".join(rows)}'
+        f"</div>"
+    )
+
+
+def _board_cell(column: StageColumn, practice, path_prefix: str, highlight_fidelity) -> str:
+    fidelity = practice.fidelity_in(column)
+    ticket = ""
+    empty = " aad-skill-row--empty"
+    if fidelity is not None:
+        ticket = _ticket(
+            display_label(fidelity.name),
+            path_prefix + practice.fidelity_href(fidelity),
+            practice.family,
+            stage=column.key,
+            perspective=practice.perspective,
+            current=fidelity is highlight_fidelity,
+        )
+        empty = ""
+    return (
+        f'<div class="aad-skill-row {practice.family}{empty}" '
+        f'data-family="{html.escape(practice.key)}">{ticket}</div>'
+    )
+
+
+_BOARD_SHELL = """
 <div class="wrap">
 <div class="foundry-kanban-shell" id="kanban-shell">
 <section class="foundry-kanban-surface foundry-skills-expanded catalog-kanban-embed foundry-kanban-surface--cdd-always-expanded" id="catalog-kanban" aria-label="CDD catalog board"{attrs}>
   <div class="foundry-board-grid foundry-board-grid--cdd" id="board">
     {practice_col}
-    {"".join(cols)}
+    {cols}
   </div>
   {stage_questions}
   <div class="foundry-skills-extra">
@@ -819,18 +765,18 @@ def wrap_guidance_body(html_text: str) -> str:
     return _GUIDANCE_BODY_RE.sub(repl, html_text)
 
 
-def catalog_examples_html(module_dir: Path, fidelity_key: str) -> str:
+def catalog_examples_html(fidelity) -> str:
     """Collapsible Examples block for ``{practice}/catalog-examples/{fidelity}.*``.
 
-    Every file with that stem is shown. Markdown renders as HTML, Draw.io
+    Every file named exactly for the fidelity is shown. Markdown renders as HTML, Draw.io
     opens in the diagrams.net viewer, images render as ``<img>``, and other
     text files stay as source.
     """
-    folder = Path(module_dir) / "catalog-examples"
-    if not folder.is_dir() or not fidelity_key:
+    folder = _catalog_examples_folder(fidelity)
+    if not folder.is_dir():
         return ""
     files = sorted(
-        (path for path in folder.iterdir() if path.is_file() and path.stem == fidelity_key),
+        (path for path in folder.iterdir() if path.is_file() and path.stem == fidelity.name),
         key=lambda path: (_EXAMPLE_SUFFIX_ORDER.get(path.suffix.lower(), 50), path.name),
     )
     if not files:
@@ -1100,7 +1046,10 @@ def _drawio_iframe(path: Path, *, zoom_left: bool = False) -> str:
 
 
 def _stories_stage_overview(stage_id: str) -> str:
-    for fidelity in _practice_fidelities("stories"):
+    """The opening of the Stories fidelity at ``stage_id``: the approach page's stage examples are Stories'."""
+    from harness.guidance.practice_catalogue import PracticeCatalogue
+
+    for fidelity in PracticeCatalogue.practice("stories").fidelities:
         if fidelity.stage == stage_id:
             return _opening_of(fidelity)
     return ""
@@ -1507,13 +1456,6 @@ def _stage_example_panel_html(
     )
 
 
-_REFINE_STAGES = (
-    ("discovery", "Discovery"),
-    ("specification", "Specification"),
-    ("implementation", "Implementation"),
-)
-
-
 def refine_stage_row(
     *,
     host_id: str,
@@ -1543,12 +1485,13 @@ def refine_stage_row(
     heads: list[str] = []
     copies: list[str] = []
     examples: list[str] = []
-    for stage_id, label in _REFINE_STAGES:
+    for column in STAGE_COLUMNS:
+        stage_id = column.stage
         heads.append(
             f'<button type="button" class="approach-window__stage" '
             f'data-stage-id="{html.escape(stage_id)}" aria-pressed="false" '
             f'aria-expanded="false">'
-            f"{html.escape(label)}</button>"
+            f"{html.escape(column.title)}</button>"
         )
         copies.append(_refine_opening(stage_id, overviews.get(stage_id, "")))
         examples.append(
@@ -1604,7 +1547,7 @@ def _approach_windows_html(
     panels: dict[str, str] = {}
     openings: dict[str, str] = {}
     needs_monaco = False
-    for stage_id, _label in _REFINE_STAGES:
+    for stage_id in STAGE_COLUMNS.stages:
         stage = stage_by_id.get(stage_id, {})
         panel, panel_monaco = (
             _stage_example_panel_html(
@@ -1744,13 +1687,8 @@ def copy_practice_examples(out_root: Path) -> None:
                 shutil.copy2(path, dest / path.name)
 
 
-_FIDELITY_STEM_ALIASES = {
-    ("ux", "ia"): ("information-architecture",),
-}
-
-
 def _product_engineering_grid(
-    practices: list[dict],
+    practices: list,
     *,
     example_sources: ProjectExampleSources | None = None,
     catalog_root: Path | None = None,
@@ -1758,20 +1696,19 @@ def _product_engineering_grid(
     """One refine row per practice, reusing the Iterate and Learn stage architecture."""
     rows: list[str] = []
     needs_monaco = False
-    for tool in practices:
-        name = tool["toolset_name"]
-        label = _PE_TAB_LABELS.get(name, name.replace("_", "-"))
+    for practice in practices:
+        label = _PE_TAB_LABELS.get(practice.key, practice.key.replace("_", "-"))
         panels, openings, panel_monaco = _practice_refine_panels(
-            name,
+            practice,
             example_sources=example_sources,
             catalog_root=catalog_root,
         )
         needs_monaco = needs_monaco or panel_monaco
         rows.append(
             refine_stage_row(
-                host_id=f"refine-row-{name}",
+                host_id=f"refine-row-{practice.key}",
                 rail_label=label,
-                rail_family=family_perspective(name),
+                rail_family=practice.perspective,
                 panels=panels,
                 openings=openings,
                 aria_label=f"{label} discovery, specification, and implementation",
@@ -1786,7 +1723,7 @@ def _product_engineering_grid(
 
 
 def _practice_refine_panels(
-    practice: str,
+    practice,
     *,
     example_sources: ProjectExampleSources | None = None,
     catalog_root: Path | None = None,
@@ -1794,28 +1731,23 @@ def _practice_refine_panels(
     panels: dict[str, str] = {}
     openings: dict[str, str] = {}
     needs_monaco = False
-    for fidelity in _practice_fidelities(practice):
+    for fidelity in practice.fidelities:
         stage_id = fidelity.stage
-        if stage_id not in dict(_REFINE_STAGES):
+        if STAGE_COLUMNS.of(stage_id) is None:
             continue
         opening = _opening_of(fidelity)
+        relative = example_sources.file_for(practice.key, stage_id) if example_sources else None
         if example_sources and catalog_root is not None:
-            relative = example_sources.file_for(practice, stage_id)
             files = [Path(catalog_root) / relative] if relative else []
         else:
-            files = _fidelity_example_files(practice, fidelity.name)
-        if not files:
-            continue
+            files = _fidelity_example_files(fidelity)
         parts: list[str] = []
         for path in files:
             slug = re.sub(
                 r"[^a-z0-9]+",
                 "-",
-                f"{practice}-{path.stem}-{path.suffix.lstrip('.')}".lower(),
+                f"{practice.key}-{path.stem}-{path.suffix.lstrip('.')}".lower(),
             ).strip("-")
-            relative = None
-            if example_sources:
-                relative = example_sources.file_for(practice, stage_id)
             inline = _stage_example_inline(
                 path,
                 include_monaco_script=False,
@@ -1842,15 +1774,6 @@ _PE_TAB_LABELS = {
 }
 
 
-def _practice_fidelities(practice: str) -> list:
-    """The live fidelities of the practice whose toolset name is ``practice``, in the order the practice declares them."""
-    from harness.guidance.practice_catalogue import PracticeCatalogue
-
-    if not PracticeCatalogue.has(practice):
-        return []
-    return list(PracticeCatalogue.practice(practice).fidelities.entries.values())
-
-
 def _opening_of(fidelity) -> str:
     """The first paragraph of the fidelity's overview: the outline a reader sees before its rules."""
     from harness.catalog_generator.catalog_generator import _first_prose_paragraph
@@ -1858,12 +1781,19 @@ def _opening_of(fidelity) -> str:
     return _first_prose_paragraph(fidelity.overview or fidelity.section)
 
 
-def _fidelity_example_files(practice: str, fidelity: str) -> list[Path]:
-    folder = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / practice / "catalog-examples"
+def _catalog_examples_folder(fidelity) -> Path:
+    """``{practice}/catalog-examples``: the folder of example files the catalog shows for the fidelity's practice."""
+    return Path(fidelity.practice_guidance.module_dir) / "catalog-examples"
+
+
+def _fidelity_example_files(fidelity) -> list[Path]:
+    """The fidelity's examples for an approach panel: files named for the fidelity in any spelling or by its board
+    label, with an image or diagram preferred over the source it was drawn from."""
+    folder = _catalog_examples_folder(fidelity)
     if not folder.is_dir():
         return []
-    names = {fidelity, fidelity.replace("_", "-"), fidelity.replace("-", "_")}
-    names.update(_FIDELITY_STEM_ALIASES.get((practice, fidelity), ()))
+    name = fidelity.name
+    names = {name, name.replace("_", "-"), name.replace("-", "_"), display_label(name)}
     files = sorted(
         (
             path
@@ -1872,29 +1802,23 @@ def _fidelity_example_files(practice: str, fidelity: str) -> list[Path]:
         ),
         key=lambda path: (_EXAMPLE_SUFFIX_ORDER.get(path.suffix.lower(), 50), path.name),
     )
-    chosen: list[Path] = []
     stems: dict[str, list[Path]] = {}
     for path in files:
         stems.setdefault(path.stem, []).append(path)
-    for group in stems.values():
-        images = [path for path in group if path.suffix.lower() in _IMAGE_SUFFIXES]
-        if images:
-            chosen.extend(images)
-            continue
-        drawios = [path for path in group if path.suffix.lower() in (".drawio", ".dio")]
-        if drawios:
-            chosen.extend(drawios)
-            continue
-        others = [
-            path
-            for path in group
-            if path.suffix.lower() not in {".md", ".markdown"}
-        ]
-        if others:
-            chosen.extend(others)
-            continue
-        chosen.extend(group)
+    chosen = [path for group in stems.values() for path in _preferred_examples(group)]
     return sorted(chosen, key=lambda path: (_EXAMPLE_SUFFIX_ORDER.get(path.suffix.lower(), 50), path.name))
+
+
+def _preferred_examples(group: list[Path]) -> list[Path]:
+    """From files sharing one stem: the images, else the diagrams, else anything but markdown, else the markdown."""
+    images = [path for path in group if path.suffix.lower() in _IMAGE_SUFFIXES]
+    if images:
+        return images
+    drawios = [path for path in group if path.suffix.lower() in (".drawio", ".dio")]
+    if drawios:
+        return drawios
+    others = [path for path in group if path.suffix.lower() not in {".md", ".markdown"}]
+    return others or group
 
 
 def fence(lang: str, text: str) -> str:

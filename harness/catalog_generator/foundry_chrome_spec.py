@@ -120,7 +120,10 @@ with description("catalog examples"):
             "0000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082"
         )
         (examples / "story_map.png").write_bytes(png)
-        html = catalog_examples_html(folder, "story_map")
+        from types import SimpleNamespace
+
+        fidelity = SimpleNamespace(name="story_map", practice_guidance=SimpleNamespace(module_dir=folder))
+        html = catalog_examples_html(fidelity)
         expect("<img" in html).to(equal(True))
         expect("data:image/png;base64," in html).to(equal(True))
         expect("<pre>" in html).to(equal(False))
@@ -313,22 +316,13 @@ with description("information architecture viewport"):
 
 with description("product engineering grid"):
     with before.all:
-        # Practice labels and colour families come from the discovered practices' catalog cards.
-        from harness.catalog_generator.catalog_generator import load_registry
+        # Practice labels and colour families come from the practices' own catalog cards.
+        from harness.catalog_generator.catalog_generator import catalog_practices
 
-        load_registry()
+        self.practices = catalog_practices()
 
     with it("renders one refine row per practice with rewind and play"):
-        html = approach_principle_grid(
-            [
-                {"toolset_name": "stories", "href": "context-tools/stories.html"},
-                {"toolset_name": "ddd", "href": "context-tools/ddd.html"},
-                {"toolset_name": "ux", "href": "context-tools/ux.html"},
-                {"toolset_name": "clean_engineering", "href": "context-tools/clean_engineering.html"},
-                {"toolset_name": "bdd", "href": "context-tools/bdd.html"},
-            ],
-            "descriptions",
-        )
+        html = approach_principle_grid(self.practices, "descriptions")
         expect('class="pe-tab' in html).to(equal(False))
         expect("Click Discovery, Specification, or Implementation." in html).to(equal(False))
         expect('id="pe-stage-examples"' in html).to(equal(False))
