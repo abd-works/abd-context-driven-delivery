@@ -72,6 +72,15 @@ _SELF_PLACEHOLDER = re.compile(r"\{\{self\.(\w+)\}\}")
 _EXEC_LOCAL_MISSING = object()
 
 
+@dataclass(frozen=True)
+class _LoopItem:
+    """One pass of a ``for`` loop in an instructions body: the loop variable's name and the item it holds on this
+    pass, so ``tools(item.member)`` and ``instructions(item.member)`` expand that item's member."""
+
+    name: str
+    item: Any
+
+
 class ToolSetCollection:
     """Named child toolsets, iterated in entry order. The collection itself may have tools."""
 
@@ -1207,8 +1216,6 @@ class AgentInstructions(AgentTool):
     _scan_defining_class: type | None = field(default=None, init=False, repr=False)
     _reset_scan: bool = field(default=True, init=False, repr=False)
     _scan_arguments: dict[str, Any] | None = field(default=None, init=False, repr=False)
-    _loop_var: str | None = field(default=None, init=False, repr=False)
-    _loop_item: Any = field(default=None, init=False, repr=False)
 
     @property
     def kind(self) -> str:
@@ -1622,10 +1629,9 @@ class AgentInstructions(AgentTool):
             return statement.value.value
         return None
 
-    def _expand_cross_arg(self, arg: ast.AST) -> bool:
-        loop_var = self._loop_var
-        roots = frozenset({loop_var}) if loop_var else frozenset({"self"})
-        owner = self._loop_item if loop_var else self.toolset
+    def _expand_cross_arg(self, arg: ast.AST, loop: _LoopItem | None = None) -> bool:
+        roots = frozenset({loop.name}) if loop else frozenset({"self"})
+        owner = loop.item if loop else self.toolset
         cross = self.toolset.provider_cross_call(arg, roots)
         if cross is None:
             return False
@@ -1653,13 +1659,13 @@ class AgentInstructions(AgentTool):
             return names
         return []
 
-    def _loop_item_instructions(self, arg: ast.AST) -> bool:
-        if self._loop_item is None or self._loop_var is None:
+    def _loop_item_instructions(self, arg: ast.AST, loop: _LoopItem) -> bool:
+        if loop.item is None:
             return False
         names = self._attr_chain(arg)
-        if not names or names[0] != self._loop_var:
+        if not names or names[0] != loop.name:
             return False
-        target: Any = self._loop_item
+        target: Any = loop.item
         for name in names[1:-1]:
             target = getattr(target, name, None)
             if target is None:
@@ -1682,19 +1688,18 @@ class AgentInstructions(AgentTool):
         self._expand_member(member, target)
         return True
 
-    def _expand_loop_attr_tool(self, arg: ast.AST) -> bool:
-        loop_var = self._loop_var
-        if not loop_var or not isinstance(arg, ast.Call):
+    def _expand_loop_attr_tool(self, arg: ast.AST, loop: _LoopItem | None) -> bool:
+        if loop is None or not isinstance(arg, ast.Call):
             return False
         if not isinstance(arg.func, ast.Attribute):
             return False
-        if not isinstance(arg.func.value, ast.Name) or arg.func.value.id != loop_var:
+        if not isinstance(arg.func.value, ast.Name) or arg.func.value.id != loop.name:
             return False
-        self._expand_target_member(arg.func.attr, self._loop_item)
+        self._expand_target_member(arg.func.attr, loop.item)
         return True
 
-    def _expand_self_tool_arg(self, arg: ast.AST) -> bool:
-        if self._loop_var is not None:
+    def _expand_self_tool_arg(self, arg: ast.AST, loop: _LoopItem | None) -> bool:
+        if loop is not None:
             return False
         member_name = self.self_member_name(arg)
         if not member_name:
@@ -1702,14 +1707,14 @@ class AgentInstructions(AgentTool):
         self._expand_target_member(member_name, self.toolset)
         return True
 
-    def _dispatch_tools_arg(self, arg: ast.AST | None) -> bool:
+    def _dispatch_tools_arg(self, arg: ast.AST | None, loop: _LoopItem | None = None) -> bool:
         if arg is None:
             return False
-        if self._expand_cross_arg(arg):
+        if self._expand_cross_arg(arg, loop):
             return True
-        if self._expand_loop_attr_tool(arg):
+        if self._expand_loop_attr_tool(arg, loop):
             return True
-        if self._expand_self_tool_arg(arg):
+        if self._expand_self_tool_arg(arg, loop):
             return True
         member = self._wrapped_member_name(arg)
         if member:
@@ -1717,7 +1722,7 @@ class AgentInstructions(AgentTool):
             return True
         return False
 
-    def _walk_for_each_wrapped(self, body_stmt: ast.stmt) -> bool:
+    def _walk_for_each_wrapped(self, body_stmt: ast.stmt, loop: _LoopItem) -> bool:
         if not isinstance(body_stmt, ast.Expr) or not isinstance(body_stmt.value, ast.Call):
             return False
         call = body_stmt.value
@@ -1726,21 +1731,19 @@ class AgentInstructions(AgentTool):
         arg = call.args[0] if call.args else None
         if arg is None:
             return False
-        var_name = self._loop_var
-        target_item = self._loop_item
         if call.func.id == "tools":
-            return self._dispatch_tools_arg(arg)
+            return self._dispatch_tools_arg(arg, loop)
         if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute):
-            if isinstance(arg.func.value, ast.Name) and arg.func.value.id == var_name:
-                self._expand_target_member(arg.func.attr, target_item)
+            if isinstance(arg.func.value, ast.Name) and arg.func.value.id == loop.name:
+                self._expand_target_member(arg.func.attr, loop.item)
                 return True
         if isinstance(arg, ast.Attribute) and isinstance(arg.value, ast.Name):
-            if arg.value.id == var_name:
-                self._expand_target_member(arg.attr, target_item)
+            if arg.value.id == loop.name:
+                self._expand_target_member(arg.attr, loop.item)
                 return True
-        if self._loop_item_instructions(arg):
+        if self._loop_item_instructions(arg, loop):
             return True
-        return self._expand_cross_arg(arg)
+        return self._expand_cross_arg(arg, loop)
 
     def _is_companion_for(self, stmt: ast.For) -> bool:
         if not isinstance(stmt.target, ast.Name):
@@ -1818,14 +1821,7 @@ class AgentInstructions(AgentTool):
                 if mode_value is not None:
                     self._loop_item_modes[id(loop_item)] = mode_value
                     continue
-                previous_var = self._loop_var
-                previous_item = self._loop_item
-                self._loop_var = loop_var
-                self._loop_item = loop_item
-                wrapped = self._walk_for_each_wrapped(body_stmt)
-                self._loop_var = previous_var
-                self._loop_item = previous_item
-                if wrapped:
+                if self._walk_for_each_wrapped(body_stmt, _LoopItem(loop_var, loop_item)):
                     continue
             self._dispatch_statement(body_stmt)
 
@@ -1859,8 +1855,6 @@ class AgentInstructions(AgentTool):
             return True
         if isinstance(arg, ast.JoinedStr):
             self._add_prompt(self._joined_string(arg))
-            return True
-        if self._loop_item_instructions(arg):
             return True
         if self._expand_instructions_cross(arg):
             return True
