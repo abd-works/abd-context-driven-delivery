@@ -49,6 +49,7 @@ def main() -> int:
 
     from harness.installation.bootstrap import ensure_import_path
     from space.session import Session
+    from space.session.chat_pointer import ChatPointer
 
     ensure_import_path(_REPO)
     transcript = Path(args.transcript).resolve()
@@ -58,7 +59,8 @@ def main() -> int:
     Session.switch(args.session, workpath=workpath, repo_path=_REPO)
     session = Session.current()
 
-    session.note_chat(args.chat_id, transcript, line_numbers)
+    chat = ChatPointer(args.chat_id, transcript, line_numbers)
+    session.note_chat(chat)
     session._append_log("--- retroactive backfill")
 
     reparented: list[str] = []
@@ -100,7 +102,7 @@ def main() -> int:
         ("satisfy", [harness, ce]),
         ("validate", [harness / "agent_tools_probe.py"]),
     ):
-        session.note_chat(args.chat_id, transcript, line_numbers)
+        session.note_chat(chat)
         session.log_action(action, paths)
 
     print(f"backfilled {len(new_lines)} line(s) into {log_path}")

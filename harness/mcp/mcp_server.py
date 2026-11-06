@@ -804,26 +804,25 @@ class McpHost:
 
     def _dispatch_between_restarts(self, resolved: str, arguments: dict[str, object] | None) -> object:
         from space.session import Session
-        from space.session.chat_context import clear_chat_context, pop_chat_fields
+        from space.session.chat_pointer import ChatPointer
         from space.work_state import project_checkout
 
         project = project_checkout()
         runtime = self.runtime_for(project)
         Session.refresh_current_from_repo(project)
-        args = pop_chat_fields(arguments)
-        try:
-            if args.get("ping") is True:
-                if not self._enrolled(resolved):
-                    raise KeyError(resolved)
-                return {"ping": "pong", "tool": resolved}
-            if resolved in runtime.prompts:
-                return runtime.invoke_prompt(resolved, args)
-            return runtime.invoke_tool(resolved, args)
-        except BaseException as failure:
-            Session.current(project).record_failure(failure, tool=resolved)
-            raise
-        finally:
-            clear_chat_context()
+        chat, args = ChatPointer.taken_from(arguments)
+        with ChatPointer.serving(chat):
+            try:
+                if args.get("ping") is True:
+                    if not self._enrolled(resolved):
+                        raise KeyError(resolved)
+                    return {"ping": "pong", "tool": resolved}
+                if resolved in runtime.prompts:
+                    return runtime.invoke_prompt(resolved, args)
+                return runtime.invoke_tool(resolved, args)
+            except BaseException as failure:
+                Session.current(project).record_failure(failure, tool=resolved)
+                raise
 
     def _enrolled(self, name: str) -> bool:
         return (

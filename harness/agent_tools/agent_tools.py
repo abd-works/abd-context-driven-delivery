@@ -1029,11 +1029,9 @@ class AgentTool(AgentToolDestination):
         if not self.should_log_session_invocation(arguments):
             return
         from space.session import Session
-        from space.session.chat_context import apply_chat_context
 
         Session.refresh_current_from_repo(repo_path)
         session = Session.current()
-        apply_chat_context(session)
         payload = arguments or {}
         logged_args = {
             key: value
@@ -1187,11 +1185,8 @@ class GuidanceAgentOperation(AgentOperation):
         if not action:
             return
         from space.session import Session
-        from space.session.chat_context import apply_chat_context
 
         Session.refresh_current_from_repo(repo_path)
-        session = Session.current()
-        apply_chat_context(session)
         payload = dict(arguments or {})
         if "guidance" in payload:
             toolset._bind_guidance(payload.get("guidance"))

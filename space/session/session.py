@@ -20,6 +20,7 @@ from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 from tools.file_manager.file_manager import FileEntry, FileManager, FileText
 from space.repo.repo import Repo
+from space.session.chat_pointer import NO_CHAT, ChatPointer
 from space.work_state import (
     LEGACY_SESSIONS_FOLDER,
     SESSIONS_FOLDER,
@@ -44,8 +45,6 @@ _REPORT_FOLDER = "validation-reports"
 MAIN_SESSION_NAME = "main"
 COMPLETE_FOLDER = "_complete"
 _ARCHIVE_FOLDER = "_archive"
-# A log line from a chat the server cannot name ends with "no-chat" in place of the chat's id, transcript, and lines.
-NO_CHAT: tuple[str, Path, str] = ("no-chat", Path(), "")
 _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 _LOOP_MARKER = re.compile(r"---\s+(\d+)(?:\s|$)")
 _KNOWN_ACTIONS = (
@@ -97,37 +96,6 @@ class SessionNameRequiredError(ValueError):
         )
 
 
-def _parse_chat_file(path: Path) -> tuple[str, str, str]:
-    if not path.is_file():
-        return path.stem, "", ""
-    lines = path.read_text(encoding="utf-8").splitlines()
-    chat_id = ""
-    line_numbers = ""
-    body_start = 0
-    for index, line in enumerate(lines):
-        if not line.strip():
-            body_start = index + 1
-            break
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        token = key.strip().lower().replace("_", "-")
-        text = value.strip()
-        if token in {"chat-id", "conversation-id"}:
-            chat_id = text
-        elif token == "lines":
-            line_numbers = text
-    else:
-        body_start = len(lines)
-    body = "\n".join(lines[body_start:]).strip()
-    if not chat_id:
-        chat_id = path.stem
-    if not line_numbers:
-        count = len(body.splitlines()) if body else 1
-        line_numbers = f"1-{count}" if count > 1 else "1"
-    return chat_id, line_numbers, body
-
-
 class Loop:
     """One span of context, generation, and evaluation inside a session."""
 
@@ -141,21 +109,32 @@ class Loop:
         return "\n".join(self.entries)
 
     def expanded_text(self) -> str:
-        """Log lines for this loop with referenced chat transcript slices inlined."""
-        from space.session.chat_transcript import expand_log_lines
-
-        return expand_log_lines(self.entries)
+        """Log lines for this loop, each followed by the transcript lines its chat pointer covers. A transcript range
+        that an earlier line already showed is named, not repeated."""
+        parts: list[str] = []
+        seen: set[tuple[str, str]] = set()
+        for line in self.entries:
+            parts.append(line)
+            chat = ChatPointer.in_log_line(line)
+            if chat is None:
+                continue
+            transcript = chat.transcript
+            key = (str(transcript.resolve()) if transcript.exists() else str(transcript), chat.lines)
+            if key in seen:
+                parts.append(f"    (chat {chat.id} {chat.lines} — see above)")
+                continue
+            seen.add(key)
+            parts.append(f"--- chat {chat} ---")
+            parts.extend(chat.transcript_text())
+        return "\n".join(parts)
 
     def inject(self, chat_file: Path, *, action: str | None = None) -> None:
-        path = Path(chat_file)
-        chat_id, line_numbers, body = _parse_chat_file(path)
-        pointer = f"{chat_id} {path} {line_numbers}".strip()
+        chat, body = ChatPointer.in_chat_file(Path(chat_file))
         session = self._session
         action_name = action or self._action_from_entries()
         if session is not None and action_name:
-            session.note_chat(chat_id, path, line_numbers)
-            session.append_chat(action_name, path)
-        self.entries.append(pointer)
+            session.append_chat(action_name, chat)
+        self.entries.append(str(chat))
         if body:
             self.entries.extend(body.splitlines())
 
@@ -380,7 +359,8 @@ class Session:
         self._known: dict[str, PracticeSessionOutput] = {}
         self._opened: list[PracticeSessionOutput] = []
         self._injected: list[tuple[str, str, str, str]] = []
-        self._chat: tuple[str, Path, str] | None = None
+        # A chat named for the next log line only, ahead of the chat of the tool call being served.
+        self._chat: ChatPointer | None = None
         self._file_manager: FileManager | None = None
 
     @property
@@ -792,7 +772,7 @@ class Session:
         range for this chat). Dispatch logs ``session.mark_loop``; the ``--- N`` marker carries the
         same pointer when chat is bound."""
         session = cls.current()
-        session._bind_chat_for_append(conversation_id, transcript_path, transcript_lines)
+        session._note_chat_given(conversation_id, transcript_path, transcript_lines)
         opened = session.loop()
         return str(opened.number)
 
@@ -851,7 +831,7 @@ class Session:
         text = (note or "").strip()
         if not text:
             raise ValueError("note is required")
-        session._bind_chat_for_append(conversation_id, transcript_path, transcript_lines)
+        session._note_chat_given(conversation_id, transcript_path, transcript_lines)
         loop_number = session._resolve_append_loop(loop)
         path_objs = [Path(item) for item in (paths or []) if str(item).strip()]
         body = text if text.lower().startswith(f"loop {loop_number}") else f"loop {loop_number}: {text}"
@@ -933,8 +913,9 @@ class Session:
         if entry not in self._injected:
             self._injected.append(entry)
 
-    def note_chat(self, chat_id: str, chat_file: Path, line_numbers: str) -> None:
-        self._chat = (chat_id, Path(chat_file), line_numbers)
+    def note_chat(self, chat: ChatPointer) -> None:
+        """Point the next log line at chat, in place of the chat of the tool call being served."""
+        self._chat = chat
 
     def reset(self) -> None:
         self._known = {}
@@ -1028,20 +1009,11 @@ class Session:
             raise ValueError("no loop in session.log; run mark-loop first")
         return chosen
 
-    def _bind_chat_for_append(
-        self,
-        conversation_id: str,
-        transcript_path: str,
-        transcript_lines: str,
-    ) -> None:
-        from space.session.chat_context import apply_chat_context, set_chat_context
-
-        chat_id = (conversation_id or "").strip()
-        transcript = (transcript_path or "").strip()
-        lines = (transcript_lines or "").strip()
-        if chat_id and transcript:
-            set_chat_context(chat_id, transcript, lines)
-        apply_chat_context(self)
+    def _note_chat_given(self, conversation_id: str, transcript_path: str, transcript_lines: str) -> None:
+        """A call made from Python names its chat in its own arguments; an MCP call's chat is already being served."""
+        chat = ChatPointer.of(conversation_id, transcript_path, transcript_lines)
+        if chat is not None:
+            self.note_chat(chat)
 
     def loop(self) -> Loop:
         from_memory = self._loops[-1].number if self._loops else 0
@@ -1050,11 +1022,7 @@ class Session:
         opened = Loop(number)
         opened._session = self
         self._loops.append(opened)
-        self.require_chat_noted()
-        marker = f"--- {number}"
-        chat = self._noted_chat()
-        self.record(f"{marker} {chat}".strip() if chat else marker)
-        self._chat = None
+        self.record(f"--- {number} {self._line_chat()}")
         return opened
 
     @staticmethod
@@ -1084,22 +1052,18 @@ class Session:
             collected.append(line)
         return collected
 
-    def require_chat_noted(self) -> None:
-        if self._chat is not None:
-            return
-        from space.session.chat_context import apply_chat_context
-
-        if apply_chat_context(self):
-            return
-        self._chat = NO_CHAT
+    def _line_chat(self) -> ChatPointer:
+        """The chat the next log line points at: one noted for it, else the chat of the call being served, else
+        ``no-chat``. A noted chat is used once."""
+        chat = self._chat or ChatPointer.current() or NO_CHAT
+        self._chat = None
+        return chat
 
     def log_action(self, action: str, paths: list[Path]) -> None:
         if self.session_path is None:
             return
-        self.require_chat_noted()
         self.record(self._action_line(action, paths))
         self._injected.clear()
-        self._chat = None
 
     def log_agent_tool(self, mcp_name: str, tool_input: dict | None = None) -> None:
         """Append a ``tool …`` line for an enrolled ``@mcp`` ``@agent_tool`` (or prompt) invocation."""
@@ -1116,21 +1080,18 @@ class Session:
         if not name:
             return
         paths = self._paths_from_tool_input(tool_input or {})
-        from space.session.chat_context import apply_chat_context
-
-        apply_chat_context(self)
         parts = ["tool", name]
         if paths:
             parts.append(", ".join(str(path) for path in paths))
         rules = self._rule_text()
-        chat = self._noted_chat()
         if rules:
             parts.append(rules)
-        if chat:
-            parts.append(chat)
+        # A tool line names its chat only when one is known; most tool calls come from a chat the server can name.
+        chat = self._line_chat()
+        if not chat.is_missing:
+            parts.append(str(chat))
         self.record(" ".join(parts))
         self._injected.clear()
-        self._chat = None
 
     def log_note(self, message: str, paths: list[Path] | None = None) -> None:
         """Record a correction or decision in the current loop (use after user steers logging or close behavior)."""
@@ -1139,15 +1100,11 @@ class Session:
         text = (message or "").strip()
         if not text:
             return
-        self.require_chat_noted()
         parts = ["note", text]
         if paths:
             parts.append(", ".join(str(path) for path in paths))
-        chat = self._noted_chat()
-        if chat:
-            parts.append(chat)
+        parts.append(str(self._line_chat()))
         self.record(" ".join(parts))
-        self._chat = None
 
     @staticmethod
     def _paths_from_tool_input(tool_input: dict) -> list[Path]:
@@ -1169,20 +1126,6 @@ class Session:
                     seen.add(token)
                     paths.append(Path(token))
         return paths
-
-    def note_chat_from_hook(
-        self,
-        action: str,
-        *,
-        chat_id: str = "",
-        chat_file: Path | str | None = None,
-        line_numbers: str = "",
-    ) -> None:
-        """Record chat metadata so the next log_action line can point at the transcript."""
-        if not chat_id and not chat_file:
-            return
-        path = Path(chat_file) if chat_file else Path(f"chat-{chat_id or 'unknown'}")
-        self.note_chat(chat_id or path.stem, path, line_numbers or "1")
 
     def log_guidance_action(self, action: str, guidance_items: list) -> None:
         """Open listed practices and log this guidance action (after session.switch)."""
@@ -1234,17 +1177,12 @@ class Session:
     def log_validation(self, guidance: PracticeGuidance, violations: list[str]) -> None:
         if self.session_path is None:
             return
-        self.require_chat_noted()
         practice = type(guidance).__name__
         fidelity = self._fidelity_name(guidance)
         detail = " ".join(violations)
-        pointer = self._noted_chat()
         line = f"validate {practice} {fidelity} {detail}".rstrip()
-        if pointer:
-            line = f"{line} {pointer}"
-        self.record(line)
+        self.record(f"{line} {self._line_chat()}")
         self._injected.clear()
-        self._chat = None
 
     def record_failure(self, failure: BaseException, *, tool: str = "") -> None:
         """Append a full trace to session.err and a pointer line on session.log (does not raise)."""
@@ -1262,38 +1200,37 @@ class Session:
             handle.write(trace)
             if not trace.endswith("\n"):
                 handle.write("\n")
-        self.require_chat_noted()
         parts = ["error", str(err), str(line_number)]
         name = (tool or "").strip()
         if name:
             parts.insert(1, name)
-        chat = self._noted_chat()
-        if chat:
-            parts.append(chat)
+        parts.append(str(self._line_chat()))
         self.record(" ".join(parts))
-        self._chat = None
 
     def log_error(self, failure: BaseException) -> None:
         self.record_failure(failure)
         raise failure
 
-    def append_chat(self, action: str, chat_file: Path) -> None:
-        pointer = self._chat_pointer(chat_file)
-        self._append_to_action_line(action, pointer)
-        self.record(f"{action} chat {pointer}")
+    def append_chat(self, action: str, chat: ChatPointer) -> None:
+        """Point action's earlier log lines at chat, and log that the chat was added."""
+        self._append_to_action_line(action, str(chat))
+        self.record(f"{action} chat {chat}")
 
     def keep_log(self) -> str:
         log_file = str(self.log_path or "session.log")
         err_file = str(self.error_path or "session.err")
         return (
             "Session owns logging once session.switch has run. "
-            "CHAT POINTERS — required for continued conversations: you must attach chat id, agent "
-            "transcript JSONL path, and line range on every log line when metadata exists. "
-            "Hooks: CDD_CONVERSATION_ID, CDD_TRANSCRIPT_PATH, CDD_TRANSCRIPT_LINES. "
-            "MCP: pass conversation_id, transcript_path, transcript_lines on the same tool call. "
+            "CHAT POINTERS — required for continued conversations: every log line ends with a chat pointer, "
+            "the chat id, the agent transcript JSONL path, and the transcript line range "
+            "(`{id} {transcript} {lines}`), or `no-chat` when no chat can be named. "
+            "MCP: pass conversation_id, transcript_path, transcript_lines on any tool call; the server takes "
+            "them off the call and every line that call writes points at that chat. A Claude Code chat may "
+            "pass conversation_id alone, and its transcript is found by that id. "
+            "Without them the pointer comes from CDD_CONVERSATION_ID, CDD_TRANSCRIPT_PATH, CDD_TRANSCRIPT_LINES. "
             "Long threads: use an accurate slice for this turn or a cumulative range (e.g. 1-1152, "
             "then 1-1450) so read_loop can inline the full dialogue for that loop. "
-            "Missing chat on an earlier line: append_chat(action, chat_file) or session.append_log "
+            "Missing chat on an earlier line: append_chat(action, chat) or session.append_log "
             "(/append-log); never hand-edit session.log. "
             "MARK-LOOP — link the entire conversation span: call session.mark_loop (/mark-loop) only "
             "with chat fields on that MCP invoke. Dispatch writes tool session.mark_loop with a pointer; "
@@ -1517,7 +1454,7 @@ class Session:
         layout = self._active_format()
         nodes = self._node_names()
         rules = self._rule_text()
-        chat = self._noted_chat()
+        chat = str(self._line_chat())
         return " ".join(
             part
             for part in (
@@ -1586,20 +1523,6 @@ class Session:
             " ".join(part for part in (practice, fidelity, rule, path) if part)
             for practice, fidelity, rule, path in ordered
         )
-
-    def _noted_chat(self) -> str:
-        if self._chat is None:
-            return ""
-        if self._chat is NO_CHAT:
-            return NO_CHAT[0]
-        chat_id, chat_file, line_numbers = self._chat
-        return f"{chat_id} {chat_file} {line_numbers}".strip()
-
-    def _chat_pointer(self, chat_file: Path) -> str:
-        if self._chat is None:
-            return str(chat_file)
-        chat_id, _path, line_numbers = self._chat
-        return f"{chat_id} {chat_file} {line_numbers}".strip()
 
     def _append_to_action_line(self, action: str, pointer: str) -> None:
         log = self.log_path

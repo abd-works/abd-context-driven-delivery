@@ -90,7 +90,7 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 	// the line names the files and folders in paths, the active guidelines, fidelity, format, and action
 	// the line names the highest graph node per practice when the graph has one
 	// the line always points at the chat id, transcript file, and line numbers; it does not copy the transcript
-	// the host supplies CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH (or note_chat) before logging; without them the action still logs and points at a no-chat line on session.err
+	// the host supplies CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH (or the MCP call names its chat, or note_chat(ChatPointer)) before logging; without them the action still logs and points at a no-chat line on session.err
 	// when a practice guideline's rules were injected, the line lists those rule names only, sorted, separated by that practice and fidelity, and the file that matched the glob
 + log_validation(guidance: PracticeGuidance, violations: list[str]): None
 	// one timestamped line on session_path / "session.log"
@@ -100,7 +100,7 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 	// writes the full trace to session_path / "session.err"
 	// appends a session.log line that points at that session.err line
 	// the failure still propagates
-+ append_chat(action: str, chat_file: Path): None
++ append_chat(action: str, chat: ChatPointer): None
 	// adds that chat's id, file name, and line numbers onto the log line for that action
 	// a validation correction is one use; any logged action can receive a later chat the same way
 + keep_log(): str
@@ -382,7 +382,7 @@ it should log the exact rule, a synopsis of the code, and the reported correctio
 #### that appends a chat to a logged action
 
 ```
--> session.append_chat(action, chat_file)
+-> session.append_chat(action, chat)
 it should add that chat's id, file, and line numbers onto that action's log line
   -> expect(session.session_path / "session.log").to contain the chat
 ```
@@ -390,7 +390,7 @@ it should add that chat's id, file, and line numbers onto that action's log line
 ##### with a validation line
 
 ```
--> session.append_chat(action, chat_file)
+-> session.append_chat(action, chat)
 it should add that chat onto the validation line
   -> expect(session.session_path / "session.log").to contain the chat
   -> expect(session.session_path / "session.log").to contain the correction
