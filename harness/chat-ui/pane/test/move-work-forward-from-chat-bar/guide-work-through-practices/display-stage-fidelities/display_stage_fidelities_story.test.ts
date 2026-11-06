@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { boardOf, checkoutFlowWith, DONE } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, nameOf, markOf, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, drawn, markOf, textOf, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -24,11 +24,13 @@ story('Display Stage Fidelities', CHAT_BAR, () => {
     })
     // StageView press -> selectStage($, stage)
     then('the dots show stories-story_map done, ux-ia not started and clean_engineering-modules done', async ($, on, scene) => {
-      const labels = await Promise.all(['fidelity-stories-story_map', 'fidelity-ux-ia', 'fidelity-clean_engineering-modules'].map(key => nameOf(scene.ui, key)))
-      expect(labels).toEqual(['stories-story_map done', 'ux-ia to do', 'clean_engineering-modules done'])
+      const slugs = ['stories-story_map', 'ux-ia', 'clean_engineering-modules']
+      expect(await Promise.all(slugs.map(slug => tipOf(scene.ui, `fidelity-${slug}`)))).toEqual(slugs)
+      const states = await Promise.all(slugs.map(async slug => textOf((await drawn(scene.ui, `card-cell-${slug}`))?.children?.[2])))
+      expect(states).toEqual(['✓ done', '○ to do', '✓ done'])
     })
     and('no dot is selected, because ux-mockup is not a Discovery fidelity', async ($, on, scene) => {
-      const marks = await Promise.all(['fidelity-stories-story_map', 'fidelity-ux-ia', 'fidelity-clean_engineering-modules'].map(async key => textOf(await markOf(scene.ui, key))))
+      const marks = await Promise.all(['dot-stories-story_map', 'dot-ux-ia', 'dot-clean_engineering-modules'].map(async key => textOf(await markOf(scene.ui, `${key}-mark`))))
       expect(marks).toEqual(['■', '■', '■'])
     })
   })

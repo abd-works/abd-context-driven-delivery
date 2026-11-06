@@ -10,7 +10,7 @@ export type ServerHealthJson = {
   attempt: number
 }
 
-export type HealthViewJson = { isPinned: boolean; areDetailsOpen: boolean }
+export type HealthViewJson = { areDetailsOpen: boolean }
 
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 
@@ -27,7 +27,8 @@ export type ChatBarViewJson = {
 }
 
 // Whether the action picker's menu is open.
-export type ActionPickerJson = { isOpen: boolean }
+// chosenAction: the action picked from the menu, which the action button shows and runs in place of the next one.
+export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
 
 // The files view of the selected fidelity: one tab per file ticket.files declares, its text once ticket.read_file read it.
 export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null }[]; shown: string | null } | null

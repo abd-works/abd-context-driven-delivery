@@ -1,7 +1,8 @@
 import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
-import { CHAT_BAR, findText, textOf } from '../../../chat-bar-screen'
+import { boardOf, checkoutFlowWith, VALIDATED } from '../../../examples/chat-bar.examples'
+import { CHAT_BAR, drawn, findText, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -42,6 +43,24 @@ story('View Fidelity Files', CHAT_BAR, () => {
     // $.mcp.call('ticket.read_file', { ticket: 'checkout-flow', path: '../secrets.txt' }) <- FileOutsideRepositoryError
     then('the tab says ../secrets.txt is not a file in this repository', async ($, on, scene) => {
       expect(textOf(await findText(scene.ui, /is not a file in this repository/))).toBe('../secrets.txt is not a file in this repository')
+    })
+  })
+  scenario('Read the violations from their count', ({ given, when, then, and }) => {
+    // Evidence: requested: a press on the red violation count opens the violations, as the board does
+    given("checkout-flow's clean_engineering-model has 7 violations in its latest validation report", async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'clean_engineering-model': { ...VALIDATED, progress: 'violations', violations: 7 } }))
+      scene.world.answers['ticket.report'] = { path: '.sessions/checkout-flow/validation-reports/clean-engineering-model.md', text: '# Validation\n\n## no-legacy-api-after-refactor\n\nFail', rules: [], has_saved_graph: false }
+    })
+    when('the Person presses the count 7', async ($, on, scene) => {
+      await scene.ui.press({ key: 'violations-clean_engineering-model' })
+    })
+    // count press -> openReport($, fidelity) -> $.mcp.call('ticket.report', { ticket: 'checkout-flow', fidelity: 'clean_engineering-model' }) -> Ticket.report()
+    then('the report opens in its own tab', async ($, on, scene) => {
+      expect(called(scene.world, 'ticket.report')).toEqual({ ticket: 'checkout-flow', fidelity: 'clean_engineering-model' })
+      expect(await drawn(scene.ui, 'file-.sessions/checkout-flow/validation-reports/clean-engineering-model.md')).toBeDefined()
+    })
+    and('its text is drawn as markdown', async ($, on, scene) => {
+      expect((await drawn(scene.ui, 'file-markdown'))?.props?.text).toBe('# Validation\n\n## no-legacy-api-after-refactor\n\nFail')
     })
   })
 })

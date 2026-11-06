@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
-import { CHAT_BAR, markOf, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, labelOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -26,7 +26,7 @@ story('List Session Files', CHAT_BAR, () => {
     })
     // ChatBarView press -> openFiles($, fidelity) -> $.mcp.call('ticket.files', { ticket: 'checkout-flow', fidelities: ['clean_engineering-model'] }) -> Ticket.files()
     then('a tab opens for chat-bar-client.ts and one for fidelity-client.ts, as in View Fidelity Files', async ($, on, scene) => {
-      const tabs = await Promise.all(['file-pane/hooks/chat-bar/chat-bar-client.ts', 'file-pane/hooks/chat-bar/fidelity-client.ts'].map(async key => textOf(await markOf(scene.ui, key))))
+      const tabs = await Promise.all(['file-pane/hooks/chat-bar/chat-bar-client.ts', 'file-pane/hooks/chat-bar/fidelity-client.ts'].map(key => labelOf(scene.ui, key)))
       expect(tabs).toEqual(['chat-bar-client.ts', 'fidelity-client.ts'])
       expect(called(scene.world, 'ticket.files')).toEqual({ ticket: 'checkout-flow', fidelities: ['clean_engineering-model'] })
     })

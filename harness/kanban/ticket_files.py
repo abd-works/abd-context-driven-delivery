@@ -59,8 +59,9 @@ class TicketFiles:
         return [FileEntry(self._repo.path_from_top(path), True) for path in files]
 
     def read(self, path: str) -> FileText:
-        """The text of path, a file in the repository; no text when it is gone, such as one deleted since the board listed it."""
-        return FileManager(self._repo.root, (self._repo.root,)).read(path)
+        """The text of path, a file in the repository or under a folder the session's practices write to, such as its
+        worktree; no text when it is gone, such as one deleted since the board listed it."""
+        return FileManager(self._repo.root, (self._repo.root, *self._session.file_manager.roots)).read(path)
 
     @property
     def _workpath(self) -> Path:

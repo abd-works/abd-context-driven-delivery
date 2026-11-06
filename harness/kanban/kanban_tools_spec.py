@@ -731,6 +731,14 @@ with description("the board tools") as self:
             with it("should refuse a file outside the repository"):
                 expect(lambda: self.project.call("ticket.read_file", ticket="pet-visits", path="../elsewhere.md")).to(raise_error(PathOutsideRootsError))
 
+            # A ticket's worktree sits beside the repository, so its practices write outside it.
+            with it("should return the text of a file under a practice root outside the repository, such as the ticket's worktree"):
+                worktree = Path(tempfile.mkdtemp(prefix="kanban-worktree-"))
+                (worktree / "story-map.md").write_text("# Worktree map\n", encoding="utf-8")
+                self.project.call("ticket.choose_practice_root", ticket="pet-visits", practice="stories", path=str(worktree))
+                opened = self.project.call("ticket.read_file", ticket="pet-visits", path=(worktree / "story-map.md").as_posix())
+                expect(opened["text"]).to(equal("# Worktree map\n"))
+
         # (S) Person --> List Ticket Files, the session folder
         with context("with files in its session folder"):
             with before.each:
@@ -802,8 +810,8 @@ with description("the board tools") as self:
                 self.project.report("sign-up", "stories-story-map-20261031T041200")
                 (self.project.sessions / "sign-up" / "validation-reports" / "stories-story-map-20261031T041200.md").write_text(JUDGED_REPORT, encoding="utf-8")
 
-            with it("should name satisfy as the next action"):
-                expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("satisfy"))
+            with it("should name review as the next action"):
+                expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("review"))
 
             with it("should count each finding of the judgment"):
                 expect(self.project.ticket_json("sign-up")["violation_counts"]).to(equal({"stories-story_map": 5}))
@@ -849,14 +857,14 @@ with description("the board tools") as self:
                 title="Sign up",
             )
 
-        with it("should name satisfy as the next action"):
-            expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("satisfy"))
+        with it("should name review as the next action"):
+            expect(self.project.ticket_json("sign-up")["next_action"]).to(equal("review"))
 
         with it("should allow Validate and Review again on the same output"):
             expect(self.project.ticket_json("sign-up")["allowed_actions"]["stories-story_map"]).to(equal(["generate", "validate", "review"]))
 
-        with it("should name satisfy as that fidelity's own next action"):
-            expect(self.project.ticket_json("sign-up")["next_actions"]["stories-story_map"]).to(equal("satisfy"))
+        with it("should name review as that fidelity's own next action"):
+            expect(self.project.ticket_json("sign-up")["next_actions"]["stories-story_map"]).to(equal("review"))
 
         # (S) Person --> Open Validation Report
         with context("with that fidelity's report saved with its graph"):

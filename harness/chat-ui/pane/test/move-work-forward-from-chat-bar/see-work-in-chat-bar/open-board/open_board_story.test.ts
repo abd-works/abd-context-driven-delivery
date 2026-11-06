@@ -1,6 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { CHAT_BAR, nameOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -11,20 +11,19 @@ import { scenario, story } from '../../../story-test'
 
 // (S) Person --> Open Board
 story('Open Board', CHAT_BAR, () => {
-  scenario('Open the board on a fidelity', ({ given, when, then, and }) => {
-    // Evidence: inferred: CDR 0001 'Fidelity dots'; design/StageStrip.dc.html openBoard sends /board with the session and the fidelity
+  scenario('A dot selects its fidelity and sends nothing to the chat', ({ given, when, then, and }) => {
+    // Evidence: requested: a dot press only sets the fidelity the action button acts on
     given('the Chat Bar shows checkout-flow with the clean_engineering-model dot')
-    when('the Person opens the board on clean_engineering-model', async ($, on, scene) => {
+    when('the Person presses the clean_engineering-model dot twice', async ($, on, scene) => {
       await scene.ui.press({ key: 'dot-clean_engineering-model' })
       await scene.ui.press({ key: 'dot-clean_engineering-model' })
     })
     // FidelityView press -> selectFidelity($, fidelity)
-    // FidelityView second press -> openBoard($, fidelity) -> $.command.run({ command: 'board', args: 'checkout-flow clean_engineering-model' })
-    then('the chat runs /board checkout-flow clean_engineering-model', async ($, on, scene) => {
-      expect(scene.world.sent).toContain('/board checkout-flow clean_engineering-model')
+    then('nothing is sent to the chat', async ($, on, scene) => {
+      expect(scene.world.sent).toEqual([])
     })
     and('clean_engineering-model is the fidelity the action button acts on', async ($, on, scene) => {
-      expect(await nameOf(scene.ui, 'action')).toBe('generate clean-engineering-model')
+      expect(await tipOf(scene.ui, 'action')).toBe('generate clean-engineering-model')
     })
   })
 })

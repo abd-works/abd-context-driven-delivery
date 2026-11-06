@@ -18,10 +18,10 @@ export const STAGE_ORDER = ['Discovery', 'Specification', 'Implementation', 'Com
 const NOT_DONE: ActionStatesData = { generate: 'to_do', validate: 'to_do', review: 'to_do' }
 const STEPS: (keyof ActionStatesData)[] = ['generate', 'validate', 'review']
 
-// Seed: each fidelity's next action as the Python Ticket names it: satisfy while it has violations, else the first of
+// Seed: each fidelity's next action as the Python Ticket names it: review while it has violations, else the first of
 // generate, validate and review not done, nothing once it is done.
 export function withNextActions(ticket: TicketData): TicketData {
-  const nextOf = (slug: string): string => (ticket.progress[slug] === 'violations' ? 'satisfy' : (STEPS.find(step => ticket.actions[slug]?.[step] !== 'done') ?? ''))
+  const nextOf = (slug: string): string => (ticket.progress[slug] === 'violations' ? 'review' : (STEPS.find(step => ticket.actions[slug]?.[step] !== 'done') ?? ''))
   return { ...ticket, next_actions: Object.fromEntries(Object.keys(ticket.actions).map(slug => [slug, nextOf(slug)])) }
 }
 

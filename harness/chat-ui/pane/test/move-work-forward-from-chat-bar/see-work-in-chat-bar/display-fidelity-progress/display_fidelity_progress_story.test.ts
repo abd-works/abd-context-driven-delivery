@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { boardOf, checkoutFlowWith, DONE, GENERATED, VALIDATED } from '../../../examples/chat-bar.examples'
-import { buttonKeys, CHAT_BAR, drawn, expectMarkColours, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, buttonKeys, drawn, expectMarkColours, markOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -22,7 +22,7 @@ story('Display Fidelity Progress', CHAT_BAR, () => {
     // ChatBarView -> FidelityView($, fidelity) for each FidelityClient; FidelityClient.status <- TicketData.progress
     then('three dots show in the Stories, UX and Clean Engineering colours, shaded done, in progress and not started as on the board', async ($, on, scene) => {
       expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-scenarios', 'dot-ux-mockup', 'dot-clean_engineering-model'])
-      await expectMarkColours(scene.ui, { 'fidelity-stories-scenarios': '#6BCB77FF', 'fidelity-ux-mockup': '#E8439380', 'fidelity-clean_engineering-model': '#4FC3F740' })
+      await expectMarkColours(scene.ui, { 'dot-stories-scenarios-mark': '#6BCB77FF', 'dot-ux-mockup-mark': '#E8439380', 'dot-clean_engineering-model-mark': '#4FC3F740' })
     })
   })
   scenario('Show a violation count in red', ({ given, when, then }) => {
@@ -33,8 +33,8 @@ story('Display Fidelity Progress', CHAT_BAR, () => {
     when('the Chat Bar draws checkout-flow')
     // FidelityClient.violationCount <- TicketData.violation_counts
     then('the Clean Engineering dot keeps its colour and shows 7 in red', async ($, on, scene) => {
-      await expectMarkColours(scene.ui, { 'fidelity-clean_engineering-model': '#4FC3F7FF' })
-      const count = (await drawn(scene.ui, 'fidelity-clean_engineering-model'))?.children?.[1]
+      await expectMarkColours(scene.ui, { 'dot-clean_engineering-model-mark': '#4FC3F7FF' })
+      const count = await markOf(scene.ui, 'violations-clean_engineering-model-mark')
       expect([textOf(count), count?.props?.color]).toEqual(['7', '#EF4444'])
     })
   })

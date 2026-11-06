@@ -49,23 +49,28 @@ export async function dueTimers(world: World): Promise<void> {
   await settle()
 }
 
-// A Text's words, however the test kit hands the element back.
-export const textOf = (node: any): string | undefined => node?.text ?? node?.children?.[0]
+// A Text's words, however the test kit hands the element back, or a Button's label.
+export const textOf = (node: any): string | undefined => node?.text ?? node?.children?.[0] ?? node?.props?.label
 
 // The first Text drawn inside an element, such as a dot's mark or the health mark.
 export const markOf = async (ui: any, key: string) => (await ui.find({ key }))?.children?.[0]
 
-// The words on the card a dot or the action button reveals on hover, the last thing drawn in the element with this key.
-export async function nameOf(ui: any, key: string): Promise<string | undefined> {
-  const card = (await ui.find({ key }))?.children?.filter(Boolean).at(-1)
-  const first = card?.children?.[0]
-  return first?.props?.label ?? first?.label ?? textOf(first)
-}
-
-// A Button's label, the words drawn on it and a surface finds it by.
+// A Button's label, the words a person reads on hover and a surface finds it by.
 export const labelOf = async (ui: any, key: string): Promise<string | undefined> => {
   const node = await ui.find({ key })
   return node?.props?.label ?? node?.label
+}
+
+// The hover tip drawn above a keyed element, such as a dot's fidelity and state, or the action the button runs.
+export async function tipOf(ui: any, key: string): Promise<string | undefined> {
+  const node = await ui.find({ key })
+  const tip = node?.children?.find((child: any) => child?.props?.position === 'absolute')
+  return tip?.children?.map(textOf).join('')
+}
+
+// The words a Button holding Texts draws, read in order.
+export async function wordsOf(ui: any, key: string): Promise<string | undefined> {
+  return (await ui.find({ key }))?.children?.map(textOf).join('')
 }
 
 // Each keyed element's mark reads as given, such as { 'session-name-button': 'checkout-flow' }.
