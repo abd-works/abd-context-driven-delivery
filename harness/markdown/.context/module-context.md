@@ -14,7 +14,7 @@ none — location and extract live in this package
 
 ## Public API
 
-- `Markdown.from_label(host, label).extract()` — `AssetLocator.locate` under the host class file directory and `host.name`.
+- `Markdown.from_label(instance, label, fidelity=None, format=None).extract()` — `AssetLocator.locate` under the instance's class file directory and `instance.name`. A `fidelity` or `format` given here is read instead of the instance's current one, so a fidelity reads its own template without changing the practice that other MCP threads are reading.
 - `Markdown.html()` — `HTML.from_markdown(extract())`.
 - `Format(name)` / `Format.from_extension(extension)` — the one format vocabulary: `name` (`md` is `markdown`), `short`, `extension`, `is_code`, `is_known`, and where its templates are kept (`template_folder`, `template_extension`). Every reader of a format, an extension, or a template folder asks it.
 - `Markdown.coerce(text, return_type)` — str, RulesCollection, templates path map, or HTML.

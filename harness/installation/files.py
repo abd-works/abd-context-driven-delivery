@@ -224,9 +224,9 @@ class FileInstallation(Installation):
             markdown = getattr(result, "markdown", None)
             if isinstance(markdown, str) and markdown.strip():
                 return markdown.strip()
-            format_rules = getattr(result, "format_rules", None)
-            if callable(format_rules):
-                return str(format_rules()).strip()
+            formatted = getattr(result, "formatted", None)
+            if callable(formatted):
+                return str(formatted()).strip()
         return tool.docstring
 
     def _fidelity_one_liner(self, child: Any) -> str:

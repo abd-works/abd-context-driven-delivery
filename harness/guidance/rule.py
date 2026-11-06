@@ -397,9 +397,6 @@ class RulesCollection(MarkdownCollection):
             lines.append(f"- **{rule.slug}** — {rule.body}")
         return "\n".join(lines)
 
-    def format_rules(self) -> str:
-        return self.formatted()
-
     @property
     @agent_instructions
     def markdown_block(self) -> str:
