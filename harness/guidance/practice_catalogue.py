@@ -74,9 +74,3 @@ class PracticeCatalogue:
             if practice.slug == slug or any(fidelity.slug == slug for fidelity in practice.fidelities):
                 return practice
         return None
-
-    @classmethod
-    def key_of(cls, guidance: PracticeGuidance) -> str | None:
-        """The catalogue key of ``guidance``; none for guidance that is not one of the practices, such as a pattern."""
-        key = getattr(guidance, "key", None)
-        return key if key in cls._REFS else None

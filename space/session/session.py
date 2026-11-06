@@ -711,7 +711,7 @@ class Session:
     def practice_root(self, guidance: PracticeGuidance, practice: str = "") -> Path:
         """The folder ``practice`` writes under: the root a person chose, or the workpath plus the practice's default
         folder from ``.context/config.json`` or the practice itself. With no practice key, the guidance's own."""
-        practice = practice or PracticeCatalogue.key_of(guidance) or ""
+        practice = practice or guidance.key
         chosen = self._output_overrides().get(practice, {}).get("root")
         if chosen:
             return (Path(self.workpath or self.repo_path).resolve() / chosen).resolve()
@@ -1186,6 +1186,8 @@ class Session:
 
     def log_guidance_action(self, action: str, guidance_items: list) -> None:
         """Open listed practices and log this guidance action (after session.switch)."""
+        from harness.guidance.guidance import PracticeGuidance
+
         paths: list[Path] = []
         seen: set[str] = set()
         if self.workpath is not None:
@@ -1193,10 +1195,9 @@ class Session:
             paths.append(work)
             seen.add(str(work))
         for item in guidance_items:
-            key = PracticeCatalogue.key_of(item)
-            if key is None:
+            if not isinstance(item, PracticeGuidance) or not PracticeCatalogue.has(item.key):
                 continue
-            opened = self.practice(key)
+            opened = self.practice(item.key)
             for group in opened._folders:
                 for folder in group:
                     resolved = Path(folder).resolve()
@@ -1225,7 +1226,7 @@ class Session:
     def note_injected_rules_from_bags(self, guidance: PracticeGuidance, matched_path: str, bags: list) -> None:
         if self.session_path is None or not matched_path or not bags:
             return
-        practice = PracticeCatalogue.key_of(guidance) or type(guidance).__name__.casefold()
+        practice = guidance.key
         for bag in bags:
             fidelity = self._fidelity_for_rules_bag(guidance, bag)
             for rule in bag:
@@ -1438,7 +1439,7 @@ class Session:
         ``default_workspace_folder`` (tests, src, …) with a workpath-relative path.
         """
         base = self.workpath or self.repo_path or project_folder()
-        key = (practice or PracticeCatalogue.key_of(guidance) or "").strip()
+        key = (practice or guidance.key).strip()
         relative = self._project_default_folder(key)
         if relative is None:
             relative = getattr(guidance, "default_workspace_folder", None) or "."
@@ -1458,7 +1459,7 @@ class Session:
         current = fidelity or getattr(getattr(guidance, "fidelities", None), "current", None)
         if current is None:
             return {}
-        key = PracticeCatalogue.key_of(guidance) or ""
+        key = guidance.key
         practice = self._output_overrides().get(key, {})
         overrides = practice.get(str(current.name), {})
         chosen_root = overrides.get("root") or practice.get("root") or self._project_default_folder(key)

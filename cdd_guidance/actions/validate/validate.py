@@ -198,8 +198,8 @@ class Validate(GuidanceAction):
 
     def _graph_practices(self) -> list[str]:
         """The catalogue key of each listed practice, such as clean_engineering; none for other guidance."""
-        keys = [PracticeCatalogue.key_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        return [key for key in keys if key]
+        practices = [item for item in self.listed() if isinstance(item, PracticeGuidance)]
+        return [practice.key for practice in practices if PracticeCatalogue.has(practice.key)]
 
     def _session_path(self) -> Path:
         return Path(self.session.session_path)
