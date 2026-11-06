@@ -5,7 +5,7 @@ import { BRAND } from '../brand'
 import { GlyphButtonView } from '../glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { runHandoff, type ChatBarClient } from './chat-bar-client'
-import { openBoard, selectFidelity, type FidelityClient } from './fidelity-client'
+import { selectFidelity, type FidelityClient } from './fidelity-client'
 import { openFiles } from './fidelity-files-client'
 import { FidelityFilesView } from './fidelity-files-view'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
@@ -29,10 +29,6 @@ export type ChatBarDraw = {
 
 const SEPARATOR = '│'
 
-// The first press on a dot selects it; a press on the selected dot opens the board there.
-function pressDot($: EngineInterface, fidelity: FidelityClient): unknown {
-  return fidelity.isSelected ? openBoard($, fidelity) : selectFidelity($, fidelity)
-}
 
 // A label shown above an element while the pointer is on its keyed Box, as the canvas's hover tips.
 function TipView({ Box, Text }: ElementTable, words: string, detail: string, detailColour: string) {
@@ -50,7 +46,7 @@ export function FidelityView($: EngineInterface, elements: ElementTable, fidelit
   const { Box, Text } = elements
   return (
     <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0} backgroundColor={fidelity.isSelected ? BRAND.selectedTint : undefined}>
-      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => pressDot($, fidelity))}
+      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => selectFidelity($, fidelity))}
       {fidelity.violationCount ? <Text size="caption" weight="bold" color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
       {TipView(elements, fidelity.fidelity, '', BRAND.muted)}
     </Box>
