@@ -5,7 +5,6 @@ import type { ActionStatesData, TicketData } from '@cdd/harness/kanban/ticket'
 
 import { sendToChat } from '../chat-command'
 import { reasonOf } from '../failure'
-import { closeActionPicker } from './action-picker-client'
 import { callTool, currentChatBar, refreshChatBar } from './chat-bar-client'
 
 const selectedFidelity = atom({ plugin: 'cdd-board', key: 'selectedFidelity' } as const, null as string | null)
@@ -121,14 +120,6 @@ export function selectedFidelitySlug($: EngineInterface) {
 // Selecting one fidelity replaces the last, so one dot is selected at most.
 export async function selectFidelity($: EngineInterface, fidelity: FidelityClient): Promise<void> {
   await update($, selectedFidelity, () => fidelity.fidelity)
-}
-
-// Choosing from the picker runs that action on the fidelity in place of its next one. Review is recorded as the action
-// button records it, never run as a command.
-export async function chooseAction($: EngineInterface, fidelity: FidelityClient, action: string): Promise<void> {
-  await closeActionPicker($)
-  if (action === 'review') await reviewFidelity($, fidelity)
-  else await runAction($, fidelity, action)
 }
 
 // Generate can take two commands, a render and then the generate, so ticket.generate_commands names them.

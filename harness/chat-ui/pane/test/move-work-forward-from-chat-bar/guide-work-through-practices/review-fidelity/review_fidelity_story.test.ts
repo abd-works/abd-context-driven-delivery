@@ -42,8 +42,9 @@ story('Review Fidelity', CHAT_BAR, () => {
       expect(await tipOf(scene.ui, 'action')).toBe('satisfy clean-engineering-model')
       await scene.ui.press({ key: 'action-picker' })
       await scene.ui.press({ key: 'pick-review' })
+      await scene.ui.press({ key: 'next-action' })
     })
-    // picker press -> chooseAction($, fidelity, 'review') -> reviewFidelity($, fidelity) -> $.mcp.call('ticket.finish_review', ...) <- ReviewRefused with the server's text
+    // picker press -> chooseAction($, 'review'); action button press -> reviewFidelity($, fidelity) -> $.mcp.call('ticket.finish_review', ...) <- ReviewRefused with the server's text
     then("the Chat Bar shows the server's reason", async ($, on, scene) => {
       expect(scene.world.toasts).toContain('clean-engineering-model not reviewed: clean_engineering-model cannot be reviewed: its latest validation report has 7 violations')
     })

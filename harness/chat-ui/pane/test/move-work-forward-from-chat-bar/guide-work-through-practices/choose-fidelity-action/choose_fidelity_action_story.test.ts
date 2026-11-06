@@ -1,6 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { CHAT_BAR, buttonKeys, drawn } from '../../../chat-bar-screen'
+import { CHAT_BAR, buttonKeys, drawn, markOf, textOf, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -25,10 +25,20 @@ story('Choose Fidelity Action', CHAT_BAR, () => {
     when('the Person chooses iterate', async ($, on, scene) => {
       await scene.ui.press({ key: 'pick-iterate' })
     })
-    // picker press -> chooseAction($, fidelity, 'iterate') -> runAction($, fidelity, 'iterate') -> $.command.run({ command: 'actions-iterate', args: 'ux-mockup' })
-    then('the chat runs /actions-iterate ux-mockup', async ($, on, scene) => {
-      expect(scene.world.sent).toContain('/actions-iterate ux-mockup')
+    // picker press -> chooseAction($, 'iterate') puts iterate on the button
+    then('the action button shows iterate, with iterate ux-mockup on hover', async ($, on, scene) => {
+      expect(textOf(await markOf(scene.ui, 'next-action-mark'))).toBe('↻')
+      expect(await tipOf(scene.ui, 'action')).toBe('iterate ux-mockup')
       expect(await drawn(scene.ui, 'picker')).toBeUndefined()
+      expect(scene.world.sent).not.toContain('/actions-iterate ux-mockup')
+    })
+    when('the Person runs the action', async ($, on, scene) => {
+      await scene.ui.press({ key: 'next-action' })
+    })
+    // action button press -> runAction($, fidelity, 'iterate') -> $.command.run({ command: 'actions-iterate', args: 'ux-mockup' })
+    then('the chat runs /actions-iterate ux-mockup, and the button shows the next action again', async ($, on, scene) => {
+      expect(scene.world.sent).toContain('/actions-iterate ux-mockup')
+      expect(await tipOf(scene.ui, 'action')).not.toBe('iterate ux-mockup')
     })
   })
 })
