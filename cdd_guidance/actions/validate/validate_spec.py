@@ -284,12 +284,9 @@ with description("a validate action on practice guidance") as self:
 
                 with context("that the latest generate wrote"):
                     with before.each:
-                        self.log = Path(Session.current().session_path) / "session.log"
-                        self.logged = self.log.read_text(encoding="utf-8") if self.log.is_file() else ""
-                        self.log.write_text(self.logged + "2026-11-05T00:00:00Z generate /work stories story_map drawio stories no-chat\n", encoding="utf-8")
+                        from harness.guidance_actions import GuidanceAction
 
-                    with after.each:
-                        self.log.write_text(self.logged, encoding="utf-8")
+                        GuidanceAction().run("stories-story-map format=drawio", lambda item: None, action="generate")
 
                     with it("should judge only the drawio"):
                         expect(self.action.validate(guidance=["stories-story-map"])).to(contain("Judge only the checked format's files (drawio: "))

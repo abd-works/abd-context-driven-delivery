@@ -36,6 +36,25 @@ from mamba import after, before, context, description, it
 
 
 with description("GuidanceAction"):
+    # An action that names no session works in the project's current session, so each example works on its own project.
+    with before.each:
+        import os
+        from unittest.mock import patch
+
+        from space.session import Session
+
+        own_project = Path(tempfile.mkdtemp(prefix="guidance-action-project-"))
+        (own_project / ".git").mkdir()
+        self.own_project = patch.dict(os.environ, {"CDD_PROJECT": str(own_project)})
+        self.own_project.start()
+        Session.forget_current()
+
+    with after.each:
+        from space.session import Session
+
+        self.own_project.stop()
+        Session.forget_current()
+
     with it("should skip opening a work session when begin runs"):
         from harness.guidance_actions import GuidanceAction
         from space.session import Session
