@@ -17,6 +17,9 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Modu
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
+# The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
+_CONTEXT_TITLE = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
+
 _PATTERNS = (
     "Shared Kernel",
     "Customer/Supplier",
@@ -327,6 +330,7 @@ class BoundedContext(Module):
         self.contexts = BoundChildren(self, "contexts")
         self.aggregates = BoundChildren(self, "aggregates")
         self._map: BoundedContextMap | None = None
+        self.context_file_lines = 1
         if graph is None:
             return
         others = [
@@ -340,6 +344,15 @@ class BoundedContext(Module):
             self.append_context(BoundedContext(child.name, child.sequential_order))
         for aggregate in others[0].aggregates:
             self.append_aggregate(aggregate.clone())
+
+    def load_context_folder(self, folder: Path) -> None:
+        """Read the folder that holds this context in code: its name is the title of `.context/bounded-context.md`,
+        else the folder's own name, and it owns the facts every code folder carries."""
+        text = (folder / ".context" / "bounded-context.md").read_text(encoding="utf-8")
+        title = _CONTEXT_TITLE.search(text)
+        self.name = title.group(1).strip() if title else folder.name
+        self.context_file_lines = max(1, text.count("\n") if text.endswith("\n") else text.count("\n") + 1)
+        self.load_folder_facts(folder)
 
     def append_context(self, context: "BoundedContext") -> None:
         context._map = self._map

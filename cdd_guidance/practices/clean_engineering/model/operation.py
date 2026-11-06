@@ -30,7 +30,7 @@ def operation_source_span(operation: "Operation") -> tuple[int, int] | None:
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 from harness.graph.bound_node import BoundChildren
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass, OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     exception_without_message_in_text,
     generic_exception_message_in_text,
@@ -108,6 +108,8 @@ class Operation(OoadNode):
         "prose_comment",
         "bold_interaction_lines",
         "bold_invariant_lines",
+        "owner",
+        "interactions",
     )
 
     def __init__(
@@ -152,10 +154,22 @@ class Operation(OoadNode):
         self.prose_comment = False
         self.bold_interaction_lines: list[int] = []
         self.bold_invariant_lines: list[int] = []
+        # The member a Clean Engineering model document describes this code operation with, when one does.
+        self.described_by: "Operation | Property | None" = None
         for key, value in fields.items():
             setattr(self, key, value)
         if parameters:
             self._take_parameters(parameters)
+
+    @property
+    def owner(self) -> str:
+        """The name of the class that declares this operation; ``_module`` for a module function; empty before a class holds it."""
+        return self.parent.name if isinstance(self.parent, OoadClass) else ""
+
+    @property
+    def interactions(self) -> List[str]:
+        """The calls the model document gives this operation, such as ``Ledger.record``; empty when no document describes it."""
+        return list(self.described_by.callees) if self.described_by is not None else []
 
     @property
     def parameters(self) -> List[Parameter]:

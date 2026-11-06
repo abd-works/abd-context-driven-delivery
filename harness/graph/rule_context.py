@@ -34,26 +34,6 @@ class RuleCheckContext:
         """Every fact the node records: its parsed object's saved attributes and the loader's own facts."""
         return node.facts
 
-    def step_keyword(self, node) -> str:
-        data = self.node_data(node)
-        if data.get("keyword"):
-            return str(data["keyword"])
-        name = (node.name or "").strip()
-        for prefix in ("Given", "When", "Then", "And", "But"):
-            if name.casefold().startswith(prefix.casefold() + " "):
-                return prefix
-        return ""
-
-    def step_text(self, node) -> str:
-        data = self.node_data(node)
-        if data.get("text"):
-            return str(data["text"])
-        name = (node.name or "").strip()
-        for prefix in ("Given", "When", "Then", "And", "But"):
-            if name.casefold().startswith(prefix.casefold() + " "):
-                return name[len(prefix) :].strip()
-        return name
-
     def scenario_outline(self, node) -> bool:
         return bool(self.node_data(node).get("is_outline"))
 
