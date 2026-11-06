@@ -4,6 +4,7 @@ import type { EngineInterface } from 'claude-code'
 import type { ActionStatesData, TicketData } from '@cdd/harness/kanban/ticket'
 
 import { sendToChat } from '../chat-command'
+import { clearChosenAction } from './action-picker-client'
 import { reasonOf } from '../failure'
 import { callTool, currentChatBar, refreshChatBar } from './chat-bar-client'
 
@@ -118,8 +119,10 @@ export function selectedFidelitySlug($: EngineInterface) {
 }
 
 // Selecting one fidelity replaces the last, so one dot is selected at most.
+// Selecting another fidelity drops an action picked for the one before, so the button shows this one's next action.
 export async function selectFidelity($: EngineInterface, fidelity: FidelityClient): Promise<void> {
   await update($, selectedFidelity, () => fidelity.fidelity)
+  await clearChosenAction($)
 }
 
 // Generate can take two commands, a render and then the generate, so ticket.generate_commands names them.

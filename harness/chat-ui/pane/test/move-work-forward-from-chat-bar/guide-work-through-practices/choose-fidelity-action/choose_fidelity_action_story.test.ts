@@ -23,7 +23,9 @@ story('Choose Fidelity Action', CHAT_BAR, () => {
     when('the Person opens the action picker', async ($, on, scene) => {
       await scene.ui.press({ key: 'action-picker' })
     })
-    then('it offers generate, validate, review, iterate, sketch, render and document', async ($, on, scene) => {
+    then('it opens over the action button, offering generate, validate, review, iterate, sketch, render and document', async ($, on, scene) => {
+      // health mark and gap 2, checkout-flow 13, ▾ │ and their gaps 5, three dots with their gaps 6
+      expect((await drawn(scene.ui, 'picker'))?.props?.marginLeft).toBe(26)
       expect(buttonKeys(await drawn(scene.ui, 'picker'))).toEqual(['pick-generate', 'pick-validate', 'pick-review', 'pick-iterate', 'pick-sketch', 'pick-render', 'pick-document'])
     })
     when('the Person chooses iterate', async ($, on, scene) => {
@@ -43,6 +45,21 @@ story('Choose Fidelity Action', CHAT_BAR, () => {
     then('the chat runs /actions-iterate ux-mockup, and the button shows the next action again', async ($, on, scene) => {
       expect(scene.world.sent).toContain('/actions-iterate ux-mockup')
       expect(await tipOf(scene.ui, 'action')).not.toBe('iterate ux-mockup')
+    })
+  })
+  scenario('Drop a picked action when another fidelity is selected', ({ given, when, then }) => {
+    // Evidence: requested: the button follows the selected fidelity's state, such as to do -> generate
+    given('the Person picked review for ux-mockup', async ($, on, scene) => {
+      await scene.ui.press({ key: 'dot-ux-mockup' })
+      await scene.ui.press({ key: 'action-picker' })
+      await scene.ui.press({ key: 'pick-review' })
+    })
+    when('the Person selects clean_engineering-model', async ($, on, scene) => {
+      await scene.ui.press({ key: 'dot-clean_engineering-model' })
+    })
+    // dot press -> selectFidelity($, fidelity) -> clearChosenAction($)
+    then("the button shows clean_engineering-model's next action, generate", async ($, on, scene) => {
+      expect(await tipOf(scene.ui, 'action')).toBe('generate clean-engineering-model')
     })
   })
 })

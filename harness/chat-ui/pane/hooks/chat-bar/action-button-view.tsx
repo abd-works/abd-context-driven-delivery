@@ -49,13 +49,22 @@ export function ActionButtonView($: EngineInterface, elements: ElementTable, { c
   )
 }
 
+// The column the action button starts at on the line: the health mark and its gap, the session name, gap, ▾, gap, │,
+// gap, then each dot with its violation count and a gap. The menu opens at it, so it reads as the button's list box.
+const NAME_TO_DOTS = 5
+const HEALTH_MARK_AND_GAP = 2
+function actionColumnOf(chatBar: ChatBarClient): number {
+  const dots = chatBar.fidelities.reduce((cells, fidelity) => cells + 1 + (fidelity.violationCount ? String(fidelity.violationCount).length : 0) + 1, 0)
+  return HEALTH_MARK_AND_GAP + chatBar.sessionName.length + NAME_TO_DOTS + dots
+}
+
 // Every builder action as a menu above the button: its icon, its name, and next beside the fidelity's next one. The one
 // on the button is highlighted; picking another puts it on the button in place of the next.
 export function PickerView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar, picker }: ChatBarDraw) {
   const fidelity = chatBar.actionFidelity
   if (!picker.isOpen || !fidelity) return null
   return (
-    <Box key="picker" flexDirection="column" alignSelf="flex-start" paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
+    <Box key="picker" flexDirection="column" alignSelf="flex-start" marginLeft={actionColumnOf(chatBar)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
       {BUILDER_ACTIONS.map(action => {
         const isNext = action === fidelity.nextAction
         const isShown = action === shownActionOf(chatBar, picker.chosenAction)

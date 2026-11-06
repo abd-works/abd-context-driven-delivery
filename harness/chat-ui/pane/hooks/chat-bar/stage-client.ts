@@ -1,5 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
+import { clearChosenAction } from './action-picker-client'
 
 const shownStage = atom({ plugin: 'cdd-board', key: 'shownStage' } as const, null as string | null)
 
@@ -77,7 +78,9 @@ export function shownStageName($: EngineInterface) {
 
 // Showing the stage in progress goes back to it. A fidelity of the last stage then reads as none selected, because
 // ChatBarClient.selectedFidelity looks only among the shown stage's fidelities.
+// Showing another stage drops an action picked from the menu, so the button shows the shown stage's next action.
 export async function selectStage($: EngineInterface, stage: StageClient): Promise<void> {
   if (!stage.canShow) return
   await update($, shownStage, () => (stage.status === 'in_progress' ? null : stage.stage))
+  await clearChosenAction($)
 }
