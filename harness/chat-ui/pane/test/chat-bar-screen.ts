@@ -55,7 +55,14 @@ export const textOf = (node: any): string | undefined => node?.text ?? node?.chi
 // The first Text drawn inside an element, such as a dot's mark or the health mark.
 export const markOf = async (ui: any, key: string) => (await ui.find({ key }))?.children?.[0]
 
-// A Button's label, the words a person reads on hover and a surface finds it by.
+// The words on the card a dot or the action button reveals on hover, the last thing drawn in the element with this key.
+export async function nameOf(ui: any, key: string): Promise<string | undefined> {
+  const card = (await ui.find({ key }))?.children?.filter(Boolean).at(-1)
+  const first = card?.children?.[0]
+  return first?.props?.label ?? first?.label ?? textOf(first)
+}
+
+// A Button's label, the words drawn on it and a surface finds it by.
 export const labelOf = async (ui: any, key: string): Promise<string | undefined> => {
   const node = await ui.find({ key })
   return node?.props?.label ?? node?.label

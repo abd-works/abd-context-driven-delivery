@@ -28,31 +28,43 @@ export type ChatBarDraw = {
 
 const SEPARATOR = '│'
 
+const firstOpen = (panels: unknown[]): unknown => panels.find(panel => panel) ?? null
+
 // The first press on a dot selects it; a press on the selected dot opens the board there.
 function pressDot($: EngineInterface, fidelity: FidelityClient): unknown {
   return fidelity.isSelected ? openBoard($, fidelity) : selectFidelity($, fidelity)
 }
 
-// One dot in its practice colour, shaded by progress, with the violation count in red beside it.
-export function FidelityView($: EngineInterface, { Box, Button, Text }: ElementTable, fidelity: FidelityClient) {
+// A desktop draws every Button natively and ignores the colour of the text inside it, so a coloured mark is Text, and
+// the Button that acts on it sits on a card the mark reveals on hover, naming what it acts on.
+function HoverCardView({ Box }: ElementTable, button: unknown) {
   return (
-    <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0}>
-      <Button key={`dot-${fidelity.fidelity}`} plain label={`${fidelity.fidelity} ${fidelity.word}`} onPress={() => pressDot($, fidelity)}>
-        <Text color={fidelity.shade} weight={fidelity.isSelected ? 'semibold' : undefined}>{fidelity.isSelected ? '◉' : '●'}</Text>
-      </Button>
-      {fidelity.violationCount ? <Text color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
+    <Box position="absolute" top={-1} left={0} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+      {button}
     </Box>
   )
 }
 
-// One stage icon, faint until reached; the stage in progress is outlined, and a shown stage reads in full ink.
-export function StageView($: EngineInterface, { Box, Button, Text }: ElementTable, stage: StageClient) {
-  const outline = stage.status === 'in_progress' || stage.isShown ? { borderStyle: 'single' as const, borderColor: stage.ink } : {}
+// One dot in its practice colour, shaded by progress and underlined while selected, with the violation count in red
+// beside it.
+export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityClient) {
+  const { Box, Button, Text } = elements
   return (
-    <Box key={`stage-box-${stage.stage}`} {...outline}>
-      <Button key={`stage-${stage.stage}`} plain label={stage.stage} onPress={() => selectStage($, stage)}>
-        <Text color={stage.ink}>{stage.icon}</Text>
-      </Button>
+    <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0}>
+      <Text color={fidelity.shade} weight="bold" underline={fidelity.isSelected}>■</Text>
+      {fidelity.violationCount ? <Text size="caption" weight="bold" color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
+      {HoverCardView(elements, <Button key={`dot-${fidelity.fidelity}`} plain label={`${fidelity.fidelity} ${fidelity.word}`} onPress={() => pressDot($, fidelity)} />)}
+    </Box>
+  )
+}
+
+// One stage icon, faint until reached; the stage in progress, or a stage shown in its place, is underlined.
+export function StageView($: EngineInterface, elements: ElementTable, stage: StageClient) {
+  const { Box, Button, Text } = elements
+  return (
+    <Box key={`stage-box-${stage.stage}`} flexDirection="row">
+      <Text color={stage.ink} underline={stage.status === 'in_progress' || stage.isShown}>{stage.icon}</Text>
+      {HoverCardView(elements, <Button key={`stage-${stage.stage}`} plain label={stage.stage} onPress={() => selectStage($, stage)} />)}
     </Box>
   )
 }
@@ -62,7 +74,7 @@ function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable
     <Box key="session-name" flexDirection="row" gap={1}>
       {health.band}
       <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-        <Button key="session-name-button" plain label={chatBar.sessionName || 'no session'} onPress={() => toggleCard($)}>
+        <Button key="session-name-button" plain onPress={() => toggleCard($)}>
           <Text weight="semibold" color={chatBar.sessionName ? BRAND.text : BRAND.muted}>{chatBar.sessionName || 'no session'}</Text>
         </Button>
       </Box>
@@ -75,9 +87,9 @@ function SessionButtonsView($: EngineInterface, { Box, Button }: ElementTable, {
   const fidelity = chatBar.actionFidelity
   return (
     <Box key="session-buttons" flexDirection="row" gap={1}>
-      <Button key="handoff" plain label="⇥ handoff" onPress={() => runHandoff($, chatBar)} />
-      {fidelity ? <Button key="files-button" plain label="▤ files" onPress={() => openFiles($, fidelity)} /> : null}
-      <Button key="close-button" plain label="✕ close" onPress={() => openClose($, chatBar)} />
+      <Button key="handoff" label="⇥ handoff" onPress={() => runHandoff($, chatBar)} />
+      {fidelity ? <Button key="files-button" label="▤ files" onPress={() => openFiles($, fidelity)} /> : null}
+      <Button key="close-button" label="✕ close" onPress={() => openClose($, chatBar)} />
     </Box>
   )
 }
@@ -95,27 +107,31 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
       {chatBar.fidelities.map(fidelity => FidelityView($, elements, fidelity))}
       {ActionButtonView($, elements, draw)}
       <Text color={BRAND.border}>{SEPARATOR}</Text>
-      {chatBar.stages.map(stage => StageView($, elements, stage))}
+      {chatBar.stages.flatMap((stage, index) => [index ? <Text key={`stage-lead-${stage.stage}`} color={BRAND.border}>›</Text> : null, StageView($, elements, stage)])}
       <Box flexGrow={1} />
       {SessionButtonsView($, elements, draw)}
     </Box>
   )
 }
 
-// The chat bar above the prompt: the boxes a person opened sit above one line holding the server health mark, the
-// session name, the fidelity dots, the action button, and the stage icons. A failed board read says so above the line.
+// The chat bar above the prompt: one line holding the server health mark, the session name, the fidelity dots, the
+// action button, and the stage icons, with one open panel above it. The space above the prompt cuts from the bottom,
+// so a second panel would push the line off screen; the first open panel in this order is the one drawn. A failed
+// board read says so above the line.
 export function ChatBarView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
   return (
     <Box key="chat-bar" flexDirection="column" width={draw.width}>
       {chatBar.problem ? <Text color={BRAND.error}>{`The board did not answer: ${chatBar.problem}`}</Text> : null}
-      {FidelityFilesView($, elements, draw.files)}
-      {CloseView($, elements, draw)}
-      {ActivateView($, elements, draw)}
-      {SessionListView($, elements, draw)}
-      {SessionCardView(elements, draw)}
-      {PickerView($, elements, draw)}
+      {firstOpen([
+        CloseView($, elements, draw),
+        ActivateView($, elements, draw),
+        FidelityFilesView($, elements, draw.files),
+        PickerView($, elements, draw),
+        SessionListView($, elements, draw),
+        SessionCardView(elements, draw),
+      ])}
       {LineView($, elements, draw)}
     </Box>
   )

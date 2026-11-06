@@ -2,7 +2,7 @@ import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
 import { boardOf, checkoutFlowWith, DONE, GENERATED } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, drawn, labelOf, markOf, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, nameOf, markOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -19,17 +19,17 @@ story('Move Session To Next Stage', CHAT_BAR, () => {
       scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-scenarios': DONE, 'ux-mockup': DONE, 'clean_engineering-model': DONE }, { is_done: true, next: null }))
     })
     when('the Person moves checkout-flow to the next [stage](../../../../../../kanban/.context/kanban-model.md#stage--column)', async ($, on, scene) => {
-      expect(await labelOf(scene.ui, 'next-action')).toBe('move checkout-flow on')
+      expect(await nameOf(scene.ui, 'action')).toBe('move checkout-flow on')
       await scene.ui.press({ key: 'next-action' })
     })
     // ChatBarView press -> moveNext($, chatBar) -> $.mcp.call('ticket.move_next', { ticket: 'checkout-flow' }) -> Ticket.move_next()
     // Ticket -> Ticket.record('move Implementation')
     then('the Chat Bar outlines Implementation', async ($, on, scene) => {
-      expect((await drawn(scene.ui, 'stage-box-Implementation'))?.props?.borderStyle).toBe('single')
+      expect((await markOf(scene.ui, 'stage-box-Implementation'))?.props?.underline).toBe(true)
       expect(called(scene.world, 'ticket.move_next')).toEqual({ ticket: 'checkout-flow' })
     })
     and('its dots show the Implementation fidelities, not started', async ($, on, scene) => {
-      const labels = await Promise.all(['dot-stories-acceptance_tests', 'dot-ux-front_end_code', 'dot-clean_engineering-code'].map(key => labelOf(scene.ui, key)))
+      const labels = await Promise.all(['fidelity-stories-acceptance_tests', 'fidelity-ux-front_end_code', 'fidelity-clean_engineering-code'].map(key => nameOf(scene.ui, key)))
       expect(labels).toEqual(['stories-acceptance_tests to do', 'ux-front_end_code to do', 'clean_engineering-code to do'])
     })
   })
@@ -44,10 +44,10 @@ story('Move Session To Next Stage', CHAT_BAR, () => {
       await $.prompt.submit({ text: 'again' })
     })
     then("the button shows ux-mockup's next action", async ($, on, scene) => {
-      expect(await labelOf(scene.ui, 'next-action')).toBe('validate ux-mockup')
+      expect(await nameOf(scene.ui, 'action')).toBe('validate ux-mockup')
     })
     but('not the move to Implementation', async ($, on, scene) => {
-      expect(textOf(await markOf(scene.ui, 'next-action'))).not.toBe('→')
+      expect(textOf(await markOf(scene.ui, 'action-chip'))).not.toBe('→')
     })
   })
 })

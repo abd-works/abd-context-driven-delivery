@@ -41,7 +41,7 @@ story('View Fidelity Files', CHAT_BAR, () => {
     })
     // $.mcp.call('ticket.read_file', { ticket: 'checkout-flow', path: '../secrets.txt' }) <- FileOutsideRepositoryError
     then('the tab says ../secrets.txt is not a file in this repository', async ($, on, scene) => {
-      expect(textOf(await findText(scene.ui, /secrets/))).toBe('../secrets.txt is not a file in this repository')
+      expect(textOf(await findText(scene.ui, /is not a file in this repository/))).toBe('../secrets.txt is not a file in this repository')
     })
   })
 })

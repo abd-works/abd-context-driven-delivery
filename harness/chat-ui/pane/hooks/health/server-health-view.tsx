@@ -24,9 +24,9 @@ type Band = {
 }
 // Where the panel is drawn: above the health mark, revealed on hover or pinned, or on top of the session card, shown
 // whenever the card is. The card's copy prefixes its keys, so a press finds the Button it means. The panel at the mark
-// has no key of its own, so hovering the mark's keyed Box reveals it.
-type Placement = { isRevealed: boolean; keyOf: (name: string) => string; panel: { key?: string } }
-const AT_THE_MARK = (view: HealthViewJson): Placement => ({ isRevealed: view.isPinned, keyOf: name => name, panel: {} })
+// has no key of its own, so hovering the mark's keyed Box reveals it, and floats above the line rather than widening it.
+type Placement = { isRevealed: boolean; keyOf: (name: string) => string; panel: { key?: string; position?: 'absolute'; bottom?: number; left?: number } }
+const AT_THE_MARK = (view: HealthViewJson): Placement => ({ isRevealed: view.isPinned, keyOf: name => name, panel: { position: 'absolute', bottom: 1, left: 0 } })
 const ON_THE_CARD: Placement = { isRevealed: true, keyOf: name => `card-${name}`, panel: { key: 'card-health' } }
 
 const LOOKS = {
