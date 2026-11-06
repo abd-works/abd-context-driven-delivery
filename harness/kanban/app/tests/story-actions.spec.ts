@@ -390,7 +390,7 @@ test.describe('Display Connected Status', () => {
     rmSync(join(fixtureRoot, '.sessions', 'checkout-flow'), { recursive: true, force: true })
     try {
       await violation.click()
-      await expect(toast(page, /no session at '.sessions/checkout-flow/session.json'/)).toBeVisible()
+      await expect(toast(page, /no session at '\.sessions\/checkout-flow\/session\.json'/)).toBeVisible()
     } finally {
       resetSessions(fixtureRoot)
     }
