@@ -17,7 +17,7 @@ function StepMarkView({ step }: { step: StepFace }) {
 
 function chipLook({ isOn, isDone }: ChipFace) {
   if (isOn) return { color: 'var(--on-accent)', borderColor: 'var(--accent)', background: 'var(--accent)' }
-  if (isDone) return { color: 'var(--reviewed)', borderColor: 'var(--reviewed)', background: 'transparent' }
+  if (isDone) return { color: 'var(--done)', borderColor: 'var(--done)', background: 'transparent' }
   return { color: 'var(--muted)', borderColor: 'var(--border)', background: 'transparent' }
 }
 
@@ -71,7 +71,7 @@ function ValidateLineView({ ticket, tile, bar }: { ticket: TicketClient; tile: T
       </button>
       <StepMarkView step={bar.validate} />
       {reportSlug ? (
-        <button className={bar.hasViolations ? 'violations-link' : 'report-link'} onClick={() => void page.panels.openReport(ticket.name, reportSlug)}>
+        <button className={bar.hasViolations ? 'violations-link' : 'report-link'} onClick={() => void page.panels.openReport(ticket, reportSlug)}>
           {bar.hasViolations ? `${bar.validate.text} found` : 'report'}
         </button>
       ) : bar.validate.text ? (
@@ -102,7 +102,7 @@ export function ActionBarView({ ticket, stage, tile, onMouseEnter, onMouseLeave 
   return (
     <div className="expansion" data-bar={tile.place} onClick={() => page.tiles.pin(tile.ticket, tile.place)} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <div className="bar-line bar-files">
-        <FileViewsView ticket={ticket.name} slugs={tile.slugs} />
+        <FileViewsView ticket={ticket} slugs={tile.slugs} />
       </div>
       <RunLineView tile={tile} stage={stage} bar={bar} />
       <ValidateLineView ticket={ticket} tile={tile} bar={bar} />

@@ -16,6 +16,8 @@ class Ddd(PracticeGuidance):
     """
 
     sketch_titles = ("ddd:", "domain driven design:")
+    SHORT_NAME = "DDD"
+    COLOUR = "#6C5CE7"
 
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {

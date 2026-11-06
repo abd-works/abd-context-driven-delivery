@@ -28,7 +28,7 @@ export function ChevronIcon({ isTurned }: { isTurned: boolean }) {
 export function CheckIcon() {
   return (
     <svg className="tile-check" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 8.5L6.5 12L13 4.5" stroke="var(--reviewed)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 8.5L6.5 12L13 4.5" stroke="var(--done)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

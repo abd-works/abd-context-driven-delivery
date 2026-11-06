@@ -2,8 +2,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { BoardOnProject, ticketOn } from 'test-utils/board-page-support'
 
-import { skillOf } from './ticket-client'
-
 // checkout-flow is the active ticket, held by a violation on its story map; billing-report has nothing recorded yet.
 const ACTIVE = 'checkout-flow'
 const OTHER = 'billing-report'
@@ -59,8 +57,9 @@ describe('Display Ticket Details', () => {
     expect(ticketOn(page, OTHER).stagePlace).toBe('Discovery · in progress')
   })
 
-  it('should keep a practice with two words in its skill', () => {
-    expect(skillOf('clean-engineering-code')).toBe('/practices-clean-engineering-clean-engineering-code')
+  it('should keep a practice with two words in its skill', async () => {
+    const { page } = await board.page()
+    expect(page.board.practiceOf('clean-engineering-code')?.skillOf('clean-engineering-code')).toBe('/practices-clean-engineering-clean-engineering-code')
   })
 })
 

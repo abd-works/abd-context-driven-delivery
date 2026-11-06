@@ -1,12 +1,12 @@
 # harness/kanban
-*Board* shows every work session in a repository as a *Ticket* on a kanban, so a person can see at a glance what each session has done and what it needs next. Its *Columns* are the *Backlog*, three *Stages* (Discovery, Specification, Implementation), and *Complete*. A *Stage* splits into In progress and Done and carries a WIP limit, set with `board.set_wip_limit`.
+*Board* shows every work session in a repository as a *Ticket* on a kanban, so a person can see at a glance what each session has done and what it needs next. Its *Columns* are the *Backlog*, three *Stages* (Discovery, Specification, Implementation), and *Complete*. A *Stage* splits into In progress and Done and carries a WIP limit, set with `stage.set_wip_limit`.
 
 A *Ticket* is one session. It is placed by its *FidelityProgress*: which of Generate, Validate, and Review are done on each fidelity its stage requires. A person moves it on with `ticket.move_next`, back with `ticket.move_previous`, straight into a stage's In progress or Done with `ticket.move_to`, and off the stages with `ticket.close` or `ticket.archive`. `ticket.activate` makes it the session the agent works in.
 
 A *BacklogItem* is an idea that is not a session yet. `backlog-item.create` writes one, and `backlog-item.start` opens it as a ticket in Discovery and moves the item's file into the ticket's session folder, where the idea stays until it becomes lasting context.
 
 - **Purpose:** see every session's progress through the delivery stages, and move sessions through them, from an agent's tools or from the Session Board.
-- **Seam (terms):** Board, Column, Stage, Ticket, FidelityProgress, BacklogItem; the `cdd` MCP tools `board.*`, `ticket.*`, and `backlog-item.*`; `@language_adapter(language="typescript")` on `Board`, `Ticket`, and `BacklogItem`, so TypeScript reaches the same tools as typed objects
+- **Seam (terms):** Board, Column, Stage, Ticket, FidelityProgress, BacklogItem; the `cdd` MCP tools `board.*`, `stage.*`, `ticket.*`, `fidelity-progress.*`, and `backlog-item.*`; `@language_adapter(language="typescript")` on `Board`, `Stage`, `Ticket`, `FidelityProgress`, and `BacklogItem`, so TypeScript reaches the same tools as typed objects
 - **Dependencies (one-way):** harness/guidance, harness/guidance_actions, cdd_guidance/actions (Generate, Validate, and the saved graph reader), space/repo, space/session
 
 ## Constraint

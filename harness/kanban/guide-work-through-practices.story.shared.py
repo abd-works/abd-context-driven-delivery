@@ -217,7 +217,7 @@ def _(s):
 
     @s.when("the Person opens help on the story_map fidelity")
     def _(world):
-        world.help = world.data_of(world.Board.current().help(practice="stories", fidelity="story_map"))
+        world.help = world.data_of(world.Board.current().help(slug="stories-story-map"))
 
     @s.then("a side panel shows story_map's overview, guidance, and rules such as verb-noun-format")
     def _(world):
@@ -241,7 +241,7 @@ def _(s):
 
     @s.when("the Person opens help on the Stories practice")
     def _(world):
-        world.help = world.data_of(world.Board.current().help(practice="stories", fidelity=""))
+        world.help = world.data_of(world.Board.current().help(slug="stories"))
 
     @s.then("a side panel shows Practice overview and SHARED RULES such as do-not-invent-requirements")
     def _(world):
@@ -266,7 +266,7 @@ def _(s):
 
     @s.when("the Person opens help on the ddd model fidelity")
     def _(world):
-        world.help = world.data_of(world.Board.current().help(practice="ddd", fidelity="model"))
+        world.help = world.data_of(world.Board.current().help(slug="ddd-model"))
 
     @s.then("its Forge link opens https://forge.abdworks.net/abd-context-driven-delivery/context-tools/ddd.html")
     def _(world):

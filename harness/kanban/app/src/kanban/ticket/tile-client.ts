@@ -1,7 +1,7 @@
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
-import { filesOf, type TicketFiles } from './ticket'
+import type { TicketFiles } from './ticket'
 import type { TicketClient } from './ticket-client'
 import { defaultPicks } from './tile-formats'
 
@@ -31,8 +31,11 @@ export class TileClient {
     return this.page.store
   }
 
-  private readFiles(ticket: string, slugs: string[]): Promise<TicketFiles | null> {
-    return filesOf(this.page.api, ticket, slugs)
+  // A bar keeps its ticket's name, because the tile actions read it, so its files are read through the ticket of that
+  // name on the board.
+  private async readFiles(ticket: string, slugs: string[]): Promise<TicketFiles | null> {
+    const shown = this.page.board.tickets.find(candidate => candidate.name === ticket)
+    return shown ? shown.filesOf(slugs) : null
   }
 
   // The bar shows at once and its files fill in when they are read, because reading them can take a second. Only the

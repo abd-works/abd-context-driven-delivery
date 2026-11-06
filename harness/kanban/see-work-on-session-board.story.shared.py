@@ -10,7 +10,7 @@ fields its classes mark, which the board app draws from.
 Covered by the board app's TypeScript client specs in harness/kanban/app, not here, because they have no Python
 operation: Arrange Board And Details (all three); Arrange Side Panel (all four); Display Board "Say the cdd server is
 not connected", "Update the board and cdd to the latest code", "Say which update step failed", "Keep the newer board when an older read answers late", "Announce a
-ticket that moved", "Announce a reviewed fidelity"; Display Ticket Card "Draw the card's title, age, and fidelity
+ticket that moved", "Announce a fidelity done"; Display Ticket Card "Draw the card's title, age, and fidelity
 segments", "Name the active ticket on the chat's status line"; Display Ticket Details "Show the active ticket with no
 card pressed", "Show the ticket worked on last when none is active", "Say another session must be activated to act on
 a locked ticket", "Expand one ticket's card at a time", "Open a card on the fidelity of a pressed segment"; Open Board
@@ -308,11 +308,11 @@ def _(s):
 
     @s.when("the Person sets Discovery's limit to 4")
     def _(world):
-        world.read = world.data_of(world.Board.current().set_wip_limit(stage="Discovery", limit=RAISED_DISCOVERY_LIMIT))
+        world.read = world.data_of(world.Stage.load("Discovery").set_wip_limit(limit=RAISED_DISCOVERY_LIMIT))
 
     @s.then("Discovery shows the limit 4")
     def _(world):
-        expect(column_in(world.read, "Discovery")["wip_limit"]).to(equal(RAISED_DISCOVERY_LIMIT))
+        expect(world.read["wip_limit"]).to(equal(RAISED_DISCOVERY_LIMIT))
 
     @s.and_("the limit is still 4 when the board is read again")
     def _(world):
@@ -344,8 +344,8 @@ def _(s):
 
     @s.when("the Person sets Discovery's limit to 2")
     def _(world):
-        world.read = world.data_of(world.Board.current().set_wip_limit(stage="Discovery", limit=LOWERED_DISCOVERY_LIMIT))
+        world.read = world.data_of(world.Stage.load("Discovery").set_wip_limit(limit=LOWERED_DISCOVERY_LIMIT))
 
     @s.then("Discovery's count shows in red, over its limit")
     def _(world):
-        expect(column_in(world.read, "Discovery")["is_over_limit"]).to(be_true)
+        expect(world.read["is_over_limit"]).to(be_true)

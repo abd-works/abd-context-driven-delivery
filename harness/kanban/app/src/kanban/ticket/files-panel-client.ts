@@ -1,9 +1,7 @@
-import { SessionClientGenerated } from '@cdd/space/session/session'
-
-import type { BoardApi } from '../board/board-api'
 import { FORMAT_GROUPS } from '../board/board-brand'
 import type { BoardStore, FilesPanel, SidePanel } from '../board/board-store'
-import { filesOf, sessionFileOf, type TicketFiles } from './ticket'
+import type { TicketFiles } from './ticket'
+import type { TicketClient } from './ticket-client'
 
 const TAB_GROUPS = ['markdown', 'code', 'diagram']
 const SESSION_ENTRY = 'session'
@@ -51,10 +49,7 @@ const showingTab = (panel: FilesPanel, path: string, text: string, line: number)
 
 // The files panel beside the board: its list, its folders, and the tabs of open files.
 export class FilesPanelClient {
-  constructor(
-    private readonly store: BoardStore,
-    private readonly api: BoardApi,
-  ) {}
+  constructor(private readonly store: BoardStore) {}
 
   private get panel(): FilesPanel | undefined {
     return this.store.state.panels.find((panel): panel is FilesPanel => panel.kind === 'files')
@@ -69,31 +64,27 @@ export class FilesPanelClient {
   }
 
   // A session folder's files are shown as the files of one entry, so the list, folder, and tabs read them the same way.
-  private async read(ticket: string, slugs: string[], isSession: boolean): Promise<TicketFiles | null> {
-    if (!isSession) return filesOf(this.api, ticket, slugs)
-    const entries = await this.sessionOf(ticket).folderFiles()
+  private async read(ticket: TicketClient, slugs: string[], isSession: boolean): Promise<TicketFiles | null> {
+    if (!isSession) return ticket.filesOf(slugs)
+    const entries = await ticket.sessionClient.folderFiles()
     return entries && { [SESSION_ENTRY]: { [SESSION_ENTRY]: entries } }
   }
 
-  private sessionOf(ticket: string): SessionClientGenerated {
-    return SessionClientGenerated.named(this.api, sessionFileOf(this.store.state.board, ticket))
-  }
-
-  async openFiles(ticket: string, slugs: string[], mode: string): Promise<void> {
+  async openFiles(ticket: TicketClient, slugs: string[], mode: string): Promise<void> {
     await this.openPanel(ticket, slugs, mode, false)
   }
 
-  async openSessionFolder(ticket: string): Promise<void> {
+  async openSessionFolder(ticket: TicketClient): Promise<void> {
     await this.openPanel(ticket, [SESSION_ENTRY], 'folder', true)
   }
 
   // The session folder, with one of its files open, such as its latest handoff.
-  async openSessionFile(ticket: string, path: string): Promise<void> {
+  async openSessionFile(ticket: TicketClient, path: string): Promise<void> {
     await this.openPanel(ticket, [SESSION_ENTRY], 'folder', true)
     await this.openTab(path)
   }
 
-  private async openPanel(ticket: string, slugs: string[], mode: string, isSession: boolean): Promise<void> {
+  private async openPanel(ticket: TicketClient, slugs: string[], mode: string, isSession: boolean): Promise<void> {
     const files = await this.read(ticket, slugs, isSession)
     if (!files) return
     this.show({ kind: 'files', ticket, isSession, slugs, files, mode, tabs: [], activeTab: '', texts: {}, lines: {}, isExpanded: false })
@@ -109,9 +100,9 @@ export class FilesPanelClient {
     if (mode === 'files' && activeTab) await this.openTab(activeTab)
   }
 
-  private async textOf(ticket: string, path: string, isOnDisk: boolean): Promise<string> {
+  private async textOf(ticket: TicketClient, path: string, isOnDisk: boolean): Promise<string> {
     if (!isOnDisk) return ''
-    return (await this.sessionOf(ticket).readFile(path))?.text ?? ''
+    return (await ticket.sessionClient.readFile(path))?.text ?? ''
   }
 
   async openTab(path: string): Promise<void> {
@@ -122,8 +113,8 @@ export class FilesPanelClient {
   }
 
   // A violation can name a file its fidelity does not declare, so its text is read whatever the panel lists.
-  async openFileAtLine(ticket: string, fidelity: string, path: string, line: number): Promise<void> {
-    if (this.panel?.ticket !== ticket) await this.openFiles(ticket, [fidelity], 'folder')
+  async openFileAtLine(ticket: TicketClient, fidelity: string, path: string, line: number): Promise<void> {
+    if (this.panel?.ticket.name !== ticket.name) await this.openFiles(ticket, [fidelity], 'folder')
     const text = await this.textOf(ticket, path, true)
     this.change(entry => showingTab(entry, path, text, line))
   }

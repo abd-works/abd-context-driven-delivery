@@ -22,7 +22,7 @@ from harness.kanban.board import Stage  # noqa: E402
 from harness.kanban.report import ReportRule, Violation  # noqa: E402
 from harness.kanban.board import Workspace  # noqa: E402
 from harness.kanban.ticket import Ticket  # noqa: E402
-from harness.kanban.board import FidelityNotFoundError, PracticeNotFoundError  # noqa: E402
+from harness.kanban.board import FidelityNotFoundError, NotAStageError, PracticeNotFoundError  # noqa: E402
 from tools.file_manager.file_manager import PathOutsideRootsError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Session  # noqa: E402
@@ -30,6 +30,7 @@ from space.session.session import UnknownPracticeError  # noqa: E402
 
 TOOLSETS = (
     "harness.kanban.board:Board",
+    "harness.kanban.board:Stage",
     "harness.kanban.ticket:Ticket",
     "harness.kanban.ticket:FidelityProgress",
     "harness.kanban.backlog_item:BacklogItem",
@@ -292,11 +293,17 @@ with description("the board tools") as self:
         with context("that sets a stage's limit below the tickets it holds"):
             with before.each:
                 (self.project.sessions / "_board.json").unlink(missing_ok=True)
-                self.limited = self.project.call("board.set_wip_limit", stage="Discovery", limit=0)
+                self.limited = self.project.call("stage.set_wip_limit", stage="Discovery", limit=0)
 
             with it("should show the stage over its limit"):
-                discovery = next(column for column in self.limited["columns"] if column["name"] == "Discovery")
-                expect(discovery["is_over_limit"]).to(be_true)
+                expect(self.limited["is_over_limit"]).to(be_true)
+
+            with it("should keep the limit for the next read of the board"):
+                expect(self.project.column("Discovery")["wip_limit"]).to(equal(0))
+
+        with context("that sets a WIP limit on a column that is not a stage"):
+            with it("should refuse it, naming the column"):
+                expect(lambda: self.project.call("stage.set_wip_limit", stage="Backlog", limit=2)).to(raise_error(NotAStageError))
 
         # (S) Board App --> Display Latest Handoff
         with it("should show no handoff for a ticket that has none"):
@@ -654,10 +661,19 @@ with description("the board tools") as self:
             actions = self.project.ticket_json("pet-visits")["progress"]["stories-story-map"]["actions"]
             expect(actions).to(equal({"generate": "done", "validate": "done", "review": "done"}))
 
+        # The board app names and colours each practice from these, and finds a fidelity's practice among its slugs.
+        with it("should name and colour every practice the board shows"):
+            stories = self.project.call("board.show")["practices"][0]
+            expect((stories["key"], stories["short_name"], stories["colour"])).to(equal(("stories", "Stories", "#6BCB77")))
+
+        with it("should list each practice's fidelities by their slugs"):
+            stories = self.project.call("board.show")["practices"][0]
+            expect(stories["fidelities"]).to(contain("stories-story-map"))
+
         # (S) Person --> Open Help
         with context("that opens help on a fidelity"):
             with before.each:
-                self.help = self.project.call("board.help", practice="stories", fidelity="story_map")
+                self.help = self.project.call("board.help", slug="stories-story-map")
 
             with it("should show the fidelity's rules"):
                 expect([rule["slug"] for rule in self.help["rules"]]).to(contain("verb-noun-format"))
@@ -670,7 +686,7 @@ with description("the board tools") as self:
 
         with context("that opens help on a practice"):
             with before.each:
-                self.help = self.project.call("board.help", practice="stories")
+                self.help = self.project.call("board.help", slug="stories")
 
             with it("should show the practice's shared rules"):
                 expect([rule["slug"] for rule in self.help["rules"]]).to(contain("do-not-invent-requirements"))
@@ -678,18 +694,14 @@ with description("the board tools") as self:
             with it("should name no fidelity on a practice's help"):
                 expect((self.help["fidelity"], self.help["stage"])).to(equal(("", "")))
 
-        with context("that opens help on a practice the board does not have"):
-            with it("should refuse it, naming the practice"):
-                expect(lambda: self.project.call("board.help", practice="astrology")).to(raise_error(PracticeNotFoundError))
-
-        with context("that opens help on a fidelity the practice does not have"):
-            with it("should refuse it, naming the fidelity and the practice"):
+        with context("that opens help on a slug no practice or fidelity of the board goes by"):
+            with it("should refuse it, naming the slug"):
                 try:
-                    self.project.call("board.help", practice="stories", fidelity="horoscope")
+                    self.project.call("board.help", slug="stories-horoscope")
                     refused = None
-                except FidelityNotFoundError as error:
-                    refused = (error.fidelity, error.within)
-                expect(refused).to(equal(("horoscope", "stories")))
+                except PracticeNotFoundError as error:
+                    refused = (error.practice, error.within)
+                expect(refused).to(equal(("stories-horoscope", "the board")))
 
         # (E) Review
         # (S) Person --> List Ticket Files
@@ -1014,20 +1026,20 @@ with description("the board tools") as self:
 
         with context("that activates a ticket"):
             with before.each:
-                self.project.call("board.activate", ticket="sign-up")
+                self.project.call("ticket.activate", ticket="sign-up")
 
             with it("should make the chosen ticket the current session"):
                 expect(self.project.call("board.show")["active"]).to(equal("sign-up"))
 
         with context("that activates a ticket with a new branch"):
             with before.each:
-                self.project.call("board.activate", ticket="sign-up", opening=["branch"])
+                self.project.call("ticket.activate", ticket="sign-up", opening=["branch"])
 
             with it("should create the ticket's branch when a ticket that has none is activated"):
-                expect(self.project.call("board.workspace", ticket="sign-up")["has_branch"]).to(be_true)
+                expect(self.project.call("ticket.workspace", ticket="sign-up")["has_branch"]).to(be_true)
 
         with it("should say a ticket has no branch yet"):
-            expect(self.project.call("board.workspace", ticket="sign-up")["has_branch"]).to(be_false)
+            expect(self.project.call("ticket.workspace", ticket="sign-up")["has_branch"]).to(be_false)
 
         with it("should name no worktree for a ticket that has none"):
             expect(self.project.ticket_json("sign-up")["worktree"]).to(equal(""))
@@ -1047,7 +1059,7 @@ with description("the board tools") as self:
         # The board opens a ticket's worktree before it opens a chat there for a ticket that has none.
         with context("that opens a ticket's worktree"):
             with before.each:
-                self.opened = Path(self.project.call("board.open_worktree", ticket="sign-up")["worktree"])
+                self.opened = Path(self.project.call("ticket.open_worktree", ticket="sign-up")["worktree"])
 
             with after.each:
                 subprocess.run(["git", "worktree", "remove", "--force", str(self.opened)], cwd=self.project.root, check=False)
@@ -1065,10 +1077,10 @@ with description("the board tools") as self:
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left has no branch yet"):
-                expect(self.project.call("board.workspace", ticket="sign-up")["leaving_has_branch"]).to(be_false)
+                expect(self.project.call("ticket.workspace", ticket="sign-up")["leaving_has_branch"]).to(be_false)
 
             with it("should commit nothing on a ticket that has no branch"):
-                self.project.call("board.activate", ticket="sign-up", leaving=["commit", "push", "merge"])
+                self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "push", "merge"])
                 count = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
                 expect(count.stdout.strip()).to(equal("1"))
 
@@ -1086,10 +1098,10 @@ with description("the board tools") as self:
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left is on its branch"):
-                expect(self.project.call("board.workspace", ticket="sign-up")["leaving_has_branch"]).to(be_true)
+                expect(self.project.call("ticket.workspace", ticket="sign-up")["leaving_has_branch"]).to(be_true)
 
             with it("should commit the branch the ticket being left is on"):
-                self.project.call("board.activate", ticket="sign-up", leaving=["commit"])
+                self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
                 count = subprocess.run(["git", "rev-list", "--count", "pet-visits"], cwd=self.project.root, check=True, capture_output=True, text=True)
                 expect(count.stdout.strip()).to(equal("2"))
 
@@ -1113,7 +1125,7 @@ with description("the board tools") as self:
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should commit nothing on a branch that is not checked out"):
-                self.project.call("board.activate", ticket="sign-up", leaving=["commit"])
+                self.project.call("ticket.activate", ticket="sign-up", leaving=["commit"])
                 count = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
                 expect(count.stdout.strip()).to(equal("1"))
 
@@ -1130,8 +1142,8 @@ with description("the board tools") as self:
         with it("should name each tool after its object"):
             names = set(self.project.server.tools)
             expect(names).to(equal({
-                "board.show", "board.set_wip_limit", "board.help", "board.folders", "board.activate", "board.workspace", "board.open_worktree",
-                "ticket.create", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.generate_commands",
+                "board.show", "board.help", "board.folders", "stage.set_wip_limit",
+                "ticket.create", "ticket.activate", "ticket.workspace", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.generate_commands",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files",
                 "session.current", "session.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.files", "session.folder_files", "session.read_file",
@@ -1154,7 +1166,7 @@ with description("the board tools") as self:
 
         with it("should return exactly the fields a Workspace marks as its data"):
             subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-            workspace = self.project.call("board.workspace", ticket="pet-visits")
+            workspace = self.project.call("ticket.workspace", ticket="pet-visits")
             expect(set(workspace)).to(equal(set(data_fields_of(Workspace))))
 
         with it("should return exactly the fields a BacklogItem marks as its data"):

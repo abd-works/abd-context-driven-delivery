@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { HelpData } from '@cdd/harness/kanban/board'
 
-import { fidelityOf, PRACTICES } from './board-brand'
+import { useBoard } from './board-context'
 import type { HelpPanel } from './board-store'
 import { helpBlocksOf } from './help-text'
 import type { HelpBlock, TextRun } from './help-text'
@@ -49,13 +49,14 @@ function HelpTextView({ markdown, className }: { markdown: string; className: st
 }
 
 export function HelpPanelHeadView({ panel: { help } }: { panel: HelpPanel }) {
-  const practice = PRACTICES.find(entry => entry.key === help.practice)
+  const { page } = useBoard()
+  const practice = page.board.practiceNamed(help.practice)
   return (
     <div className="panel-words">
       <div className="panel-kind">
         HELP<span className="accent-mark">_</span>
       </div>
-      <h1>{help.fidelity ? fidelityOf(help.slug) : practice?.name}</h1>
+      <h1>{help.fidelity ? practice?.fidelityNameOf(help.slug) : practice?.name}</h1>
       <div className="help-place">
         <span className="practice-chip" style={{ borderLeftColor: practice?.color }}>
           {practice?.name}

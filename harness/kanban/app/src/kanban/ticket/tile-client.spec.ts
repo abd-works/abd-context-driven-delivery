@@ -4,7 +4,7 @@ import type { BoardPage } from '@src/kanban/board/board-page'
 import type { ColumnClient } from '@src/kanban/board/column-client'
 import { BoardOnProject, ticketOn } from 'test-utils/board-page-support'
 
-import { filesOf, type TicketFiles } from './ticket'
+import type { TicketFiles } from './ticket'
 import { cellPlace, headPlace } from './tile-client'
 import { chipsOf, chosenFormats, defaultPicks } from './tile-formats'
 
@@ -29,7 +29,7 @@ let STAGE: ColumnClient
 let NOTHING_MADE: TicketFiles
 let MARKDOWN_MADE: TicketFiles
 
-const filesOn = async (): Promise<TicketFiles> => (await filesOf(board.board.api, TICKET, [SLUG]))!
+const filesOn = async (): Promise<TicketFiles> => (await ticketOn((await board.page()).page, TICKET).filesOf([SLUG]))!
 
 beforeAll(async () => {
   board = await BoardOnProject.start()

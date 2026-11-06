@@ -13,6 +13,8 @@ class Ux(PracticeGuidance):
     """# Instructions"""
 
     sketch_titles = ("ux:", "user experience:")
+    SHORT_NAME = "UX"
+    COLOUR = "#E84393"
 
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {

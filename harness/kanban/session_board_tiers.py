@@ -23,7 +23,7 @@ Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
 from generate.generate import Generate  # noqa: E402
 from harness.kanban.backlog_item import BacklogItem, BacklogItemNotFoundError  # noqa: E402
-from harness.kanban.board import Board  # noqa: E402
+from harness.kanban.board import Board, Stage  # noqa: E402
 from harness.kanban.session_board_examples import SURFACE_FIXTURE_PROJECT, SessionsProject  # noqa: E402
 from harness.kanban.story_test import World, ticket_in  # noqa: E402
 from harness.kanban.ticket import FidelityNotFoundError, Ticket, TicketNotFoundError  # noqa: E402
@@ -33,6 +33,7 @@ from validate.validate import Validate  # noqa: E402
 
 TOOLSETS = (
     "harness.kanban.board:Board",
+    "harness.kanban.board:Stage",
     "harness.kanban.ticket:Ticket",
     "harness.kanban.ticket:FidelityProgress",
     "space.session.session:Session",
@@ -49,7 +50,7 @@ class DomainTier:
     name = "domain"
 
     def open(self) -> World:
-        return World(project=SessionsProject(SURFACE_FIXTURE_PROJECT), Board=Board, Ticket=Ticket, BacklogItem=BacklogItem, Session=Session, Validate=Validate, Generate=Generate, data_of=data_of)
+        return World(project=SessionsProject(SURFACE_FIXTURE_PROJECT), Board=Board, Stage=Stage, Ticket=Ticket, BacklogItem=BacklogItem, Session=Session, Validate=Validate, Generate=Generate, data_of=data_of)
 
     def close(self, world: World) -> None:
         world.project.close()
@@ -66,6 +67,7 @@ class ServerTier:
         return World(
             project=project,
             Board=BoardTools(cdd),
+            Stage=StageTools(cdd),
             Ticket=TicketTools(cdd),
             BacklogItem=BacklogItemTools(cdd),
             Validate=lambda: ActionPrompts(cdd, "validate"),
@@ -93,7 +95,7 @@ class CddTools:
 
 
 class BoardTools:
-    """The board tools: board.show, and every other board tool by its name, such as board.activate(ticket=...)."""
+    """The board tools: board.show, and every other board tool by its name, such as board.help(slug=...)."""
 
     def __init__(self, cdd: CddTools) -> None:
         self._cdd = cdd
@@ -108,10 +110,6 @@ class BoardTools:
     def data(self) -> dict:
         return self._cdd.call("board.show")
 
-    def set_wip_limit(self, stage: str, limit: int) -> BoardTools:
-        self._cdd.call("board.set_wip_limit", stage=stage, limit=limit)
-        return self
-
     def folders(self, path: str = "") -> list[str]:
         return self._cdd.call("board.folders", path=path)
 
@@ -119,6 +117,29 @@ class BoardTools:
         if operation.startswith("_"):
             raise AttributeError(operation)
         return lambda **arguments: _handle_of(self._cdd, self._cdd.call(f"board.{operation}", **arguments))
+
+
+class StageTools:
+    """The stage tools: each takes the stage by its name, such as Discovery."""
+
+    def __init__(self, cdd: CddTools) -> None:
+        self._cdd = cdd
+
+    def load(self, stage: str) -> StageHandle:
+        return StageHandle(self._cdd, stage)
+
+
+class StageHandle:
+    """One stage by name. Each operation is the stage tool of its name, called with the stage's name."""
+
+    def __init__(self, cdd: CddTools, name: str) -> None:
+        self._cdd = cdd
+        self.name = name
+
+    def __getattr__(self, operation: str) -> Any:
+        if operation.startswith("_"):
+            raise AttributeError(operation)
+        return lambda **arguments: self._cdd.call(f"stage.{operation}", stage=self.name, **arguments)
 
 
 class TicketTools:

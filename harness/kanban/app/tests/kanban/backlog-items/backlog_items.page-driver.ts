@@ -8,7 +8,7 @@ import { card, dragCard, openBoard, turnOffActiveSessionOnly } from '../../suppo
 import type { BacklogItemsDriver } from './backlog_items.spec.shared'
 
 // A segment names its skill and the state of that fidelity's work, as `/practices-stories-stories-story-map: in progress`.
-const STATE_WORDS: Record<string, string> = { 'in progress': 'in_progress', 'not started': 'not_started', reviewed: 'done', violations: 'violations' }
+const STATE_WORDS: Record<string, string> = { 'in progress': 'in_progress', 'not started': 'not_started', done: 'done', violations: 'violations' }
 
 export class BacklogItemsPageDriver implements BacklogItemsDriver {
   private readonly page: Page

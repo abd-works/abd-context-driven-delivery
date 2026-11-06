@@ -54,9 +54,9 @@ function OpenGroupView({ open }: { open: Activation }) {
   return (
     <div className="dialog-group">
       <div className="dialog-group-heading">OPEN</div>
-      <SessionFactsView session={open.title} branch={hasBranch ? open.ticket : NONE_YET} />
-      <OptionView label={hasBranch ? `Branch ${open.ticket} already exists` : `Create branch ${open.ticket}`} isChecked={!hasBranch && open.opening.includes('branch')} isOff={hasBranch} onToggle={() => page.activation.toggleOpening('branch')} />
-      <OptionView label={hasWorktree ? 'Worktree already exists' : `Create worktree for ${open.ticket}`} isChecked={!hasWorktree && open.opening.includes('worktree')} isOff={hasWorktree} onToggle={() => page.activation.toggleOpening('worktree')} />
+      <SessionFactsView session={open.ticket.title} branch={hasBranch ? open.ticket.name : NONE_YET} />
+      <OptionView label={hasBranch ? `Branch ${open.ticket.name} already exists` : `Create branch ${open.ticket.name}`} isChecked={!hasBranch && open.opening.includes('branch')} isOff={hasBranch} onToggle={() => page.activation.toggleOpening('branch')} />
+      <OptionView label={hasWorktree ? 'Worktree already exists' : `Create worktree for ${open.ticket.name}`} isChecked={!hasWorktree && open.opening.includes('worktree')} isOff={hasWorktree} onToggle={() => page.activation.toggleOpening('worktree')} />
     </div>
   )
 }

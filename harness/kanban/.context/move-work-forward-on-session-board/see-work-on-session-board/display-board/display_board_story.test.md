@@ -53,8 +53,8 @@
 *When* another chat moves move-me into Discovery's Done
 *Then* a toast says Move me moved to Discovery · Done
 
-#### Scenario: Announce a reviewed fidelity
+#### Scenario: Announce a fidelity done
 
 *Given* the [ticket](../../../kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../kanban-model.md#fidelityguidance) generated and validated with no violations
 *When* a review of stories-story-map is written to billing-report's [session log](../../../kanban-model.md#session)
-*Then* a toast says stories-story-map reviewed on billing-report
+*Then* a toast says stories-story-map done on billing-report

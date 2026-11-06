@@ -34,18 +34,18 @@ function TicketBarView({ ticket }: { ticket: TicketClient }) {
         <div className="details-title">
           <h2>{ticket.title}</h2>
           <span className="details-place">
-            <PlaceLinkView label={ticket.name} hint="Browse the session folder" onPress={() => page.files.openSessionFolder(ticket.name)} />
+            <PlaceLinkView label={ticket.name} hint="Browse the session folder" onPress={() => page.files.openSessionFolder(ticket)} />
             {ticket.origin ? ` · ${ticket.origin}` : ''}
             {' · root '}
             <PlaceLinkView label={ticket.session.workpath || 'whole repository'} hint="Choose the session's workpath and each practice's practice root" onPress={() => page.roots.openFor(ticket)} />
             {' · '}
-            <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageSlugs.length} onPress={() => page.files.openFiles(ticket.name, stageSlugs, 'folder')} />
+            <PlaceLinkView label={ticket.stagePlace} hint={`Browse the files of ${stage?.name ?? 'this stage'}`} isOff={!stageSlugs.length} onPress={() => page.files.openFiles(ticket, stageSlugs, 'folder')} />
           </span>
         </div>
         <div className="details-place">
           {ticket.session.handoff ? (
             <>
-              Latest handoff: <PlaceLinkView label={ticket.session.handoff} hint="Open the handoff" onPress={() => page.files.openSessionFile(ticket.name, ticket.session.handoff)} />
+              Latest handoff: <PlaceLinkView label={ticket.session.handoff} hint="Open the handoff" onPress={() => page.files.openSessionFile(ticket, ticket.session.handoff)} />
             </>
           ) : (
             'No handoff yet'

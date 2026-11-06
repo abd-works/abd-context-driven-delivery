@@ -18,7 +18,9 @@ from harness.kanban.board import (
     Board,
     Card,
     FidelityNotFoundError,
+    NotAStageError,
     Stage,
+    Workspace,
 )
 from harness.kanban.report import Report, ReportFile
 from harness.mcp.mcp_server import mcp
@@ -39,6 +41,11 @@ MARKED_IN_PROGRESS = "in-progress"
 SATISFY = "satisfy"
 ALWAYS_ALLOWED = (GENERATE,)
 ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW)
+LEAVE_COMMIT = "commit"
+LEAVE_PUSH = "push"
+LEAVE_MERGE = "merge"
+OPEN_BRANCH = "branch"
+OPEN_WORKTREE = "worktree"
 
 
 class TicketNotFoundError(LookupError):
@@ -46,13 +53,6 @@ class TicketNotFoundError(LookupError):
 
     def __init__(self, ticket: str) -> None:
         super().__init__(f"no ticket named {ticket!r} on the board")
-
-
-class NotAStageError(ValueError):
-    """Raised when a ticket is moved into a column that is not a stage, such as the Backlog or Complete."""
-
-    def __init__(self, stage: str) -> None:
-        super().__init__(f"{stage!r} is not a stage a ticket can be moved into")
 
 
 @language_adapter(language="typescript", identity="name")
@@ -73,6 +73,7 @@ class Ticket(Card):
     @classmethod
     @tool_subject
     def load(cls, ticket: str) -> Ticket:
+        """The ticket named ticket on the current board, read from its own session alone."""
         found = Board.current().ticket(ticket)
         if found is None:
             raise TicketNotFoundError(ticket)
@@ -187,8 +188,52 @@ class Ticket(Card):
     @data_field
     def worktree(self) -> str:
         """The folder of the ticket's own worktree, where its chat works; empty while it has none."""
-        found = self._board.worktree_of(self.name)
-        return str(found) if found else ""
+        found = self._board.worktrees.get(self.branch)
+        return str(found.path) if found else ""
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def activate(self, leaving: list[str] | None = None, opening: list[str] | None = None) -> Ticket:
+        """Make ticket the current session. leaving names what to do with the active ticket's work first: commit, push, merge. opening names what to create for ticket: branch, worktree."""
+        active = self._board.active
+        if active is not None and active.name != self.name:
+            active.leave(leaving or [])
+        repo = self._board.repo
+        if OPEN_BRANCH in (opening or []):
+            repo.switch_branch(self.name)
+        if OPEN_WORKTREE in (opening or []):
+            repo.switch_worktree(self.name)
+        Session.switch(self.name, repo_path=repo.root)
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def open_worktree(self) -> Ticket:
+        """Open ticket's own worktree beside the repository, creating its branch when missing: the folder its chat works in, named as its worktree. The open session is left as it is."""
+        self.branch.open_in_worktree()
+        # The board lists worktrees once per read, so the ticket is read again from a board that lists the new one.
+        return Board.load(self._board.repo.root).ticket(self.name)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def workspace(self) -> Workspace:
+        """Say whether ticket already has its branch and its worktree, so activating it offers only what is missing, and whether the active ticket being left is on a branch of its own, so its work can be committed, pushed, and merged."""
+        active = self._board.active
+        return Workspace(self.branch, active.branch if active is not None else None)
+
+    def leave(self, leaving: list[str]) -> None:
+        """Do what leaving names with the ticket's work: commit, push, merge. Only on its own branch, checked out,
+        because those steps act on whatever is checked out."""
+        if not leaving or not self.branch.is_checked_out:
+            return
+        repo = self._board.repo
+        if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
+            repo.push_commit(f"{self.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
+        if LEAVE_MERGE in leaving:
+            repo.close_branch(self.name)
 
     @mcp
     @agent_tool
@@ -237,7 +282,7 @@ class Ticket(Card):
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
         """Close ticket: its session ends, its folder moves to _complete/, and it shows in Complete. leaving names what to do with its work first: commit, push, merge."""
-        self._board.leave(self, leaving or [])
+        self.leave(leaving or [])
         self._session.close()
         return Ticket(self._session.move_to_closed(), self._board)
 
@@ -457,11 +502,25 @@ class FidelityProgress:
     @property
     @data_field
     def report_file(self) -> str:
-        """Its latest validation report, as a path from the project; empty when it has none. Validate saves a report
-        before the agent judges it, so a report with no judgment and no saved graph yet does not hide an earlier one
-        that has its result."""
-        latest = self._latest_report_of(self._fidelity)
-        return self._ticket.session.from_project(latest) if latest else ""
+        """Its latest validation report, as a path from the project; empty when it has none."""
+        latest = self.latest_report
+        return self._ticket.session.from_project(latest.file) if latest else ""
+
+    @property
+    def latest_report(self) -> ReportFile | None:
+        """Its latest validation report that has its result, else its latest; none when it has none. Validate saves a
+        report before the agent judges it, so a report with no judgment and no saved graph yet does not hide an earlier
+        one that has its result."""
+        return self._latest_report_in(self._fidelity)
+
+    @property
+    def session(self) -> Session:
+        """The session of the ticket this progress is on, which holds its reports and the folder they name files from."""
+        return self._ticket.session
+
+    @property
+    def repo(self) -> Repo:
+        return self._ticket.board.repo
 
     @property
     @data_field
@@ -482,10 +541,8 @@ class FidelityProgress:
     @noSessionLog
     def report(self) -> Report:
         """Return this fidelity's latest validation report: its path and text, and the rules broken in it, each with its description and each violation with its line and the source around it. The rules are those broken on the nodes of the graph saved beside the report, then each rule the validating agent's judgment fails that the graph did not hit. has_saved_graph is false when the report has no saved graph, so its graph's rules are missing."""
-        latest = self._latest_report_of(self._fidelity)
-        if latest is None:
-            return Report()
-        return self._report_file(latest).report(self, self._superseded(latest))
+        latest = self.latest_report
+        return latest.report() if latest is not None else Report()
 
     @mcp
     @agent_tool
@@ -505,10 +562,10 @@ class FidelityProgress:
         names = [fidelity.name for fidelity in self._practice_fidelities]
         return self._practice_fidelities[:names.index(self._fidelity.name)] if self._fidelity.name in names else []
 
-    def rule_slugs_without(self, superseded: list[FidelityGuidance]) -> set[str]:
-        """The practice's shared rules, this fidelity's own, and every earlier fidelity's but the superseded ones."""
-        dropped = {fidelity.name for fidelity in superseded}
-        earlier = [rule for fidelity in self.earlier_fidelities if fidelity.name not in dropped for rule in fidelity.rules]
+    def rules_answered_by(self, report: ReportFile) -> set[str]:
+        """The rules report answers for: the practice's shared rules, this fidelity's own, and every earlier fidelity's
+        but those an earlier fidelity's newer report answers for."""
+        earlier = [rule for fidelity in self.earlier_fidelities if not self._has_newer_report(fidelity, report) for rule in fidelity.rules]
         return {rule.slug for rule in [*self._fidelity.practice_guidance.rules, *earlier, *self._fidelity.rules]}
 
     @property
@@ -527,27 +584,19 @@ class FidelityProgress:
         """A validate the log shows passing still failed when the judgment the validating agent added to its report fails a rule."""
         if VALIDATE not in self._done_actions:
             return False
-        latest = self._latest_report_of(self._fidelity)
-        return latest is not None and self._report_file(latest).is_judged_failing
+        latest = self.latest_report
+        return latest is not None and latest.is_judged_failing
 
-    def _latest_report_of(self, fidelity: FidelityGuidance) -> Path | None:
-        """The latest report of fidelity in its ticket's session that has its result, else its latest; none when it has none."""
-        own = self._ticket.session.practices[self.practice].fidelities[fidelity.name].reports()
-        with_result = [report for report in own if self._report_file(report).has_result]
+    def _latest_report_in(self, fidelity: FidelityGuidance) -> ReportFile | None:
+        """The latest report of fidelity, this one or one of the practice's earlier ones, in the ticket's session."""
+        own = [ReportFile(path, self) for path in self.session.practices[self.practice].fidelities[fidelity.name].reports()]
+        with_result = [report for report in own if report.has_result]
         return (with_result or own or [None])[-1]
 
-    def _superseded(self, report: Path) -> list[FidelityGuidance]:
-        """The earlier fidelities with a report newer than report, whose rules that newer report answers for."""
-        stamp = self._report_file(report).stamp
-        return [earlier for earlier in self.earlier_fidelities if self._stamp_of(self._latest_report_of(earlier)) > stamp]
-
-    def _stamp_of(self, report: Path | None) -> str:
-        return self._report_file(report).stamp if report else ""
-
-    def _report_file(self, file: Path) -> ReportFile:
-        session = self._ticket.session
-        repo = Repo(session.repo_from_session())
-        return ReportFile(file, repo, Path(session.workpath or repo.root).resolve())
+    def _has_newer_report(self, earlier: FidelityGuidance, report: ReportFile) -> bool:
+        """Whether an earlier fidelity was validated after report was written, so its own report answers for its rules."""
+        latest = self._latest_report_in(earlier)
+        return latest is not None and latest.stamp > report.stamp
 
 
 class ActionStates:

@@ -65,7 +65,8 @@ from harness.kanban.story_test import (
     refusal_of,
     ticket_in,
 )
-from harness.kanban.ticket import NotAStageError, TicketNotFoundError
+from harness.kanban.board import NotAStageError
+from harness.kanban.ticket import TicketNotFoundError
 
 shared_stories = SharedStories("Steer Ticket Sessions")
 
@@ -290,7 +291,7 @@ def _(s):
 
     @s.when("the Person moves checkout-flow into Complete")
     def _(world):
-        world.workspace = world.data_of(world.Board.current().workspace(ticket=world.ticket.name))
+        world.workspace = world.data_of(world.ticket.workspace())
 
     @s.then("a dialog headed Close session Checkout flow offers commit and push, chosen")
     def _(world):
@@ -491,7 +492,7 @@ def _(s):
 
     @s.when("the Person activates billing-report")
     def _(world):
-        world.workspace = world.data_of(world.Board.current().workspace(ticket=world.ticket.name))
+        world.workspace = world.data_of(world.ticket.workspace())
 
     @s.then("a dialog headed Switch from Checkout flow to Billing report offers commit and push, chosen, and merge, not chosen")
     def _(world):
@@ -503,7 +504,7 @@ def _(s):
 
     @s.when("the Person chooses merge and confirms")
     def _(world):
-        world.Board.current().activate(ticket=world.ticket.name, leaving=["commit", "push", "merge"], opening=["branch"])
+        world.ticket.activate(leaving=["commit", "push", "merge"], opening=["branch"])
 
     @s.then("billing-report is the active ticket with a thick orange outline")
     def _(world):
@@ -529,7 +530,7 @@ def _(s):
 
     @s.when("the Person activates billing-report with nothing chosen")
     def _(world):
-        world.Board.current().activate(ticket=BILLING_REPORT.name, leaving=[], opening=[])
+        world.Ticket.load(BILLING_REPORT.name).activate(leaving=[], opening=[])
 
     @s.then("billing-report is the active ticket")
     def _(world):
@@ -559,7 +560,7 @@ def _(s):
 
     @s.when("the Person activates billing-report with commit chosen")
     def _(world):
-        world.Board.current().activate(ticket=BILLING_REPORT.name, leaving=["commit"], opening=[])
+        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["commit"], opening=[])
 
     @s.then("billing-report is the active ticket")
     def _(world):
@@ -579,7 +580,7 @@ def _(s):
 
     @s.when("the Person activates billing-report with a new branch")
     def _(world):
-        world.Board.current().activate(ticket=BILLING_REPORT.name, leaving=[], opening=["branch"])
+        world.Ticket.load(BILLING_REPORT.name).activate(leaving=[], opening=["branch"])
 
     @s.then("the repository has the branch billing-report")
     def _(world):

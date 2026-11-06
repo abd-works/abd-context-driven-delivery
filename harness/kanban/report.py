@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from harness.installation.destination import data_field
 
 if TYPE_CHECKING:
-    from harness.guidance.guidance import FidelityGuidance
     from harness.kanban.ticket import FidelityProgress
     from space.repo.repo import Repo
 
@@ -162,10 +161,16 @@ class Report:
 class ReportFile:
     """A validation report saved in a session folder, with the graph the validation checked saved beside it."""
 
-    def __init__(self, file: Path, repo: Repo, workpath: Path) -> None:
+    # It is made for the fidelity progress it reports on, which holds the ticket's session, the repository its files
+    # are named from, and the rules this report answers for.
+
+    def __init__(self, file: Path, progress: FidelityProgress) -> None:
         self._file = file
-        self._repo = repo
-        self._workpath = workpath
+        self._progress = progress
+
+    @property
+    def file(self) -> Path:
+        return self._file
 
     @property
     def stamp(self) -> str:
@@ -185,51 +190,59 @@ class ReportFile:
     def is_judged_failing(self) -> bool:
         return bool(Judgment.from_report(self.text))
 
-    def report(self, progress: FidelityProgress, superseded: list[FidelityGuidance]) -> Report:
+    def report(self) -> Report:
         """The rules broken on the nodes of the saved graph, then each rule the agent's judgment fails that the graph did not hit."""
         text = self.text
-        graph_rules = self._graph_rules(progress, superseded) if self._graph.is_file() else []
+        graph_rules = self._graph_rules() if self._graph.is_file() else []
         hit = {rule.name for rule in graph_rules}
-        judged = [rule for rule in self._judged_rules(text, progress) if rule.name not in hit]
+        judged = [rule for rule in self._judged_rules(text) if rule.name not in hit]
         return Report(self._repo.path_from_top(self._file), text, graph_rules + judged, self._graph.is_file())
+
+    @property
+    def _repo(self) -> Repo:
+        return self._progress.repo
+
+    @property
+    def _workpath(self) -> Path:
+        """The folder the saved graph names its files from: the session's workpath, else the repository's top."""
+        return Path(self._progress.session.workpath or self._repo.root).resolve()
 
     @property
     def _graph(self) -> Path:
         return self._file.with_suffix(".json")
 
-    def _graph_rules(self, progress: FidelityProgress, superseded: list[FidelityGuidance]) -> list[ReportRule]:
-        return [
-            self._rule(progress, name, [self._violation_of(hit) for hit in hits])
-            for name, hits in self._hits_by_rule(progress, superseded).items()
-        ]
+    def _graph_rules(self) -> list[ReportRule]:
+        return [self._rule(name, [self._violation_of(hit) for hit in hits]) for name, hits in self._hits_by_rule().items()]
 
-    def _hits_by_rule(self, progress: FidelityProgress, superseded: list[FidelityGuidance]) -> dict[str, list[dict]]:
+    def _hits_by_rule(self) -> dict[str, list[dict]]:
         """The hits on the rules this report answers for: a saved graph holds its whole practice's hits. A rule no
         fidelity describes belongs to none, so every report keeps it."""
         from validate.graph_json_reader import violations_by_rule, violations_from_graph_json_files
 
-        answered = progress.rule_slugs_without(superseded)
+        progress = self._progress
+        answered = progress.rules_answered_by(self)
         described = progress.rule_descriptions
-        scanned = self._scanned_rules(progress.practice)
+        scanned = self._scanned_rules()
         hits = violations_by_rule(violations_from_graph_json_files([self._graph], [progress.practice]))
         return {name: rule_hits for name, rule_hits in hits.items() if name in scanned and (name in answered or name not in described)}
 
-    def _scanned_rules(self, practice: str) -> set[str]:
+    def _scanned_rules(self) -> set[str]:
         """The rules a scanner checks now; a saved graph keeps the hits of a scanner deleted since it was saved."""
         from harness.graph.practice_rules_registry import checks_for_practice
         from harness.graph.schema_rules import active_overlay_patterns
 
         overlays = json.loads(self._graph.read_text(encoding="utf-8")).get("overlays", [])
-        return set(checks_for_practice(practice, active_overlay_patterns(tuple(overlays))))
+        return set(checks_for_practice(self._progress.practice, active_overlay_patterns(tuple(overlays))))
 
-    def _judged_rules(self, text: str, progress: FidelityProgress) -> list[ReportRule]:
+    def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""
         findings: dict[str, list[Violation]] = {}
         for judgment in Judgment.from_report(text):
             findings.setdefault(judgment.rule, []).extend(self._judged_violation(judgment.file, finding) for finding in judgment.findings)
-        return [self._rule(progress, rule, violations) for rule, violations in findings.items()]
+        return [self._rule(rule, violations) for rule, violations in findings.items()]
 
-    def _rule(self, progress: FidelityProgress, name: str, violations: list[Violation]) -> ReportRule:
+    def _rule(self, name: str, violations: list[Violation]) -> ReportRule:
+        progress = self._progress
         return ReportRule(progress.fidelity_slug, name, progress.rule_descriptions.get(name, ""), violations)
 
     def _judged_violation(self, judged_file: str, finding: Violation) -> Violation:

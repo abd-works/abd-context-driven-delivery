@@ -1099,6 +1099,17 @@ class Repo:
 
         return [Session.load(folder, self.root) for folder in self._work_session_folders()]
 
+    def work_session(self, name: str) -> Session | None:
+        """This repository's work session called name, open before closed; none when it has none. Only that session's
+        folder is read, so a tool that names one session does not load every other."""
+        from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, Session
+
+        if not name or name == MAIN_SESSION_NAME or name.startswith("_"):
+            return None
+        sessions = self.sessions_folder
+        folder = next((folder for folder in (sessions / name, sessions / COMPLETE_FOLDER / name) if folder.is_dir()), None)
+        return Session.load(folder, self.root) if folder is not None else None
+
     @property
     def current_session(self) -> Session:
         """The session saved as open in ``.sessions/session.json``; main, which works on the whole repository, when none

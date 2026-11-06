@@ -3,7 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { ReportRuleData } from '@cdd/harness/kanban/ticket'
 import type { TicketFiles } from '@src/kanban/ticket/ticket'
 import { folderGroupsOf, generatedPaths, offeredTabs } from '@src/kanban/ticket/files-panel-client'
-import { BoardOnProject } from 'test-utils/board-page-support'
+import { BoardOnProject, ticketOn as shownTicket } from 'test-utils/board-page-support'
+import type { TicketClient } from '@src/kanban/ticket/ticket-client'
 
 import type { BoardPage } from './board-page'
 import type { FilesPanel, ReportPanel } from './board-store'
@@ -29,24 +30,34 @@ afterAll(() => board.close())
 const filesPanel = (page: BoardPage) => page.store.state.panels.find(panel => panel.kind === 'files') as FilesPanel
 const reportPanel = (page: BoardPage) => page.store.state.panels.find(panel => panel.kind === 'report') as ReportPanel
 
+// A panel holds the ticket it is about, as the board read shows it.
+const ticketOn = (page: BoardPage): TicketClient => shownTicket(page, TICKET)
+
+// A ticket the page still holds after the board stopped showing it: its tools name a ticket the board does not have.
+const goneTicket = (page: BoardPage, name: string): TicketClient => {
+  const shown = ticketOn(page).toJSON()
+  const progress = Object.fromEntries(Object.entries(shown.progress).map(([slug, entry]) => [slug, { ...entry, ticket: name }]))
+  return page.ticket({ ...shown, name, progress })
+}
+
 const EVERY_FORMAT = 'Fix every format of the fidelity: its documents, its diagrams, and its code.'
 
 async function brokenRule(page: BoardPage): Promise<ReportRuleData> {
-  await page.panels.openReport(TICKET, SLUG)
+  await page.panels.openReport(ticketOn(page), SLUG)
   return reportPanel(page).report.rules[0]!
 }
 
 describe('List Ticket Files', () => {
   it('should list the files that exist', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(TICKET, [SLUG], 'folder')
+    await page.files.openFiles(ticketOn(page), [SLUG], 'folder')
     expect(generatedPaths(filesPanel(page))).toEqual(['.context/story-map.md'])
   })
 
   describe('with a list that cannot be read', () => {
     async function refused() {
       const { page } = await board.page()
-      await page.files.openFiles('no-such-ticket', [SLUG], 'folder')
+      await page.files.openFiles(goneTicket(page, 'no-such-ticket'), [SLUG], 'folder')
       return page
     }
 
@@ -72,13 +83,13 @@ describe('Browse Ticket Folder', () => {
 describe("Browse Ticket's Session Folder", () => {
   it('should list every file in the session folder', async () => {
     const { page } = await board.page()
-    await page.files.openSessionFolder(TICKET)
+    await page.files.openSessionFolder(ticketOn(page))
     expect(generatedPaths(filesPanel(page))).toContain(REPORT_PATH)
   })
 
   it('should show them as folders', async () => {
     const { page } = await board.page()
-    await page.files.openSessionFolder(TICKET)
+    await page.files.openSessionFolder(ticketOn(page))
     expect(filesPanel(page).mode).toBe('folder')
   })
 
@@ -88,7 +99,7 @@ describe("Browse Ticket's Session Folder", () => {
     async function opened() {
       board.write(HANDOFF, '# Handoff\n')
       const { page } = await board.page()
-      await page.files.openSessionFile(TICKET, HANDOFF)
+      await page.files.openSessionFile(ticketOn(page), HANDOFF)
       return page
     }
 
@@ -105,7 +116,7 @@ describe("Browse Ticket's Session Folder", () => {
 describe('View Fidelity Files', () => {
   it('should open one tab per format, generated or not', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(TICKET, [SLUG], 'files')
+    await page.files.openFiles(ticketOn(page), [SLUG], 'files')
     expect(filesPanel(page).tabs).toEqual(['.context/story-map.md', '.context/story-map.drawio'])
   })
 
@@ -116,13 +127,13 @@ describe('View Fidelity Files', () => {
 
   it('should read the text of the file a tab shows', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(TICKET, [SLUG], 'files')
+    await page.files.openFiles(ticketOn(page), [SLUG], 'files')
     expect(filesPanel(page).texts['.context/story-map.md']).toBe(['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n'))
   })
 
   it('should go back to the folder when the last tab closes', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(TICKET, [SLUG], 'files')
+    await page.files.openFiles(ticketOn(page), [SLUG], 'files')
     page.files.closeTab('.context/story-map.md')
     page.files.closeTab('.context/story-map.drawio')
     expect(filesPanel(page).mode).toBe('folder')
@@ -132,7 +143,7 @@ describe('View Fidelity Files', () => {
     async function opened() {
       board.write('src/other.py', 'x\n')
       const { page } = await board.page()
-      await page.files.openFileAtLine(TICKET, SLUG, 'src/other.py', FAILING_LINE)
+      await page.files.openFileAtLine(ticketOn(page), SLUG, 'src/other.py', FAILING_LINE)
       return page
     }
 
@@ -149,13 +160,13 @@ describe('View Fidelity Files', () => {
 describe('Open Validation Report', () => {
   it("should show that fidelity's latest report", async () => {
     const { page } = await board.page()
-    await page.panels.openReport(TICKET, SLUG)
+    await page.panels.openReport(ticketOn(page), SLUG)
     expect(reportPanel(page).report.path).toBe(REPORT_PATH)
   })
 
   it("should show every fidelity's violations with no fidelity named", async () => {
     const { page } = await board.page()
-    await page.panels.openReport(TICKET, '')
+    await page.panels.openReport(ticketOn(page), '')
     expect(reportPanel(page).report.path).toBe('.sessions/checkout-flow/validation-reports')
   })
 })
@@ -167,7 +178,7 @@ describe('Fix Report Violations', () => {
       const chat = await board.connectChat(page)
       const rule = await brokenRule(page)
       const violation = rule.violations[0]!
-      await page.fixViolation(TICKET, rule, violation)
+      await ticketOn(page).fixViolation(rule, violation)
       return { rule, violation, commands: await chat.checkIn() }
     }
 
@@ -207,7 +218,7 @@ describe('Fix Report Violations', () => {
       const chat = await board.connectChat(page)
       const rule = await brokenRule(page)
       const { report } = reportPanel(page)
-      await page.fixRule(TICKET, report, rule)
+      await ticketOn(page).fixRule(report, rule)
       const [command] = await chat.checkIn()
       expect(command!.text).toContain(`Fix all violations of ${rule.name} found in this report: ${report.path}`)
     })
@@ -216,7 +227,7 @@ describe('Fix Report Violations', () => {
       const { page } = await board.page()
       const chat = await board.connectChat(page)
       const rule = await brokenRule(page)
-      await page.fixRule(TICKET, reportPanel(page).report, rule)
+      await ticketOn(page).fixRule(reportPanel(page).report, rule)
       const [command] = await chat.checkIn()
       expect(command!.text).toContain(EVERY_FORMAT)
     })
@@ -227,9 +238,9 @@ describe('Fix Report Violations', () => {
     async function sent() {
       const { page } = await board.page()
       const chat = await board.connectChat(page)
-      await page.panels.openReport(TICKET, SLUG)
+      await page.panels.openReport(ticketOn(page), SLUG)
       const { report } = reportPanel(page)
-      await page.fixReport(TICKET, report)
+      await ticketOn(page).fixReport(report)
       return { report, commands: await chat.checkIn() }
     }
 
@@ -253,8 +264,8 @@ describe('Refresh Board After Tool Calls', () => {
     // The story map validated again, clean, and its diagram generated, as the agent leaves them.
     async function changed() {
       const { page } = await board.page()
-      await page.panels.openReport(TICKET, SLUG)
-      await page.files.openFiles(TICKET, [SLUG], 'folder')
+      await page.panels.openReport(ticketOn(page), SLUG)
+      await page.files.openFiles(ticketOn(page), [SLUG], 'folder')
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.md', '# Graph rule validation\n')
       board.write('.sessions/checkout-flow/validation-reports/stories-story-map-20261102T100000.json', JSON.stringify(CLEAN_GRAPH))
       board.write('.context/story-map.drawio', '<mxfile/>\n')
@@ -274,7 +285,7 @@ describe('Refresh Board After Tool Calls', () => {
 
   it('should keep a tab a person closed closed', async () => {
     const { page } = await board.page()
-    await page.files.openFiles(TICKET, [SLUG], 'files')
+    await page.files.openFiles(ticketOn(page), [SLUG], 'files')
     page.files.closeTab('.context/story-map.drawio')
     await page.files.reload()
     expect(filesPanel(page).tabs).toEqual(['.context/story-map.md'])
@@ -299,8 +310,8 @@ describe('Arrange Side Panel', () => {
   describe('Expand Side Panel', () => {
     it('should expand one panel at a time', async () => {
       const { page } = await board.page()
-      await page.panels.openReport(TICKET, SLUG)
-      await page.files.openFiles(TICKET, [SLUG], 'folder')
+      await page.panels.openReport(ticketOn(page), SLUG)
+      await page.files.openFiles(ticketOn(page), [SLUG], 'folder')
       page.panels.toggleExpanded('report')
       page.panels.toggleExpanded('files')
       expect(page.store.state.panels.filter(panel => panel.isExpanded).map(panel => panel.kind)).toEqual(['files'])
@@ -310,7 +321,7 @@ describe('Arrange Side Panel', () => {
   describe('Close Side Panel', () => {
     it('should close the panel', async () => {
       const { page } = await board.page()
-      await page.panels.openReport(TICKET, SLUG)
+      await page.panels.openReport(ticketOn(page), SLUG)
       page.panels.close('report')
       expect(page.store.state.panels).toEqual([])
     })

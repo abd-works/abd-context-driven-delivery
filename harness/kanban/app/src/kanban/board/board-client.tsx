@@ -4,20 +4,16 @@ import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
 import type { TicketClient } from '../ticket/ticket-client'
 import type { BoardPage } from './board-page'
 import { ColumnClient } from './column-client'
+import { PracticeClient } from './practice-client'
 
 const standingOf = (ticket: TicketClient): string => (ticket.column === 'Complete' ? ticket.column : `${ticket.column} · ${ticket.isDone ? 'Done' : 'In progress'}`)
 
 function changesOf(was: TicketClient, ticket: TicketClient): string[] {
   const moved = standingOf(was) === standingOf(ticket) ? [] : [`${ticket.title} moved to ${standingOf(ticket)}`]
-  const reviewed = Object.entries(ticket.progress)
+  const done = Object.entries(ticket.progress)
     .filter(([slug, progress]) => progress.state === 'done' && was.progress[slug]?.state !== 'done')
-    .map(([slug]) => `${slug} reviewed on ${ticket.name}`)
-  return [...moved, ...reviewed]
-}
-
-const limitFrom = (text: string): number | null => {
-  const limit = Number.parseInt(text, 10)
-  return limit >= 1 ? limit : null
+    .map(([slug]) => `${slug} done on ${ticket.name}`)
+  return [...moved, ...done]
 }
 
 // One read of the board, with what the page works out from it. Each read is a new client, built from the store.
@@ -27,6 +23,19 @@ export class BoardClient extends BoardClientGenerated {
     private readonly page: BoardPage,
   ) {
     super(page.api, data)
+  }
+
+  get shownPractices(): PracticeClient[] {
+    return this.practices.map(practice => new PracticeClient(practice))
+  }
+
+  // The practice a fidelity belongs to, found among the fidelities Python lists for each practice.
+  practiceOf(slug: string): PracticeClient | undefined {
+    return this.shownPractices.find(practice => practice.has(slug))
+  }
+
+  practiceNamed(key: string): PracticeClient | undefined {
+    return this.shownPractices.find(practice => practice.key === key)
   }
 
   get shownColumns(): ColumnClient[] {
@@ -78,15 +87,6 @@ export class BoardClient extends BoardClientGenerated {
 
   select(address: string): void {
     this.page.store.change({ selected: address })
-  }
-
-  // What a person typed becomes a limit only when it is a whole number of at least one.
-  async submitWipLimit(stage: string, text: string): Promise<void> {
-    this.page.layout.cancelLimit()
-    const limit = limitFrom(text)
-    if (!limit) return
-    await this.setWipLimit(stage, limit)
-    await this.page.reader.refresh()
   }
 
   // A ticket moved back out of Discovery leaves the columns and comes back as a backlog item under its title.

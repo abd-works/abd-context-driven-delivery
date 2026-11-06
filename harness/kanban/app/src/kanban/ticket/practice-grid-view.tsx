@@ -1,7 +1,6 @@
-import { PRACTICES } from '../board/board-brand'
-import type { Practice } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { ColumnClient } from '../board/column-client'
+import type { PracticeClient } from '../board/practice-client'
 import { ChevronIcon } from '../board/icons'
 import { StageHeadView } from '../board/stage-head-view'
 import { ActionBarView } from './action-bar-view'
@@ -58,13 +57,13 @@ function StageBarsView({ ticket }: { ticket: TicketClient }) {
   )
 }
 
-function PracticeLabelView({ ticket, practice }: { ticket: TicketClient; practice: Practice }) {
+function PracticeLabelView({ ticket, practice }: { ticket: TicketClient; practice: PracticeClient }) {
   const { page } = useBoard()
   const isOn = ticket.isEnabled(practice.key)
   const label = `${isOn ? 'Disable' : 'Enable'} ${practice.name} for ${ticket.title}`
   return (
     <div className={isOn ? 'practice-label' : 'practice-label is-off'} style={{ borderLeftColor: practice.color }}>
-      <button className="readme-link" onClick={() => void page.panels.openHelp(practice.key, '')}>
+      <button className="readme-link" onClick={() => void page.panels.openHelp(practice.slug)}>
         {practice.name}
       </button>
       <input type="checkbox" role="switch" className="practice-switch" title={label} aria-label={label} checked={isOn} disabled={ticket.isLocked} onChange={() => void ticket.enablePractice(practice.key, !isOn)} />
@@ -72,13 +71,13 @@ function PracticeLabelView({ ticket, practice }: { ticket: TicketClient; practic
   )
 }
 
-function PracticeLineView({ ticket, practice }: { ticket: TicketClient; practice: Practice }) {
+function PracticeLineView({ ticket, practice }: { ticket: TicketClient; practice: PracticeClient }) {
   const { page } = useBoard()
   return (
     <div className="column-grid details-grid">
       <PracticeLabelView ticket={ticket} practice={practice} />
       {page.board.stages.map(stage => {
-        const slug = stage.workRequired.find(required => required.startsWith(practice.prefix))
+        const slug = stage.workRequired.find(required => practice.has(required))
         return slug ? <TileView key={slug} ticket={ticket} stage={stage} slug={slug} hasPracticeChip={false} opensOnHover={false} /> : <span key={stage.name} />
       })}
       <span />
@@ -88,7 +87,7 @@ function PracticeLineView({ ticket, practice }: { ticket: TicketClient; practice
 
 export function PracticeGridView({ ticket }: { ticket: TicketClient }) {
   const { page, state } = useBoard()
-  const shown = PRACTICES.filter(practice => ticket.isEnabled(practice.key) || !state.hidesDisabled)
+  const shown = page.board.shownPractices.filter(practice => ticket.isEnabled(practice.key) || !state.hidesDisabled)
   return (
     <div className="details-lines">
       <div className="column-grid details-grid">

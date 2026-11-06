@@ -98,24 +98,22 @@ A member noted *data field* is marked `@data_field`: MCP sends an object as exac
 	-> Board.load
 + show(): Board
 	// `board.show`
-+ set_wip_limit(stage: str, limit: int): Board
-	// `board.set_wip_limit`: saved in `.sessions/_board.json`
-+ wip_limit(stage: str): int
-	// the limit saved for stage, else 3
-+ worktree_of(ticket: str): Path
-	// the worktree that has ticket's branch checked out; none when it has none. The worktrees are listed once per board read, because the board is read after every call, and a project that is no git clone has none
++ worktrees: dict[Branch, Worktree]
+	// each branch's worktree, listed once per board read rather than once per ticket, because the board is read after every call; a project that is no git clone has none
 	-> Repo.is_clone
 	-> Repo.list_worktrees
-	// 3 until a person sets it
++ practices: list[PracticeGuidance]
+	// data field: the practices every ticket works through, each with its key, slug, short name, colour, and fidelities' slugs, so the board app names and colours them from Python
 + folders(path: str): list[str]
 	// `board.folders`: the folders inside one folder of the repository, as paths from the project, for a person choosing a workpath or a practice root; installed packages, caches, and hidden folders are left out
-+ help(practice: str, fidelity: str): Help
-	// `board.help`: the practice, fidelity, and stage, with the overview, guidance, rules, and forge page. Refuses a practice or fidelity it does not have with `PracticeNotFoundError` or `FidelityNotFoundError`
-	-> Board.practice
++ help(slug: str): Help
+	// `board.help`: the practice or fidelity slug names, such as `stories` or `stories-story-map`, with its stage, overview, guidance, rules, and forge page. Refuses a slug no practice or fidelity goes by with `PracticeNotFoundError`
 + practice(key: str): PracticeGuidance
 	// the practice whose folder name is key, such as `clean_engineering`; raises `PracticeNotFoundError` for one the board does not have
 	-> PracticeGuidance.key
 + ticket(name: str): Ticket
+	// read from that ticket's session folder alone, open before closed
+	-> Repo.work_session
 + backlog_item(title: str): BacklogItem
 + column(name: str): Column
 	// raises `ColumnNotFoundError` for a column the board does not have
@@ -167,8 +165,12 @@ A member noted *data field* is marked `@data_field`: MCP sends an object as exac
 	// data field
 	// tickets in this stage that are done; they wait here until a person moves them
 	-> Ticket.is_done
++ load(stage: str): Stage
+	// the `@tool_subject` of the `stage.*` tools; refuses a column that is not a stage with `NotAStageError`
 + wip_limit: int
-	// data field
+	// data field: the limit saved for this stage in `.sessions/_board.json`, else 3
++ set_wip_limit(limit: int): Stage
+	// `stage.set_wip_limit`: saved in `.sessions/_board.json` beside the other stages' limits
 + work_required_slugs: list[str]
 	// data field `work_required`: each required fidelity as `<practice>-<fidelity>`
 + formats: dict[str, list[str]]
@@ -264,7 +266,8 @@ The base type of Ticket and BacklogItem.
 + worktree: str
 	// data field
 	// the folder of its own worktree, where its chat works; empty while it has none. The board picks the chat working in this folder, or a folder inside it, when a person clicks the ticket
-	-> Board.worktree_of
+	-> Board.worktrees
+	-> Ticket.branch
 + practice_roots: dict[str, PracticeRoot]
 	// data field
 	// where each practice writes, as a path from the project, and whether a person chose it or it is the default
@@ -489,7 +492,7 @@ Whether a ticket has its branch and its worktree, and whether the active ticket 
 
 The overview, guidance, and rules of a practice or one of its fidelities, with its stage and its page on the forge.
 
-+ Help(practice: str, fidelity: str, stage: str, subject: PracticeGuidance | FidelityGuidance, href: str)
++ Help(practice: PracticeGuidance, fidelity: FidelityGuidance | None)
 ------
 + practice: str
 	// data field

@@ -1,8 +1,6 @@
-import { FidelityProgressClientGenerated } from '@cdd/harness/kanban/fidelity-progress'
 import { BoardClientGenerated } from '@cdd/harness/kanban/board'
-import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
 
-import { ReportClient } from '../ticket/report-client'
+import type { TicketClient } from '../ticket/ticket-client'
 import type { BoardApi } from './board-api'
 import type { BoardStore, ReportPanel, SidePanel } from './board-store'
 
@@ -40,14 +38,9 @@ export class SidePanelClient {
     this.store.change(state => ({ panelWidths: { ...state.panelWidths, [kind]: width } }))
   }
 
-  private async readReport(ticket: string, fidelity: string): Promise<ReportClient | null> {
-    const report = await (fidelity ? FidelityProgressClientGenerated.named(this.api, ticket, fidelity).report() : TicketClientGenerated.named(this.api, ticket).violations())
-    return report ? new ReportClient(report) : null
-  }
-
   // With no fidelity, a report panel holds the violations of every fidelity of its ticket.
-  async openReport(ticket: string, fidelity: string): Promise<void> {
-    const report = await this.readReport(ticket, fidelity)
+  async openReport(ticket: TicketClient, fidelity: string): Promise<void> {
+    const report = await ticket.reportOf(fidelity)
     if (report) this.show({ kind: 'report', ticket, fidelity, report, closedRules: [], isExpanded: false })
   }
 
@@ -59,8 +52,9 @@ export class SidePanelClient {
     })
   }
 
-  async openHelp(practice: string, fidelity: string): Promise<void> {
-    const help = await new BoardClientGenerated(this.api).help(practice, fidelity)
+  // slug names a practice, such as stories, or a fidelity, such as stories-story-map.
+  async openHelp(slug: string): Promise<void> {
+    const help = await new BoardClientGenerated(this.api).help(slug)
     if (help) this.show({ kind: 'help', help, isExpanded: false })
   }
 
@@ -69,7 +63,7 @@ export class SidePanelClient {
   }
 
   closeTicketPanels(ticket: string): void {
-    this.store.change(state => ({ panels: state.panels.filter(panel => panel.kind === 'help' || panel.ticket !== ticket) }))
+    this.store.change(state => ({ panels: state.panels.filter(panel => panel.kind === 'help' || panel.ticket.name !== ticket) }))
   }
 
   // One panel is expanded at a time.
@@ -81,7 +75,7 @@ export class SidePanelClient {
   async reload(): Promise<void> {
     const open = this.reportPanel
     if (!open) return
-    const report = await this.readReport(open.ticket, open.fidelity)
+    const report = await open.ticket.reportOf(open.fidelity)
     if (report) this.changeReport(panel => ({ ...panel, report }))
   }
 }

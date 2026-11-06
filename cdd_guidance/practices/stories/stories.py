@@ -12,6 +12,8 @@ class Stories(PracticeGuidance):
     """# Instructions"""
 
     sketch_titles = ("stories:",)
+    SHORT_NAME = "Stories"
+    COLOUR = "#6BCB77"
 
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {

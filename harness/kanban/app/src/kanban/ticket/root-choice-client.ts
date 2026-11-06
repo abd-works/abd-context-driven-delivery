@@ -22,17 +22,16 @@ export class RootChoiceClient {
   }
 
   get ticket(): TicketClient | undefined {
-    const name = this.choice?.ticket
-    return name ? this.page.board.tickets.find(ticket => ticket.name === name) : undefined
+    return this.choice?.ticket ?? undefined
   }
 
   openFor(ticket: TicketClient): void {
-    this.page.store.change({ rootChoice: { ticket: ticket.name, startingItem: null, browsing: null } })
+    this.page.store.change({ rootChoice: { ticket, startingItem: null, browsing: null } })
   }
 
   // An item starts once a person has chosen the folder its session works in.
   async openToStart(item: BacklogItemClient): Promise<void> {
-    this.page.store.change({ rootChoice: { ticket: '', startingItem: item.toJSON(), browsing: null } })
+    this.page.store.change({ rootChoice: { ticket: null, startingItem: item.toJSON(), browsing: null } })
     await this.browse(TICKET_ROOT, '')
   }
 
@@ -74,7 +73,7 @@ export class RootChoiceClient {
     const item = this.choice?.startingItem
     if (!item) return
     const ticket = await this.page.item(item).start(undefined, path)
-    if (ticket) this.page.store.change({ rootChoice: { ticket: ticket.name, startingItem: null, browsing: null } })
+    if (ticket) this.page.store.change({ rootChoice: { ticket: this.page.ticket(ticket), startingItem: null, browsing: null } })
   }
 
   close(): void {

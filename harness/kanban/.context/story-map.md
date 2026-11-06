@@ -45,7 +45,7 @@ Observed: `details-view.tsx`, `practice-grid-view.tsx`. Intended (`.sessions/ses
 
 ### (S) Person --> [Set Stage WIP Limit](move-work-forward-on-session-board/see-work-on-session-board/set-stage-wip-limit/set_stage_wip_limit_story.test.md)
 
-Observed: `Board.set_wip_limit`, saved in `.sessions/_board.json`.
+Observed: `Stage.set_wip_limit`, saved in `.sessions/_board.json`.
 
 ### (S) Person --> [Arrange Side Panel](move-work-forward-on-session-board/see-work-on-session-board/arrange-side-panel/arrange_side_panel_story.test.md)
 

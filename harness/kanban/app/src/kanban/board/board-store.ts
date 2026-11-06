@@ -4,6 +4,7 @@ import type { BoardData, HelpData } from '@cdd/harness/kanban/board'
 import type { ChatData, ChatMessageData } from '@cdd/tools/chat/chat'
 import type { ReportClient } from '../ticket/report-client'
 import type { TicketFiles } from '../ticket/ticket'
+import type { TicketClient } from '../ticket/ticket-client'
 import type { WorkspaceClient } from '../ticket/workspace-client'
 
 export type Toast = { id: number; text: string; isFailure: boolean }
@@ -13,9 +14,9 @@ export type BacklogDraft = { isOpen: boolean; title: string; text: string }
 // An open action bar: on a tile or on a stage head. One ticket and place hold at most one bar.
 export type Tile = { ticket: string; place: string; stage: string; slugs: string[]; action: string; picked: string[]; isPinned: boolean; files: TicketFiles }
 
+// A dialog or panel holds the ticket it is about, so its actions reach that ticket's tools without looking it up again.
 export type Activation = {
-  ticket: string
-  title: string
+  ticket: TicketClient
   isClosing: boolean
   leavingTitle: string
   leaving: string[]
@@ -26,15 +27,15 @@ export type Activation = {
 // The roots dialog: the ticket's workpath on top and each practice's practice root under it. Starting a backlog item asks for its workpath
 // first, so until it starts there is no ticket yet, only the item.
 export type RootChoice = {
-  ticket: string
+  ticket: TicketClient | null
   startingItem: BacklogItemData | null
   browsing: { target: string; path: string; folders: string[] } | null
 }
 
-export type ReportPanel = { kind: 'report'; ticket: string; fidelity: string; report: ReportClient; closedRules: string[]; isExpanded: boolean }
+export type ReportPanel = { kind: 'report'; ticket: TicketClient; fidelity: string; report: ReportClient; closedRules: string[]; isExpanded: boolean }
 export type FilesPanel = {
   kind: 'files'
-  ticket: string
+  ticket: TicketClient
   // A session folder's files, or the files of the fidelities in slugs.
   isSession: boolean
   slugs: string[]

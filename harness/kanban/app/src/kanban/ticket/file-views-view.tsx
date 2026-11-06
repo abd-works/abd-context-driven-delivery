@@ -2,6 +2,7 @@ import type { MouseEvent } from 'react'
 
 import { useBoard } from '../board/board-context'
 import { FileViewIcon } from '../board/icons'
+import type { TicketClient } from './ticket-client'
 
 const FILE_VIEWS = [
   { mode: 'folder', hint: 'Browse the folder' },
@@ -9,7 +10,7 @@ const FILE_VIEWS = [
 ]
 
 // Opens the files panel on the fidelities given: the whole card's on a card, one fidelity's in its action bar.
-export function FileViewsView({ ticket, slugs }: { ticket: string; slugs: string[] }) {
+export function FileViewsView({ ticket, slugs }: { ticket: TicketClient; slugs: string[] }) {
   const { page } = useBoard()
   // A press on a card would also select it; opening its files is enough.
   const opened = (mode: string) => (event: MouseEvent) => {

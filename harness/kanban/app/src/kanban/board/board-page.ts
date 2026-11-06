@@ -1,6 +1,6 @@
 import type { BacklogItemData } from '@cdd/harness/kanban/backlog-item'
 import type { BoardData } from '@cdd/harness/kanban/board'
-import type { ReportRuleData, TicketData, ViolationData } from '@cdd/harness/kanban/ticket'
+import type { TicketData } from '@cdd/harness/kanban/ticket'
 import type { ChatData } from '@cdd/tools/chat/chat'
 
 import { BacklogDraftClient, BacklogItemClient } from '../backlog-item/backlog-item-client'
@@ -8,7 +8,6 @@ import { ChatClient, isWorkingIn } from '../chat/chat-client'
 import { ActivationClient } from '../ticket/activation-client'
 import { FilesPanelClient } from '../ticket/files-panel-client'
 import { OpenCardClient } from '../ticket/open-card-client'
-import { fixReportPrompt, fixRulePrompt, fixViolationPrompt, type ReportClient } from '../ticket/report-client'
 import { RootChoiceClient } from '../ticket/root-choice-client'
 import { TicketClient } from '../ticket/ticket-client'
 import { TileActionsClient } from '../ticket/tile-actions-client'
@@ -28,7 +27,7 @@ const BUILD_PATH = '/build'
 const SERVER_BACK_WITHIN_MILLISECONDS = 30_000
 const SERVER_BACK_CHECK_MILLISECONDS = 1000
 const CLAUDE_OPEN_PATH = '/claude/open'
-const NOT_READ_YET: BoardData = { project: '', active: null, columns: [] }
+const NOT_READ_YET: BoardData = { project: '', practices: [], active: null, columns: [] }
 
 // Everything the page's views act through, wired once.
 export class BoardPage {
@@ -57,7 +56,7 @@ export class BoardPage {
     this.api = new BoardApi(this.store, send)
     this.chat = new ChatClient(this.store, this.api, link => this.openLink(link))
     this.panels = new SidePanelClient(this.store, this.api)
-    this.files = new FilesPanelClient(this.store, this.api)
+    this.files = new FilesPanelClient(this.store)
     this.build = new BuildClient(this.store, this.api)
   }
 
@@ -80,24 +79,6 @@ export class BoardPage {
 
   item(json: BacklogItemData): BacklogItemClient {
     return new BacklogItemClient(json, this)
-  }
-
-  fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData): Promise<void> {
-    return this.sendActionFor(ticket, fixViolationPrompt(rule, violation))
-  }
-
-  fixRule(ticket: string, report: ReportClient, rule: ReportRuleData): Promise<void> {
-    return this.sendActionFor(ticket, fixRulePrompt(report, rule))
-  }
-
-  fixReport(ticket: string, report: ReportClient): Promise<void> {
-    return this.sendActionFor(ticket, fixReportPrompt(report))
-  }
-
-  // A report's fixes are for the ticket whose report it is, so they name that ticket's session and go to its chat.
-  private sendActionFor(ticket: string, command: string): Promise<void> {
-    const shown = this.board.tickets.find(candidate => candidate.name === ticket)
-    return this.chat.command(shown?.actionCommand(command) ?? command, shown?.name, shown?.worktree)
   }
 
   // Brings the board and every chat onto the latest code: the server pulls, rebuilds, pins cdd, and restarts itself, and

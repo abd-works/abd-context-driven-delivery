@@ -1,32 +1,17 @@
-// What the canvas names and colours, in one place, so a practice looks the same on a card, a tile, and in help.
-export const PRACTICES = [
-  { key: 'stories', name: 'Stories', prefix: 'stories-', color: '#6BCB77' },
-  { key: 'ddd', name: 'DDD', prefix: 'ddd-', color: '#6C5CE7' },
-  { key: 'ux', name: 'UX', prefix: 'ux-', color: '#E84393' },
-  { key: 'clean_engineering', name: 'CE', prefix: 'clean-engineering-', color: '#4FC3F7' },
-  { key: 'bdd', name: 'BDD', prefix: 'bdd-', color: '#00B894' },
-]
-
-export type Practice = (typeof PRACTICES)[number]
-
-export const practiceOf = (slug: string): Practice | undefined => PRACTICES.find(candidate => slug.startsWith(candidate.prefix))
-
-export const fidelityOf = (slug: string): string => slug.slice(practiceOf(slug)?.prefix.length ?? 0)
-
 export const STATES: Record<string, { label: string; color: string }> = {
-  done: { label: 'reviewed', color: 'var(--reviewed)' },
+  done: { label: 'done', color: 'var(--done)' },
   in_progress: { label: 'in progress', color: 'var(--progress)' },
   violations: { label: 'violations', color: 'var(--violations)' },
   not_started: { label: 'not started', color: 'var(--idle)' },
 }
 
-// Each practice's colour lights up with progress: dim until started, then brighter, then full when reviewed.
+// Each practice's colour lights up with progress: dim until started, then brighter, then full when done.
 // How bright a fidelity's segment and tile are: almost black when its practice is off for the ticket, then brighter as
 // its work goes from not started to started to done. Violations stay bright so they are seen.
 export const WORK_LIGHT: Record<string, number> = { off: 0.12, not_started: 0.35, in_progress: 0.7, violations: 1, done: 1 }
 
 export const ACTION_STANDINGS: Record<string, { mark: string; color: string; label: string }> = {
-  done: { mark: '✓', color: 'var(--reviewed)', label: 'done' },
+  done: { mark: '✓', color: 'var(--done)', label: 'done' },
   in_progress: { mark: '…', color: 'var(--progress)', label: 'in progress' },
   to_do: { mark: '○', color: 'var(--muted)', label: 'to do' },
 }

@@ -1,4 +1,3 @@
-import { practiceOf } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
@@ -60,7 +59,7 @@ export class OpenCardClient {
   dropPractice(ticket: string, practice: string): void {
     const remaining = (tile: Tile): Tile | null => {
       if (tile.ticket !== ticket) return tile
-      const slugs = tile.slugs.filter(slug => practiceOf(slug)?.key !== practice)
+      const slugs = tile.slugs.filter(slug => this.page.board.practiceOf(slug)?.key !== practice)
       return slugs.length ? { ...tile, slugs } : null
     }
     this.store.change(state => ({ tiles: state.tiles.map(remaining).filter((tile): tile is Tile => tile !== null) }))

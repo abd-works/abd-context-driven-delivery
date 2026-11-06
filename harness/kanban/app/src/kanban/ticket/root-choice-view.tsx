@@ -1,6 +1,5 @@
 import type { KeyboardEvent } from 'react'
 
-import { PRACTICES } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { RootChoice } from '../board/board-store'
 import { TICKET_ROOT } from './root-choice-client'
@@ -9,8 +8,6 @@ import type { TicketClient } from './ticket-client'
 const WHOLE_REPOSITORY = 'whole repository'
 
 const shownPath = (path: string): string => path || WHOLE_REPOSITORY
-
-const practiceName = (key: string): string => PRACTICES.find(practice => practice.key === key)?.name ?? key
 
 function RootLineView({ label, root, standing, onChange, onDefault }: { label: string; root: string; standing: string; onChange: () => void; onDefault?: () => void }) {
   return (
@@ -37,7 +34,7 @@ function RootLineView({ label, root, standing, onChange, onDefault }: { label: s
 // The ticket's workpath on top; every practice under it writes under its default folder there unless a person chose another practice root.
 function RootsListView({ ticket }: { ticket: TicketClient }) {
   const { page } = useBoard()
-  const practices = PRACTICES.filter(practice => ticket.session.practices[practice.key])
+  const practices = page.board.shownPractices.filter(practice => ticket.session.practices[practice.key])
   return (
     <>
       <RootLineView label="Session" root={ticket.session.workpath} standing="" onChange={() => void page.roots.browse(TICKET_ROOT, ticket.session.workpath)} />
@@ -98,7 +95,7 @@ function FolderBrowserView({ browsing }: { browsing: NonNullable<RootChoice['bro
   )
 }
 
-function headingOf(choice: RootChoice, ticket: TicketClient | undefined): string {
+function headingOf(choice: RootChoice, ticket: TicketClient | undefined, practiceName: (key: string) => string): string {
   const subject = choice.startingItem ? choice.startingItem.title : (ticket?.title ?? '')
   if (!choice.browsing) return `Roots of ${subject}`
   if (choice.startingItem) return `Where ${subject} works`
@@ -116,7 +113,7 @@ export function RootChoiceView() {
   return (
     <div className="dialog-backdrop" onKeyDown={pressed}>
       <div role="dialog" aria-modal="true" aria-labelledby="roots-title" className="dialog roots-dialog">
-        <h2 id="roots-title">{headingOf(choice, ticket)}</h2>
+        <h2 id="roots-title">{headingOf(choice, ticket, key => page.board.practiceNamed(key)?.name ?? key)}</h2>
         {choice.browsing ? <FolderBrowserView browsing={choice.browsing} /> : ticket ? <RootsListView ticket={ticket} /> : null}
       </div>
     </div>

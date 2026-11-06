@@ -1,4 +1,4 @@
-import type { WorkspaceData } from '@cdd/harness/kanban/board'
+import type { WorkspaceData } from '@cdd/harness/kanban/ticket'
 
 // What exists for a ticket on disk. WorkspaceData has no generated class, because Python returns it as a plain result.
 export class WorkspaceClient {

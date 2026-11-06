@@ -16,7 +16,7 @@ export function FilesPanelHeadView({ panel }: { panel: FilesPanel }) {
       <div className="panel-kind">
         FILES<span className="accent-mark">_</span>
       </div>
-      <div className="files-subject">{panel.isSession ? `${panel.ticket} session folder` : panel.slugs.join(', ')}</div>
+      <div className="files-subject">{panel.isSession ? `${panel.ticket.name} session folder` : panel.slugs.join(', ')}</div>
       <div className="file-modes">
         {FILE_MODES.map(mode => (
           <button key={mode} className={panel.mode === mode ? 'file-mode is-chosen' : 'file-mode'} onClick={() => void page.files.chooseMode(mode)}>

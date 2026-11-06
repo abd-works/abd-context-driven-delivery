@@ -21,6 +21,7 @@ from harness.agent_tools.agent_tools import (
     toolset_collection,
 )
 from harness.installation.files import rules, skill
+from harness.installation.destination import data_field
 from harness.mcp.mcp_server import mcp
 from harness.markdown import (
     AssetLocator,
@@ -180,6 +181,10 @@ class GuidanceCollection(MarkdownCollection, Guidance):
 class PracticeGuidance(Guidance):
     sketch_titles: tuple[str, ...] = ()
     """The headings that open this practice's section of a sketch, lower case, such as `stories:`."""
+    SHORT_NAME: str = ""
+    """The practice's name where there is little room, such as `CE` on a session board's chip."""
+    COLOUR: str = ""
+    """The colour a session board draws the practice's chips and tiles in, such as `#6BCB77` for Stories."""
 
     def __init__(
         self,
@@ -201,10 +206,34 @@ class PracticeGuidance(Guidance):
         """Shared rules as a collection."""
 
     @property
+    @data_field
     def key(self) -> str:
         """The practice's folder name, such as `clean_engineering`: how session log action lines and session.json name
         the practice."""
         return Path(inspect.getfile(type(self))).parent.name
+
+    @property
+    @data_field(key="slug")
+    def practice_slug(self) -> str:
+        """The practice's slug, such as `clean-engineering`, which each of its fidelities' slugs begins with."""
+        return self.slug
+
+    @property
+    @data_field
+    def short_name(self) -> str:
+        return type(self).SHORT_NAME or type(self).__name__
+
+    @property
+    @data_field
+    def colour(self) -> str:
+        return type(self).COLOUR
+
+    @property
+    @data_field(key="fidelities")
+    def fidelity_slugs(self) -> list[str]:
+        """The slug of each of the practice's fidelities, such as `stories-story-map`, so a reader holding a fidelity's
+        slug finds its practice without taking the slug apart."""
+        return [fidelity.slug for fidelity in self.fidelities]
 
     def files(self, stage: str = "") -> dict[str, dict[str, list]]:
         """The files each fidelity of this practice declares in the session it works in, by fidelity name and then

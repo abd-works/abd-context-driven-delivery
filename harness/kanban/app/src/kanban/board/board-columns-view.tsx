@@ -13,7 +13,7 @@ import { StageHeadView } from './stage-head-view'
 function WipLimitFieldView({ column }: { column: ColumnClient }) {
   const { page } = useBoard()
   const [text, setText] = useState(String(column.wipLimit))
-  const submit = () => void page.board.submitWipLimit(column.name, text)
+  const submit = () => void column.submitWipLimit(text)
   const pressed = (event: KeyboardEvent) => {
     if (event.key === 'Enter') submit()
     if (event.key === 'Escape') page.layout.cancelLimit()

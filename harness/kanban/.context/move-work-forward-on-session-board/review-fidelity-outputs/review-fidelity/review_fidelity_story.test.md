@@ -8,7 +8,7 @@
 *When* the Person reviews story_map on billing-report
 *Then* billing-report's session log ends with review Stories story_map
 *And* the story_map tile marks Review ✓ and the fidelity is done
-*And* a toast says stories-story-map reviewed on billing-report
+*And* a toast says stories-story-map done on billing-report
 
 #### Scenario: Keep Review off until Validate is clean
 

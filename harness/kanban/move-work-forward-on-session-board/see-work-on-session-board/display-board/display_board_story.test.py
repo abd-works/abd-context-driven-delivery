@@ -113,7 +113,7 @@ with story("Display Board"):
             pass
         with then("a toast says Move me moved to Discovery · Done"):
             pass
-    with scenario("Announce a reviewed fidelity"):
+    with scenario("Announce a fidelity done"):
         # Evidence: observed: board-client.spec 'should name a fidelity that was reviewed'.
         with given("the [ticket](../../../.context/kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance) generated and validated with no violations"):
             pass
@@ -123,5 +123,5 @@ with story("Display Board"):
             # Board page -> Board.show()
             # Board <- stories-story-map done on billing-report
             pass
-        with then("a toast says stories-story-map reviewed on billing-report"):
+        with then("a toast says stories-story-map done on billing-report"):
             pass

@@ -123,7 +123,7 @@ test.describe('Display Board', () => {
     })
   })
 
-  test.describe('Announce a reviewed fidelity', () => {
+  test.describe('Announce a fidelity done', () => {
     test.beforeEach(async ({ page, request }) => {
       writeSession(fixtureRoot, { name: 'billing-report', title: 'Billing report', log: [generatedLine('stories', 'story_map'), validatedLine('Stories', 'story_map')] })
       await openBoard(page)
@@ -131,8 +131,8 @@ test.describe('Display Board', () => {
       await request.post('/api/fidelity-progress/billing-report/stories-story-map/finish-review', { headers: BOARD_POST_HEADERS, data: {} })
     })
 
-    test('Then a toast says stories-story-map reviewed on billing-report', async ({ page }) => {
-      await expect(toast(page, 'stories-story-map reviewed on billing-report')).toBeVisible({ timeout: 8_000 })
+    test('Then a toast says stories-story-map done on billing-report', async ({ page }) => {
+      await expect(toast(page, 'stories-story-map done on billing-report')).toBeVisible({ timeout: 8_000 })
     })
   })
 })

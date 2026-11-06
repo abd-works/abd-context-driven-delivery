@@ -3302,10 +3302,10 @@ Announce a ticket that moved
   ```
 
 
-Announce a reviewed fidelity
+Announce a fidelity done
   ```
   // the graph holds no operation this observation calls
-  it Then a toast says stories-story-map reviewed on billing-report
+  it Then a toast says stories-story-map done on billing-report
   ```
 
 

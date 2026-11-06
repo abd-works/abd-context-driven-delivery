@@ -27,6 +27,9 @@ export const newChatLink = (ticket: string, worktree: string): string => {
 
 type CommandKind = 'submit' | 'fill' | 'command'
 
+// What a ticket's chat is found by: the ticket's name and the worktree its work is in.
+type ChatOwner = { readonly name: string; readonly worktree: string }
+
 const shortened = (text: string): string => (text.length > SHOWN_COMMAND ? `${text.slice(0, SHOWN_COMMAND)}…` : text)
 
 // The chat a person works in. Commands wait in the chat's own folder until its cdd-board mod checks in and takes them.
@@ -149,5 +152,39 @@ export class ChatClient {
     if (!(await ChatClientGenerated.named(this.api, targetChat).send(kind, text))) return
     this.store.toast(sent)
     await this.readMessages()
+  }
+}
+
+// One ticket's chat: the connected chat working in its worktree, else the one titled by its name. The ticket owns it,
+// so whatever the board sends for the ticket goes to that chat without a caller naming the ticket's worktree again.
+export class TicketChat {
+  constructor(
+    private readonly chats: ChatClient,
+    private readonly owner: ChatOwner,
+  ) {}
+
+  get found(): ChatData | undefined {
+    return this.chats.chatFor(this.owner.name, this.owner.worktree)
+  }
+
+  get isOpening(): boolean {
+    return this.chats.isOpeningFor(this.owner.name)
+  }
+
+  command(text: string): Promise<void> {
+    return this.chats.command(text, this.owner.name, this.owner.worktree)
+  }
+
+  fill(text: string): Promise<void> {
+    return this.chats.fill(text, this.owner.name, this.owner.worktree)
+  }
+
+  beginOpening(): boolean {
+    return this.chats.beginOpening(this.owner.name)
+  }
+
+  // The new chat opens on the worktree given, which can have been opened only now.
+  start(worktree: string): void {
+    this.chats.startFor(this.owner.name, worktree)
   }
 }

@@ -19,6 +19,8 @@ class CleanEngineering(PracticeGuidance):
     """# Instructions"""
 
     sketch_titles = ("ce:", "clean engineering:")
+    SHORT_NAME = "CE"
+    COLOUR = "#4FC3F7"
 
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {

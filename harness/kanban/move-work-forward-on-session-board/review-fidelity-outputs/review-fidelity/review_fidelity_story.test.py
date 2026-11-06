@@ -28,7 +28,7 @@ with story("Review Fidelity"):
             pass
         with and_("the story_map tile marks Review ✓ and the fidelity is done"):
             pass
-        with and_("a toast says stories-story-map reviewed on billing-report"):
+        with and_("a toast says stories-story-map done on billing-report"):
             pass
     with scenario("Keep Review off until Validate is clean"):
         # Evidence: observed: tile-client.spec 'should not allow Review until Validate is clean'.

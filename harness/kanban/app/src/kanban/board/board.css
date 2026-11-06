@@ -6,7 +6,7 @@ a:hover { color: #C64514; }
 
 .board-root {
   --bg: #0B0B0B; --surface: #111113; --raised: #1B1B20; --border: #2A2A2A; --text: #E8E8ED; --muted: #9B9BA8;
-  --idle: #71717A; --reviewed: #22C55E; --progress: #F59E0B; --violations: #EF4444; --accent: #E5531A;
+  --idle: #71717A; --done: #22C55E; --progress: #F59E0B; --violations: #EF4444; --accent: #E5531A;
   --accent-text: #FF6A2E; --on-accent: #0B0B0B; --error: #EF4444; --mono: 'JetBrains Mono', ui-monospace, monospace;
   position: relative; box-sizing: border-box; height: 100dvh; width: 100%; display: flex; flex-direction: column; overflow: hidden;
   background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; font-size: 13px;
@@ -52,7 +52,7 @@ a:hover { color: #C64514; }
 .chat-message-time { margin-left: auto; text-transform: none; }
 .chat-message.is-waiting .chat-message-state, .chat-message.is-taken .chat-message-state { color: var(--progress); }
 .chat-message.is-shown .chat-message-state { color: var(--progress); }
-.chat-message.is-done .chat-message-state { color: var(--reviewed); }
+.chat-message.is-done .chat-message-state { color: var(--done); }
 .chat-message-state { display: inline-flex; align-items: center; gap: 5px; }
 .progress-wheel { display: inline-block; flex-shrink: 0; width: 10px; height: 10px; margin-right: 5px; border: 2px solid var(--border); border-top-color: var(--progress); border-radius: 50%; animation: progress-wheel-turn .8s linear infinite; vertical-align: -1px; }
 .chat-message-state > .progress-wheel { margin-right: 0; }
@@ -258,7 +258,7 @@ a:hover { color: #C64514; }
 .panel-note { margin: 0; color: var(--muted); font: 12px var(--mono); }
 .panel-note.files-empty { padding: 20px; }
 .panel-warning { margin: 0; color: var(--progress); font: 600 13px var(--mono); }
-.panel-clean { margin: 0; color: var(--reviewed); font: 600 14px var(--mono); }
+.panel-clean { margin: 0; color: var(--done); font: 600 14px var(--mono); }
 .report-text { margin: 0; color: var(--muted); font: 12px/20px var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .files-subject { font: 12px var(--mono); overflow-wrap: anywhere; }

@@ -1,5 +1,4 @@
-import type { WorkspaceData } from '@cdd/harness/kanban/board'
-import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
+import type { WorkspaceData } from '@cdd/harness/kanban/ticket'
 
 import type { BoardPage } from '../board/board-page'
 import type { Activation } from '../board/board-store'
@@ -21,12 +20,13 @@ const stepsOf = (steps: Record<string, string>, chosen: string[]): string[] =>
 // What leaving did, in the canvas's words, ahead of what came of the session.
 function reportOf(open: Activation, outcome: string, opened: string[]): string {
   const left = stepsOf(LEFT_STEPS, open.leaving)
-  return [left.length ? `${open.leavingTitle}: ${left.join(', ')}` : '', opened.length ? `${open.title}: ${opened.join(', ')}` : '', outcome].filter(Boolean).join(' · ')
+  return [left.length ? `${open.leavingTitle}: ${left.join(', ')}` : '', opened.length ? `${open.ticket.title}: ${opened.join(', ')}` : '', outcome].filter(Boolean).join(' · ')
 }
 
 export const activationHeading = (open: Activation): string => {
-  if (open.isClosing) return `Close session ${open.title}`
-  return open.leavingTitle ? `Switch from ${open.leavingTitle} to ${open.title}` : `Activate ${open.title}`
+  const { title } = open.ticket
+  if (open.isClosing) return `Close session ${title}`
+  return open.leavingTitle ? `Switch from ${open.leavingTitle} to ${title}` : `Activate ${title}`
 }
 
 // The dialog asked before the session changes, because leaving can commit, push, and merge work.
@@ -43,12 +43,11 @@ export class ActivationClient {
 
   async start(ticket: TicketClient, isClosing: boolean): Promise<void> {
     ticket.select()
-    const found = await this.page.board.workspace(ticket.name)
+    const found = await ticket.workspace()
     const workspace = new WorkspaceClient(found ?? NO_WORKSPACE)
     const leavingTitle = isClosing ? ticket.title : (this.page.board.activeTicket?.title ?? '')
     this.show({
-      ticket: ticket.name,
-      title: ticket.title,
+      ticket,
       isClosing,
       leavingTitle,
       leaving: workspace.leavingHasBranch ? FIRST_LEAVING : [],
@@ -77,16 +76,16 @@ export class ActivationClient {
   }
 
   private async closeSession(open: Activation): Promise<void> {
-    const closed = await TicketClientGenerated.named(this.page.api, open.ticket).close(open.leaving)
+    const closed = await open.ticket.close(open.leaving)
     await this.page.reader.refresh()
     if (!closed) return
     this.page.ticket(closed.toJSON()).select()
-    this.page.store.toast(reportOf(open, `Session ${open.title} closed`, []))
+    this.page.store.toast(reportOf(open, `Session ${open.ticket.title} closed`, []))
   }
 
   private async activateSession(open: Activation): Promise<void> {
-    const activated = await this.page.board.activate(open.ticket, open.leaving, open.opening)
+    const activated = await open.ticket.activate(open.leaving, open.opening)
     await this.page.reader.refresh()
-    if (activated) this.page.store.toast(reportOf(open, `${open.title} is now active`, stepsOf(OPENED_STEPS, open.opening)))
+    if (activated) this.page.store.toast(reportOf(open, `${open.ticket.title} is now active`, stepsOf(OPENED_STEPS, open.opening)))
   }
 }

@@ -15,6 +15,8 @@ class Bdd(PracticeGuidance):
     """
 
     sketch_titles = ("bdd:", "behavior driven development:")
+    SHORT_NAME = "BDD"
+    COLOUR = "#00B894"
 
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {

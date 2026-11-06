@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import type { DragEvent, MouseEvent, RefObject } from 'react'
 
-import { ageOf, practiceOf } from '../board/board-brand'
+import { ageOf } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { ColumnClient } from '../board/column-client'
 import { SessionActionIcon } from '../board/icons'
 import { FileViewsView } from './file-views-view'
 import type { TicketClient } from './ticket-client'
-import { skillOf } from './ticket-client'
 import { TileView } from './tile-view'
 
 export type CardSpot = 'left' | 'right' | 'only'
@@ -35,11 +34,12 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
     <div className="segments">
       {ticket.enabledSlugs(stage).map(slug => {
         const { key, label, color } = ticket.stateOf(slug)
-        const skill = skillOf(slug)
+        const practice = page.board.practiceOf(slug)
+        const skill = practice?.skillOf(slug) ?? slug
         const isOpen = state.tiles.some(tile => tile.ticket === ticket.name && tile.slugs.length === 1 && tile.slugs[0] === slug)
         const leave = () => onSkill('')
         const enter = () => onSkill(skill)
-        const background = key === 'violations' ? color : practiceOf(slug)?.color
+        const background = key === 'violations' ? color : practice?.color
         return (
           <button key={slug} className="segment-hit" title={label} aria-label={`${skill}: ${label}`} aria-expanded={isOpen} onClick={withoutSelecting(() => page.cards.openSegment(ticket, stage, slug))} onMouseEnter={enter} onMouseLeave={leave} onFocus={enter} onBlur={leave}>
             <span className="segment" style={{ background, opacity: ticket.lightOf(slug) }} />
@@ -68,20 +68,20 @@ function CardFaceView({ ticket, stage }: { ticket: TicketClient; stage: ColumnCl
       <CardMarkView ticket={ticket} />
       <div className="ticket-title-line">
         <div className="ticket-title">{ticket.title}</div>
-        {page.chat.isOpeningFor(ticket.name) ? <span className="progress-wheel" role="status" title="Opening its chat in the Claude app" aria-label="Opening its chat" /> : null}
+        {ticket.chat.isOpening ? <span className="progress-wheel" role="status" title="Opening its chat in the Claude app" aria-label="Opening its chat" /> : null}
         <SplitActionView ticket={ticket} />
       </div>
       <div className="ticket-meta">{ageOf(state.now, ticket.lastActivity)}</div>
       <SegmentsView ticket={ticket} stage={stage} onSkill={setSkill} />
       {skill ? <div className="card-skill">{skill}</div> : null}
       {ticket.violatedSlugs.some(slug => stage.workRequired.includes(slug)) ? (
-        <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket.name, ''))}>
+        <button className="violations-link card-violations" onClick={withoutSelecting(() => page.panels.openReport(ticket, ''))}>
           violations
         </button>
       ) : null}
       <div className="card-files">
         <SessionActionsView ticket={ticket} />
-        <FileViewsView ticket={ticket.name} slugs={ticket.enabledSlugs(stage)} />
+        <FileViewsView ticket={ticket} slugs={ticket.enabledSlugs(stage)} />
       </div>
     </>
   )

@@ -5,6 +5,7 @@ import { useBoard } from '../board/board-context'
 import type { ReportPanel } from '../board/board-store'
 import { ChevronIcon } from '../board/icons'
 import { locationOf, type ReportClient } from './report-client'
+import type { TicketClient } from './ticket-client'
 
 function SourceLineView({ violation, entry }: { violation: ViolationData; entry: SourceLineData }) {
   return (
@@ -52,7 +53,7 @@ function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; 
           {hasSource ? null : <ViolationLocationView panel={panel} rule={rule} violation={violation} />}
           <div className="violation-message">{violation.message}</div>
         </div>
-        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : 'Send this fix to the chat'} onClick={() => void page.fixViolation(panel.ticket, rule, violation)}>
+        <button className="fix-button" aria-label={`Fix ${locationOf(violation)}`} disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : 'Send this fix to the chat'} onClick={() => void panel.ticket.fixViolation(rule, violation)}>
           Fix
         </button>
       </div>
@@ -61,7 +62,7 @@ function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; 
   )
 }
 
-function RuleHeadView({ ticket, report, rule, place, isOpen, isOff }: { ticket: string; report: ReportClient; rule: ReportRuleData; place: string; isOpen: boolean; isOff: boolean }) {
+function RuleHeadView({ ticket, report, rule, place, isOpen, isOff }: { ticket: TicketClient; report: ReportClient; rule: ReportRuleData; place: string; isOpen: boolean; isOff: boolean }) {
   const { page } = useBoard()
   return (
     <div className="rule-head">
@@ -75,7 +76,7 @@ function RuleHeadView({ ticket, report, rule, place, isOpen, isOff }: { ticket: 
         </h2>
         <p>{rule.description}</p>
       </div>
-      <button className="ghost-button" disabled={isOff} onClick={() => void page.fixRule(ticket, report, rule)}>
+      <button className="ghost-button" disabled={isOff} onClick={() => void ticket.fixRule(report, rule)}>
         Fix all
       </button>
     </div>

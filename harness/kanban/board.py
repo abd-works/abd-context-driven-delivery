@@ -6,11 +6,11 @@ import json
 from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
@@ -19,11 +19,13 @@ from space.session import Session
 from space.work_state import board_checkout
 
 if TYPE_CHECKING:
-    from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
+    from pathlib import Path
+
+    from harness.guidance.guidance import FidelityGuidance
     from harness.guidance.rule import Rule
     from harness.kanban.backlog_item import BacklogItem
     from harness.kanban.ticket import Ticket
-    from space.repo.repo import Branch, Repo
+    from space.repo.repo import Branch, Repo, Worktree
 
 BACKLOG_COLUMN = "Backlog"
 COMPLETE_COLUMN = "Complete"
@@ -32,11 +34,6 @@ VALIDATE = "validate"
 REVIEW = "review"
 # What every fidelity goes through in its stage, named as the session log names them.
 STAGE_ACTIONS = (GENERATE, VALIDATE, REVIEW)
-LEAVE_COMMIT = "commit"
-LEAVE_PUSH = "push"
-LEAVE_MERGE = "merge"
-OPEN_BRANCH = "branch"
-OPEN_WORKTREE = "worktree"
 # How many tickets a stage holds before its count shows as over its limit, until a person sets another.
 DEFAULT_WIP_LIMIT = 3
 FORGE = "https://forge.abdworks.net/abd-context-driven-delivery"
@@ -49,6 +46,14 @@ class ColumnNotFoundError(LookupError):
     def __init__(self, column: str) -> None:
         self.column = column
         super().__init__(f"no column named {column!r} on the board")
+
+
+class NotAStageError(ValueError):
+    """Raised when a caller names a column that is not a stage, such as the Backlog or Complete, where a stage is wanted:
+    a ticket moved into it, or a WIP limit set on it."""
+
+    def __init__(self, stage: str) -> None:
+        super().__init__(f"{stage!r} is not a stage a ticket can be moved into")
 
 
 class PracticeNotFoundError(LookupError):
@@ -109,20 +114,18 @@ class Board:
     def project(self) -> str:
         return self._repo.root.name
 
-    def worktree_of(self, ticket: str) -> Path | None:
-        """The folder of the worktree that has ticket's branch checked out; none when it has no worktree."""
-        return self._worktrees.get(ticket)
-
     @cached_property
-    def _worktrees(self) -> dict[str, Path]:
-        """Each branch's worktree, listed once per board read: the board is read after every call. A project that is no
-        git clone has none."""
+    def worktrees(self) -> dict[Branch, Worktree]:
+        """Each branch's worktree, listed once per board read rather than once per ticket: the board is read after every
+        call. A project that is no git clone has none."""
         if not self._repo.is_clone:
             return {}
-        return {tree.branch.name: tree.path for tree in self._repo.list_worktrees() if tree.branch is not None}
+        return {tree.branch: tree for tree in self._repo.list_worktrees() if tree.branch is not None}
 
     @property
+    @data_field
     def practices(self) -> list[PracticeGuidance]:
+        """The practices every ticket works through, in the order the board shows them, each with its name and colour."""
         return list(self._practices)
 
     @property
@@ -171,7 +174,12 @@ class Board:
         return found
 
     def ticket(self, name: str) -> Ticket | None:
-        return next((ticket for ticket in self.tickets if ticket.name == name), None)
+        """The ticket called name, open before closed, read from its own session folder: a tool names one ticket, so
+        the board reads no other session to find it."""
+        from harness.kanban.ticket import Ticket
+
+        session = self._repo.work_session(name)
+        return Ticket(session, self) if session is not None else None
 
     def backlog_item(self, title: str) -> BacklogItem | None:
         return next((item for item in self.backlog_items if item.title == title), None)
@@ -186,66 +194,6 @@ class Board:
     @mcp
     @agent_tool
     @noSessionLog
-    def activate(self, ticket: str, leaving: list[str] | None = None, opening: list[str] | None = None) -> Ticket:
-        """Make ticket the current session. leaving names what to do with the active ticket's work first: commit, push, merge. opening names what to create for ticket: branch, worktree."""
-        chosen = self._named_ticket(ticket)
-        active = self.active
-        if active is not None and active.name != chosen.name:
-            self.leave(active, leaving or [])
-        if OPEN_BRANCH in (opening or []):
-            self.repo.switch_branch(chosen.name)
-        if OPEN_WORKTREE in (opening or []):
-            self.repo.switch_worktree(chosen.name)
-        Session.switch(chosen.name, repo_path=self.repo.root)
-        return chosen
-
-    def leave(self, ticket: Ticket, leaving: list[str]) -> None:
-        """Do what leaving names with ticket's work: commit, push, merge. Only on its own branch, checked out, because
-        those steps act on whatever is checked out."""
-        if not leaving or not ticket.branch.is_checked_out:
-            return
-        if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
-            self.repo.push_commit(f"{ticket.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
-        if LEAVE_MERGE in leaving:
-            self.repo.close_branch(ticket.name)
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def open_worktree(self, ticket: str) -> Ticket:
-        """Open ticket's own worktree beside the repository, creating its branch when missing: the folder its chat works in, named as its worktree. The open session is left as it is."""
-        opened = self._named_ticket(ticket)
-        opened.branch.open_in_worktree()
-        return Board.load(self.repo.root)._named_ticket(opened.name)
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def workspace(self, ticket: str) -> Workspace:
-        """Say whether ticket already has its branch and its worktree, so activating it offers only what is missing, and whether the active ticket being left is on a branch of its own, so its work can be committed, pushed, and merged."""
-        active = self.active
-        return Workspace(self._named_ticket(ticket).branch, active.branch if active is not None else None)
-
-    def _named_ticket(self, name: str) -> Ticket:
-        from harness.kanban.ticket import TicketNotFoundError
-
-        found = self.ticket(name)
-        if found is None:
-            raise TicketNotFoundError(name)
-        return found
-
-    @mcp
-    @agent_tool
-    @noSessionLog
-    def set_wip_limit(self, stage: str, limit: int) -> Board:
-        """Set how many tickets stage holds before its count shows as over its limit."""
-        limits = {**self._saved_wip_limits, stage: limit}
-        self._repo.board_file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
-        return self
-
-    @mcp
-    @agent_tool
-    @noSessionLog
     def folders(self, path: str = "") -> list[str]:
         """List the folders inside path, a folder in the repository (its top when empty), as paths from the project, for a person choosing a workpath or a practice root. Installed packages, caches, and hidden folders hold no one's work, so they are left out."""
         return sorted(entry.path for entry in self._repo.file_manager.list(path).folders)
@@ -253,11 +201,15 @@ class Board:
     @mcp
     @agent_tool
     @noSessionLog
-    def help(self, practice: str, fidelity: str = "") -> Help:
-        """Return the overview, guidance, and rules of practice, or of its fidelity when one is named, with the stage that fidelity belongs to and its page on the forge."""
-        guidance = self.practice(practice)
-        subject = self._fidelity_of(guidance, fidelity) if fidelity else guidance
-        return Help(practice, fidelity, subject.stage.capitalize() if fidelity else "", subject, self._forge_page(practice, fidelity))
+    def help(self, slug: str) -> Help:
+        """Return the overview, guidance, and rules of the practice or fidelity slug names, such as stories or stories-story-map, with the stage a fidelity belongs to and its page on the forge."""
+        for practice in self._practices:
+            if practice.slug == slug:
+                return Help(practice, None)
+            fidelity = next((entry for entry in practice.fidelities if entry.slug == slug), None)
+            if fidelity is not None:
+                return Help(practice, fidelity)
+        raise PracticeNotFoundError(slug, "the board")
 
     def practice(self, key: str) -> PracticeGuidance:
         """The board's practice whose folder name is key, such as clean_engineering."""
@@ -265,26 +217,6 @@ class Board:
         if found is None:
             raise PracticeNotFoundError(key, "the board")
         return found
-
-    def wip_limit(self, stage: str) -> int:
-        return self._saved_wip_limits.get(stage, DEFAULT_WIP_LIMIT)
-
-    @property
-    def _saved_wip_limits(self) -> dict[str, int]:
-        path = self._repo.board_file
-        return json.loads(path.read_text(encoding="utf-8")).get("wip_limits", {}) if path.is_file() else {}
-
-    def _fidelity_of(self, guidance: PracticeGuidance, name: str) -> FidelityGuidance:
-        try:
-            return guidance.fidelities[name]
-        except KeyError as missing:
-            raise FidelityNotFoundError(name, guidance.key) from missing
-
-    def _forge_page(self, practice: str, fidelity: str) -> str:
-        slug = f"{practice}-{fidelity}"
-        if not fidelity or slug in FIDELITIES_WITHOUT_PAGE:
-            return f"{FORGE}/context-tools/{practice}.html"
-        return f"{FORGE}/fidelities/{slug}.html"
 
     def _build_columns(self) -> list[Column]:
         # The stage names come from the one place a fidelity's **Stage:** is read against, written as column titles.
@@ -333,12 +265,26 @@ class Complete(Column):
         return list(self.cards)
 
 
+@language_adapter(language="typescript", identity="name")
+@agent_toolset
 class Stage(Column):
-    """*Stage* is a column where work is done: every chosen practice's fidelity for it goes through its actions."""
+    """Show one stage of the board, the tickets at work in it, and how many it takes before it is over its limit."""
+
+    # Every chosen practice's fidelity for the stage goes through its actions. The stage keeps its own WIP limit in the
+    # board's file, `.sessions/_board.json`, beside the other stages' limits.
 
     def __init__(self, name: str, board: Board, actions: list[str]) -> None:
         super().__init__(name, board)
         self._actions = list(actions)
+
+    @classmethod
+    @tool_subject
+    def load(cls, stage: str) -> Stage:
+        """The stage of the current board named stage, such as Discovery."""
+        found = Board.current().column(stage)
+        if not isinstance(found, Stage):
+            raise NotAStageError(stage)
+        return found
 
     @property
     def actions(self) -> list[str]:
@@ -348,12 +294,6 @@ class Stage(Column):
     @data_field(key="work_required")
     def work_required_slugs(self) -> list[str]:
         return [fidelity.slug for fidelity in self.work_required]
-
-    @property
-    @data_field
-    def fidelities(self) -> dict[str, str]:
-        """Each fidelity's name by its slug, such as story_map for stories-story-map: the name board.help takes."""
-        return {fidelity.slug: fidelity.name for fidelity in self.work_required}
 
     @property
     @data_field
@@ -386,7 +326,7 @@ class Stage(Column):
     @property
     @data_field
     def wip_limit(self) -> int:
-        return self._board.wip_limit(self.name)
+        return self._saved_wip_limits.get(self.name, DEFAULT_WIP_LIMIT)
 
     @property
     @data_field
@@ -403,12 +343,31 @@ class Stage(Column):
     def done(self) -> list[Ticket]:
         return [ticket for ticket in self.cards if ticket.is_done]
 
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def set_wip_limit(self, limit: int) -> Stage:
+        """Set how many tickets this stage holds before its count shows as over its limit."""
+        limits = {**self._saved_wip_limits, self.name: limit}
+        self._board.repo.board_file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
+        return self
+
+    @property
+    def _saved_wip_limits(self) -> dict[str, int]:
+        """Every stage's limit a person has set, by stage name: one file holds them all."""
+        path = self._board.repo.board_file
+        return json.loads(path.read_text(encoding="utf-8")).get("wip_limits", {}) if path.is_file() else {}
+
 
 class Card(ABC):
     """*Card* is anything on the board that a person moves: a ticket or a backlog item."""
 
     def __init__(self, board: Board) -> None:
         self._board = board
+
+    @property
+    def board(self) -> Board:
+        return self._board
 
     @property
     @data_field
@@ -437,22 +396,25 @@ class Card(ABC):
 class Help:
     """The overview, guidance, and rules of a practice or one of its fidelities, with its stage and its page on the forge."""
 
-    def __init__(self, practice: str, fidelity: str, stage: str, subject: PracticeGuidance | FidelityGuidance, href: str) -> None:
+    def __init__(self, practice: PracticeGuidance, fidelity: FidelityGuidance | None) -> None:
         self._practice = practice
         self._fidelity = fidelity
-        self._stage = stage
-        self._subject = subject
-        self._href = href
+
+    @property
+    def _subject(self) -> PracticeGuidance | FidelityGuidance:
+        return self._fidelity or self._practice
 
     @property
     @data_field
     def practice(self) -> str:
-        return self._practice
+        """The key of the practice this help is about, or whose fidelity it is about, such as clean_engineering."""
+        return self._practice.key
 
     @property
     @data_field
     def fidelity(self) -> str:
-        return self._fidelity
+        """The name of the fidelity this help is about, such as story_map; empty on a practice's help."""
+        return self._fidelity.name if self._fidelity else ""
 
     @property
     @data_field
@@ -463,7 +425,8 @@ class Help:
     @property
     @data_field
     def stage(self) -> str:
-        return self._stage
+        """The column of the stage the fidelity belongs to, such as Discovery; empty on a practice's help."""
+        return self._fidelity.stage.capitalize() if self._fidelity else ""
 
     @property
     @data_field
@@ -483,7 +446,11 @@ class Help:
     @property
     @data_field
     def href(self) -> str:
-        return self._href
+        """Its page on the forge: a fidelity's own page, or its practice's page for a fidelity the forge has none for."""
+        page = f"{self._practice.key}-{self._fidelity.name}" if self._fidelity else ""
+        if not page or page in FIDELITIES_WITHOUT_PAGE:
+            return f"{FORGE}/context-tools/{self._practice.key}.html"
+        return f"{FORGE}/fidelities/{page}.html"
 
 
 class HelpRule:

@@ -171,11 +171,11 @@ describe('Display Board', () => {
       expect(toastsOf(page)).toEqual(['Move me moved to Discovery · Done'])
     })
 
-    it('should name a fidelity that was reviewed', async () => {
+    it('should name a fidelity that is done', async () => {
       const { page } = await board.page()
       board.logOn('billing-report', 'generate /work stories story_map markdown stories', 'validate Stories story_map', 'review Stories story_map')
       await page.reader.refresh()
-      expect(toastsOf(page)).toEqual(['stories-story-map reviewed on billing-report'])
+      expect(toastsOf(page)).toEqual(['stories-story-map done on billing-report'])
     })
 
     it('should say a ticket moved to the Backlog', async () => {
@@ -240,26 +240,26 @@ describe('Arrange Board And Details', () => {
 describe('Set Stage WIP Limit', () => {
   it('should save a whole number', async () => {
     const { page } = await board.page()
-    await page.board.submitWipLimit('Discovery', '4')
+    await page.board.stageNamed('Discovery')!.submitWipLimit('4')
     const saved = await new BoardAdapter(board.project.cdd).show()
     expect(saved.columns.find(column => column.name === 'Discovery')?.wip_limit).toBe(4)
   })
 
   it('should read the board again', async () => {
     const { page } = await board.page()
-    await page.board.submitWipLimit('Discovery', '4')
+    await page.board.stageNamed('Discovery')!.submitWipLimit('4')
     expect(page.board.stageNamed('Discovery')?.wipLimit).toBe(4)
   })
 
   it('should change nothing for a limit that is not a number', async () => {
     const { page, asked } = await board.page()
-    await page.board.submitWipLimit('Discovery', 'many')
+    await page.board.stageNamed('Discovery')!.submitWipLimit('many')
     expect(asked).toEqual([])
   })
 
   it('should send the header the server asks of a page on this machine', async () => {
     const { page } = await board.page()
-    await page.board.submitWipLimit('Discovery', '4')
+    await page.board.stageNamed('Discovery')!.submitWipLimit('4')
     expect(page.store.state.toasts).toEqual([])
   })
 })

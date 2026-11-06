@@ -1,10 +1,16 @@
 import type { ColumnData } from '@cdd/harness/kanban/board'
+import { StageClientGenerated, type StageData } from '@cdd/harness/kanban/stage'
 
 import type { BacklogItemClient } from '../backlog-item/backlog-item-client'
 import type { TicketClient } from '../ticket/ticket-client'
 import type { BoardPage } from './board-page'
 
-// A column has no generated class, because Python returns it as a shape inside the board.
+const limitFrom = (text: string): number | null => {
+  const limit = Number.parseInt(text, 10)
+  return limit >= 1 ? limit : null
+}
+
+// A column has no generated class, because Python returns it as a shape inside the board; a stage's tools are its own.
 export class ColumnClient {
   constructor(
     private readonly data: ColumnData,
@@ -25,11 +31,6 @@ export class ColumnClient {
 
   get workRequired(): string[] {
     return this.data.work_required ?? []
-  }
-
-  // Each fidelity's own name by its slug, such as story_map for stories-story-map: the name help takes.
-  get fidelities(): Record<string, string> {
-    return this.data.fidelities ?? {}
   }
 
   get formats(): Record<string, string[]> {
@@ -71,5 +72,19 @@ export class ColumnClient {
 
   get count(): number {
     return this.isBacklog ? this.items.length : this.everyTicket.length
+  }
+
+  // A stage's column holds every field of its stage, so its tools act on the stage the column shows.
+  private get stage(): StageClientGenerated {
+    return new StageClientGenerated(this.page.api, this.data as StageData)
+  }
+
+  // What a person typed becomes a limit only when it is a whole number of at least one.
+  async submitWipLimit(text: string): Promise<void> {
+    this.page.layout.cancelLimit()
+    const limit = limitFrom(text)
+    if (!limit || !this.isStage) return
+    await this.stage.setWipLimit(limit)
+    await this.page.reader.refresh()
   }
 }

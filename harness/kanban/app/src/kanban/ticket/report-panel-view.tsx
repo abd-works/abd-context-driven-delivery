@@ -1,10 +1,10 @@
-import { practiceOf } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { ReportPanel } from '../board/board-store'
 import { RuleView } from './report-rule-view'
 
 export function ReportPanelHeadView({ panel }: { panel: ReportPanel }) {
-  const title = panel.fidelity ? (practiceOf(panel.fidelity)?.name ?? panel.fidelity) : panel.ticket
+  const { page } = useBoard()
+  const title = panel.fidelity ? (page.board.practiceOf(panel.fidelity)?.name ?? panel.fidelity) : panel.ticket.name
   return (
     <div className="panel-words">
       <div className="panel-kind">
@@ -48,13 +48,12 @@ function ReportStandingView({ panel }: { panel: ReportPanel }) {
 
 export function ReportPanelBodyView({ panel }: { panel: ReportPanel }) {
   const { page, state } = useBoard()
-  const owner = page.board.tickets.find(ticket => ticket.name === panel.ticket)
-  const isOff = (owner?.isLocked ?? false) || !page.chat.canSend
+  const isOff = panel.ticket.isLocked || !page.chat.canSend
   return (
     <div className="panel-body report-body" key={state.board?.project}>
       <ReportStandingView panel={panel} />
       {panel.report.rules.length ? (
-        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : 'Ask the chat to fix all violations found in this report'} onClick={() => void page.fixReport(panel.ticket, panel.report)}>
+        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to send fixes' : 'Ask the chat to fix all violations found in this report'} onClick={() => void panel.ticket.fixReport(panel.report)}>
           Fix all violations
         </button>
       ) : null}

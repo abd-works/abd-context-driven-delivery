@@ -4,6 +4,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { BoardAdapter, type ColumnData } from '@cdd/harness/kanban/board'
+import { StageAdapter } from '@cdd/harness/kanban/stage'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
 import { CddProject } from 'test-utils/behavior-test/cdd-project'
 
@@ -19,7 +20,7 @@ class WipLimitsAdapterDriver implements WipLimitsDriver {
   }
 
   async setWipLimit(stage: string, limit: number): Promise<void> {
-    await this.board.setWipLimit(stage, limit)
+    await new StageAdapter(project.cdd, stage).setWipLimit(limit)
   }
 
   async limitOf(stage: string): Promise<number> {
