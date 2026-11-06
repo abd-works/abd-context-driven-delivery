@@ -21,13 +21,11 @@ def main() -> int:
         help="Practice and fidelity slugs to filter probes.",
     )
     args = parser.parse_args()
-    from harness.guidance.guidance import probe_guidance_actions, probe_guidance_instructions
+    from harness.guidance.guidance_probe import GuidanceProbe
     from harness.installation.installer import Installer
 
-    installer = Installer(repo=_REPO)
-    instructions = probe_guidance_instructions(args.guidance, installer)
-    actions = probe_guidance_actions(args.guidance, installer)
-    report = "\n\n".join((instructions, actions))
+    probe = GuidanceProbe.filtered_by(Installer(repo=_REPO), args.guidance)
+    report = "\n\n".join((probe.instructions(), probe.actions()))
     print(report)
     if any(line.lstrip("!").startswith("red") for line in report.splitlines()[:4]):
         return 1

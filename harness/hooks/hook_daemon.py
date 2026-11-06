@@ -20,11 +20,14 @@ for _entry in (_REPO, _REPO / "tools", _REPO / "cdd_guidance" / "practices", _RE
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
+from harness.hooks.running_process import RunningProcess  # noqa: E402
+
 _PORT_RANGE_START = 20000
 _PORT_RANGE_SIZE = 10000
 _SOURCE_STAMP_FILES = (
     Path("harness/hooks/hook_daemon.py"),
     Path("harness/hooks/hook_server.py"),
+    Path("harness/hooks/running_process.py"),
     Path("harness/guidance/rule.py"),
     Path("harness/guidance_actions/guidance_actions.py"),
 )
@@ -173,18 +176,9 @@ class HookDaemon:
             return
         deadline = time.time() + 3
         while time.time() < deadline:
-            if not self._process_is_alive(pid):
+            if not RunningProcess(pid).alive:
                 return
             time.sleep(0.05)
-
-    def _process_is_alive(self, pid: int) -> bool:
-        if pid <= 0:
-            return False
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            return False
-        return True
 
     def _publish_address(self, path: Path, port: int, repo: Path | None = None) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)

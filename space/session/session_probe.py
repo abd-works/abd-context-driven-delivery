@@ -30,7 +30,7 @@ def probe_session_log() -> dict[str, Any]:
 
 def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
     from space.session import Session
-    from space.session.chat_context import set_chat_context
+    from space.session.chat_pointer import ChatPointer
 
     try:
         Session.forget_current(repo)
@@ -40,14 +40,14 @@ def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
         chats.mkdir(parents=True, exist_ok=True)
         transcript = chats / "guidance-probe.md"
         transcript.write_text("guidance diagnostics probe\n", encoding="utf-8")
-        set_chat_context("guidance-probe", transcript, "1")
         Session.forget_current(repo)
 
         from generate.generate import Generate
         from validate.validate import Validate
 
-        Generate().generate(["bdd"])
-        Validate().validate(["bdd"])
+        with ChatPointer.serving(ChatPointer("guidance-probe", transcript, "1")):
+            Generate().generate(["bdd"])
+            Validate().validate(["bdd"])
 
         session = Session.current()
 

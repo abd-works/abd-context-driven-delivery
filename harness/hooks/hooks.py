@@ -77,6 +77,10 @@ class Hook(Destination):
         return marked
 
     @classmethod
+    def companion_flags(cls) -> tuple[str, ...]:
+        return (*super().companion_flags(), cls.disabled_flag)
+
+    @classmethod
     def disabled_on(cls, operation: Any) -> bool:
         """True when ``@Hook(..., disabled=True)`` turned the hook on this operation off."""
         return bool(getattr(operation, cls.disabled_flag, False))

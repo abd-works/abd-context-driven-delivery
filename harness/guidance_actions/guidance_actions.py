@@ -183,11 +183,11 @@ class GuidanceAction:
         return operation
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
-        from harness.agent_tools.agent_tools import GuidanceAgentOperation
+        from harness.agent_tools.agent_tools import AgentToolMark, GuidanceAgentOperation
 
         discovered: dict[str, AgentOperation] = {}
         for name, member in self._marked_members(type(self)):
-            if getattr(member, "_is_agent_tool", False):
+            if AgentToolMark.marks(member):
                 discovered[name] = GuidanceAgentOperation(
                     name=name,
                     callable=self._bound_callable(name, member),

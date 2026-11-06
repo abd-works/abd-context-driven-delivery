@@ -26,14 +26,13 @@ from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
 from harness.mcp.mcp_server import McpServer
 from space.repo.repo import Repo
 from space.session import Session
+from space.session.chat_pointer import ChatPointer
 from space.session.session import PracticeRootInContextError, SessionNameRequiredError
 from space.session.throwaway_project import ProjectCall
 from space.work_state import WorkState
 
 
 def _bind_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat") -> Path:
-    from space.session.chat_context import set_chat_context
-
     chats = session.session_path / "chats"
     chats.mkdir(parents=True, exist_ok=True)
     transcript = chats / f"{chat_id}.md"
@@ -41,7 +40,6 @@ def _bind_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat
     os.environ["CDD_CONVERSATION_ID"] = chat_id
     os.environ["CDD_TRANSCRIPT_PATH"] = str(transcript)
     os.environ["CDD_TRANSCRIPT_LINES"] = "1"
-    set_chat_context(chat_id, transcript, "1")
     return transcript
 
 
@@ -553,9 +551,6 @@ with description("a session"):
                 work.mkdir()
                 Session.new("alpha", work, bare)
                 self.bare_session = Session.current()
-                from space.session.chat_context import clear_chat_context
-
-                clear_chat_context()
                 os.environ.pop("CDD_CONVERSATION_ID", None)
                 os.environ.pop("CDD_TRANSCRIPT_PATH", None)
                 self.bare_session.log_action("sketch", [work / "x.py"])
@@ -604,7 +599,7 @@ with description("a session"):
             with it("should point at the chat id, the transcript file, and the line numbers"):
                 transcript = self.work / "chat.md"
                 transcript.write_text("hello\n", encoding="utf-8")
-                self.session.note_chat("chat-1", transcript, "1-2")
+                self.session.note_chat(ChatPointer("chat-1", transcript, "1-2"))
                 self.session.log_action("sketch", [self.edited])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
                 expect("chat-1" in log and str(transcript) in log and "1-2" in log).to(equal(True))
@@ -721,7 +716,7 @@ with description("a loop"):
                 encoding="utf-8",
             )
             chat_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-            self.session.note_chat(chat_id, chat, "1")
+            self.session.note_chat(ChatPointer(chat_id, chat, "1"))
             self.session.log_action("validate", [self.work / "cart.py"])
             body = Session.read_loop(self.opened.number)
             expect("loop read" in body and "validate" in body).to(equal(True))
@@ -770,10 +765,9 @@ with description("an action"):
             self.session.log_action("sketch", [self.work / "cart.py"])
             self.chat = self.work / "chat.md"
             self.chat.write_text("chat body\n", encoding="utf-8")
-            self.session.note_chat("chat-9", self.chat, "4")
 
         with it("should add that chat onto that action's log line"):
-            self.session.append_chat("sketch", self.chat)
+            self.session.append_chat("sketch", ChatPointer("chat-9", self.chat, "4"))
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
             expect("chat-9" in log and "4" in log).to(equal(True))
 

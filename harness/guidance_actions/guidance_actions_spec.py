@@ -284,7 +284,6 @@ with description("GuidanceAction"):
         from unittest.mock import patch
 
         from space.session import Session
-        from space.session.chat_context import clear_chat_context
 
         tmp = Path(tempfile.mkdtemp(prefix="guidance-action-session-log-"))
         (tmp / ".git").mkdir()
@@ -307,7 +306,6 @@ with description("GuidanceAction"):
         }
         # The chat this server names stays with this example only; later specs read the environment's chat.
         with patch.dict(os.environ, chat):
-            clear_chat_context()
             try:
                 McpServer(repo=tmp, project=work)
                 Session.forget_current()
@@ -318,7 +316,6 @@ with description("GuidanceAction"):
                 action.run(lambda item: None, action="generate")
                 logged = log.read_text(encoding="utf-8")
             finally:
-                clear_chat_context()
                 Session.forget_current()
         expect(logged).to(contain("generate"))
 

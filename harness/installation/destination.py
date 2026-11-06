@@ -10,27 +10,57 @@ InstallTracker = Callable[[Path], None]
 
 _NO_CATALOG_FLAG = "_no_catalog"
 _NO_DEPLOY_FLAG = "_no_deploy"
-_LANGUAGE_ADAPTERS_FLAG = "_language_adapters"
-_IDENTITY_FLAG = "_language_adapter_identity"
-_EDITS_FLAG = "_language_adapter_edits"
 _DATA_FIELD_FLAG = "_data_field"
 
-MARK_FLAGS = (
-    "_skill",
-    "_command",
-    "_rules",
-    "_mcp",
-    "_hook",
-    "_echo",
-    "_is_agent_instructions",
-    "_is_agent_tool",
-    "_is_toolset_collection",
-    "_skill_name",
-    "_command_name",
-    "_hook_name",
-)
-"""The attributes the install marks set on an operation. Code that wraps a marked operation, such as a collected or
-markdown property, copies these so the wrapper installs the way the operation does."""
+
+class Mark:
+    """A decorator that marks the operation or class it decorates, by setting its ``flag`` on it, so install and
+    discovery can find what it marks. Each kind of mark is a subclass that names its flag and reads it with
+    ``marks``; together the subclasses are the one list of marks."""
+
+    flag = ""
+    # A wrapper of a marked operation, such as a collected or markdown property, copies the marks whose kinds say so,
+    # so the wrapper installs the way the operation does.
+    copied = True
+    _kinds: list[type[Mark]] = []
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if cls.flag and all(kind.flag != cls.flag for kind in Mark._kinds):
+            Mark._kinds.append(cls)
+
+    def __new__(cls, target: Any = None):
+        mark = object.__new__(cls)
+        if callable(target):
+            return mark.annotate(target)
+        return mark
+
+    @classmethod
+    def marks(cls, target: Any) -> bool:
+        """True when this kind of mark is on target."""
+        return bool(getattr(target, cls.flag, False))
+
+    @classmethod
+    def copied_flags(cls) -> tuple[str, ...]:
+        """Every attribute a wrapper copies from the operation it wraps: each copied kind's flag and the attributes that
+        go with it, such as the name a skill mark gives."""
+        flags: list[str] = []
+        for kind in Mark._kinds:
+            if kind.copied:
+                flags.extend((kind.flag, *kind.companion_flags()))
+        return tuple(dict.fromkeys(flags))
+
+    @classmethod
+    def companion_flags(cls) -> tuple[str, ...]:
+        """The other attributes this kind of mark sets beside its flag."""
+        return ()
+
+    def annotate(self, target: Any) -> Any:
+        setattr(target, self.flag, True)
+        return target
+
+    def __call__(self, target: Any) -> Any:
+        return self.annotate(target)
 
 
 def noCatalog(target: Any = None) -> Any:
@@ -65,7 +95,7 @@ def noDeploy(target: Any = None) -> Any:
     return mark(target)
 
 
-def language_adapter(*, language: str, identity: str | tuple[str, ...] = "") -> Callable[[Any], Any]:
+class LanguageAdapter:
     """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them.
 
     identity names the data fields (`@data_field`) that hold the object's name, one for each argument its
@@ -74,42 +104,56 @@ def language_adapter(*, language: str, identity: str | tuple[str, ...] = "") -> 
     the one board, has none.
     """
 
-    def mark(toolset: Any) -> Any:
-        setattr(toolset, _LANGUAGE_ADAPTERS_FLAG, (*languages_of(toolset), language))
-        if identity:
-            setattr(toolset, _IDENTITY_FLAG, (identity,) if isinstance(identity, str) else tuple(identity))
+    flag = "_language_adapters"
+    identity_flag = "_language_adapter_identity"
+
+    def __init__(self, *, language: str, identity: str | tuple[str, ...] = "") -> None:
+        self.language = language
+        self.identity = (identity,) if isinstance(identity, str) and identity else tuple(identity or ())
+
+    def __call__(self, toolset: Any) -> Any:
+        setattr(toolset, self.flag, (*self.languages_of(toolset), self.language))
+        if self.identity:
+            setattr(toolset, self.identity_flag, self.identity)
         return toolset
 
-    return mark
+    @classmethod
+    def languages_of(cls, toolset: Any) -> tuple[str, ...]:
+        """The languages a toolset's class is marked for."""
+        return tuple(getattr(toolset, cls.flag, ()))
+
+    @classmethod
+    def identity_fields_of(cls, toolset: Any) -> tuple[str, ...]:
+        """The fields of the toolset's data that name one object, or none when its tools load none by name."""
+        return tuple(getattr(toolset, cls.identity_flag, ()))
 
 
-def languages_of(toolset: Any) -> tuple[str, ...]:
-    """The languages a toolset's class is marked for."""
-    return tuple(getattr(toolset, _LANGUAGE_ADAPTERS_FLAG, ()))
+language_adapter = LanguageAdapter
 
 
-def identity_fields_of(toolset: Any) -> tuple[str, ...]:
-    """The fields of the toolset's data that name one object, or none when its tools load none by name."""
-    return tuple(getattr(toolset, _IDENTITY_FLAG, ()))
-
-
-def edits(*fields: str) -> Callable[[Any], Any]:
+class Edits:
     """Name the fields of the object's data this operation changes, when its argument names do not match them.
 
     A generated view shows a field as an input only where an operation changes it, so this is how an operation whose
     argument is called something else, such as `rename(new_title)`, still makes `title` editable.
     """
 
-    def mark(operation: Any) -> Any:
-        setattr(operation, _EDITS_FLAG, fields)
+    flag = "_language_adapter_edits"
+
+    def __init__(self, *fields: str) -> None:
+        self.fields = fields
+
+    def __call__(self, operation: Any) -> Any:
+        setattr(operation, self.flag, self.fields)
         return operation
 
-    return mark
+    @classmethod
+    def fields_of(cls, operation: Any) -> tuple[str, ...]:
+        """The fields an operation's `@edits` mark names, or none."""
+        return tuple(getattr(operation, cls.flag, ()))
 
 
-def edited_fields_of(operation: Any) -> tuple[str, ...]:
-    """The fields an operation's `@edits` mark names, or none."""
-    return tuple(getattr(operation, _EDITS_FLAG, ()))
+edits = Edits
 
 
 def data_field(target: Any = None, *, key: str = "") -> Any:
@@ -180,10 +224,8 @@ def omitted_from_deploy(obj: Any) -> bool:
     return bool(fn is not None and getattr(fn, _NO_DEPLOY_FLAG, False))
 
 
-class Destination:
+class Destination(Mark):
     """Base annotation to define the installation destination of a tool."""
-
-    flag = ""
 
     def annotate(self, fn: Callable[..., Any]) -> Callable[..., Any]:
         setattr(fn, self.flag, True)
@@ -198,8 +240,24 @@ class Destination:
         operation carries no such mark."""
         return str(getattr(operation, f"{cls.flag}_name", "") or "")
 
-    def __call__(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        return self.annotate(fn)
+    @classmethod
+    def companion_flags(cls) -> tuple[str, ...]:
+        return (f"{cls.flag}_name",)
+
+
+class NamedDestination(Destination):
+    """A destination whose mark may name what it installs: ``@skill("name")``, ``@skill(name="name")``, or bare
+    ``@skill`` for the operation's own name."""
+
+    def __new__(cls, fn: Any = None, name: str | None = None):
+        mark = object.__new__(cls)
+        if isinstance(fn, str):
+            mark.name = fn
+            return mark
+        mark.name = name
+        if callable(fn):
+            return mark.annotate(fn)
+        return mark
 
 
 class Installation:
