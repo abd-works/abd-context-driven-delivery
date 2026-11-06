@@ -13,6 +13,12 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable, NamedTuple
 
+_REPO = Path(__file__).resolve().parents[1]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from harness.hooks.running_process import RunningProcess  # noqa: E402
+
 GRAPH_WEB_PORTS: tuple[int, ...] = (3000,)
 GRAPH_APP_PORTS: tuple[int, ...] = (5173, 5174, 5175, 5176)
 
@@ -75,21 +81,8 @@ class RepoProcesses:
             heard.update(ports.get(item, []))
         return sorted(heard)
 
-    def alive(self, pid: int) -> bool:
-        if pid <= 0:
-            return False
-        if sys.platform == "win32":
-            return self._windows_alive(pid)
-        try:
-            os.kill(pid, 0)
-        except PermissionError:
-            return True
-        except OSError:
-            return False
-        return True
-
     def stop(self, pid: int) -> None:
-        if pid <= 0 or pid == os.getpid() or not self.alive(pid):
+        if pid <= 0 or pid == os.getpid() or not RunningProcess(pid).alive:
             return
         if sys.platform == "win32":
             subprocess.run(
@@ -272,15 +265,6 @@ class RepoProcesses:
                 continue
             ports.setdefault(int(pid_match.group(1)), set()).add(int(port_match.group(1)))
         return {pid: sorted(values) for pid, values in ports.items()}
-
-    def _windows_alive(self, pid: int) -> bool:
-        import ctypes
-
-        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
-        if not handle:
-            return False
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
 
 
 class PingReport:
