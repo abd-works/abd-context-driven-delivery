@@ -781,14 +781,18 @@ with description("an action"):
     # (S) Session --> Record Session Action
     with context("that names an action"):
         with it("should log that action"):
-            GuidanceAction().run("a note", lambda item: None, action="sketch")
+            action = GuidanceAction()
+            action._bind_guidance("a note")
+            action.run(lambda item: None, action="sketch")
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
             expect("sketch" in log).to(equal(True))
 
         with it("should log workpath and practice context for listed guidance"):
             from harness.guidance_actions import GuidanceAction
 
-            GuidanceAction().run(["bdd"], lambda item: None, action="generate")
+            action = GuidanceAction()
+            action._bind_guidance(["bdd"])
+            action.run(lambda item: None, action="generate")
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
             expect("generate" in log and str(self.work) in log and "bdd" in log).to(equal(True))
 
@@ -806,7 +810,9 @@ with description("an action"):
                 _bind_mandatory_chat(self.session, self.work, "mcp-host-chat")
                 McpServer(repo=self.repo, project=self.work)
                 Session.forget_current()
-                GuidanceAction().run(["bdd"], lambda _item: None, action="generate")
+                action = GuidanceAction()
+                action._bind_guidance(["bdd"])
+                action.run(lambda _item: None, action="generate")
                 Validate().validate(["bdd"])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
                 expect(
@@ -840,7 +846,9 @@ with description("an action"):
         with it("should leave session.log unchanged"):
             log_path = self.session.session_path / "session.log"
             before = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
-            GuidanceAction().run("a note", lambda item: None)
+            action = GuidanceAction()
+            action._bind_guidance("a note")
+            action.run(lambda item: None)
             after_log = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
             expect(after_log).to(equal(before))
 

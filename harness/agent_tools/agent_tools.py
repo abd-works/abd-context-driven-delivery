@@ -1020,21 +1020,18 @@ class AgentTool(AgentToolDestination):
             return True
         return self.install_to_mcp
 
-    def log_session_invocation(
-        self,
-        arguments: dict[str, Any] | None,
-        *,
-        repo_path: Path | str | None = None,
-    ) -> None:
+    def log_session_invocation(self, arguments: dict[str, Any] | None) -> None:
+        """Log the call in the session it works in: a guidance action's own session, which a board command names, or
+        else the chat's current session."""
         if not self.should_log_session_invocation(arguments):
             return
         from space.session import Session
         from space.session.chat_context import apply_chat_context
 
-        Session.refresh_current_from_repo(repo_path)
-        session = Session.current()
-        apply_chat_context(session)
         payload = arguments or {}
+        call_session = getattr(self.toolset, "call_session", None)
+        session = call_session(payload) if callable(call_session) else Session.current()
+        apply_chat_context(session)
         logged_args = {
             key: value
             for key, value in payload.items()
@@ -1170,31 +1167,20 @@ class GuidanceAgentOperation(AgentOperation):
 
     def invoke(self, arguments: dict[str, Any] | None = None) -> Any:
         toolset = self.toolset
-        if hasattr(toolset, "clear_session_action_log"):
-            toolset.clear_session_action_log()
+        toolset.start_call()
         return super().invoke(arguments)
 
-    def log_session_invocation(
-        self,
-        arguments: dict[str, Any] | None,
-        *,
-        repo_path: Path | str | None = None,
-    ) -> None:
+    def log_session_invocation(self, arguments: dict[str, Any] | None) -> None:
+        """Log the call as its action, in the session the action works in once it has bound the call's guidance."""
         if not self.should_log_session_invocation(arguments):
             return
         toolset = self.toolset
         action = toolset.session_action_for_operation(self.name)
         if not action:
             return
-        from space.session import Session
         from space.session.chat_context import apply_chat_context
 
-        Session.refresh_current_from_repo(repo_path)
-        session = Session.current()
-        apply_chat_context(session)
-        payload = dict(arguments or {})
-        if "guidance" in payload:
-            toolset._bind_guidance(payload.get("guidance"))
+        apply_chat_context(toolset.call_session(dict(arguments or {})))
         toolset._log_running_action(action)
 
 
@@ -1252,8 +1238,8 @@ class AgentInstructions(AgentTool):
         call while the MCP server runs, so each call starts its own line in the session log."""
         payload = dict(arguments or {})
         toolset = self.toolset
-        if hasattr(toolset, "clear_session_action_log"):
-            toolset.clear_session_action_log()
+        if hasattr(toolset, "start_call"):
+            toolset.start_call()
         self.log_session_invocation(payload)
         if self.name == "instructions" and hasattr(toolset, "instructions"):
             return toolset.instructions
@@ -1261,8 +1247,6 @@ class AgentInstructions(AgentTool):
 
     def _expanded_reply(self, arguments: dict[str, Any]) -> str:
         toolset = self.toolset
-        if hasattr(toolset, "begin") and "guidance" in arguments:
-            toolset.begin(arguments["guidance"])
         expanded = AgentInstructions.for_callable(self.callable, toolset).expand({}, arguments)
         body = (expanded.instructions or "").strip()
         doc = (inspect.getdoc(self.callable) or "").strip()
