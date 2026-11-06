@@ -19,7 +19,7 @@ from expects import contain, equal, expect
 from mamba import description, it
 
 from harness.agent_tools.agent_tools_diagnostics import AgentToolsDiagnostics
-from harness.mcp.mcp_server import McpHost, McpOperationDefinition
+from harness.mcp.mcp_server import McpHost
 from harness.mcp.spec_support import SpecServer
 from harness.agent_tools.agent_tools_probe import (
     AGENT_TOOLS_PROBE_SECTION,
@@ -96,7 +96,6 @@ with description("mcp tools diagnostics"):
     with it("should treat agent_tools_diagnostics as kind tool for MCP enrollment"):
         tool = AgentToolsDiagnostics().tools["agent_tools_diagnostics"]
         expect(tool.kind).to(equal("tool"))
-        expect(McpOperationDefinition.from_tool(tool).kind).to(equal("tool"))
 
     with it("should complete agent-tools-diagnostics through the cdd server within two minutes"):
         elapsed, text = _call_agent_tools_diagnostics()

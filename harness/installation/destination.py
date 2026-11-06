@@ -123,7 +123,11 @@ def data_fields_of(cls: type) -> dict[str, property]:
 
 
 def data_of(value: Any) -> Any:
-    """value as plain JSON data: an object with marked properties as its fields, each object it holds as its own data."""
+    """value as plain JSON data: an object with marked properties as its fields, each object it holds as its own data.
+
+    This is the one way an object becomes data, for MCP results and every other JSON answer, so a path reads the same
+    wherever it is sent: with forward slashes. A git commit still states its data in ``to_mcp_result`` until it marks
+    its properties."""
     if isinstance(value, Path):
         return value.as_posix()
     if isinstance(value, dict):
@@ -133,6 +137,9 @@ def data_of(value: Any) -> Any:
     fields = data_fields_of(type(value)) if not isinstance(value, type) else {}
     if fields:
         return {key: data_of(field.fget(value)) for key, field in fields.items()}
+    stated = getattr(value, "to_mcp_result", None)
+    if callable(stated) and not isinstance(value, type):
+        return data_of(stated())
     return value
 
 

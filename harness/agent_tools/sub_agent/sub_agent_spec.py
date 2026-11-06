@@ -8,25 +8,26 @@ if str(_REPO_ROOT) not in sys.path:
 
 from expects import contain, equal, expect
 from harness.agent_tools.sub_agent.fixtures import MarkedActionExample, MarkedToolExample
-from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE
+from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE, marked_as_sub_agent
 from harness.agent_tools.sub_agent.sub_agent import SubAgent
 from mamba import context, description, it
 
 
 with description("SubAgent toolset"):
-    with context("manifest signature"):
-        with it("exposes sub_agent as an action"):
-            entry = SubAgent.manifest.signature["sub_agent"]
-            expect(entry["kind"]).to(equal("action"))
+    with context("with its tools listed"):
+        with it("exposes sub_agent as instructions"):
+            tool = AgentToolSet.instantiate(SubAgent).tools["sub_agent"]
+            expect(tool.kind).to(equal("instructions"))
 
     with context("sub_agent instructions"):
         with it("tells the caller to launch a non-blocking sub-agent"):
-            instructions = SubAgent.manifest.signature["sub_agent"]["instructions"]
+            instructions = "\n".join(AgentToolSet.instantiate(SubAgent).tools["sub_agent"].prompt)
             expect(instructions).to(contain("run_in_background"))
             expect(instructions).to(contain("generalPurpose"))
 
         with it("includes the delegated instructions placeholder"):
-            instructions = SubAgent.manifest.signature["sub_agent"]["instructions"]
+            instructions = "\n".join(AgentToolSet.instantiate(SubAgent).tools["sub_agent"].prompt)
             expect(instructions).to(contain("{{instructions}}"))
 
 
@@ -37,11 +38,9 @@ with description("@subAgent mark"):
             expect(tool.description).to(contain(SUB_AGENT_CALLER_PREAMBLE))
             expect(tool.description).to(contain("Run the focused check."))
 
-        with it("exposes sub_agent kind in the manifest"):
-            entry = MarkedToolExample.manifest.signature["run_check"]
-            expect(entry["kind"]).to(equal("sub_agent"))
-            expect(entry["launch"]).to(equal("non_blocking"))
-            expect(entry["returns"]).to(equal("str"))
+        with it("marks the tool as launched on a sub-agent"):
+            tool = MarkedToolExample().operations["run_check"]
+            expect(marked_as_sub_agent(tool.callable)).to(equal(True))
 
     with context("on @agent_instructions"):
         with it("prepends delegation instructions when expanded"):
@@ -53,7 +52,6 @@ with description("@subAgent mark"):
             expect(expanded.instructions).to(contain("Plan work for refactor auth"))
             expect(expanded.instructions).to(contain("Break the task into steps."))
 
-        with it("exposes sub_agent kind in the manifest"):
-            entry = MarkedActionExample.manifest.signature["plan_work"]
-            expect(entry["kind"]).to(equal("sub_agent"))
-            expect(entry["launch"]).to(equal("non_blocking"))
+        with it("marks the instructions as launched on a sub-agent"):
+            tool = MarkedActionExample().instructions["plan_work"]
+            expect(marked_as_sub_agent(tool.callable)).to(equal(True))

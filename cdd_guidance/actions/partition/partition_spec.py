@@ -50,7 +50,7 @@ with description("Partition kit on hosts"):
     with it("should not expose partition on practice Guidance"):
         cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
         practice = cls()
-        expect("partition" in practice.agent_tools).to(equal(False))
+        expect("partition" in practice.tools).to(equal(False))
 
 
 with description("a partition action"):

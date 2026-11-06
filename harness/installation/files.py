@@ -316,8 +316,6 @@ class FileInstallation(Installation):
         if schema and schema not in parts[0]:
             parts.append(schema)
         if self.mcp_mode:
-            from harness.mcp.mcp_server import McpOperationDefinition
-
             fidelity_parts = (
                 self._fidelity_invoke_parts(toolset)
                 if tool.name == "instructions"
@@ -326,7 +324,7 @@ class FileInstallation(Installation):
             if fidelity_parts:
                 parts.extend(fidelity_parts)
             else:
-                parts.append(McpOperationDefinition.from_tool(tool).invoke_line())
+                parts.append(tool.invoke_line())
         elif self._needs_shell_invoke(tool, kind):
             parts.append(self._shell_invoke_line(tool))
         text = self.render("\n\n".join(p for p in parts if p), member, toolset)
