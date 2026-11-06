@@ -7,7 +7,6 @@ Stage column heads that name a catalog example link to that example.
 from __future__ import annotations
 
 import base64
-import functools
 import html
 import json
 import re
@@ -219,8 +218,9 @@ def approach_principle_grid(
 ) -> str:
     """Static board under one approach principle. ``kind`` is descriptions, windows, spec, or tickets."""
     by_name = {t["toolset_name"]: t for t in practices}
-    row_order = ("stories", "ddd", "ux", "clean_engineering", "bdd")
-    rows = [by_name[name] for name in row_order if name in by_name]
+    from harness.guidance.practice_catalogue import PracticeCatalogue
+
+    rows = [by_name[name] for name in PracticeCatalogue.keys() if name in by_name]
 
     def practice_href(tool: dict) -> str:
         return tool.get("href") or f"context-tools/{tool['toolset_name']}.html"
@@ -1844,16 +1844,11 @@ _PE_TAB_LABELS = {
 
 def _practice_fidelities(practice: str) -> list:
     """The live fidelities of the practice whose toolset name is ``practice``, in the order the practice declares them."""
-    practice_class = _practice_classes().get(practice)
-    return list(practice_class().fidelities.entries.values()) if practice_class else []
+    from harness.guidance.practice_catalogue import PracticeCatalogue
 
-
-@functools.cache
-def _practice_classes() -> dict[str, type]:
-    """Each catalogued practice class by toolset name. Discovery walks the install catalog, so it runs once per process."""
-    from harness.catalog_generator.catalog_generator import discover_context_tools
-
-    return {entry.toolset_name(): entry.cls for entry in discover_context_tools()}
+    if not PracticeCatalogue.has(practice):
+        return []
+    return list(PracticeCatalogue.practice(practice).fidelities.entries.values())
 
 
 def _opening_of(fidelity) -> str:

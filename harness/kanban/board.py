@@ -7,10 +7,11 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 from cdd_guidance.practices.stages import DISCOVERY, IMPLEMENTATION, SPECIFICATION
@@ -76,7 +77,6 @@ class Board:
     # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
     # Every ticket is in exactly one column; the board stores no ticket state.
 
-    _built_practices: ClassVar[tuple[PracticeGuidance, ...] | None] = None
 
     def __init__(self, repo: Repo, practices: list[PracticeGuidance]) -> None:
         self._repo = repo
@@ -88,7 +88,7 @@ class Board:
         """The board of the repository at repo_root, with every practice chosen."""
         from space.repo.repo import Repo
 
-        return cls(Repo(repo_root), list(cls._every_practice()))
+        return cls(Repo(repo_root), list(PracticeCatalogue.practices()))
 
     @classmethod
     @tool_subject
@@ -97,20 +97,6 @@ class Board:
         project from each request's X-CDD-Project header and runs the call inside working_on(project). A chat in a
         ticket's worktree reads the board of the project's main checkout, where every ticket's session lives."""
         return cls.load(board_checkout())
-
-    @classmethod
-    def _every_practice(cls) -> tuple[PracticeGuidance, ...]:
-        """Built once per process: the practices do not change between tool calls, and building them took about 30 ms
-        on every call."""
-        if cls._built_practices is None:
-            from bdd.bdd import Bdd
-            from clean_engineering.clean_engineering import CleanEngineering
-            from ddd.ddd import Ddd
-            from stories.stories import Stories
-            from ux.ux import Ux
-
-            Board._built_practices = (Stories(), Ddd(), Ux(), CleanEngineering(), Bdd())
-        return Board._built_practices
 
     @property
     def repo(self) -> Repo:

@@ -13,7 +13,6 @@ from pathlib import Path
 from harness.graph.schema_edges import _SEMANTIC
 
 _ROOT = Path(__file__).resolve().parents[2]
-_PRACTICES = ("stories", "clean_engineering", "ddd", "bdd", "ux")
 
 # Practice → CE practice whose schema anchors ``is: module|class|…`` resolve against.
 _CE_EXTENSION: dict[str, str] = {"ddd": "clean_engineering"}

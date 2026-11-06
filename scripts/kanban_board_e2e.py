@@ -1,14 +1,19 @@
 """End to end: real Claude Code, the cdd-board mod, and the real cdd MCP server, in a fresh project with one ticket
 whose Discovery is done. Run after scripts/install.py --ide Claude. Prints the status line, toasts, and three turns."""
-import json, shutil, subprocess, time
+import json, shutil, subprocess, sys, time
 from pathlib import Path
+_REPO = Path(__file__).resolve().parents[1]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+from harness.guidance.practice_catalogue import PracticeCatalogue
 project = Path("/tmp/e2e-project"); shutil.rmtree(project, ignore_errors=True)
 (project / ".git").mkdir(parents=True)
 ticket = project / ".sessions" / "pet-visits"; ticket.mkdir(parents=True)
 (project / ".sessions" / "session.json").write_text(json.dumps({"session": "pet-visits"}))
 (ticket / "session.json").write_text(json.dumps({"name": "pet-visits", "title": "Pet visits", "scope": "feature"}))
 lines = []
-for practice, cls, fidelity in [("stories","Stories","story_map"),("ddd","Ddd","bounded_context"),("ux","Ux","ia"),("clean_engineering","CleanEngineering","modules"),("bdd","Bdd","behavior")]:
+for guidance in PracticeCatalogue.practices():
+    practice, cls, fidelity = guidance.key, type(guidance).__name__, next(iter(guidance.fidelities.entries))
     lines += [f"2026-10-31T01:00:00Z generate /work {practice} {fidelity} markdown {practice} no-chat",
               f"2026-10-31T01:00:01Z validate {cls} {fidelity} no-chat",
               f"2026-10-31T01:00:02Z review /work {practice} {fidelity} markdown {practice} no-chat"]

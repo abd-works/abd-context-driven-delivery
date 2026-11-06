@@ -10,9 +10,9 @@ from harness.installation.destination import noDeploy
 from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 from harness.guidance import Rule
+from harness.guidance.practice_catalogue import PracticeCatalogue
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
-_GRAPH_PRACTICES = frozenset({"clean_engineering", "ddd", "stories", "bdd", "ux"})
 
 
 class PathsNotFoundError(FileNotFoundError):
@@ -147,7 +147,7 @@ class Validate(GuidanceAction):
 
         workspace = self._validate_workspace()
         graph = Graph()
-        graph.load_files(str(workspace), sorted(_GRAPH_PRACTICES), edited)
+        graph.load_files(str(workspace), list(PracticeCatalogue.keys()), edited)
         return Path(graph.write_json(str(self._session_path() / "edited-graph.json")))
 
     def _workspace_relative(self, paths: list[str] | None) -> list[str]:
@@ -210,7 +210,7 @@ class Validate(GuidanceAction):
             for item in self.listed()
             if not isinstance(item, str)
         ]
-        return [name for name in names if name in _GRAPH_PRACTICES]
+        return [name for name in names if PracticeCatalogue.has(name)]
 
     def _session_path(self) -> Path:
         return Path(self.acting_session().session_path)

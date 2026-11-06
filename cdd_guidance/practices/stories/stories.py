@@ -10,6 +10,8 @@ from harness.guidance.guidance import PracticeGuidance
 class Stories(PracticeGuidance):
     """# Instructions"""
 
+    sketch_titles = ("stories:",)
+
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
         "name": "Stories",

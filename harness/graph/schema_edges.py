@@ -12,7 +12,6 @@ from functools import lru_cache
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
-_PRACTICES = ("stories", "clean_engineering", "ddd", "bdd", "ux")
 
 # Child-list edges. _link records these. The sync records the other schema fields.
 _CHILD_LISTS = {
@@ -358,7 +357,9 @@ def relationship_kinds_for_patterns(active_patterns: tuple[str, ...]) -> dict[st
 @lru_cache(maxsize=1)
 def _fields() -> tuple[SchemaField, ...]:
     found: list[SchemaField] = []
-    for practice in _PRACTICES:
+    from harness.guidance.practice_catalogue import PracticeCatalogue
+
+    for practice in PracticeCatalogue.keys():
         path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
         if path.is_file():
             found.extend(_parse(path.read_text(encoding="utf-8")))

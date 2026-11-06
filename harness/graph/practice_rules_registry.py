@@ -8,14 +8,6 @@ from functools import lru_cache
 from harness.graph.language_for_node import language_for_node
 from harness.graph.practice_rule import PracticeGraphRule
 
-_PRACTICE_RULES = {
-    "clean_engineering": "cdd_guidance.practices.clean_engineering.rules",
-    "stories": "cdd_guidance.practices.stories.rules",
-    "ddd": "cdd_guidance.practices.ddd.rules",
-    "bdd": "cdd_guidance.practices.bdd.rules",
-    "ux": "cdd_guidance.practices.ux.rules",
-}
-
 _CE_CHANNEL_RULES = {
     "drawio": "cdd_guidance.practices.clean_engineering.model.drawio.rules",
 }
@@ -40,10 +32,11 @@ def _load_module_rules(module_path: str) -> dict[str, PracticeGraphRule]:
 
 @lru_cache(maxsize=None)
 def graph_rules_for_practice(practice: str) -> dict[str, PracticeGraphRule]:
-    path = _PRACTICE_RULES.get(practice)
-    if path is None:
+    from harness.guidance.practice_catalogue import PracticeCatalogue
+
+    if not PracticeCatalogue.has(practice):
         return {}
-    return _load_module_rules(path)
+    return _load_module_rules(f"{PracticeCatalogue.module_of(practice)}.rules")
 
 
 @lru_cache(maxsize=None)

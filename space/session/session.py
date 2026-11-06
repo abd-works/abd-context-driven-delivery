@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Callable
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.installation.destination import data_field, language_adapter
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 from tools.file_manager.file_manager import FileEntry, FileManager, FileText
@@ -347,15 +348,6 @@ class PracticeSessionOutput:
 
 
 
-_PRACTICE_TYPES = {
-    "stories": "cdd_guidance.practices.stories.stories:Stories",
-    "clean_engineering": "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering",
-    "ddd": "cdd_guidance.practices.ddd.ddd:Ddd",
-    "bdd": "cdd_guidance.practices.bdd.bdd:Bdd",
-    "ux": "cdd_guidance.practices.ux.ux:Ux",
-}
-
-
 @language_adapter(language="typescript", identity="session_file")
 @agent_toolset
 class Session:
@@ -395,7 +387,7 @@ class Session:
         """The session's file manager, held in memory, reading under the session's roots: the folder each practice works
         in, as ``session.json`` records it or by the practice's default. A new one when those roots change."""
         workpath = Path(self.workpath or self.repo_from_session()).resolve()
-        roots = tuple(sorted({self.practice_root(self._guidance_for(name), name).resolve() for name in _PRACTICE_TYPES}))
+        roots = tuple(sorted({self.practice_root(self._guidance_for(name), name).resolve() for name in PracticeCatalogue.keys()}))
         if self._file_manager is None or self._file_manager.roots != roots:
             self._file_manager = FileManager(workpath, roots)
         return self._file_manager
@@ -704,7 +696,7 @@ class Session:
     def practice_root(self, guidance: PracticeGuidance, practice: str = "") -> Path:
         """The folder ``practice`` writes under: the root a person chose, or the workpath plus the practice's default
         folder from ``.context/config.json`` or the practice itself. With no practice key, the guidance's own."""
-        practice = practice or self._practice_key_for_instance(guidance) or ""
+        practice = practice or PracticeCatalogue.key_of(guidance) or ""
         chosen = self._output_overrides().get(practice, {}).get("root")
         if chosen:
             return (Path(self.workpath or self.repo_path).resolve() / chosen).resolve()
@@ -877,7 +869,7 @@ class Session:
         found = self._opened_named(name)
         if found is not None:
             return found
-        if name not in _PRACTICE_TYPES:
+        if not PracticeCatalogue.has(name):
             raise UnknownPracticeError(name)
         opened = self.practices[name]
         self._opened.append(opened)
@@ -887,7 +879,7 @@ class Session:
     @data_field
     def practices(self) -> dict[str, PracticeSessionOutput]:
         """Every practice CDD has, by practice key, opened or not."""
-        for name in _PRACTICE_TYPES:
+        for name in PracticeCatalogue.keys():
             self._known.setdefault(name, PracticeSessionOutput(name, self))
         return dict(self._known)
 
@@ -1193,7 +1185,7 @@ class Session:
             paths.append(work)
             seen.add(str(work))
         for item in guidance_items:
-            key = self._practice_key_for_instance(item)
+            key = PracticeCatalogue.key_of(item)
             if key is None:
                 continue
             opened = self.practice(key)
@@ -1226,7 +1218,7 @@ class Session:
     def note_injected_rules_from_bags(self, guidance: PracticeGuidance, matched_path: str, bags: list) -> None:
         if self.session_path is None or not matched_path or not bags:
             return
-        practice = self._practice_key_for_instance(guidance) or type(guidance).__name__.casefold()
+        practice = PracticeCatalogue.key_of(guidance) or type(guidance).__name__.casefold()
         for bag in bags:
             fidelity = self._fidelity_for_rules_bag(guidance, bag)
             for rule in bag:
@@ -1413,14 +1405,6 @@ class Session:
         return None
 
     @staticmethod
-    def _practice_key_for_instance(guidance: PracticeGuidance) -> str | None:
-        cls_name = type(guidance).__name__
-        for key, ref in _PRACTICE_TYPES.items():
-            if ref.rsplit(":", 1)[-1] == cls_name:
-                return key
-        return None
-
-    @staticmethod
     def _fidelity_for_rules_bag(guidance: PracticeGuidance, bag) -> str:
         parent = getattr(bag, "parent", None)
         if parent is guidance or parent is None:
@@ -1429,14 +1413,9 @@ class Session:
         return str(getattr(parent, "name", "") or getattr(parent, "fidelity", "") or "")
 
     def _guidance_for(self, name: str) -> PracticeGuidance:
-        ref = _PRACTICE_TYPES.get(name)
-        if ref is None:
+        if not PracticeCatalogue.has(name):
             raise UnknownPracticeError(name)
-        module_name, class_name = ref.split(":")
-        import importlib
-
-        module = importlib.import_module(module_name)
-        return getattr(module, class_name)()
+        return PracticeCatalogue.create(name)
 
     def _graph_for(self, name: str, output_paths: list[list[Path]]) -> Graph:
         from harness.graph.graph import Graph
@@ -1474,7 +1453,7 @@ class Session:
         ``default_workspace_folder`` (tests, src, …) with a workpath-relative path.
         """
         base = self.workpath or self.repo_path or project_folder()
-        key = (practice or self._practice_key_for_instance(guidance) or "").strip()
+        key = (practice or PracticeCatalogue.key_of(guidance) or "").strip()
         relative = self._project_default_folder(key)
         if relative is None:
             relative = getattr(guidance, "default_workspace_folder", None) or "."
@@ -1494,7 +1473,7 @@ class Session:
         current = fidelity or getattr(getattr(guidance, "fidelities", None), "current", None)
         if current is None:
             return {}
-        key = self._practice_key_for_instance(guidance) or ""
+        key = PracticeCatalogue.key_of(guidance) or ""
         practice = self._output_overrides().get(key, {})
         overrides = practice.get(str(getattr(current, "fidelity", "") or getattr(current, "name", "")), {})
         chosen_root = overrides.get("root") or practice.get("root") or self._project_default_folder(key)
@@ -1572,7 +1551,7 @@ class Session:
     def last_generated_format(self, guidance: PracticeGuidance) -> str:
         """The format the latest generate of guidance's fidelity wrote, read from its line in session.log; empty when
         no generate line names that fidelity."""
-        practice = self._practice_key_for_instance(guidance)
+        practice = PracticeCatalogue.key_of(guidance)
         fidelity = self._fidelity_name(guidance)
         if not practice or not fidelity:
             return ""

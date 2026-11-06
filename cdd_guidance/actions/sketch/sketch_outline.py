@@ -4,37 +4,29 @@ from __future__ import annotations
 
 
 class SketchLens:
-    """The section of a sketch that one practice writes."""
-
-    stories: "SketchLens"
-    clean_engineering: "SketchLens"
-    domain_driven_design: "SketchLens"
-    user_experience: "SketchLens"
-    behavior_driven_development: "SketchLens"
-    every: tuple["SketchLens", ...]
+    """The section of a sketch that one practice writes, opened by the headings the practice declares."""
 
     def __init__(self, titles: tuple[str, ...]) -> None:
         self.titles = titles
+
+    @classmethod
+    def of(cls, practice: str) -> "SketchLens":
+        """The lens of the practice with that catalogue key, such as `stories`."""
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        return cls(PracticeCatalogue.practice_class(practice).sketch_titles)
+
+    @classmethod
+    def every(cls) -> tuple["SketchLens", ...]:
+        """One lens per practice, in catalogue order."""
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        return tuple(cls.of(key) for key in PracticeCatalogue.keys())
 
     def opens(self, title: str) -> bool:
         """True when this title is the section heading or marker this practice writes under."""
         return title.strip().lower() in self.titles
 
-
-SketchLens.stories = SketchLens(("stories:",))
-SketchLens.clean_engineering = SketchLens(("ce:", "clean engineering:"))
-SketchLens.domain_driven_design = SketchLens(("ddd:", "domain driven design:"))
-SketchLens.user_experience = SketchLens(("ux:", "user experience:"))
-SketchLens.behavior_driven_development = SketchLens(
-    ("bdd:", "behavior driven development:")
-)
-SketchLens.every = (
-    SketchLens.stories,
-    SketchLens.clean_engineering,
-    SketchLens.domain_driven_design,
-    SketchLens.user_experience,
-    SketchLens.behavior_driven_development,
-)
 
 _HORIZONTAL_RULES = {"---", "***", "___"}
 
@@ -77,7 +69,7 @@ class SketchOutline:
     @property
     def _names_a_lens(self) -> bool:
         return any(
-            any(lens.opens(title) for lens in SketchLens.every)
+            any(lens.opens(title) for lens in SketchLens.every())
             for _, _, title in self._outline
         )
 
@@ -114,7 +106,7 @@ class SketchOutline:
                 continue
             if other_depth and other_depth <= depth:
                 return other
-            if any(lens.opens(title) for lens in SketchLens.every):
+            if any(lens.opens(title) for lens in SketchLens.every()):
                 return other
         return len(self._lines)
 

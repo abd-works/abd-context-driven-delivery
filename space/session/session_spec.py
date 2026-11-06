@@ -885,7 +885,7 @@ with description("a practice"):
                 self.session.practice("ddd").enable(False)
 
             with it("should leave that practice out of the active practices"):
-                expect([practice.name for practice in self.session.active_practices]).to(equal(["stories", "clean_engineering", "bdd", "ux"]))
+                expect([practice.name for practice in self.session.active_practices]).to(equal(["stories", "ux", "clean_engineering", "bdd"]))
 
             with it("should save it in the session's session.json"):
                 saved = json.loads((self.session.session_path / "session.json").read_text(encoding="utf-8"))

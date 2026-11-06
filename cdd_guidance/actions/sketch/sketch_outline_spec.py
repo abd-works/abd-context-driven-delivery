@@ -65,15 +65,15 @@ with description("a sketch that carries its hierarchy in markdown headings"):
     with it("should name the practices it holds a section for"):
         expect(
             [
-                self.outline.holds(SketchLens.stories),
-                self.outline.holds(SketchLens.domain_driven_design),
-                self.outline.holds(SketchLens.user_experience),
+                self.outline.holds(SketchLens.of("stories")),
+                self.outline.holds(SketchLens.of("ddd")),
+                self.outline.holds(SketchLens.of("ux")),
             ]
         ).to(equal([True, True, False]))
 
     with description("that is read for one practice"):
         with it("should nest each heading one level deeper than the heading above it"):
-            expect(self.outline.body_for(SketchLens.stories)).to(
+            expect(self.outline.body_for(SketchLens.of("stories"))).to(
                 equal(
                     "\n"
                     "Unify Client Identity\n"
@@ -92,13 +92,13 @@ with description("a sketch that carries its hierarchy in markdown headings"):
             )
 
         with it("should leave the other practice's section out"):
-            expect("ClientMatched" in self.outline.body_for(SketchLens.stories)).to(
+            expect("ClientMatched" in self.outline.body_for(SketchLens.of("stories"))).to(
                 equal(False)
             )
 
         with it("should nest at the width that practice's notation uses"):
             expect(
-                SketchOutline(_HEADED, 2).body_for(SketchLens.domain_driven_design)
+                SketchOutline(_HEADED, 2).body_for(SketchLens.of("ddd"))
             ).to(
                 equal(
                     "\n"
@@ -117,14 +117,14 @@ with description("a sketch that carries its hierarchy in markdown headings"):
 
     with description("that names a lens the sketch does not hold"):
         with it("should read as an empty section"):
-            expect(self.outline.body_for(SketchLens.behavior_driven_development)).to(
+            expect(self.outline.body_for(SketchLens.of("bdd"))).to(
                 equal("")
             )
 
 
 with description("a sketch that names no lens"):
     with it("should read as one section of indented lines"):
-        expect(SketchOutline(_FLAT, 2).body_for(SketchLens.clean_engineering)).to(
+        expect(SketchOutline(_FLAT, 2).body_for(SketchLens.of("clean_engineering"))).to(
             equal("shop/\n  Cart\n    total\n")
         )
 
@@ -134,5 +134,5 @@ with description("a sketch written flat beneath a bare lens marker"):
         expect(
             SketchOutline(
                 "ddd:\n  Customer | custom\n    customer\n", 2
-            ).body_for(SketchLens.domain_driven_design)
+            ).body_for(SketchLens.of("ddd"))
         ).to(equal("Customer | custom\n  customer\n"))

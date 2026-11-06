@@ -179,6 +179,9 @@ class GuidanceCollection(MarkdownCollection, Guidance):
 
 
 class PracticeGuidance(Guidance):
+    sketch_titles: tuple[str, ...] = ()
+    """The headings that open this practice's section of a sketch, lower case, such as `stories:`."""
+
     def __init__(
         self,
         format: str | None = None,

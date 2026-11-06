@@ -13,8 +13,8 @@ class SketchBddModel(BddModel):
         from cdd_guidance.practices.bdd.model.bdd_model import _parse_sketch
 
         outline = SketchOutline(text)
-        if outline.holds(SketchLens.behavior_driven_development):
-            text = outline.body_for(SketchLens.behavior_driven_development)
+        if outline.holds(SketchLens.of("bdd")):
+            text = outline.body_for(SketchLens.of("bdd"))
         self.descriptions = _parse_sketch(text)
         return self
 

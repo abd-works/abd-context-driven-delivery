@@ -12,6 +12,8 @@ from harness.guidance.guidance import PracticeGuidance
 class Ux(PracticeGuidance):
     """# Instructions"""
 
+    sketch_titles = ("ux:", "user experience:")
+
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
         "name": "User Experience",

@@ -14,6 +14,8 @@ class Ddd(PracticeGuidance):
     module load time).
     """
 
+    sketch_titles = ("ddd:", "domain driven design:")
+
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
         "name": "Domain-Driven Design",

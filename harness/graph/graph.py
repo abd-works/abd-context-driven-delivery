@@ -41,7 +41,6 @@ from harness.graph.skipped_folders import SKIPPED_FOLDERS, scanned_files, skips_
 
 Display = str
 Tuple = list[str]
-_GRAPH_PRACTICE_NAMES = frozenset({"clean_engineering", "stories", "ddd", "bdd", "ux"})
 _GRAPH_JSON_NAME = "graph.json"
 _DIRTY_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py", ".md"}
 _RULE_FILE_NAMES = ("rules.py", "schema.yaml", "rules.yaml")
@@ -724,7 +723,9 @@ class Node:
         if not node_id or not semantic_type:
             return None
         practice_name = str(practice).strip()
-        if practice_name not in _GRAPH_PRACTICE_NAMES:
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        if not PracticeCatalogue.has(practice_name):
             return None
         from harness.graph.node_data import decode_node_data
 

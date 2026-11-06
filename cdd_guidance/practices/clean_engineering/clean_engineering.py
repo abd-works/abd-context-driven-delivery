@@ -18,6 +18,8 @@ from harness.guidance.guidance import PracticeGuidance
 class CleanEngineering(PracticeGuidance):
     """# Instructions"""
 
+    sketch_titles = ("ce:", "clean engineering:")
+
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
         "name": "Clean Engineering",
