@@ -855,6 +855,10 @@ def repo_root_path(installer: Any) -> str:
     return str(Path(installer.repo))
 
 
+# Tools that write under the session's root; a probe runs them in a session of its own.
+_WRITES_UNDER_SESSION_ROOT = frozenset({"sketch.save_sketch", "grill-context.write_grill_answer"})
+
+
 class ActionProbeSession:
     """Temp files and folders created during action probes; removed in ``cleanup``."""
 
@@ -872,6 +876,16 @@ class ActionProbeSession:
         path = Path(tempfile.mkdtemp(prefix="cdd-guidance-probe-"))
         self._created.append(path)
         return str(path)
+
+    def work_session(self) -> Any:
+        """A session that works in a new temp folder and keeps no log, for probing tools that write under the
+        session's root, so a probe never writes into the session being worked on."""
+        from space.session import Session
+
+        session = Session(self.repo_root())
+        session.name = "diagnostic-probe"
+        session.workpath = Path(self.temp_dir())
+        return session
 
     def temp_segment_file(self) -> str:
         handle, name = tempfile.mkstemp(suffix="-segment.md", prefix="cdd-guidance-probe-")
@@ -951,7 +965,6 @@ def fill_probe_arguments(
         and param.kind
         not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
     }
-    folder = session.guidance_folder()
     content_paths = session.content_paths(slugs)
     root = session.repo_root()
     args: dict[str, Any] = {}
@@ -973,20 +986,13 @@ def fill_probe_arguments(
         if "mode" in param_names:
             args.setdefault("mode", "index_only")
     elif mcp_name == "grill-context.explore_context_files":
-        args["root"] = root
+        args["folder"] = root
     elif mcp_name == "grill-context.read_context_file":
         args["path"] = session.sample_guidance_file()
     elif mcp_name == "grill-context.write_grill_answer":
-        args["root"] = session.temp_dir()
         args["heading"] = "diagnostic-probe"
         args["body"] = "probe"
-    elif mcp_name == "sketch.list_sketches":
-        args["destination"] = folder
-        if "slug" in param_names:
-            args.setdefault("slug", "")
     elif mcp_name == "sketch.save_sketch":
-        args["destination"] = session.temp_dir()
-        args["slug"] = "diagnostic-probe"
         args["paths"] = content_paths
         if "content" in param_names:
             args.setdefault("content", "")
@@ -1004,6 +1010,8 @@ def _probe_action(
     slugs: list[str],
     session: ActionProbeSession,
 ) -> dict[str, Any]:
+    if tool.mcp_name in _WRITES_UNDER_SESSION_ROOT:
+        toolset = type(toolset)(session=session.work_session())
     member = getattr(toolset, tool.name)
     arguments, missing = fill_probe_arguments(tool.mcp_name, member, slugs, session)
     if missing:

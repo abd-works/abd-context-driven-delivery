@@ -1,7 +1,7 @@
 # sketch — module context
 
 ## Purpose
-`Sketch` produces a rough, persisted draft of a formal artifact through an interactive grill loop. It locates a sketch template via tiered discovery (caller-supplied → agent-dir convention → built-in default), writes interim `{slug}-sketch.md` files to the session docs dir after every two or three grill answers, and overwrites the same path on each refinement. Leaving a sketch only in chat is treated as a defect; the file under the docs dir is the working record. `/sketch` invokes this toolset — not each context tool's host `sketch`. When a fidelity is finished, formal artifacts come from **`/sketch_render`** (straight `render.render` from the sketch markdown) — see `actions/sketch_render` and `actions/sketch/sketch.md` → **Render from sketch**. Use `generate` only when the user explicitly wants a fresh AI-authored pass outside that transform.
+`Sketch` produces a rough, persisted draft of a formal artifact through an interactive grill loop. It locates a sketch template via tiered discovery (caller-supplied → agent-dir convention → built-in default), writes the session's `{session}-sketch.md` under the session root's `.context` folder after every two or three grill answers, and overwrites the same path on each refinement. Leaving a sketch only in chat is treated as a defect; the file under the docs dir is the working record. `/sketch` invokes this toolset — not each context tool's host `sketch`. When a fidelity is finished, formal artifacts come from **`/sketch_render`** (straight `render.render` from the sketch markdown) — see `actions/sketch_render` and `actions/sketch/sketch.md` → **Render from sketch**. Use `generate` only when the user explicitly wants a fresh AI-authored pass outside that transform.
 
 ## Seam
 `Sketch`, `SketchOutline`, `SketchLens`
@@ -15,9 +15,8 @@ A caller asks for one practice's section and reads the indented body it already 
 
 ## Public API
 - `find_template`
-- `save_sketch`
-- `list_sketches`
-- `sketch_session(slug, destination, agent_dir)`
+- `save_sketch(content, paths, module)` — the session's sketch, `{session root}/.context/{session name}-sketch.md`, or a module's under that root
+- `list_sketches(module)`
 - `sketch(tools)` — practice sketch body once per passed context tool
 - `SketchOutline(text, nesting_indent)` — read one practice's section as indented lines
 - `SketchOutline.holds(lens)` / `SketchOutline.body_for(lens)`

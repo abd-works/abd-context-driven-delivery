@@ -100,7 +100,9 @@ with description("guidance diagnostics"):
     with it("should treat an empty sketch list as a successful probe"):
         from sketch.sketch import Sketch
 
-        text = Sketch().list_sketches(str(_REPO_ROOT / "cdd_guidance"))
+        probe = ActionProbeSession(Installer(repo=_REPO_ROOT))
+        text = Sketch(session=probe.work_session()).list_sketches()
+        probe.cleanup()
         expect(text).to(equal("no sketches"))
         item = _instruction_result("sketch.list_sketches", text)
         expect(item["color"]).to(equal("green"))

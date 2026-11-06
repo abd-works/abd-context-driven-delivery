@@ -545,10 +545,16 @@ class Session:
         return self.from_project(self.session_file)
 
     @property
+    def root(self) -> Path:
+        """The folder the session works in: its workpath, or the whole repository when it chose none. Actions write
+        their sketches, grill answers, and partitions under it."""
+        return Path(self.workpath or self.repo_from_session()).resolve()
+
+    @property
     @data_field(key="workpath")
     def workpath_from_project(self) -> str:
         """The folder the session works in, as a path from the project; empty for the whole repository."""
-        return self.from_project(Path(self.workpath or self.repo_from_session()).resolve())
+        return self.from_project(self.root)
 
     @property
     @data_field(key="handoff")

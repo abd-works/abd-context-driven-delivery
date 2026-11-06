@@ -4,7 +4,7 @@ The questions to ask are in `clean_engineering.md`, under **Sketch** for the act
 
 Rough shape for sketching an clean_engineering analysis before generating the formal artifact. Use clean_engineering vocabulary directly (class, property, operation, subtype, composition, aggregation, association) rather than the generic `thing` fallback.
 
-This template is the clean_engineering notation for a section of the engagement sketch. When sketched with another practice in the same session (bdd-behavior), keep that notation in `{slug}-sketch.md` so the object model and BDD stay paired; do not write a second sketch file.
+This template is the clean_engineering notation for a section of the engagement sketch. When sketched with another practice in the same session (bdd-behavior), keep that notation in the session's `{session}-sketch.md` so the object model and BDD stay paired; do not write a second sketch file.
 
 When **Domain Driven Design** is also an active sketch lens, do **not** add a `clean engineering:` section. Module seams and entity operations belong in `domain driven design:` per `practices/ddd/templates/ddd-sketch.md`. A small bounded context is usually **one** `#### {module}/` — not one module per aggregate or per class (`no-module-per-class`). Read this template and `clean_engineering.md` for **Guidance** and **Rules** while sketching DDD; use this file's notation only when CE is active without DDD.
 
