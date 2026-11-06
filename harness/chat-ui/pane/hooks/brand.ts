@@ -10,6 +10,8 @@ export const BRAND = {
   // Text drawn on an orange chip, and the orange tint behind a chosen row.
   onAccent: '#0B0B0B',
   accentTint: '#E5531A2E',
+  // Behind the selected fidelity's dot: an underline under a full square is hidden by the square itself.
+  selectedTint: '#FFFFFF33',
   faint: '#71717A',
   success: '#22C55E',
   successWash: '#12261A',

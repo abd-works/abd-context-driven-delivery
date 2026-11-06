@@ -44,13 +44,13 @@ function TipView({ Box, Text }: ElementTable, words: string, detail: string, det
   )
 }
 
-// One square in its practice colour, fainter the less is done, underlined when selected, with the violation count in
+// One square in its practice colour, fainter the less is done, on a light tint when selected, with the violation count in
 // red beside it; the fidelity and its state show above it on hover.
 export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityClient) {
   const { Box, Text } = elements
   return (
-    <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0}>
-      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => pressDot($, fidelity), fidelity.isSelected)}
+    <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0} backgroundColor={fidelity.isSelected ? BRAND.selectedTint : undefined}>
+      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => pressDot($, fidelity))}
       {fidelity.violationCount ? <Text size="caption" weight="bold" color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
       {TipView(elements, fidelity.fidelity, `${fidelity.mark} ${fidelity.word}`, fidelity.lookColour)}
     </Box>

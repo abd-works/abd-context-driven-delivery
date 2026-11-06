@@ -11,10 +11,14 @@ import { scenario, story } from '../../../story-test'
 
 // (S) Person --> Choose Fidelity Action
 story('Choose Fidelity Action', CHAT_BAR, () => {
-  scenario('Pick another action for the fidelity', ({ given, when, then }) => {
+  scenario('Pick another action for the fidelity', ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 'The picker offers every builder action'; no chat bar code yet
     given("checkout-flow's ux-mockup is the selected fidelity", async ($, on, scene) => {
       await scene.ui.press({ key: 'dot-ux-mockup' })
+    })
+    and("the ux-mockup dot sits on the selected tint", async ($, on, scene) => {
+      expect((await drawn(scene.ui, 'fidelity-ux-mockup'))?.props?.backgroundColor).toBe('#FFFFFF33')
+      expect((await drawn(scene.ui, 'fidelity-stories-scenarios'))?.props?.backgroundColor).toBeUndefined()
     })
     when('the Person opens the action picker', async ($, on, scene) => {
       await scene.ui.press({ key: 'action-picker' })
