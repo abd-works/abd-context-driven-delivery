@@ -26,42 +26,6 @@ from harness.catalog_generator.foundry_chrome import (
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-_PATH_HINTS: tuple[tuple[tuple[str, str], re.Pattern[str]], ...] = (
-    (("stories", "discovery"), re.compile(r"story[-_]?map", re.I)),
-    (("stories", "specification"), re.compile(r"(?:story[-_])?scenarios", re.I)),
-    (
-        ("stories", "implementation"),
-        re.compile(r"(?:story|acceptance)[-_]?(?:test|tests)|_story\.test\.", re.I),
-    ),
-    (("ddd", "discovery"), re.compile(r"bounded[-_]?context", re.I)),
-    (
-        ("ddd", "specification"),
-        re.compile(r"building[-_]?blocks|ce-domain-model|domain-model", re.I),
-    ),
-    (
-        ("ddd", "implementation"),
-        re.compile(r"(?:^|/)(?:client|offer|product)[-_]?model\.(?:ts|py)$|tactics", re.I),
-    ),
-    (("ux", "discovery"), re.compile(r"information[-_]?architecture|(?:^|/)ia[./]", re.I)),
-    (("ux", "specification"), re.compile(r"mockup", re.I)),
-    (
-        ("ux", "implementation"),
-        re.compile(r"front[-_]?end(?:[-_]?code)?|(?:^|/)components?/", re.I),
-    ),
-    (("clean_engineering", "discovery"), re.compile(r"modules?[-_]?map|module[-_]?context", re.I)),
-    (("clean_engineering", "specification"), re.compile(r"[-_]model\.(?:md|drawio)$", re.I)),
-    (("clean_engineering", "implementation"), re.compile(r"module[-_]?map|clean[-_]?engineering", re.I)),
-    (("bdd", "specification"), re.compile(r"behavior|behaviour", re.I)),
-    (("bdd", "implementation"), re.compile(r"bdd[-_]?development|development\.test", re.I)),
-)
-
-_FOLDER_HINTS: tuple[tuple[tuple[str, str], str], ...] = (
-    (("stories", "discovery"), "stories"),
-    (("ddd", "discovery"), "domain"),
-    (("ux", "discovery"), "ux"),
-)
-
-
 @dataclass(frozen=True)
 class ApproachExampleSlot:
     practice: str
@@ -158,23 +122,61 @@ def classify_example_path(
     *,
     project_root: Path | None = None,
 ) -> ApproachExampleSlot | None:
+    """The practice and stage of the first board fidelity that declares a file at ``path``, read from each fidelity's
+    ``outputs``, the same declarations the session uses to find a fidelity's files. None when no fidelity declares it."""
     candidate = Path(path).resolve()
-    text = "/".join(candidate.parts).lower()
-    name = candidate.name.lower()
-    for (practice, stage), pattern in _PATH_HINTS:
-        if pattern.search(name) or pattern.search(text):
-            return ApproachExampleSlot(practice, stage)
-    if candidate.suffix.lower() in {".drawio", ".dio"}:
-        for (practice, stage), folder in _FOLDER_HINTS:
-            if f"/{folder}/" in text or text.endswith(f"/{folder}/{name}"):
-                return ApproachExampleSlot(practice, stage)
-    if project_root and candidate.suffix.lower() in {".ts", ".tsx"}:
-        rel = candidate.relative_to(project_root).as_posix().lower()
-        if rel.startswith("stories/") and "test" in name:
-            return ApproachExampleSlot("stories", "implementation")
-        if rel.startswith("domain/") and name.endswith("-model.ts"):
-            return ApproachExampleSlot("ddd", "implementation")
+    relative = _relative_posix(candidate, project_root)
+    for practice in PracticeCatalogue.practices():
+        for fidelity in practice.fidelities:
+            if STAGE_COLUMNS.of(fidelity.stage) is None:
+                continue
+            if any(pattern.search(relative) for pattern in _declared_file_patterns(fidelity)):
+                return ApproachExampleSlot(practice.key, fidelity.stage)
     return None
+
+
+def _relative_posix(path: Path, project_root: Path | None) -> str:
+    if project_root is not None and path.is_relative_to(project_root):
+        return path.relative_to(project_root).as_posix()
+    return path.as_posix()
+
+
+def _declared_file_patterns(fidelity) -> list[re.Pattern[str]]:
+    """Each file the fidelity declares, as a pattern that matches the end of a path. A declared folder, such as
+    ``{module}/``, names no file, so it matches none."""
+    declared = [
+        name
+        for names in fidelity.outputs.values()
+        for name in ([names] if isinstance(names, str) else names)
+        if name and not name.endswith("/")
+    ]
+    return [_declared_file_pattern(name) for name in declared]
+
+
+def _declared_file_pattern(declared: str) -> re.Pattern[str]:
+    """A declared path such as ``{bounded_context}/{aggregate}/{aggregate}.ts`` as a pattern. As in the session, a named
+    folder matches folders at any depth and a named part of a file name matches within it; a name used twice must be
+    the same text both times, and ``**/`` and ``*`` keep their glob meaning."""
+    seen: set[str] = set()
+    parts: list[str] = []
+    for token in re.split(r"(\{[^{}/]+\}/?|\*\*/|\*)", declared):
+        if not token:
+            continue
+        if token == "**/":
+            parts.append(r"(?:[^/]+/)*")
+        elif token == "*":
+            parts.append(r"[^/]*")
+        elif token.startswith("{"):
+            name = re.sub(r"\W", "_", token.strip("{}/"))
+            folder = token.endswith("/")
+            if name in seen:
+                parts.append(f"(?P={name})" + ("/" if folder else ""))
+            else:
+                seen.add(name)
+                parts.append(f"(?P<{name}>[^/]+(?:/[^/]+)*)/" if folder else f"(?P<{name}>[^/]+)")
+        else:
+            parts.append(re.escape(token))
+    return re.compile(r"(?:^|/)" + "".join(parts) + "$", re.I)
 
 
 def discover_project_examples(project_root: str | Path) -> dict[tuple[str, str], Path]:
