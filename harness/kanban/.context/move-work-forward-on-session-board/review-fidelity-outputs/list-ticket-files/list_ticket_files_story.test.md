@@ -4,9 +4,9 @@
 
 #### Scenario: List a fidelity's files with whether each exists
 
-*Given* checkout-flow's story map tests/story-map.md is there and tests/story-map.drawio is not
+*Given* checkout-flow's story map .context/story-map.md is there and .context/story-map.drawio is not
 *When* the Person lists checkout-flow's story_map files
-*Then* the files panel lists tests/story-map.md as there
+*Then* the files panel lists .context/story-map.md as there
 *But* no file of another fidelity is listed
 
 #### Scenario: List only what the ticket's branch changed
@@ -21,5 +21,5 @@
 
 *Given* the board shows no ticket named no-such-ticket
 *When* the Person lists no-such-ticket's story_map files
-*Then* a toast says cdd ticket.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board
+*Then* a toast says cdd fidelity-progress.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board
 *But* no panel opens

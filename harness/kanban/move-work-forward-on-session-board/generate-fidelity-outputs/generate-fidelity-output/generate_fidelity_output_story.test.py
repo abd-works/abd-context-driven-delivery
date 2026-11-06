@@ -35,7 +35,7 @@ with story("Generate Fidelity Output"):
             pass
     with scenario("Render the earlier fidelity into a new format first"):
         # Evidence: observed: kanban_tools_spec 'with a fidelity's markdown generated' — 'should render the earlier fidelity into the new format first'; Ticket.generate_commands.
-        with given("pet-visits' story map is docs/story-map.md, generated in markdown only"):
+        with given("pet-visits' story map is docs/.context/story-map.md, generated in markdown only"):
             pass
         with when("the Person generates scenarios in drawio"):
             # Person -> Ticket.generate_commands(['stories-scenarios'], ['drawio'])

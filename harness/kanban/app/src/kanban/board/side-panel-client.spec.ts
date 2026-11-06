@@ -51,7 +51,7 @@ describe('List Ticket Files', () => {
     }
 
     it('should say so in a toast', async () => {
-      expect((await refused()).store.state.toasts[0]?.text).toBe("cdd ticket.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board")
+      expect((await refused()).store.state.toasts[0]?.text).toBe("cdd fidelity-progress.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board")
     })
 
     it('should open no panel', async () => {

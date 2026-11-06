@@ -15,7 +15,7 @@ with story("Validate Fidelity"):
         # Evidence: observed: tile-client.spec 'Validate Fidelity' — 'should send the fidelity to validate', 'should allow Validate on files already there, with nothing recorded yet'.
         with given("billing-report is the active [ticket](../../../.context/kanban-model.md#ticket--card) and a chat is connected"):
             pass
-        with and_("its story map tests/story-map.md is there"):
+        with and_("its story map .context/story-map.md is there"):
             pass
         with when("the Person validates story_map"):
             # Board page -> Chat.send('command', '/actions-validate stories-story-map')

@@ -31,9 +31,13 @@ VALIDATE = "validate"
 REVIEW = "review"
 # What every fidelity goes through in its stage, named as the session log names them.
 STAGE_ACTIONS = (GENERATE, VALIDATE, REVIEW)
+LEAVE_COMMIT = "commit"
+LEAVE_PUSH = "push"
+LEAVE_MERGE = "merge"
+OPEN_BRANCH = "branch"
+OPEN_WORKTREE = "worktree"
 FORGE = "https://forge.abdworks.net/abd-context-driven-delivery"
 FIDELITIES_WITHOUT_PAGE = ("ddd-model", "bdd-realization")
-UNCHOSEN_FOLDERS = frozenset({"node_modules", "__pycache__"})
 
 
 class ColumnNotFoundError(LookupError):
@@ -142,13 +146,13 @@ class Board:
     def tickets(self) -> list[Ticket]:
         from harness.kanban.ticket import Ticket
 
-        return [Ticket(session, self) for session in Session.all_in(self._repo.root)]
+        return [Ticket(session, self) for session in self._repo.sessions()]
 
     @property
     def backlog_items(self) -> list[BacklogItem]:
         from harness.kanban.backlog_item import BacklogItem
 
-        folder = Session.backlog_folder(self._repo.root)
+        folder = self._repo.backlog_folder
         if not folder.is_dir():
             return []
         # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
@@ -194,10 +198,66 @@ class Board:
     @mcp
     @agent_tool
     @noSessionLog
+    def activate(self, ticket: str, leaving: list[str] | None = None, opening: list[str] | None = None) -> Ticket:
+        """Make ticket the current session. leaving names what to do with the active ticket's work first: commit, push, merge. opening names what to create for ticket: branch, worktree."""
+        chosen = self._named_ticket(ticket)
+        active = self.active
+        if active is not None and active.name != chosen.name:
+            self.leave(active, leaving or [])
+        if OPEN_BRANCH in (opening or []):
+            self.repo.switch_branch(chosen.name)
+        if OPEN_WORKTREE in (opening or []):
+            self.repo.switch_worktree(chosen.name)
+        Session.switch(chosen.name, repo_path=self.repo.root)
+        return chosen
+
+    def leave(self, ticket: Ticket, leaving: list[str]) -> None:
+        """Do what leaving names with ticket's work: commit, push, merge. Only on its own branch, checked out, because
+        those steps act on whatever is checked out."""
+        if not leaving or not self._is_on_its_branch(ticket.name):
+            return
+        if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
+            self.repo.push_commit(f"{ticket.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
+        if LEAVE_MERGE in leaving:
+            self.repo.close_branch(ticket.name)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def open_worktree(self, ticket: str) -> Ticket:
+        """Open ticket's own worktree beside the repository, creating its branch when missing: the folder its chat works in, named as its worktree. The open session is left as it is."""
+        name = self._named_ticket(ticket).name
+        self.repo.branch_named(name).open_in_worktree()
+        return Board.load(self.repo.root)._named_ticket(name)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def workspace(self, ticket: str) -> Workspace:
+        """Say whether ticket already has its branch and its worktree, so activating it offers only what is missing, and whether the active ticket being left is on a branch of its own, so its work can be committed, pushed, and merged."""
+        name = self._named_ticket(ticket).name
+        active = self.active
+        return Workspace(self.repo.has_branch(name), self.worktree_of(name) is not None, active is not None and self._is_on_its_branch(active.name))
+
+    def _named_ticket(self, name: str) -> Ticket:
+        from harness.kanban.ticket import TicketNotFoundError
+
+        found = self.ticket(name)
+        if found is None:
+            raise TicketNotFoundError(name)
+        return found
+
+    def _is_on_its_branch(self, name: str) -> bool:
+        """Whether the repository has the branch name checked out; a commit lands on whatever is checked out."""
+        return self.repo.has_branch(name) and self.repo.current_branch == name
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def set_wip_limit(self, stage: str, limit: int) -> Board:
         """Set how many tickets stage holds before its count shows as over its limit."""
         limits = {**self._saved_wip_limits, stage: limit}
-        Session.board_file(self._repo.root).write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
+        self._repo.board_file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
         return self
 
     @mcp
@@ -205,9 +265,7 @@ class Board:
     @noSessionLog
     def folders(self, path: str = "") -> list[str]:
         """List the folders inside path, a folder in the repository (its top when empty), as paths from the project, for a person choosing a workpath or a practice root. Installed packages, caches, and hidden folders hold no one's work, so they are left out."""
-        parent = self._repo.root / path
-        found = [entry for entry in parent.iterdir() if entry.is_dir() and entry.name not in UNCHOSEN_FOLDERS and not entry.name.startswith(".")]
-        return sorted(entry.relative_to(self._repo.root).as_posix() for entry in found)
+        return sorted(entry.path for entry in self._repo.file_manager.list(path).folders)
 
     @mcp
     @agent_tool
@@ -230,7 +288,7 @@ class Board:
 
     @property
     def _saved_wip_limits(self) -> dict[str, int]:
-        path = Session.board_file(self._repo.root)
+        path = self._repo.board_file
         return json.loads(path.read_text(encoding="utf-8")).get("wip_limits", {}) if path.is_file() else {}
 
     def _fidelity_of(self, guidance: PracticeGuidance, name: str) -> FidelityGuidance:
@@ -451,3 +509,27 @@ class HelpRule:
     @data_field
     def text(self) -> str:
         return self._rule.body.strip()
+
+
+class Workspace:
+    """Whether a ticket has its branch and its worktree, and whether the active ticket being left is on a branch of its own."""
+
+    def __init__(self, has_branch: bool, has_worktree: bool, leaving_has_branch: bool) -> None:
+        self._has_branch = has_branch
+        self._has_worktree = has_worktree
+        self._leaving_has_branch = leaving_has_branch
+
+    @property
+    @data_field
+    def has_branch(self) -> bool:
+        return self._has_branch
+
+    @property
+    @data_field
+    def has_worktree(self) -> bool:
+        return self._has_worktree
+
+    @property
+    @data_field
+    def leaving_has_branch(self) -> bool:
+        return self._leaving_has_branch

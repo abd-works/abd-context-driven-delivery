@@ -35,7 +35,7 @@ describe('Choose Session Root', () => {
   describe('with the roots of a ticket open', () => {
     it("should show the ticket's practices with their roots", async () => {
       const page = await openedFor(TICKET)
-      expect(Object.keys(page.roots.ticket!.practiceRoots)).toContain('stories')
+      expect(Object.keys(page.roots.ticket!.session.practices)).toContain('stories')
     })
 
     describe('that a person browses into a folder for the session workpath', () => {
@@ -64,7 +64,7 @@ describe('Choose Session Root', () => {
         }
 
         it("should make it the ticket's workpath", async () => {
-          expect(ticketOn(await used(), TICKET).workpath).toBe('src/visits')
+          expect(ticketOn(await used(), TICKET).session.workpath).toBe('src/visits')
         })
 
         it('should go back to the list of roots', async () => {
@@ -82,14 +82,14 @@ describe('Choose Session Root', () => {
       }
 
       it("should show it as that practice's chosen root", async () => {
-        expect(ticketOn(await chosen(), TICKET).practiceRoots.stories).toEqual({ root: 'src/billing', is_chosen: true })
+        expect(ticketOn(await chosen(), TICKET).session.practices.stories).toMatchObject({ root: 'src/billing', is_root_chosen: true })
       })
 
       describe('and then goes back to its default', () => {
         it('should show the practice on its default root', async () => {
           const page = await chosen()
           await page.roots.useDefault('stories')
-          expect(ticketOn(page, TICKET).practiceRoots.stories?.is_chosen).toBe(false)
+          expect(ticketOn(page, TICKET).session.practices.stories?.is_root_chosen).toBe(false)
         })
       })
     })
@@ -120,7 +120,7 @@ describe('Choose Session Root', () => {
       }
 
       it('should open its ticket with that folder as its workpath', async () => {
-        expect(ticketOn(await started(), 'gift-cards').workpath).toBe('src/visits')
+        expect(ticketOn(await started(), 'gift-cards').session.workpath).toBe('src/visits')
       })
 
       it("should stay open on the new ticket's roots, so its practices' roots can be set", async () => {

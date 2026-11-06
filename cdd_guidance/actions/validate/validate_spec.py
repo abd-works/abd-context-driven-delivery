@@ -149,13 +149,9 @@ with description("a validate action on practice guidance") as self:
     with context("with the saved graph"):
         with before.each:
             self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
-            self.session = Path(tempfile.mkdtemp(prefix="cdd-validate-session-"))
+            self.session = Path(Session.current().session_path)
             self.action._validate_workspace = lambda: self.folder
             self.action._project_checkout = lambda: self.folder
-            self.action._session_path = lambda: self.session
-
-        with after.each:
-            shutil.rmtree(self.session, ignore_errors=True)
 
         with it("should report the guidance practice's graph hits from graph.json when graph is true"):
             prose = _expanded_validate(self.action, {"guidance": ["ddd-tactics"], "graph": True})
@@ -176,14 +172,12 @@ with description("a validate action on practice guidance") as self:
             self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
             _write(self.folder, "src/orders/order.ts", _OVER_LIMIT.format(name="Order"))
             _write(self.folder, "src/billing/invoice.ts", _OVER_LIMIT.format(name="Invoice"))
-            self.session = Path(tempfile.mkdtemp(prefix="cdd-validate-session-"))
+            self.session = Path(Session.current().session_path)
             self.action._validate_workspace = lambda: self.folder
             self.action._project_checkout = lambda: self.folder
-            self.action._session_path = lambda: self.session
 
         with after.each:
             shutil.rmtree(self.folder, ignore_errors=True)
-            shutil.rmtree(self.session, ignore_errors=True)
 
         with it("should report the rule violations in those files as they are now"):
             report = self.action.validate(guidance=["clean-engineering-code"], paths=["src/orders/order.ts"])
@@ -202,14 +196,12 @@ with description("a validate action on practice guidance") as self:
         with before.each:
             self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
             _write(self.folder, "board/.context/story-map.md", _STORY_MAP)
-            self.session = Path(tempfile.mkdtemp(prefix="cdd-validate-session-"))
+            self.session = Path(Session.current().session_path)
             self.action._validate_workspace = lambda: self.folder
             self.action._project_checkout = lambda: self.folder
-            self.action._session_path = lambda: self.session
 
         with after.each:
             shutil.rmtree(self.folder, ignore_errors=True)
-            shutil.rmtree(self.session, ignore_errors=True)
 
         with it("should report the story map's rule violations at the story map's path"):
             report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
@@ -343,13 +335,9 @@ with description("a validate action on practice guidance") as self:
 
     with context("with edited files of a working copy that every graph practice reads"):
         with before.each:
-            self.session = Path(tempfile.mkdtemp(prefix="cdd-validate-session-"))
+            self.session = Path(Session.current().session_path)
             self.action._validate_workspace = lambda: _SAMPLE
             self.action._project_checkout = lambda: _SAMPLE
-            self.action._session_path = lambda: self.session
-
-        with after.each:
-            shutil.rmtree(self.session, ignore_errors=True)
 
         with it("should report the private-method-naming violation on the edited entity root"):
             report = self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])

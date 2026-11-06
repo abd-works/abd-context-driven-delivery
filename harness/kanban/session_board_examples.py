@@ -23,11 +23,12 @@ import tempfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from space.repo.repo import Repo
 from space.session import Session
 from space.work_state import WorkState
 
 STAMP = "2026-11-01T10:00:00Z"
-STORY_MAP_FILE = "tests/story-map.md"
+STORY_MAP_FILE = ".context/story-map.md"
 STORY_MAP_TEXT = "# Check Out Order\n\n## Payment\n\n- Enter Card Details\n- Handle Payment\n- Confirm Order\n"
 STORY_MAP_REPORT = "stories-story-map-20261101T100000"
 STORY_MAP_GRAPH = {
@@ -171,7 +172,7 @@ HANDOFF_TEXT = "# Handoff\n"
 EARLIER_HANDOFF = "handoff-20261031T090000.md"
 EARLIER_HANDOFF_TEXT = "# Earlier handoff\n"
 PET_VISITS_STORY_MAP_ROOT = "docs"
-PET_VISITS_STORY_MAP_FILE = "docs/story-map.md"
+PET_VISITS_STORY_MAP_FILE = "docs/.context/story-map.md"
 PET_VISITS_STORY_MAP_TEXT = "# Pet visits\n"
 SPEC_THEIRS = "src/theirs_spec.py"
 SPEC_MINE = "src/mine_spec.py"
@@ -256,7 +257,7 @@ class SessionsProject:
         WorkState(self.root).session = seed.name
 
     def seed_wip_limits(self, limits: dict[str, int]) -> None:
-        Session.board_file(self.root).write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
+        Repo(self.root).board_file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
 
     def seed_report(self, seed: SessionSeed, report: ReportSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name / "validation-reports"
@@ -331,7 +332,7 @@ def seed_surface_fixture(project: SessionsProject) -> None:
 
 
 def seed_checkout_flow_held_on_violations(project: SessionsProject) -> None:
-    """checkout-flow with its story map generated and validated with verb-noun-format on tests/story-map.md line 6,
+    """checkout-flow with its story map generated and validated with verb-noun-format on .context/story-map.md line 6,
     and that validation's report saved with its graph."""
     project.seed_file(STORY_MAP_FILE, STORY_MAP_TEXT)
     project.seed_session(CHECKOUT_FLOW)

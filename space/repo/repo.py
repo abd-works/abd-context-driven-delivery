@@ -10,7 +10,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.installation.destination import language_adapter
@@ -18,6 +18,13 @@ from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 from space.repo.latest_release import LatestRelease
 from space.work_state import WorkState
+
+BACKLOG_FOLDER = "_backlog"
+BOARD_FILE = "_board.json"
+
+if TYPE_CHECKING:
+    from space.session.session import Session
+    from tools.file_manager.file_manager import FileManager
 
 logger = logging.getLogger(__name__)
 
@@ -1084,6 +1091,47 @@ class Repo:
         if self._memory:
             return name in self._branch_names
         return bool(self._git("branch", "--list", name).strip())
+
+    @property
+    def sessions_folder(self) -> Path:
+        """The `.sessions` folder that holds this repository's work sessions and what they share on the board."""
+        return WorkState(self.root).sessions_folder
+
+    @property
+    def backlog_folder(self) -> Path:
+        """Where sessions wait before work starts, and where a session moved back is held."""
+        return self.sessions_folder / BACKLOG_FOLDER
+
+    @property
+    def board_file(self) -> Path:
+        """The file that holds what this repository's sessions share on the board."""
+        return self.sessions_folder / BOARD_FILE
+
+    def sessions(self) -> list[Session]:
+        """This repository's work sessions, open ones first then closed: not main, and not the folders the sessions share."""
+        from space.session.session import Session
+
+        return [Session.load(folder, self.root) for folder in self._work_session_folders()]
+
+    def _work_session_folders(self) -> list[Path]:
+        from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME
+
+        sessions = self.sessions_folder
+        if not sessions.is_dir():
+            return []
+        skipped = {COMPLETE_FOLDER, MAIN_SESSION_NAME}
+        # Folders whose names start with `_` are the ones the sessions share, such as the backlog.
+        open_folders = [folder for folder in sorted(sessions.iterdir()) if folder.is_dir() and folder.name not in skipped and not folder.name.startswith("_")]
+        closed = sessions / COMPLETE_FOLDER
+        closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
+        return open_folders + closed_folders
+
+    @property
+    def file_manager(self) -> FileManager:
+        """Lists, finds, and reads the files anywhere in this repository."""
+        from tools.file_manager.file_manager import FileManager
+
+        return FileManager(self.root, (self.root,))
 
     def path_from_top(self, path: Path | str) -> str:
         """path as written from the repository's top, empty for the top itself, or as it is when it lies outside the

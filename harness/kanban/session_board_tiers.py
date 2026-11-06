@@ -26,7 +26,7 @@ from harness.kanban.backlog_item import BacklogItem, BacklogItemNotFoundError  #
 from harness.kanban.board import Board  # noqa: E402
 from harness.kanban.session_board_examples import SURFACE_FIXTURE_PROJECT, SessionsProject  # noqa: E402
 from harness.kanban.story_test import World, ticket_in  # noqa: E402
-from harness.kanban.ticket import Ticket, TicketNotFoundError  # noqa: E402
+from harness.kanban.ticket import FidelityNotFoundError, Ticket, TicketNotFoundError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Session  # noqa: E402
 from validate.validate import Validate  # noqa: E402
@@ -34,6 +34,9 @@ from validate.validate import Validate  # noqa: E402
 TOOLSETS = (
     "harness.kanban.board:Board",
     "harness.kanban.ticket:Ticket",
+    "harness.kanban.ticket:FidelityProgress",
+    "space.session.session:Session",
+    "space.session.session:PracticeSessionOutput",
     "harness.kanban.backlog_item:BacklogItem",
     "validate.validate:Validate",
     "generate.generate:Generate",
@@ -90,7 +93,7 @@ class CddTools:
 
 
 class BoardTools:
-    """The board tools: board.show, board.set_wip_limit, board.folders, and board.help."""
+    """The board tools: board.show, and every other board tool by its name, such as board.activate(ticket=...)."""
 
     def __init__(self, cdd: CddTools) -> None:
         self._cdd = cdd
@@ -112,12 +115,14 @@ class BoardTools:
     def folders(self, path: str = "") -> list[str]:
         return self._cdd.call("board.folders", path=path)
 
-    def help(self, practice: str, fidelity: str = "") -> dict:
-        return self._cdd.call("board.help", practice=practice, fidelity=fidelity)
+    def __getattr__(self, operation: str) -> Any:
+        if operation.startswith("_"):
+            raise AttributeError(operation)
+        return lambda **arguments: _handle_of(self._cdd, self._cdd.call(f"board.{operation}", **arguments))
 
 
 class TicketTools:
-    """The ticket tools that open or name a ticket: ticket.new, and the ticket every other ticket tool takes."""
+    """The ticket tools that open or name a ticket: ticket.create, and the ticket every other ticket tool takes."""
 
     def __init__(self, cdd: CddTools) -> None:
         self._cdd = cdd
@@ -125,8 +130,8 @@ class TicketTools:
     def load(self, ticket: str) -> TicketHandle:
         return TicketHandle(self._cdd, ticket)
 
-    def new(self, title: str, scope: str = "feature", parent: str = "", path: str = "") -> TicketHandle:
-        opened = self._cdd.call("ticket.new", title=title, scope=scope, parent=parent, path=path)
+    def create(self, title: str, scope: str = "feature", parent: str = "", path: str = "") -> TicketHandle:
+        opened = self._cdd.call("ticket.create", title=title, scope=scope, parent=parent, path=path)
         return TicketHandle(self._cdd, opened["name"])
 
 
@@ -144,12 +149,96 @@ class TicketHandle:
             raise TicketNotFoundError(self.name)
         return found
 
+    @property
+    def session(self) -> SessionHandle:
+        return SessionHandle(self._cdd, self)
+
+    def progress_of(self, slug: str) -> FidelityProgressHandle:
+        progress = self.data()["progress"]
+        if slug not in progress:
+            raise FidelityNotFoundError(slug, f"ticket {self.name!r}")
+        return FidelityProgressHandle(self._cdd, self, slug)
+
     def __getattr__(self, operation: str) -> Any:
         if operation.startswith("_"):
             raise AttributeError(operation)
 
         def called(**arguments: Any) -> Any:
             return _handle_of(self._cdd, self._cdd.call(f"ticket.{operation}", ticket=self.name, **arguments))
+
+        return called
+
+
+class FidelityProgressHandle:
+    """One fidelity's progress on a ticket. Each operation is the fidelity-progress tool of its name, called with the
+    ticket's name and the fidelity's slug."""
+
+    def __init__(self, cdd: CddTools, ticket: TicketHandle, slug: str) -> None:
+        self._cdd = cdd
+        self._ticket = ticket
+        self.slug = slug
+
+    def data(self) -> dict:
+        return self._ticket.data()["progress"][self.slug]
+
+    def __getattr__(self, operation: str) -> Any:
+        if operation.startswith("_"):
+            raise AttributeError(operation)
+
+        def called(**arguments: Any) -> Any:
+            answered = self._cdd.call(f"fidelity-progress.{operation}", ticket=self._ticket.name, fidelity=self.slug, **arguments)
+            return _handle_of(self._cdd, answered)
+
+        return called
+
+
+class SessionHandle:
+    """A ticket's session. Each operation is the session tool of its name, called with the session's file; its
+    practices are each practice-session-output's tools, called with the session's file and the practice's name."""
+
+    def __init__(self, cdd: CddTools, ticket: TicketHandle) -> None:
+        self._cdd = cdd
+        self._ticket = ticket
+
+    def data(self) -> dict:
+        return self._ticket.data()["session"]
+
+    def practice(self, name: str) -> PracticeHandle:
+        return PracticeHandle(self._cdd, self, name)
+
+    @property
+    def practices(self) -> dict[str, PracticeHandle]:
+        return {name: PracticeHandle(self._cdd, self, name) for name in self.data()["practices"]}
+
+    def __getattr__(self, operation: str) -> Any:
+        if operation.startswith("_"):
+            raise AttributeError(operation)
+
+        def called(**arguments: Any) -> Any:
+            return _handle_of(self._cdd, self._cdd.call(f"session.{operation}", session=self.data()["session_file"], **arguments))
+
+        return called
+
+
+class PracticeHandle:
+    """One practice in a ticket's session: its practice-session-output tools, such as enable and choose_root."""
+
+    def __init__(self, cdd: CddTools, session: SessionHandle, name: str) -> None:
+        self._cdd = cdd
+        self._session = session
+        self.name = name
+
+    def data(self) -> dict:
+        return self._session.data()["practices"][self.name]
+
+    def __getattr__(self, operation: str) -> Any:
+        if operation.startswith("_"):
+            raise AttributeError(operation)
+
+        def called(**arguments: Any) -> Any:
+            session_file = self._session.data()["session_file"]
+            self._cdd.call(f"practice-session-output.{operation}", session=session_file, practice=self.name, **arguments)
+            return self
 
         return called
 
@@ -163,8 +252,8 @@ class BacklogItemTools:
     def load(self, backlog_item: str) -> BacklogItemHandle:
         return BacklogItemHandle(self._cdd, backlog_item)
 
-    def add(self, title: str, text: str = "") -> BacklogItemHandle:
-        added = self._cdd.call("backlog-item.add", title=title, text=text)
+    def create(self, title: str, text: str = "") -> BacklogItemHandle:
+        added = self._cdd.call("backlog-item.create", title=title, text=text)
         return BacklogItemHandle(self._cdd, added["title"])
 
 
@@ -200,10 +289,13 @@ class ActionPrompts:
 
 def _server_data_of(value: Any) -> Any:
     """What a step reads: a handle's data as the server sends it now, and any other answer, already JSON, as it is."""
-    return value.data() if isinstance(value, (BoardTools, TicketHandle, BacklogItemHandle)) else value
+    handles = (BoardTools, TicketHandle, BacklogItemHandle, FidelityProgressHandle, SessionHandle, PracticeHandle)
+    return value.data() if isinstance(value, handles) else value
 
 
 def _handle_of(cdd: CddTools, answered: Any) -> Any:
+    if isinstance(answered, dict) and {"ticket", "slug", "state"} <= set(answered):
+        return FidelityProgressHandle(cdd, TicketHandle(cdd, answered["ticket"]), answered["slug"])
     if isinstance(answered, dict) and {"name", "column"} <= set(answered):
         return TicketHandle(cdd, answered["name"])
     if isinstance(answered, dict) and {"title", "path", "text"} <= set(answered):

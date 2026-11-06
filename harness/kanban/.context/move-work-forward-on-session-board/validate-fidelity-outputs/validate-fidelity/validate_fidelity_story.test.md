@@ -5,7 +5,7 @@
 #### Scenario: Send the fidelity to validate
 
 *Given* billing-report is the active [ticket](../../../kanban-model.md#ticket--card) and a chat is connected
-*And* its story map tests/story-map.md is there
+*And* its story map .context/story-map.md is there
 *When* the Person validates story_map
 *Then* the chat receives the command /actions-validate stories-story-map
 *And* Claude Code goes on to Save Validation Report for stories-story_map

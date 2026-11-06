@@ -382,7 +382,7 @@ test.describe('Display Connected Status', () => {
     await expect(page.locator('.band-failure')).toHaveCount(0)
   })
 
-  // The ticket a violation belongs to is gone, so ticket.read_file really refuses it.
+  // The ticket a violation belongs to is gone, so session.read_file really refuses it.
   test('should show a tool failure in a toast', async ({ page }) => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
     const violation = page.locator('[data-panel="report"]').getByRole('button', { name: '.context/story-map.md:6', exact: true })
@@ -390,7 +390,7 @@ test.describe('Display Connected Status', () => {
     rmSync(join(fixtureRoot, '.sessions', 'checkout-flow'), { recursive: true, force: true })
     try {
       await violation.click()
-      await expect(toast(page, /no ticket named 'checkout-flow'/)).toBeVisible()
+      await expect(toast(page, /no session at '.sessions/checkout-flow/session.json'/)).toBeVisible()
     } finally {
       resetSessions(fixtureRoot)
     }

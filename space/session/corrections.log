@@ -1,0 +1,2 @@
+2026-11-05 Ticket split: I added new shapes beside Session (SessionFiles, a practices_worked_on dict, a practice_roots dict, declared_files) instead of extending the objects that already own that data.
+Correction: do-not-invent-parallel-object-models; extend the owning object. A practice's root, whether it is on, and its files belong on Session.practices[name] (PracticeSessionOutput); a fidelity's files belong on that practice's fidelity; the session folder's files belong on Session. No flattened copies on Ticket or Session.

@@ -13,7 +13,7 @@
 
 #### Scenario: Render the earlier fidelity into a new format first
 
-*Given* pet-visits' story map is docs/story-map.md, generated in markdown only
+*Given* pet-visits' story map is docs/.context/story-map.md, generated in markdown only
 *When* the Person generates scenarios in drawio
 *Then* the first command is /actions-render stories-story-map format=drawio source=markdown
 *And* the last is /actions-generate stories-scenarios format=drawio

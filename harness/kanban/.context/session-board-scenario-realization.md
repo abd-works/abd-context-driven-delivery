@@ -1058,7 +1058,7 @@ it should go back to the folder when the last tab closes
     -> FilesPanelClient.chooseMode()
       -> FilesPanelClient.openTab()
         -> FilesPanelClient.textOf()
--> FilesPanelClient.closeTab('tests/story-map.md')
+-> FilesPanelClient.closeTab('.context/story-map.md')
 ```
 
 #### with a violation in a file its fidelity does not declare
@@ -1192,7 +1192,7 @@ it should keep a tab a person closed closed
     -> FilesPanelClient.chooseMode()
       -> FilesPanelClient.openTab()
         -> FilesPanelClient.textOf()
--> FilesPanelClient.closeTab('tests/story-map.drawio')
+-> FilesPanelClient.closeTab('.context/story-map.drawio')
 -> SidePanelClient.reload()
 ```
 

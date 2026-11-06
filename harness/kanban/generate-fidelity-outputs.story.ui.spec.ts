@@ -10,9 +10,9 @@
  * `.sessions/` or a fidelity's output file; a chat is `FakeChat`, which checks in through the board's server as the
  * cdd-board mod does. A tile is opened in the details, where a press opens its action bar.
  *
- * The scenarios name billing-report's story map `tests/story-map.md`, which the fixture holds. The story_map fidelity
+ * The scenarios name billing-report's story map `.context/story-map.md`, which the fixture holds. The story_map fidelity
  * declares its markdown at `.context/story-map.md` (cdd_guidance/practices/stories/stories.md), so the board does not
- * count tests/story-map.md as the story map; the Thens that need it counted fail until the two agree.
+ * count .context/story-map.md as the story map; the Thens that need it counted fail until the two agree.
  */
 import { rmSync } from 'node:fs'
 import { join } from 'node:path'
@@ -65,7 +65,7 @@ test.describe('with no chat connected', () => {
         await openBoard(page)
       })
 
-      // Fails today: the fixture's tests/story-map.md is not where the story_map fidelity declares its markdown.
+      // Fails today: the fixture's .context/story-map.md is not where the story_map fidelity declares its markdown.
       test('Then the markdown chip is green and not picked', async ({ page }) => {
         const bar = await openStoryMapTile(page)
         await expect(chip(bar, 'markdown')).toHaveAttribute('aria-label', 'markdown: done')
@@ -196,7 +196,7 @@ test.describe('with a chat connected', () => {
         await runOf(bar).click({ timeout: 5_000 }).catch(() => undefined)
       })
 
-      // Fails today: tests/story-map.md is not the story map's declared markdown, so there is nothing to render and Run stays off.
+      // Fails today: .context/story-map.md is not the story map's declared markdown, so there is nothing to render and Run stays off.
       test('Then the chat receives the command /actions-render stories-story-map format=drawio', async () => {
         await expect.poll(() => receivedBy(chat)).toContain('/actions-render stories-story-map format=drawio session=.sessions/billing-report/session.json')
       })

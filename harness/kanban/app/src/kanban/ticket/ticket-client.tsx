@@ -1,5 +1,8 @@
 import type { BacklogItemData } from '@cdd/harness/kanban/backlog-item'
-import { TicketClientGenerated, type ActionStatesData, type TicketData } from '@cdd/harness/kanban/ticket'
+import { FidelityProgressClientGenerated, type ActionStatesData } from '@cdd/harness/kanban/fidelity-progress'
+import { TicketClientGenerated, type TicketData } from '@cdd/harness/kanban/ticket'
+import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
+import { SessionClientGenerated } from '@cdd/space/session/session'
 
 import { guidanceSlug, PRACTICES, practiceOf, STATES, WORK_LIGHT } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
@@ -49,7 +52,7 @@ export class TicketClient extends TicketClientGenerated {
 
   get violatedSlugs(): string[] {
     return Object.entries(this.progress)
-      .filter(([, state]) => state === 'violations')
+      .filter(([, progress]) => progress.state === 'violations')
       .map(([slug]) => slug)
   }
 
@@ -59,11 +62,30 @@ export class TicketClient extends TicketClientGenerated {
 
   // Where a split ticket came from: `story of epic`.
   get origin(): string {
-    return this.scope && this.parent ? `${this.scope} of ${this.parent}` : this.scope
+    const { scope, parent } = this.session
+    return scope && parent ? `${scope} of ${parent}` : scope
   }
 
   get stagePlace(): string {
     return [this.column, this.standing].filter(Boolean).join(' · ')
+  }
+
+  // The action Run next sends: the next fidelity's own next action.
+  get nextAction(): string {
+    return this.next ? (this.progress[this.next]?.next_action ?? '') : ''
+  }
+
+  // The ticket's session, its practices, and its fidelities' progress each answer their own tools.
+  get sessionClient(): SessionClientGenerated {
+    return new SessionClientGenerated(this.api, this.session)
+  }
+
+  practiceClient(practice: string): PracticeSessionOutputClientGenerated {
+    return PracticeSessionOutputClientGenerated.named(this.api, this.session.session_file, practice)
+  }
+
+  progressClient(slug: string): FidelityProgressClientGenerated {
+    return FidelityProgressClientGenerated.named(this.api, this.name, slug)
   }
 
   get nextStepName(): string {
@@ -104,11 +126,11 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   isEnabled(practice: string): boolean {
-    return this.practices[practice] ?? true
+    return this.session.practices[practice]?.enabled ?? true
   }
 
   stateOf(slug: string): { label: string; color: string; key: string } {
-    const key = this.progress[slug] ?? 'not_started'
+    const key = this.progress[slug]?.state ?? 'not_started'
     return { ...STATES[key]!, key }
   }
 
@@ -117,7 +139,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   actionsOf(slug: string): ActionStatesData {
-    return this.actions[slug] ?? { generate: 'to_do', validate: 'to_do', review: 'to_do' }
+    return this.progress[slug]?.actions ?? { generate: 'to_do', validate: 'to_do', review: 'to_do' }
   }
 
   // How far one action has got across slugs: done only when it is done on all of them.
@@ -128,7 +150,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   violationCountOf(slugs: string[]): number {
-    return slugs.reduce((total, slug) => total + (this.violationCounts[slug] ?? 0), 0)
+    return slugs.reduce((total, slug) => total + (this.progress[slug]?.violation_count ?? 0), 0)
   }
 
   enabledSlugs(stage: ColumnClient): string[] {
@@ -136,7 +158,7 @@ export class TicketClient extends TicketClientGenerated {
   }
 
   allows(slug: string, action: string): boolean {
-    return (this.allowedActions[slug] ?? []).includes(action)
+    return (this.progress[slug]?.allowed_actions ?? []).includes(action)
   }
 
   isNext(stage: ColumnClient, slug: string): boolean {
@@ -160,7 +182,7 @@ export class TicketClient extends TicketClientGenerated {
 
   private async worktreeOpened(): Promise<string> {
     if (this.worktree) return this.worktree
-    const opened = await this.openWorktree()
+    const opened = await this.page.board.openWorktree(this.name)
     await this.page.reader.refresh()
     return opened?.worktree ?? ''
   }
@@ -200,25 +222,25 @@ export class TicketClient extends TicketClientGenerated {
     this.page.item(item).select()
   }
 
-  override async enablePractice(practice: string, isEnabled: boolean): Promise<this | null> {
-    const saved = await super.enablePractice(practice, isEnabled)
+  async enablePractice(practice: string, isEnabled: boolean): Promise<boolean> {
+    const saved = await this.practiceClient(practice).enable(isEnabled)
     await this.page.reader.refresh()
-    if (!saved) return null
+    if (!saved) return false
     if (!isEnabled) this.page.cards.dropPractice(this.name, practice)
     const name = PRACTICES.find(entry => entry.key === practice)?.name ?? practice
-    this.page.store.toast(`${name} ${isEnabled ? 'on' : 'off'} for ${this.title} · saved to .sessions/${this.name}/session.json`)
-    return saved
+    this.page.store.toast(`${name} ${isEnabled ? 'on' : 'off'} for ${this.title} · saved to ${this.session.session_file}`)
+    return true
   }
 
   private async review(slug: string): Promise<void> {
-    await this.finishReview([slug])
+    await this.progressClient(slug).finishReview()
     await this.page.reader.refresh()
   }
 
   // A command runs in whichever chat it is sent to, whose open session can be another ticket's, so every action command
   // names this ticket's session.json.
   actionCommand(command: string): string {
-    return `${command} session=${this.sessionFile}`
+    return `${command} session=${this.session.session_file}`
   }
 
   fillSplit(): Promise<void> {

@@ -54,10 +54,10 @@ with story("Review Fidelity"):
         # Evidence: observed: kanban_tools_spec 'that a person names a fidelity the ticket does not have' — 'should refuse it, naming the fidelity', 'among fidelities it does have' — 'should write no review for the others named with it'.
         with given("billing-report's story map passed validate"):
             pass
-        with when("the Person reviews stories-story_map and stories-no_such_fidelity together"):
+        with when("the Person reviews stories-no_such_fidelity"):
             # Person -> Ticket.finish_review(['stories-story_map', 'stories-no_such_fidelity']) <- FidelityNotFoundError
             pass
-        with then("the board says no fidelity named stories-no_such_fidelity on this ticket"):
+        with then("the board says no fidelity named stories-no_such_fidelity on ticket billing-report"):
             pass
         with but_("no review line is written for stories-story_map"):
             pass

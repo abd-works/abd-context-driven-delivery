@@ -26,8 +26,8 @@
 #### Scenario: Refuse a fidelity the ticket does not have
 
 *Given* billing-report's story map passed validate
-*When* the Person reviews stories-story_map and stories-no_such_fidelity together
-*Then* the board says no fidelity named stories-no_such_fidelity on this ticket
+*When* the Person reviews stories-no_such_fidelity
+*Then* the board says no fidelity named stories-no_such_fidelity on ticket billing-report
 *But* no review line is written for stories-story_map
 
 #### Scenario: Complete a stage's work
