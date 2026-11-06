@@ -14,7 +14,7 @@
 #### Scenario: Finish a stage on the practices left on
 
 *Given* pet-visits has generated, validated, and reviewed the story_map [fidelity](../../../kanban-model.md#fidelityguidance)
-*And* DDD and UX are turned off for pet-visits
+*And* every practice but Stories is turned off for pet-visits
 *When* the session board reads pet-visits
 *Then* pet-visits shows in Discovery's Done
 

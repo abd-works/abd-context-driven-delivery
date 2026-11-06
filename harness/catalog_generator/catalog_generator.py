@@ -1,13 +1,13 @@
 """catalog_generator - discover-and-render primitives for the CDD HTML catalog.
 
-Wraps the real object model directly (Toolset.tools, AgentToolSet.agent_tools,
+Wraps the real object model directly (Toolset.tools, AgentToolSet.operations,
 BaseContextTool.fidelities) - there is no separate scraped schema. See
 ``catalog/cdd-catalog-plan.md`` and ``catalog/cdd-catalog-sketch.md`` for the
 full design; this module implements the "Assemble Catalog Page Data" epic's
 four discover-step stories:
 
 - ``load_registry`` - Load Context Tool And Utility Registry
-- ``scrape_fidelities`` - Scrape Fidelity Keys, Format Defaults, And Guidance Sections
+- each practice's live ``FidelityGuidance`` gives the fidelity name, default format, and ``section`` text
 - ``resolve_lifecycle_actions`` - Resolve Lifecycle Action Source Dir And Calls Via AST Walk
 - ``skill_slash_name`` - Collect Skill Slash-Command Map From SKILL Frontmatter
 
@@ -31,7 +31,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
+from harness.agent_tools.name import Name
 from harness.guidance.guidance import FidelityGuidance
+from harness.markdown.format import Format
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.installation.destination import noCatalog, omitted_from_catalog
 from harness.installation.files import skill
@@ -110,9 +112,7 @@ class RegistryEntry:
         return getattr(module, self.class_name)
 
     def toolset_name(self) -> str:
-        import re
-
-        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", self.cls.__name__).lower()
+        return Name(self.cls.__name__).snake
 
     def fidelity_cards(self) -> list[str]:
         from harness.catalog_generator.foundry_chrome import cap_card
@@ -134,12 +134,12 @@ class RegistryEntry:
 
         owner = self.cls()
         skill_name = SkillSlashName().resolve(owner_toolset_name(owner)) or owner_toolset_name(owner)
-        guidances = CatalogFidelityGuidance.scrape(self.cls)
+        fidelities = [fidelity for fidelity in owner.fidelities.entries.values() if not omitted_from_catalog(fidelity)]
         context_tool = catalog.catalog_context_tool
         context_tool.owner = owner
         context_tool.display_name = self.display_name
         context_tool.skill_name = skill_name
-        context_tool.guidances = guidances
+        context_tool.fidelities = fidelities
         body = context_tool.generate_catalog()
         catalog._tool_bodies.append(body)
         catalog._current_entry = self
@@ -159,7 +159,7 @@ class RegistryEntry:
             kanban_embed=catalog._kanban_embed(),
         )
         CatalogPage(catalog.out_root).write(f"context-tools/{owner_toolset_name(owner)}.html", page)
-        catalog._write_fidelity_pages(guidances)
+        catalog._write_fidelity_pages(fidelities)
 
     def write_utility_page(self, catalog: Catalog) -> None:
         from harness.catalog_generator.foundry_chrome import page_shell
@@ -210,7 +210,7 @@ def fidelity_names_by_stage(practice: type) -> dict[str, str]:
         board_key = stage_to_board.get(str(getattr(child, "stage", "") or "").strip().lower())
         if not board_key:
             continue
-        names[board_key] = str(getattr(child, "fidelity", None) or getattr(child, "name", None) or key)
+        names[board_key] = str(getattr(child, "name", None) or key)
     return names
 
 
@@ -249,31 +249,7 @@ def keep_in_catalog(entry: RegistryEntry) -> bool:
     """Registry rows marked ``@noCatalog`` stay deployed and stay out of the catalog."""
     return not omitted_from_catalog(entry.cls)
 
-# -- Fidelity scraping --------------------------------------------------------
-
-_GUIDANCE_MISSING = "Guidance missing"
-
-_FORMAT_DIR_ALIASES: dict[str, tuple[str, ...]] = {
-    "markdown": ("md", "markdown"),
-    "python": ("py", "python"),
-    "javascript": ("js", "javascript"),
-    "typescript": ("ts", "typescript"),
-    "java": ("java",),
-    "html": ("html",),
-    "drawio": ("drawio",),
-}
-
-_FORMAT_FILE_EXT: dict[str, str] = {
-    "markdown": ".md",
-    "md": ".md",
-    "python": ".py",
-    "py": ".py",
-    "javascript": ".js",
-    "js": ".js",
-    "typescript": ".ts",
-    "ts": ".ts",
-    "java": ".java",
-}
+# -- Fidelity templates -------------------------------------------------------
 
 # CDD stage key → frontmatter fidelity tokens used in template YAML/headers.
 _STAGE_FRONTMATTER_TOKENS: dict[str, tuple[str, ...]] = {
@@ -314,115 +290,6 @@ class TemplateFrontmatter:
                 self._token_set.add(tok)
 
 
-class CatalogFidelityGuidance(FidelityGuidance):
-    """Live FidelityGuidance plus the scraped ``##`` section for catalog pages."""
-
-    def __init__(
-        self,
-        name: str = "",
-        default_format: str | None = "",
-        section: str = "",
-        overview: str = "",
-    ) -> None:
-        super().__init__(name=name, default_format=default_format or "")
-        self.section = section
-        self.tool_overview = overview
-
-    @property
-    def key(self) -> str:
-        return self.name
-
-    @property
-    def guidance(self) -> str:  # type: ignore[override]
-        return self.section
-
-    @property
-    def overview(self) -> str:  # type: ignore[override]
-        return self.tool_overview
-
-    def write_catalog_page(self, catalog: Catalog) -> None:
-        from harness.catalog_generator.foundry_chrome import display_label, page_shell
-
-        entry = catalog._current_entry
-        owner = catalog._current_owner
-        fidelity = catalog.catalog_context_tool.catalog_fidelity
-        fidelity.fidelity_name = self.key
-        fidelity.owner = owner
-        fidelity.skill_name = catalog._current_skill_name
-        fidelity.guidance = self.guidance
-        fidelity.overview = self.overview
-        fidelity.tool_display_name = entry.display_name
-        fidelity.default_format = self.default_format
-        fid_body = fidelity.generate_catalog()
-        catalog._prepare_fidelity_kanban(self.key)
-        fid_page = page_shell(
-            title=f"{display_label(self.key)} — {entry.display_name}",
-            h1=catalog._harness_headline(),
-            tagline=catalog._harness_tagline(),
-            body_inner=fid_body,
-            commons_prefix="../commons/",
-            nav_prefix="../",
-            nav_current="fidelities",
-            show_hero=True,
-            body_wrap_class="skill-detail-page",
-            kanban_embed=catalog._kanban_embed(),
-        )
-        CatalogPage(catalog.out_root).write(
-            f"fidelities/{owner_toolset_name(owner)}-{self.key}.html",
-            fid_page,
-        )
-
-    @classmethod
-    def scrape(cls, practice: type) -> list[CatalogFidelityGuidance]:
-        """For every fidelity on ``practice``, resolve default format and the ``###`` body."""
-        from harness.markdown import Markdown
-
-        keys = cls._fidelity_keys(practice)
-        if not keys:
-            return []
-        module_dir = Path(importlib_module_file(practice.__module__)).resolve().parent
-        guide_path = module_dir / f"{module_dir.name}.md"
-        guide_text = guide_path.read_text(encoding="utf-8") if guide_path.is_file() else ""
-        overview = extract_tool_overview(guide_text) if guide_text else ""
-        results: list[CatalogFidelityGuidance] = []
-        for fidelity_key in keys:
-            section = (
-                HeadingSection(guide_text, level=3).extract(fidelity_key)
-                if guide_text
-                else None
-            )
-            default_format = Markdown(None, "").fidelity_format(section) if section else None
-            if not default_format:
-                default_format = getattr(practice, "_fidelity_format_defaults", {}).get(
-                    fidelity_key
-                )
-            results.append(
-                cls(
-                    name=fidelity_key,
-                    default_format=default_format,
-                    section=section if section is not None else _GUIDANCE_MISSING,
-                    overview=overview,
-                )
-            )
-        return results
-
-    @classmethod
-    def _fidelity_keys(cls, practice: type) -> list[str]:
-        declared = practice.__dict__.get("fidelities")
-        if isinstance(declared, dict):
-            return list(declared.values())
-        instance = practice()
-        bag = getattr(instance, "fidelities", None)
-        entries = getattr(bag, "entries", None)
-        if isinstance(entries, dict):
-            return [
-                getattr(child, "name", None) or getattr(child, "fidelity", key)
-                for key, child in entries.items()
-                if not omitted_from_catalog(child)
-            ]
-        return []
-
-
 def _template_frontmatter_blob(text: str) -> str:
     """Return the leading frontmatter block (YAML or ``# ---`` comment form)."""
     lines = text.splitlines()
@@ -440,14 +307,6 @@ def _template_frontmatter_blob(text: str) -> str:
             blob.append(stripped[2:].lstrip() if stripped.startswith("#") else stripped)
         return "\n".join(blob)
     return ""
-
-def _slug_variants(domain_slug: str) -> list[str]:
-    variants = [domain_slug]
-    for alt in (domain_slug.replace("_", "-"), domain_slug.replace("-", "_")):
-        if alt not in variants:
-            variants.append(alt)
-    return variants
-
 
 class HeadingSection:
     """Body under one markdown heading, up to the next heading of that level."""
@@ -575,31 +434,6 @@ class SkillSlashName:
         return found
 
 
-def extract_tool_overview(markdown: str) -> str:
-    """Prose under the opening H1 until Shared rules / first fidelity ``##``.
-
-    Skips the Fidelity|Default Format|Produce index table — that is not the
-    overview the fidelity page should lead with.
-    """
-    if not markdown.strip():
-        return ""
-    lines = markdown.splitlines()
-    start = 0
-    if lines and lines[0].startswith("# "):
-        start = 1
-    body_lines: list[str] = []
-    for line in lines[start:]:
-        stripped = line.strip()
-        if stripped.lower() in ("## shared rules", "## scaffold"):
-            break
-        if re.match(r"^##\s+\S", stripped) and not stripped.lower().startswith("## shared"):
-            break
-        body_lines.append(line)
-    while body_lines and not body_lines[-1].strip():
-        body_lines.pop()
-    return "\n".join(body_lines).strip()
-
-
 def extract_shared_sections(markdown: str, fidelity_keys: set[str]) -> str:
     """Practice-level ``##`` sections, stopping before each fidelity.
 
@@ -640,15 +474,6 @@ def _insert_after_heading(html_text: str, heading: str, insertion: str) -> str:
     return html_text[:insert_at] + insertion + html_text[insert_at:]
 
 
-def fidelity_opening_paragraph(markdown: str, fidelity_key: str) -> str:
-    """First paragraph of a fidelity's Overview — the outline, not the rules."""
-    section = HeadingSection(markdown, level=3).extract(fidelity_key)
-    if not section:
-        return ""
-    overview = HeadingSection(section, level=4).extract("Overview")
-    return _first_prose_paragraph(overview if overview is not None else section)
-
-
 def _first_prose_paragraph(text: str) -> str:
     lines: list[str] = []
     started = False
@@ -669,11 +494,6 @@ def _first_prose_paragraph(text: str) -> str:
         started = True
         lines.append(line)
     return "\n".join(lines).strip()
-
-def importlib_module_file(module_path: str) -> str:
-    """Thin wrapper so ``scrape_fidelities`` needs only one import surface."""
-    module = importlib.import_module(module_path)
-    return module.__file__  # type: ignore[return-value]
 
 # -- Lifecycle action resolution (AST walk) ----------------------------------
 
@@ -981,7 +801,7 @@ class ActionResolution:
                 continue
             module = importlib.import_module(module_path)
             instance = getattr(module, class_name)()
-            discovered = instance.agent_tools
+            discovered = instance.tools
             if action_name in discovered:
                 tool = discovered[action_name]
                 if omitted_from_catalog(getattr(tool, "callable", tool)):
@@ -992,13 +812,13 @@ class ActionResolution:
             pass
 
         owner = _Owner()
-        owner.agent_tools = actions
+        owner.tools = actions
         return owner
 
     def write_catalog_page(self, catalog: Catalog) -> None:
         from harness.catalog_generator.foundry_chrome import page_shell
 
-        action = catalog._action_owner.agent_tools[self.name]
+        action = catalog._action_owner.tools[self.name]
         catalog_action = catalog.catalog_action
         catalog_action.action = action
         catalog_action.owner = catalog._action_owner
@@ -1358,19 +1178,15 @@ class CatalogFidelity:
         self.catalog_action = catalog_action
         self.lifecycle_actions = lifecycle_actions
         self.skill_name = ""
-        self.fidelity_name = ""
+        self.fidelity: FidelityGuidance | None = None
         self.toolset_name = ""
-        self.owner: object | None = None
-        self.guidance = ""
         self.example_body: str | None = None
-        self.overview = ""
         self.tool_display_name = ""
-        self.default_format: str | None = None
 
     def _quick_invoke(self) -> str:
         """Invoke block — Foundry install-block chrome, sits under the board."""
         skill_name = self.skill_name
-        fidelity_name = self.fidelity_name
+        fidelity_name = self.fidelity.name
         action_links = ", ".join(
             f'<a href="../actions/{r.name}.html">{r.name}</a>' for r in self.lifecycle_actions
         )
@@ -1404,7 +1220,7 @@ class CatalogFidelity:
 
         from harness.catalog_generator.foundry_chrome import fence
 
-        default_format = self.default_format
+        default_format = self.fidelity.default_format
         module_dir = self._module_dir()
         path = self.default_template_path()
         if path is None or not path.is_file():
@@ -1429,17 +1245,17 @@ class CatalogFidelity:
         )
 
     def _module_dir(self) -> Path:
-        return Path(getattr(self.owner, "module_dir", Path("."))).resolve()
+        return Path(getattr(self.fidelity.practice_guidance, "module_dir", Path("."))).resolve()
 
     def _domain_slug(self) -> str:
-        return getattr(self.owner, "toolset_name", self._module_dir().name)
+        return getattr(self.fidelity.practice_guidance, "toolset_name", self._module_dir().name)
 
     def _format_aliases(self) -> tuple[str, ...]:
-        fmt = (self.default_format or "").lower()
-        return _FORMAT_DIR_ALIASES.get(fmt, (fmt,))
+        format = Format(self.fidelity.default_format)
+        return tuple(dict.fromkeys((format.short, format.name)))
 
     def default_template_path(self) -> Path | None:
-        if not self.default_format:
+        if not self.fidelity.default_format:
             return None
         named = self._named_template_file()
         if named is not None:
@@ -1457,8 +1273,8 @@ class CatalogFidelity:
         shared = self._module_dir() / "templates"
         if not shared.is_dir():
             return None
-        ext = _FORMAT_FILE_EXT.get(self.default_format.lower(), "")
-        for slug in _slug_variants(self._domain_slug()):
+        ext = Format(self.fidelity.default_format).template_extension
+        for slug in Name(self._domain_slug()).spellings:
             for stem in (f"{slug}-templates", f"{slug}-template"):
                 found = self._named_stem_path(shared, stem, ext)
                 if found is not None:
@@ -1513,7 +1329,7 @@ class CatalogFidelity:
         return scored
 
     def _template_score(self, path: Path) -> int:
-        fidelity = self.fidelity_name
+        fidelity = self.fidelity.name
         fidelity_kebab = fidelity.replace("_", "-")
         name_l = path.name.lower()
         stem_kebab = path.stem.replace("_", "-").lower()
@@ -1547,17 +1363,17 @@ class CatalogFidelity:
         return TemplateFrontmatter().tokens(text)
 
     def _stage_tokens(self) -> set[str]:
-        fidelities = getattr(type(self.owner), "fidelities", None)
+        fidelities = getattr(type(self.fidelity.practice_guidance), "fidelities", None)
         if not isinstance(fidelities, dict):
             return set()
         stage_key = next(
-            (stage for stage, name in fidelities.items() if name == self.fidelity_name),
+            (stage for stage, name in fidelities.items() if name == self.fidelity.name),
             "",
         )
         return set(_STAGE_FRONTMATTER_TOKENS.get(stage_key, ()))
 
     def _fallback_root_template(self, templates_root: Path) -> Path | None:
-        ext = _FORMAT_FILE_EXT.get((self.default_format or "").lower(), "")
+        ext = Format(self.fidelity.default_format).template_extension
         aliases = self._format_aliases()
         root_files = [
             path for path in templates_root.iterdir()
@@ -1566,11 +1382,11 @@ class CatalogFidelity:
         ]
         if len(root_files) == 1:
             return root_files[0].resolve()
-        fidelity_kebab = self.fidelity_name.replace("_", "-")
+        fidelity_kebab = self.fidelity.name.replace("_", "-")
         named = [
             path for path in root_files
             if fidelity_kebab in path.stem.replace("_", "-").lower()
-            or self.fidelity_name.lower() in path.stem.lower()
+            or self.fidelity.name.lower() in path.stem.lower()
         ]
         if named:
             return sorted(named)[0].resolve()
@@ -1600,12 +1416,6 @@ class CatalogFidelity:
             return "text"
         return lang
 
-    def _ensure_default_format(self) -> None:
-        if self.default_format is not None:
-            return
-        defaults = getattr(type(self.owner), "_fidelity_format_defaults", {})
-        self.default_format = defaults.get(self.fidelity_name)
-
     def _guidance_preview(self, label: str) -> str:
         from harness.catalog_generator.foundry_chrome import (
             catalog_examples_html,
@@ -1613,14 +1423,10 @@ class CatalogFidelity:
             wrap_guidance_body,
         )
 
-        overview_html = markdown_to_html(self.overview) if self.overview.strip() else ""
-        fid_md = f"## {label}\n\n{self.guidance}" if self.guidance else self.guidance
-        examples = catalog_examples_html(self._module_dir(), self.fidelity_name)
-        bits = []
-        if overview_html:
-            bits.append(f"<h2>Overview</h2>\n{overview_html}")
-        bits.append(wrap_guidance_body(markdown_to_html(fid_md)))
-        preview = "\n".join(bits)
+        section = self.fidelity.section
+        fid_md = f"## {label}\n\n{section}" if section else section
+        examples = catalog_examples_html(self._module_dir(), self.fidelity.name)
+        preview = wrap_guidance_body(markdown_to_html(fid_md))
         if examples:
             preview = _insert_after_heading(preview, "Overview", examples)
         return preview
@@ -1635,9 +1441,8 @@ class CatalogFidelity:
 
         from harness.catalog_generator.foundry_chrome import display_label
 
-        self._ensure_default_format()
-        label = display_label(self.fidelity_name)
-        tool_label = self.tool_display_name or getattr(self.owner, "toolset_name", "")
+        label = display_label(self.fidelity.name)
+        tool_label = self.tool_display_name or getattr(self.fidelity.practice_guidance, "toolset_name", "")
         preview = self._guidance_preview(label)
         return (
             f'<header class="page-hero--detail fidelity-detail-header">'
@@ -1646,7 +1451,7 @@ class CatalogFidelity:
             f"</header>\n"
             f"{self._quick_invoke()}\n"
             f'<section class="install-block fidelity-guidance" '
-            f'data-fidelity="{html_mod.escape(self.fidelity_name)}" '
+            f'data-fidelity="{html_mod.escape(self.fidelity.name)}" '
             f'aria-label="Fidelity guidance">'
             f"{preview}</section>\n"
             f"{self._default_template_panel()}\n"
@@ -1667,7 +1472,7 @@ class CatalogContextTool:
         self.owner: object | None = None
         self.display_name = ""
         self.skill_name = ""
-        self.guidances: list[CatalogFidelityGuidance] = []
+        self.fidelities: list[FidelityGuidance] = []
 
     def generate_catalog(self) -> str:
         """Render one practice page the way a fidelity page is rendered.
@@ -1697,16 +1502,12 @@ class CatalogContextTool:
             f"{self._fidelity_section()}"
         )
 
-    def _guide_markdown(self) -> str:
-        module_dir = Path(getattr(self.owner, "module_dir", Path("."))).resolve()
-        guide = module_dir / f"{module_dir.name}.md"
+    def _shared_markdown(self) -> str:
+        guide = self.owner.domain_markdown_path()
         if not guide.is_file():
             return ""
-        return guide.read_text(encoding="utf-8")
-
-    def _shared_markdown(self) -> str:
-        keys = {guidance.key for guidance in self.guidances}
-        return extract_shared_sections(self._guide_markdown(), keys)
+        keys = {fidelity.name for fidelity in self.fidelities}
+        return extract_shared_sections(guide.read_text(encoding="utf-8"), keys)
 
     def _owner_slug(self) -> str:
         return RegistryEntry("", "", "", type(self.owner)).toolset_name()
@@ -1721,13 +1522,12 @@ class CatalogContextTool:
         )
 
         slug = self._owner_slug()
-        guide = self._guide_markdown()
         module_dir = Path(getattr(self.owner, "module_dir", Path("."))).resolve()
         rows: list[str] = []
-        for guidance in self.guidances:
-            name = guidance.key
+        for fidelity in self.fidelities:
+            name = fidelity.name
             title = display_label(name)
-            opening = fidelity_opening_paragraph(guide, name)
+            opening = _first_prose_paragraph(fidelity.overview or fidelity.section)
             opening_html = markdown_to_html(opening) if opening else ""
             examples = catalog_examples_html(module_dir, name)
             rows.append(
@@ -2151,9 +1951,32 @@ class Catalog:
         for entry in self._context_tool_entries:
             entry.write_context_tool_page(self)
 
-    def _write_fidelity_pages(self, guidances: list[CatalogFidelityGuidance]) -> None:
-        for guidance in guidances:
-            guidance.write_catalog_page(self)
+    def _write_fidelity_pages(self, fidelities: list[FidelityGuidance]) -> None:
+        for fidelity in fidelities:
+            self._write_fidelity_page(fidelity)
+
+    def _write_fidelity_page(self, fidelity: FidelityGuidance) -> None:
+        from harness.catalog_generator.foundry_chrome import display_label, page_shell
+
+        renderer = self.catalog_context_tool.catalog_fidelity
+        renderer.fidelity = fidelity
+        renderer.skill_name = self._current_skill_name
+        renderer.tool_display_name = self._current_entry.display_name
+        body = renderer.generate_catalog()
+        self._prepare_fidelity_kanban(fidelity.name)
+        page = page_shell(
+            title=f"{display_label(fidelity.name)} — {self._current_entry.display_name}",
+            h1=self._harness_headline(),
+            tagline=self._harness_tagline(),
+            body_inner=body,
+            commons_prefix="../commons/",
+            nav_prefix="../",
+            nav_current="fidelities",
+            show_hero=True,
+            body_wrap_class="skill-detail-page",
+            kanban_embed=self._kanban_embed(),
+        )
+        CatalogPage(self.out_root).write(f"fidelities/{owner_toolset_name(self._current_owner)}-{fidelity.name}.html", page)
 
     def _write_action_pages(self) -> None:
         self._prepare_plain_kanban()

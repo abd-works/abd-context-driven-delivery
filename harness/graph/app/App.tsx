@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import wordmarkBlack from './brand/abd.works.wordmark.black.svg?url';
 import wordmarkWhite from './brand/abd.works.wordmark.white.svg?url';
 import type { CddProgress } from '@cdd/cdd-shared';
-import type { ExplorerEntryData, InventoryData, PracticeInventoryData, NodeSourceData } from '@cdd/harness/graph/graph';
+import type { ExplorerEntryData, InventoryData, PracticeGraphData, NodeSourceData } from '@cdd/harness/graph/graph';
 import { nodeFilter, type FilterSelection } from './filter/filter-selection';
 import { FilterView } from './filter/FilterView';
 import { GraphClient } from './graph/GraphClient';
@@ -34,7 +34,7 @@ export function App() {
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selection, setSelection] = useState<FilterSelection>(EMPTY);
   const [trees, setTrees] = useState<ExplorerEntryData[]>([]);
-  const [catalog, setCatalog] = useState<Record<string, PracticeInventoryData>>({});
+  const [catalog, setCatalog] = useState<Record<string, PracticeGraphData>>({});
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
   const [relationships, setRelationships] = useState<string[]>([]);
   const [rules, setRules] = useState<string[]>([]);
@@ -401,7 +401,7 @@ function joined(values: string[]): string {
 
 function listed(
   practices: string[],
-  catalog: Record<string, PracticeInventoryData>,
+  catalog: Record<string, PracticeGraphData>,
   field: 'node_types' | 'edge_types' | 'rules',
 ): string[] {
   return unique(practices.flatMap((name) => catalog[name]?.[field] ?? []));
@@ -410,7 +410,7 @@ function listed(
 function overlayFilterRefresh(
   previous: FilterSelection,
   next: FilterSelection,
-  catalog: Record<string, PracticeInventoryData>,
+  catalog: Record<string, PracticeGraphData>,
   activeOverlays: string[] = next.overlays,
 ): FilterSelection {
   const scope = next.practices.length ? next.practices : Object.keys(catalog);
@@ -465,7 +465,7 @@ function mergeNewCatalogItems(current: string[], available: string[]): string[] 
 function practiceSelection(
   previous: FilterSelection,
   next: FilterSelection,
-  catalog: Record<string, PracticeInventoryData>,
+  catalog: Record<string, PracticeGraphData>,
 ): FilterSelection {
   const scope = next.practices.length ? next.practices : Object.keys(catalog);
   const nodes = listed(scope, catalog, 'node_types');

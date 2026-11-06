@@ -10,7 +10,7 @@
 
 #### Scenario: Leave a generated format unpicked
 
-*Given* billing-report's story map is tests/story-map.md, already there
+*Given* billing-report's story map is .context/story-map.md, already there
 *When* the Person opens the story_map tile
 *Then* the markdown chip is green and not picked
 

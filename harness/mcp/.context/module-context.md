@@ -10,16 +10,16 @@ Run the **one cdd server** every chat in every project talks to, and publish `@m
 
 ## Seam
 
-`mcp`, `McpOperationDefinition`, `McpInstallation`, `McpTool`, `McpPrompt`, `McpServer`, `McpHost`, `McpDaemon`, `CddHome`, `ProjectNotNamed`
+`mcp`, `McpInstallation`, `McpServer`, `McpHost`, `McpDaemon`, `CddHome`, `ProjectNotNamed`
 
 ## Public API
 
-- `McpOperationDefinition.from_tool` / `invoke_line` — MCP name and the skill/command `Use MCP tool:` tail
-- `McpInstallation.write` — record the op and write the `cdd` entry: the server's URL, and how each request names its project
+- The server works from `AgentTool` directly: its `mcp_name`, `description`, `input_schema`, and `invoke`. An operation is published as a tool; instructions are published as a prompt whose call answers with them expanded.
+- `McpInstallation.write` — record the `AgentTool` and write the `cdd` entry: the server's URL, and how each request names its project
 - `McpInstallation.ensure_server` / `pin_server` / `serve_from_checkout` — start the server when none answers; change which code serves every chat
 - `McpServer.start` / `bind_from` / `for_project` — enroll recorded `@mcp` ops only; one runtime per project
 - `McpHost.from_refs` / `serve` / `dispatch` / `standup` — the server; `cdd.ping` and `cdd.restart` are always listed
-- `McpHost.input_schema_for_callable` — JSON Schema from Python parameter types
+- A tool's answer becomes JSON through `data_of` (`harness.installation.destination`), the one serializer, so a path reads with forward slashes in every answer.
 - `McpDaemon.ensure` / `ping` / `stop` / `restart` — find, start, and stop the server process
 - `CddHome.install` / `pin` / `serve_from` / `source` — `~/.cdd/runtime.json` and the pinned copy in `~/.cdd/runtime/`
 

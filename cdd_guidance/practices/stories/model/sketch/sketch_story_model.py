@@ -28,7 +28,7 @@ _STEP = re.compile(r"^(given|when|then|and|but)\s+(.+)$", re.I)
 class SketchStoryModel(StoryModel):
     def parse(self, text: str) -> "SketchStoryModel":
         model = type(self)()
-        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.stories)
+        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.of("stories"))
         epic: Epic | None = None
         subs: list[Epic] = []
         story: Story | None = None

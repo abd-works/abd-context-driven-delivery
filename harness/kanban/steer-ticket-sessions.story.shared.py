@@ -83,7 +83,7 @@ def _(s):
 
     @s.when("the Person adds the backlog item Gift cards with the text Sell gift cards.")
     def _(world):
-        world.BacklogItem.add(title=GIFT_CARDS_IDEA.title, text=GIFT_CARDS_IDEA.text)
+        world.BacklogItem.create(title=GIFT_CARDS_IDEA.title, text=GIFT_CARDS_IDEA.text)
 
     @s.then("the Backlog shows Gift cards with the text Sell gift cards.")
     def _(world):
@@ -120,7 +120,7 @@ def _(s):
     @s.then("the ticket gift-cards is In progress in Discovery with root src/visits")
     def _(world):
         expect_placed(world.started, "Discovery", is_done=False)
-        expect(world.started["root"]).to(equal(VISITS_ROOT))
+        expect(world.started["session"]["workpath"]).to(equal(VISITS_ROOT))
 
 
 @shared_stories.scenario("Add Backlog Item", "Keep the idea file with the new ticket")
@@ -186,16 +186,16 @@ def _(s):
 
     @s.when("the Person opens a new ticket titled Pet visits")
     def _(world):
-        world.opened = world.data_of(world.Ticket.new(title=PET_VISITS_TICKET.title, scope=PET_VISITS_TICKET.scope))
+        world.opened = world.data_of(world.Ticket.create(title=PET_VISITS_TICKET.title, scope=PET_VISITS_TICKET.scope))
 
     @s.then("pet-visits is In progress in Discovery, titled Pet visits")
     def _(world):
         expect_placed(world.opened, "Discovery", is_done=False)
         expect((world.opened["name"], world.opened["title"])).to(equal(("pet-visits", PET_VISITS_TICKET.title)))
 
-    @s.and_("its next step is Generate on stories-story_map")
+    @s.and_("its next step is Generate on stories-story-map")
     def _(world):
-        expect((world.opened["next"], world.opened["next_action"])).to(equal(("stories-story_map", "generate")))
+        expect((world.opened["next"], world.opened["progress"][world.opened["next"]]["next_action"])).to(equal(("stories-story-map", "generate")))
 
     @s.and_("checkout-flow is still the active ticket")
     def _(world):
@@ -210,7 +210,7 @@ def _(s):
 
     @s.when("the Person opens a ticket titled Billing report on src/billing")
     def _(world):
-        world.opened = world.data_of(world.Ticket.new(title=BILLING_REPORT_ON_SRC_BILLING.title, scope=BILLING_REPORT_ON_SRC_BILLING.scope, path=BILLING_REPORT_ON_SRC_BILLING.path))
+        world.opened = world.data_of(world.Ticket.create(title=BILLING_REPORT_ON_SRC_BILLING.title, scope=BILLING_REPORT_ON_SRC_BILLING.scope, path=BILLING_REPORT_ON_SRC_BILLING.path))
 
     @s.then("billing-report's session works in src/billing")
     def _(world):
@@ -219,7 +219,7 @@ def _(s):
 
     @s.and_("the details show its root as src/billing")
     def _(world):
-        expect(world.opened["root"]).to(equal(BILLING_ROOT))
+        expect(world.opened["session"]["workpath"]).to(equal(BILLING_ROOT))
 
 
 @shared_stories.scenario("Open Ticket Session", "Choose a ticket's root")
@@ -242,15 +242,15 @@ def _(s):
 
     @s.when("the Person chooses src/visits as checkout-flow's root")
     def _(world):
-        world.chosen = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).choose_root(path=VISITS_ROOT))
+        world.chosen = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.choose_workpath(path=VISITS_ROOT))
 
     @s.then("checkout-flow's root reads src/visits")
     def _(world):
-        expect(world.chosen["root"]).to(equal(VISITS_ROOT))
+        expect(world.chosen["workpath"]).to(equal(VISITS_ROOT))
 
     @s.and_("each practice's default root sits under src/visits")
     def _(world):
-        expect(all(entry["root"].startswith(VISITS_ROOT) for entry in world.chosen["practice_roots"].values())).to(be_true)
+        expect(all(entry["root"].startswith(VISITS_ROOT) for entry in world.chosen["practices"].values())).to(be_true)
 
 
 @shared_stories.scenario("Open Ticket Session", "Choose one practice's root and go back to its default")
@@ -262,23 +262,23 @@ def _(s):
 
     @s.when("the Person chooses src/billing for checkout-flow's Stories root")
     def _(world):
-        world.chosen = world.data_of(world.ticket.choose_practice_root(practice="stories", path=BILLING_ROOT))
+        world.chosen = world.data_of(world.ticket.session.practice("stories").choose_root(path=BILLING_ROOT))
 
     @s.then("the Stories root reads src/billing, chosen by the Person")
     def _(world):
-        expect(world.chosen["practice_roots"]["stories"]).to(equal({"root": BILLING_ROOT, "is_chosen": True}))
+        expect((world.chosen["root"], world.chosen["is_root_chosen"])).to(equal((BILLING_ROOT, True)))
 
     @s.and_("every other practice stays on its default root")
     def _(world):
-        expect([practice for practice, entry in world.chosen["practice_roots"].items() if entry["is_chosen"]]).to(equal(["stories"]))
+        expect([name for name, entry in world.data_of(world.ticket)["session"]["practices"].items() if entry["is_root_chosen"]]).to(equal(["stories"]))
 
     @s.when("the Person puts Stories back on its default root")
     def _(world):
-        world.chosen = world.data_of(world.ticket.use_default_practice_root(practice="stories"))
+        world.chosen = world.data_of(world.ticket.session.practice("stories").use_default_root())
 
     @s.then("the Stories root is the default again")
     def _(world):
-        expect(world.chosen["practice_roots"]["stories"]["is_chosen"]).to(be_false)
+        expect(world.chosen["is_root_chosen"]).to(be_false)
 
 
 @shared_stories.scenario("Close Active Session", "Complete the active ticket with its work committed")
@@ -290,7 +290,7 @@ def _(s):
 
     @s.when("the Person moves checkout-flow into Complete")
     def _(world):
-        world.workspace = world.data_of(world.ticket.workspace())
+        world.workspace = world.data_of(world.Board.current().workspace(ticket=world.ticket.name))
 
     @s.then("a dialog headed Close session Checkout flow offers commit and push, chosen")
     def _(world):
@@ -491,7 +491,7 @@ def _(s):
 
     @s.when("the Person activates billing-report")
     def _(world):
-        world.workspace = world.data_of(world.ticket.workspace())
+        world.workspace = world.data_of(world.Board.current().workspace(ticket=world.ticket.name))
 
     @s.then("a dialog headed Switch from Checkout flow to Billing report offers commit and push, chosen, and merge, not chosen")
     def _(world):
@@ -503,7 +503,7 @@ def _(s):
 
     @s.when("the Person chooses merge and confirms")
     def _(world):
-        world.ticket.activate(leaving=["commit", "push", "merge"], opening=["branch"])
+        world.Board.current().activate(ticket=world.ticket.name, leaving=["commit", "push", "merge"], opening=["branch"])
 
     @s.then("billing-report is the active ticket with a thick orange outline")
     def _(world):
@@ -529,7 +529,7 @@ def _(s):
 
     @s.when("the Person activates billing-report with nothing chosen")
     def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=[], opening=[])
+        world.Board.current().activate(ticket=BILLING_REPORT.name, leaving=[], opening=[])
 
     @s.then("billing-report is the active ticket")
     def _(world):
@@ -559,7 +559,7 @@ def _(s):
 
     @s.when("the Person activates billing-report with commit chosen")
     def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["commit"], opening=[])
+        world.Board.current().activate(ticket=BILLING_REPORT.name, leaving=["commit"], opening=[])
 
     @s.then("billing-report is the active ticket")
     def _(world):
@@ -579,7 +579,7 @@ def _(s):
 
     @s.when("the Person activates billing-report with a new branch")
     def _(world):
-        world.Ticket.load(BILLING_REPORT.name).activate(leaving=[], opening=["branch"])
+        world.Board.current().activate(ticket=BILLING_REPORT.name, leaving=[], opening=["branch"])
 
     @s.then("the repository has the branch billing-report")
     def _(world):
@@ -593,7 +593,7 @@ def _(s):
 @shared_stories.scenario("Split Ticket Into Child Tickets", "Ask the chat to split a ticket into child tickets")
 def _(s):
     # The chat connected here, and the prompt the board app fills in it, are the board app's; this scenario starts
-    # where the chat opens the child ticket through ticket.new.
+    # where the chat opens the child ticket through ticket.create.
     @s.given("checkout-flow is the active ticket and a chat is connected")
     def _(world):
         world.project.seed_session(CHECKOUT_FLOW)
@@ -601,7 +601,7 @@ def _(s):
 
     @s.when("the chat opens a child ticket Enter card details with parent checkout-flow")
     def _(world):
-        world.opened = world.data_of(world.Ticket.new(title=ENTER_CARD_DETAILS.title, scope=ENTER_CARD_DETAILS.scope, parent=ENTER_CARD_DETAILS.parent))
+        world.opened = world.data_of(world.Ticket.create(title=ENTER_CARD_DETAILS.title, scope=ENTER_CARD_DETAILS.scope, parent=ENTER_CARD_DETAILS.parent))
 
     @s.then("enter-card-details is In progress in Discovery")
     def _(world):
@@ -609,7 +609,7 @@ def _(s):
 
     @s.and_("its details read enter-card-details · story of checkout-flow")
     def _(world):
-        expect((world.opened["name"], world.opened["scope"], world.opened["parent"])).to(equal(("enter-card-details", "story", CHECKOUT_FLOW.name)))
+        expect((world.opened["name"], world.opened["session"]["scope"], world.opened["session"]["parent"])).to(equal(("enter-card-details", "story", CHECKOUT_FLOW.name)))
 
 
 @shared_stories.scenario("Archive Ticket", "Archive a ticket off the board")
@@ -666,11 +666,11 @@ def _(s):
 
     @s.then("the details read Latest handoff: .sessions/checkout-flow/handoff-20261101T120000.md")
     def _(world):
-        expect(world.selected["handoff"]).to(equal(f".sessions/{CHECKOUT_FLOW.name}/{LATEST_HANDOFF}"))
+        expect(world.selected["session"]["handoff"]).to(equal(f".sessions/{CHECKOUT_FLOW.name}/{LATEST_HANDOFF}"))
 
     @s.when("the Person opens the handoff")
     def _(world):
-        world.opened = world.data_of(world.ticket.read_file(path=world.selected["handoff"]))
+        world.opened = world.data_of(world.ticket.session.read_file(path=world.selected["session"]["handoff"]))
 
     @s.then("the files panel shows the handoff in a tab with its text # Handoff")
     def _(world):
@@ -689,4 +689,4 @@ def _(s):
 
     @s.then("the details say No handoff yet")
     def _(world):
-        expect(world.selected["handoff"]).to(equal(""))
+        expect(world.selected["session"]["handoff"]).to(equal(""))

@@ -8,6 +8,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from space.repo.repo import Branch, Repo, Worktree
 
 SESSIONS_FOLDER = ".sessions"
 STATE_NAME = "session.json"
@@ -18,27 +22,11 @@ _LEGACY_SESSION_KEY = "current"
 _called_project: ContextVar[Path | None] = ContextVar("cdd_called_project", default=None)
 
 
-def checkout_holding(path: Path | str) -> Path:
-    """The git checkout containing ``path``; ``path`` itself when it is not inside one."""
-    resolved = Path(path).resolve()
-    for candidate in (resolved, *resolved.parents):
-        if (candidate / ".git").exists():
-            return candidate
-    return resolved
+def _repo_at(folder: Path | str) -> Repo:
+    # WHY: space.repo.repo saves its branch and worktree through WorkState, so it is imported when first used.
+    from space.repo.repo import Repo
 
-
-def main_checkout_of(checkout: Path | str) -> Path:
-    """The repository's main checkout. A linked worktree's ``.git`` is a file naming its git folder, whose
-    ``commondir`` leads back to the main checkout's ``.git``; any other checkout is its own main checkout."""
-    root = Path(checkout).resolve()
-    marker = root / ".git"
-    if not marker.is_file():
-        return root
-    worktree_git = (root / marker.read_text(encoding="utf-8").split("gitdir:", 1)[-1].strip()).resolve()
-    common = worktree_git / "commondir"
-    if not common.is_file():
-        return root
-    return (worktree_git / common.read_text(encoding="utf-8").strip()).resolve().parent
+    return Repo(folder)
 
 
 def project_folder() -> Path:
@@ -56,13 +44,13 @@ def project_folder() -> Path:
 def project_checkout() -> Path:
     """The checkout holding the project being worked on. Sessions, the board, and every tool that finds
     ``.sessions/`` start here, so they all find the same one."""
-    return checkout_holding(project_folder())
+    return _repo_at(project_folder()).checkout_folder
 
 
 def board_checkout() -> Path:
     """The checkout whose ``.sessions/`` holds the board. A ticket's worktree is a linked worktree of the project, so
     a chat working there reads the same board as one in the main checkout."""
-    return main_checkout_of(project_checkout())
+    return _repo_at(project_checkout()).primary_root()
 
 
 @contextmanager
@@ -92,20 +80,28 @@ class WorkState:
         return self.sessions_folder / STATE_NAME
 
     @property
-    def branch(self) -> str:
-        return self._value("branch")
+    def branch(self) -> Branch | None:
+        """The branch saved as open, on this checkout; none when no branch is saved."""
+        name = self._value("branch")
+        return _repo_at(self.root).branch_named(name) if name else None
 
     @branch.setter
-    def branch(self, name: str) -> None:
-        self._store("branch", name)
+    def branch(self, branch: Branch | None) -> None:
+        self._store("branch", branch.name if branch is not None else "")
 
     @property
-    def worktree(self) -> str:
-        return self._value("worktree")
+    def worktree(self) -> Worktree | None:
+        """The worktree saved as open, with the saved branch; none when no worktree is open."""
+        path = self._value("worktree")
+        if not path:
+            return None
+        from space.repo.repo import Worktree
+
+        return Worktree.from_checkout(Path(path), self._value("branch"))
 
     @worktree.setter
-    def worktree(self, path: str) -> None:
-        self._store("worktree", path)
+    def worktree(self, worktree: Worktree | None) -> None:
+        self._store("worktree", str(worktree.path) if worktree is not None else "")
 
     @property
     def session(self) -> str:
@@ -118,7 +114,7 @@ class WorkState:
     @property
     def release(self) -> str:
         """The release this checkout's work belongs to: the open session, else the branch, else ``main``."""
-        return self.session or self.branch or "main"
+        return self.session or self._value("branch") or "main"
 
     def release_folder(self, release: str = "") -> Path:
         """``.sessions/<release>/``: the release's session files, its design canvas, and its end-to-end results."""

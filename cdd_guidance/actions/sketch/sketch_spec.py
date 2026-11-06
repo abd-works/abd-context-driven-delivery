@@ -29,20 +29,19 @@ with description("Sketch toolset") as self:
     with after.each:
         self.throwaway.close()
 
-    with context("manifest signature"):
+    with context("with its tools listed"):
         with it("exposes find_template, save_sketch, list_sketches as tools"):
-            sig = Sketch.manifest.signature
-            expect(sig["find_template"]["kind"]).to(equal("tool"))
-            expect(sig["save_sketch"]["kind"]).to(equal("tool"))
-            expect(sig["list_sketches"]["kind"]).to(equal("tool"))
+            tools = AgentToolSet.instantiate(Sketch).tools
+            expect(tools["find_template"].kind).to(equal("tool"))
+            expect(tools["save_sketch"].kind).to(equal("tool"))
+            expect(tools["list_sketches"].kind).to(equal("tool"))
 
         with it("exposes sketch as an action with find_template and save_sketch"):
-            entry = Sketch.manifest.signature["sketch"]
-            expect(entry["kind"]).to(equal("action"))
-            expect("find_template" in entry["tools"]).to(be_true)
-            expect("save_sketch" in entry["tools"]).to(be_true)
-            expect("review_sketch" in entry["tools"]).to(be_true)
-            expect(entry.get("chain")).to(equal(None))
+            sketch = AgentToolSet.instantiate(Sketch).tools["sketch"]
+            expect(sketch.kind).to(equal("instructions"))
+            expect("find_template" in sketch.tools).to(be_true)
+            expect("save_sketch" in sketch.tools).to(be_true)
+            expect("review_sketch" in sketch.tools).to(be_true)
 
     with context("sketch_template property"):
         with it("returns the default template when agent_dir was not set at construction"):
@@ -214,11 +213,11 @@ with description("Sketch toolset") as self:
             )
 
         with it("wires find_template and save_sketch as its tool steps"):
-            expect("find_template" in self.body.tool_steps).to(be_true)
-            expect("save_sketch" in self.body.tool_steps).to(be_true)
+            expect("find_template" in self.body.tools).to(be_true)
+            expect("save_sketch" in self.body.tools).to(be_true)
 
         with it("wires review_sketch after save_sketch as a hard review gate"):
-            steps = list(self.body.tool_steps)
+            steps = list(self.body.tools)
             expect("review_sketch" in steps).to(be_true)
             expect("save_sketch" in steps).to(be_true)
             save_i = steps.index("save_sketch")
@@ -299,4 +298,4 @@ with description("PracticeGuidance operations for sketch"):
             )
         )
         practice = cls()
-        expect("sketch" in practice.agent_tools).to(equal(False))
+        expect("sketch" in practice.tools).to(equal(False))

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import importlib
-import inspect
 import json
 import logging
 import os
@@ -11,19 +10,17 @@ import socket
 import sys
 import tempfile
 import threading
-import types as py_types
-from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, NotRequired, Required, Union, get_args, get_origin, get_type_hints, is_typeddict
+from typing import Any
 
 import anyio
 import mcp.types as types
 from mcp.server import NotificationOptions, Server
 from mcp.server.models import InitializationOptions
 
-from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
-from harness.installation.destination import Destination, Installation, data_fields_of, data_of
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
+from harness.installation.destination import Destination, Installation, data_of
 from harness.mcp.restart_gate import RestartGate
 
 logger = logging.getLogger(__name__)
@@ -52,14 +49,11 @@ _LONG_CALL_TIMEOUT_SECONDS = {
     "repo.push_commit": 600,
 }
 _SERVING_MCP_HOST: Any = None
-_UNION_ORIGINS = {Union, py_types.UnionType}
 
 
 def serving_mcp_host() -> Any:
     """The ``McpHost`` currently serving MCP requests in this process, if any."""
     return _SERVING_MCP_HOST
-_ARRAY_ORIGINS = {list, tuple, Sequence}
-_OBJECT_ORIGINS = {dict, Mapping}
 
 
 class Mcp(Destination):
@@ -104,44 +98,6 @@ class McpIllegitimateTool(Exception):
 
 def _is_legal_mcp_name(name: str) -> bool:
     return bool(name) and re.fullmatch(r"[A-Za-z0-9_.-]+", name) is not None
-
-
-@dataclass
-class McpOperationDefinition:
-    mcp_name: str
-    kind: str
-    tool: Any
-    operation: str
-    member: Any
-    description: str = ""
-
-    @classmethod
-    def from_tool(cls, tool: Any) -> McpOperationDefinition:
-        kind = "tool" if tool.kind == "tool" else "prompt"
-        toolset = tool.toolset
-        if getattr(toolset, "practice_guidance", None) is not None and tool.name == "instructions":
-            mcp_name = tool.slug
-        else:
-            mcp_name = f"{tool.slug}.{tool.name}"
-        return cls(
-            mcp_name=mcp_name,
-            kind=kind,
-            tool=toolset,
-            operation=tool.name,
-            member=tool.callable,
-            description=tool.description,
-        )
-
-    def invoke_line(self) -> str:
-        try:
-            signature = inspect.signature(self.member)
-            params = inspect.Signature(
-                [p for n, p in signature.parameters.items() if n not in {"self", "cls"}]
-            )
-            suffix = str(params)
-        except (TypeError, ValueError):
-            suffix = "()"
-        return f"Use MCP tool: `{self.mcp_name}{suffix}`"
 
 
 class UserMcpConfig:
@@ -199,7 +155,7 @@ class McpInstallation(Installation):
 
     def __init__(self, ide: str, path: Path | str, toolset_ref: str = "", repo: Path | str | None = None) -> None:
         super().__init__(ide, path, toolset_ref, repo=repo)
-        self.mcp_operations: list[McpOperationDefinition] = []
+        self.mcp_operations: list[AgentTool] = []
         self._bound = False
         self.host: McpHost | None = None
         self.diagnosis: dict[str, Any] | None = None
@@ -210,10 +166,10 @@ class McpInstallation(Installation):
         self.record_operation(tool)
         self.write_mcp_manifest()
 
-    def record_operation(self, tool: Any) -> None:
+    def record_operation(self, tool: AgentTool) -> None:
         if not tool.install_to_mcp:
             return
-        self.mcp_operations.append(McpOperationDefinition.from_tool(tool))
+        self.mcp_operations.append(tool)
 
     @property
     def user_config(self) -> UserMcpConfig | None:
@@ -365,8 +321,8 @@ class McpInstallation(Installation):
 
     def bind(self, server: Any) -> None:
         self._bound = True
-        for op in self.mcp_operations:
-            server.enroll(op)
+        for tool in self.mcp_operations:
+            server.enroll(tool)
 
     def standup(self) -> McpHost:
         self.host = McpHost.standup(repo=self.repo)
@@ -424,157 +380,6 @@ class McpInstallation(Installation):
         return f"running (pid {ping.get('pid')}, {self.server_home.mode} {ping.get('source')})"
 
 
-def _annotation_uses_path(annotation: object) -> bool:
-    if annotation is Path:
-        return True
-    origin = get_origin(annotation)
-    if origin in _UNION_ORIGINS:
-        return any(_annotation_uses_path(arg) for arg in get_args(annotation))
-    return False
-
-
-def _coerce_mcp_arguments(
-    callable: Callable[..., object], arguments: dict[str, object]
-) -> dict[str, object]:
-    try:
-        hints = get_type_hints(callable)
-    except (NameError, TypeError, AttributeError):
-        hints = {}
-    coerced = dict(arguments)
-    try:
-        signature = inspect.signature(callable)
-    except (TypeError, ValueError):
-        return coerced
-    for name, param in signature.parameters.items():
-        if name not in coerced:
-            continue
-        value = coerced[name]
-        if value is None:
-            continue
-        annotation = hints.get(name, param.annotation)
-        if _annotation_uses_path(annotation) and isinstance(value, str):
-            coerced[name] = Path(value)
-    return coerced
-
-
-def _active_mcp_project() -> Path | None:
-    if _SERVING_MCP_HOST is None:
-        return None
-    from space.work_state import project_checkout
-
-    return project_checkout()
-
-
-def _log_mcp_operation_invocation(
-    op: McpOperationDefinition, arguments: dict[str, object]
-) -> None:
-    from harness.agent_tools.agent_tools import agent_tool_for_operation
-
-    agent_tool = agent_tool_for_operation(op.tool, op.operation)
-    if agent_tool is None:
-        return
-    agent_tool.log_session_invocation(dict(arguments), repo_path=_active_mcp_project())
-
-
-def _invoke_mcp_callable(
-    op: McpOperationDefinition, arguments: dict[str, object]
-) -> object:
-    _log_mcp_operation_invocation(op, arguments)
-    args = _coerce_mcp_arguments(op.member, arguments)
-    toolset = op.tool
-    operation = op.operation
-    if getattr(op.member, ON_SUBJECT_FLAG, False):
-        return op.member(**args)
-    if toolset is not None and operation:
-        owner = toolset if inspect.isclass(toolset) else type(toolset)
-        descriptor = owner.__dict__.get(operation)
-        if isinstance(descriptor, classmethod):
-            return descriptor.__func__(owner, **args)
-        if isinstance(descriptor, staticmethod):
-            return descriptor.__func__(**args)
-        target = getattr(toolset, operation, None)
-        if callable(target):
-            return target(**args)
-    member = op.member
-    if inspect.ismethod(member):
-        return member(**args)
-    if callable(member):
-        return member(**args)
-    return member
-
-
-def _prompt_message(op: McpOperationDefinition) -> str:
-    if op.operation == "instructions":
-        overview = getattr(op.tool, "overview", None)
-        if isinstance(overview, str) and overview.strip():
-            return overview.strip()
-    function = getattr(op.member, "__func__", op.member)
-    return (inspect.getdoc(function) or "").strip()
-
-
-class McpTool:
-    """One MCP tool enrolled from a deploy-recorded ``McpOperationDefinition``."""
-
-    def __init__(self, op: McpOperationDefinition) -> None:
-        self.mcp_name = op.mcp_name
-        self._op = op
-        self.callable = op.member
-        self.description = op.description or _prompt_message(op)
-
-    def invoke(self, arguments: dict[str, object] | None = None) -> object:
-        return _invoke_mcp_callable(self._op, dict(arguments or {}))
-
-
-class McpPrompt:
-    """One MCP prompt enrolled from a deploy-recorded ``McpOperationDefinition``."""
-
-    def __init__(self, op: McpOperationDefinition) -> None:
-        self.mcp_name = op.mcp_name
-        self._op = op
-        self.callable = op.member
-        self.prompt_text = op.description or _prompt_message(op)
-
-    def invoke(self, arguments: dict[str, object] | None = None) -> object:
-        payload = dict(arguments or {})
-        tool = self._op.tool
-        # One action object serves every call while the server runs, so each call starts its own session line.
-        if hasattr(tool, "clear_session_action_log"):
-            tool.clear_session_action_log()
-        _log_mcp_operation_invocation(self._op, payload)
-        name = self._op.operation
-        if name == "instructions" and hasattr(tool, "instructions"):
-            return tool.instructions
-        member = self.callable
-        if getattr(member, "_is_agent_instructions", False):
-            return self._expanded_instructions(tool, member, dict(arguments or {}))
-        if callable(member):
-            try:
-                result = member(**dict(arguments or {}))
-            except TypeError:
-                result = None
-            if result is not None:
-                return result
-            return self.prompt_text or getattr(tool, "instructions", "")
-        if hasattr(tool, "instructions"):
-            return tool.instructions
-        return member
-
-    def _expanded_instructions(self, tool: Any, member: Any, arguments: dict[str, object]) -> str:
-        if hasattr(tool, "begin") and "guidance" in arguments:
-            tool.begin(arguments["guidance"])
-        from harness.agent_tools.agent_tools import AgentInstructions
-
-        expanded = AgentInstructions.for_callable(member, tool).expand({}, arguments)
-        body = (expanded.instructions or "").strip()
-        doc = (inspect.getdoc(member) or "").strip()
-        if doc and doc not in body:
-            body = f"{doc}\n\n{body}".strip() if body else doc
-        reply = body or self.prompt_text or doc
-        # An action that works in a session says which one, so the agent knows its folders without looking for them.
-        session = getattr(tool, "session_context", "")
-        return f"{reply}\n\n{session}" if session else reply
-
-
 class McpServer:
     """Load toolset refs and enroll only ``@Mcp`` ops from the deploy walk."""
 
@@ -589,8 +394,8 @@ class McpServer:
         self.venv = self.repo / ".venv"
         self._apply_catalog_import_path()
         self.mcp_installations: list[McpInstallation] = []
-        self._tools: dict[str, McpTool] = {}
-        self._prompts: dict[str, McpPrompt] = {}
+        self._tools: dict[str, AgentTool] = {}
+        self._prompts: dict[str, AgentTool] = {}
         self.exceptions: list[McpIllegitimateTool] = []
         self._started = False
         self._toolset_refs: tuple[str, ...] = ()
@@ -609,11 +414,11 @@ class McpServer:
         return self._started
 
     @property
-    def tools(self) -> dict[str, McpTool]:
+    def tools(self) -> dict[str, AgentTool]:
         return self._tools
 
     @property
-    def prompts(self) -> dict[str, McpPrompt]:
+    def prompts(self) -> dict[str, AgentTool]:
         return self._prompts
 
     def skip(self, tool: str, error: BaseException) -> None:
@@ -630,29 +435,20 @@ class McpServer:
             exc_info=skipped.cause,
         )
 
-    def enroll(self, op: McpOperationDefinition) -> None:
-        if not _is_legal_mcp_name(op.mcp_name):
-            self.skip(
-                op.mcp_name,
-                McpIllegitimateTool(
-                    op.mcp_name,
-                    "illegal MCP tool name",
-                ),
-            )
+    def enroll(self, tool: AgentTool) -> None:
+        """Publish tool under its MCP name: an operation as a tool, instructions as a prompt whose call answers with
+        them expanded."""
+        name = tool.mcp_name
+        if not _is_legal_mcp_name(name):
+            self.skip(name, McpIllegitimateTool(name, "illegal MCP tool name"))
             return
-        if op.mcp_name in self._tools or op.mcp_name in self._prompts:
-            self.skip(
-                op.mcp_name,
-                McpIllegitimateTool(
-                    op.mcp_name,
-                    "MCP name is already enrolled",
-                ),
-            )
+        if name in self._tools or name in self._prompts:
+            self.skip(name, McpIllegitimateTool(name, "MCP name is already enrolled"))
             return
-        if op.kind == "tool":
-            self._tools[op.mcp_name] = McpTool(op)
+        if tool.kind == "tool":
+            self._tools[name] = tool
         else:
-            self._prompts[op.mcp_name] = McpPrompt(op)
+            self._prompts[name] = tool
 
     def bind_from(self, installation: McpInstallation) -> None:
         installation.bind(self)
@@ -718,11 +514,8 @@ class McpServer:
     def _enroll_toolset(self, toolset: Any) -> None:
         if getattr(toolset, "practice_guidance", "missing") is None:
             return
-        installation = McpInstallation("Cursor", ".", toolset.registration_name)
         for tool in toolset.tools_for(InstallDestination.MCP):
-            installation.record_operation(tool)
-        installation.bind(self)
-        self.mcp_installations.append(installation)
+            self.enroll(tool)
 
     def resolve_call_name(self, name: str) -> str:
         """Map Cursor's underscore tool id (`slug_op`) back to the enrolled `slug.op`."""
@@ -843,141 +636,6 @@ class McpHost:
         if _SERVING_MCP_HOST is self:
             _SERVING_MCP_HOST = None
 
-    def input_schema_for_callable(self, callable: Callable[..., object]) -> dict[str, Any]:
-        hints = self._callable_hints(callable)
-        properties: dict[str, Any] = {}
-        required: list[str] = []
-        for name, param in inspect.signature(callable).parameters.items():
-            if not self._is_schema_parameter(name, param):
-                continue
-            properties[name] = self._parameter_schema(hints, name, param)
-            if param.default is inspect.Parameter.empty:
-                required.append(name)
-        result: dict[str, Any] = {"type": "object", "properties": properties}
-        if required:
-            result["required"] = required
-        return result
-
-    def _callable_hints(self, callable: Callable[..., object]) -> dict[str, Any]:
-        function = getattr(callable, "__func__", callable)
-        try:
-            return get_type_hints(function)
-        except (NameError, TypeError, AttributeError):
-            return self._hints_one_by_one(function)
-
-    def _hints_one_by_one(self, function: Callable[..., object]) -> dict[str, Any]:
-        """Each annotation read on its own, so one naming a class imported only for type checking, as a return type
-        often does to break a circular import, leaves the parameters' types readable. One that cannot be read is left
-        out, the same as before."""
-        hints: dict[str, Any] = {}
-        module_names = getattr(function, "__globals__", {})
-        for name, annotation in getattr(function, "__annotations__", {}).items():
-            try:
-                hints[name] = eval(annotation, module_names) if isinstance(annotation, str) else annotation
-            except NameError:
-                continue
-        return hints
-
-    def _is_schema_parameter(self, name: str, param: inspect.Parameter) -> bool:
-        if name in {"self", "cls"}:
-            return False
-        return param.kind in (
-            inspect.Parameter.POSITIONAL_OR_KEYWORD,
-            inspect.Parameter.KEYWORD_ONLY,
-        )
-
-    def _parameter_schema(
-        self, hints: dict[str, Any], name: str, param: inspect.Parameter
-    ) -> dict[str, Any]:
-        annotation = hints.get(name, param.annotation)
-        if annotation is inspect.Parameter.empty:
-            return {"type": "string"}
-        return self._annotation_schema(annotation)
-
-    def _annotation_schema(self, annotation: object) -> dict[str, Any]:
-        annotation = self._unwrap_required(annotation)
-        if annotation is Any:
-            return {}
-        if is_typeddict(annotation):
-            return self._typed_dict_schema(annotation)
-        origin = get_origin(annotation)
-        if origin in _UNION_ORIGINS:
-            return self._union_schema(annotation)
-        if annotation is list or origin in _ARRAY_ORIGINS:
-            return self._array_schema(annotation)
-        if annotation is dict or origin in _OBJECT_ORIGINS:
-            return self._object_schema(annotation)
-        return self._scalar_schema(annotation)
-
-    def _unwrap_required(self, annotation: object) -> object:
-        if get_origin(annotation) in {NotRequired, Required}:
-            args = get_args(annotation)
-            if args:
-                return args[0]
-        return annotation
-
-    def _typed_dict_schema(self, annotation: object) -> dict[str, Any]:
-        hints = get_type_hints(annotation, include_extras=True)
-        properties: dict[str, Any] = {}
-        required: list[str] = []
-        for name, hint in hints.items():
-            if get_origin(hint) is NotRequired:
-                hint = get_args(hint)[0]
-            else:
-                required.append(name)
-            properties[name] = self._annotation_schema(hint)
-        schema: dict[str, Any] = {
-            "type": "object",
-            "properties": properties,
-            "additionalProperties": False,
-        }
-        if required:
-            schema["required"] = required
-        return schema
-
-    def _union_schema(self, annotation: object) -> dict[str, Any]:
-        variants = [self._annotation_schema(arg) for arg in get_args(annotation)]
-        if len(variants) == 1:
-            return variants[0]
-        return {"anyOf": variants}
-
-    def _array_schema(self, annotation: object) -> dict[str, Any]:
-        args = get_args(annotation)
-        item_schema = self._annotation_schema(args[0]) if args else {"type": "string"}
-        return {"type": "array", "items": item_schema}
-
-    def _object_schema(self, annotation: object) -> dict[str, Any]:
-        args = get_args(annotation)
-        schema: dict[str, Any] = {"type": "object"}
-        if len(args) >= 2:
-            schema["additionalProperties"] = self._annotation_schema(args[1])
-        return schema
-
-    def _scalar_schema(self, annotation: object) -> dict[str, Any]:
-        if inspect.isclass(annotation) and annotation not in (
-            str,
-            int,
-            float,
-            bool,
-            type(None),
-            Path,
-            bytes,
-        ):
-            return {"type": "object"}
-        if annotation is str:
-            return {"type": "string"}
-        if annotation is int:
-            return {"type": "integer"}
-        if annotation is float:
-            return {"type": "number"}
-        if annotation is bool:
-            return {"type": "boolean"}
-        if annotation is type(None):
-            return {"type": "null"}
-        if annotation is Path:
-            return {"type": "string", "description": "Filesystem path"}
-        return {"type": "string"}
-
     def _register_handlers(self) -> None:
         @self._server.list_tools()
         async def handle_list_tools() -> list[types.Tool]:
@@ -993,21 +651,8 @@ class McpHost:
                     inputSchema={"type": "object", "properties": {}},
                 ),
             ]
-            tools.extend(
-                listed
-                for listed in (
-                    self._listed_tool(tool) for tool in self._runtime._tools.values()
-                )
-                if listed is not None
-            )
-            tools.extend(
-                listed
-                for listed in (
-                    self._listed_prompt_tool(prompt)
-                    for prompt in self._runtime._prompts.values()
-                )
-                if listed is not None
-            )
+            enrolled = (*self._runtime._tools.values(), *self._runtime._prompts.values())
+            tools.extend(listed for listed in map(self._listed_tool, enrolled) if listed is not None)
             return tools
 
         @self._server.call_tool()
@@ -1033,13 +678,13 @@ class McpHost:
             if prompt is None:
                 raise ValueError(f"unknown prompt: {name}")
             return types.GetPromptResult(
-                description=prompt.prompt_text or None,
+                description=prompt.description or None,
                 messages=[
                     types.PromptMessage(
                         role="user",
                         content=types.TextContent(
                             type="text",
-                            text=prompt.prompt_text or "",
+                            text=prompt.description or "",
                         ),
                     )
                 ],
@@ -1135,39 +780,13 @@ class McpHost:
         with working_on(project), reporting_to(reporter):
             return self.dispatch(name, arguments)
 
-    def _mcp_tool(self, tool: McpTool) -> types.Tool:
-        return types.Tool(
-            name=tool.mcp_name,
-            description=tool.description or None,
-            inputSchema=self.input_schema_for_callable(tool.callable),
-        )
-
-    def _listed_tool(self, tool: McpTool) -> types.Tool | None:
+    def _listed_tool(self, tool: AgentTool) -> types.Tool | None:
+        """tool as the tool list shows it; one whose schema cannot be read is skipped, so the rest still list."""
         try:
-            return self._mcp_tool(tool)
+            return types.Tool(name=tool.mcp_name, description=tool.description or None, inputSchema=tool.input_schema)
         except Exception as error:
             self._runtime.skip(tool.mcp_name, error)
             return None
-
-    def _mcp_prompt_tool(self, prompt: McpPrompt) -> types.Tool:
-        return types.Tool(
-            name=prompt.mcp_name,
-            description=prompt.prompt_text or None,
-            inputSchema=self.input_schema_for_callable(prompt.callable),
-        )
-
-    def _listed_prompt_tool(self, prompt: McpPrompt) -> types.Tool | None:
-        try:
-            return self._mcp_prompt_tool(prompt)
-        except Exception as error:
-            self._runtime.skip(prompt.mcp_name, error)
-            return None
-
-    def _as_prompt(self, prompt: McpPrompt) -> types.Prompt:
-        return types.Prompt(
-            name=prompt.mcp_name,
-            description=prompt.prompt_text or None,
-        )
 
     def dispatch(self, name: str, arguments: dict[str, object] | None = None) -> object:
         """Run one tool call on the project being worked on. A true ``ping`` argument answers without entering the
@@ -1214,19 +833,8 @@ class McpHost:
         )
 
     def _content_blocks(self, value: object) -> list[types.TextContent]:
-        text = value if isinstance(value, str) else json.dumps(value, default=self._json_default)
+        text = value if isinstance(value, str) else json.dumps(data_of(value))
         return [types.TextContent(type="text", text=text)]
-
-    @staticmethod
-    def _json_default(value: object) -> object:
-        if data_fields_of(type(value)):
-            return data_of(value)
-        converter = getattr(value, "to_mcp_result", None)
-        if callable(converter):
-            return converter()
-        if isinstance(value, Path):
-            return str(value)
-        raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
     def serve(self, daemon: Any, listener: socket.socket) -> None:
         """Answer every chat over HTTP on ``listener``, which ``daemon`` claimed, until the process is stopped."""

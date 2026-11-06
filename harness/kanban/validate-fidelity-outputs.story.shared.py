@@ -52,7 +52,7 @@ def _(s):
     @s.given("pet-visits' story map is generated")
     def _(world):
         world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
-        world.session = world.Session.at(world.project.sessions / PET_VISITS.name, world.project.root)
+        world.session = world.Session.load(world.project.sessions / PET_VISITS.name, world.project.root)
         world.ticket = world.Ticket.load(PET_VISITS.name)
 
     @s.when("Claude Code validates the story map and finds no graph-rule violation")
@@ -94,7 +94,7 @@ def _(s):
 
     @s.then("validate is on for story_map")
     def _(world):
-        expect(world.read["allowed_actions"][STORY_MAP]).to(contain("validate"))
+        expect(world.read["progress"][STORY_MAP]["allowed_actions"]).to(contain("validate"))
 
 
 @shared_stories.scenario("Save Validation Report", "Save the report and the graph it checked")
@@ -165,20 +165,20 @@ def _(s):
     def _(world):
         seed_checkout_flow_held_on_violations(world.project)
 
-    @s.and_("the graph names verb-noun-format on tests/story-map.md line 6")
+    @s.and_("the graph names verb-noun-format on .context/story-map.md line 6")
     def _(world):
         # The graph saved with the report above, STORY_MAP_GRAPH, holds that one hit.
         pass
 
     @s.when("the Person opens checkout-flow's story_map report")
     def _(world):
-        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).report(fidelity=STORY_MAP))
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).progress_of(STORY_MAP).report())
 
     @s.then("the report panel shows .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md")
     def _(world):
         expect(world.report["path"]).to(equal(f"{REPORTS}/{STORY_MAP_REPORT}.md"))
 
-    @s.and_("it lists verb-noun-format with one violation at tests/story-map.md line 6 and the source lines around it")
+    @s.and_("it lists verb-noun-format with one violation at .context/story-map.md line 6 and the source lines around it")
     def _(world):
         listed = [(rule["name"], [(violation["location"], violation["line"], {"number": 6, "text": "- Handle Payment"} in violation["source"]) for violation in rule["violations"]]) for rule in world.report["rules"]]
         expect(listed).to(equal([("verb-noun-format", [(STORY_MAP_FILE, 6, True)])]))
@@ -208,7 +208,7 @@ def _(s):
 
     @s.when("the Person opens the story_map report")
     def _(world):
-        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).report(fidelity=STORY_MAP))
+        world.report = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).progress_of(STORY_MAP).report())
 
     @s.then("the report panel shows the report's text")
     def _(world):
@@ -231,4 +231,4 @@ def _(s):
 
     @s.then("the story_map bar shows no report link")
     def _(world):
-        expect(STORY_MAP in world.read["reports"]).to(equal(False))
+        expect(world.read["progress"][STORY_MAP]["report_file"]).to(equal(""))

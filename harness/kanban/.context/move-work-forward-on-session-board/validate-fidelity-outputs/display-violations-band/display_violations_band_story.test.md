@@ -4,7 +4,7 @@
 
 #### Scenario: Show the active ticket's violations in a band
 
-*Given* checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card) with violations on stories-story_map
+*Given* checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card) with violations on stories-story-map
 *When* the session board reads the board
 *Then* a band across the page top names checkout-flow's violations
 

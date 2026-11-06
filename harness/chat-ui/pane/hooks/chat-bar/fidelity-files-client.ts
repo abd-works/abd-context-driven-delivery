@@ -1,14 +1,15 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { FileEntryData, FileTextData, ReportData } from '@cdd/harness/kanban/ticket'
+import type { FileEntryData, ReportData } from '@cdd/harness/kanban/fidelity-progress'
+import type { FileTextData } from '@cdd/space/session/session'
 
 import type { FidelityFilesJson } from '../../types'
 import { reasonOf } from '../failure'
 import { callTool, currentChatBar } from './chat-bar-client'
 import type { FidelityClient } from './fidelity-client'
 
-// The files view of one fidelity: a tab per file ticket.files declares, each tab's text read by ticket.read_file.
+// The files view of one fidelity: a tab per file fidelity-progress.files declares, each tab's text read by session.read_file.
 const fidelityFiles = atom({ plugin: 'cdd-board', key: 'fidelityFiles' } as const, null as FidelityFilesJson)
 
 // The files view orders a fidelity's files as the board does: markdown, then code, then diagrams.
@@ -23,8 +24,8 @@ export function currentFidelityFiles($: EngineInterface) {
 export async function openFiles($: EngineInterface, fidelity: FidelityClient): Promise<void> {
   const chatBar = await currentChatBar($)
   try {
-    const files = await callTool<Record<string, Record<string, FileEntryData[]>>>($, 'ticket.files', { ticket: chatBar.sessionName, fidelities: [fidelity.fidelity] })
-    const paths = [...new Set(Object.values(files[fidelity.fidelity] ?? {}).flat().map(entry => entry.path))].sort((a, b) => fileOrder(a) - fileOrder(b))
+    const files = await callTool<Record<string, FileEntryData[]>>($, 'fidelity-progress.files', { ticket: chatBar.sessionName, fidelity: fidelity.fidelity })
+    const paths = [...new Set(Object.values(files).flat().map(entry => entry.path))].sort((a, b) => fileOrder(a) - fileOrder(b))
     await update($, fidelityFiles, () => ({ fidelity: fidelity.fidelity, tabs: paths.map(path => ({ path, text: null })), shown: paths[0] ?? null }))
     if (paths[0]) await showFile($, paths[0])
   } catch (failure) {
@@ -37,7 +38,7 @@ export async function openFiles($: EngineInterface, fidelity: FidelityClient): P
 export async function openReport($: EngineInterface, fidelity: FidelityClient): Promise<void> {
   const chatBar = await currentChatBar($)
   try {
-    const report = await callTool<ReportData>($, 'ticket.report', { ticket: chatBar.sessionName, fidelity: fidelity.fidelity })
+    const report = await callTool<ReportData>($, 'fidelity-progress.report', { ticket: chatBar.sessionName, fidelity: fidelity.fidelity })
     await update($, fidelityFiles, () => ({ fidelity: fidelity.fidelity, tabs: [{ path: report.path, text: report.text }], shown: report.path }))
   } catch (failure) {
     $.ui.toast(`${fidelity.guidance} report: ${reasonOf(failure)}`)
@@ -49,7 +50,7 @@ export async function showFile($: EngineInterface, path: string): Promise<void> 
   const chatBar = await currentChatBar($)
   let text: string
   try {
-    text = (await callTool<FileTextData>($, 'ticket.read_file', { ticket: chatBar.sessionName, path })).text
+    text = (await callTool<FileTextData>($, 'session.read_file', { session: chatBar.sessionFile, path })).text
   } catch (failure) {
     text = reasonOf(failure)
   }

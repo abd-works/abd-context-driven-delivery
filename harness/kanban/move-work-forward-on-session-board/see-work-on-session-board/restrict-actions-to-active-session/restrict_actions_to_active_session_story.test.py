@@ -33,7 +33,7 @@ with story("Restrict Actions To Active Session"):
         with and_("billing-report is not the active [ticket](../../../.context/kanban-model.md#ticket--card)"):
             pass
         with when("the Person opens billing-report's files"):
-            # Person -> Ticket.files(['stories-story_map'])
+            # Person -> Ticket.files(['stories-story-map'])
             pass
         with then("the files panel lists billing-report's files"):
             pass

@@ -7,7 +7,7 @@
 *Given* the [ticket](../../../kanban-model.md#ticket--card) billing-report is In progress in Discovery with nothing recorded
 *When* the Person selects billing-report's card
 *Then* the details show Billing report, root whole repository, and Discovery · in progress
-*And* the details say No handoff yet and Next: stories-story_map, generate
+*And* the details say No handoff yet and Next: stories-story-map, generate
 *And* the details show a tile for each enabled [fidelity](../../../kanban-model.md#fidelityguidance) with its [fidelity progress](../../../kanban-model.md#fidelityprogress)
 
 #### Scenario: Show the active ticket with no card pressed

@@ -8,7 +8,7 @@
 *When* the Person reviews story_map on billing-report
 *Then* billing-report's session log ends with review Stories story_map
 *And* the story_map tile marks Review ✓ and the fidelity is done
-*And* a toast says stories-story_map reviewed on billing-report
+*And* a toast says stories-story-map reviewed on billing-report
 
 #### Scenario: Keep Review off until Validate is clean
 
@@ -26,9 +26,9 @@
 #### Scenario: Refuse a fidelity the ticket does not have
 
 *Given* billing-report's story map passed validate
-*When* the Person reviews stories-story_map and stories-no_such_fidelity together
-*Then* the board says no fidelity named stories-no_such_fidelity on this ticket
-*But* no review line is written for stories-story_map
+*When* the Person reviews stories-no_such_fidelity
+*Then* the board says no fidelity named stories-no_such_fidelity on ticket billing-report
+*But* no review line is written for stories-story-map
 
 #### Scenario: Complete a stage's work
 

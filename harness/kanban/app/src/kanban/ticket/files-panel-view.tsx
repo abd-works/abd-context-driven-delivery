@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 
-import { guidanceSlug } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { FilesPanel } from '../board/board-store'
 import { folderGroupsOf, generatedPaths } from './files-panel-client'
@@ -17,7 +16,7 @@ export function FilesPanelHeadView({ panel }: { panel: FilesPanel }) {
       <div className="panel-kind">
         FILES<span className="accent-mark">_</span>
       </div>
-      <div className="files-subject">{panel.isSession ? `${panel.ticket} session folder` : panel.slugs.map(guidanceSlug).join(', ')}</div>
+      <div className="files-subject">{panel.isSession ? `${panel.ticket} session folder` : panel.slugs.join(', ')}</div>
       <div className="file-modes">
         {FILE_MODES.map(mode => (
           <button key={mode} className={panel.mode === mode ? 'file-mode is-chosen' : 'file-mode'} onClick={() => void page.files.chooseMode(mode)}>

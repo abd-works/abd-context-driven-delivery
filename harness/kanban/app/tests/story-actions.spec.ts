@@ -133,7 +133,7 @@ test.describe('Generate Fidelity Output', () => {
 test.describe('Send Tile Action To Chat', () => {
   test('should send the chosen action on a tile', async ({ page }) => {
     await waitForChat(page)
-    const tile = page.locator('.details-body [data-tile="stories-story_map"]')
+    const tile = page.locator('.details-body [data-tile="stories-story-map"]')
     await tile.getByRole('button', { name: 'story-map', exact: true }).click()
     await tile.getByRole('combobox', { name: 'Action' }).selectOption('sketch')
     await tile.getByRole('button', { name: /^code|^diagram|^markdown/ }).first().click()
@@ -145,14 +145,14 @@ test.describe('Send Tile Action To Chat', () => {
 test.describe('Open Practice Tile', () => {
   // Moving across the details grid would otherwise open bar after bar, so there a tile opens only on a press.
   test('should leave a tile in the details closed while the pointer only rests on it', async ({ page }) => {
-    const tile = page.locator('.details-body [data-tile="ddd-bounded_context"]')
+    const tile = page.locator('.details-body [data-tile="ddd-bounded-context"]')
     await tile.hover()
     await page.waitForTimeout(800)
     await expect(tile.locator('.expansion')).toHaveCount(0)
   })
 
   test('should keep a pressed tile open after the pointer leaves', async ({ page }) => {
-    const tile = page.locator('.details-body [data-tile="ddd-bounded_context"]')
+    const tile = page.locator('.details-body [data-tile="ddd-bounded-context"]')
     await tile.getByRole('button', { name: 'bounded-context', exact: true }).click()
     await expect(tile.locator('.expansion')).toBeVisible()
     await page.locator('.board-header').hover()
@@ -162,9 +162,9 @@ test.describe('Open Practice Tile', () => {
 
   test('should keep two pressed tiles open at once', async ({ page }) => {
     const details = page.locator('.details-body')
-    await details.locator('[data-tile="ddd-bounded_context"]').getByRole('button', { name: 'bounded-context', exact: true }).click()
-    await details.locator('[data-tile="stories-story_map"]').getByRole('button', { name: 'story-map', exact: true }).click()
-    await expect(details.locator('[data-tile="ddd-bounded_context"] .expansion, [data-tile="stories-story_map"] .expansion')).toHaveCount(2)
+    await details.locator('[data-tile="ddd-bounded-context"]').getByRole('button', { name: 'bounded-context', exact: true }).click()
+    await details.locator('[data-tile="stories-story-map"]').getByRole('button', { name: 'story-map', exact: true }).click()
+    await expect(details.locator('[data-tile="ddd-bounded-context"] .expansion, [data-tile="stories-story-map"] .expansion')).toHaveCount(2)
   })
 })
 
@@ -172,7 +172,7 @@ test.describe('Expand Ticket', () => {
   test('should open a card on the fidelity of a pressed segment', async ({ page }) => {
     await card(page, 'checkout-flow').getByRole('button', { name: /practices-ddd-ddd-bounded-context/ }).first().click()
     const opened = page.locator('[data-open-card="checkout-flow"]')
-    await expect(opened.locator('[data-tile="ddd-bounded_context"] .expansion')).toBeVisible()
+    await expect(opened.locator('[data-tile="ddd-bounded-context"] .expansion')).toBeVisible()
   })
 
   test('should show the skill of the segment under the pointer', async ({ page }) => {
@@ -289,7 +289,7 @@ test.describe('Open Help', () => {
 
 test.describe('Open Validation Report', () => {
   test('should show the rules with the failing line marked', async ({ page }) => {
-    await page.locator('.details-body [data-tile="stories-story_map"]').getByRole('button', { name: 'violations' }).click()
+    await page.locator('.details-body [data-tile="stories-story-map"]').getByRole('button', { name: 'violations' }).click()
     const report = page.locator('[data-panel="report"]')
     await expect(report.getByRole('button', { name: /verb-noun-format/ })).toBeVisible()
     await expect(report.locator('.code-line.is-failing')).toContainText('Handle Payment')
@@ -325,7 +325,7 @@ test.describe('Fix Report Violations', () => {
 
 test.describe('Display Violations Band', () => {
   test('should name the active ticket\'s violations across the page top', async ({ page }) => {
-    await expect(page.getByRole('status', { name: "Active ticket's violations" })).toContainText('checkout-flow · Discovery · violations: stories-story_map')
+    await expect(page.getByRole('status', { name: "Active ticket's violations" })).toContainText('checkout-flow · Discovery · violations: stories-story-map')
   })
 })
 
@@ -340,8 +340,8 @@ test.describe('List, browse, and view files', () => {
   })
 
   test('should offer a tab for a format not generated yet and say so', async ({ page }) => {
-    await page.locator('.details-body [data-tile="stories-story_map"]').getByRole('button', { name: 'story-map', exact: true }).click()
-    await page.locator('.details-body [data-tile="stories-story_map"] .expansion').getByRole('button', { name: 'files', exact: true }).click()
+    await page.locator('.details-body [data-tile="stories-story-map"]').getByRole('button', { name: 'story-map', exact: true }).click()
+    await page.locator('.details-body [data-tile="stories-story-map"] .expansion').getByRole('button', { name: 'files', exact: true }).click()
     const files = page.locator('[data-panel="files"]')
     await files.getByRole('tab', { name: 'story-map.drawio' }).click()
     await expect(files.locator('.file-lines')).toContainText('Not generated yet.')
@@ -382,7 +382,7 @@ test.describe('Display Connected Status', () => {
     await expect(page.locator('.band-failure')).toHaveCount(0)
   })
 
-  // The ticket a violation belongs to is gone, so ticket.read_file really refuses it.
+  // The ticket a violation belongs to is gone, so session.read_file really refuses it.
   test('should show a tool failure in a toast', async ({ page }) => {
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: fix violations' }).first().click()
     const violation = page.locator('[data-panel="report"]').getByRole('button', { name: '.context/story-map.md:6', exact: true })
@@ -390,7 +390,7 @@ test.describe('Display Connected Status', () => {
     rmSync(join(fixtureRoot, '.sessions', 'checkout-flow'), { recursive: true, force: true })
     try {
       await violation.click()
-      await expect(toast(page, /no ticket named 'checkout-flow'/)).toBeVisible()
+      await expect(toast(page, /no session at '\.sessions\/checkout-flow\/session\.json'/)).toBeVisible()
     } finally {
       resetSessions(fixtureRoot)
     }

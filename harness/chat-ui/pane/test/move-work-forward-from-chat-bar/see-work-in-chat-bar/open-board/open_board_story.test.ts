@@ -13,16 +13,16 @@ import { scenario, story } from '../../../story-test'
 story('Open Board', CHAT_BAR, () => {
   scenario('A dot selects its fidelity and sends nothing to the chat', ({ given, when, then, and }) => {
     // Evidence: requested: a dot press only sets the fidelity the action button acts on
-    given('the Chat Bar shows checkout-flow with the clean_engineering-model dot')
-    when('the Person presses the clean_engineering-model dot twice', async ($, on, scene) => {
-      await scene.ui.press({ key: 'dot-clean_engineering-model' })
-      await scene.ui.press({ key: 'dot-clean_engineering-model' })
+    given('the Chat Bar shows checkout-flow with the clean-engineering-model dot')
+    when('the Person presses the clean-engineering-model dot twice', async ($, on, scene) => {
+      await scene.ui.press({ key: 'dot-clean-engineering-model' })
+      await scene.ui.press({ key: 'dot-clean-engineering-model' })
     })
     // FidelityView press -> selectFidelity($, fidelity)
     then('nothing is sent to the chat', async ($, on, scene) => {
       expect(scene.world.sent).toEqual([])
     })
-    and('clean_engineering-model is the fidelity the action button acts on', async ($, on, scene) => {
+    and('clean-engineering-model is the fidelity the action button acts on', async ($, on, scene) => {
       expect(await tipOf(scene.ui, 'action')).toBe('generate clean-engineering-model')
     })
   })

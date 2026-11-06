@@ -1,4 +1,4 @@
-import { fidelityOf, guidanceSlug, practiceOf } from '../board/board-brand'
+import { fidelityOf, practiceOf } from '../board/board-brand'
 import { useBoard } from '../board/board-context'
 import type { ColumnClient } from '../board/column-client'
 import { CheckIcon } from '../board/icons'
@@ -21,24 +21,23 @@ function TileNameView({ ticket, stage, slug }: TileProps) {
   const toggle = () => page.tiles.toggle(ticket, { ticket: ticket.name, stage, place, slugs: [slug] })
   return (
     <button className="tile-name" title={skillOf(slug)} disabled={!isOn} aria-expanded={page.tiles.isOpen(ticket.name, place)} onClick={() => void toggle()}>
-      {guidanceSlug(fidelityOf(slug))}
+      {fidelityOf(slug)}
     </button>
   )
 }
 
-function TileHelpView({ slug }: { slug: string }) {
+function TileHelpView({ stage, slug }: { stage: ColumnClient; slug: string }) {
   const { page } = useBoard()
-  const fidelity = fidelityOf(slug)
-  const name = guidanceSlug(fidelity)
+  const name = fidelityOf(slug)
   return (
-    <button className="help-link" title={`Help for ${name}`} aria-label={`Help for ${name}`} onClick={() => void page.panels.openHelp(practiceOf(slug)?.key ?? '', fidelity)}>
+    <button className="help-link" title={`Help for ${name}`} aria-label={`Help for ${name}`} onClick={() => void page.panels.openHelp(practiceOf(slug)?.key ?? '', stage.fidelities[slug] ?? '')}>
       ?
     </button>
   )
 }
 
 function TileHeadingView(props: TileProps) {
-  const { ticket, slug, hasPracticeChip } = props
+  const { ticket, stage, slug, hasPracticeChip } = props
   const { page } = useBoard()
   const practice = practiceOf(slug)
   const { key, label } = ticket.stateOf(slug)
@@ -53,7 +52,7 @@ function TileHeadingView(props: TileProps) {
           violations
         </button>
       ) : null}
-      <TileHelpView slug={slug} />
+      <TileHelpView stage={stage} slug={slug} />
     </div>
   )
 }

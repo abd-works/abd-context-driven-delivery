@@ -102,30 +102,6 @@ class ContextConfig:
         return self.update(practice_folders=mapping)
 
 
-def context_config_path(root: Path | str) -> Path:
-    return ContextConfig(root).path
-
-
-def has_context_config(root: Path | str) -> bool:
-    return ContextConfig(root).exists()
-
-
-def load_context_config(root: Path | str) -> dict[str, Any]:
-    return ContextConfig(root).load()
-
-
-def save_context_config(root: Path | str, data: Mapping[str, Any]) -> Path:
-    return ContextConfig(root).save(data)
-
-
-def guideline_value(root: Path | str, pattern: str) -> str:
-    return ContextConfig(root).guideline(pattern)
-
-
-def practice_folders(root: Path | str) -> dict[str, str]:
-    return ContextConfig(root).practice_folders()
-
-
 def _read_text(path: Path) -> str:
     if not path.is_file():
         return ""

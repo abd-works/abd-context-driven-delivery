@@ -37,13 +37,13 @@ function RootLineView({ label, root, standing, onChange, onDefault }: { label: s
 // The ticket's workpath on top; every practice under it writes under its default folder there unless a person chose another practice root.
 function RootsListView({ ticket }: { ticket: TicketClient }) {
   const { page } = useBoard()
-  const practices = PRACTICES.filter(practice => ticket.practiceRoots[practice.key])
+  const practices = PRACTICES.filter(practice => ticket.session.practices[practice.key])
   return (
     <>
-      <RootLineView label="Session" root={ticket.workpath} standing="" onChange={() => void page.roots.browse(TICKET_ROOT, ticket.workpath)} />
+      <RootLineView label="Session" root={ticket.session.workpath} standing="" onChange={() => void page.roots.browse(TICKET_ROOT, ticket.session.workpath)} />
       <div className="dialog-group-heading">PRACTICES</div>
       {practices.map(practice => {
-        const { root, is_chosen: isChosen } = ticket.practiceRoots[practice.key]!
+        const { root, is_root_chosen: isChosen } = ticket.session.practices[practice.key]!
         return (
           <RootLineView
             key={practice.key}

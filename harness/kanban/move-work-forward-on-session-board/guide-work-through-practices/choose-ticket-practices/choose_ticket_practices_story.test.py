@@ -32,7 +32,7 @@ with story("Choose Ticket Practices"):
         # Evidence: observed: kanban_spec 'with every practice but Stories turned off' — 'should be done with the one practice it works on'.
         with given("pet-visits has generated, validated, and reviewed the story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance)"):
             pass
-        with and_("DDD and UX are turned off for pet-visits"):
+        with and_("every practice but Stories is turned off for pet-visits"):
             pass
         with when("the session board reads pet-visits"):
             # Ticket -> Ticket.is_done

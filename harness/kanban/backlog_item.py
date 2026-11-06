@@ -45,7 +45,7 @@ class BacklogItem(Card):
     def create(cls, title: str, text: str = "") -> BacklogItem:
         """Add an idea to the Backlog: one markdown file, with title as its heading and text under it."""
         board = Board.current()
-        item = cls(Session.backlog_folder(board.repo.root) / f"{name_of(title)}.md", board)
+        item = cls(board.repo.backlog_folder / f"{name_of(title)}.md", board)
         item._write(title, text)
         return item
 
@@ -53,7 +53,7 @@ class BacklogItem(Card):
     def from_ticket(cls, ticket: Ticket, board: Board) -> BacklogItem:
         """The item a ticket moved back into the Backlog becomes: its own folder, history and all, with its idea file
         inside."""
-        return cls(Session.backlog_folder(board.repo.root) / ticket.name / f"{ticket.name}.md", board)
+        return cls(board.repo.backlog_folder / ticket.name / f"{ticket.name}.md", board)
 
     def write_if_missing(self, title: str) -> None:
         """Give an item whose ticket never had an idea file one holding title, so it shows in the Backlog."""
@@ -107,7 +107,7 @@ class BacklogItem(Card):
         ticket = self._ticket_brought_back(kept_folder) if kept_folder.is_dir() else self._ticket_opened(scope, path)
         # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.
         if self._path.exists():
-            ticket.keep_file(self._path)
+            ticket.session.keep_file(self._path)
         return ticket
 
     def move_next(self) -> Ticket:
@@ -129,5 +129,5 @@ class BacklogItem(Card):
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
         ticket = Ticket.create(self.title, scope, "", path)
-        ticket.record(f"backlog {self._path}")
+        ticket.session.record(f"backlog {self._path}")
         return ticket

@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 
 from harness.graph.practice_rule import PracticeGraphRule
-from harness.graph.story_model_lookup import example_count, scenario_for_graph_node, story_of
 
 _CAMEL_STEP = re.compile(r"^[a-z]+(?:[A-Z][a-z0-9]*)+$")
 
@@ -20,12 +19,33 @@ _GESTURE = re.compile(
     re.I,
 )
 
+def scenario_of(node):
+    """The scenario the loader read this node from; None for a graph reloaded from graph.json."""
+    return node.model if node.type == "Scenario" else None
+
+
+def story_of(node, context):
+    """The story that owns the scenario node; its Background state applies to the scenario too."""
+    parent = context.practice.direct_parent(node)
+    return parent.model if parent is not None else None
+
+
+def example_count(scenario) -> int:
+    examples = getattr(scenario, "examples", None)
+    if examples is None:
+        return 0
+    try:
+        return len(examples)
+    except TypeError:
+        return 0
+
+
 class AndChaining(PracticeGraphRule):
     slug = "and-chaining"
     node_types = ("Scenario",)
 
     def check(self, node, context) -> list[str]:
-        scenario = scenario_for_graph_node(node, context)
+        scenario = scenario_of(node)
         if scenario is None:
             return _and_chaining_from_graph(node, context)
         for when_steps, then_steps in scenario.when_then_runs():
@@ -68,7 +88,7 @@ class OutlineRequiresManyPermutations(PracticeGraphRule):
 
     def check(self, node, context) -> list[str]:
         outline = context.scenario_outline(node)
-        scenario = scenario_for_graph_node(node, context)
+        scenario = scenario_of(node)
         if scenario is not None:
             outline = outline or scenario.is_outline
         if not outline:
@@ -99,13 +119,13 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
     node_types = ("Scenario",)
 
     def check(self, node, context) -> list[str]:
-        scenario = scenario_for_graph_node(node, context)
+        scenario = scenario_of(node)
         if scenario is None:
             return []
         concepts = scenario_domain_concepts(scenario.steps)
         if not concepts:
             return []
-        story = story_of(context.story_model(), scenario)
+        story = story_of(node, context)
         backgrounds = [*getattr(scenario, "backgrounds", []), *getattr(story, "backgrounds", [])]
         background_examples = sum(example_count(background) for background in backgrounds)
         if example_count(scenario) == 0 and background_examples == 0 and context.child_count(node, ("examples",)) == 0:
@@ -146,7 +166,7 @@ class FlaggedWritesIntendedGwt(PracticeGraphRule):
 
     def check(self, node, context) -> list[str]:
         evidence = context.scenario_evidence(node)
-        scenario = scenario_for_graph_node(node, context)
+        scenario = scenario_of(node)
         if scenario is not None:
             evidence = evidence or list(scenario.evidence)
         if not evidence:

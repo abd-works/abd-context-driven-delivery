@@ -23,8 +23,8 @@ const files = (page: Page) => page.locator('[data-panel="files"]')
 
 async function openStoryMapBar(page: Page, ticket: string, title: string): Promise<Locator> {
   await card(page, ticket).getByRole('button', { name: `Show ${title}` }).click({ position: { x: 4, y: 4 } })
-  await page.locator('.details-body [data-tile="stories-story_map"] .tile-name').click()
-  const bar = page.locator('.details-body [data-tile="stories-story_map"] .expansion')
+  await page.locator('.details-body [data-tile="stories-story-map"] .tile-name').click()
+  const bar = page.locator('.details-body [data-tile="stories-story-map"] .expansion')
   await expect(bar).toBeVisible()
   return bar
 }

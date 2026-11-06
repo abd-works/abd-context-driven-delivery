@@ -54,11 +54,11 @@ story('Choose Fidelity Action', CHAT_BAR, () => {
       await scene.ui.press({ key: 'action-picker' })
       await scene.ui.press({ key: 'pick-review' })
     })
-    when('the Person selects clean_engineering-model', async ($, on, scene) => {
-      await scene.ui.press({ key: 'dot-clean_engineering-model' })
+    when('the Person selects clean-engineering-model', async ($, on, scene) => {
+      await scene.ui.press({ key: 'dot-clean-engineering-model' })
     })
     // dot press -> selectFidelity($, fidelity) -> clearChosenAction($)
-    then("the button shows clean_engineering-model's next action, generate", async ($, on, scene) => {
+    then("the button shows clean-engineering-model's next action, generate", async ($, on, scene) => {
       expect(await tipOf(scene.ui, 'action')).toBe('generate clean-engineering-model')
     })
   })

@@ -30,7 +30,7 @@ export type ChatBarViewJson = {
 // chosenAction: the action picked from the menu, which the action button shows and runs in place of the next one.
 export type ActionPickerJson = { isOpen: boolean; chosenAction: string | null }
 
-// The files view of the selected fidelity: one tab per file ticket.files declares, its text once ticket.read_file read it.
+// The files view of the selected fidelity: one tab per file fidelity-progress.files declares, its text once session.read_file read it.
 export type FidelityFilesJson = { fidelity: string; tabs: { path: string; text: string | null }[]; shown: string | null } | null
 
 declare module 'claude-code' {

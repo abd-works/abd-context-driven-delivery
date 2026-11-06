@@ -18,7 +18,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SampleTool,
 )
-from harness.markdown import AssetLocator, HTML, Markdown, YamlBinder, canonical_format
+from harness.markdown import AssetLocator, HTML, Markdown, YamlBinder
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
 _STORIES_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "stories"
@@ -64,7 +64,6 @@ with description("a templates folder beside the module"):
     with context("with a produce file named for the domain and a markdown extension"):
         with it("should map the markdown format key not the templates filename stem"):
             instance = SamplePracticeGuidance(format="markdown")
-            expect(canonical_format("md")).to(equal("markdown"))
             expect(instance.templates).to(contain("active format template body for sample tool"))
 
 

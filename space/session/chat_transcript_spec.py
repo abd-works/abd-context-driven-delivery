@@ -66,9 +66,9 @@ with description("chat transcript helpers"):
                 Session.forget_current()
                 Session.new("alpha", work, repo)
                 session = Session.current(repo)
-                session._append_log("--- 1")
+                session.record("--- 1")
                 chat_id = "b4c2a422-7199-47ce-9656-c0429af8adb8"
                 log_line = f"2026-10-20T12:00:00Z sketch {work / 'a.py'} {chat_id} {transcript} 1"
-                session._append_log(log_line)
+                session.record(log_line)
                 expanded = session.loop_at(1).expanded_text()
                 expect("question" in expanded and "sketch" in expanded).to(equal(True))

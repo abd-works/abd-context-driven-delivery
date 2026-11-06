@@ -72,7 +72,7 @@ def main() -> int:
                 continue
             reparented.append(_reparent_no_chat(cleaned, args.chat_id, transcript, line_numbers))
 
-    log_path = session.session_path / "session.log"
+    log_path = session.log_path
     existing = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
     existing_lines = {line.strip() for line in existing.splitlines() if line.strip()}
     new_lines = [line for line in reparented if line not in existing_lines]

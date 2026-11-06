@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 from typing import Any
 
+from harness.agent_tools.name import Name
 from harness.installation.destination import Destination, Installation
 
 
@@ -77,8 +77,7 @@ class Hook(Destination):
 
     @classmethod
     def normalize_event(cls, event: str) -> str:
-        stepped = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", event)
-        return stepped.replace("-", "_").lower()
+        return Name(event).snake
 
 
 hook = Hook

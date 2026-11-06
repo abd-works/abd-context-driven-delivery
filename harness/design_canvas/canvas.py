@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from harness.agent_tools.name import Name
+
 PROJECT = "project"
 
 
@@ -78,8 +80,7 @@ def stem(path: str) -> str:
 
 
 def camel(name: str) -> str:
-    head, *rest = name.split("-")
-    return head + "".join(part.capitalize() for part in rest)
+    return Name(name).camel
 
 
 def artboard(title: str, width: int, height: int, body: str, style: str, root_style: str, head: str = "",

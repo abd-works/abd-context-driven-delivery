@@ -16,11 +16,11 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 with story("Display Violations Band"):
     with scenario("Show the active ticket's violations in a band"):
         # Evidence: observed: board-page-view.tsx ViolationsBandView; story-actions.spec 'should name the active ticket's violations across the page top'.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card) with violations on stories-story_map"):
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card) with violations on stories-story-map"):
             pass
         with when("the session board reads the board"):
             # Board page -> Board.show()
-            # Board <- active ticket checkout-flow with progress violations on stories-story_map
+            # Board <- active ticket checkout-flow with progress violations on stories-story-map
             pass
         with then("a band across the page top names checkout-flow's violations"):
             pass

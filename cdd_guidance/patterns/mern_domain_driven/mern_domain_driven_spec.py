@@ -62,7 +62,7 @@ with description("a MernDomainDriven generator"):
 
         with it("should not expose generate, iterate, or satisfy"):
             for name in ("generate", "iterate", "satisfy"):
-                expect(name in self.tool.agent_tools).to(equal(False))
+                expect(name in self.tool.tools).to(equal(False))
 
     with context("whose _stories() companion is resolved"):
         with before.each:
@@ -72,7 +72,7 @@ with description("a MernDomainDriven generator"):
             expect(isinstance(self.stories, Stories)).to(be_true)
 
         with it("should pin fidelity to acceptance_tests"):
-            expect(self.stories.fidelities.current.fidelity).to(equal("acceptance_tests"))
+            expect(self.stories.fidelities.current.name).to(equal("acceptance_tests"))
 
         with it("should pin format to typescript"):
             expect(self.stories.format).to(equal("typescript"))

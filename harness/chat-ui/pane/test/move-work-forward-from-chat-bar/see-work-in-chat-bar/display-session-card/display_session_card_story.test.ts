@@ -22,7 +22,7 @@ story('Display Session Card', CHAT_BAR, () => {
     })
     // ChatBarView paints the session card from the same ChatBarClient
     then("the card opens with each fidelity's colour, name and state, such as Scenarios done in the Stories colour", async ($, on, scene) => {
-      const slugs = ['stories-scenarios', 'ux-mockup', 'clean_engineering-model']
+      const slugs = ['stories-scenarios', 'ux-mockup', 'clean-engineering-model']
       const names = await Promise.all(slugs.map(async slug => textOf(await markOf(scene.ui, `card-pick-${slug}-mark`))))
       expect(names).toEqual(['Scenarios', 'Mockup', 'Model'])
       const states = await Promise.all(slugs.map(async slug => textOf((await drawn(scene.ui, `card-cell-${slug}`))?.children?.[2])))
@@ -33,13 +33,13 @@ story('Display Session Card', CHAT_BAR, () => {
     and('the fidelities start over the first dot, and the folders in one column after the widest row', async ($, on, scene) => {
       // checkout-flow is 13 letters; ▾, │ and their gaps take 5 more. The widest row, ■ Scenarios ✓ done, takes 18, and
       // 3 more set the folders apart.
-      const indents = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean_engineering-model'].map(async key => (await drawn(scene.ui, key))?.props?.marginLeft))
+      const indents = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean-engineering-model'].map(async key => (await drawn(scene.ui, key))?.props?.marginLeft))
       expect(indents).toEqual([18, 18, 18])
       const header = (await drawn(scene.ui, 'card-header'))?.children?.map((cell: any) => cell?.props?.width)
       expect(header?.slice(0, 2)).toEqual([18, 21])
     })
     and("each fidelity's folders sit beside it", async ($, on, scene) => {
-      expect(textOf(await markOf(scene.ui, 'card-folder-clean_engineering-model-mark'))).toBe('▸ harness/chat-ui/pane')
+      expect(textOf(await markOf(scene.ui, 'card-folder-clean-engineering-model-mark'))).toBe('▸ harness/chat-ui/pane')
     })
   })
   scenario('Close the pinned session card', ({ given, when, then }) => {
