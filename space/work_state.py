@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from space.repo.repo import Branch, Repo, Worktree
 
 SESSIONS_FOLDER = ".sessions"
+# Sessions were once kept in `sessions/`; a session folder there is still found.
+LEGACY_SESSIONS_FOLDER = "sessions"
 STATE_NAME = "session.json"
 DESIGN_CANVAS_FOLDER = "design-canvas"
 E2E_RESULTS_FOLDER = "e2e-test-results"

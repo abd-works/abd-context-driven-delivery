@@ -2180,8 +2180,8 @@ it should show the board of the whole checkout, where sessions keep their folder
 ```
 it should have no active ticket, since main is not on the board
 -> Board.active
-  -> Session.active_name(repo_path: Path)
-  <- str
+  -> Repo.current_session
+  <- Session
 <- Ticket
 ```
 
@@ -2268,8 +2268,8 @@ it should name the ticket of the current session as active
 -> Board.current("pet-visits")
 <- Board
 -> Board.active
-  -> Session.active_name(repo_path: Path)
-  <- str
+  -> Repo.current_session
+  <- Session
 <- Ticket
 ```
 

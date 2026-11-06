@@ -21,6 +21,7 @@ from harness.mcp.mcp_server import mcp
 from tools.file_manager.file_manager import FileEntry, FileManager, FileText
 from space.repo.repo import Repo
 from space.work_state import (
+    LEGACY_SESSIONS_FOLDER,
     SESSIONS_FOLDER,
     WorkState,
     project_checkout,
@@ -41,7 +42,6 @@ _HANDOFF_FILES = "handoff-*.md"
 _FORMER_VERBS = {"pull": "move"}
 _REPORT_FOLDER = "validation-reports"
 MAIN_SESSION_NAME = "main"
-_LEGACY_REPO_SESSIONS_DIR = "sessions"
 COMPLETE_FOLDER = "_complete"
 _ARCHIVE_FOLDER = "_archive"
 # A log line from a chat the server cannot name ends with "no-chat" in place of the chat's id, transcript, and lines.
@@ -351,9 +351,6 @@ class PracticeSessionOutput:
 class Session:
     """Work session — one in-memory current for each project; new and switch open named sessions."""
 
-    main_session = MAIN_SESSION_NAME
-    default_wip = 3
-
     # One cdd server works on every chat's project, so each project keeps its own current session.
     _current_by_project: dict[Path, Session] = {}
 
@@ -410,7 +407,7 @@ class Session:
         """Reload in-memory session when repo ``.sessions/session.json`` current changed."""
         repo = Repo(repo_path).checkout_folder if repo_path is not None else project_checkout()
         slot = cls._slot(repo)
-        saved = cls.active_name(repo)
+        saved = Repo(repo).current_session.name
         if slot.name == saved and slot.session_path is not None and slot.repo_path == repo:
             return
         cls._current_by_project.pop(repo, None)
@@ -418,26 +415,11 @@ class Session:
         session.repo_path = repo
         session.resolve(saved, repo if saved == MAIN_SESSION_NAME else None, repo)
 
-    @classmethod
-    def active_name(cls, repo_path: Path) -> str:
-        """The session saved as open on ``repo_path``; main, which works on the whole repository, when none is named."""
-        return WorkState(repo_path).session or MAIN_SESSION_NAME
-
-    @classmethod
-    def current_folder(cls, repo_path: Path | str | None = None) -> Path:
-        """``.sessions/{current}/`` on the project's checkout; ``.sessions/main/`` when none is named.
-
-        Reads the project (``repo_path``, else the project being worked on), not a session held in memory."""
-        repo = Repo(repo_path).checkout_folder if repo_path is not None else project_checkout()
-        return cls._session_folder(repo, cls.active_name(repo))
-
-    @classmethod
-    def new_handoff_path(cls, repo_path: Path | str | None = None) -> Path:
-        """A new ``handoff-{timestamp}.md`` in the current session's folder, which it creates; names sort by time, so
+    def new_handoff_path(self) -> Path:
+        """A new ``handoff-{timestamp}.md`` in this session's folder, which it creates; names sort by time, so
         ``latest_handoff`` finds the newest."""
-        folder = cls.current_folder(repo_path)
-        folder.mkdir(parents=True, exist_ok=True)
-        return folder / f"handoff-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}.md"
+        self.session_path.mkdir(parents=True, exist_ok=True)
+        return self.session_path / f"handoff-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}.md"
 
     @classmethod
     @mcp
@@ -727,17 +709,17 @@ class Session:
         return type(self).load(destination, self.repo_path)
 
     def move_to_closed(self) -> Session:
-        return self.move_folder_to(self.sessions_dir(self.repo_path) / COMPLETE_FOLDER)
+        return self.move_folder_to(Repo(self.repo_path).sessions_folder / COMPLETE_FOLDER)
 
     def move_to_archive(self) -> Session:
-        return self.move_folder_to(self.sessions_dir(self.repo_path) / _ARCHIVE_FOLDER)
+        return self.move_folder_to(Repo(self.repo_path).sessions_folder / _ARCHIVE_FOLDER)
 
     def move_to_backlog(self) -> Session:
         return self.move_folder_to(Repo(self.repo_path).backlog_folder)
 
     def reopen(self) -> Session:
         """Back among the open sessions, from closed or the backlog."""
-        return self.move_folder_to(self.sessions_dir(self.repo_path))
+        return self.move_folder_to(Repo(self.repo_path).sessions_folder)
 
     @classmethod
     @mcp
@@ -762,7 +744,7 @@ class Session:
             repo = project_checkout()
         slot = cls._slot(repo)
         wanted = cls._session_name(name, repo)
-        folder = Path(session_path) if session_path is not None else cls._session_folder(repo, wanted)
+        folder = Path(session_path) if session_path is not None else Repo(repo).session_folder(wanted)
         if not (folder / "session.json").is_file():
             work = Path(workpath) if workpath is not None else slot._env_workpath()
             return cls.new(wanted, work, repo)
@@ -866,7 +848,7 @@ class Session:
         """``session`` in repo/.sessions/session.json."""
         if self.repo_path is None:
             return MAIN_SESSION_NAME
-        return type(self).active_name(self.repo_path)
+        return Repo(self.repo_path).current_session.name
 
     @saved_current_session.setter
     def saved_current_session(self, name: str) -> None:
@@ -963,7 +945,7 @@ class Session:
                 self.repo_path = self._repo_holding(self.session_path)
         elif repo_path is not None:
             self.repo_path = Path(repo_path).resolve()
-            self.session_path = self._session_folder(self.repo_path, name)
+            self.session_path = Repo(self.repo_path).session_folder(name)
             stored = self._read_session_folder_json(self.session_path)
             if workpath is not None:
                 self.workpath = Path(workpath).resolve()
@@ -974,10 +956,10 @@ class Session:
         elif workpath is not None:
             self.workpath = Path(workpath).resolve()
             self.repo_path = Repo(self.workpath).checkout_folder
-            self.session_path = self._session_folder(self.repo_path, name)
+            self.session_path = Repo(self.repo_path).session_folder(name)
         else:
             self.repo_path = project_checkout()
-            self.session_path = self._session_folder(self.repo_path, name)
+            self.session_path = Repo(self.repo_path).session_folder(name)
             stored = self._read_session_folder_json(self.session_path)
             if stored.get("workpath"):
                 self.workpath = Path(stored["workpath"])
@@ -1328,7 +1310,7 @@ class Session:
         self.name = name
         self.workpath = workpath.resolve()
         self.repo_path = repo_path.resolve()
-        self.session_path = self.sessions_dir(self.repo_path) / name
+        self.session_path = Repo(self.repo_path).sessions_folder / name
         self.session_path.mkdir(parents=True, exist_ok=True)
         self._read_practices_json()
         self._write_session_folder_json()
@@ -1347,25 +1329,6 @@ class Session:
         opened._session = self
         self._loops = [opened]
         self.record("--- 1")
-
-    @staticmethod
-    def sessions_dir(repo_path: Path) -> Path:
-        return WorkState(repo_path).sessions_folder
-
-    @classmethod
-    def _session_folder(cls, repo_path: Path, name: str) -> Path:
-        """A ticket on the board lives in the main checkout's ``.sessions``, so a chat in the ticket's linked worktree
-        logs there too and the board shows its work. Each checkout keeps its own main session."""
-        root = Path(repo_path).resolve()
-        preferred = cls.sessions_dir(root) / name
-        legacy = root / _LEGACY_REPO_SESSIONS_DIR / name
-        candidates = [preferred, legacy]
-        if name != MAIN_SESSION_NAME:
-            candidates.insert(0, cls.sessions_dir(Repo(root).primary_root()) / name)
-        for folder in candidates:
-            if (folder / "session.json").is_file():
-                return folder
-        return preferred
 
     def _write_session_folder_json(self) -> None:
         if self.session_path is None:
@@ -1398,7 +1361,7 @@ class Session:
 
     def _repo_holding(self, session_path: Path) -> Path:
         folder = Path(session_path).resolve().parent
-        if folder.name in {SESSIONS_FOLDER, _LEGACY_REPO_SESSIONS_DIR}:
+        if folder.name in {SESSIONS_FOLDER, LEGACY_SESSIONS_FOLDER}:
             return folder.parent
         return folder
 

@@ -22,7 +22,7 @@ from harness.kanban.board import (
 )
 from harness.kanban.report import Report, ReportFile
 from harness.mcp.mcp_server import mcp
-from space.repo.repo import Repo
+from space.repo.repo import Branch, Repo
 from space.session import Session, name_of
 from space.session.session import LogEntry
 from tools.file_manager.file_manager import FileEntry
@@ -97,6 +97,11 @@ class Ticket(Card):
         """Its session's name. A ticket is an agent toolset, whose own name is the toolset's, so without this a
         ticket's name would read "ticket"."""
         return self._session.name
+
+    @property
+    def branch(self) -> Branch:
+        """The ticket's own branch, named as the ticket; the repository may not have it yet."""
+        return self._board.repo.branch_named(self.name)
 
     @property
     def title(self) -> str:

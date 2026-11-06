@@ -1113,7 +1113,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
             expect(session.workpath).to(equal(self.project.resolve()))
 
         with it("should give the project's session folder"):
-            expect(Session.current_folder()).to(equal(self.project.resolve() / ".sessions" / "beta"))
+            expect(Repo(self.project).current_session.session_path).to(equal(self.project.resolve() / ".sessions" / "beta"))
 
         with it("should append log notes to the project's session log"):
             transcript = _bind_mandatory_chat(Session.current(), self.project, "project-chat")
@@ -1166,7 +1166,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
             expect(Session.current().workpath).to(equal(self.project.resolve()))
 
         with it("should give the project's main session folder"):
-            expect(Session.current_folder()).to(equal(self.project.resolve() / ".sessions" / "main"))
+            expect(Repo(self.project).current_session.session_path).to(equal(self.project.resolve() / ".sessions" / "main"))
 
         with it("should leave the session unnamed in .sessions/session.json"):
             Session.current()
