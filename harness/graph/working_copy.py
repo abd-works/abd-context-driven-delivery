@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 from harness.graph.bound_node import schema_sync_paused
-from harness.graph.graph import Graph
+from harness.graph.graph import Graph, edge_order
 from harness.graph.rules import attach_rules
 from harness.graph.skipped_folders import scanned_files, skips_folder
 
@@ -117,7 +117,9 @@ def _register_overlay_schema_catalog(graph: Graph) -> None:
             practice.node_types.add(node_type)
         for kind in edge_kinds.get(name, ()):
             if kind not in practice.edge_types:
-                practice.edge_types[kind] = EdgeType(kind, 5, overlay_edge_display(kind))
+                # A kind no edge was recorded under is listed after the ones the tree shows.
+                display = overlay_edge_display(kind)
+                practice.edge_types[kind] = EdgeType(kind, edge_order(kind, "relationship"), display)
 
 
 def _record_clean(practice, root: Path) -> list[dict]:
@@ -129,16 +131,14 @@ def _record_clean(practice, root: Path) -> list[dict]:
     models: dict = {}
     root_id = practice.root_node.node_id
     files = _code_files(practice.graph, root)
-    class_names = _class_names(_declaring_files(practice.graph, root, files), practice.graph)
+    modules = _parsed_modules(practice.graph, root, files)
+    class_names = {cls.name for module, _text in modules.values() for cls in module.classes}
+    class_names |= _class_names(_unparsed_declaring_files(practice.graph, root, files), practice.graph)
     ids = {rel: f"clean_engineering:{kind}:{rel}" for rel, kind in roles.items()}
     folders = {rel: _folder_module(root / rel) for rel in roles}
-    for index, file in enumerate(files, start=1):
+    for file, (module, text) in modules.items():
         relative = file.relative_to(root).as_posix()
-        _report(practice.graph, f"clean_engineering · classes · {index}/{len(files)} · {relative}")
         owner = _nearest(str(Path(relative).parent).replace("\\", "/"), roles)
-        module, text = _parsed_module(file, root)
-        if module is None:
-            continue
         if owner:
             folders[owner].dependencies.extend(module.dependencies)
         for cls in module.classes:
@@ -150,9 +150,9 @@ def _record_clean(practice, root: Path) -> list[dict]:
         folder_row = [ids[rel], Path(rel).name, kind, "clean_engineering", rel, 1, 1]
         nodes.append(folder_row)
         models[ids[rel]] = folders[rel]
-        edges.append([parent, ids[rel], "owns", 2, "direct"])
+        edges.append([parent, ids[rel], "owns", edge_order("owns"), "direct"])
         if kind == "Package":
-            edges.append([ids[rel], parent, "belongsTo", 5, "relationship"])
+            edges.append([ids[rel], parent, "belongsTo", edge_order("belongsTo"), "relationship"])
     practice.apply_nodes(nodes, models)
     practice.apply_edges(edges)
     practice.loaded = ["nodes", "edges", "rules"]
@@ -225,14 +225,27 @@ def _code_files(graph: Graph, root: Path) -> list[Path]:
     return [path for path in edited if path.suffix.lower() in _CODE_SUFFIXES]
 
 
-def _declaring_files(graph: Graph, root: Path, files: list[Path]) -> list[Path]:
-    """Files whose class names a type hint may name: every source file, even when only some are edited.
+def _parsed_modules(graph: Graph, root: Path, files: list[Path]) -> dict[Path, tuple]:
+    """Each source file's parsed module and text, for the files that parse."""
+    modules: dict[Path, tuple] = {}
+    for index, file in enumerate(files, start=1):
+        _report(graph, f"clean_engineering · classes · {index}/{len(files)} · {file.relative_to(root).as_posix()}")
+        module, text = _parsed_module(file, root)
+        if module is not None:
+            modules[file] = (module, text)
+    return modules
 
-    Names come from a text match, not a parse, so reading the files the scope leaves out stays cheap.
+
+def _unparsed_declaring_files(graph: Graph, root: Path, files: list[Path]) -> list[Path]:
+    """The source files outside an edited-file scope, whose class names a type hint may still name.
+
+    The scope's own files are parsed and their classes named by the parse. Names in the other files come from a text
+    match, so reading the files the scope leaves out stays cheap.
     """
     if graph.edited_files() is None:
-        return files
-    return scanned_files(root, _CODE_SUFFIXES)
+        return []
+    parsed = set(files)
+    return [path for path in scanned_files(root, _CODE_SUFFIXES) if path not in parsed]
 
 
 def _folder_module(folder: Path):
@@ -286,7 +299,7 @@ def _imported_folders(targets: list[str], ids: dict[str, str], own: str) -> set[
     return found
 
 
-_BEHAVIOR_EDGES = {"Description": ("descriptions", 1), "Context": ("contexts", 2), "Observation": ("observations", 3)}
+_BEHAVIOR_EDGES = {"Description": "descriptions", "Context": "contexts", "Observation": "observations"}
 
 
 def _record_bdd(practice, root: Path) -> None:
@@ -319,7 +332,7 @@ def _record_spec(practice, file: Path, relative: str, nodes: list, edges: list, 
     spec_id = f"bdd:Spec:{relative}"
     nodes.append([spec_id, file.stem, "Spec", "bdd", relative, 1, max(1, len(lines))])
     models[spec_id] = spec
-    edges.append([practice.root_node.node_id, spec_id, "owns", 2, "direct"])
+    edges.append([practice.root_node.node_id, spec_id, "owns", edge_order("owns"), "direct"])
     ids = {id(spec): spec_id}
     for node in spec.behavior_nodes():
         node.load_span_facts("\n".join(lines[node.line - 1 : node.end_line]))
@@ -328,8 +341,8 @@ def _record_spec(practice, file: Path, relative: str, nodes: list, edges: list, 
         row = [node_id, node.name, node.type, "bdd", relative, node.line, node.end_line]
         nodes.append(row)
         models[node_id] = node
-        kind, order = _BEHAVIOR_EDGES[node.type]
-        edges.append([ids.get(id(node.parent), spec_id), node_id, kind, order, "direct"])
+        kind = _BEHAVIOR_EDGES[node.type]
+        edges.append([ids.get(id(node.parent), spec_id), node_id, kind, edge_order(kind), "direct"])
 
 
 def _tactical_block(member: dict):
@@ -456,21 +469,21 @@ def _class_fact(text: str, relative: str, module_id: str, cls, class_names: set[
     class_row = [class_id, cls.name, "OoadClass", "clean_engineering", relative, class_start, class_end]
     nodes.append(_fact_row(class_row, {"folder": module_id}))
     models[class_id] = cls
-    edges.append([module_id, class_id, "owns", 2, "direct"])
-    edges.append([class_id, module_id, "belongsTo", 5, "relationship"])
+    edges.append([module_id, class_id, "owns", edge_order("owns"), "direct"])
+    edges.append([class_id, module_id, "belongsTo", edge_order("belongsTo"), "relationship"])
     properties = _properties_of(cls, text)
     for prop in properties:
         prop_id = f"clean_engineering:Property:{relative}:{prop['name']}:{cls.name}"
         nodes.append([prop_id, prop["name"], "Property", "clean_engineering", relative, prop["line"], prop["line"]])
-        edges.append([class_id, prop_id, "properties", 3, "grouped"])
+        edges.append([class_id, prop_id, "properties", edge_order("properties"), "grouped"])
         if _names_class(prop["hint"], class_names):
-            edges.append([class_id, prop_id, "relative", 1, "direct"])
+            edges.append([class_id, prop_id, "relative", edge_order("relative"), "direct"])
             for other in class_names:
                 if other != cls.name and other in prop["hint"]:
                     other_id = _class_id_named(nodes, other)
                     if other_id:
-                        edges.append([prop_id, other_id, "hasType", 7, "relationship"])
-                        edges.append([class_id, other_id, "dependsOn", 13, "relationship"])
+                        edges.append([prop_id, other_id, "hasType", edge_order("hasType"), "relationship"])
+                        edges.append([class_id, other_id, "dependsOn", edge_order("dependsOn"), "relationship"])
     for operation in cls.own_operations():
         if operation.name in {"constructor", "get", "set"} or getattr(operation, "is_property", False):
             continue
@@ -478,33 +491,26 @@ def _class_fact(text: str, relative: str, module_id: str, cls, class_names: set[
             continue
         from cdd_guidance.practices.clean_engineering.model.operation import operation_source_span
 
-        span = _method_span(text, operation.name, getattr(operation, "line", None) or 1)
-        model_span = operation_source_span(operation)
-        if model_span is not None:
-            start, end = model_span
-        else:
-            start = getattr(operation, "line", None) or span[0]
-            line_count = getattr(operation, "line_count", None)
-            end = start + line_count - 1 if line_count and line_count > 0 else span[1]
+        start, end = operation_source_span(operation) or _scanned_span(text, operation)
         op_id = f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}"
         operation.load_span_facts("\n".join(lines[start - 1 : end]))
         signature = {"owner": cls.name, "parameters": [[p.name, (p.type_hint or "").strip()] for p in operation.parameters]}
         op_row = [op_id, operation.name, "Operation", "clean_engineering", relative, start, end]
         nodes.append(_fact_row(op_row, signature))
         models[op_id] = operation
-        edges.append([class_id, op_id, "owns", 2, "direct"])
+        edges.append([class_id, op_id, "owns", edge_order("owns"), "direct"])
         for parameter in operation.parameters:
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
             parameter.load_operation_facts(operation)
-            nodes.append([param_id, parameter.name, "Parameter", "clean_engineering", relative, span[0], span[0]])
+            nodes.append([param_id, parameter.name, "Parameter", "clean_engineering", relative, start, start])
             models[param_id] = parameter
-            edges.append([op_id, param_id, "hasParameter", 6, "relationship"])
+            edges.append([op_id, param_id, "hasParameter", edge_order("hasParameter"), "relationship"])
         if _names_class(getattr(operation, "return_type", "") or "", class_names):
             for other in class_names:
                 if other in (operation.return_type or ""):
                     other_id = _class_id_named(nodes, other)
                     if other_id:
-                        edges.append([op_id, other_id, "returns", 10, "relationship"])
+                        edges.append([op_id, other_id, "returns", edge_order("returns"), "relationship"])
     return {
         "name": cls.name,
         "id": class_id,
@@ -613,6 +619,14 @@ def _class_id_named(nodes: list, name: str) -> str:
     return ""
 
 
+def _scanned_span(text: str, operation) -> tuple[int, int]:
+    """An operation's lines when its parser gave no span: from its line, or the text's method head, through its close."""
+    span = _method_span(text, operation.name, getattr(operation, "line", None) or 1)
+    start = getattr(operation, "line", None) or span[0]
+    line_count = getattr(operation, "line_count", None)
+    return start, start + line_count - 1 if line_count and line_count > 0 else span[1]
+
+
 def _method_span(text: str, name: str, fallback: int) -> tuple[int, int]:
     from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
 
@@ -649,9 +663,9 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
         if rel != "." and parent_rel == rel:
             parent_rel = ""
         parent_id = context_ids.get(parent_rel) or practice.root_node.node_id
-        edges.append([parent_id, context_id, "owns", 2, "direct"])
+        edges.append([parent_id, context_id, "owns", edge_order("owns"), "direct"])
         if parent_rel:
-            edges.append([context_id, parent_id, "belongsTo", 3, "relationship"])
+            edges.append([context_id, parent_id, "belongsTo", edge_order("belongsTo"), "relationship"])
     by_id = {}
     ddd_root_id = practice.root_node.node_id
     for folder in sorted(members):
@@ -659,8 +673,8 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
         aggregate_id = f"ddd:Aggregate:{folder}"
         nodes.append([aggregate_id, Path(folder).name, "Aggregate", "ddd", folder, 1, 1])
         models[aggregate_id] = _folder_module(root / folder)
-        edges.append([context_id, aggregate_id, "owns", 2, "direct"])
-        edges.append([aggregate_id, context_id, "belongsTo", 3, "relationship"])
+        edges.append([context_id, aggregate_id, "owns", edge_order("owns"), "direct"])
+        edges.append([aggregate_id, context_id, "belongsTo", edge_order("belongsTo"), "relationship"])
         for member in members[folder]:
             member_id = f"ddd:{member['kind']}:{member['file']}:{member['name']}"
             start, end = member["extent"]
@@ -669,22 +683,22 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
             models[member_id] = _tactical_block(member)
             by_id[member["name"]] = member_id
             if member["kind"] == "EntityRoot":
-                edges.append([aggregate_id, member_id, "root", 1, "direct"])
+                edges.append([aggregate_id, member_id, "root", edge_order("root"), "direct"])
             else:
-                edges.append([aggregate_id, member_id, "owns", 2, "direct"])
-            edges.append([member_id, aggregate_id, "belongsTo", 3, "relationship"])
+                edges.append([aggregate_id, member_id, "owns", edge_order("owns"), "direct"])
+            edges.append([member_id, aggregate_id, "belongsTo", edge_order("belongsTo"), "relationship"])
             if member["kind"] == "Repository" and member["name"].endswith("Repository"):
                 root_name = member["name"][: -len("Repository")]
                 root_id = by_id.get(root_name)
                 if root_id:
-                    edges.append([member_id, root_id, "accesses", 4, "relationship"])
+                    edges.append([member_id, root_id, "accesses", edge_order("accesses"), "relationship"])
         for member in members[folder]:
             if member["kind"] != "EntityRoot":
                 continue
             for other in _FOREIGN.findall(member["text"]):
                 other_id = by_id.get(other)
                 if other_id and other != member["name"]:
-                    edges.append([by_id[member["name"]], other_id, "associates", 5, "relationship"])
+                    edges.append([by_id[member["name"]], other_id, "associates", edge_order("associates"), "relationship"])
     practice.apply_nodes(nodes, models)
     practice.apply_edges(edges)
     practice.loaded = ["nodes", "edges", "rules"]
@@ -754,22 +768,22 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
     for index, step in enumerate(steps, start=1):
         _report(graph, f"stories · steps · {index}/{total_steps} · {step.name}")
         body = _step_body(graph._folder, step, lines_by_file)
-        called = set(getattr(step, "data", {}).get("callees") or []) | set(_MEMBER_CALL.findall(body))
+        called = set(step.get_fact("callees") or []) | set(_MEMBER_CALL.findall(body))
         matched = [operation for name in called for operation in operations_by_name.get(name, ())]
         epic = _epic_for(step, epics) if matched else None
         for operation in matched:
-            _edge(stories, "invokes", 12, "relationship", step, operation)
-            _edge(clean, "invokes", 12, "relationship", operation, step)
-            _edge(clean, "invokedBy", 9, "relationship", operation, step)
+            _edge(stories, "invokes", "relationship", step, operation)
+            _edge(clean, "invokes", "relationship", operation, step)
+            _edge(clean, "invokedBy", "relationship", operation, step)
             module = modules.get(Path(operation.source.file).parent.name)
             if module is not None and epic is not None:
-                _edge(clean, "usedBy", 14, "relationship", module, epic)
-                _edge(stories, "uses", 9, "relationship", epic, module)
+                _edge(clean, "usedBy", "relationship", module, epic)
+                _edge(stories, "uses", "relationship", epic, module)
         if _gwt_phase(step) not in {"given", "when", "then"}:
             continue
         for example, pattern in example_patterns:
             if pattern.search(body):
-                _edge(stories, "observes", 8, "relationship", step, example)
+                _edge(stories, "observes", "relationship", step, example)
     sources = _function_sources(graph._folder, graph)
     total_examples = len(examples)
     for index, example in enumerate(examples, start=1):
@@ -777,13 +791,13 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
         text = sources.get(example.name, "")
         for name, class_node in classes_by_name.items():
             if re.search(rf"\b{re.escape(name)}\b", text):
-                _edge(stories, "demonstrates", 4, "grouped", example, class_node)
-                _edge(clean, "demonstrates", 4, "grouped", class_node, example)
-                _edge(clean, "demonstratedThrough", 8, "relationship", class_node, example)
+                _edge(stories, "demonstrates", "grouped", example, class_node)
+                _edge(clean, "demonstrates", "grouped", class_node, example)
+                _edge(clean, "demonstratedThrough", "relationship", class_node, example)
         for prop in properties:
             if re.search(rf"\.{re.escape(prop.name)}\b", text):
-                _edge(stories, "retrievedUsing", 11, "relationship", example, prop)
-                _edge(clean, "retrievedUsing", 11, "relationship", prop, example)
+                _edge(stories, "retrievedUsing", "relationship", example, prop)
+                _edge(clean, "retrievedUsing", "relationship", prop, example)
 
 
 # A member read that is not a call: `ticketOn(page, OTHER).isLocked`, `stage.actions`.
@@ -845,8 +859,8 @@ def _record_bdd_edges(graph: Graph) -> None:
                     invoked = found + [member for member in invoked if member not in found]
                     break
             for member in invoked:
-                _edge(bdd, "invokes", 12, "relationship", node, member)
-                _edge(clean, "invokedBy", 9, "relationship", member, node)
+                _edge(bdd, "invokes", "relationship", node, member)
+                _edge(clean, "invokedBy", "relationship", member, node)
 
 
 def _invoked_in(text: str, is_python: bool, members_by_name: dict) -> list:
@@ -909,8 +923,8 @@ def _enclosing_setups(nodes: list, starts: list[int], index: int, lines: list[st
     return setups
 
 
-def _edge(practice, kind: str, order: int, display: str, parent, child) -> None:
-    practice.record({"kind": kind, "order": order, "display": display}, parent, child)
+def _edge(practice, kind: str, display: str, parent, child) -> None:
+    practice.record({"kind": kind, "order": edge_order(kind, display), "display": display}, parent, child)
 
 
 def _step_body(root: Path | None, step, lines_by_file: dict[str, list[str]]) -> str:
@@ -1231,8 +1245,7 @@ def _record_lern_context_mappings(graph: Graph, root: Path, ddd) -> None:
 def _lern_schema_edge(practice, kind: str, parent, child) -> None:
     from harness.graph.schema_edges import overlay_edge_display
 
-    order = 2 if overlay_edge_display(kind) == "direct" else 5
-    _edge(practice, kind, order, overlay_edge_display(kind), parent, child)
+    _edge(practice, kind, overlay_edge_display(kind), parent, child)
 
 
 def _lern_other_node_files(root: Path, folder: str, slug: str, ddd, aggregate) -> None:

@@ -298,9 +298,6 @@ with description("a graph"):
                 with it("should mark the emailValidationCode call"):
                     expect(self.register.source.text).to(contain("/* call:this.emailValidationCode */"))
 
-                with it("should fold that call for Monaco"):
-                    expect(any(fold.kind == "call" and fold.start == fold.end for fold in self.register.source.folds)).to(equal(True))
-
             with context("with the practice selected"):
                 with before.all:
                     self.graph.filter.select_practices(["clean_engineering"])

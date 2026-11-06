@@ -11,6 +11,9 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from harness.graph.graph import edge_order
+from harness.guidance.schema import Schema
+
 _ROOT = Path(__file__).resolve().parents[2]
 
 # Child-list edges. _link records these. The sync records the other schema fields.
@@ -80,24 +83,6 @@ _PHASES = {"given": "given", "when": "when", "then": "then"}
 
 _DISPLAY = {"demonstrates": "grouped"}
 
-_ORDER = {
-    "demonstrates": 3,
-    "shownOn": 4,
-    "specifiedBy": 4,
-    "invokes": 5,
-    "invokedBy": 6,
-    "demonstratedThrough": 6,
-    "hasType": 6,
-    "retrievedUsing": 7,
-    "observes": 8,
-    "uses": 9,
-    "usedBy": 9,
-    "dependsOn": 10,
-    "given": 2,
-    "returnType": 7,
-    "specifies": 4,
-}
-
 
 class SchemaField:
     def __init__(self, owner: str, kind: str, targets: tuple[str, ...], phase: str = "") -> None:
@@ -145,7 +130,8 @@ def _bound_nodes(graph) -> list:
 
 
 def _record(kind: str, parent, child) -> None:
-    fact = {"kind": kind, "order": _ORDER.get(kind, 1), "display": _DISPLAY.get(kind, "relationship")}
+    display = _DISPLAY.get(kind, "relationship")
+    fact = {"kind": kind, "order": edge_order(kind, display), "display": display}
     parent.practice.record(fact, parent, child)
     if parent.practice is not child.practice:
         child.practice.record(fact, child, parent)
@@ -315,21 +301,18 @@ _OVERLAY_TREE_DIRECT_KINDS = frozenset(
     }
 )
 
+# Fields every schema type may carry that name the type itself, not a relationship.
 _OVERLAY_REL_SKIP = frozenset({"is", "fidelity", "name", "path"})
-_OVERLAY_REL_LINE = re.compile(r"^\s+(?:-\s+)?([A-Za-z]\w*)\??:\s+")
 
 
-def _relationship_kinds_from_overlay_schema(text: str) -> set[str]:
-    """Field names from overlay schema list lines (``- route: route``)."""
-    kinds: set[str] = set()
-    for line in text.splitlines():
-        match = _OVERLAY_REL_LINE.match(line)
-        if match is None:
-            continue
-        kind = match.group(1)
-        if kind not in _OVERLAY_REL_SKIP:
-            kinds.add(kind)
-    return kinds
+def _relationship_kinds_from_overlay_schema(schema: Schema) -> set[str]:
+    """Field names from an overlay schema (``- route: route``)."""
+    return {
+        name
+        for kind in schema.types.values()
+        for name, value in kind.fields
+        if value and name not in _OVERLAY_REL_SKIP
+    }
 
 
 def overlay_edge_display(kind: str) -> str:
@@ -349,7 +332,7 @@ def relationship_kinds_for_patterns(active_patterns: tuple[str, ...]) -> dict[st
             continue
         for schema in sorted(root.glob("*/model/schema.yaml")):
             practice = schema.parent.parent.name
-            kinds = _relationship_kinds_from_overlay_schema(schema.read_text(encoding="utf-8"))
+            kinds = _relationship_kinds_from_overlay_schema(Schema.load(schema))
             by_practice.setdefault(practice, set()).update(kinds)
     return {name: frozenset(kinds) for name, kinds in by_practice.items()}
 
@@ -360,39 +343,22 @@ def _fields() -> tuple[SchemaField, ...]:
     from harness.guidance.practice_catalogue import PracticeCatalogue
 
     for practice in PracticeCatalogue.keys():
-        path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
-        if path.is_file():
-            found.extend(_parse(path.read_text(encoding="utf-8")))
+        found.extend(_schema_fields(Schema.load(_ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml")))
     patterns = _ROOT / "cdd_guidance" / "patterns"
     if patterns.is_dir():
         for schema in sorted(patterns.glob("*/practices/*/model/schema.yaml")):
-            found.extend(_parse(schema.read_text(encoding="utf-8")))
+            found.extend(_schema_fields(Schema.load(schema)))
     return tuple(found)
 
 
-def _parse(text: str) -> list[SchemaField]:
+def _schema_fields(schema: Schema) -> list[SchemaField]:
+    """Every field of a schema type whose value names other types."""
     fields: list[SchemaField] = []
-    owner_key = ""
-    for line in text.splitlines():
-        header = re.match(r"^([A-Za-z]\w*):\s*$", line)
-        if header:
-            owner_key = header.group(1)
-            continue
-        field = re.match(r"^  ([A-Za-z]\w*)\??:\s*(.*)$", line)
-        if field is None or not owner_key:
-            continue
-        targets = _targets(field.group(2))
-        if not targets:
-            continue
-        kind = field.group(1)
-        fields.append(
-            SchemaField(
-                _semantic(owner_key),
-                kind,
-                tuple(_semantic(name) for name in targets),
-                _PHASES.get(owner_key, ""),
-            )
-        )
+    for key, kind in schema.types.items():
+        for name, value in kind.fields:
+            targets = _targets(value)
+            if targets:
+                fields.append(SchemaField(semantic_type(key), name, tuple(semantic_type(target) for target in targets), _PHASES.get(key, "")))
     return fields
 
 
@@ -403,7 +369,16 @@ def _targets(value: str) -> list[str]:
     return [name for name in re.findall(r"[A-Za-z]\w*", value) if name not in {"string", "number", "dotPath"}]
 
 
-def _semantic(name: str) -> str:
-    if name in _SEMANTIC:
-        return _SEMANTIC[name]
-    return name[:1].upper() + name[1:]
+def semantic_type(schema_key: str) -> str:
+    """The explorer node type a schema key names: ``class`` is ``OoadClass``; any other key is capitalised."""
+    if schema_key in _SEMANTIC:
+        return _SEMANTIC[schema_key]
+    return schema_key[:1].upper() + schema_key[1:]
+
+
+def schema_key_for_type(node_type: str) -> str:
+    """The schema key for an explorer node type, the reverse of ``semantic_type``."""
+    for key, mapped in _SEMANTIC.items():
+        if mapped == node_type:
+            return key
+    return node_type[:1].lower() + node_type[1:]

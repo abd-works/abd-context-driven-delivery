@@ -10,6 +10,7 @@ import json
 import re
 from pathlib import Path
 
+from harness.graph.graph import edge_order
 from harness.graph.node_data import encode_node_data
 
 from cdd_guidance.practices.stories.model.source_location import SourceLocation
@@ -88,7 +89,7 @@ class GraphStoryModel:
         epic.load_map_facts()
         epic.evidence = self._epic_evidence(root, story_file, epic, top)
         nodes.append(self._row(node_id, epic.name, semantic, source_file, line, end, epic))
-        edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
+        edges.append([parent_id, node_id, "decomposedInto", edge_order("decomposedInto"), "direct"])
         for child in epic.epics:
             self._epic(root, node_id, child, False, nodes, edges)
         for story in epic.stories:
@@ -103,7 +104,7 @@ class GraphStoryModel:
         line, end = self._source_span(story, root, file)
         story.load_map_facts()
         nodes.append(self._row(node_id, story.name, "Story", file or ".", line, end, story, self._file_facts(root, file)))
-        edges.append([parent_id, node_id, "decomposedInto", 1, "direct"])
+        edges.append([parent_id, node_id, "decomposedInto", edge_order("decomposedInto"), "direct"])
         for background in story.backgrounds:
             self._background(root, file, node_id, background, nodes, edges)
         scoped = [name for background in story.backgrounds for name in background.examples]
@@ -117,9 +118,9 @@ class GraphStoryModel:
         self._ensure_source(background, file, line, end)
         background.load_map_facts()
         nodes.append(self._row(node_id, label, "Background", file or ".", line, end, background))
-        edges.append([parent_id, node_id, "background", 2, "direct"])
+        edges.append([parent_id, node_id, "background", edge_order("background"), "direct"])
         for step in background.steps:
-            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
+            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps")
 
     def _scenario(self, root: str, file: str, parent_id: str, scenario, nodes: list, edges: list, scoped: list[str] = ()) -> None:
         """Record the scenario with its own examples and those its story's Background scopes. A scenario read from a
@@ -144,13 +145,13 @@ class GraphStoryModel:
                 },
             )
         )
-        edges.append([parent_id, node_id, "scenarios", 3, "direct"])
+        edges.append([parent_id, node_id, "scenarios", edge_order("scenarios"), "direct"])
         for step in scenario.steps:
-            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps", order=4)
+            self._step(root, file, node_id, step, nodes, edges, edge_kind="steps")
         for name in dict.fromkeys([*scenario.examples, *scoped]):
             example_id = f"stories:Example:{file}:{name}"
             nodes.append([example_id, name, "Example", "stories", file or ".", line, end])
-            edges.append([node_id, example_id, "examples", 5, "direct"])
+            edges.append([node_id, example_id, "examples", edge_order("examples"), "direct"])
 
     def _step(
         self,
@@ -162,7 +163,6 @@ class GraphStoryModel:
         edges: list,
         *,
         edge_kind: str = "steps",
-        order: int = 4,
     ) -> None:
         semantic = _step_semantic(step)
         label = f"{step.keyword.lower()} {step.text}".strip()
@@ -170,9 +170,9 @@ class GraphStoryModel:
         node_id = f"stories:{semantic}:{file}:{line}:{hash(label) & 0xFFFFFF}"
         nodes.append([node_id, label, semantic, "stories", file or ".", line, end])
         self._models[node_id] = step
-        edges.append([parent_id, node_id, edge_kind, order, "direct"])
+        edges.append([parent_id, node_id, edge_kind, edge_order(edge_kind), "direct"])
         for continuation in step.ands:
-            self._step(root, file, node_id, continuation, nodes, edges, edge_kind="ands", order=9)
+            self._step(root, file, node_id, continuation, nodes, edges, edge_kind="ands")
 
     def _row(
         self,

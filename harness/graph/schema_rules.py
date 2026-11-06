@@ -6,11 +6,11 @@ DDD (and pattern overlays) extend Clean Engineering via ``is:`` supertypes in sc
 
 from __future__ import annotations
 
-import re
 from functools import lru_cache
 from pathlib import Path
 
-from harness.graph.schema_edges import _SEMANTIC
+from harness.graph.schema_edges import schema_key_for_type, semantic_type
+from harness.guidance.schema import Schema
 
 _ROOT = Path(__file__).resolve().parents[2]
 
@@ -77,21 +77,6 @@ def _merge_parsed_rules(found: dict[str, tuple[str, ...]], overlay: dict[str, tu
         found[node_type] = tuple(merged)
 
 
-def semantic_type(schema_key: str) -> str:
-    if schema_key in _SEMANTIC:
-        return _SEMANTIC[schema_key]
-    return schema_key[:1].upper() + schema_key[1:]
-
-
-def schema_key_for_type(node_type: str) -> str:
-    for key, mapped in _SEMANTIC.items():
-        if mapped == node_type:
-            return key
-    if node_type:
-        return node_type[:1].lower() + node_type[1:]
-    return node_type
-
-
 @lru_cache(maxsize=None)
 def _schema_fidelities(practice: str) -> dict[str, list[str]]:
     from harness.guidance.schema_map import load_node_fidelities
@@ -107,26 +92,47 @@ def fidelities_for_type(practice: str, node_type: str) -> list[str]:
 @lru_cache(maxsize=None)
 def _direct_rules_for_practice(practice: str, active_patterns: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
     """Rule slugs declared explicitly under ``rules:`` in schema (no inheritance)."""
-    path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
+    path = _practice_schema_path(practice)
     if not path.is_file():
         return {}
-    found = _parse_rules(path.read_text(encoding="utf-8"))
+    found = _rules(Schema.load(path))
     for schema in _overlay_schema_paths(practice, active_patterns):
-        _merge_parsed_rules(found, _parse_rules(schema.read_text(encoding="utf-8")))
+        _merge_parsed_rules(found, _rules(Schema.load(schema)))
     for rules_path in _overlay_rules_paths(practice, active_patterns):
-        _merge_parsed_rules(found, _parse_rules(rules_path.read_text(encoding="utf-8")))
+        _merge_parsed_rules(found, _rules(Schema.load(rules_path)))
     return found
+
+
+def _practice_schema_path(practice: str) -> Path:
+    return _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
+
+
+def _rules(schema: Schema) -> dict[str, tuple[str, ...]]:
+    """Explorer node type → the rule slugs its schema types list; ``given``, ``when``, and ``then`` are each a Step."""
+    found: dict[str, tuple[str, ...]] = {}
+    for key, slugs in schema.rules().items():
+        _merge_parsed_rules(found, {semantic_type(key): slugs})
+    return found
+
+
+def _supertypes(schema: Schema) -> dict[str, str]:
+    """Explorer node type → the ``is:`` reference its schema type names."""
+    return {semantic_type(key): kind.supertype for key, kind in schema.types.items() if kind.supertype}
+
+
+def _type_names(schema: Schema) -> set[str]:
+    return {semantic_type(key) for key in schema.types}
 
 
 @lru_cache(maxsize=None)
 def _is_supertypes_for_practice(practice: str, active_patterns: tuple[str, ...]) -> dict[str, str]:
     """Explorer node type → ``is:`` reference (local key, CE token, or practice.type)."""
-    path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
+    path = _practice_schema_path(practice)
     if not path.is_file():
         return {}
-    found = _parse_is_supertypes(path.read_text(encoding="utf-8"))
+    found = _supertypes(Schema.load(path))
     for schema in _overlay_schema_paths(practice, active_patterns):
-        overlay = _parse_is_supertypes(schema.read_text(encoding="utf-8"))
+        overlay = _supertypes(Schema.load(schema))
         for node_type, ref in overlay.items():
             if _is_self_ddd_ref(practice, node_type, ref):
                 continue
@@ -145,12 +151,9 @@ def _is_self_ddd_ref(practice: str, node_type: str, ref: str) -> bool:
 @lru_cache(maxsize=None)
 def _schema_types_for_practice(practice: str, active_patterns: tuple[str, ...]) -> frozenset[str]:
     """Every type block named in schema.yaml (base + active overlays)."""
-    path = _ROOT / "cdd_guidance" / "practices" / practice / "model" / "schema.yaml"
-    types: set[str] = set()
-    if path.is_file():
-        types.update(_parse_type_headers(path.read_text(encoding="utf-8")))
+    types = _type_names(Schema.load(_practice_schema_path(practice)))
     for schema in _overlay_schema_paths(practice, active_patterns):
-        types.update(_parse_type_headers(schema.read_text(encoding="utf-8")))
+        types.update(_type_names(Schema.load(schema)))
     types.update(_direct_rules_for_practice(practice, active_patterns).keys())
     types.update(_is_supertypes_for_practice(practice, active_patterns).keys())
     return frozenset(types)
@@ -313,89 +316,12 @@ def _pattern_owning_rule(practice: str, node_type: str, slug: str, patterns: tup
 @lru_cache(maxsize=None)
 def _overlay_declared_rules(practice: str, pattern: str) -> dict[str, tuple[str, ...]]:
     model = _PATTERNS_ROOT / pattern / "practices" / practice / "model"
-    found: dict[str, tuple[str, ...]] = {}
-    schema = model / "schema.yaml"
-    if schema.is_file():
-        found = dict(_parse_rules(schema.read_text(encoding="utf-8")))
-    rules = model / "rules.yaml"
-    if rules.is_file():
-        _merge_parsed_rules(found, _parse_rules(rules.read_text(encoding="utf-8")))
+    found = _rules(Schema.load(model / "schema.yaml"))
+    _merge_parsed_rules(found, _rules(Schema.load(model / "rules.yaml")))
     return found
 
 
 @lru_cache(maxsize=None)
 def _overlay_types(practice: str, pattern: str) -> frozenset[str]:
-    schema = _PATTERNS_ROOT / pattern / "practices" / practice / "model" / "schema.yaml"
-    if not schema.is_file():
-        return frozenset()
-    return frozenset(_parse_type_headers(schema.read_text(encoding="utf-8")))
+    return frozenset(_type_names(Schema.load(_PATTERNS_ROOT / pattern / "practices" / practice / "model" / "schema.yaml")))
 
-
-_TOP_TYPE_HEADER = re.compile(r"^([A-Za-z]\w*):\s*$")
-_LIST_TYPE_HEADER = re.compile(r"^\s+-\s+([A-Za-z]\w*):\s*$")
-
-
-def _schema_owner_key(line: str, current: str) -> str:
-    top = _TOP_TYPE_HEADER.match(line)
-    if top:
-        return top.group(1)
-    listed = _LIST_TYPE_HEADER.match(line)
-    if listed:
-        return listed.group(1)
-    return current
-
-
-def _parse_type_headers(text: str) -> set[str]:
-    types: set[str] = set()
-    owner_key = ""
-    for line in text.splitlines():
-        next_key = _schema_owner_key(line, owner_key)
-        if next_key != owner_key:
-            owner_key = next_key
-            types.add(semantic_type(owner_key))
-    return types
-
-
-def _parse_is_supertypes(text: str) -> dict[str, str]:
-    by_type: dict[str, str] = {}
-    owner_key = ""
-    for line in text.splitlines():
-        next_key = _schema_owner_key(line, owner_key)
-        if next_key != owner_key:
-            owner_key = next_key
-            continue
-        if not owner_key:
-            continue
-        is_line = re.match(r"^\s+- is:\s+(\S+)\s*$", line)
-        if is_line:
-            by_type[semantic_type(owner_key)] = is_line.group(1).strip()
-    return by_type
-
-
-def _parse_rules(text: str) -> dict[str, tuple[str, ...]]:
-    by_type: dict[str, list[str]] = {}
-    owner_key = ""
-    in_rules = False
-    for line in text.splitlines():
-        next_key = _schema_owner_key(line, owner_key)
-        if next_key != owner_key:
-            owner_key = next_key
-            in_rules = False
-            continue
-        if re.match(r"^  rules:\s*$", line) and owner_key:
-            in_rules = True
-            node_type = semantic_type(owner_key)
-            by_type.setdefault(node_type, [])
-            continue
-        if in_rules:
-            bullet = re.match(r"^\s+-\s+(\S+)\s*$", line)
-            if bullet is None:
-                if line.startswith("  ") and not line.startswith("    "):
-                    in_rules = False
-                continue
-            node_type = semantic_type(owner_key)
-            slugs = by_type.setdefault(node_type, [])
-            slug = bullet.group(1).strip()
-            if slug not in slugs:
-                slugs.append(slug)
-    return {node_type: tuple(slugs) for node_type, slugs in by_type.items()}

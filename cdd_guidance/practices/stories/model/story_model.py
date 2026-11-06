@@ -55,17 +55,6 @@ class StoryNode(BoundNode, ABC):
         "scenario_count",
     )
     _belongs = _BELONGS
-    _edge_order = {
-        "decomposedInto": 1,
-        "background": 2,
-        "scenarios": 3,
-        "steps": 4,
-        "examples": 5,
-        "increments": 6,
-        "stories": 7,
-        "belongsTo": 8,
-        "ands": 9,
-    }
 
     _GENERIC_VERBS = frozenset({"handle", "process", "manage", "perform", "do", "execute", "run"})
     _ACTOR_NOUNS = frozenset({
