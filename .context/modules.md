@@ -509,14 +509,6 @@ The *cdd-board* Claude Code mod connects a chat to the Session Board: it checks 
 
 ---
 
-## tools/echo_instructions
-*EchoInstructions* shows action instructions inside a labelled fence so you can read them and the agent does not follow them.
-
-- **Purpose:** Show action instructions inside a labelled fence so the user can read them without the agent following them.
-- **Seam (terms):** EchoInstructions
-- **Dependencies (one-way):** `harness/agent_tools`
-
----
 
 ## tools/prompt_notify
 *PromptNotify* toasts the invoked action, practice, fidelity, or guideline on `preToolUse`. Callers mark the member with `@echo`.

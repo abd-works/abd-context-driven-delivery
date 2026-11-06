@@ -93,7 +93,7 @@ def discover_context_tools(repo: Path | None = None) -> list["RegistryEntry"]:
 UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("installer", "harness.installation.installer", "Installer"),
     ("diagnose", "cdd_guidance.actions.diagnose.diagnose", "Diagnose"),
-    ("echo instructions", "echo_instructions.echo_instructions", "EchoInstructions"),
+    ("echo", "echo.echo", "Echo"),
     ("handoff", "space.handoff.handoff", "Handoff"),
     ("repo", "space.repo.repo", "Repo"),
 )

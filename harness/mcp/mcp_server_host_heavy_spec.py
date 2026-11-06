@@ -27,7 +27,7 @@ from harness.mcp.spec_support import SpecServer
 
 _LINGER_SECONDS = 1
 _HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
-_ECHO = "echo_instructions.echo_instructions:EchoInstructions"
+_ECHO = "echo.echo:Echo"
 _PARAMETER_TYPES = "harness.mcp._examples.parameter_types.parameter_types:ParameterTypes"
 _RENDER = "cdd_guidance.actions.render.render:Render"
 _SESSION = "space.session.session:Session"
@@ -198,7 +198,7 @@ with description("the cdd server") as self:
         with context("that has invoked a real @agent_tool through the MCP wire"):
             with it("should return what the tool returned"):
                 result = self.chat.run(
-                    lambda session: session.call_tool("echo-instructions.fence", arguments={"body": "hello mcp"})
+                    lambda session: session.call_tool("echo.fence", arguments={"body": "hello mcp"})
                 )
                 expect("hello mcp" in _text(result)).to(equal(True))
 

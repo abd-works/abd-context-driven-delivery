@@ -512,7 +512,7 @@ def _builtin_workspace_probe_arguments(
 ) -> dict[str, Any]:
     if mcp_name == "session.switch":
         return {"name": "_cdd_mcp_probe", "repo_path": repo_root}
-    if mcp_name.startswith("echo-instructions.") and "body" in param_names:
+    if mcp_name.startswith("echo.") and "body" in param_names:
         return {"body": "agent-tools-diagnostics probe"}
     return {}
 
