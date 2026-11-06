@@ -22,7 +22,7 @@ Load the umbrella skill for each selected lens to establish shared vocabulary an
 - `stories-scenarios` for concrete Given-When-Then behavior scenarios and example data tables.
 - `ddd-model` for the aggregate view: each root with its members, repository, and domain operations, how aggregates depend on one another across contexts, and synchronization rules.
 - `ux-mockup` for concrete UI controls, user interactions, data placement, transitions, and runnable greybox screens.
-- `clean_engineering-model` for typed class participants, operations, relationships, public module interfaces, and explicit constructor dependencies without production method bodies.
+- `clean-engineering-model` for typed class participants, operations, relationships, public module interfaces, and explicit constructor dependencies without production method bodies.
 - `bdd-behavior` for executable describe/it test hierarchies containing behavior signatures without test implementation code.
 
 Run the `generate` action skill for each practice. When complete run the `get_fix_violation_instructions` for each practice and fix any returned violations.

@@ -49,8 +49,29 @@ class Name:
         return list(dict.fromkeys(spelling for spelling in (self._text, self.kebab, self.snake) if spelling))
 
     @property
+    def title_words(self) -> list[str]:
+        """The words of a title, such as a story or scenario name, in lower case. A title's capitals do not split its
+        words, so `iPhone notes` is `iphone` and `notes`, as file, branch, and test names made from titles have always
+        been."""
+        return [word for word in _NOT_LETTER_OR_DIGIT.split(self._text.lower()) if word]
+
+    @property
     def title_slug(self) -> str:
-        """`pet-visits` for `Pet visits`: a title in lower case with every run of other characters as one hyphen. A
-        title's capitals do not split its words, so `iPhone notes` is `iphone-notes`, as file and branch names made from
-        titles have always been."""
-        return "-".join(word for word in _NOT_LETTER_OR_DIGIT.split(self._text.lower()) if word)
+        """`pet-visits` for `Pet visits`: the title's words joined by hyphens, as a file or folder name."""
+        return "-".join(self.title_words)
+
+    @property
+    def title_snake(self) -> str:
+        """`pet_visits` for `Pet visits`: the title's words joined by underscores, as a Python name."""
+        return "_".join(self.title_words)
+
+    @property
+    def title_pascal(self) -> str:
+        """`PetVisits` for `Pet visits`: each of the title's words capitalised, as a class name."""
+        return "".join(word.capitalize() for word in self.title_words)
+
+    @property
+    def title_camel(self) -> str:
+        """`petVisits` for `Pet visits`: the title in Pascal case with its first word in lower case, as a member name."""
+        head, *rest = self.title_words or [""]
+        return head + "".join(word.capitalize() for word in rest)

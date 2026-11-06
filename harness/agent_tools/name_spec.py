@@ -39,6 +39,15 @@ with description("a Name") as self:
         with it("should not split a word at a capital"):
             expect(Name("iPhone notes").title_slug).to(equal("iphone-notes"))
 
+        with it("should become a Python name of its lower-case words"):
+            expect(Name("Show the API keys").title_snake).to(equal("show_the_api_keys"))
+
+        with it("should become a class name of its capitalised words"):
+            expect(Name("show the API keys").title_pascal).to(equal("ShowTheApiKeys"))
+
+        with it("should become a member name with its first word in lower case"):
+            expect(Name("Show the API keys").title_camel).to(equal("showTheApiKeys"))
+
     with description("that is empty"):
         with it("should have no words"):
             expect(Name("").kebab).to(equal(""))

@@ -37,6 +37,7 @@ from typing import Iterable, List
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
 from cdd_guidance.practices.stories.model.story_model import Step, StepType, Story
+from harness.agent_tools.name import Name
 
 
 def render_story_spec_file(story: Story) -> str:
@@ -69,7 +70,7 @@ def render_story_spec_file(story: Story) -> str:
 
 
 def _render_scenario_block(scenario) -> List[str]:
-    key = _snake(scenario.name)
+    key = Name(scenario.name).title_snake or "scenario"
     lines: List[str] = []
     lines.append(f"    \"{key}\": {{")
     lines.append(f"        \"name\":         {_py_string(scenario.name)},")
@@ -130,12 +131,7 @@ def _py_string_tuple(values: Iterable[str]) -> str:
 
 
 def _screaming_snake(name: str) -> str:
-    return _snake(name).upper() or "STORY"
-
-
-def _snake(name: str) -> str:
-    parts = [w for w in re.split(r"[^0-9A-Za-z]+", name) if w]
-    return "_".join(p.lower() for p in parts) or "scenario"
+    return Name(name).title_snake.upper() or "STORY"
 
 
 def _interaction_realization(when_steps: list, then_steps: list) -> list[CallGraphEntry]:

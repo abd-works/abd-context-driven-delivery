@@ -9,6 +9,7 @@ under actual/from-{source}/to-{target}, and walks every node.
 from pathlib import Path
 
 from expects import equal, expect
+from harness.agent_tools.name import Name
 from harness.output_folder import OutputFolder
 from mamba import describe, context, it, before, shared_context, included_context
 
@@ -32,8 +33,7 @@ _FLUENT = ("typescript", "javascript")
 
 
 def _kebab(name: str) -> str:
-    import re
-    return re.sub(r"[^0-9a-z]+", "-", name.strip().lower()).strip("-") or "unnamed"
+    return Name(name).title_slug or "unnamed"
 
 
 def walk(story_map: StoryModel) -> list:

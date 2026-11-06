@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypedDict
 
+from harness.agent_tools.name import Name
+
 from agent_bdd.yaml_fence import YamlFence
 
 try:
@@ -1127,7 +1129,7 @@ class AgentSpecRunbook:
         if named is not None:
             return named
         prompt = self._prompt_arg(call_node, 0) or ""
-        slug = re.sub(r"[^a-z0-9]+", "_", prompt[:40].lower()).strip("_")
+        slug = Name(prompt[:40]).title_snake
         return slug or None
 
     def _assign_name_for_call(self, call_node: ast.Call) -> str | None:
