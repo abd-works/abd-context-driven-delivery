@@ -13,10 +13,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
-from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, load_approach_copy
-from harness.catalog_generator.catalog_generator import Catalog, GitCitation, load_registry
+from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN
+from harness.catalog_generator.catalog_generator import Catalog, GitCitation
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.catalog_generator.foundry_chrome import (
+    STAGE_COLUMNS,
     Brand,
     page_shell,
     stage_project_examples,
@@ -24,7 +25,6 @@ from harness.catalog_generator.foundry_chrome import (
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_STAGE_IDS = ("discovery", "specification", "implementation")
 
 _PATH_HINTS: tuple[tuple[tuple[str, str], re.Pattern[str]], ...] = (
     (("stories", "discovery"), re.compile(r"story[-_]?map", re.I)),
@@ -117,7 +117,6 @@ class ProjectApproach:
         destination.mkdir(parents=True, exist_ok=True)
         Brand(collection=brands_root).copy_commons(destination)
         staged = stage_project_examples(self.project_root, self.examples, destination)
-        context_entries, _utilities = load_registry()
         catalog = Catalog(
             repo_url=self.repo_url,
             ref="",
@@ -125,11 +124,9 @@ class ProjectApproach:
             approach_md_path=self.approach_md_path,
             brands_root=brands_root,
         )
-        catalog._context_tool_entries = context_entries
-        catalog._board_tools = catalog._board_tool_entries()
         example_hrefs = write_stage_example_pages(
             destination,
-            catalog._approach_copy().stages,
+            catalog.approach_copy.stages,
             example_sources=staged,
         )
         headline = html_escape(self.project_title)
@@ -137,12 +134,12 @@ class ProjectApproach:
             title=f"{self.project_title} — Context Driven Delivery",
             h1=f'<span class="accent">{headline}</span> <span class="accent">Context Driven Delivery</span>',
             tagline="",
-            subhead=load_approach_copy(self.approach_md_path).subhead,
+            subhead=catalog.approach_copy.subhead,
             after_subhead=(
                 f'Project repo <a href="{html_escape(self.repo_url)}" '
                 'target="_blank" rel="noopener noreferrer">here</a>.'
             ),
-            body_inner=catalog._approach_page_body(
+            body_inner=catalog.approach_page_body(
                 example_hrefs,
                 example_sources=staged,
                 catalog_root=destination,
@@ -216,7 +213,7 @@ def load_examples_manifest(project_root: str | Path) -> dict[tuple[str, str], Pa
         if not isinstance(stages, dict):
             continue
         for stage, relative in stages.items():
-            if stage not in _STAGE_IDS:
+            if STAGE_COLUMNS.of(stage) is None:
                 continue
             resolved[(practice, stage)] = _resolve_project_path(root, relative)
     return resolved

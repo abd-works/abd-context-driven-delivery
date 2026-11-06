@@ -125,7 +125,6 @@ def _parse_stages(body: str) -> list[dict]:
                 "scope_name": meta.get("scope_name", title),
                 "scope_width": meta.get("scope_width", ""),
                 "paras": paras,
-                "board_key": meta.get("board_key", ""),
                 "example": meta.get("example", ""),
             }
         )
