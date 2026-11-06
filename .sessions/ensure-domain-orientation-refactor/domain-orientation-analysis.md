@@ -379,7 +379,7 @@ Updated 2026-11-06 on `ensure-domain-orientation-refactor`. ✅ done, ◐ partly
 - ✅ **1.9 Git concepts as objects.** Branch and Worktree are objects, and the board's backlog folder and board file are on Repo (`a0b8dc28c`). `Workspace` reads the ticket's `Branch` objects (`exists`, `is_checked_out`) instead of three booleans (K-F7); `Repo.current_session` and `Repo.session_folder` replace `Session.active_name`, `current_folder`, `_session_folder`, and `sessions_dir` (K-F5); `work_state.py` already used `Branch` and `Worktree` (K-F14) (`01c38abd6`).
 - ✅ **1.10 Slugs, formats, and names.** `FidelityGuidance.slug` everywhere, one `Name` converter, one `Format` vocabulary, and `FidelityGuidance` keeps `name` and `practice_guidance` (`df4361395`). Left: K-F21's `*_name` data fields and some prose in `cdd_guidance` that still writes slugs like `ddd-bounded_context`.
 - ⬜ **1.11 Classes that only read their collaborators.** Not started; `ChatPointer` does not exist yet.
-- ⬜ **1.12 State passed around as parameters.** 37 instances are listed in appendix area P; not started.
+- ◐ **1.12 State passed around as parameters.** 37 instances are listed in appendix area P. The Clean Engineering rule `hold-state-on-the-object-not-in-parameters` (model and code fidelity) now fails new code that does this (`54bb896e4`). Refactoring the 37 places is in design: the session already holds `practices[key].fidelities[name]`; next, each action is made for its session and reads the session's own fidelities, and each fidelity saves the format it was given.
 
 ### Bugs
 - ✅ 1. `language_adapter.py` no longer splits `mcp_name` (`651c7cb30`).
@@ -405,4 +405,4 @@ Updated 2026-11-06 on `ensure-domain-orientation-refactor`. ✅ done, ◐ partly
 
 ### Not yet checked
 - **TypeScript runtime tests:** the board's vitest setup hangs starting a cdd server, and the chat bar has no plugin manifest, so the TypeScript changes are type-checked only.
-- **Python story tests (`*_story.test.py`):** they fail the same way on the base branch, so they are not counted in the 2645 passing specs.
+- **Python story tests (`*_story.test.py`):** they fail the same way on the base branch, so they are not counted in the 2643 passing specs.
