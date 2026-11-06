@@ -1,6 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
+import { boardOf, checkoutFlow } from '../../../examples/chat-bar.examples'
 import { CHAT_BAR, expectMarks, findText, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
@@ -15,7 +16,7 @@ story('Close Active Session', CHAT_BAR, () => {
   scenario('Close the session with its work committed', ({ given, when, then, and }) => {
     // Evidence: inferred: mirrors Close Active Session 'Complete the active ticket with its work committed'; no chat bar code yet
     given('checkout-flow is the active [session](../../../../../../kanban/.context/kanban-model.md#session), on its own branch', async ($, on, scene) => {
-      scene.world.answers['board.workspace'] = { has_branch: true, has_worktree: true, leaving_has_branch: true }
+      scene.world.workspaces['checkout-flow'] = { has_branch: true, has_worktree: true, leaving_has_branch: true }
     })
     when('the Person closes checkout-flow', async ($, on, scene) => {
       await scene.ui.press({ key: 'close-button' })
@@ -39,9 +40,11 @@ story('Close Active Session', CHAT_BAR, () => {
   })
   scenario('Close a session that has no branch of its own', ({ given, when, then, but }) => {
     // Evidence: inferred: mirrors Close Active Session 'Complete a ticket that has no branch of its own'
-    given('checkout-flow is the active [session](../../../../../../kanban/.context/kanban-model.md#session)')
+    given('checkout-flow is the active [session](../../../../../../kanban/.context/kanban-model.md#session)', async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlow())
+    })
     but('it has no branch of its own', async ($, on, scene) => {
-      scene.world.answers['board.workspace'] = { has_branch: false, has_worktree: false, leaving_has_branch: false }
+      scene.world.workspaces['checkout-flow'] = { has_branch: false, has_worktree: false, leaving_has_branch: false }
     })
     when('the Person closes checkout-flow and confirms', async ($, on, scene) => {
       await scene.ui.press({ key: 'close-button' })

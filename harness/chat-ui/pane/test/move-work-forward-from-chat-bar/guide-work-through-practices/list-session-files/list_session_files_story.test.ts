@@ -1,6 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
+import { MODEL_FILES } from '../../../examples/chat-bar.examples'
 import { CHAT_BAR, labelOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
@@ -18,8 +19,7 @@ story('List Session Files', CHAT_BAR, () => {
       await scene.ui.press({ key: 'dot-clean-engineering-model' })
     })
     and('it declares pane/hooks/chat-bar/chat-bar-client.ts and pane/hooks/chat-bar/fidelity-client.ts', async ($, on, scene) => {
-      scene.world.answers['fidelity-progress.files'] = { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-client.ts', exists: true }] }
-      scene.world.answers['session.read_file'] = { path: 'pane/hooks/chat-bar/chat-bar-client.ts', text: '// Model shell for the chat bar' }
+      scene.world.declared['clean-engineering-model'] = MODEL_FILES
     })
     when('the Person lists the files', async ($, on, scene) => {
       await scene.ui.press({ key: 'files-button' })

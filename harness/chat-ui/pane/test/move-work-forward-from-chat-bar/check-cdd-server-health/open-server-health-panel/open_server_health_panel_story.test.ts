@@ -1,7 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { cdd } from '../../../cdd-stub'
-import { HEALTHY } from '../../../examples/chat-bar.examples'
+import { boardOf, checkoutFlow, HEALTHY } from '../../../examples/chat-bar.examples'
 import { CHAT_BAR, drawn, findText, labelOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
@@ -15,7 +14,10 @@ import { scenario, story } from '../../../story-test'
 story('Open Server Health Panel', CHAT_BAR, () => {
   scenario('Show every part running on one line', ({ given, when, then, and }) => {
     // Evidence: observed: server-health-view.tsx lists MCP host, Tools, Kanban app, Graph app, Hook server; register.test.ts
-    given('cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173')
+    given('cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173', async ($, on, scene) => {
+      scene.world.toolCount = 116
+      scene.world.health = HEALTHY
+    })
     and('the hook server is not running', async ($, on, scene) => {
       scene.world.health = { ...HEALTHY, is_hook_server_running: false }
     })
@@ -42,8 +44,12 @@ story('Open Server Health Panel', CHAT_BAR, () => {
   })
   scenario('Pin the panel open', ({ given, when, then }) => {
     // Evidence: requested: the health mark opens only with the session card
-    given('the server health panel is open over the mark')
-    when('the Person pins the panel', async ($, on, scene) => {
+    // The surface applies a hover without calling the mod, so before the press the panel shows only on hover.
+    given('cdd is connected and checkout-flow is the active session', async ($, on, scene) => {
+      scene.world.health = HEALTHY
+      scene.world.board = boardOf('checkout-flow', checkoutFlow())
+    })
+    when('the Person presses the server health mark', async ($, on, scene) => {
       await scene.ui.press({ key: 'health-icon' })
     })
     // ServerHealthBandView press -> toggleCard($)

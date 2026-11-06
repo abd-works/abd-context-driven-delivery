@@ -49,7 +49,7 @@ Mirrors Display Fidelity Progress and Display Violations Band: one dot per pract
 
 Mirrors Display Ticket Card and Browse Ticket Folder: resting the pointer on the session name shows the card over the strip, each fidelity's name and state over its dot, the stage name over the stage icons, and each fidelity's folders beside it, with the server health panel on top (CDR "Session name and session list"). Requested: the person closes a pinned card, after which it shows only while the pointer is on the name.
 
-### (S) Person --> [Open Board](../pane/test/move-work-forward-from-chat-bar/see-work-in-chat-bar/open-board/open_board_story.test.ts)
+### (S) Person --> [Select Fidelity](../pane/test/move-work-forward-from-chat-bar/see-work-in-chat-bar/select-fidelity/select_fidelity_story.test.ts)
 
 Requested: pressing a dot selects its fidelity as the one the action button acts on and sends nothing to the chat. This replaces the CDR's "clicking a dot opens `/board`"; nothing on the bar opens the board now.
 

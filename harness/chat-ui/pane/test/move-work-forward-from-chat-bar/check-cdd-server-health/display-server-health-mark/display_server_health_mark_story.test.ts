@@ -1,6 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { cdd } from '../../../cdd-stub'
+import { boardOf, checkoutFlow, HEALTHY } from '../../../examples/chat-bar.examples'
 import { CHAT_BAR, buttonKeys, drawn, expectMarkLooks, expectMarks } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
@@ -14,7 +14,10 @@ import { scenario, story } from '../../../story-test'
 story('Display Server Health Mark', CHAT_BAR, () => {
   scenario('Show the connected mark', ({ given, when, then }) => {
     // Evidence: observed: pane/hooks/health/server-health-view.tsx draws ✓ for connected; register.test.ts
-    given('cdd answers server-health.report with 116 tools loaded')
+    given('cdd answers server-health.report with 116 tools loaded', async ($, on, scene) => {
+      scene.world.health = HEALTHY
+      scene.world.toolCount = 116
+    })
     when('the Chat Bar draws the active [session](../../../../../../kanban/.context/kanban-model.md#session) checkout-flow')
     // Boot ui.render -> ChatBarView($, chatBar) -> ServerHealthBandView(elements, band)
     // refreshHealth($) -> $.mcp.call('server-health.report')
@@ -24,15 +27,13 @@ story('Display Server Health Mark', CHAT_BAR, () => {
       await expectMarks(scene.ui, { 'session-name-button': 'checkout-flow' })
     })
   })
-  scenario('Show the disconnected mark', ({ given, when, then, but }) => {
+  scenario('Show the disconnected mark', ({ given, when, then }) => {
     // Evidence: observed: server-health-view.tsx draws ✕ in the error colour for disconnected
-    given('the Chat Bar shows checkout-flow', async ($, on, scene) => {
-      await expectMarks(scene.ui, { 'session-name-button': 'checkout-flow' })
+    given('checkout-flow is the active session', async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlow())
     })
-    but('plugin:cdd:cdd does not answer', async ($, on, scene) => {
+    when('plugin:cdd:cdd stops answering and the Chat Bar draws again', async ($, on, scene) => {
       scene.world.serverLost = true
-    })
-    when('the Chat Bar draws', async ($, on, scene) => {
       await $.prompt.submit({ text: 'again' })
     })
     // refreshHealth($) -> $.mcp.call('server-health.report') <- no connected MCP tool on a server named plugin:cdd:cdd

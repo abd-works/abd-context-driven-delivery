@@ -1,9 +1,11 @@
 // The engine and the cdd server beneath the chat bar, for the story tests. board.show answers `board`, the Seed a Given
 // sets. The ticket tools a press reaches change that board as the Python Ticket does, so a test reads the server's state
-// after the press rather than setting it by hand. Every other tool answers from `answers`, and any tool fails with the
-// server's own text from `refusals`.
-import type { BoardData } from '@cdd/harness/kanban/board'
-import type { FidelityProgressData } from '@cdd/harness/kanban/fidelity-progress'
+// after the press rather than setting it by hand. The read tools answer from the server's state for the ticket,
+// fidelity or path asked for, as the Python Session and FidelityProgress do: `declared` files and `reports` per
+// fidelity, `texts` per path, `workspaces` per ticket. Any tool fails with the server's own text from `refusals`.
+import type { BoardData, WorkspaceData } from '@cdd/harness/kanban/board'
+import type { FidelityProgressData, FileEntryData, ReportData } from '@cdd/harness/kanban/fidelity-progress'
+import type { FileTextData } from '@cdd/space/session/session'
 import type { TicketData } from '@cdd/harness/kanban/ticket'
 
 import { boardOf, checkoutFlow, HEALTHY, progressOf, STAGE_ORDER, WORK_OF } from './examples/chat-bar.examples'
@@ -16,7 +18,10 @@ export type World = {
   sent: string[]
   fills: string[]
   toasts: string[]
-  answers: Record<string, unknown>
+  declared: Record<string, Record<string, FileEntryData[]>>
+  reports: Record<string, ReportData>
+  texts: Record<string, string>
+  workspaces: Record<string, WorkspaceData>
   refusals: Record<string, string>
   health: unknown
   healthText: string | null
@@ -86,12 +91,48 @@ function create(world: World, { title }: { title: string }): TicketData {
   return created
 }
 
-const TICKET_TOOLS: Record<string, (world: World, args: any) => TicketData | FidelityProgressData> = {
+// A refusal the cdd server sends back as its error text.
+class Refused extends Error {}
+
+// FidelityProgress.files: the files the asked fidelity declares, by format; none for a fidelity that declares none.
+const files = (world: World, { fidelity }: { fidelity: string }): Record<string, FileEntryData[]> => world.declared[fidelity] ?? {}
+
+// FidelityProgress.report: the asked fidelity's latest validation report; an empty report when it has none.
+const report = (world: World, { fidelity }: { fidelity: string }): ReportData => world.reports[fidelity] ?? ({ path: '', text: '', rules: [], has_saved_graph: false } as ReportData)
+
+// Session.read_file: the text of a path under the session's roots, no text once it is gone; a path that climbs out of
+// the roots is refused with PathOutsideRootsError's text.
+function readFile(world: World, { path }: { session: string; path: string }): FileTextData {
+  if (path.split('/').includes('..')) throw new Refused(`${path} is outside the session's roots`)
+  return { path, text: world.texts[path] ?? '' }
+}
+
+// Board.workspace: whether the ticket has a branch and a worktree of its own; none for a ticket that has neither.
+const workspace = (world: World, { ticket }: { ticket: string }): WorkspaceData => world.workspaces[ticket] ?? ({ has_branch: false, has_worktree: false, leaving_has_branch: false } as WorkspaceData)
+
+// Ticket.generate_commands: the generate command for the fidelities in the formats, in the ticket's session. The stub's
+// fidelities have no earlier file to render from, so no render command comes first.
+const generateCommands = (world: World, { ticket, fidelities, formats }: { ticket: string; fidelities: string[]; formats: string[] }): string[] => [
+  `/actions-generate ${fidelities.join(' ')} format=${formats.join(',')} session=${named(world, ticket).session.session_file}`,
+]
+
+const TOOLS: Record<string, (world: World, args: any) => unknown> = {
+  'ticket.generate_commands': generateCommands,
   'ticket.move_next': moveNext,
   'fidelity-progress.finish_review': finishReview,
   'ticket.close': close,
   'board.activate': activate,
   'ticket.create': create,
+  'fidelity-progress.files': files,
+  'fidelity-progress.report': report,
+  'session.read_file': readFile,
+  'board.workspace': workspace,
+}
+
+// A tool call the agent makes on the cdd server, not the chat bar: the server's state changes and the chat bar only
+// hears of it through the engine's tool.call event.
+export function agentCalls(world: World, tool: string, args: unknown): void {
+  TOOLS[tool]!(world, args)
 }
 
 function answerTool(world: World, tool: string, args: unknown) {
@@ -100,8 +141,14 @@ function answerTool(world: World, tool: string, args: unknown) {
   if (tool === 'server-health.report') return world.healthText !== null ? toolText(world.healthText, false) : toolAnswer(world.health)
   if (world.refusals[tool]) return toolText(world.refusals[tool], true)
   if (tool === 'board.show') return toolAnswer(world.board)
-  const operation = TICKET_TOOLS[tool]
-  return toolAnswer(operation ? operation(world, args) : world.answers[tool])
+  const operation = TOOLS[tool]
+  if (!operation) throw new Error(`the cdd stub has no tool ${tool}`)
+  try {
+    return toolAnswer(operation(world, args))
+  } catch (failure) {
+    if (failure instanceof Refused) return toolText(failure.message, true)
+    throw failure
+  }
 }
 
 function runProcess(world: World, argv: string[]) {
@@ -117,7 +164,10 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
     sent: [],
     fills: [],
     toasts: [],
-    answers: {},
+    declared: {},
+    reports: {},
+    texts: {},
+    workspaces: {},
     refusals: {},
     health: HEALTHY,
     healthText: null,

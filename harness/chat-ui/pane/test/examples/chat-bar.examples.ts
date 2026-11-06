@@ -93,3 +93,18 @@ export function boardOf(active: string | null, ...tickets: TicketData[]): BoardD
 
 // Interaction: the name a person types in the session list's field.
 export const NEW_SESSION_NAME = 'payment-retry'
+
+// Seed: the TypeScript files clean-engineering-model declares in checkout-flow's session, as FidelityProgress.files
+// lists them by format.
+export const MODEL_FILES = { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-client.ts', exists: true }] }
+
+// Seed: the text of chat-bar-client.ts under checkout-flow's Clean Engineering root.
+export const CHAT_BAR_CLIENT_TEXT = { 'pane/hooks/chat-bar/chat-bar-client.ts': '// Model shell for the chat bar\nexport class ChatBarClient {}' }
+
+// Seed: clean-engineering-model's latest validation report, failing no-legacy-api-after-refactor.
+export const MODEL_REPORT = {
+  path: '.sessions/checkout-flow/validation-reports/clean-engineering-model.md',
+  text: '# Validation\n\n## no-legacy-api-after-refactor\n\nFail',
+  rules: [],
+  has_saved_graph: false,
+}

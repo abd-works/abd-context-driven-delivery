@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
-import { boardOf, checkoutFlowWith, DONE } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, drawn, findText, markOf, textOf } from '../../../chat-bar-screen'
+import { boardOf, checkoutFlow, checkoutFlowWith, DONE, HEALTHY } from '../../../examples/chat-bar.examples'
+import { CHAT_BAR, drawn, findText, markOf, stateOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -25,7 +25,7 @@ story('Display Session Card', CHAT_BAR, () => {
       const slugs = ['stories-scenarios', 'ux-mockup', 'clean-engineering-model']
       const names = await Promise.all(slugs.map(async slug => textOf(await markOf(scene.ui, `card-pick-${slug}-mark`))))
       expect(names).toEqual(['Scenarios', 'Mockup', 'Model'])
-      const states = await Promise.all(slugs.map(async slug => textOf((await drawn(scene.ui, `card-cell-${slug}`))?.children?.[2])))
+      const states = await Promise.all(slugs.map(slug => stateOf(scene.ui, slug)))
       expect(states).toEqual(['✓ done', '○ to do', '○ to do'])
       expect((await markOf(scene.ui, 'card-cell-stories-scenarios'))?.props?.color).toBe('#6BCB77FF')
       expect((await findText(scene.ui, 'Specification'))?.props?.color).toBe('#E5531A')
@@ -56,7 +56,9 @@ story('Display Session Card', CHAT_BAR, () => {
   })
   scenario('Show the card while the pointer is on the session name', ({ given, when, then }) => {
     // Evidence: inferred: CDR 0001 'Hovering the name opens the session card'
-    given('the Chat Bar shows checkout-flow')
+    given('the Chat Bar shows checkout-flow', async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlow())
+    })
     // The surface applies a hover without calling the mod, so the drawn tree says what the hover reveals.
     when('the Person rests the pointer on checkout-flow')
     then('the session card shows, and stays while the pointer is on the card or the name', async ($, on, scene) => {
@@ -68,7 +70,9 @@ story('Display Session Card', CHAT_BAR, () => {
   })
   scenario('Stack the health panel on the card', ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 'Hovering the session name stacks the same panel on top of the session card'
-    given('cdd is connected')
+    given('cdd is connected', async ($, on, scene) => {
+      scene.world.health = HEALTHY
+    })
     when('the Person opens the session card for checkout-flow', async ($, on, scene) => {
       await scene.ui.press({ key: 'session-name-button' })
     })
