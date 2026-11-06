@@ -13,6 +13,8 @@ import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from harness.agent_tools.name import Name
+
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
 _CODE_SPAN = re.compile(r"`[^`\n]+`")
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
@@ -37,7 +39,7 @@ def heading_anchor(heading: str) -> str:
 
 
 def _slug(name: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", unlink(name).lower()).strip("-")
+    return Name(unlink(name)).title_slug
 
 
 def _words(name: str) -> List[str]:

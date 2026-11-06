@@ -175,7 +175,7 @@ describe('Display Board', () => {
       const { page } = await board.page()
       board.logOn('billing-report', 'generate /work stories story_map markdown stories', 'validate Stories story_map', 'review Stories story_map')
       await page.reader.refresh()
-      expect(toastsOf(page)).toEqual(['stories-story_map reviewed on billing-report'])
+      expect(toastsOf(page)).toEqual(['stories-story-map reviewed on billing-report'])
     })
 
     it('should say a ticket moved to the Backlog', async () => {

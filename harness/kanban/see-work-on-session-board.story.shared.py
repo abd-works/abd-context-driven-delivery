@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from ddd.ddd import Ddd
 from expects import be_none, be_true, equal, expect
 
+from space.repo.repo import Repo
 from harness.kanban.session_board_examples import (
     BACK_TO_BACKLOG,
     BILLING_REPORT,
@@ -87,7 +88,7 @@ def _(s):
 def _(s):
     @s.given("a board with the Stories, DDD, and UX practices chosen")
     def _(world):
-        world.board = world.Board(world.project.root, [Stories(), Ddd(), Ux()])
+        world.board = world.Board(Repo(world.project.root), [Stories(), Ddd(), Ux()])
 
     @s.when("the session board reads the board")
     def _(world):
@@ -104,7 +105,7 @@ def _(s):
     @s.and_("the Discovery stage requires story_map, bounded_context, and ia, each through Generate, Validate, and Review")
     def _(world):
         required = (column_in(world.read, "Discovery")["work_required"], world.board.column("Discovery").actions)
-        expect(required).to(equal((["stories-story_map", "ddd-bounded_context", "ux-ia"], ["generate", "validate", "review"])))
+        expect(required).to(equal((["stories-story-map", "ddd-bounded-context", "ux-ia"], ["generate", "validate", "review"])))
 
 
 @shared_stories.scenario("Display Board", "Show a failing tool in a toast")
@@ -273,15 +274,15 @@ def _(s):
 
     @s.then("the details show Billing report, root whole repository, and Discovery · in progress")
     def _(world):
-        expect((world.selected["title"], world.selected["root"], world.selected["column"], world.selected["is_done"])).to(equal(("Billing report", "", "Discovery", False)))
+        expect((world.selected["title"], world.selected["session"]["workpath"], world.selected["column"], world.selected["is_done"])).to(equal(("Billing report", "", "Discovery", False)))
 
-    @s.and_("the details say No handoff yet and Next: stories-story_map, generate")
+    @s.and_("the details say No handoff yet and Next: stories-story-map, generate")
     def _(world):
-        expect((world.selected["handoff"], world.selected["next"], world.selected["next_action"])).to(equal(("", "stories-story_map", "generate")))
+        expect((world.selected["session"]["handoff"], world.selected["next"], world.selected["progress"][world.selected["next"]]["next_action"])).to(equal(("", "stories-story-map", "generate")))
 
     @s.and_("the details show a tile for each enabled fidelity with its fidelity progress")
     def _(world):
-        expect({slug: world.selected["progress"].get(slug) for slug in DISCOVERY_FIDELITY_SLUGS}).to(equal(dict.fromkeys(DISCOVERY_FIDELITY_SLUGS, "not_started")))
+        expect({slug: world.selected["progress"][slug]["state"] for slug in DISCOVERY_FIDELITY_SLUGS}).to(equal(dict.fromkeys(DISCOVERY_FIDELITY_SLUGS, "not_started")))
 
 
 @shared_stories.scenario("Display Ticket Details", "Name a split ticket by the ticket it came from")
@@ -296,7 +297,7 @@ def _(s):
 
     @s.then("the details read child · story of epic")
     def _(world):
-        expect((world.selected["title"], world.selected["scope"], world.selected["parent"])).to(equal(("child", "story", "epic")))
+        expect((world.selected["title"], world.selected["session"]["scope"], world.selected["session"]["parent"])).to(equal(("child", "story", "epic")))
 
 
 @shared_stories.scenario("Set Stage WIP Limit", "Set a stage's limit")

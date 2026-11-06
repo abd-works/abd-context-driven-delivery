@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { ActionStatesData, TicketData } from '@cdd/harness/kanban/ticket'
+import type { ActionStatesData, FidelityProgressData } from '@cdd/harness/kanban/fidelity-progress'
 
 import { commandOf } from '../chat-command'
 import { reasonOf } from '../failure'
@@ -24,6 +24,8 @@ export const ACTION_ICONS: Record<string, string> = { generate: '✦', validate:
 
 export type FidelityJson = {
   slug: string
+  practice: string
+  name: string
   progress: string
   violationCount: number
   actions: ActionStatesData
@@ -42,18 +44,18 @@ export class FidelityClient {
   }
 
   get practice(): string {
-    return this.json.slug.slice(0, this.json.slug.indexOf('-'))
+    return this.json.practice
   }
 
   // The fidelity's own name as the session card shows it, such as Scenarios or Front end code.
   get name(): string {
-    const words = this.json.slug.slice(this.json.slug.indexOf('-') + 1).replace(/_/g, ' ')
+    const words = this.json.name.replace(/_/g, ' ')
     return words.charAt(0).toUpperCase() + words.slice(1)
   }
 
-  // The name the actions take, such as ux-mockup.
+  // The name the actions take, such as ux-mockup: the fidelity's slug.
   get guidance(): string {
-    return this.json.slug.replace(/_/g, '-')
+    return this.json.slug
   }
 
   // A fidelity validated and waiting for review reads to review, as on the canvas.
@@ -107,7 +109,7 @@ export class FidelityClient {
   }
 }
 
-// ticket.finish_review refused the review, most often because the latest Validate did not pass. reason is the server's text.
+// fidelity-progress.finish_review refused the review, most often because the latest Validate did not pass. reason is the server's text.
 export class ReviewRefused {
   constructor(readonly reason: string) {}
 }
@@ -155,7 +157,7 @@ export async function runAction($: EngineInterface, fidelity: FidelityClient, ac
 export async function reviewFidelity($: EngineInterface, fidelity: FidelityClient): Promise<FidelityClient | ReviewRefused> {
   const chatBar = await currentChatBar($)
   try {
-    await callTool<TicketData>($, 'ticket.finish_review', { ticket: chatBar.sessionName, fidelities: [fidelity.fidelity] })
+    await callTool<FidelityProgressData>($, 'fidelity-progress.finish_review', { ticket: chatBar.sessionName, fidelity: fidelity.fidelity })
   } catch (failure) {
     $.ui.toast(`${fidelity.guidance} not reviewed: ${reasonOf(failure)}`)
     return new ReviewRefused(reasonOf(failure))

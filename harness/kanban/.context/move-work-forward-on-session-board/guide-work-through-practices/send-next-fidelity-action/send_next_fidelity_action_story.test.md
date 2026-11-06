@@ -17,11 +17,11 @@
 
 #### Scenario: Open the report while violations hold the ticket
 
-*Given* checkout-flow's story map has a verb-noun-format violation on tests/story-map.md line 6
+*Given* checkout-flow's story map has a verb-noun-format violation on .context/story-map.md line 6
 *But* no chat is connected
 *When* the Person runs checkout-flow's next step
 *Then* Run next read Run next: fix violations
-*And* the report panel opens on stories-story_map
+*And* the report panel opens on stories-story-map
 
 #### Scenario: Record a review with no chat
 
@@ -35,7 +35,7 @@
 *Given* pet-visits' story map is generated and validated with no violations
 *And* a person has moved pet-visits into Specification
 *When* the session board reads pet-visits
-*Then* Run next reads Run next: review on stories-story_map
+*Then* Run next reads Run next: review on stories-story-map
 
 #### Scenario: Keep Run next off where it cannot run
 

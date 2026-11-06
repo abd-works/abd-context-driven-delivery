@@ -14,7 +14,7 @@ import { scenario, story } from '../../../story-test'
 // (S) Person --> Open Session
 story('Open Session', CHAT_BAR, () => {
   scenario('Open a session from the list', ({ given, when, then }) => {
-    // Evidence: inferred: story map 'picking a session ... then calls ticket.activate'; no chat bar code yet
+    // Evidence: inferred: story map 'picking a session ... then calls board.activate'; no chat bar code yet
     given('checkout-flow is the active [session](../../../../../../kanban/.context/kanban-model.md#session)', async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlow(), paymentRetry())
     })
@@ -23,11 +23,11 @@ story('Open Session', CHAT_BAR, () => {
       await scene.ui.press({ key: 'session-payment-retry' })
       await scene.ui.press({ key: 'activate-confirm' })
     })
-    // session list press -> activateSession($, 'payment-retry') -> $.mcp.call('ticket.activate', { ticket: 'payment-retry', leaving: ['commit', 'push'], opening: ['branch', 'worktree'] }) -> Ticket.activate()
+    // session list press -> activateSession($, 'payment-retry') -> $.mcp.call('board.activate', { ticket: 'payment-retry', leaving: ['commit', 'push'], opening: ['branch', 'worktree'] }) -> Board.activate()
     then('the Chat Bar shows payment-retry with its Discovery dots', async ($, on, scene) => {
       await expectMarks(scene.ui, { 'session-name-button': 'payment-retry' })
-      expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-story_map', 'dot-ux-ia', 'dot-clean_engineering-modules'])
-      expect(called(scene.world, 'ticket.activate')).toEqual({ ticket: 'payment-retry', leaving: ['commit', 'push'], opening: ['branch', 'worktree'] })
+      expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-story-map', 'dot-ux-ia', 'dot-clean-engineering-modules'])
+      expect(called(scene.world, 'board.activate')).toEqual({ ticket: 'payment-retry', leaving: ['commit', 'push'], opening: ['branch', 'worktree'] })
     })
   })
   scenario('List the sessions with their stages', ({ given, when, then, and }) => {

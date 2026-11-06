@@ -24,6 +24,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.agent_tools import agent_toolset
+from harness.agent_tools.name import Name
 from harness.installation.destination import Destination
 from harness.hooks.hooks import Hook
 
@@ -404,8 +405,7 @@ class PromptNotify:
         return previous if isinstance(previous, dict) else {}
 
     def _compact(self, text: str) -> str:
-        stepped = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", text)
-        return re.sub(r"[^a-z0-9]+", "-", stepped.lower()).strip("-")
+        return Name(text).kebab
 
     def _walk_skill_tree(self, root: Path) -> None:
         if not root.is_dir():

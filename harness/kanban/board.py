@@ -7,10 +7,11 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_field, language_adapter
 from harness.mcp.mcp_server import mcp
 from cdd_guidance.practices.stages import DISCOVERY, IMPLEMENTATION, SPECIFICATION
@@ -31,9 +32,13 @@ VALIDATE = "validate"
 REVIEW = "review"
 # What every fidelity goes through in its stage, named as the session log names them.
 STAGE_ACTIONS = (GENERATE, VALIDATE, REVIEW)
+LEAVE_COMMIT = "commit"
+LEAVE_PUSH = "push"
+LEAVE_MERGE = "merge"
+OPEN_BRANCH = "branch"
+OPEN_WORKTREE = "worktree"
 FORGE = "https://forge.abdworks.net/abd-context-driven-delivery"
 FIDELITIES_WITHOUT_PAGE = ("ddd-model", "bdd-realization")
-UNCHOSEN_FOLDERS = frozenset({"node_modules", "__pycache__"})
 
 
 class ColumnNotFoundError(LookupError):
@@ -55,7 +60,7 @@ class PracticeNotFoundError(LookupError):
 
 
 class FidelityNotFoundError(LookupError):
-    """Raised when a caller names a fidelity, such as stories-story_map, that a ticket or practice does not have. It
+    """Raised when a caller names a fidelity, such as stories-story-map, that a ticket or practice does not have. It
     names the fidelity and the ticket or practice searched, so a caller can say which request was refused."""
 
     def __init__(self, fidelity: str, within: str) -> None:
@@ -72,7 +77,6 @@ class Board:
     # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
     # Every ticket is in exactly one column; the board stores no ticket state.
 
-    _built_practices: ClassVar[tuple[PracticeGuidance, ...] | None] = None
 
     def __init__(self, repo: Repo, practices: list[PracticeGuidance]) -> None:
         self._repo = repo
@@ -84,7 +88,7 @@ class Board:
         """The board of the repository at repo_root, with every practice chosen."""
         from space.repo.repo import Repo
 
-        return cls(Repo(repo_root), list(cls._every_practice()))
+        return cls(Repo(repo_root), list(PracticeCatalogue.practices()))
 
     @classmethod
     @tool_subject
@@ -93,20 +97,6 @@ class Board:
         project from each request's X-CDD-Project header and runs the call inside working_on(project). A chat in a
         ticket's worktree reads the board of the project's main checkout, where every ticket's session lives."""
         return cls.load(board_checkout())
-
-    @classmethod
-    def _every_practice(cls) -> tuple[PracticeGuidance, ...]:
-        """Built once per process: the practices do not change between tool calls, and building them took about 30 ms
-        on every call."""
-        if cls._built_practices is None:
-            from bdd.bdd import Bdd
-            from clean_engineering.clean_engineering import CleanEngineering
-            from ddd.ddd import Ddd
-            from stories.stories import Stories
-            from ux.ux import Ux
-
-            Board._built_practices = (Stories(), Ddd(), Ux(), CleanEngineering(), Bdd())
-        return Board._built_practices
 
     @property
     def repo(self) -> Repo:
@@ -127,7 +117,7 @@ class Board:
         git clone has none."""
         if not self._repo.is_clone:
             return {}
-        return {tree.branch: tree.path for tree in self._repo.list_worktrees()}
+        return {tree.branch.name: tree.path for tree in self._repo.list_worktrees() if tree.branch is not None}
 
     @property
     def practices(self) -> list[PracticeGuidance]:
@@ -142,13 +132,13 @@ class Board:
     def tickets(self) -> list[Ticket]:
         from harness.kanban.ticket import Ticket
 
-        return [Ticket(session, self) for session in Session.all_in(self._repo.root)]
+        return [Ticket(session, self) for session in self._repo.sessions()]
 
     @property
     def backlog_items(self) -> list[BacklogItem]:
         from harness.kanban.backlog_item import BacklogItem
 
-        folder = Session.backlog_folder(self._repo.root)
+        folder = self._repo.backlog_folder
         if not folder.is_dir():
             return []
         # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
@@ -194,10 +184,66 @@ class Board:
     @mcp
     @agent_tool
     @noSessionLog
+    def activate(self, ticket: str, leaving: list[str] | None = None, opening: list[str] | None = None) -> Ticket:
+        """Make ticket the current session. leaving names what to do with the active ticket's work first: commit, push, merge. opening names what to create for ticket: branch, worktree."""
+        chosen = self._named_ticket(ticket)
+        active = self.active
+        if active is not None and active.name != chosen.name:
+            self.leave(active, leaving or [])
+        if OPEN_BRANCH in (opening or []):
+            self.repo.switch_branch(chosen.name)
+        if OPEN_WORKTREE in (opening or []):
+            self.repo.switch_worktree(chosen.name)
+        Session.switch(chosen.name, repo_path=self.repo.root)
+        return chosen
+
+    def leave(self, ticket: Ticket, leaving: list[str]) -> None:
+        """Do what leaving names with ticket's work: commit, push, merge. Only on its own branch, checked out, because
+        those steps act on whatever is checked out."""
+        if not leaving or not self._is_on_its_branch(ticket.name):
+            return
+        if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
+            self.repo.push_commit(f"{ticket.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
+        if LEAVE_MERGE in leaving:
+            self.repo.close_branch(ticket.name)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def open_worktree(self, ticket: str) -> Ticket:
+        """Open ticket's own worktree beside the repository, creating its branch when missing: the folder its chat works in, named as its worktree. The open session is left as it is."""
+        name = self._named_ticket(ticket).name
+        self.repo.branch_named(name).open_in_worktree()
+        return Board.load(self.repo.root)._named_ticket(name)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def workspace(self, ticket: str) -> Workspace:
+        """Say whether ticket already has its branch and its worktree, so activating it offers only what is missing, and whether the active ticket being left is on a branch of its own, so its work can be committed, pushed, and merged."""
+        name = self._named_ticket(ticket).name
+        active = self.active
+        return Workspace(self.repo.has_branch(name), self.worktree_of(name) is not None, active is not None and self._is_on_its_branch(active.name))
+
+    def _named_ticket(self, name: str) -> Ticket:
+        from harness.kanban.ticket import TicketNotFoundError
+
+        found = self.ticket(name)
+        if found is None:
+            raise TicketNotFoundError(name)
+        return found
+
+    def _is_on_its_branch(self, name: str) -> bool:
+        """Whether the repository has the branch name checked out; a commit lands on whatever is checked out."""
+        return self.repo.has_branch(name) and self.repo.current_branch == name
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def set_wip_limit(self, stage: str, limit: int) -> Board:
         """Set how many tickets stage holds before its count shows as over its limit."""
         limits = {**self._saved_wip_limits, stage: limit}
-        Session.board_file(self._repo.root).write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
+        self._repo.board_file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
         return self
 
     @mcp
@@ -205,9 +251,7 @@ class Board:
     @noSessionLog
     def folders(self, path: str = "") -> list[str]:
         """List the folders inside path, a folder in the repository (its top when empty), as paths from the project, for a person choosing a workpath or a practice root. Installed packages, caches, and hidden folders hold no one's work, so they are left out."""
-        parent = self._repo.root / path
-        found = [entry for entry in parent.iterdir() if entry.is_dir() and entry.name not in UNCHOSEN_FOLDERS and not entry.name.startswith(".")]
-        return sorted(entry.relative_to(self._repo.root).as_posix() for entry in found)
+        return sorted(entry.path for entry in self._repo.file_manager.list(path).folders)
 
     @mcp
     @agent_tool
@@ -230,7 +274,7 @@ class Board:
 
     @property
     def _saved_wip_limits(self) -> dict[str, int]:
-        path = Session.board_file(self._repo.root)
+        path = self._repo.board_file
         return json.loads(path.read_text(encoding="utf-8")).get("wip_limits", {}) if path.is_file() else {}
 
     def _fidelity_of(self, guidance: PracticeGuidance, name: str) -> FidelityGuidance:
@@ -306,17 +350,23 @@ class Stage(Column):
     @property
     @data_field(key="work_required")
     def work_required_slugs(self) -> list[str]:
-        return [self._slug(fidelity) for fidelity in self.work_required]
+        return [fidelity.slug for fidelity in self.work_required]
+
+    @property
+    @data_field
+    def fidelities(self) -> dict[str, str]:
+        """Each fidelity's name by its slug, such as story_map for stories-story-map: the name board.help takes."""
+        return {fidelity.slug: fidelity.name for fidelity in self.work_required}
 
     @property
     @data_field
     def formats(self) -> dict[str, list[str]]:
-        return {self._slug(fidelity): list(fidelity.outputs) for fidelity in self.work_required}
+        return {fidelity.slug: list(fidelity.outputs) for fidelity in self.work_required}
 
     @property
     @data_field
     def default_formats(self) -> dict[str, str]:
-        return {self._slug(fidelity): fidelity.default_format for fidelity in self.work_required}
+        return {fidelity.slug: fidelity.default_format for fidelity in self.work_required}
 
     @property
     def work_required(self) -> list[FidelityGuidance]:
@@ -355,9 +405,6 @@ class Stage(Column):
     @data_field
     def done(self) -> list[Ticket]:
         return [ticket for ticket in self.cards if ticket.is_done]
-
-    def _slug(self, fidelity: FidelityGuidance) -> str:
-        return f"{fidelity.practice_guidance.key}-{fidelity.name}"
 
 
 class Card(ABC):
@@ -412,6 +459,12 @@ class Help:
 
     @property
     @data_field
+    def slug(self) -> str:
+        """The slug of the practice or fidelity this help is about, such as stories-story-map."""
+        return self._subject.slug
+
+    @property
+    @data_field
     def stage(self) -> str:
         return self._stage
 
@@ -451,3 +504,27 @@ class HelpRule:
     @data_field
     def text(self) -> str:
         return self._rule.body.strip()
+
+
+class Workspace:
+    """Whether a ticket has its branch and its worktree, and whether the active ticket being left is on a branch of its own."""
+
+    def __init__(self, has_branch: bool, has_worktree: bool, leaving_has_branch: bool) -> None:
+        self._has_branch = has_branch
+        self._has_worktree = has_worktree
+        self._leaving_has_branch = leaving_has_branch
+
+    @property
+    @data_field
+    def has_branch(self) -> bool:
+        return self._has_branch
+
+    @property
+    @data_field
+    def has_worktree(self) -> bool:
+        return self._has_worktree
+
+    @property
+    @data_field
+    def leaving_has_branch(self) -> bool:
+        return self._leaving_has_branch

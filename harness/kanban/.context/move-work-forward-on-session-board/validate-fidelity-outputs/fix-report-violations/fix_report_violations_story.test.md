@@ -4,10 +4,10 @@
 
 #### Scenario: Fix one violation at its line
 
-*Given* checkout-flow's story_map report lists verb-noun-format at tests/story-map.md line 6
+*Given* checkout-flow's story_map report lists verb-noun-format at .context/story-map.md line 6
 *And* a chat is connected
 *When* the Person fixes that violation
-*Then* the chat receives one message naming the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed, with instructions to fix it
+*Then* the chat receives one message naming the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed, with instructions to fix it
 
 #### Scenario: Fix every violation of a rule
 

@@ -13,7 +13,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 with story("Render Fidelity Format"):
     with scenario("Render existing output into another format"):
         # Evidence: observed: tile-client.spec 'Render Fidelity Format' — 'should turn existing output into the chosen format'.
-        with given("billing-report's story map is tests/story-map.md, in markdown"):
+        with given("billing-report's story map is .context/story-map.md, in markdown"):
             pass
         with and_("a chat is connected"):
             pass

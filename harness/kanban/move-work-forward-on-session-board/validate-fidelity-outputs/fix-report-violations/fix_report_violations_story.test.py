@@ -13,14 +13,14 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 with story("Fix Report Violations"):
     with scenario("Fix one violation at its line"):
         # Evidence: observed: side-panel-client.spec 'Fix Report Violations' — 'should send Fix for one violation at its line'; story-actions.spec 'should send Fix and Fix all to the chat'.
-        with given("checkout-flow's story_map report lists verb-noun-format at tests/story-map.md line 6"):
+        with given("checkout-flow's story_map report lists verb-noun-format at .context/story-map.md line 6"):
             pass
         with and_("a chat is connected"):
             pass
         with when("the Person fixes that violation"):
-            # Board page -> Chat.send('command', fix message: the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed)
+            # Board page -> Chat.send('command', fix message: the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed)
             pass
-        with then("the chat receives one message naming the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed, with instructions to fix it"):
+        with then("the chat receives one message naming the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed, with instructions to fix it"):
             pass
     with scenario("Fix every violation of a rule"):
         # Evidence: observed: side-panel-client.spec 'should ask the chat to fix all violations of that rule found in the report it names'.
@@ -50,7 +50,7 @@ with story("Fix Report Violations"):
         with when("Claude Code validates the story map again with no violations"):
             # Validate -> Session.log_validation(Stories story_map, [])
             # Board page -> Board.show()
-            # Board page -> Ticket.report('stories-story_map')
+            # Board page -> Ticket.report('stories-story-map')
             pass
         with then("the open report lists no rules"):
             pass

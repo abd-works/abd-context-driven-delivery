@@ -128,7 +128,7 @@ An operation reads the same from the page to the domain, so anyone can follow it
 | Browser | Route | Server | Tool | Domain |
 |---|---|---|---|---|
 | `TicketClientGenerated.moveNext()` | `POST /ticket/:ticket/move-next` | `TicketAdapter.moveNext()` | `ticket.move_next` | `Ticket.move_next()` |
-| `TicketClientGenerated.enablePractice(practice, isEnabled)` | `POST /ticket/:ticket/enable-practice` | `TicketAdapter.enablePractice(practice, isEnabled)` | `ticket.enable_practice` | `Ticket.enable_practice(practice, is_enabled)` |
+| `PracticeSessionOutputClientGenerated.enable(isEnabled)` | `POST /practice-session-output/:session/:practice/enable` | `PracticeSessionOutputAdapter.enable(isEnabled)` | `practice-session-output.enable` | `PracticeSessionOutput.enable(is_enabled)` |
 
 The route is the tool's object, then the object's identity when the tool loads one, then the operation in kebab case. Every route is a `POST` with the operation's own arguments in the body, so both ends follow from the tool's name alone.
 

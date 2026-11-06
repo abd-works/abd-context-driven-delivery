@@ -10,9 +10,9 @@
  * `.sessions/` or a fidelity's output file; a chat is `FakeChat`, which checks in through the board's server as the
  * cdd-board mod does. A tile is opened in the details, where a press opens its action bar.
  *
- * The scenarios name billing-report's story map `tests/story-map.md`, which the fixture holds. The story_map fidelity
+ * The scenarios name billing-report's story map `.context/story-map.md`, which the fixture holds. The story_map fidelity
  * declares its markdown at `.context/story-map.md` (cdd_guidance/practices/stories/stories.md), so the board does not
- * count tests/story-map.md as the story map; the Thens that need it counted fail until the two agree.
+ * count .context/story-map.md as the story map; the Thens that need it counted fail until the two agree.
  */
 import { rmSync } from 'node:fs'
 import { join } from 'node:path'
@@ -37,9 +37,9 @@ async function selectBillingReport(page: Page): Promise<void> {
 
 async function openStoryMapTile(page: Page): Promise<Locator> {
   await selectBillingReport(page)
-  await details(page).locator('[data-tile="stories-story_map"] .tile-name').click()
-  await expect(barOf(page, 'stories-story_map')).toBeVisible()
-  return barOf(page, 'stories-story_map')
+  await details(page).locator('[data-tile="stories-story-map"] .tile-name').click()
+  await expect(barOf(page, 'stories-story-map')).toBeVisible()
+  return barOf(page, 'stories-story-map')
 }
 
 test.beforeEach(() => resetSessions(fixtureRoot))
@@ -65,7 +65,7 @@ test.describe('with no chat connected', () => {
         await openBoard(page)
       })
 
-      // Fails today: the fixture's tests/story-map.md is not where the story_map fidelity declares its markdown.
+      // Fails today: the fixture's .context/story-map.md is not where the story_map fidelity declares its markdown.
       test('Then the markdown chip is green and not picked', async ({ page }) => {
         const bar = await openStoryMapTile(page)
         await expect(chip(bar, 'markdown')).toHaveAttribute('aria-label', 'markdown: done')
@@ -150,7 +150,7 @@ test.describe('with a chat connected', () => {
       })
 
       test('Then Run is off', async ({ page }) => {
-        await expect(runOf(barOf(page, 'stories-story_map'))).toBeDisabled()
+        await expect(runOf(barOf(page, 'stories-story-map'))).toBeDisabled()
       })
     })
 
@@ -180,7 +180,7 @@ test.describe('with a chat connected', () => {
 
       test("And the bar's picks are cleared", async ({ page }) => {
         await expect.poll(() => receivedBy(chat)).toContain('/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json')
-        await expect(barOf(page, 'stories-story_map').locator('[aria-pressed="true"]')).toHaveCount(0)
+        await expect(barOf(page, 'stories-story-map').locator('[aria-pressed="true"]')).toHaveCount(0)
       })
     })
   })
@@ -196,7 +196,7 @@ test.describe('with a chat connected', () => {
         await runOf(bar).click({ timeout: 5_000 }).catch(() => undefined)
       })
 
-      // Fails today: tests/story-map.md is not the story map's declared markdown, so there is nothing to render and Run stays off.
+      // Fails today: .context/story-map.md is not the story map's declared markdown, so there is nothing to render and Run stays off.
       test('Then the chat receives the command /actions-render stories-story-map format=drawio', async () => {
         await expect.poll(() => receivedBy(chat)).toContain('/actions-render stories-story-map format=drawio session=.sessions/billing-report/session.json')
       })
@@ -211,7 +211,7 @@ test.describe('with a chat connected', () => {
       })
 
       test('Then Run is off', async ({ page }) => {
-        await expect(runOf(barOf(page, 'stories-story_map'))).toBeDisabled()
+        await expect(runOf(barOf(page, 'stories-story-map'))).toBeDisabled()
       })
     })
   })
@@ -219,7 +219,7 @@ test.describe('with a chat connected', () => {
   test.describe('Send Tile Action To Chat', () => {
     test.describe('Send sketch, iterate, or document as its own command', () => {
       async function runAction(page: Page, action: string): Promise<void> {
-        const bar = barOf(page, 'stories-story_map')
+        const bar = barOf(page, 'stories-story-map')
         await bar.getByRole('combobox', { name: 'Action' }).selectOption(action)
         await runOf(bar).click()
       }
@@ -286,7 +286,7 @@ test.describe('with a chat connected', () => {
       test.describe('the Person picks a chat and runs sketch again', () => {
         test.beforeEach(async ({ page }) => {
           await page.getByRole('combobox', { name: 'Chat to send commands to' }).selectOption(chat.id)
-          await runOf(barOf(page, 'stories-story_map')).click()
+          await runOf(barOf(page, 'stories-story-map')).click()
         })
 
         // The toast names the chat and the whole command, the session it runs on included.

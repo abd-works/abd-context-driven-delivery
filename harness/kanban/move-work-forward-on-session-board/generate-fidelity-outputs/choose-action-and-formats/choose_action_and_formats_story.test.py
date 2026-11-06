@@ -16,14 +16,14 @@ with story("Choose Action And Formats"):
         with given("billing-report's story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance) has no file generated"):
             pass
         with when("the Person opens the story_map tile"):
-            # Board page -> Ticket.files(['stories-story_map'])
-            # Ticket <- markdown tests/story-map.md, not there
+            # Board page -> Ticket.files(['stories-story-map'])
+            # Ticket <- markdown .context/story-map.md, not there
             pass
         with then("the generate action is chosen with the markdown chip picked"):
             pass
     with scenario("Leave a generated format unpicked"):
         # Evidence: observed: tile-client.spec 'should not pick a format already generated'; register.test 'a format already generated carries a check' in the map.
-        with given("billing-report's story map is tests/story-map.md, already there"):
+        with given("billing-report's story map is .context/story-map.md, already there"):
             pass
         with when("the Person opens the story_map tile"):
             # Person -> TileClient.toggle(billing-report, story_map tile)

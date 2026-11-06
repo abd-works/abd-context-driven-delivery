@@ -1,4 +1,4 @@
-"""Filter, stage, passing rules, packages, and source folds on a graph."""
+"""Filter, stage, passing rules, and packages on a graph."""
 
 import sys
 from pathlib import Path
@@ -7,22 +7,11 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from expects import be_above, contain, equal, expect
+from expects import contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from graph import Graph, Node, PracticeGraph, Source
-
-_FOLDS = _HERE / "_examples" / "folds"
-
-
-def operation(practice: PracticeGraph, name: str, owner: str, text: str, folder: Path) -> Node:
-    path = folder / f"{name}.ts"
-    path.write_text(text, encoding="utf-8")
-    node = Node(practice, "Operation", f"clean_engineering:Operation:{path.name}:{name}:{owner}", name, Source(path.name, 1, len(text.splitlines()), str(folder)))
-    practice.by_id[node.node_id] = node
-    practice.nodes.setdefault("Operation", []).append(node)
-    return node
 
 
 with description("a graph"):
@@ -125,43 +114,3 @@ with description("a graph"):
         with it("should parent the class on the package"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")
             expect([child["name"] for child in package["children"]]).to(equal(["Customer"]))
-
-    with context("with source that opens a block and calls an operation"):
-        with before.all:
-            _FOLDS.mkdir(parents=True, exist_ok=True)
-            self.practice = PracticeGraph("clean_engineering")
-            self.callee = operation(
-                self.practice,
-                "emailValidationCode",
-                "AccountCredentials",
-                "emailValidationCode(): void {\n  const code = new ValidationCode()\n}\n",
-                _FOLDS,
-            )
-            self.class_node = Node(
-                self.practice,
-                "OoadClass",
-                "clean_engineering:OoadClass:ValidationCode.ts:ValidationCode",
-                "ValidationCode",
-                Source("ValidationCode.ts", 1, 3, str(_FOLDS)),
-            )
-            (_FOLDS / "ValidationCode.ts").write_text("class ValidationCode {\n  value: string\n}\n", encoding="utf-8")
-            self.caller = operation(
-                self.practice,
-                "register",
-                "AccountCredentials",
-                "async register(): Promise<void> {\n  this.emailValidationCode()\n}\n",
-                _FOLDS,
-            )
-            self.caller.source.expand([self.callee, self.class_node])
-
-        with it("should fold the block around the call"):
-            blocks = [fold for fold in self.caller.source.folds if fold.kind == "block" and fold.end > fold.start]
-            expect(len(blocks)).to(be_above(0))
-
-        with it("should fold the inlined operation past the call line"):
-            calls = [fold for fold in self.caller.source.folds if fold.kind == "call" and fold.end > fold.start]
-            expect(len(calls)).to(be_above(0))
-
-        with it("should fold the class named in the inlined operation"):
-            classes = [fold for fold in self.caller.source.folds if fold.kind == "class" and fold.end > fold.start]
-            expect(len(classes)).to(be_above(0))

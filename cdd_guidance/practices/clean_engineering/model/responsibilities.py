@@ -7,11 +7,12 @@ not a second job — only several distinct clusters on a large public surface co
 
 from __future__ import annotations
 
-import re
 from collections import defaultdict
 from typing import Dict, Iterable, List, Mapping, Set
 
 from nltk.corpus import wordnet as wn
+
+from harness.agent_tools.name import Name
 
 _MIN_PUBLIC_OPERATIONS = 8
 _MIN_NOUN_CLUSTERS = 4
@@ -50,8 +51,7 @@ class Responsibilities:
         return nouns
 
     def _leading_word(self, operation: str) -> str:
-        spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", operation)
-        return spaced.lower().split("_", 1)[0]
+        return next(iter(Name(operation).words), "")
 
     def _stem_noun(self, token: str) -> str:
         lemma = wn.morphy(token.lower(), wn.NOUN)

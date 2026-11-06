@@ -9,9 +9,9 @@ The line reads left to right:
 - **Fidelity dots.** One square per practice in its practice colour, shaded by state as on the board. A fidelity with violations keeps its colour and shows its count in red. Clicking a dot opens `/board` on that session and fidelity and makes it the fidelity the action button acts on.
 - **Action button and ▾ picker.** The button shows the next action for one fidelity as an icon (generate, validate, review), with the action and fidelity on hover. The picker offers every builder action (generate, validate, review, iterate, sketch, render, document). When every fidelity of the stage is reviewed, the button moves the session to the next stage (`ticket.move_next`).
 - **Stage icons.** Backlog, Discovery (magnifier), Specification (document), Implementation (gear), Complete (check), in orange; stages not yet reached are faint, and only the stage in progress has an outline. Clicking a stage shows that stage's fidelities.
-- **Handoff, files, close.** Close closes the active session (`ticket.close`), as Close does on the board; it does not just hide the bar. Files opens the board's files view for the selected fidelity only: a tab per file `ticket.files` declares, its text from `ticket.read_file`.
+- **Handoff, files, close.** Close closes the active session (`ticket.close`), as Close does on the board; it does not just hide the bar. Files opens the board's files view for the selected fidelity only: a tab per file `fidelity-progress.files` declares, its text from `session.read_file`.
 
-Actions run on one fidelity at a time. Each fidelity goes generate, validate, then review (`ticket.finish_review` with that one fidelity), which needs its latest Validate to have passed.
+Actions run on one fidelity at a time. Each fidelity goes generate, validate, then review (`fidelity-progress.finish_review` on that one fidelity), which needs its latest Validate to have passed.
 
 ## Considered options
 

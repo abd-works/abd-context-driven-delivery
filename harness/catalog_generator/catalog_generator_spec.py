@@ -22,7 +22,6 @@ from mamba import after, before, description, it
 from harness.catalog_generator.catalog_generator import (
     UTILITY_REGISTRY,
     ActionResolution,
-    CatalogFidelityGuidance,
     RegistryEntry,
     SkillSlashName,
     build_run_request,
@@ -162,36 +161,23 @@ with description("Load Context Tool And Utility Registry"):
             )
 
 
-with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections"):
-    with description("given DDD's fidelities ClassVar, its format defaults, and ddd.md"):
+with description("Read Fidelity Names, Default Formats, And Sections From The Live Practice"):
+    with description("given DDD's fidelities and ddd.md"):
         with before.all:
-            self.guidances = CatalogFidelityGuidance.scrape(Ddd)
+            self.fidelities = list(Ddd().fidelities.entries.values())
 
-        with it("resolves each fidelity to its key and default format"):
-            keys = [g.key for g in self.guidances]
-            expect(keys).to(
+        with it("names each fidelity with its default format"):
+            expect([fidelity.name for fidelity in self.fidelities]).to(
                 equal(["bounded_context", "model", "tactics"])
             )
-            formats = {g.key: g.default_format for g in self.guidances}
+            formats = {fidelity.name: fidelity.default_format for fidelity in self.fidelities}
             expect(formats["bounded_context"]).to(equal("markdown"))
             expect(formats["tactics"]).to(equal("python"))
 
-        with it("resolves the matching ### {fidelity} guidance body from ddd.md"):
-            tactics = next(g for g in self.guidances if g.key == "tactics")
-            expect(tactics.guidance).not_to(equal("Guidance missing"))
-            expect(len(tactics.guidance) > 0).to(be_true)
-
-    with description("given a fidelity with no matching ### heading in {tool}.md"):
-        with before.all:
-            class _NoHeading:
-                __module__ = "cdd_guidance.practices.bdd.bdd"
-                fidelities = {"discovery": "modules"}  # BDD has no ### modules section
-                _fidelity_format_defaults = {}
-
-            self.stub_guidances = CatalogFidelityGuidance.scrape(_NoHeading)
-
-        with it("resolves to a Guidance missing stub instead of failing"):
-            expect(self.stub_guidances[0].guidance).to(equal("Guidance missing"))
+        with it("gives the fidelity's whole ### block from ddd.md as its section"):
+            tactics = next(fidelity for fidelity in self.fidelities if fidelity.name == "tactics")
+            expect(tactics.section).to(contain("#### Overview"))
+            expect(tactics.section).to(contain("#### Rules"))
 
 
 with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):

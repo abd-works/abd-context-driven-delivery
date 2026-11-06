@@ -15,8 +15,8 @@ import { scenario, story } from '../../../story-test'
 story('Move Session To Next Stage', CHAT_BAR, () => {
   scenario('Move on once every fidelity is reviewed', ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 'When every fidelity of the stage is reviewed, the button moves the session to the next stage'; no chat bar code yet
-    given('checkout-flow is In progress in Specification with stories-scenarios, ux-mockup and clean_engineering-model reviewed', async ($, on, scene) => {
-      scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-scenarios': DONE, 'ux-mockup': DONE, 'clean_engineering-model': DONE }, { is_done: true, next: null }))
+    given('checkout-flow is In progress in Specification with stories-scenarios, ux-mockup and clean-engineering-model reviewed', async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-scenarios': DONE, 'ux-mockup': DONE, 'clean-engineering-model': DONE }, { is_done: true, next: null }))
     })
     when('the Person moves checkout-flow to the next [stage](../../../../../../kanban/.context/kanban-model.md#stage--column)', async ($, on, scene) => {
       expect(await labelOf(scene.ui, 'next-action')).toBe('move checkout-flow on')
@@ -29,8 +29,8 @@ story('Move Session To Next Stage', CHAT_BAR, () => {
       expect(called(scene.world, 'ticket.move_next')).toEqual({ ticket: 'checkout-flow' })
     })
     and('its dots show the Implementation fidelities, not started', async ($, on, scene) => {
-      const labels = await Promise.all(['dot-stories-acceptance_tests', 'dot-ux-front_end_code', 'dot-clean_engineering-code'].map(key => labelOf(scene.ui, key)))
-      expect(labels).toEqual(['stories-acceptance_tests to do', 'ux-front_end_code to do', 'clean_engineering-code to do'])
+      const labels = await Promise.all(['dot-stories-acceptance-tests', 'dot-ux-front-end-code', 'dot-clean-engineering-code'].map(key => labelOf(scene.ui, key)))
+      expect(labels).toEqual(['stories-acceptance-tests to do', 'ux-front-end-code to do', 'clean-engineering-code to do'])
     })
   })
   scenario('Keep acting on fidelities until the stage is reviewed', ({ given, when, then, but }) => {

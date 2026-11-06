@@ -14,6 +14,8 @@ class Bdd(PracticeGuidance):
     module load time).
     """
 
+    sketch_titles = ("bdd:", "behavior driven development:")
+
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
         "name": "Behavior-Driven Development",
