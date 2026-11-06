@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
 from harness.agent_tools.cdd_diagnostic_bridge import probe_arguments_from_cdd_diagnostic
 from harness.guidance.guidance import (
     ActionProbeSession,
@@ -24,7 +24,6 @@ from harness.guidance.guidance import (
     installed_channel_items,
     probe_subsection,
 )
-from harness.mcp.mcp_server import McpOperationDefinition, McpPrompt
 
 _HEAVY_INVOKE_PREFIXES = ("session.", "graph.")
 
@@ -319,18 +318,15 @@ def probe_workspace_toolset(
         return [{"toolset": ref, "color": "red", "failure": _failure_text(exc)}]
     probes: list[dict[str, Any]] = []
     for tool in toolset.tools_for(InstallDestination.MCP):
-        operation = McpOperationDefinition.from_tool(tool)
-        if operation.mcp_name not in published:
+        if tool.mcp_name not in published:
             continue
         if not agent_tools_toolset_ref(ref):
             continue
-        skip = _SKIP_INVOKE.get(operation.mcp_name)
+        skip = _SKIP_INVOKE.get(tool.mcp_name)
         if skip:
-            probes.append({"mcp": operation.mcp_name, "color": "yellow", "skipped": skip})
+            probes.append({"mcp": tool.mcp_name, "color": "yellow", "skipped": skip})
             continue
-        probes.append(
-            _probe_workspace_action(toolset, tool.name, operation, slugs, session, installer)
-        )
+        probes.append(_probe_workspace_action(toolset, tool, slugs, session, installer))
     return probes
 
 
@@ -454,36 +450,35 @@ def _probe_mcp_invoke_host(
 
 def _probe_workspace_action(
     toolset: Any,
-    name: str,
-    operation: McpOperationDefinition,
+    tool: AgentTool,
     slugs: list[str],
     session: ActionProbeSession,
     installer: Any,
 ) -> dict[str, Any]:
-    member = getattr(toolset, name)
-    args, missing = fill_probe_arguments(operation.mcp_name, member, slugs, session)
+    member = getattr(toolset, tool.name)
+    args, missing = fill_probe_arguments(tool.mcp_name, member, slugs, session)
     if missing:
         extra, still_missing = fill_workspace_probe_arguments(
-            operation.mcp_name, member, installer, session
+            tool.mcp_name, member, installer, session
         )
         args = {**args, **extra}
         missing = still_missing
     if missing:
         return {
-            "mcp": operation.mcp_name,
+            "mcp": tool.mcp_name,
             "color": "red",
             "failure": "needs " + ", ".join(missing),
         }
     try:
-        if operation.kind == "prompt":
-            result = McpPrompt(operation).invoke(args)
+        if tool.kind != "tool":
+            result = tool.invoke(args)
         elif args:
             result = member(**args)
         else:
             result = member()
     except Exception as exc:
-        return {"mcp": operation.mcp_name, "color": "red", "failure": _failure_text(exc)}
-    item = _instruction_result(operation.mcp_name, result)
+        return {"mcp": tool.mcp_name, "color": "red", "failure": _failure_text(exc)}
+    item = _instruction_result(tool.mcp_name, result)
     if args.get("paths"):
         item["paths"] = args["paths"]
     return item

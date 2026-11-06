@@ -162,7 +162,7 @@ with description("Stories"):
                 "sketch",
                 "iterate",
             ):
-                expect(name in practice.agent_tools).to(equal(False))
+                expect(name in practice.tools).to(equal(False))
 
     with context("whose instructions action is expanded"):
         with it("should name `{story_snake}_story.test.md` at scenarios"):

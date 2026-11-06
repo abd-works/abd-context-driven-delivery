@@ -80,7 +80,7 @@ with description("a Bdd toolset"):
                 "sketch",
                 "iterate",
             ):
-                expect(name in practice.agent_tools).to(equal(False))
+                expect(name in practice.tools).to(equal(False))
 
     with context("whose render tool is called"):
         with it("should render a sketch to python"):

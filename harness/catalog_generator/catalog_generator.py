@@ -1,6 +1,6 @@
 """catalog_generator - discover-and-render primitives for the CDD HTML catalog.
 
-Wraps the real object model directly (Toolset.tools, AgentToolSet.agent_tools,
+Wraps the real object model directly (Toolset.tools, AgentToolSet.operations,
 BaseContextTool.fidelities) - there is no separate scraped schema. See
 ``catalog/cdd-catalog-plan.md`` and ``catalog/cdd-catalog-sketch.md`` for the
 full design; this module implements the "Assemble Catalog Page Data" epic's
@@ -831,7 +831,7 @@ class ActionResolution:
                 continue
             module = importlib.import_module(module_path)
             instance = getattr(module, class_name)()
-            discovered = instance.agent_tools
+            discovered = instance.tools
             if action_name in discovered:
                 tool = discovered[action_name]
                 if omitted_from_catalog(getattr(tool, "callable", tool)):
@@ -842,13 +842,13 @@ class ActionResolution:
             pass
 
         owner = _Owner()
-        owner.agent_tools = actions
+        owner.tools = actions
         return owner
 
     def write_catalog_page(self, catalog: Catalog) -> None:
         from harness.catalog_generator.foundry_chrome import page_shell
 
-        action = catalog._action_owner.agent_tools[self.name]
+        action = catalog._action_owner.tools[self.name]
         catalog_action = catalog.catalog_action
         catalog_action.action = action
         catalog_action.owner = catalog._action_owner

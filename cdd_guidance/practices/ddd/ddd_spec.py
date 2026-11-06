@@ -27,11 +27,6 @@ class _DddSpecSupport:
         body = AgentInstructions.for_callable(func, ddd)
         return "\n".join(body.prompt)
 
-    def tool_steps(self, ddd: Ddd, action_name: str) -> tuple:
-        func = getattr(type(ddd), action_name)
-        body = AgentInstructions.for_callable(func, ddd)
-        return body.tool_steps
-
     def ddd(self) -> Ddd:
         return Ddd(fidelity="bounded_context")
 
@@ -135,7 +130,7 @@ with description("a Ddd toolset"):
                 "iterate",
                 "document",
             ):
-                expect(name in practice.agent_tools).to(equal(False))
+                expect(name in practice.tools).to(equal(False))
 
     with context("whose guidance action is expanded"):
         with it("should include the Clean Engineering companion's instructions"):

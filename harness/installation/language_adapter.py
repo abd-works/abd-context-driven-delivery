@@ -16,7 +16,7 @@ from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
+from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentTool, AgentToolSet, InstallDestination
 from harness.installation.destination import Installation, SourceFile, data_fields_of, edited_fields_of, identity_fields_of, languages_of
 
 _FOLDER = "language-adapters"
@@ -178,18 +178,18 @@ def is_source_file(hint: object) -> bool:
 class TypeScriptOperation:
     """One MCP tool, as the server adapter, the browser adapter, and the route between them each write it."""
 
-    def __init__(self, tool: Any, owner: TypeScriptToolset) -> None:
+    def __init__(self, tool: AgentTool, owner: TypeScriptToolset) -> None:
         self._owner = owner
         self.mcp_name = tool.mcp_name
-        self.name = camel_case(tool.mcp_name.split(".")[1])
+        self.name = camel_case(tool.name)
         self.is_static = inspect.ismethod(tool.callable)
         self.identity = owner.identity_of(tool)
-        schema = owner.input_schema(tool)
+        schema = tool.input_schema
         self.properties = {name: value for name, value in schema["properties"].items() if name not in self.identity}
         self.required = [name for name in schema.get("required", []) if name in self.properties]
         self.result = owner.result_of(tool)
-        self.path_tail = kebab_case(tool.mcp_name.split(".")[1])
-        self.label = label_of(tool.mcp_name.split(".")[1])
+        self.path_tail = kebab_case(tool.name)
+        self.label = label_of(tool.name)
         self.marked_edits = edited_fields_of(tool.callable)
 
     @property
@@ -254,16 +254,15 @@ class TypeScriptOperation:
 class TypeScriptToolset:
     """One marked toolset, written as one TypeScript file of its generated classes and one of its starting-point views."""
 
-    def __init__(self, toolset: Any, tools: list[Any], folder: Path, host: Any, peers: dict[str, TypeScriptToolset]) -> None:
+    def __init__(self, toolset: Any, tools: list[AgentTool], folder: Path, peers: dict[str, TypeScriptToolset]) -> None:
         self._toolset = toolset
         self._tools = sorted(tools, key=lambda tool: tool.mcp_name)
         self._folder = PurePosixPath(folder.as_posix())
-        self._host = host
         self._peers = peers
         self._shapes: dict[str, type] = {}
         self._imports: set[tuple[str, str]] = set()
         self.name = type(toolset).__name__
-        self.slug = self._tools[0].mcp_name.split(".")[0]
+        self.slug = toolset.slug
         self.identity_fields = identity_fields_of(type(toolset))
 
     @property
@@ -501,17 +500,14 @@ class TypeScriptToolset:
     def _identity_name(self) -> tuple[str, ...]:
         return next(filter(None, map(self.identity_of, self._tools)), ())
 
-    def identity_of(self, tool: Any) -> tuple[str, ...]:
+    def identity_of(self, tool: AgentTool) -> tuple[str, ...]:
         """The arguments that name the object, its loader's: a loader with none, like the current board's, names none."""
         if not getattr(tool.callable, ON_SUBJECT_FLAG, False):
             return ()
         load = AgentToolSet.tool_subject_of(type(self._toolset))
         return tuple(inspect.signature(load).parameters)
 
-    def input_schema(self, tool: Any) -> Mapping[str, Any]:
-        return self._host.input_schema_for_callable(tool.callable)
-
-    def result_of(self, tool: Any) -> str:
+    def result_of(self, tool: AgentTool) -> str:
         annotation = inspect.signature(tool.callable).return_annotation
         text = annotation.__name__ if isinstance(annotation, type) else str(annotation).replace("typing.", "")
         return self._text_type(text, tool.callable)
@@ -745,13 +741,10 @@ class LanguageAdapterInstallation(Installation):
         return f"{note}\n{(_TEMPLATES / file_name).read_text(encoding='utf-8')}"
 
     def _typescript_toolsets(self) -> dict[str, TypeScriptToolset]:
-        from harness.mcp.mcp_server import McpHost, McpOperationDefinition, McpServer, McpTool
-
-        host = McpHost(McpServer(repo=self.repo))
         peers: dict[str, TypeScriptToolset] = {}
         for toolset in self._recorded:
-            tools = [McpTool(McpOperationDefinition.from_tool(tool)) for tool in toolset.tools.values() if InstallDestination.MCP in tool.destinations]
-            peers[type(toolset).__name__] = TypeScriptToolset(toolset, tools, self.folder_for(toolset), host, peers)
+            tools = toolset.tools_for(InstallDestination.MCP)
+            peers[type(toolset).__name__] = TypeScriptToolset(toolset, tools, self.folder_for(toolset), peers)
         return peers
 
     def _written(self, path: Path, text: str) -> Path:

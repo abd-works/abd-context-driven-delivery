@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin, get_type_hints
 
+from harness.agent_tools.parameter_schema import ParameterSchema
+
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
 TypeAnnotation = Any
@@ -294,10 +296,6 @@ class AgentToolSetTools:
 
     def tools_for(self, destination: str) -> list[AgentTool]:
         return [tool for tool in self.tools.values() if tool.install_to(destination)]
-
-    @property
-    def agent_tools(self) -> dict[str, AgentTool]:
-        return self.tools
 
 
 class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
@@ -983,10 +981,34 @@ class AgentTool(AgentToolDestination):
         )
 
     @property
-    def session_log_name(self) -> str:
+    def mcp_name(self) -> str:
+        """The name MCP publishes this tool under and the session log records it by: ``{toolset slug}.{name}``. A
+        practice's own instructions are published under the practice's slug alone."""
         if getattr(self.toolset, "practice_guidance", None) is not None and self.name == "instructions":
             return self.slug
         return f"{self.slug}.{self.name}"
+
+    def invoke_line(self) -> str:
+        """The ``Use MCP tool:`` line a skill or command ends with, naming the tool and the parameters it takes."""
+        try:
+            signature = inspect.signature(self.callable)
+            params = inspect.Signature([p for n, p in signature.parameters.items() if n not in {"self", "cls"}])
+            suffix = str(params)
+        except (TypeError, ValueError):
+            suffix = "()"
+        return f"Use MCP tool: `{self.mcp_name}{suffix}`"
+
+    @property
+    def input_schema(self) -> dict[str, Any]:
+        """The JSON Schema of the arguments a caller passes, read from the callable's type hints."""
+        return ParameterSchema(self.callable).json_schema
+
+    def invoke(self, arguments: dict[str, Any] | None = None) -> Any:
+        """Run the tool with arguments as a caller sent them: log the call in the session, then call it with each
+        argument in the type its parameter declares."""
+        payload = dict(arguments or {})
+        self.log_session_invocation(payload)
+        return self.callable(**ParameterSchema(self.callable).coerced(payload))
 
     def should_log_session_invocation(self, arguments: dict[str, Any] | None) -> bool:
         if arguments and arguments.get("ping") is True:
@@ -1017,7 +1039,7 @@ class AgentTool(AgentToolDestination):
             for key, value in payload.items()
             if isinstance(value, (str, int, float, bool, list))
         }
-        session.log_agent_tool(self.session_log_name, logged_args)
+        session.log_agent_tool(self.mcp_name, logged_args)
 
     @property
     def kind(self) -> str:
@@ -1060,8 +1082,9 @@ class AgentTool(AgentToolDestination):
             return prepend_sub_agent_instructions(text)
         return text
 
-    @property
+    @functools.cached_property
     def description(self) -> str:
+        """What the tool does, expanded from its docstring once: MCP lists it on every request for the tool list."""
         from harness.markdown.markdown import Markdown
 
         expanded = Markdown.from_label(self.toolset, "").expand_docstring(self.docstring)
@@ -1139,16 +1162,12 @@ class AgentOperation(AgentTool):
     def kind(self) -> str:
         return "tool"
 
-    def invoke(self, arguments: dict[str, Any]) -> Any:
-        self.log_session_invocation(arguments)
-        return self.callable(**arguments)
-
 
 @dataclass
 class GuidanceAgentOperation(AgentOperation):
     """@agent_tool on a GuidanceAction kit — session log via ``run``, not generic ``tool …``."""
 
-    def invoke(self, arguments: dict[str, Any]) -> Any:
+    def invoke(self, arguments: dict[str, Any] | None = None) -> Any:
         toolset = self.toolset
         if hasattr(toolset, "clear_session_action_log"):
             toolset.clear_session_action_log()
@@ -1176,14 +1195,6 @@ class GuidanceAgentOperation(AgentOperation):
         if "guidance" in payload:
             toolset._bind_guidance(payload.get("guidance"))
         toolset._log_running_action(action)
-
-
-def agent_tool_for_operation(toolset: Any, operation: str) -> AgentTool | None:
-    if toolset is None or not operation:
-        return None
-    tools = toolset.tools
-    found = tools.get(operation)
-    return found if isinstance(found, AgentTool) else None
 
 
 @dataclass
@@ -1235,9 +1246,31 @@ class AgentInstructions(AgentTool):
         self._scan()
         return list(dict.fromkeys(self._tools))
 
-    @property
-    def tool_steps(self) -> list[str]:
-        return self.tools
+    def invoke(self, arguments: dict[str, Any] | None = None) -> str:
+        """The instructions an agent follows for this call, expanded with arguments. One action object serves every
+        call while the MCP server runs, so each call starts its own line in the session log."""
+        payload = dict(arguments or {})
+        toolset = self.toolset
+        if hasattr(toolset, "clear_session_action_log"):
+            toolset.clear_session_action_log()
+        self.log_session_invocation(payload)
+        if self.name == "instructions" and hasattr(toolset, "instructions"):
+            return toolset.instructions
+        return self._expanded_reply(payload)
+
+    def _expanded_reply(self, arguments: dict[str, Any]) -> str:
+        toolset = self.toolset
+        if hasattr(toolset, "begin") and "guidance" in arguments:
+            toolset.begin(arguments["guidance"])
+        expanded = AgentInstructions.for_callable(self.callable, toolset).expand({}, arguments)
+        body = (expanded.instructions or "").strip()
+        doc = (inspect.getdoc(self.callable) or "").strip()
+        if doc and doc not in body:
+            body = f"{doc}\n\n{body}".strip() if body else doc
+        reply = body or self.description or doc
+        # An action that works in a session says which one, so the agent knows its folders without looking for them.
+        session = getattr(toolset, "session_context", "")
+        return f"{reply}\n\n{session}" if session else reply
 
     @property
     def result_template(self) -> str:
@@ -1323,15 +1356,9 @@ class AgentInstructions(AgentTool):
         nested.scan_with_visited(self._visited, defining_class)
 
     def _merge_from(self, other: AgentInstructions) -> None:
-        self._tools.extend(other.deferred_tools())
-        for part in other.deferred_prompt():
+        self._tools.extend(other._tools)
+        for part in tuple(other._prompt):
             self._add_prompt(part)
-
-    def deferred_tools(self) -> list[str]:
-        return list(self._tools)
-
-    def deferred_prompt(self) -> tuple[str, ...]:
-        return tuple(self._prompt)
 
     def scan_with_visited(
         self,
@@ -2111,47 +2138,6 @@ class AgentInstructionsMark:
         return self.annotate(fn)
 
 
-class ToolsetManifest:
-    """Class-level signature over marked tools and instructions."""
-
-    def __init__(self, toolset_cls: type | None = None) -> None:
-        self._toolset_cls = toolset_cls
-
-    def __get__(self, instance: Any, owner: type | None = None) -> "ToolsetManifest":
-        cls = owner if owner is not None else self._toolset_cls
-        if cls is None:
-            return self
-        bound = ToolsetManifest(cls)
-        return bound
-
-    @property
-    def signature(self) -> dict[str, dict[str, Any]]:
-        if self._toolset_cls is None:
-            return {}
-        instance = AgentToolSet.instantiate(self._toolset_cls)
-        signature: dict[str, dict[str, Any]] = {}
-        for name, tool in instance.tools.items():
-            kind = "action" if tool.kind == "instructions" else tool.kind
-            entry: dict[str, Any] = {"kind": kind}
-            nested = getattr(tool, "tools", None)
-            if nested:
-                entry["tools"] = list(nested)
-            prompt = getattr(tool, "prompt", None)
-            if prompt:
-                entry["instructions"] = tool._with_sub_agent_preamble("\n".join(prompt))
-            from harness.agent_tools.sub_agent.mark import marked_as_sub_agent
-
-            if marked_as_sub_agent(tool.callable):
-                entry["kind"] = "sub_agent"
-                entry["launch"] = "non_blocking"
-                if tool.response:
-                    entry["returns"] = tool.response
-                if not entry.get("instructions"):
-                    entry["instructions"] = tool.description
-            signature[name] = entry
-        return signature
-
-
 class AgentToolSetMark:
     """Mark a class as an agent toolset — @agent_tool and @agent_instructions."""
 
@@ -2187,7 +2173,6 @@ class AgentToolSetMark:
         merged.__module__ = toolset_cls.__module__
         merged.__qualname__ = toolset_cls.__qualname__
         setattr(merged, "_is_agent_toolset", True)
-        merged.manifest = ToolsetManifest(merged)
         AgentToolSet()._validate_toolset(merged)
         return merged
 
@@ -2259,4 +2244,3 @@ agent_tool = AgentToolMark
 agent_toolset = AgentToolSetMark
 agent_instructions = AgentInstructionsMark
 toolset_collection = ToolSetCollectionMark
-toolsetCollection = toolset_collection

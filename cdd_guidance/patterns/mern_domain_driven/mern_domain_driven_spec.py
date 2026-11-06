@@ -62,7 +62,7 @@ with description("a MernDomainDriven generator"):
 
         with it("should not expose generate, iterate, or satisfy"):
             for name in ("generate", "iterate", "satisfy"):
-                expect(name in self.tool.agent_tools).to(equal(False))
+                expect(name in self.tool.tools).to(equal(False))
 
     with context("whose _stories() companion is resolved"):
         with before.each:

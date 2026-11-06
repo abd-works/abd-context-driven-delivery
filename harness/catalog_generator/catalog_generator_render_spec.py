@@ -43,7 +43,7 @@ with description("Render Action Page With Fixed Sections"):
             hrefs = {name: f"actions/{name}.html" for name in self.resolutions}
             self.catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             resolution = self.resolutions["repair"]
-            action = self.owner.agent_tools["repair"]
+            action = self.owner.tools["repair"]
             self.catalog_action.action = action
             self.catalog_action.owner = self.owner
             self.catalog_action.source_dir = resolution.source_dir

@@ -18,7 +18,7 @@ from harness.agent_tools.agent_tools import (
     agent_tool,
     agent_toolset,
     instructions,
-    toolsetCollection,
+    toolset_collection,
 )
 from harness.installation.files import rules, skill
 from harness.mcp.mcp_server import mcp
@@ -141,7 +141,7 @@ class Guidance:
         )
 
 
-@toolsetCollection
+@toolset_collection
 class GuidanceCollection(MarkdownCollection, Guidance):
     def __init__(self, entries: dict[str, Guidance] | None = None, parent: Any = None) -> None:
         MarkdownCollection.__init__(self, entries, parent=parent)
@@ -389,7 +389,7 @@ class PracticeGuidance(Guidance):
         return node_fidelities(self.schema)
 
 
-    @toolsetCollection
+    @toolset_collection
     @markdownCollection
     def fidelities(self) -> GuidanceCollection:
         """Fidelity children from the Fidelities section."""
@@ -940,8 +940,6 @@ def probe_action_toolset(
     session: ActionProbeSession,
 ) -> list[dict[str, Any]]:
     from harness.agent_tools.agent_tools import AgentToolSet
-    from harness.mcp.mcp_server import McpOperationDefinition, McpPrompt
-
     try:
         toolset = AgentToolSet.instantiate(ref)
     except Exception as exc:
@@ -950,10 +948,9 @@ def probe_action_toolset(
     for tool in toolset.tools.values():
         if not tool.install_to_mcp:
             continue
-        operation = McpOperationDefinition.from_tool(tool)
-        if operation.mcp_name not in published:
+        if tool.mcp_name not in published:
             continue
-        probes.append(_probe_action(toolset, tool.name, operation, slugs, McpPrompt, session))
+        probes.append(_probe_action(toolset, tool, slugs, session))
     return probes
 
 
@@ -1024,26 +1021,24 @@ def fill_probe_arguments(
 
 def _probe_action(
     toolset: Any,
-    name: str,
-    operation: Any,
+    tool: Any,
     slugs: list[str],
-    prompts: Any,
     session: ActionProbeSession,
 ) -> dict[str, Any]:
-    member = getattr(toolset, name)
-    arguments, missing = fill_probe_arguments(operation.mcp_name, member, slugs, session)
+    member = getattr(toolset, tool.name)
+    arguments, missing = fill_probe_arguments(tool.mcp_name, member, slugs, session)
     if missing:
-        return {"mcp": operation.mcp_name, "color": "red", "failure": "needs " + ", ".join(missing)}
+        return {"mcp": tool.mcp_name, "color": "red", "failure": "needs " + ", ".join(missing)}
     try:
-        if operation.kind == "prompt":
-            result = prompts(operation).invoke(arguments)
+        if tool.kind != "tool":
+            result = tool.invoke(arguments)
         elif arguments:
             result = member(**arguments)
         else:
             result = member()
     except Exception as exc:
-        return {"mcp": operation.mcp_name, "color": "red", "failure": _failure_text(exc)}
-    item = _instruction_result(operation.mcp_name, result)
+        return {"mcp": tool.mcp_name, "color": "red", "failure": _failure_text(exc)}
+    item = _instruction_result(tool.mcp_name, result)
     if arguments.get("paths"):
         item["paths"] = arguments["paths"]
     return item

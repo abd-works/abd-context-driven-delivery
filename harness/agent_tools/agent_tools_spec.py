@@ -27,7 +27,7 @@ from harness.agent_tools.agent_tools import (
     ToolSetCollection,
     agent_instructions,
     agent_toolset,
-    toolsetCollection,
+    toolset_collection,
 )
 from harness.hooks.hooks import hook
 from harness.mcp.mcp_server import mcp
@@ -957,7 +957,7 @@ class _NestedChild:
         return _BundleTools()
 
 
-@toolsetCollection
+@toolset_collection
 class _MarkedBag:
     pass
 
@@ -968,7 +968,7 @@ class _NestedParent:
         self._kids = _MarkedBag()
         self._kids.entries["code"] = _NestedChild()
 
-    @toolsetCollection
+    @toolset_collection
     @property
     def kids(self) -> _MarkedBag:
         return self._kids
@@ -982,12 +982,12 @@ class _TwoCollections:
         self._beta = _MarkedBag()
         self._beta.entries["extra"] = _NestedChild()
 
-    @toolsetCollection
+    @toolset_collection
     @property
     def alpha(self) -> _MarkedBag:
         return self._alpha
 
-    @toolsetCollection
+    @toolset_collection
     @property
     def beta(self) -> _MarkedBag:
         return self._beta
@@ -1006,7 +1006,7 @@ class _WrappedBag:
         self.parent = parent
 
 
-@toolsetCollection
+@toolset_collection
 class _CollectBag:
     @collect
     @agent_instructions

@@ -66,4 +66,4 @@ with description("PracticeGuidance operations for iterate"):
             )
         )
         practice = cls()
-        expect("iterate" in practice.agent_tools).to(equal(False))
+        expect("iterate" in practice.tools).to(equal(False))
