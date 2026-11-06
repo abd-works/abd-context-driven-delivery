@@ -28,7 +28,6 @@ export type ChatBarDraw = {
 }
 
 const SEPARATOR = '│'
-const RULE = '─'
 
 // The first press on a dot selects it; a press on the selected dot opens the board there.
 function pressDot($: EngineInterface, fidelity: FidelityClient): unknown {
@@ -58,16 +57,15 @@ export function FidelityView($: EngineInterface, elements: ElementTable, fidelit
   )
 }
 
-// One stage icon, faint until reached, after a grey › from the stage before it. Only the stage in progress is outlined;
-// a stage shown instead of it is tinted. Its name and what it is for show above it on hover.
+// One stage icon, faint until reached, after a grey › from the stage before it. Only the stage in progress is underlined,
+// which costs no extra row as an outline would; a stage shown instead of it is tinted. Its name and what it is for show above it on hover.
 export function StageView($: EngineInterface, elements: ElementTable, stage: StageClient, index: number) {
   const { Box, Text } = elements
-  const outline = stage.isOutlined ? { borderStyle: 'round' as const, borderColor: stage.ink } : {}
   return (
     <Box key={`stage-step-${stage.stage}`} flexDirection="row" gap={0}>
       {index ? <Text color={BRAND.border}>{' › '}</Text> : null}
-      <Box key={`stage-box-${stage.stage}`} paddingX={stage.isOutlined ? 0 : 1} backgroundColor={stage.tint} {...outline}>
-        {GlyphButtonView(elements, `stage-${stage.stage}`, stage.icon, stage.ink, () => selectStage($, stage))}
+      <Box key={`stage-box-${stage.stage}`} paddingX={1} backgroundColor={stage.tint}>
+        {GlyphButtonView(elements, `stage-${stage.stage}`, stage.icon, stage.ink, () => selectStage($, stage), stage.isInProgress)}
         {TipView(elements, stage.stage, stage.scope, BRAND.muted)}
       </Box>
     </Box>
@@ -113,17 +111,13 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
 }
 
 // The line, left to right: health mark, session name, │, fidelity dots and the action chip, the stage path, then the
-// session's buttons, between two grey rules as on the canvas. session-card-view.tsx counts these cells to lay the card
-// over them.
+// session's buttons, on one row. session-card-view.tsx counts these cells to lay the card over them.
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
-  const rule = (key: string) => <Text key={key} color={BRAND.border}>{RULE.repeat(Math.max(0, draw.width - 2))}</Text>
   if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}>{SessionNameView($, elements, draw)}</Box>
   return (
-    <Box key="line" flexDirection="column">
-      {rule('rule-above')}
-      <Box flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
+    <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
         {SessionNameView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>
         {chatBar.fidelities.map(fidelity => FidelityView($, elements, fidelity))}
@@ -133,8 +127,6 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
         </Box>
         <Box flexGrow={1} />
         {SessionButtonsView($, elements, draw)}
-      </Box>
-      {rule('rule-below')}
     </Box>
   )
 }

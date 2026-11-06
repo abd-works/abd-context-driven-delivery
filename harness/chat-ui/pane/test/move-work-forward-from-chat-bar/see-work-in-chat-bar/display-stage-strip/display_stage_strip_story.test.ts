@@ -2,7 +2,7 @@ import { expect } from 'claude-code/testing'
 
 import { cdd } from '../../../cdd-stub'
 import { boardOf, checkoutFlow, SPECIFICATION } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, buttonKeys, drawn } from '../../../chat-bar-screen'
+import { CHAT_BAR, buttonKeys, drawn, markOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -40,11 +40,11 @@ story('Display Stage Strip', CHAT_BAR, () => {
         'close-button',
       ])
     })
-    and('Backlog and Discovery are drawn full, Specification is outlined, and Implementation and Complete are faint', async ($, on, scene) => {
+    and('Backlog and Discovery are drawn full, Specification is underlined, and Implementation and Complete are faint', async ($, on, scene) => {
       const inks = await Promise.all(['Backlog', 'Discovery', 'Specification', 'Implementation', 'Complete'].map(async stage => (await drawn(scene.ui, `stage-${stage}-mark`))?.children?.[0]?.props?.color))
       expect(inks).toEqual(['#E5531A', '#E5531A', '#E5531A', '#E5531A66', '#E5531A66'])
-      expect((await drawn(scene.ui, 'stage-box-Specification'))?.props?.borderStyle).toBe('round')
-      expect((await drawn(scene.ui, 'stage-box-Discovery'))?.props?.borderStyle).toBeUndefined()
+      expect((await markOf(scene.ui, 'stage-Specification-mark'))?.props?.underline).toBe(true)
+      expect((await markOf(scene.ui, 'stage-Discovery-mark'))?.props?.underline).toBe(false)
     })
   })
   scenario('Redraw after the agent moves the session', ({ given, when, then }) => {
@@ -55,8 +55,8 @@ story('Display Stage Strip', CHAT_BAR, () => {
       await $.tool.call({ tool: 'mcp__plugin_cdd_cdd__ticket_move_next' } as never)
     })
     // Boot tool.call -> refreshChatBar($) -> $.mcp.call('board.show')
-    then('the Chat Bar outlines Implementation and its dots show the Implementation fidelities', async ($, on, scene) => {
-      expect((await drawn(scene.ui, 'stage-box-Implementation'))?.props?.borderStyle).toBe('round')
+    then('the Chat Bar underlines Implementation and its dots show the Implementation fidelities', async ($, on, scene) => {
+      expect((await markOf(scene.ui, 'stage-Implementation-mark'))?.props?.underline).toBe(true)
       expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-acceptance_tests', 'dot-ux-front_end_code', 'dot-clean_engineering-code'])
       expect(buttonKeys(await drawn(scene.ui, 'line'))).not.toContain(`dot-${SPECIFICATION[0]}`)
     })

@@ -24,8 +24,8 @@ story('Move Session To Next Stage', CHAT_BAR, () => {
     })
     // ChatBarView press -> moveNext($, chatBar) -> $.mcp.call('ticket.move_next', { ticket: 'checkout-flow' }) -> Ticket.move_next()
     // Ticket -> Ticket.record('move Implementation')
-    then('the Chat Bar outlines Implementation', async ($, on, scene) => {
-      expect((await drawn(scene.ui, 'stage-box-Implementation'))?.props?.borderStyle).toBe('round')
+    then('the Chat Bar underlines Implementation', async ($, on, scene) => {
+      expect((await markOf(scene.ui, 'stage-Implementation-mark'))?.props?.underline).toBe(true)
       expect(called(scene.world, 'ticket.move_next')).toEqual({ ticket: 'checkout-flow' })
     })
     and('its dots show the Implementation fidelities, not started', async ($, on, scene) => {

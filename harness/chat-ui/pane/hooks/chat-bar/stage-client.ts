@@ -8,7 +8,7 @@ const shownStage = atom({ plugin: 'cdd-board', key: 'shownStage' } as const, nul
 const STAGE_ICONS: Record<string, string> = { Backlog: '☰', Discovery: '⌕', Specification: '▤', Implementation: '⚙', Complete: '✓' }
 const INK = '#E5531A'
 const FAINT_INK = '#E5531A66'
-// A shown stage that is not the one in progress gets the canvas's orange tint instead of an outline.
+// A shown stage that is not the one in progress gets the canvas's orange tint instead of an underline.
 const TINT = '#E5531A2E'
 // What each stage is for, which the canvas shows on hover beside its name.
 const STAGE_SCOPES: Record<string, string> = {
@@ -55,14 +55,14 @@ export class StageClient {
     return STAGE_SCOPES[this.json.name] ?? ''
   }
 
-  // Only the stage in progress is outlined.
-  get isOutlined(): boolean {
+  // Only the stage in progress is underlined.
+  get isInProgress(): boolean {
     return this.json.status === 'in_progress'
   }
 
   // The shown stage, when it is not the one in progress, reads tinted.
   get tint(): string | undefined {
-    return this.json.isShown && !this.isOutlined ? TINT : undefined
+    return this.json.isShown && !this.isInProgress ? TINT : undefined
   }
 }
 
