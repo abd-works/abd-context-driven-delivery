@@ -16,7 +16,7 @@ Installer(repo=_REPO_ROOT).ensure_import_path()
 from expects import contain, equal, expect
 from mamba import description, it
 
-from harness.guidance.guidance import ActionProbeSession, fill_probe_arguments, probe_guidance_actions
+from harness.guidance.guidance_probe import GuidanceProbe
 from harness.guidance.guidance_diagnostics import GuidanceDiagnostics
 
 
@@ -43,19 +43,14 @@ with description("guidance diagnostics install"):
         )
         from cdd_guidance.actions.render.render import Render
 
-        session = ActionProbeSession(installer)
-        args, missing = fill_probe_arguments(
-            "render.render",
-            Render.render,
-            ["stories", "clean-engineering-model"],
-            session,
-        )
-        session.cleanup()
+        probe = GuidanceProbe(installer, ["stories", "clean-engineering-model"])
+        args, missing = probe.arguments_for("render.render", Render.render)
+        probe.cleanup()
         expect(missing).to(equal([]))
         expect(args["format"]).to(equal("markdown"))
         expect(args["paths"][0]).to(contain("cdd_guidance"))
         expect(args["paths"][0]).to(contain("practices"))
-        probe_guidance_actions(["stories", "clean-engineering-model"], installer)
+        probe.actions()
         data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
         item = data["guidance"]["actions"]["items"][0]
         expect(item["mcp"]).to(equal("render.render"))
