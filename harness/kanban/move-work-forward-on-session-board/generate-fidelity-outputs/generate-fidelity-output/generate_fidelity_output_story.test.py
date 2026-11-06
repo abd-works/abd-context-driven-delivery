@@ -39,7 +39,7 @@ with story("Generate Fidelity Output"):
             pass
         with when("the Person generates scenarios in drawio"):
             # Person -> Ticket.generate_commands(['stories-scenarios'], ['drawio'])
-            # Ticket -> Session.fidelity_outputs(Stories story_map) <- markdown docs/story-map.md there, drawio not
+            # Ticket -> FidelityGuidance(Stories story_map).output_paths() <- markdown docs/story-map.md there, drawio not
             pass
         with then("the first command is /actions-render stories-story-map format=drawio source=markdown"):
             pass
@@ -51,7 +51,7 @@ with story("Generate Fidelity Output"):
             pass
         with when("Claude Code finishes generating the story map"):
             # Generate -> GuidanceAction.run(...)
-            # GuidanceAction -> Session.log_guidance_action('generate', [Stories story_map])
+            # GuidanceAction -> Session.log_guidance_action('generate')
             pass
         with then("the session log ends with a generate line naming stories story_map markdown"):
             pass

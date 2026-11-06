@@ -17,7 +17,7 @@ with story("List Ticket Files"):
             pass
         with when("the Person lists checkout-flow's story_map files"):
             # Person -> Ticket.files(['stories-story-map'])
-            # Ticket -> Session.fidelity_outputs(Stories story_map)
+            # Ticket -> FidelityGuidance(Stories story_map).output_paths()
             # Ticket <- markdown .context/story-map.md exists, drawio .context/story-map.drawio missing
             pass
         with then("the files panel lists .context/story-map.md as there"):

@@ -311,7 +311,8 @@ class GuidanceAction:
         if self._logged_session_action == action:
             return
         self._logged_session_action = action
-        self.session.log_guidance_action(action, self.listed())
+        self.listed()
+        self.session.log_guidance_action(action)
 
     @echo
     @agent_instructions
@@ -346,8 +347,8 @@ class GuidanceAction:
         session_json = Path(session.session_path) / "session.json"
         root = Path(session.workpath or session.repo_path or project_checkout()).resolve().as_posix()
         project = Path(session.repo_path or project_checkout()).resolve().as_posix()
-        practices = [item for item in self.listed() if not isinstance(item, str)]
-        writes = [f"- {item.slug}: {session.practice_root(item).as_posix()}" for item in practices]
+        practices = [(item, self._session_practice(item)) for item in self.listed() if not isinstance(item, str)]
+        writes = [f"- {item.slug}: {practice.folder.as_posix()}" for item, practice in practices if practice is not None]
         stored = session_json.read_text(encoding="utf-8").strip() if session_json.is_file() else "{}"
         return "\n".join([
             "## Session",
