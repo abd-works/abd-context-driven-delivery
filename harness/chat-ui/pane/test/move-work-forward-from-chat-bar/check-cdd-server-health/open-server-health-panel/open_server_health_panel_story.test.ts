@@ -23,10 +23,10 @@ story('Open Server Health Panel', CHAT_BAR, () => {
       await scene.ui.press({ key: 'health-icon' })
     })
     // ServerHealthBandView -> ExpandedView(elements, health)
-    then('the panel opens above the mark with MCP host, Tools, Kanban app and Graph app green', async ($, on, scene) => {
+    then('the session card opens with the panel on top, MCP host, Tools, Kanban app and Graph app green', async ($, on, scene) => {
       const colours = await Promise.all(['running', '116 loaded', 'running :8778', 'running :5173'].map(async text => (await findText(scene.ui, text))?.props?.color))
       expect(colours).toEqual(['#22C55E', '#22C55E', '#22C55E', '#22C55E'])
-      expect((await drawn(scene.ui, 'server-health'))?.children?.[0]?.props?.display).toBeUndefined()
+      expect((await drawn(scene.ui, 'session-card'))?.children?.[0]?.props?.display).toBeUndefined()
     })
     and('Tools reads 116 loaded, Kanban app 8778 and Graph app 5173', async ($, on, scene) => {
       const values = await Promise.all(['116 loaded', 'running :8778', 'running :5173'].map(async text => textOf(await findText(scene.ui, text))))
@@ -41,14 +41,14 @@ story('Open Server Health Panel', CHAT_BAR, () => {
     })
   })
   scenario('Pin the panel open', ({ given, when, then }) => {
-    // Evidence: observed: server-health-client.ts togglePin
+    // Evidence: requested: the health mark opens only with the session card
     given('the server health panel is open over the mark')
     when('the Person pins the panel', async ($, on, scene) => {
       await scene.ui.press({ key: 'health-icon' })
     })
-    // ServerHealthBandView press -> togglePin($)
-    then('the panel stays open after the pointer leaves the mark', async ($, on, scene) => {
-      expect((await drawn(scene.ui, 'server-health'))?.children?.[0]?.props?.display).toBeUndefined()
+    // ServerHealthBandView press -> toggleCard($)
+    then('the session card and its panel stay open after the pointer leaves the mark', async ($, on, scene) => {
+      expect((await drawn(scene.ui, 'session-card'))?.children?.[0]?.props?.display).toBeUndefined()
     })
   })
   scenario('Say what is wrong when cdd is down', ({ given, when, then, and }) => {

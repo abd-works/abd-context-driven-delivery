@@ -49,7 +49,7 @@ const pinnedBand = async ($: any) => {
   return ui
 }
 
-const expandedOf = async (ui: any) => (await ui.find({ key: 'health-panel' }))?.children?.[0]
+const expandedOf = async (ui: any) => (await ui.find({ key: 'session-card' }))?.children?.[0]
 
 const findText = (ui: any, text: RegExp | string) => ui.find({ type: 'Text', text })
 
@@ -110,7 +110,7 @@ test('the expanded band reveals itself on hover', async ($, on) => {
   const ui = await mountBand($)
 
   const panel = await expandedOf(ui)
-  expect(panel?.hover).toEqual({ display: 'flex', scope: 'server-health' })
+  expect(panel?.hover).toEqual({ display: 'flex', scope: 'session-card' })
   await ui.unmount()
 })
 

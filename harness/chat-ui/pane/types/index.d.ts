@@ -10,7 +10,7 @@ export type ServerHealthJson = {
   attempt: number
 }
 
-export type HealthViewJson = { isPinned: boolean; areDetailsOpen: boolean }
+export type HealthViewJson = { areDetailsOpen: boolean }
 
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 

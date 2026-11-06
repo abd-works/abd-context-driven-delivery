@@ -36,7 +36,7 @@ function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: F
   return (
     <Box key={`card-${fidelity.fidelity}`} flexDirection="row" gap={2} alignItems="center">
       <Box key={`card-cell-${fidelity.fidelity}`} flexDirection="row" gap={1} alignItems="center">
-        <Text color={fidelity.shade}>▪</Text>
+        <Text color={fidelity.shade}>■</Text>
         {GlyphButtonView(elements, `card-pick-${fidelity.fidelity}`, fidelity.name, nameColour, () => selectFidelity($, fidelity), fidelity.isSelected)}
         <Text color={fidelity.lookColour} wrap="truncate">{`${fidelity.mark} ${fidelity.word}`}</Text>
       </Box>
@@ -45,20 +45,22 @@ function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: F
   )
 }
 
-// The session card above the line: the server health panel on top, then the canvas's orange-edged card of the shown
-// stage's fidelities. Hovering the session name shows it; a press on the name pins it, and ✕ or the name closes it.
+// The session card above the line: the server health panel on top, then, once there is a session, the canvas's
+// orange-edged card of the shown stage's fidelities. Hovering the session name or the health mark shows it; a press on
+// either pins it, and ✕ or another press closes it.
 export function SessionCardView($: EngineInterface, elements: ElementTable, { chatBar, view, health }: ChatBarDraw) {
   const { Box } = elements
-  if (!chatBar.hasSession) return null
   const shown = view.isCardOpen ? {} : { display: 'none' as const, hover: { display: 'flex' as const, scope: CARD_SCOPE } }
   return (
     <Box key="session-card" flexDirection="column">
       <Box flexDirection="column" gap={1} alignSelf="flex-start" {...shown}>
         {health.panel}
-        <Box key="card-grid" flexDirection="column" paddingX={1} borderStyle="round" borderColor={BRAND.accent} backgroundColor={BRAND.raised}>
-          {HeaderView($, elements, chatBar)}
-          {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity))}
-        </Box>
+        {chatBar.hasSession ? (
+          <Box key="card-grid" flexDirection="column" paddingX={1} borderStyle="round" borderColor={BRAND.accent} backgroundColor={BRAND.raised}>
+            {HeaderView($, elements, chatBar)}
+            {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity))}
+          </Box>
+        ) : null}
       </Box>
     </Box>
   )

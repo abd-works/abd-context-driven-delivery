@@ -20,9 +20,10 @@ import {
   refreshHealth,
   refreshHealthSoon,
   runInstall,
-  togglePin,
 } from './health/server-health-client'
-import { ServerHealthBandView, ServerHealthMarkPanelView, ServerHealthPanelView } from './health/server-health-view'
+import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { CARD_SCOPE } from './chat-bar/session-card-view'
+import { toggleCard } from './chat-bar/session-dialogs-client'
 import { withChatNamed } from './session/session-log-client'
 
 const PLUGIN = 'cdd-board'
@@ -94,7 +95,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     const actions = {
-      togglePin: () => togglePin($),
+      toggleCard: () => toggleCard($),
       openDetails: () => openDetails($),
       hideDetails: () => hideDetails($),
       reconnect: () => reconnect($, () => readActive($)),
@@ -107,7 +108,7 @@ export const register: Register = on => {
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
       files: await currentFidelityFiles($),
-      health: { band: ServerHealthBandView(elements, band), markPanel: ServerHealthMarkPanelView(elements, band), panel: ServerHealthPanelView(elements, band) },
+      health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band) },
       width: e.props.bodyColumns,
     })
   })

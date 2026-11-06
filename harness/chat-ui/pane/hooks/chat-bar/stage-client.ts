@@ -6,6 +6,10 @@ const shownStage = atom({ plugin: 'cdd-board', key: 'shownStage' } as const, nul
 // One glyph per stage, standing for the canvas's icons: Backlog, Discovery (magnifier), Specification (document),
 // Implementation (gear), Complete (check).
 const STAGE_ICONS: Record<string, string> = { Backlog: '☰', Discovery: '⌕', Specification: '▤', Implementation: '⚙', Complete: '✓' }
+
+export function stageIconOf(stage: string): string {
+  return STAGE_ICONS[stage] ?? '·'
+}
 const INK = '#E5531A'
 const FAINT_INK = '#E5531A66'
 // A shown stage that is not the one in progress gets the canvas's orange tint instead of an underline.
@@ -43,7 +47,7 @@ export class StageClient {
   }
 
   get icon(): string {
-    return STAGE_ICONS[this.json.name] ?? '·'
+    return stageIconOf(this.json.name)
   }
 
   // Stages not yet reached are faint, so the path still reads left to right.

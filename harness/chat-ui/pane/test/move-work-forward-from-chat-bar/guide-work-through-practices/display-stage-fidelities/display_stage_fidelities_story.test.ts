@@ -29,7 +29,7 @@ story('Display Stage Fidelities', CHAT_BAR, () => {
     })
     and('no dot is selected, because ux-mockup is not a Discovery fidelity', async ($, on, scene) => {
       const marks = await Promise.all(['dot-stories-story_map', 'dot-ux-ia', 'dot-clean_engineering-modules'].map(async key => textOf(await markOf(scene.ui, `${key}-mark`))))
-      expect(marks).toEqual(['▪', '▪', '▪'])
+      expect(marks).toEqual(['■', '■', '■'])
     })
   })
 })

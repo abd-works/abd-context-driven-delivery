@@ -69,7 +69,7 @@ story('Display Session Card', CHAT_BAR, () => {
       expect([card?.props?.display, card?.children?.[0]?.props?.key]).toEqual([undefined, 'card-health'])
     })
     and('it shows the same parts as the panel over the mark', async ($, on, scene) => {
-      const parts = await Promise.all(['card-MCP host', 'card-Tools', 'card-Kanban app'].map(async key => (await drawn(scene.ui, key))?.children?.[1]))
+      const parts = await Promise.all(['MCP host', 'Tools', 'Kanban app'].map(async key => (await drawn(scene.ui, key))?.children?.[1]))
       expect(parts.map(textOf)).toEqual(['running', '116 loaded', 'running :8778'])
     })
   })

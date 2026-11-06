@@ -23,7 +23,7 @@ export type ChatBarDraw = {
   view: ChatBarViewJson
   picker: ActionPickerJson
   files: FidelityFilesJson
-  health: { band: unknown; markPanel: unknown; panel: unknown }
+  health: { band: unknown; panel: unknown }
   width: number
 }
 
@@ -50,7 +50,7 @@ export function FidelityView($: EngineInterface, elements: ElementTable, fidelit
   const { Box, Text } = elements
   return (
     <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0}>
-      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '▪', fidelity.shade, () => pressDot($, fidelity), fidelity.isSelected)}
+      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => pressDot($, fidelity), fidelity.isSelected)}
       {fidelity.violationCount ? <Text size="caption" weight="bold" color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
       {TipView(elements, fidelity.fidelity, `${fidelity.mark} ${fidelity.word}`, fidelity.lookColour)}
     </Box>
@@ -145,7 +145,6 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {SessionListView($, elements, draw)}
       {SessionCardView($, elements, draw)}
       {PickerView($, elements, draw)}
-      {draw.health.markPanel}
       {LineView($, elements, draw)}
     </Box>
   )
