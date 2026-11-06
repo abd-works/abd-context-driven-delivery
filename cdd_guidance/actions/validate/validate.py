@@ -190,7 +190,13 @@ class Validate(GuidanceAction):
         return sorted(str(folder) for folder in folders if folder == workspace or workspace in folder.parents)
 
     def _fidelity_outputs(self, item) -> dict[str, list[str]]:
-        return self.session.fidelity_outputs(item)
+        return item.output_paths() if isinstance(item, PracticeGuidance) else {}
+
+    def _listed_practices(self) -> list:
+        """Each listed practice as this action's session holds it, which logs its own validate line; guidance that is no
+        practice CDD has is left out."""
+        found = [self._session_practice(item) for item in self.listed() if not isinstance(item, str)]
+        return [practice for practice in found if practice is not None]
 
     def _graph_practices(self) -> list[str]:
         """The catalogue key of each listed practice, such as clean_engineering; none for other guidance."""
@@ -310,15 +316,14 @@ class Validate(GuidanceAction):
     def _log_graph_validation(self, violations: list) -> None:
         if self._guidance_text is not None or not violations:
             return
-        session = self.session
         synopsis = [
             f"graph-rule {item.get('rule_slug', '')} {item.get('location', '')}:{item.get('line_number', '')}"
             for item in violations[:40]
         ]
         if len(violations) > 40:
             synopsis.append(f"graph-rule … and {len(violations) - 40} more")
-        for item in self.listed():
-            session.log_validation(item, synopsis)
+        for practice in self._listed_practices():
+            practice.log_validation(synopsis)
         # This line is the call's validate line; the session board reads the latest one, so no clean line may follow.
         self._logged_session_action = "validate"
 
@@ -334,9 +339,8 @@ class Validate(GuidanceAction):
     def _log_validation_to_session(self) -> None:
         if self._guidance_text is not None:
             return
-        session = self.session
-        for item in self.listed():
-            session.log_validation(item, [])
+        for practice in self._listed_practices():
+            practice.log_validation([])
 
     def _rules_for(self, item) -> str:
         """Shared rules plus the active fidelity's rules. Every fidelity when none is active."""

@@ -2354,7 +2354,7 @@ the board tools
           -> Session.choose_output_root(practice: str, root: Path)
         <- Ticket
         -> Ticket.files(fidelities: list[str])
-          -> Session.fidelity_outputs(guidance: PracticeGuidance)
+          -> FidelityGuidance.output_paths()
             -> FidelityGuidance.outputs
             <- dict
           <- dict
@@ -2802,7 +2802,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> Ticket.files(fidelities: list[str])
-        -> Session.fidelity_outputs(guidance: PracticeGuidance)
+        -> FidelityGuidance.output_paths()
           -> FidelityGuidance.outputs
           <- dict
         <- dict
@@ -2815,7 +2815,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> Ticket.files(fidelities: list[str])
-        -> Session.fidelity_outputs(guidance: PracticeGuidance)
+        -> FidelityGuidance.output_paths()
           -> FidelityGuidance.outputs
           <- dict
         <- dict
@@ -2829,7 +2829,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> Ticket.files(fidelities: list[str])
-        -> Session.fidelity_outputs(guidance: PracticeGuidance)
+        -> FidelityGuidance.output_paths()
           -> FidelityGuidance.outputs
           <- dict
         <- dict
@@ -2842,7 +2842,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> Ticket.files(fidelities: list[str])
-        -> Session.fidelity_outputs(guidance: PracticeGuidance)
+        -> FidelityGuidance.output_paths()
           -> FidelityGuidance.outputs
           <- dict
         <- dict
@@ -3189,7 +3189,7 @@ the board tools
       -> Board.ticket(name: str)
       <- Ticket
       -> Ticket.files(fidelities: list[str])
-        -> Session.fidelity_outputs(guidance: PracticeGuidance)
+        -> FidelityGuidance.output_paths()
           -> FidelityGuidance.outputs
           <- dict
         <- dict

@@ -1564,7 +1564,7 @@ it should show the practice on its default root
 -> TicketClient.practiceRoots()
   -> cdd ticket.practice_roots
     -> Ticket.practice_roots
-      -> Session.practice_root(guidance: PracticeGuidance, practice: str)
+      -> PracticeSessionOutput.folder
       <- Path
       -> Session.has_chosen_output_root(practice: str)
       <- bool
@@ -2066,7 +2066,7 @@ it should bring the ticket back with its work
 ```
 it should list the file with whether it exists
 -> Ticket.files(TICKET, FIDELITY)
-  -> Session.fidelity_outputs(guidance: PracticeGuidance)
+  -> FidelityGuidance.output_paths()
     -> FidelityGuidance.outputs
     <- dict
   <- dict
@@ -2839,7 +2839,7 @@ it should write that practice's files there
   -> Session.choose_output_root(practice: str, root: Path)
 <- Ticket
 -> Ticket.files(ticket="pet-visits", fidelities=["stories-story-map"])
-  -> Session.fidelity_outputs(guidance: PracticeGuidance)
+  -> FidelityGuidance.output_paths()
     -> FidelityGuidance.outputs
     <- dict
   <- dict
@@ -3448,7 +3448,7 @@ it should list the files a pattern finds there
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> Ticket.files(ticket="pet-visits", fidelities=["bdd-behavior"])
-  -> Session.fidelity_outputs(guidance: PracticeGuidance)
+  -> FidelityGuidance.output_paths()
     -> FidelityGuidance.outputs
     <- dict
   <- dict
@@ -3464,7 +3464,7 @@ it should list the files a named part of the path finds there, in folders at any
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> Ticket.files(ticket="pet-visits", fidelities=["clean-engineering-model"])
-  -> Session.fidelity_outputs(guidance: PracticeGuidance)
+  -> FidelityGuidance.output_paths()
     -> FidelityGuidance.outputs
     <- dict
   <- dict
@@ -3482,7 +3482,7 @@ it should list the file with whether it exists
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> Ticket.files(ticket="pet-visits", fidelities=["stories-story-map"])
-  -> Session.fidelity_outputs(guidance: PracticeGuidance)
+  -> FidelityGuidance.output_paths()
     -> FidelityGuidance.outputs
     <- dict
   <- dict
@@ -3498,7 +3498,7 @@ it should list only the fidelities asked for
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> Ticket.files(ticket="pet-visits", fidelities=["stories-story-map"])
-  -> Session.fidelity_outputs(guidance: PracticeGuidance)
+  -> FidelityGuidance.output_paths()
     -> FidelityGuidance.outputs
     <- dict
   <- dict
@@ -3865,7 +3865,7 @@ it should create the ticket's branch when a ticket that has none is activated
 ```
 it should say a ticket has no branch yet
 -> GuidanceAction.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-  -> Session.log_guidance_action(action: str, guidance_items: list)
+  -> Session.log_guidance_action(action: str)
 -> Board.ticket("pet-visits", title="Pet visits")
 <- Ticket
 -> Ticket.workspace(ticket="sign-up")
@@ -3877,7 +3877,7 @@ it should say a ticket has no branch yet
 ```
 it should say the ticket being left has no branch yet
 -> GuidanceAction.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-  -> Session.log_guidance_action(action: str, guidance_items: list)
+  -> Session.log_guidance_action(action: str)
 -> Board.ticket("pet-visits", title="Pet visits")
 <- Ticket
 -> Ticket.workspace(ticket="sign-up")
@@ -3887,7 +3887,7 @@ it should say the ticket being left has no branch yet
 ```
 it should commit nothing on a ticket that has no branch
 -> GuidanceAction.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-  -> Session.log_guidance_action(action: str, guidance_items: list)
+  -> Session.log_guidance_action(action: str)
 -> Board.ticket("pet-visits", title="Pet visits")
 <- Ticket
 -> Ticket.activate(ticket="sign-up", leaving=["commit", "push", "merge"])
@@ -3902,7 +3902,7 @@ it should commit nothing on a ticket that has no branch
 ```
 it should leave the branch checked out as it was
 -> GuidanceAction.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-  -> Session.log_guidance_action(action: str, guidance_items: list)
+  -> Session.log_guidance_action(action: str)
 -> Board.ticket("pet-visits", title="Pet visits")
 <- Ticket
 -> Ticket.close(ticket="pet-visits", leaving=["commit", "merge"])
@@ -3917,7 +3917,7 @@ it should leave the branch checked out as it was
 ```
 it should say the ticket being left is on its branch
 -> GuidanceAction.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
-  -> Session.log_guidance_action(action: str, guidance_items: list)
+  -> Session.log_guidance_action(action: str)
 -> Ticket.workspace(ticket="sign-up")
 <- dict
 ```
@@ -3925,7 +3925,7 @@ it should say the ticket being left is on its branch
 ```
 it should commit the branch the ticket being left is on
 -> GuidanceAction.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
-  -> Session.log_guidance_action(action: str, guidance_items: list)
+  -> Session.log_guidance_action(action: str)
 -> Ticket.activate(ticket="sign-up", leaving=["commit"])
   -> Repo.switch_branch(name: str)
   <- str
@@ -3940,9 +3940,9 @@ it should commit the branch the ticket being left is on
 ```
 it should list only the files the ticket's branch changed
 -> GuidanceAction.run(["git", "add", "src"], cwd=self.project.root, check=True)
-  -> Session.log_guidance_action(action: str, guidance_items: list)
+  -> Session.log_guidance_action(action: str)
 -> Ticket.files(ticket="pet-visits", fidelities=["bdd-behavior"])
-  -> Session.fidelity_outputs(guidance: PracticeGuidance)
+  -> FidelityGuidance.output_paths()
     -> FidelityGuidance.outputs
     <- dict
   <- dict
@@ -3956,7 +3956,7 @@ it should list only the files the ticket's branch changed
 ```
 it should commit nothing on a branch that is not checked out
 -> GuidanceAction.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
-  -> Session.log_guidance_action(action: str, guidance_items: list)
+  -> Session.log_guidance_action(action: str)
 -> Ticket.activate(ticket="sign-up", leaving=["commit"])
   -> Repo.switch_branch(name: str)
   <- str
@@ -4005,7 +4005,7 @@ it should return exactly the fields WorkspaceData names
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
 -> GuidanceAction.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-  -> Session.log_guidance_action(action: str, guidance_items: list)
+  -> Session.log_guidance_action(action: str)
 -> Ticket.workspace(ticket="pet-visits")
 <- dict
 ```

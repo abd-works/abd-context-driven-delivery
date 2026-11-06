@@ -30,14 +30,14 @@ with story("Validate Fidelity"):
             pass
         with when("Claude Code validates the story map and finds no graph-rule violation"):
             # Validate -> Graph.load_files(...)
-            # Validate -> Session.log_validation(Stories story_map, [])
+            # Validate -> PracticeSessionOutput(Stories story_map).log_validation([])
             pass
         with then("the session log ends with validate Stories story_map"):
             pass
         with and_("the story_map tile marks Validate ✓"):
             pass
         with when("Claude Code validates it again and finds actor-named-in-step on map.md line 12"):
-            # Validate -> Session.log_validation(Stories story_map, ['actor-named-in-step map.md:12'])
+            # Validate -> PracticeSessionOutput(Stories story_map).log_validation(['actor-named-in-step map.md:12'])
             pass
         with then("the session log ends with validate Stories story_map graph-rule actor-named-in-step map.md:12"):
             pass

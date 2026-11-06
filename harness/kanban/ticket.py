@@ -429,7 +429,7 @@ class FidelityProgress:
 
     @property
     def _has_files(self) -> bool:
-        return self._ticket.session.has_declared_output(self._fidelity)
+        return self._ticket.session.practices[self.practice].fidelities[self._fidelity.name].has_declared_output()
 
     @property
     def has_violations(self) -> bool:

@@ -746,18 +746,17 @@ with description("an action"):
     # (S) Session --> Record Validation Run
     with context("that calls validate"):
         with before.each:
-            self.guidance = self.session.practice("bdd").guideline
+            self.practice = self.session.practice("bdd")
 
         with context("with a practice and a fidelity"):
             with it("should log that practice and that fidelity"):
-                self.session.log_validation(self.guidance, [])
+                self.practice.log_validation([])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
                 expect("Bdd" in log and "behavior" in log).to(equal(True))
 
         with context("with a violation"):
             with it("should log the rule, the synopsis, and the correction"):
-                self.session.log_validation(
-                    self.guidance,
+                self.practice.log_validation(
                     ["hierarchy-preservation synopsis: flattened tree correction: keep the nesting"],
                 )
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
@@ -922,15 +921,14 @@ with description("a practice"):
 
         with context("with a fidelity's outputs resolved for the session"):
             with before.each:
-                from stories.stories import Stories
-
-                self.guidance = Stories(fidelity="story_map")
+                self.stories = self.session.practice("stories")
+                self.fidelity = self.stories.fidelities["story_map"]
                 self.write_overrides = lambda overrides: (self.session.session_path / "session.json").write_text(
                     json.dumps({"name": "alpha", "outputs": overrides}), encoding="utf-8"
                 )
 
             with it("should put each format's file under the practice's root folder"):
-                outputs = self.session.fidelity_outputs(self.guidance)
+                outputs = self.fidelity.output_paths()
                 expect(outputs["markdown"]).to(equal([(self.work / ".context" / "story-map.md").resolve().as_posix()]))
 
             with context("with session.json naming a root folder for the practice"):
@@ -938,32 +936,39 @@ with description("a practice"):
                     self.write_overrides({"stories": {"root": "docs/stories"}})
 
                 with it("should use that root"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / "docs/stories/.context/story-map.md").resolve().as_posix()]))
 
             with context("that a person chooses a folder as the practice's root"):
-                with it("should return the practice root it saved"):
-                    expect(self.session.choose_practice_root("stories", self.work / "docs")).to(equal((self.work / "docs").resolve()))
+                with it("should write the practice's files under that folder"):
+                    self.stories.keep_root(self.work / "docs")
+                    expect(self.stories.folder).to(equal((self.work / "docs").resolve()))
 
                 with it("should say the practice root is chosen"):
-                    self.session.choose_practice_root("stories", self.work / "docs")
-                    expect(self.session.has_chosen_practice_root("stories")).to(equal(True))
+                    self.stories.keep_root(self.work / "docs")
+                    expect(self.stories.is_root_chosen).to(equal(True))
 
                 with context("that is then put back to the default"):
                     with it("should say the practice root is not chosen"):
-                        self.session.choose_practice_root("stories", self.work / "docs")
-                        self.session.use_default_practice_root("stories")
-                        expect(self.session.has_chosen_practice_root("stories")).to(equal(False))
+                        self.stories.keep_root(self.work / "docs")
+                        self.stories.use_default_root()
+                        expect(self.stories.is_root_chosen).to(equal(False))
+
+                with context("that then moves the session's workpath"):
+                    with it("should still write the practice's files under that folder"):
+                        self.stories.keep_root(self.work / "docs")
+                        self.session.choose_workpath("work/inner")
+                        expect(self.stories.folder).to(equal((self.work / "docs").resolve()))
 
             with context("that a person chooses a .context folder as the practice's root"):
                 with it("should refuse it, since the practice's documents already go in its root's .context"):
-                    expect(lambda: self.session.choose_practice_root("stories", self.work / ".context")).to(
+                    expect(lambda: self.stories.keep_root(self.work / ".context")).to(
                         raise_error(PracticeRootInContextError)
                     )
 
                 with it("should name the practice and the folder it refused"):
                     try:
-                        self.session.choose_practice_root("stories", self.work / ".context")
+                        self.stories.keep_root(self.work / ".context")
                     except PracticeRootInContextError as refused:
                         expect((refused.practice, refused.root)).to(equal(("stories", self.work / ".context")))
 
@@ -972,7 +977,7 @@ with description("a practice"):
                     self.write_overrides({"stories": {"root": "docs/stories", "story_map": {"root": "docs/map"}}})
 
                 with it("should prefer the fidelity's root"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["drawio"]).to(equal([(self.work / "docs/map/.context/story-map.drawio").resolve().as_posix()]))
 
             with context("with session.json naming a file for a single-file output"):
@@ -980,22 +985,20 @@ with description("a practice"):
                     self.write_overrides({"stories": {"story_map": {"markdown": "our-map.md"}}})
 
                 with it("should use that file name"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / ".context" / "our-map.md").resolve().as_posix()]))
 
                 with it("should keep the declared name for the other formats"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["drawio"]).to(equal([(self.work / ".context" / "story-map.drawio").resolve().as_posix()]))
 
             with context("with session.json naming a file for a patterned output"):
                 with before.each:
-                    from stories.stories import Stories
-
-                    self.guidance = Stories(fidelity="scenarios")
+                    self.fidelity = self.stories.fidelities["scenarios"]
                     self.write_overrides({"stories": {"scenarios": {"python": "one-file.py"}}})
 
                 with it("should keep the declared pattern"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["python"][0]).to(contain("{story_snake}_story.test.py"))
 
         with context("with config.json practice_folders pointing a practice at the workpath"):
@@ -1017,7 +1020,7 @@ with description("a practice"):
             with before.each:
                 self.custom = self.repo / "custom-bdd"
                 self.custom.mkdir()
-                self.session.remember_parent_folders("bdd", [[self.custom]])
+                self.session.practice("bdd").remember_folders([[self.custom]])
                 Session.forget_current()
                 Session.switch("alpha", repo_path=self.repo)
                 self.session = Session.current()
@@ -1038,7 +1041,7 @@ with description("a practice"):
                 self.second_set = self.repo / "two"
                 self.first_set.mkdir()
                 self.second_set.mkdir()
-                self.session.remember_parent_folders("bdd", [[self.first_set], [self.second_set]])
+                self.session.practice("bdd").remember_folders([[self.first_set], [self.second_set]])
                 Session.forget_current()
                 Session.switch("alpha", repo_path=self.repo)
                 self.session = Session.current()
@@ -1066,7 +1069,7 @@ with description("a practice"):
             Session.new("alpha", self.work, self.repo)
             self.session = Session.current()
             for practice in ("clean_engineering", "stories", "bdd"):
-                self.session.remember_parent_folders(practice, [[self.tree]])
+                self.session.practice(practice).remember_folders([[self.tree]])
             Session.forget_current()
             Session.switch("alpha", repo_path=self.repo)
             self.session = Session.current()

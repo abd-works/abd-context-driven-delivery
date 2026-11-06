@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import Skill
@@ -56,8 +57,7 @@ class Generate(GuidanceAction):
         self.add_generate_header_to_generated()
 
     def _where_outputs_go(self) -> str:
-        session = self.session
-        outputs = [session.fidelity_outputs(item) for item in self.listed() if not isinstance(item, str)]
+        outputs = [item.output_paths() for item in self.listed() if isinstance(item, PracticeGuidance)]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:
             return ""
