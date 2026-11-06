@@ -2,7 +2,7 @@ import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
 import { boardOf, checkoutFlow, paymentRetry } from '../../../examples/chat-bar.examples'
-import { buttonKeys, CHAT_BAR, drawn, expectMarks, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, buttonKeys, drawn, expectMarks, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar

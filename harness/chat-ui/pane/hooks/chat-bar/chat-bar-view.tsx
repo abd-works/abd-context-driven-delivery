@@ -50,11 +50,11 @@ export function FidelityView($: EngineInterface, elements: ElementTable, fidelit
   const { Box, Button, Text } = elements
   return (
     <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0}>
-      <Button key={`dot-${fidelity.fidelity}`} plain label={`${fidelity.fidelity} ${fidelity.word}`} onPress={() => pressDot($, fidelity)}>
+      <Button key={`dot-${fidelity.fidelity}`} plain onPress={() => pressDot($, fidelity)}>
         <Text color={fidelity.shade} underline={fidelity.isSelected}>■</Text>
       </Button>
       {fidelity.violationCount ? <Text size="caption" weight="bold" color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
-      {TipView(elements, fidelity.name, `${fidelity.mark} ${fidelity.word}`, fidelity.lookColour)}
+      {TipView(elements, fidelity.fidelity, `${fidelity.mark} ${fidelity.word}`, fidelity.lookColour)}
     </Box>
   )
 }
@@ -68,7 +68,7 @@ export function StageView($: EngineInterface, elements: ElementTable, stage: Sta
     <Box key={`stage-step-${stage.stage}`} flexDirection="row" gap={0}>
       {index ? <Text color={BRAND.border}>{' › '}</Text> : null}
       <Box key={`stage-box-${stage.stage}`} paddingX={stage.isOutlined ? 0 : 1} backgroundColor={stage.tint} {...outline}>
-        <Button key={`stage-${stage.stage}`} plain label={stage.stage} onPress={() => selectStage($, stage)}>
+        <Button key={`stage-${stage.stage}`} plain onPress={() => selectStage($, stage)}>
           <Text color={stage.ink}>{stage.icon}</Text>
         </Button>
         {TipView(elements, stage.stage, stage.scope, BRAND.muted)}
@@ -82,7 +82,7 @@ function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable
     <Box key="session-name" flexDirection="row" gap={1}>
       {health.band}
       <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>
-        <Button key="session-name-button" plain label={chatBar.sessionName || 'no session'} onPress={() => toggleCard($)}>
+        <Button key="session-name-button" plain onPress={() => toggleCard($)}>
           <Text weight="semibold" color={chatBar.sessionName ? BRAND.text : BRAND.muted}>{chatBar.sessionName || 'no session'}</Text>
         </Button>
       </Box>

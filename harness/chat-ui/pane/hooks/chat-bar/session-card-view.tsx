@@ -62,7 +62,7 @@ function FidelityRowView($: EngineInterface, { Box, Button, Text }: ElementTable
   return (
     <Box key={`card-${fidelity.fidelity}`} flexDirection="row" marginLeft={indentFor(columns.fidelities)}>
       <Box width={columns.stages - columns.fidelities}>
-        <Button key={`card-pick-${fidelity.fidelity}`} plain label={`${fidelity.name} ${fidelity.word}`} onPress={() => selectFidelity($, fidelity)}>
+        <Button key={`card-pick-${fidelity.fidelity}`} plain onPress={() => selectFidelity($, fidelity)}>
           <Text color={fidelity.shade}>{'■ '}</Text>
           <Text color={fidelity.status === 'not_started' ? BRAND.muted : BRAND.text} underline={fidelity.isSelected}>{`${fidelity.name} `}</Text>
           <Text color={fidelity.lookColour}>{`${fidelity.mark} ${fidelity.word}`}</Text>

@@ -1,6 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { CHAT_BAR, labelOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -24,7 +24,7 @@ story('Open Board', CHAT_BAR, () => {
       expect(scene.world.sent).toContain('/board checkout-flow clean_engineering-model')
     })
     and('clean_engineering-model is the fidelity the action button acts on', async ($, on, scene) => {
-      expect(await labelOf(scene.ui, 'next-action')).toBe('generate clean-engineering-model')
+      expect(await tipOf(scene.ui, 'action')).toBe('generate clean-engineering-model')
     })
   })
 })

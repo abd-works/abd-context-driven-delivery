@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { boardOf, checkoutFlowWith, DONE } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, drawn, findText, labelOf, markOf, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, drawn, findText, labelOf, markOf, textOf, wordsOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -22,8 +22,8 @@ story('Display Session Card', CHAT_BAR, () => {
     })
     // ChatBarView paints the session card from the same ChatBarClient
     then("the card opens over the strip with each fidelity's colour, name and state, such as Scenarios done in the Stories colour", async ($, on, scene) => {
-      const rows = await Promise.all(['card-pick-stories-scenarios', 'card-pick-ux-mockup', 'card-pick-clean_engineering-model'].map(key => labelOf(scene.ui, key)))
-      expect(rows).toEqual(['Scenarios done', 'Mockup to do', 'Model to do'])
+      const rows = await Promise.all(['card-pick-stories-scenarios', 'card-pick-ux-mockup', 'card-pick-clean_engineering-model'].map(key => wordsOf(scene.ui, key)))
+      expect(rows).toEqual(['■ Scenarios ✓ done', '■ Mockup ○ to do', '■ Model ○ to do'])
       expect((await markOf(scene.ui, 'card-pick-stories-scenarios'))?.props?.color).toBe('#6BCB77FF')
     })
     and('the fidelities start over the first dot, and Specification over the stage path', async ($, on, scene) => {

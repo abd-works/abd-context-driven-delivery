@@ -30,10 +30,10 @@ export function ActionButtonView($: EngineInterface, { Box, Button, Text }: Elem
   const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelity?.guidance ?? ''}`
   return (
     <Box key="action" flexDirection="row" gap={0}>
-      <Button key="next-action" plain label={target} onPress={() => pressAction($, chatBar, action)}>
+      <Button key="next-action" plain onPress={() => pressAction($, chatBar, action)}>
         <Text weight="bold" color={BRAND.onAccent} backgroundColor={BRAND.accent}>{` ${ACTION_ICONS[action] ?? '•'} `}</Text>
       </Button>
-      <Button key="action-picker" plain label="▾" onPress={() => toggleActionPicker($)}>
+      <Button key="action-picker" plain onPress={() => toggleActionPicker($)}>
         <Text color={BRAND.onAccent} backgroundColor={BRAND.accent}>▾</Text>
       </Button>
       <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
@@ -53,7 +53,7 @@ export function PickerView($: EngineInterface, { Box, Button, Text }: ElementTab
       {BUILDER_ACTIONS.map(action => {
         const isNext = action === fidelity.nextAction
         return (
-          <Button key={`pick-${action}`} plain label={action} onPress={() => chooseAction($, fidelity, action)}>
+          <Button key={`pick-${action}`} plain onPress={() => chooseAction($, fidelity, action)}>
             <Text color={isNext ? BRAND.accent : BRAND.muted} backgroundColor={isNext ? BRAND.accentTint : undefined}>{`${ACTION_ICONS[action]} `}</Text>
             <Text color={isNext ? BRAND.text : BRAND.muted} backgroundColor={isNext ? BRAND.accentTint : undefined}>{action.padEnd(9)}</Text>
             <Text size="caption" color={BRAND.faint}>{isNext ? 'next' : ''}</Text>

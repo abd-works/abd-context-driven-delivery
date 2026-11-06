@@ -61,6 +61,18 @@ export const labelOf = async (ui: any, key: string): Promise<string | undefined>
   return node?.props?.label ?? node?.label
 }
 
+// The hover tip drawn above a keyed element, such as a dot's fidelity and state, or the action the button runs.
+export async function tipOf(ui: any, key: string): Promise<string | undefined> {
+  const node = await ui.find({ key })
+  const tip = node?.children?.find((child: any) => child?.props?.position === 'absolute')
+  return tip?.children?.map(textOf).join('')
+}
+
+// The words a Button holding Texts draws, read in order.
+export async function wordsOf(ui: any, key: string): Promise<string | undefined> {
+  return (await ui.find({ key }))?.children?.map(textOf).join('')
+}
+
 // Each keyed element's mark reads as given, such as { 'session-name-button': 'checkout-flow' }.
 export async function expectMarks(ui: any, marks: Record<string, string>): Promise<void> {
   const read = await Promise.all(Object.keys(marks).map(async key => [key, textOf(await markOf(ui, key))]))

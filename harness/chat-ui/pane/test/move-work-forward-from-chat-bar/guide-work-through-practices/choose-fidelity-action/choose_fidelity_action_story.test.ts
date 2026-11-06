@@ -1,6 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { buttonKeys, CHAT_BAR, drawn } from '../../../chat-bar-screen'
+import { CHAT_BAR, buttonKeys, drawn } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
