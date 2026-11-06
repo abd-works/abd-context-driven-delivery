@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { boardOf, checkoutFlowWith, GENERATED } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, findText, labelOf, textOf, tipOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, findText, markOf, textOf, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -37,7 +37,7 @@ story('Invoke Next Fidelity Action', CHAT_BAR, () => {
       await $.prompt.submit({ text: 'again' })
     })
     then('the button shows the validate icon, with validate ux-mockup on hover', async ($, on, scene) => {
-      expect(await labelOf(scene.ui, 'next-action')).toBe('✓')
+      expect(textOf(await markOf(scene.ui, 'next-action-mark'))).toBe('✓')
       expect(await tipOf(scene.ui, 'action')).toBe('validate ux-mockup')
       expect(textOf(await findText(scene.ui, 'validate ux-mockup'))).toBe('validate ux-mockup')
     })

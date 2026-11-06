@@ -1,6 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../brand'
+import { GlyphButtonView } from '../glyph-button-view'
 import { toggleActionPicker } from './action-picker-client'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
@@ -22,16 +23,17 @@ function pressAction($: EngineInterface, chatBar: ChatBarClient, action: string)
   return action === 'review' ? reviewFidelity($, fidelity) : runAction($, fidelity, action)
 }
 
-// The orange chip of the canvas, drawn as the surface's primary buttons: the next action's icon, then the ▾ that opens
+// The orange chip of the canvas, an orange Box holding the next action's icon, then the ▾ that opens
 // the picker, its action and fidelity shown above it on hover.
-export function ActionButtonView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar }: ChatBarDraw) {
+export function ActionButtonView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
+  const { Box, Text } = elements
   const action = actionOf(chatBar)
   if (!action) return null
   const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelity?.guidance ?? ''}`
   return (
-    <Box key="action" flexDirection="row" gap={0}>
-      <Button key="next-action" variant="primary" label={ACTION_ICONS[action] ?? '•'} onPress={() => pressAction($, chatBar, action)} />
-      <Button key="action-picker" variant="primary" label="▾" onPress={() => toggleActionPicker($)} />
+    <Box key="action" flexDirection="row" gap={0} paddingX={1} backgroundColor={BRAND.accent}>
+      {GlyphButtonView(elements, 'next-action', ACTION_ICONS[action] ?? '•', BRAND.onAccent, () => pressAction($, chatBar, action))}
+      {GlyphButtonView(elements, 'action-picker', '▾', BRAND.onAccent, () => toggleActionPicker($))}
       <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
         <Text color={BRAND.text}>{target}</Text>
       </Box>

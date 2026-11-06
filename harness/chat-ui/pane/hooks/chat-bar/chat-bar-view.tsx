@@ -51,7 +51,7 @@ export function FidelityView($: EngineInterface, elements: ElementTable, fidelit
   const { Box, Text } = elements
   return (
     <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0}>
-      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => pressDot($, fidelity), fidelity.isSelected)}
+      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '▪', fidelity.shade, () => pressDot($, fidelity), fidelity.isSelected)}
       {fidelity.violationCount ? <Text size="caption" weight="bold" color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
       {TipView(elements, fidelity.fidelity, `${fidelity.mark} ${fidelity.word}`, fidelity.lookColour)}
     </Box>
@@ -83,17 +83,17 @@ function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable
           <Text weight="semibold" color={chatBar.sessionName ? BRAND.text : BRAND.muted}>{chatBar.sessionName || 'no session'}</Text>
         </Button>
       </Box>
-      <Button key="session-list-button" label="▾" onPress={() => toggleSessionList($)} />
+      {GlyphButtonView({ Box, Button, Text }, 'session-list-button', '▾', BRAND.muted, () => toggleSessionList($))}
     </Box>
   )
 }
 
-// One icon Button whose words show above it on hover.
+// One icon a person presses, with no chip around it, whose words show above it on hover.
 function IconButtonView(elements: ElementTable, key: string, icon: string, words: string, onPress: () => unknown) {
-  const { Box, Button } = elements
+  const { Box } = elements
   return (
     <Box key={`${key}-box`}>
-      <Button key={key} label={icon} onPress={onPress} />
+      {GlyphButtonView(elements, key, icon, BRAND.muted, onPress)}
       {TipView(elements, words, '', BRAND.muted)}
     </Box>
   )

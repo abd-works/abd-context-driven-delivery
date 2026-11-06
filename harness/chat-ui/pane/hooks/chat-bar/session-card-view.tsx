@@ -16,8 +16,8 @@ export const CARD_SCOPE = 'session-card'
 // the card's columns start over the parts they name.
 const GAP = 1
 const HEALTH_MARK = 1
-// A bordered Button draws `[ ▾ ]`.
-const LIST_BUTTON = 5
+// The session list's ▾, drawn as a glyph.
+const LIST_BUTTON = 1
 const SEPARATOR = 1
 const DOT = 1
 // The orange chip ` ▶ ` and its ▾.
@@ -63,7 +63,7 @@ function FidelityRowView($: EngineInterface, { Box, Button, Text }: ElementTable
     <Box key={`card-${fidelity.fidelity}`} flexDirection="row" marginLeft={indentFor(columns.fidelities)}>
       <Box width={columns.stages - columns.fidelities}>
         <Box key={`card-cell-${fidelity.fidelity}`} flexDirection="row" gap={1} alignItems="center">
-          <Text color={fidelity.shade}>■</Text>
+          <Text color={fidelity.shade}>▪</Text>
           <Button key={`card-pick-${fidelity.fidelity}`} plain label={fidelity.name} dimColor={fidelity.status === 'not_started'} onPress={() => selectFidelity($, fidelity)} />
           <Text color={fidelity.lookColour}>{`${fidelity.mark} ${fidelity.word}`}</Text>
         </Box>
