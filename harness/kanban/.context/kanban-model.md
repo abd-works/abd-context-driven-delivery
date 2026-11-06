@@ -361,7 +361,8 @@ The base type of Ticket and BacklogItem.
 	// `ticket.report`: the latest report, with the rules broken on the nodes of the graph saved beside it, then each rule its judgment fails. A report with no saved graph lists no graph rules and says so; a fidelity with no report has an empty one. Intended: `Session.report` takes this over, so the ticket only asks its session
 	-> ReportFile.report
 + generate_commands(fidelities: list[str], formats: list[str]): list[str]
-	// `ticket.generate_commands`: renders the earlier fidelity first when a format is new to it; raises `FidelityNotFoundError` for a fidelity the ticket does not have. Intended: `Generate.commands_for` takes this over
+	// `ticket.generate_commands`: the commands the first fidelity's progress builds, naming the others alongside it in one generate; raises `FidelityNotFoundError` for a fidelity the ticket does not have
+	-> FidelityCommands.generate
 + keep_file(file: Path): Path
 	// keeps a file, such as a started backlog item's idea, with the ticket's work
 	-> Session.keep_file
@@ -375,6 +376,10 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + FidelityProgress(fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool)
 ------
 + << association >> fidelity: FidelityGuidance
+	// the fidelity as the ticket's session holds it, one object per fidelity in a session
++ << composition >> commands: FidelityCommands
++ earlier_progress: FidelityProgress
+	// the progress of this practice's fidelity in the stage before this one
 + stage: Stage
 + practice: str
 	-> PracticeGuidance.key
@@ -396,6 +401,19 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	// this fidelity's dated validation reports among the session's, in the order given
 + with_violations(): FidelityProgress
 	// the same progress with its latest validate failed, for a judgment that fails a rule
+
+## FidelityCommands
+
+The slash commands that run an action on one fidelity of a ticket. A command runs in whichever chat it is sent to, whose open session can be another ticket's, so each names its ticket's session.json in a `session=` word.
+
++ FidelityCommands(progress: FidelityProgress, session: Session)
+------
+----
++ generate(formats: list[str], alongside: FidelityProgress...): list[str]
+	// the generate command naming this fidelity and those alongside it, after each one's render of its earlier fidelity
+	-> FidelityCommands.render_earlier
++ render_earlier(formats: list[str]): str
+	// renders the earlier fidelity into the formats it has no file in, when it has work to render; empty otherwise
 
 ## Judgment
 
@@ -969,9 +987,15 @@ Intended: an enum in place of the three string constants in `stages.py`, so a st
 + << association >> listed: list[FidelityGuidance]
 	// the guidance this call runs on
 ----
-+ run(guidance: GuidanceArg, operation, action: str)
-	// runs the action on each listed fidelity and writes the action's line to the session log; that line is what the session reads back
++ start_call()
+	// a new call starts with no guidance bound, no session found, and no line logged
++ call_session(arguments: dict): Session
+	// binds the call's guidance once and gives the session the call's log line goes in, the one a board command names
++ run(operation, action: str)
+	// runs the action on each listed fidelity the call bound and writes the action's line to the session log; that line is what the session reads back
 	-> Session.log_guidance_action
++ _inside(action_type: type, guidance): GuidanceAction
+	// an action started inside this one, made for this action's session and working on the same Guidance objects
 
 ## Generate : GuidanceAction
 
@@ -979,11 +1003,8 @@ Intended: an enum in place of the three string constants in `stages.py`, so a st
 ----
 + generate(guidance: GuidanceArg): str
 	// the agent writes the fidelity's artifacts where its outputs say. A guidance string can carry its format (`stories-scenarios format=python`). Reads the rules without running Validate, so it logs only its own `generate` line
-	-> Validate.rules_of
+	-> Validate.listed_rules
 	-> Session.fidelity_outputs
-+ commands_for(session: Session, fidelities: list[FidelityGuidance], formats: list[str]): list[str]
-	// Intended, replaces `Ticket.generate_commands`: the commands that generate fidelities in formats, rendering the earlier fidelity first when a format is new to it
-	-> Session.files
 
 ## Validate : GuidanceAction
 
@@ -993,7 +1014,7 @@ Intended: an enum in place of the three string constants in `stages.py`, so a st
 	// builds the knowledge graph from the artifacts in paths, runs the fidelity's rules on it, saves the report in the session's `validation-reports/` with the graph it checked under the same name in `.json`, and logs one `graph-rule` entry per violation
 	-> Graph.load_files
 	-> Session.log_validation
-+ rules_of(guidance: GuidanceArg): str
++ listed_rules(): str
 	// the shared and active fidelity's rules as text for another action to follow; checks nothing, saves no report, and writes nothing to the session log
 
 # harness/graph

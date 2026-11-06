@@ -118,7 +118,12 @@ class Ticket(Card):
         """One per fidelity the board requires, in stage order; read from the session log each time, with the latest
         report's judgment able to fail a validate the log shows passing."""
         entries = self._session.log_entries
-        return [FidelityProgress.from_log(fidelity, stage, entries, self) for stage in self._stages for fidelity in stage.work_required]
+        return [FidelityProgress.from_log(self._own(fidelity), stage, entries, self) for stage in self._stages for fidelity in stage.work_required]
+
+    def _own(self, fidelity: FidelityGuidance) -> FidelityGuidance:
+        """fidelity as this ticket's session holds it: one object per fidelity in a session, which finds its own files
+        and reports there and is the one an action on it works with."""
+        return self._session.practices[fidelity.practice_guidance.key].fidelities[fidelity.name]
 
     @property
     @data_field(key="progress")
@@ -263,10 +268,10 @@ class Ticket(Card):
     @noSessionLog
     def generate_commands(self, fidelities: list[str], formats: list[str]) -> list[str]:
         """Return the commands that generate fidelities in formats. A format the same practice's earlier fidelity has no file in is rendered from that fidelity first."""
-        renders = [self._render_command(self.progress_of(slug), formats) for slug in fidelities]
-        named = " ".join(fidelities)
-        commands = [*filter(None, renders), f"/actions-generate {named} format={','.join(formats)}"]
-        return [f"{command} session={self._session.session_file_from_project}" for command in commands]
+        if not fidelities:
+            return []
+        first, *alongside = [self.progress_of(slug) for slug in fidelities]
+        return first.commands.generate(formats, *alongside)
 
     def _reopen(self) -> Ticket:
         """Back out of Complete into Implementation's Done: its session reopens."""
@@ -316,17 +321,6 @@ class Ticket(Card):
     def _enter(self, stage: Stage) -> Ticket:
         self._session.record(f"{MOVED_INTO} {stage.name}")
         return self
-
-    def _render_command(self, progress: FidelityProgress, formats: list[str]) -> str:
-        """The command that renders the fidelity before progress's into formats it has no file in, when it has work to render."""
-        earlier = next((entry for entry in self.progress if entry.practice == progress.practice and entry.stage.next_stage is progress.stage), None)
-        if earlier is None:
-            return ""
-        made = {label for label, entries in earlier.files().items() if any(entry.exists for entry in entries)}
-        wanted = [label for label in formats if label in earlier.fidelity.outputs and label not in made]
-        if not made or not wanted:
-            return ""
-        return f"/actions-render {earlier.fidelity_slug} format={','.join(wanted)} source={sorted(made)[0]}"
 
 
 @language_adapter(language="typescript", identity=("ticket", "slug"))
@@ -381,6 +375,16 @@ class FidelityProgress:
     @property
     def fidelity(self) -> FidelityGuidance:
         return self._fidelity
+
+    @property
+    def commands(self) -> FidelityCommands:
+        """The commands that run an action on this fidelity in its ticket's session."""
+        return FidelityCommands(self, self._ticket.session)
+
+    @property
+    def earlier_progress(self) -> FidelityProgress | None:
+        """The progress of this practice's fidelity in the stage before this one; none in the first stage."""
+        return next((entry for entry in self._ticket.progress if entry.practice == self.practice and entry.stage.next_stage is self._stage), None)
 
     @property
     def stage(self) -> Stage:
@@ -492,7 +496,7 @@ class FidelityProgress:
     @noSessionLog
     def files(self) -> dict[str, list[FileEntry]]:
         """List the files this fidelity declares by format in its ticket's session, each with its path from the project and whether it exists. A pattern lists the files the ticket worked on, not every match in the repository."""
-        return self._ticket.session.practices[self.practice].fidelities[self._fidelity.name].files()
+        return self._fidelity.files()
 
     def with_violations(self) -> FidelityProgress:
         """This progress with its latest validate failed, so validate is to do again; a person's review stands."""
@@ -532,7 +536,7 @@ class FidelityProgress:
 
     def _latest_report_of(self, fidelity: FidelityGuidance) -> Path | None:
         """The latest report of fidelity in its ticket's session that has its result, else its latest; none when it has none."""
-        own = self._ticket.session.practices[self.practice].fidelities[fidelity.name].reports()
+        own = fidelity.reports()
         with_result = [report for report in own if self._report_file(report).has_result]
         return (with_result or own or [None])[-1]
 
@@ -548,6 +552,38 @@ class FidelityProgress:
         session = self._ticket.session
         repo = Repo(session.repo_from_session())
         return ReportFile(file, repo, Path(session.workpath or repo.root).resolve())
+
+
+class FidelityCommands:
+    """The slash commands that run an action on one fidelity of a ticket. A command runs in whichever chat it is sent
+    to, whose open session can be another ticket's, so each names its ticket's session.json."""
+
+    def __init__(self, progress: FidelityProgress, session: Session) -> None:
+        self._progress = progress
+        self._session = session
+
+    def generate(self, formats: list[str], *alongside: FidelityProgress) -> list[str]:
+        """The commands that generate this fidelity, and the fidelities alongside it in the same turn, in formats. A
+        fidelity whose earlier fidelity has no file in one of formats has that fidelity rendered into it first."""
+        progresses = [self._progress, *alongside]
+        renders = [progress.commands.render_earlier(formats) for progress in progresses]
+        named = " ".join(progress.fidelity_slug for progress in progresses)
+        return [*filter(None, renders), self._in_session(f"/actions-generate {named} format={','.join(formats)}")]
+
+    def render_earlier(self, formats: list[str]) -> str:
+        """The command that renders the earlier fidelity into those of formats it has no file in, when it has work to
+        render; empty otherwise."""
+        earlier = self._progress.earlier_progress
+        if earlier is None:
+            return ""
+        made = {label for label, entries in earlier.files().items() if any(entry.exists for entry in entries)}
+        wanted = [label for label in formats if label in earlier.fidelity.outputs and label not in made]
+        if not made or not wanted:
+            return ""
+        return self._in_session(f"/actions-render {earlier.fidelity_slug} format={','.join(wanted)} source={sorted(made)[0]}")
+
+    def _in_session(self, command: str) -> str:
+        return f"{command} session={self._session.session_file_from_project}"
 
 
 class ActionStates:
