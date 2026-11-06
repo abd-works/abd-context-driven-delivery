@@ -38,21 +38,21 @@ function pressDot($: EngineInterface, fidelity: FidelityClient): unknown {
 function TipView({ Box, Text }: ElementTable, words: string, detail: string, detailColour: string) {
   return (
     <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
-      <Text color={BRAND.text}>{`${words} `}</Text>
-      <Text color={detailColour}>{detail}</Text>
+      <Text color={BRAND.text}>{detail ? `${words} ` : words}</Text>
+      {detail ? <Text color={detailColour}>{detail}</Text> : null}
     </Box>
   )
 }
 
 // One square in its practice colour, fainter the less is done, on a light tint when selected, with the violation count in
-// red beside it; the fidelity and its state show above it on hover.
+// red beside it; the fidelity's name shows above it on hover, its state being on the session card.
 export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityClient) {
   const { Box, Text } = elements
   return (
     <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0} backgroundColor={fidelity.isSelected ? BRAND.selectedTint : undefined}>
       {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => pressDot($, fidelity))}
       {fidelity.violationCount ? <Text size="caption" weight="bold" color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
-      {TipView(elements, fidelity.fidelity, `${fidelity.mark} ${fidelity.word}`, fidelity.lookColour)}
+      {TipView(elements, fidelity.fidelity, '', BRAND.muted)}
     </Box>
   )
 }

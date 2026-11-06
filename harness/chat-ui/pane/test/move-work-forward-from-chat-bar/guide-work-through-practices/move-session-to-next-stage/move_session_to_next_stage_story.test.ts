@@ -29,8 +29,10 @@ story('Move Session To Next Stage', CHAT_BAR, () => {
       expect(called(scene.world, 'ticket.move_next')).toEqual({ ticket: 'checkout-flow' })
     })
     and('its dots show the Implementation fidelities, not started', async ($, on, scene) => {
-      const labels = await Promise.all(['fidelity-stories-acceptance_tests', 'fidelity-ux-front_end_code', 'fidelity-clean_engineering-code'].map(key => tipOf(scene.ui, key)))
-      expect(labels).toEqual(['stories-acceptance_tests ○ to do', 'ux-front_end_code ○ to do', 'clean_engineering-code ○ to do'])
+      const slugs = ['stories-acceptance_tests', 'ux-front_end_code', 'clean_engineering-code']
+      expect(await Promise.all(slugs.map(slug => tipOf(scene.ui, `fidelity-${slug}`)))).toEqual(slugs)
+      const states = await Promise.all(slugs.map(async slug => textOf((await drawn(scene.ui, `card-cell-${slug}`))?.children?.[2])))
+      expect(states).toEqual(['○ to do', '○ to do', '○ to do'])
     })
   })
   scenario('Keep acting on fidelities until the stage is reviewed', ({ given, when, then, but }) => {

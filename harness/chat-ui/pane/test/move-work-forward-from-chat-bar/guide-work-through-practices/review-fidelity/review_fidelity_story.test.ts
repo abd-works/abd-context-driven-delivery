@@ -26,7 +26,7 @@ story('Review Fidelity', CHAT_BAR, () => {
     // ChatBarView press -> reviewFidelity($, fidelity) -> $.mcp.call('ticket.finish_review', { ticket: 'checkout-flow', fidelities: ['ux-mockup'] }) -> Ticket.finish_review()
     // Ticket -> Ticket.record('review UX mockup')
     then('the UX dot shows reviewed', async ($, on, scene) => {
-      expect(await tipOf(scene.ui, 'fidelity-ux-mockup')).toBe('ux-mockup ✓ done')
+      expect(textOf((await drawn(scene.ui, 'card-cell-ux-mockup'))?.children?.[2])).toBe('✓ done')
       expect(called(scene.world, 'ticket.finish_review')).toEqual({ ticket: 'checkout-flow', fidelities: ['ux-mockup'] })
     })
   })
