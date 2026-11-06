@@ -83,10 +83,8 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 	// one timestamped line on session_path / "session.log" for this action
 + log_guidance_action(action: str, guidance_items: list): None
 	// opens each listed practice on this session, syncs that practice's guideline from the action binding, collects workpath and practice folder paths, then calls log_action
-+ note_injected_rules_for_edit(guidance: PracticeGuidance, payload: dict): None
-	// notes rule slugs that match an edit payload so the next log_action line can name them
-+ note_injected_rules_from_bags(guidance: PracticeGuidance, matched_path: str, bags: list): None
-	// notes rule slugs from matched rule bags (inject_rules hook path)
++ note_injected_rules(rules: RulesCollection, matched_path: str): None
+	// notes the rules an inject_rules hook gave the agent for the edited file, so the next log_action line names each rule with the practice and fidelity its collection belongs to
 	// the line names the files and folders in paths, the active guidelines, fidelity, format, and action
 	// the line names the highest graph node per practice when the graph has one
 	// the line always points at the chat id, transcript file, and line numbers; it does not copy the transcript
@@ -133,7 +131,7 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 - log_action records the injected rule names for that practice guideline and fidelity.
 - Validate.validate calls log_validation. Generate and Satisfy call Validate.validate, so those runs are the same line. Iterate tells the agent to validate and does not call Validate. Sketch does not call Validate.
 - GuidanceAction.run calls log_guidance_action for the action it is running when session.new or session.switch has bound session_path.
-- RulesCollection.inject_rules calls note_injected_rules_from_bags on the current session when rules are injected.
+- RulesCollection.inject_rules calls note_injected_rules on the current session for each collection it injects.
 - new and select each run a code section and return keep_log. keep_log is the one instruction set both of them return.
 - keep_log tells the agent that log_action, log_validation, and log_error already run, and that append_chat may attach a later chat when those miss the chat or a detail.
 - append_chat points at the transcript file. The transcript stays the chat record; the session log is the trail.

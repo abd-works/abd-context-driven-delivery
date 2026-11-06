@@ -31,6 +31,7 @@ from space.work_state import (
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
+    from harness.guidance.rule import RulesCollection
 
 
 _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
@@ -379,7 +380,8 @@ class Session:
         self._parent_folders: dict = {}
         self._known: dict[str, PracticeSessionOutput] = {}
         self._opened: list[PracticeSessionOutput] = []
-        self._injected: list[tuple[str, str, str, str]] = []
+        # The rules an inject_rules hook gave the agent since the last log line, each with the edited file it matched.
+        self._injected: list[tuple[RulesCollection, str]] = []
         self._chat: tuple[str, Path, str] | None = None
         self._file_manager: FileManager | None = None
 
@@ -926,10 +928,12 @@ class Session:
         self._write_practices_json(stored)
         self._parent_folders = stored
 
-    def note_injected_rule(
-        self, practice: str, fidelity: str, rule: str, matched_path: str = ""
-    ) -> None:
-        entry = (practice, fidelity, rule, matched_path)
+    def note_injected_rules(self, rules: RulesCollection, matched_path: str) -> None:
+        """Note that an inject_rules hook gave the agent rules for the edited file at matched_path, so the next log line
+        names each of those rules with its practice and fidelity."""
+        if self.session_path is None or not matched_path:
+            return
+        entry = (rules, matched_path)
         if entry not in self._injected:
             self._injected.append(entry)
 
@@ -1207,30 +1211,6 @@ class Session:
                     paths.append(resolved)
         self.log_action(action, paths)
 
-    def note_injected_rules_for_edit(self, guidance: PracticeGuidance, payload: dict) -> None:
-        """Note rule slugs from inject_rules hooks for the next log_action line."""
-        if self.session_path is None:
-            return
-        rules = getattr(guidance, "rules", None)
-        if rules is None:
-            return
-        path = rules._payload_path(payload)
-        if not path or not rules._just_edited(payload):
-            return
-        bags = rules._bags_for_path(path)
-        if not bags:
-            return
-        self.note_injected_rules_from_bags(guidance, path, bags)
-
-    def note_injected_rules_from_bags(self, guidance: PracticeGuidance, matched_path: str, bags: list) -> None:
-        if self.session_path is None or not matched_path or not bags:
-            return
-        practice = PracticeCatalogue.key_of(guidance) or type(guidance).__name__.casefold()
-        for bag in bags:
-            fidelity = self._fidelity_for_rules_bag(guidance, bag)
-            for rule in bag:
-                self.note_injected_rule(practice, fidelity, rule.slug, matched_path)
-
     def log_validation(self, guidance: PracticeGuidance, violations: list[str]) -> None:
         if self.session_path is None:
             return
@@ -1388,14 +1368,6 @@ class Session:
             if opened.name == name:
                 return opened
         return None
-
-    @staticmethod
-    def _fidelity_for_rules_bag(guidance: PracticeGuidance, bag) -> str:
-        parent = getattr(bag, "parent", None)
-        if parent is guidance or parent is None:
-            current = getattr(getattr(guidance, "fidelities", None), "current", None)
-            return str(getattr(current, "name", "") or "")
-        return str(getattr(parent, "name", "") or "")
 
     def _guidance_for(self, name: str) -> PracticeGuidance:
         if not PracticeCatalogue.has(name):
@@ -1581,11 +1553,8 @@ class Session:
     def _rule_text(self) -> str:
         if not self._injected:
             return ""
-        ordered = sorted(self._injected, key=lambda item: (item[0], item[1], item[2], item[3]))
-        return " ".join(
-            " ".join(part for part in (practice, fidelity, rule, path) if part)
-            for practice, fidelity, rule, path in ordered
-        )
+        named = {(rules.practice_key, rules.fidelity_name, rule.slug, path) for rules, path in self._injected for rule in rules}
+        return " ".join(" ".join(part for part in entry if part) for entry in sorted(named))
 
     def _noted_chat(self) -> str:
         if self._chat is None:
