@@ -14,7 +14,8 @@ sys.modules.pop("actions", None)
 
 import yaml
 from expects import be_true, contain, equal, expect, have_key
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
+from space.session.throwaway_project import ThrowawayProject
 
 from harness.agent_tools.agent_tools import (
     AgentInstructions,
@@ -186,6 +187,13 @@ _CAR_STORY_TOOLSET = "cdd_guidance.actions._examples.car_story.car_story:CarStor
 
 
 with description("a class"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("with a toolset that declares @agent_instructions members"):
         with context("the travelTo action"):
             with it("should expose travelTo as an @agent_instructions member"):
@@ -230,6 +238,13 @@ with description("a class"):
 
 
 with description("an action"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that has instructions with templating"):
         with context("with templated placeholders for a parameter"):
             with it("should put argument values into those instructions where {{param}} appears"):
@@ -285,6 +300,13 @@ with description("an action"):
 
 
 with description("super() delegation in action bodies"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("a child class that calls super().generate() explicitly"):
         with it("should inline the parent's prose in the child expansion"):
             child = ExplicitSuperChild()
@@ -299,6 +321,13 @@ with description("super() delegation in action bodies"):
 
 
 with description("empty-body auto-super in action bodies"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("a child whose generate body is only Ellipsis"):
         with it("should inline the parent's prose"):
             child = EmptySuperChild()
@@ -329,6 +358,13 @@ with description("empty-body auto-super in action bodies"):
 
 
 with description("AgentToolSet"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("on a live Car example instance"):
         with context("with a class-level description"):
             with it("should expose description matching the class docstring"):
@@ -674,6 +710,13 @@ class _BrokenProvider:
 
 
 with description("a for-each action over companion toolsets"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("when each companion is flipped to tool mode in the loop"):
         with before.each:
             self.body = AgentInstructions.for_callable(
@@ -764,6 +807,13 @@ class _NestedRulesCaller:
 
 
 with description("a for-each action over nested instruction properties"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("when the loop names item.rules.markdown_block"):
         with before.each:
             self.body = AgentInstructions.for_callable(
@@ -806,6 +856,13 @@ class _ExecBodyAgent:
 
 
 with description("an @agent_instructions body that runs unwrapped Python"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("when a conditional branch is taken"):
         with before.each:
             self.agent = _ExecBodyAgent()
@@ -834,6 +891,13 @@ with description("an @agent_instructions body that runs unwrapped Python"):
 
 
 with description("a cross-instance call whose provider cannot resolve"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with it("should still list the named tool"):
         body = AgentInstructions.for_callable(
             _BrokenProvider.wrap, _BrokenProvider()
@@ -842,6 +906,13 @@ with description("a cross-instance call whose provider cannot resolve"):
 
 
 with description("AgentToolValidationError"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("when constructed without a line number"):
         with it("should format the message as class.action - message"):
             err = AgentToolValidationError(
@@ -875,6 +946,13 @@ with description("AgentToolValidationError"):
 
 
 with description("AgentInstructions"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("the description property"):
         with it("should return the docstring text from the instruction callable"):
             story = CarStory()
@@ -909,6 +987,13 @@ class _DestinationFixture:
 
 
 with description("AgentToolSet destination catalog"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
 
     with context("tools_for a destination"):
 
@@ -1017,6 +1102,13 @@ class _CollectBag:
 
 
 with description("a class annotated as a toolset collection"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with it("should be a ToolSetCollection without subclassing it"):
         bag = _MarkedBag()
         bag.entries["code"] = object()
@@ -1033,7 +1125,12 @@ with description("a class annotated as a toolset collection"):
 
 
 with description("a toolset collection with collected child properties"):
+    with after.each:
+        ThrowawayProject.close_all()
+
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
+        ThrowawayProject()
         self.bag = _CollectBag()
         self.bag.entries["one"] = _CollectChild("one", "first overview", {"a": 1})
         self.bag.entries["two"] = _CollectChild("two", "second overview", {"b": 2})
@@ -1050,6 +1147,13 @@ with description("a toolset collection with collected child properties"):
 
 
 with description("a toolset that exposes annotated properties and child collections"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("with an @agent_instructions property"):
         with it("should enroll the property getter on tools"):
             expect("instructions" in _PropertyHost().tools).to(equal(True))
@@ -1100,6 +1204,13 @@ class Parcel:
 
 
 with description("a domain class whose constructor takes collaborators"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that marks a @tool_subject loader"):
         with it("should build as a toolset with no arguments"):
             expect(AgentToolSet.instantiate(Parcel).tools).to(have_key("forward"))

@@ -395,7 +395,12 @@ with description("a validate action on practice guidance") as self:
 
 
 with description("two validate calls running at once on one action") as self:
+    with after.each:
+        ThrowawayProject.close_all()
+
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
+        ThrowawayProject()
         import threading
 
         from validate.validate import Validate
