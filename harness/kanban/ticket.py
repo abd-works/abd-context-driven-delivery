@@ -46,7 +46,6 @@ LEAVE_PUSH = "push"
 LEAVE_MERGE = "merge"
 OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
-SATISFY = "satisfy"
 ALWAYS_ALLOWED = (GENERATE,)
 ONCE_THERE_IS_OUTPUT = (VALIDATE, REVIEW)
 # A session log line is `<timestamp> <verb> <subject...>`: the verb is its second word, and on a move or a mark the
@@ -195,7 +194,8 @@ class Ticket(Card):
     @property
     @data_field
     def next_action(self) -> str:
-        """What Run next does: generate, validate, or review on the next fidelity, or satisfy while it has violations."""
+        """What Run next does: generate, validate, or review on the next fidelity; review while it has violations, which a
+        person reads and tells the agent to fix."""
         upcoming = self.next_fidelity
         return upcoming.next_action if upcoming else ""
 
@@ -675,10 +675,10 @@ class FidelityProgress:
 
     @property
     def next_action(self) -> str:
-        """What runs next on this fidelity: satisfy while it has violations, else the first of its stage's actions not
-        done, or nothing once it is done."""
+        """What runs next on this fidelity: review while it has violations, since a person reads them and tells the agent
+        to fix them, else the first of its stage's actions not done, or nothing once it is done."""
         if self._has_violations:
-            return SATISFY
+            return REVIEW
         remaining = self.remaining_actions
         return remaining[0] if remaining else ""
 

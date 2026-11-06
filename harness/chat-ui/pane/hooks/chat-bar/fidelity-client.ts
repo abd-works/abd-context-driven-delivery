@@ -20,7 +20,7 @@ const LOOKS: Record<string, { mark: string; word: string; colour: string; shade:
 }
 export const BUILDER_ACTIONS = ['generate', 'validate', 'review', 'iterate', 'sketch', 'render', 'document']
 // Glyphs standing for the canvas's action icons: play, check, eye, cycle, pencil, open-out, page, and the move-on arrow.
-export const ACTION_ICONS: Record<string, string> = { generate: '▶', validate: '✓', review: '◉', satisfy: '✚', iterate: '↻', sketch: '✎', render: '↗', document: '▯', advance: '➜' }
+export const ACTION_ICONS: Record<string, string> = { generate: '▶', validate: '✓', review: '◉', iterate: '↻', sketch: '✎', render: '↗', document: '▯', advance: '➜' }
 
 export type FidelityJson = {
   slug: string
@@ -91,7 +91,7 @@ export class FidelityClient {
     return this.json.isSelected
   }
 
-  // What the Python Ticket names next on this fidelity: satisfy while it has violations, else the first of generate,
+  // What the Python Ticket names next on this fidelity: review while it has violations, else the first of generate,
   // validate and review not done; nothing once it is done.
   get nextAction(): string {
     return this.json.nextAction

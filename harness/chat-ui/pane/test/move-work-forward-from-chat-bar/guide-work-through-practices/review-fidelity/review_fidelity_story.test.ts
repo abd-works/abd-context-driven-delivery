@@ -30,23 +30,21 @@ story('Review Fidelity', CHAT_BAR, () => {
       expect(called(scene.world, 'ticket.finish_review')).toEqual({ ticket: 'checkout-flow', fidelities: ['ux-mockup'] })
     })
   })
-  scenario('Refuse a review before a clean validate', ({ given, when, then, and }) => {
-    // Evidence: inferred: CDR 0001 'which needs its latest Validate to have passed'
+  scenario('Review the violations before a clean validate', ({ given, when, then, and }) => {
+    // Evidence: requested: a person reviews the violations and tells the agent to fix them
     given("checkout-flow's clean_engineering-model has 7 violations in its latest validation report", async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'clean_engineering-model': { ...VALIDATED, progress: 'violations', violations: 7 } }))
-      scene.world.refusals['ticket.finish_review'] = 'clean_engineering-model cannot be reviewed: its latest validation report has 7 violations'
     })
     when('the Person reviews clean_engineering-model', async ($, on, scene) => {
-      // With violations the Ticket names satisfy next, so the Person picks review from the action picker.
+      // With violations the Ticket names review next.
       await scene.ui.press({ key: 'dot-clean_engineering-model' })
-      expect(await tipOf(scene.ui, 'action')).toBe('satisfy clean-engineering-model')
-      await scene.ui.press({ key: 'action-picker' })
-      await scene.ui.press({ key: 'pick-review' })
+      expect(await tipOf(scene.ui, 'action')).toBe('review clean-engineering-model')
       await scene.ui.press({ key: 'next-action' })
     })
-    // picker press -> chooseAction($, 'review'); action button press -> reviewFidelity($, fidelity) -> $.mcp.call('ticket.finish_review', ...) <- ReviewRefused with the server's text
-    then("the Chat Bar shows the server's reason", async ($, on, scene) => {
-      expect(scene.world.toasts).toContain('clean-engineering-model not reviewed: clean_engineering-model cannot be reviewed: its latest validation report has 7 violations')
+    // action button press -> openBoard($, fidelity) -> /board checkout-flow clean_engineering-model
+    then('the board opens on clean_engineering-model, where its report shows the violations to fix', async ($, on, scene) => {
+      expect(scene.world.sent).toContain('/board checkout-flow clean_engineering-model')
+      expect(scene.world.calls).not.toContain('ticket.finish_review')
     })
     and('the Clean Engineering dot still shows 7 in red', async ($, on, scene) => {
       const count = (await drawn(scene.ui, 'fidelity-clean_engineering-model'))?.children?.[1]

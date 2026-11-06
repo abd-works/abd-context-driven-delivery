@@ -7,9 +7,6 @@ import { GlyphButtonView } from '../glyph-button-view'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
-// Wide enough for an icon and the longest value, `▦ running :5173`; the columns wrap when the band is narrower than five of them.
-const PART_WIDTH = 16
-
 type Actions = {
   toggleCard: () => unknown
   openDetails: () => unknown
@@ -34,10 +31,10 @@ const LOOKS = {
 // The surface has no tooltip, so the part's name is a card revealed while the pointer is over its icon and value.
 function PartsView({ Box, Text }: ElementTable, health: ServerHealthJson) {
   return (
-    <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
+    <Box flexDirection="row" columnGap={3}>
       {partsOf(health).map(part => (
-        <Box key={part.label} flexDirection="row" gap={1} width={PART_WIDTH}>
-          <Text size="heading" color={colourOf(part)}>{part.icon}</Text>
+        <Box key={part.label} flexDirection="row" gap={1}>
+          <Text color={colourOf(part)}>{part.icon}</Text>
           <Text color={colourOf(part)}>{part.value}</Text>
           <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
             <Text color={BRAND.text}>{part.label}</Text>

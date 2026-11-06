@@ -133,9 +133,9 @@ describe('Send Next Fidelity Action', () => {
     expect(ticketOn(page, OTHER).runNextLabel).toBe('Run next: generate')
   })
 
-  it('should say fix violations on held violations', async () => {
+  it('should say review violations on held violations', async () => {
     const { page } = await board.page()
-    expect(ticketOn(page, ACTIVE).runNextLabel).toBe('Run next: fix violations')
+    expect(ticketOn(page, ACTIVE).runNextLabel).toBe('Run next: review violations')
   })
 
   describe('with generate next', () => {
