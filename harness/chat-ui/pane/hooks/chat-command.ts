@@ -20,11 +20,12 @@ export async function filledPrompt($: EngineInterface, text: string): Promise<st
   return answer.isFilled ? '' : `the prompt box did not take it (${answer.refusal ?? 'refused by a hook'})`
 }
 
-// Sends a slash command to this chat as the board's Run does: it runs as if the person typed it, its line in the
-// transcript. The engine refuses a plugin's command in some states, such as after the person stopped the session and
-// has typed nothing since; the command then waits in the prompt box for the person to send, so it is never lost.
+// Sends a slash command to this chat: it runs as if the person typed it, its line in the transcript, once the chat is
+// idle. The engine refuses a plugin's command in some states, such as after the person stopped the session and has
+// typed nothing since, and may say so only once the chat is idle; whenever it does, the command waits in the prompt
+// box for the person to send, so it is never lost.
 export async function sendToChat($: EngineInterface, text: string): Promise<void> {
-  const refusal = await Promise.race([$.command.run(commandOf(text)).then(() => '', reasonOf), after($, REFUSED_WITHIN_MILLISECONDS, '')])
+  const refusal = await $.command.run(commandOf(text)).then(() => '', reasonOf)
   if (!refusal) return
   const unfilled = await filledPrompt($, text).catch(reasonOf)
   $.ui.toast(unfilled ? `The chat would not run ${text}: ${refusal}; ${unfilled}` : `The chat would not run ${text} (${refusal}), so it is in the prompt box: press Enter to send it`)

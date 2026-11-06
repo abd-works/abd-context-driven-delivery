@@ -5,7 +5,7 @@ import { GlyphButtonView } from '../glyph-button-view'
 import { chooseAction, clearChosenAction, toggleActionPicker } from './action-picker-client'
 import { moveNext, type ChatBarClient } from './chat-bar-client'
 import type { ChatBarDraw } from './chat-bar-view'
-import { ACTION_ICONS, BUILDER_ACTIONS, openBoard, reviewFidelity, runAction } from './fidelity-client'
+import { ACTION_ICONS, BUILDER_ACTIONS, reviewFidelity, runAction } from './fidelity-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -20,14 +20,12 @@ function shownActionOf(chatBar: ChatBarClient, chosenAction: string | null): str
 }
 
 // The action button runs what it shows: advance moves the session on, review records the person's approval, and every
-// other action is a command the chat runs. Review over violations opens the board on the fidelity, where the person
-// reads them and sends Fix. A picked action is run once, and the button then shows the next one again.
+// other action is a command the chat runs. A picked action is run once, and the button then shows the next one again.
 async function pressAction($: EngineInterface, chatBar: ChatBarClient, action: string): Promise<void> {
   const fidelity = chatBar.actionFidelity
   await clearChosenAction($)
   if (action === 'advance') return moveNext($, chatBar)
   if (!fidelity) return
-  if (action === 'review' && fidelity.violationCount) return openBoard($, fidelity)
   return action === 'review' ? reviewFidelity($, fidelity) : runAction($, fidelity, action)
 }
 

@@ -152,9 +152,3 @@ export async function reviewFidelity($: EngineInterface, fidelity: FidelityClien
   return (await currentChatBar($)).fidelities.find(entry => entry.fidelity === fidelity.fidelity) ?? fidelity
 }
 
-// A dot opens the board on this session at that fidelity, and the action button follows it.
-export async function openBoard($: EngineInterface, fidelity: FidelityClient): Promise<void> {
-  await selectFidelity($, fidelity)
-  const chatBar = await currentChatBar($)
-  await sendToChat($, `/board ${chatBar.sessionName} ${fidelity.fidelity}`)
-}
