@@ -8,7 +8,7 @@ import { runHandoff, type ChatBarClient } from './chat-bar-client'
 import { openBoard, selectFidelity, type FidelityClient } from './fidelity-client'
 import { openFiles } from './fidelity-files-client'
 import { FidelityFilesView } from './fidelity-files-view'
-import { CARD_SCOPE, cardColumnsOf, SessionCardView } from './session-card-view'
+import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose } from './session-client'
 import { toggleCard, toggleSessionList } from './session-dialogs-client'
 import { ActivateView, CloseView, SessionListView } from './session-dialogs-view'
@@ -111,8 +111,7 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
 }
 
 // The line, left to right: health mark, session name, │, fidelity dots and the action chip, the stage path, then the
-// session's buttons, on one row. The dots and the action take the card's fidelity column, so the stage path starts
-// under the card's stage, as on the canvas.
+// session's buttons, packed to the left on one row.
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
@@ -121,7 +120,7 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
     <Box key="line" flexDirection="row" gap={1} flexWrap="wrap" alignItems="center">
         {SessionNameView($, elements, draw)}
         <Text color={BRAND.border}>{SEPARATOR}</Text>
-        <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center" width={cardColumnsOf(chatBar).fidelities}>
+        <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
           {chatBar.fidelities.map(fidelity => FidelityView($, elements, fidelity))}
           {ActionButtonView($, elements, draw)}
         </Box>

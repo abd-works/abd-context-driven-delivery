@@ -30,14 +30,13 @@ story('Display Session Card', CHAT_BAR, () => {
       expect((await markOf(scene.ui, 'card-cell-stories-scenarios'))?.props?.color).toBe('#6BCB77FF')
       expect((await findText(scene.ui, 'Specification'))?.props?.color).toBe('#E5531A')
     })
-    and('the fidelities start over the first dot, and Specification over the stage path', async ($, on, scene) => {
-      // checkout-flow is 13 letters; ▾, │ and their gaps take 5 more. The widest row, ■ Scenarios ✓ done, takes 18 and a
-      // gap, and the stage path's margin and the line's gap before it take 2.
+    and('the fidelities start over the first dot, and the folders in one column after the widest row', async ($, on, scene) => {
+      // checkout-flow is 13 letters; ▾, │ and their gaps take 5 more. The widest row, ■ Scenarios ✓ done, takes 18, and
+      // 3 more set the folders apart.
       const indents = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean_engineering-model'].map(async key => (await drawn(scene.ui, key))?.props?.marginLeft))
       expect(indents).toEqual([18, 18, 18])
       const header = (await drawn(scene.ui, 'card-header'))?.children?.map((cell: any) => cell?.props?.width)
       expect(header?.slice(0, 2)).toEqual([18, 21])
-      expect((await drawn(scene.ui, 'fidelity-column'))?.props?.width).toBe(19)
     })
     and("each fidelity's folders sit beside it", async ($, on, scene) => {
       expect(textOf(await markOf(scene.ui, 'card-folder-clean_engineering-model-mark'))).toBe('▸ harness/chat-ui/pane')
