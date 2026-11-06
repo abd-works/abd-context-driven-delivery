@@ -22,9 +22,9 @@ story('Display Session Card', CHAT_BAR, () => {
     })
     // ChatBarView paints the session card from the same ChatBarClient
     then("the card opens over the strip with each fidelity's colour, name and state, such as Scenarios done in the Stories colour", async ($, on, scene) => {
-      const rows = await Promise.all(['card-pick-stories-scenarios', 'card-pick-ux-mockup', 'card-pick-clean_engineering-model'].map(key => wordsOf(scene.ui, key)))
-      expect(rows).toEqual(['■ Scenarios ✓ done', '■ Mockup ○ to do', '■ Model ○ to do'])
-      expect((await markOf(scene.ui, 'card-pick-stories-scenarios'))?.props?.color).toBe('#6BCB77FF')
+      const rows = await Promise.all(['card-cell-stories-scenarios', 'card-cell-ux-mockup', 'card-cell-clean_engineering-model'].map(key => wordsOf(scene.ui, key)))
+      expect(rows).toEqual(['■Scenarios✓ done', '■Mockup○ to do', '■Model○ to do'])
+      expect((await markOf(scene.ui, 'card-cell-stories-scenarios'))?.props?.color).toBe('#6BCB77FF')
     })
     and('the fidelities start over the first dot, and Specification over the stage path', async ($, on, scene) => {
       // checkout-flow: health mark, gap, 13 letters, gap, [ ▾ ] in 5, gap, │, gap puts the first dot at column 24; the

@@ -2,6 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { ActionPickerJson, ChatBarViewJson, FidelityFilesJson } from '../../types'
 import { BRAND } from '../brand'
+import { GlyphButtonView } from '../glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { runHandoff, type ChatBarClient } from './chat-bar-client'
 import { openBoard, selectFidelity, type FidelityClient } from './fidelity-client'
@@ -16,13 +17,13 @@ import { selectStage, type StageClient } from './stage-client'
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
 // What one draw of the chat bar reads: the client built from board.show, which boxes are open above the line, the
-// server health band at the mark and its panel for the session card, and the columns the band may fill.
+// server health mark, its panel above the line, the same panel for the session card, and the columns the band may fill.
 export type ChatBarDraw = {
   chatBar: ChatBarClient
   view: ChatBarViewJson
   picker: ActionPickerJson
   files: FidelityFilesJson
-  health: { band: unknown; panel: unknown }
+  health: { band: unknown; markPanel: unknown; panel: unknown }
   width: number
 }
 
@@ -47,12 +48,10 @@ function TipView({ Box, Text }: ElementTable, words: string, detail: string, det
 // One square in its practice colour, fainter the less is done, underlined when selected, with the violation count in
 // red beside it; the fidelity and its state show above it on hover.
 export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityClient) {
-  const { Box, Button, Text } = elements
+  const { Box, Text } = elements
   return (
     <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0}>
-      <Button key={`dot-${fidelity.fidelity}`} plain onPress={() => pressDot($, fidelity)}>
-        <Text color={fidelity.shade} underline={fidelity.isSelected}>■</Text>
-      </Button>
+      {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => pressDot($, fidelity), fidelity.isSelected)}
       {fidelity.violationCount ? <Text size="caption" weight="bold" color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
       {TipView(elements, fidelity.fidelity, `${fidelity.mark} ${fidelity.word}`, fidelity.lookColour)}
     </Box>
@@ -62,15 +61,13 @@ export function FidelityView($: EngineInterface, elements: ElementTable, fidelit
 // One stage icon, faint until reached, after a grey › from the stage before it. Only the stage in progress is outlined;
 // a stage shown instead of it is tinted. Its name and what it is for show above it on hover.
 export function StageView($: EngineInterface, elements: ElementTable, stage: StageClient, index: number) {
-  const { Box, Button, Text } = elements
+  const { Box, Text } = elements
   const outline = stage.isOutlined ? { borderStyle: 'round' as const, borderColor: stage.ink } : {}
   return (
     <Box key={`stage-step-${stage.stage}`} flexDirection="row" gap={0}>
       {index ? <Text color={BRAND.border}>{' › '}</Text> : null}
       <Box key={`stage-box-${stage.stage}`} paddingX={stage.isOutlined ? 0 : 1} backgroundColor={stage.tint} {...outline}>
-        <Button key={`stage-${stage.stage}`} plain onPress={() => selectStage($, stage)}>
-          <Text color={stage.ink}>{stage.icon}</Text>
-        </Button>
+        {GlyphButtonView(elements, `stage-${stage.stage}`, stage.icon, stage.ink, () => selectStage($, stage))}
         {TipView(elements, stage.stage, stage.scope, BRAND.muted)}
       </Box>
     </Box>
@@ -144,6 +141,7 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {SessionListView($, elements, draw)}
       {SessionCardView($, elements, draw)}
       {PickerView($, elements, draw)}
+      {draw.health.markPanel}
       {LineView($, elements, draw)}
     </Box>
   )

@@ -22,7 +22,7 @@ import {
   runInstall,
   togglePin,
 } from './health/server-health-client'
-import { ServerHealthBandView, ServerHealthPanelView } from './health/server-health-view'
+import { ServerHealthBandView, ServerHealthMarkPanelView, ServerHealthPanelView } from './health/server-health-view'
 import { withChatNamed } from './session/session-log-client'
 
 const PLUGIN = 'cdd-board'
@@ -107,7 +107,7 @@ export const register: Register = on => {
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
       files: await currentFidelityFiles($),
-      health: { band: ServerHealthBandView(elements, band), panel: ServerHealthPanelView(elements, band) },
+      health: { band: ServerHealthBandView(elements, band), markPanel: ServerHealthMarkPanelView(elements, band), panel: ServerHealthPanelView(elements, band) },
       width: e.props.bodyColumns,
     })
   })

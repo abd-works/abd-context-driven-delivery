@@ -22,20 +22,16 @@ function pressAction($: EngineInterface, chatBar: ChatBarClient, action: string)
   return action === 'review' ? reviewFidelity($, fidelity) : runAction($, fidelity, action)
 }
 
-// The orange chip of the canvas: the next action's icon, then the ▾ that opens the picker, its action and fidelity
-// shown above it on hover.
+// The orange chip of the canvas, drawn as the surface's primary buttons: the next action's icon, then the ▾ that opens
+// the picker, its action and fidelity shown above it on hover.
 export function ActionButtonView($: EngineInterface, { Box, Button, Text }: ElementTable, { chatBar }: ChatBarDraw) {
   const action = actionOf(chatBar)
   if (!action) return null
   const target = action === 'advance' ? `move ${chatBar.sessionName} on` : `${action} ${chatBar.actionFidelity?.guidance ?? ''}`
   return (
     <Box key="action" flexDirection="row" gap={0}>
-      <Button key="next-action" plain onPress={() => pressAction($, chatBar, action)}>
-        <Text weight="bold" color={BRAND.onAccent} backgroundColor={BRAND.accent}>{` ${ACTION_ICONS[action] ?? '•'} `}</Text>
-      </Button>
-      <Button key="action-picker" plain onPress={() => toggleActionPicker($)}>
-        <Text color={BRAND.onAccent} backgroundColor={BRAND.accent}>▾</Text>
-      </Button>
+      <Button key="next-action" variant="primary" label={ACTION_ICONS[action] ?? '•'} onPress={() => pressAction($, chatBar, action)} />
+      <Button key="action-picker" variant="primary" label="▾" onPress={() => toggleActionPicker($)} />
       <Box position="absolute" top={-1} left={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
         <Text color={BRAND.text}>{target}</Text>
       </Box>
@@ -53,11 +49,11 @@ export function PickerView($: EngineInterface, { Box, Button, Text }: ElementTab
       {BUILDER_ACTIONS.map(action => {
         const isNext = action === fidelity.nextAction
         return (
-          <Button key={`pick-${action}`} plain onPress={() => chooseAction($, fidelity, action)}>
-            <Text color={isNext ? BRAND.accent : BRAND.muted} backgroundColor={isNext ? BRAND.accentTint : undefined}>{`${ACTION_ICONS[action]} `}</Text>
-            <Text color={isNext ? BRAND.text : BRAND.muted} backgroundColor={isNext ? BRAND.accentTint : undefined}>{action.padEnd(9)}</Text>
+          <Box key={`pick-row-${action}`} flexDirection="row" gap={1} alignItems="center" backgroundColor={isNext ? BRAND.accentTint : undefined}>
+            <Text color={isNext ? BRAND.accent : BRAND.muted}>{ACTION_ICONS[action]}</Text>
+            <Button key={`pick-${action}`} plain label={action} onPress={() => chooseAction($, fidelity, action)} />
             <Text size="caption" color={BRAND.faint}>{isNext ? 'next' : ''}</Text>
-          </Button>
+          </Box>
         )
       })}
     </Box>

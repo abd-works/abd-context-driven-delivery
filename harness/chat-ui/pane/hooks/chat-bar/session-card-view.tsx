@@ -62,11 +62,11 @@ function FidelityRowView($: EngineInterface, { Box, Button, Text }: ElementTable
   return (
     <Box key={`card-${fidelity.fidelity}`} flexDirection="row" marginLeft={indentFor(columns.fidelities)}>
       <Box width={columns.stages - columns.fidelities}>
-        <Button key={`card-pick-${fidelity.fidelity}`} plain onPress={() => selectFidelity($, fidelity)}>
-          <Text color={fidelity.shade}>{'■ '}</Text>
-          <Text color={fidelity.status === 'not_started' ? BRAND.muted : BRAND.text} underline={fidelity.isSelected}>{`${fidelity.name} `}</Text>
+        <Box key={`card-cell-${fidelity.fidelity}`} flexDirection="row" gap={1} alignItems="center">
+          <Text color={fidelity.shade}>■</Text>
+          <Button key={`card-pick-${fidelity.fidelity}`} plain label={fidelity.name} dimColor={fidelity.status === 'not_started'} onPress={() => selectFidelity($, fidelity)} />
           <Text color={fidelity.lookColour}>{`${fidelity.mark} ${fidelity.word}`}</Text>
-        </Button>
+        </Box>
       </Box>
       {fidelity.folder ? <Button key={`card-folder-${fidelity.fidelity}`} label={`▸ ${fidelity.folder}`} dimColor onPress={() => openFiles($, fidelity)} /> : null}
     </Box>

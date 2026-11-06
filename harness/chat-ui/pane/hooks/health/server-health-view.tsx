@@ -3,6 +3,7 @@ import { colourOf, detailsOf, headlineOf, installLineOf, partsOf } from './serve
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../brand'
+import { GlyphButtonView } from '../glyph-button-view'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -22,8 +23,11 @@ type Band = {
   install: InstallJson
   actions: Actions
 }
-// Where the panel is drawn: above the health mark, revealed on hover or pinned, or on top of the session card, shown
-// whenever the card is. The card's copy prefixes its keys, so a press finds the Button it means. The panel at the mark
+// The hover group of the health mark and its panel above the line: the pointer on either keeps the panel shown.
+export const HEALTH_SCOPE = 'server-health'
+
+// Where the panel is drawn: above the line over the health mark, revealed on hover or pinned, or on top of the session
+// card, shown whenever the card is. The card's copy prefixes its keys, so a press finds the Button it means. The panel at the mark
 // has no key of its own, so hovering the mark's keyed Box reveals it.
 type Placement = { isRevealed: boolean; keyOf: (name: string) => string; panel: { key?: string } }
 const AT_THE_MARK = (view: HealthViewJson): Placement => ({ isRevealed: view.isPinned, keyOf: name => name, panel: {} })
@@ -111,7 +115,8 @@ function ExpandedView(elements: ElementTable, band: Band, placement: Placement) 
       borderStyle="single"
       borderColor={look.border}
       backgroundColor={look.wash}
-      {...(placement.isRevealed ? {} : { display: 'none' as const, hover: { display: 'flex' as const } })}
+      alignSelf="flex-start"
+      {...(placement.isRevealed ? {} : { display: 'none' as const, hover: { display: 'flex' as const, scope: HEALTH_SCOPE } })}
     >
       {HeadlineView(elements, health)}
       {InstallLineView(elements, install)}
@@ -122,19 +127,22 @@ function ExpandedView(elements: ElementTable, band: Band, placement: Placement) 
   )
 }
 
-// The band is one icon until the pointer is over it or a click pins it, so it stays out of the way. The icon
-// sits beside what it expands, so the pointer stays on it as the panel opens.
+// The band is one icon on the line; its panel opens above the line while the pointer is on the icon or the panel, or
+// once a click pins it, so it stays out of the way.
 export function ServerHealthBandView(elements: ElementTable, band: Band) {
-  const { Box, Button, Text } = elements
+  const { Box } = elements
   const look = LOOKS[band.health.connection]
   return (
-    <Box key="server-health" flexDirection="row" gap={1}>
-      {ExpandedView(elements, band, AT_THE_MARK(band.view))}
-      <Button key="health-icon" plain label={look.glyph} onPress={band.actions.togglePin}>
-        <Text color={look.color}>{look.glyph}</Text>
-      </Button>
+    <Box key="server-health" flexDirection="row" hover={{ scope: HEALTH_SCOPE }}>
+      {GlyphButtonView(elements, 'health-icon', look.glyph, look.color, band.actions.togglePin)}
     </Box>
   )
+}
+
+// The panel over the health mark, drawn above the line.
+export function ServerHealthMarkPanelView(elements: ElementTable, band: Band) {
+  const { Box } = elements
+  return <Box key="health-panel" flexDirection="column">{ExpandedView(elements, band, AT_THE_MARK(band.view))}</Box>
 }
 
 // The same panel stacked on top of the session card, as CDR 0001 has hovering the session name show it.

@@ -49,8 +49,8 @@ export async function dueTimers(world: World): Promise<void> {
   await settle()
 }
 
-// A Text's words, however the test kit hands the element back.
-export const textOf = (node: any): string | undefined => node?.text ?? node?.children?.[0]
+// A Text's words, however the test kit hands the element back, or a Button's label.
+export const textOf = (node: any): string | undefined => node?.text ?? node?.children?.[0] ?? node?.props?.label
 
 // The first Text drawn inside an element, such as a dot's mark or the health mark.
 export const markOf = async (ui: any, key: string) => (await ui.find({ key }))?.children?.[0]

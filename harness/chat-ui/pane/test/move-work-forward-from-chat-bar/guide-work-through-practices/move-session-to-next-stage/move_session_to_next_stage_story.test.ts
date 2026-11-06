@@ -2,7 +2,7 @@ import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
 import { boardOf, checkoutFlowWith, DONE, GENERATED } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, drawn, markOf, textOf, tipOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, drawn, labelOf, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -47,7 +47,7 @@ story('Move Session To Next Stage', CHAT_BAR, () => {
       expect(await tipOf(scene.ui, 'action')).toBe('validate ux-mockup')
     })
     but('not the move to Implementation', async ($, on, scene) => {
-      expect(textOf(await markOf(scene.ui, 'next-action'))).not.toBe('→')
+      expect(await labelOf(scene.ui, 'next-action')).not.toBe('➜')
     })
   })
 })
