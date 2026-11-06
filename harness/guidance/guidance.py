@@ -431,37 +431,35 @@ class PracticeGuidance(Guidance):
         return load_document("", paths)
 
     @agent_tool
-    def render(
-        self,
-        format: str,
-        content: Any = "",
-        source: str | None = None,
-        previous: str = "",
-        keep_positioning: bool = False,
-        workspace: str = "",
-    ) -> dict:
-        """Turn content into the practice object model, then render the target format.
-        workspace: the folder the rendered file sits in; a renderer that links to files finds them there."""
+    def render(self, format: str, content: Any = "", source: str | None = None, previous: str = "") -> dict:
+        """Turn content into the practice object model, then render the target format. Content is in source, the
+        format this practice works in when none is named; previous is the target file as it is now."""
+        return self._render(format, content, source, previous, folder="")
+
+    def render_files(self, format: str, paths: list[str] | str, source: str | None = None) -> dict:
+        """Render the files at paths into format. A renderer that links to other files, such as a story map linking
+        to each story's file, finds them in the folder the first path is, or sits in."""
+        content = self.read_paths(paths, source)
+        return self._render(format, self if content in ("", None) else content, source, "", _folder_of(paths))
+
+    def _render(self, format: str, content: Any, source: str | None, previous: str, folder: str) -> dict:
         if not self.formats:
             companion = self.clean_engineering_companion
             owner = companion.practice_guidance if companion is not None else None
             if owner is None or owner is self:
                 return {"format": source or self.format or format, "content": content}
-            return owner.render(
-                format,
-                content,
-                source=source,
-                previous=previous,
-                keep_positioning=keep_positioning,
-                workspace=workspace,
-            )
+            return owner._render(format, content, source, previous, folder)
         model = self._to_object_model(content, source)
         target = self._live_adapter(format)
-        sketch_previous = previous
         if (source or "").lower() == "sketch" and isinstance(content, str) and content.strip():
-            sketch_previous = previous or content
-        rendered = self._call_render(target, model, sketch_previous, keep_positioning, workspace)
+            previous = previous or content
+        rendered = self._call_render(target, self._model_for(target, model), previous, folder)
         return {"format": format, "content": rendered}
+
+    def _model_for(self, target: Any, model: Any) -> Any:
+        """The object model in the form target renders; a practice whose formats read another practice's model
+        converts it here."""
+        return model
 
     def _to_object_model(self, content: Any, source: str | None) -> Any:
         if self._is_object_model(content):
@@ -511,9 +509,8 @@ class PracticeGuidance(Guidance):
         adapter = self._live_adapter(source_format)
         return adapter.parse(self._incoming(source_format, content))
 
-    def _call_render(
-        self, target: Any, parsed: Any, previous: str, keep_positioning: bool, workspace: str = ""
-    ) -> Any:
+    def _call_render(self, target: Any, parsed: Any, previous: str, folder: str) -> Any:
+        """Ask target to render parsed, giving it the previous file and the linked files' folder when it takes them."""
         try:
             parameters = inspect.signature(target.render).parameters
         except (TypeError, ValueError):
@@ -521,10 +518,8 @@ class PracticeGuidance(Guidance):
         kwargs: dict[str, Any] = {}
         if "previous" in parameters:
             kwargs["previous"] = previous or None
-        if "keep_positioning" in parameters:
-            kwargs["keep_positioning"] = keep_positioning
-        if workspace and "workspace" in parameters:
-            kwargs["workspace"] = workspace
+        if folder and "workspace" in parameters:
+            kwargs["workspace"] = folder
         return target.render(parsed, **kwargs)
 
     def _live_adapter(self, format_name: str) -> Any:
@@ -578,6 +573,17 @@ class PracticeGuidance(Guidance):
         if not current_name:
             return False
         return Name(current_name).snake != Name(name).snake
+
+
+def _folder_of(paths: list[str] | str) -> str:
+    """The folder the files at paths sit in: the first path when it is a folder, else its parent."""
+    first = paths[0] if isinstance(paths, (list, tuple)) and paths else paths
+    if not first or not isinstance(first, str):
+        return ""
+    path = Path(first)
+    if path.is_dir():
+        return str(path)
+    return str(path.parent) if path.parent.is_dir() else ""
 
 
 @agent_toolset
