@@ -37,7 +37,7 @@ story('Invoke Next Fidelity Action', CHAT_BAR, () => {
       await $.prompt.submit({ text: 'again' })
     })
     then('the button shows the validate icon, with validate ux-mockup on hover', async ($, on, scene) => {
-      await expectMarks(scene.ui, { 'next-action': '◎' })
+      await expectMarks(scene.ui, { 'next-action': ' ✓ ' })
       expect(await labelOf(scene.ui, 'next-action')).toBe('validate ux-mockup')
       expect(textOf(await findText(scene.ui, 'validate ux-mockup'))).toBe('validate ux-mockup')
     })

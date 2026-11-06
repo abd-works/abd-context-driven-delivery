@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { boardOf, checkoutFlowWith, DONE } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, drawn, findText, markOf, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, drawn, findText, labelOf, markOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -21,22 +21,23 @@ story('Display Session Card', CHAT_BAR, () => {
       await scene.ui.press({ key: 'session-name-button' })
     })
     // ChatBarView paints the session card from the same ChatBarClient
-    then("the card opens over the strip with each fidelity's colour, name and state over its dot, such as Scenarios done over the Stories dot", async ($, on, scene) => {
-      const rows = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean_engineering-model'].map(async key => (await drawn(scene.ui, key))?.children?.map(textOf)))
-      expect(rows).toEqual([['✓', 'Scenarios done', 'harness/chat-ui/.context'], ['○', 'Mockup to do', 'harness/chat-ui/design'], ['○', 'Model to do', 'harness/chat-ui/pane']])
-      expect((await markOf(scene.ui, 'card-stories-scenarios'))?.props?.color).toBe('#6BCB77')
+    then("the card opens over the strip with each fidelity's colour, name and state, such as Scenarios done in the Stories colour", async ($, on, scene) => {
+      const rows = await Promise.all(['card-pick-stories-scenarios', 'card-pick-ux-mockup', 'card-pick-clean_engineering-model'].map(key => labelOf(scene.ui, key)))
+      expect(rows).toEqual(['Scenarios done', 'Mockup to do', 'Model to do'])
+      expect((await markOf(scene.ui, 'card-pick-stories-scenarios'))?.props?.color).toBe('#6BCB77FF')
     })
-    and("each fidelity starts in its own dot's column, and Specification in its stage icon's", async ($, on, scene) => {
-      // checkout-flow: health mark, gap, 13 letters, gap, ▾, gap, │, gap puts the first dot at column 20; the card's
-      // border and padding take 2. Each dot then takes 2 with its gap. stories-scenarios, which the button follows, is
-      // done, so no action button is drawn; │ takes 2 and the stage icons Backlog and Discovery 2 each, so the outlined
-      // Specification starts at column 32.
-      const indents = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean_engineering-model', 'card-stage'].map(async key => (await drawn(scene.ui, key))?.props?.marginLeft))
-      expect(indents).toEqual([18, 20, 22, 30])
+    and('the fidelities start over the first dot, and Specification over the stage path', async ($, on, scene) => {
+      // checkout-flow: health mark, gap, 13 letters, gap, [ ▾ ] in 5, gap, │, gap puts the first dot at column 24; the
+      // card's border and padding take 2. The three dots take 2 each with their gaps. stories-scenarios, which the button
+      // follows, is done, so no action button is drawn, and the stage path's margin puts it at column 31.
+      const indents = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean_engineering-model'].map(async key => (await drawn(scene.ui, key))?.props?.marginLeft))
+      expect(indents).toEqual([22, 22, 22])
+      const header = (await drawn(scene.ui, 'card-header'))?.children?.map((cell: any) => cell?.props?.width)
+      expect(header?.slice(0, 2)).toEqual([22, 7])
       expect((await findText(scene.ui, 'Specification'))?.props?.color).toBe('#E5531A')
     })
     and("each fidelity's folders sit beside it", async ($, on, scene) => {
-      expect(textOf(await findText(scene.ui, 'harness/chat-ui/pane'))).toBe('harness/chat-ui/pane')
+      expect(await labelOf(scene.ui, 'card-folder-clean_engineering-model')).toBe('▸ harness/chat-ui/pane')
     })
   })
   scenario('Show the card while the pointer is on the session name', ({ given, when, then }) => {

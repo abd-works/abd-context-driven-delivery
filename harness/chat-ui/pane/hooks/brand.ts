@@ -7,6 +7,10 @@ export const BRAND = {
   text: '#E8E8ED',
   muted: '#9B9BA8',
   accent: '#E5531A',
+  // Text drawn on an orange chip, and the orange tint behind a chosen row.
+  onAccent: '#0B0B0B',
+  accentTint: '#E5531A2E',
+  faint: '#71717A',
   success: '#22C55E',
   successWash: '#12261A',
   warning: '#F59E0B',

@@ -20,7 +20,8 @@ const LOOKS: Record<string, { mark: string; word: string; colour: string; shade:
   done: { mark: '✓', word: 'done', colour: '#22C55E', shade: 'FF' },
 }
 export const BUILDER_ACTIONS = ['generate', 'validate', 'review', 'iterate', 'sketch', 'render', 'document']
-export const ACTION_ICONS: Record<string, string> = { generate: '✦', validate: '◎', review: '✓', satisfy: '✚', iterate: '↻', sketch: '✎', render: '⇄', document: '▭', advance: '→' }
+// Glyphs standing for the canvas's action icons: play, check, eye, cycle, pencil, open-out, page, and the move-on arrow.
+export const ACTION_ICONS: Record<string, string> = { generate: '▶', validate: '✓', review: '◉', satisfy: '✚', iterate: '↻', sketch: '✎', render: '↗', document: '▯', advance: '➜' }
 
 export type FidelityJson = {
   slug: string
