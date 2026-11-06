@@ -63,6 +63,14 @@ def _write(root: Path, relative: str, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _working_in(project: Path, root: Path) -> Session:
+    """The open session, made to work in root, a folder of the project checked out at project."""
+    session = Session.current()
+    session.repo_path = Path(project).resolve()
+    session.workpath = Path(root).resolve()
+    return session
+
+
 def _expanded_validate(action, arguments):
     return AgentInstructions.for_callable(Validate.validate, action).expand(
         {}, arguments
@@ -150,8 +158,7 @@ with description("a validate action on practice guidance") as self:
         with before.each:
             self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
             self.session = Path(Session.current().session_path)
-            self.action._validate_workspace = lambda: self.folder
-            self.action._project_checkout = lambda: self.folder
+            self.action = Validate(session=_working_in(self.folder, self.folder))
 
         with it("should report the guidance practice's graph hits from graph.json when graph is true"):
             prose = _expanded_validate(self.action, {"guidance": ["ddd-tactics"], "graph": True})
@@ -173,8 +180,7 @@ with description("a validate action on practice guidance") as self:
             _write(self.folder, "src/orders/order.ts", _OVER_LIMIT.format(name="Order"))
             _write(self.folder, "src/billing/invoice.ts", _OVER_LIMIT.format(name="Invoice"))
             self.session = Path(Session.current().session_path)
-            self.action._validate_workspace = lambda: self.folder
-            self.action._project_checkout = lambda: self.folder
+            self.action = Validate(session=_working_in(self.folder, self.folder))
 
         with after.each:
             shutil.rmtree(self.folder, ignore_errors=True)
@@ -197,8 +203,7 @@ with description("a validate action on practice guidance") as self:
             self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
             _write(self.folder, "board/.context/story-map.md", _STORY_MAP)
             self.session = Path(Session.current().session_path)
-            self.action._validate_workspace = lambda: self.folder
-            self.action._project_checkout = lambda: self.folder
+            self.action = Validate(session=_working_in(self.folder, self.folder))
 
         with after.each:
             shutil.rmtree(self.folder, ignore_errors=True)
@@ -304,7 +309,7 @@ with description("a validate action on practice guidance") as self:
         # An agent works from the project's checkout, so every path it sees starts there, not at the session's root.
         with context("in a session whose root is a folder of the project"):
             with before.each:
-                self.action._validate_workspace = lambda: self.folder / "board"
+                self.action = Validate(session=_working_in(self.folder, self.folder / "board"))
 
             with it("should read a path named from the project's root"):
                 report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
@@ -335,8 +340,7 @@ with description("a validate action on practice guidance") as self:
     with context("with edited files of a working copy that every graph practice reads"):
         with before.each:
             self.session = Path(Session.current().session_path)
-            self.action._validate_workspace = lambda: _SAMPLE
-            self.action._project_checkout = lambda: _SAMPLE
+            self.action = Validate(session=_working_in(_SAMPLE, _SAMPLE))
 
         with it("should report the private-method-naming violation on the edited entity root"):
             report = self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])

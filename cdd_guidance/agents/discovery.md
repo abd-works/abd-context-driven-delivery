@@ -20,9 +20,9 @@ You own orchestration. If the user names the practice lenses to use, follow thei
 Load the umbrella skill for each selected lens to establish shared vocabulary and rules:
 
 - `stories` and `stories-scaffold` for the story map and the primary end-to-end user journey flow.
-- `ddd` and `ddd-bounded_context` for bounded contexts, aggregate boundaries, ubiquitous language definitions, and context relationships.
+- `ddd` and `ddd-bounded-context` for bounded contexts, aggregate boundaries, ubiquitous language definitions, and context relationships.
 - `ux` and `ux-ia` for screen maps, layout regions, navigation flows, and user interaction sequences.
-- `clean_engineering` and `clean_engineering-modules` for deep modules, public interfaces, and one-way module dependencies.
+- `clean-engineering` and `clean-engineering-modules` for deep modules, public interfaces, and one-way module dependencies.
 - `bdd` and `bdd-modules` only when a high-level subject index is needed for discovery coverage; discovery normally omits BDD.
 
 ## Working Method

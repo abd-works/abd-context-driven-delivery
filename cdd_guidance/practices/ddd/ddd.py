@@ -77,7 +77,8 @@ class Ddd(PracticeGuidance):
             return MarkdownCleanEngineeringModel().parse(self._incoming(source_format, content))
         return parsed
 
-    def _call_render(self, target, parsed, previous: str, keep_positioning: bool, workspace: str = ""):
+    def _model_for(self, target, parsed):
+        # The code formats render Clean Engineering's class model; the DDD formats render the bounded-context map.
         from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
         from cdd_guidance.practices.ddd.model.clean_engineering_bridge import (
             from_clean_engineering,
@@ -91,7 +92,7 @@ class Ddd(PracticeGuidance):
                 _python_generics(parsed)
         elif isinstance(target, BoundedContextMap) and isinstance(parsed, CleanEngineeringModel):
             parsed = from_clean_engineering(parsed)
-        return super()._call_render(target, parsed, previous, keep_positioning, workspace)
+        return parsed
 
 
 def _has_aggregates(parsed) -> bool:

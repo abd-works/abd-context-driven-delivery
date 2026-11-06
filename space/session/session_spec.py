@@ -579,9 +579,8 @@ with description("a session"):
 
         with context("with rules injected from a inject rules hook"):
             with before.each:
-                self.session.note_injected_rule(
-                    "bdd", "development", "hierarchy-preservation", str(self.edited)
-                )
+                rules = self.session.practice("bdd").fidelities["development"].rules
+                self.session.note_injected_rules(rules, str(self.edited))
 
             with it("should log that practice, fidelity, rule, and matched file"):
                 self.session.log_action("sketch", [self.edited])

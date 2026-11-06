@@ -294,12 +294,12 @@ class GuidanceAction:
 
     def _session_practice(self, item):
         """The practice item is, as this action's session holds it; none when item is no practice CDD has."""
+        from harness.guidance.guidance import PracticeGuidance
         from harness.guidance.practice_catalogue import PracticeCatalogue
 
-        key = PracticeCatalogue.key_of(item)
-        if key is None or not PracticeCatalogue.has(key):
+        if not isinstance(item, PracticeGuidance) or not PracticeCatalogue.has(item.key):
             return None
-        return self.session.practice(key)
+        return self.session.practice(item.key)
 
     def _work_in_session(self, item, chose_format: bool) -> None:
         practice = self._session_practice(item)

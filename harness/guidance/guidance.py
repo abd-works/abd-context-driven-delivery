@@ -253,21 +253,36 @@ class PracticeGuidance(Guidance):
     def context_index_key(self) -> str:
         return AssetLocator(self, "").class_file_directory().name
 
-    def project_rules(self, root=None) -> list:
-        """Custom rulesets from the working folder, tagged project."""
-        from harness.guidance.project_rules import load_project_rules
+    def project_rules(self) -> list:
+        """The custom rules the project keeps for this practice in `.context/rules/{practice}/rules.md`, and for a
+        fidelity in a folder named after it, each tagged project; none when the practice works in no folder."""
+        from harness.guidance.project_rules import ProjectRulesets
 
-        folder = self._working_folder(root)
-        if folder is None:
+        folder = self._working_folder()
+        if folder is None or not folder.is_dir():
             return []
-        fidelities = getattr(self, "fidelities", None)
-        names = list(getattr(fidelities, "entries", {}) or {})
-        return load_project_rules(folder, self.context_index_key, names)
+        rules: list = []
+        seen: set[Path] = set()
+        for rules_dir in ProjectRulesets(folder).folders_for(self.context_index_key):
+            rules.extend(self._project_rules_in(rules_dir / "rules.md", None, seen))
+            for fidelity in self.fidelities.entries:
+                for spelling in Name(fidelity).spellings:
+                    rules.extend(self._project_rules_in(rules_dir / spelling / "rules.md", fidelity, seen))
+        return rules
 
-    def _working_folder(self, root=None) -> Path | None:
+    def _project_rules_in(self, path: Path, fidelity: str | None, seen: set[Path]) -> list:
+        """The rules in one project rules file, once each however many spellings lead to it."""
+        if not path.is_file() or path.resolve() in seen:
+            return []
+        seen.add(path.resolve())
+        collection = RulesCollection.from_markdown(path.read_text(encoding="utf-8"), fidelity=fidelity)
+        return [
+            rule.attribute_to(self.context_index_key, tag="project", shared=fidelity is None) for rule in collection
+        ]
+
+    def _working_folder(self) -> Path | None:
         workspace = getattr(self, "workspace", None)
         candidates = (
-            root,
             getattr(workspace, "path", None) if workspace is not None else None,
             getattr(self, "path", None),
         )
@@ -468,37 +483,35 @@ class PracticeGuidance(Guidance):
         return load_document("", paths)
 
     @agent_tool
-    def render(
-        self,
-        format: str,
-        content: Any = "",
-        source: str | None = None,
-        previous: str = "",
-        keep_positioning: bool = False,
-        workspace: str = "",
-    ) -> dict:
-        """Turn content into the practice object model, then render the target format.
-        workspace: the folder the rendered file sits in; a renderer that links to files finds them there."""
+    def render(self, format: str, content: Any = "", source: str | None = None, previous: str = "") -> dict:
+        """Turn content into the practice object model, then render the target format. Content is in source, the
+        format this practice works in when none is named; previous is the target file as it is now."""
+        return self._render(format, content, source, previous, folder="")
+
+    def render_files(self, format: str, paths: list[str] | str, source: str | None = None) -> dict:
+        """Render the files at paths into format. A renderer that links to other files, such as a story map linking
+        to each story's file, finds them in the folder the first path is, or sits in."""
+        content = self.read_paths(paths, source)
+        return self._render(format, self if content in ("", None) else content, source, "", _folder_of(paths))
+
+    def _render(self, format: str, content: Any, source: str | None, previous: str, folder: str) -> dict:
         if not self.formats:
             companion = self.clean_engineering_companion
             owner = companion.practice_guidance if companion is not None else None
             if owner is None or owner is self:
                 return {"format": source or self.format or format, "content": content}
-            return owner.render(
-                format,
-                content,
-                source=source,
-                previous=previous,
-                keep_positioning=keep_positioning,
-                workspace=workspace,
-            )
+            return owner._render(format, content, source, previous, folder)
         model = self._to_object_model(content, source)
         target = self._live_adapter(format)
-        sketch_previous = previous
         if (source or "").lower() == "sketch" and isinstance(content, str) and content.strip():
-            sketch_previous = previous or content
-        rendered = self._call_render(target, model, sketch_previous, keep_positioning, workspace)
+            previous = previous or content
+        rendered = self._call_render(target, self._model_for(target, model), previous, folder)
         return {"format": format, "content": rendered}
+
+    def _model_for(self, target: Any, model: Any) -> Any:
+        """The object model in the form target renders; a practice whose formats read another practice's model
+        converts it here."""
+        return model
 
     def _to_object_model(self, content: Any, source: str | None) -> Any:
         if self._is_object_model(content):
@@ -548,9 +561,8 @@ class PracticeGuidance(Guidance):
         adapter = self._live_adapter(source_format)
         return adapter.parse(self._incoming(source_format, content))
 
-    def _call_render(
-        self, target: Any, parsed: Any, previous: str, keep_positioning: bool, workspace: str = ""
-    ) -> Any:
+    def _call_render(self, target: Any, parsed: Any, previous: str, folder: str) -> Any:
+        """Ask target to render parsed, giving it the previous file and the linked files' folder when it takes them."""
         try:
             parameters = inspect.signature(target.render).parameters
         except (TypeError, ValueError):
@@ -558,10 +570,8 @@ class PracticeGuidance(Guidance):
         kwargs: dict[str, Any] = {}
         if "previous" in parameters:
             kwargs["previous"] = previous or None
-        if "keep_positioning" in parameters:
-            kwargs["keep_positioning"] = keep_positioning
-        if workspace and "workspace" in parameters:
-            kwargs["workspace"] = workspace
+        if folder and "workspace" in parameters:
+            kwargs["workspace"] = folder
         return target.render(parsed, **kwargs)
 
     def _live_adapter(self, format_name: str) -> Any:
@@ -617,8 +627,23 @@ class PracticeGuidance(Guidance):
         return Name(current_name).snake != Name(name).snake
 
 
+def _folder_of(paths: list[str] | str) -> str:
+    """The folder the files at paths sit in: the first path when it is a folder, else its parent."""
+    first = paths[0] if isinstance(paths, (list, tuple)) and paths else paths
+    if not first or not isinstance(first, str):
+        return ""
+    path = Path(first)
+    if path.is_dir():
+        return str(path)
+    return str(path.parent) if path.parent.is_dir() else ""
+
+
 @agent_toolset
 class FidelityGuidance(Guidance):
+    host: FidelityGuidance | None = None
+    """The fidelity this one is the Clean Engineering companion of, such as Stories' acceptance_tests for code; none
+    for a fidelity of its own practice."""
+
     def __init__(
         self,
         name: str = "",
@@ -691,6 +716,19 @@ class FidelityGuidance(Guidance):
         return AssetLocator(self, "").class_file_directory().name
 
     @property
+    def format(self) -> str | None:
+        """The format this fidelity works in. A Clean Engineering companion writes its host's code, so while the host's
+        practice works in a code format the companion works in it too, read when asked so it follows the host."""
+        host_practice = self.host.practice_guidance if self.host is not None else None
+        if host_practice is not None and Format(host_practice.format).is_code:
+            return host_practice.format
+        return getattr(self, "_format", None)
+
+    @format.setter
+    def format(self, value: str | None) -> None:
+        self._format = value
+
+    @property
     def default_format(self) -> str:
         return getattr(self, "_default_format", "")
 
@@ -707,6 +745,8 @@ class FidelityGuidance(Guidance):
 
     @property
     def clean_engineering(self) -> FidelityGuidance | None:
+        """The Clean Engineering fidelity this fidelity's `clean_engineering:` field names, whose instructions join
+        this fidelity's. It knows this fidelity as its host and reads the code format from it."""
         stored = getattr(self, "_clean_engineering", None)
         if isinstance(stored, FidelityGuidance):
             return stored
@@ -715,14 +755,7 @@ class FidelityGuidance(Guidance):
         from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
         companion = CleanEngineering().fidelities[stored]
-        host = self.practice_guidance
-        practice = companion.practice_guidance
-        if (
-            host is not None
-            and practice is not None
-            and Format(host.format).is_code
-        ):
-            practice.format = host.format
+        companion.host = self
         self._clean_engineering = companion
         return companion
 
@@ -746,6 +779,12 @@ class FidelityGuidance(Guidance):
     @property
     def overview(self) -> str:  # type: ignore[override]
         return Markdown.from_label(self, "overview").extract()
+
+    @property
+    def scaffold(self) -> str:
+        """This fidelity's Scaffold subsection: the names a first cut writes, which are what a partition index lists;
+        empty when the fidelity has none."""
+        return Markdown.from_label(self, "scaffold").extract().strip()
 
     @property
     def section(self) -> str:
@@ -788,9 +827,7 @@ class FidelityGuidance(Guidance):
             companion_text = (
                 companion.instructions if isinstance(companion, FidelityGuidance) else ""
             )
-            templates = Markdown.from_label(
-                practice, "templates", fidelity=self.name, format=self.format or self.default_format
-            ).extract().strip()
+            templates = self._template(practice)
             if templates:
                 templates = f"#### Template\n\n{templates}"
         schema = practice.schema_guide() if practice is not None else ""
@@ -807,3 +844,13 @@ class FidelityGuidance(Guidance):
             )
             if part
         )
+
+    def _template(self, practice: PracticeGuidance) -> str:
+        """This fidelity's template in the format it works in, else in its default format: a companion writing
+        TypeScript still shows Clean Engineering's reference template when no TypeScript one exists."""
+        formats = [spelling for spelling in dict.fromkeys((self.format, self.default_format)) if spelling] or [""]
+        for format in formats:
+            found = Markdown.from_label(practice, "templates", fidelity=self.name, format=format).extract().strip()
+            if found:
+                return found
+        return ""

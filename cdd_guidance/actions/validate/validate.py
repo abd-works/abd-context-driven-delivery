@@ -129,7 +129,7 @@ class Validate(GuidanceAction):
             default = self._session_path() / "clean-engineering-violations.json"
             if default.is_file():
                 return [default]
-            saved = self._validate_workspace() / ".context" / "graph.json"
+            saved = self.session.root / ".context" / "graph.json"
             if saved.is_file():
                 return [saved]
         return paths
@@ -142,9 +142,8 @@ class Validate(GuidanceAction):
         """
         from harness.graph.graph import Graph
 
-        workspace = self._validate_workspace()
         graph = Graph()
-        graph.load_files(str(workspace), list(PracticeCatalogue.keys()), edited)
+        graph.load_files(str(self.session.root), list(PracticeCatalogue.keys()), edited)
         return Path(graph.write_json(str(self._session_path() / "edited-graph.json")))
 
     def _workspace_relative(self, paths: list[str] | None) -> list[str]:
@@ -153,8 +152,8 @@ class Validate(GuidanceAction):
         A relative path is read from the project's checkout, where the agent works and every path it sees starts. A
         path that is not there, or not under the session's root, is refused: the graph would be built from nothing,
         and its empty report would read as a clean validate."""
-        workspace = self._validate_workspace()
-        project = self._project_checkout()
+        workspace = self.session.root
+        project = self.session.repo_from_session()
         named = [(item, (project / item).resolve()) for item in paths or []]
         unreadable = [item for item, path in named if not path.exists() or (path != workspace and workspace not in path.parents)]
         if unreadable:
@@ -169,8 +168,8 @@ class Validate(GuidanceAction):
 
     def _other_format_files(self, checked: list[tuple[str, dict[str, list[str]]]]) -> set[str]:
         """The declared files of every format validate does not check, as graph node files record them."""
-        workspace = self._validate_workspace()
-        others = [(self._project_checkout() / path).resolve() for chosen, outputs in checked for format, paths in outputs.items() if format != chosen for path in paths if "{" not in path]
+        workspace = self.session.root
+        others = [(self.session.repo_from_session() / path).resolve() for chosen, outputs in checked for format, paths in outputs.items() if format != chosen for path in paths if "{" not in path]
         return {path.relative_to(workspace).as_posix() for path in others if workspace in path.parents}
 
     def _one_format_instruction(self, checked: list[tuple[str, dict[str, list[str]]]]) -> str:
@@ -183,9 +182,9 @@ class Validate(GuidanceAction):
         The folder, not the file, because a story map's stories keep their scenarios in files beside it."""
         if not self._graph_practices():
             return []
-        workspace = self._validate_workspace()
+        workspace = self.session.root
         declared = [path for chosen, outputs in checked for path in outputs.get(chosen, [])]
-        found = [(self._project_checkout() / path).resolve() for path in declared if "{" not in path]
+        found = [(self.session.repo_from_session() / path).resolve() for path in declared if "{" not in path]
         folders = {path.parent if path.is_file() else path for path in found if path.exists()}
         return sorted(str(folder) for folder in folders if folder == workspace or workspace in folder.parents)
 
@@ -200,45 +199,11 @@ class Validate(GuidanceAction):
 
     def _graph_practices(self) -> list[str]:
         """The catalogue key of each listed practice, such as clean_engineering; none for other guidance."""
-        keys = [PracticeCatalogue.key_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        return [key for key in keys if key]
+        practices = [item for item in self.listed() if isinstance(item, PracticeGuidance)]
+        return [practice.key for practice in practices if PracticeCatalogue.has(practice.key)]
 
     def _session_path(self) -> Path:
         return Path(self.session.session_path)
-
-    def _validate_workspace(self) -> Path:
-        return Path(self.session.workpath).resolve()
-
-    def _project_checkout(self) -> Path:
-        session = self.session
-        return Path(session.repo_path or session.workpath).resolve()
-
-    def _graph_json_report(
-        self,
-        paths: list[Path],
-        *,
-        path_prefixes: list[str] | None = None,
-    ) -> str:
-        from validate.graph_json_reader import (
-            filter_violations_by_path_prefix,
-            refresh_stale_limit_operation_parameter_messages,
-            violations_from_graph_json_files,
-        )
-        from validate.validation_report import build_graph_json_report
-
-        workspace = self._validate_workspace()
-        violations = violations_from_graph_json_files(paths)
-        violations = refresh_stale_limit_operation_parameter_messages(violations, workspace)
-        violations = filter_violations_by_path_prefix(violations, path_prefixes)
-        violations = [violation for violation in violations if violation.get("location") not in self._unchecked_files]
-        self._log_graph_validation(violations)
-        return build_graph_json_report(
-            violations,
-            workspace_directory=self._validate_workspace(),
-            title="Graph rule validation",
-            graph_sources=[str(path.resolve()) for path in paths],
-            link_from_directory=self._session_path(),
-        )
 
     def _graph_and_ai_rule_report(
         self,
@@ -251,11 +216,10 @@ class Validate(GuidanceAction):
             refresh_stale_limit_operation_parameter_messages,
             violations_from_graph_json_files,
         )
-        from validate.validation_report import build_graph_and_ai_rule_report
+        from validate.validation_report import ValidationReport
 
-        workspace = self._validate_workspace()
         violations = violations_from_graph_json_files(paths, self._graph_practices() or None)
-        violations = refresh_stale_limit_operation_parameter_messages(violations, workspace)
+        violations = refresh_stale_limit_operation_parameter_messages(violations, self.session.root)
         violations = filter_violations_by_path_prefix(violations, path_prefixes)
         violations = [violation for violation in violations if violation.get("location") not in self._unchecked_files]
         self._log_graph_validation(violations)
@@ -266,13 +230,10 @@ class Validate(GuidanceAction):
                 continue
             rules.extend(self._iter_validate_rules(item))
             rule_bodies.update(self._rule_bodies_from_guidance(item))
-        return build_graph_and_ai_rule_report(
+        return ValidationReport(self.session).of_graph_and_ai_rules(
             violations,
             rules,
-            workspace_directory=workspace,
-            title="Graph rule validation",
             graph_sources=[str(path.resolve()) for path in paths],
-            link_from_directory=self._session_path(),
             rule_bodies=rule_bodies,
         )
 

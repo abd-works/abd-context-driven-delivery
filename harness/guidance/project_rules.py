@@ -1,4 +1,4 @@
-﻿"""Load custom project rulesets from a working folder."""
+﻿"""Find the custom rulesets a project keeps under `.context/rules/` folders."""
 from __future__ import annotations
 
 import os
@@ -13,109 +13,32 @@ _SKIP_DIRS = {
     ".venv",
     "venv",
 }
-_INDEX: dict[str, dict[str, list[Path]]] = {}
 
 
-def load_project_rules(root, practice, fidelities) -> list:
-    """Rules tagged project, including fidelity folders under the practice ruleset."""
-    from harness.guidance.rule import RulesCollection
+class ProjectRulesets:
+    """*ProjectRulesets* are the `.context/rules/{practice}/` folders found anywhere under a project's working folder,
+    by practice key. Walking the project is slow, so each working folder is walked once per process."""
 
-    folder = _folder(root)
-    practice_name = str(practice or "").strip()
-    if folder is None or not practice_name:
-        return []
-    loaded: list = []
-    seen: set[Path] = set()
-    names = [str(name) for name in (fidelities or [])]
-    for rules_dir in _indexed_rules(folder).get(practice_name, []):
-        loaded.extend(
-            _rules_from(
-                rules_dir / "rules.md",
-                practice_name,
-                None,
-                seen,
-                RulesCollection,
-            )
-        )
-        for fidelity in names:
-            for child_name in _fidelity_folders(fidelity):
-                loaded.extend(
-                    _rules_from(
-                        rules_dir / child_name / "rules.md",
-                        practice_name,
-                        fidelity,
-                        seen,
-                        RulesCollection,
-                    )
-                )
-    return loaded
+    _found: dict[str, dict[str, list[Path]]] = {}
 
+    def __init__(self, root: Path) -> None:
+        self.root = root
 
-def _folder(root) -> Path | None:
-    if root is None:
-        return None
-    text = str(root).strip()
-    if not text or text == ".":
-        return None
-    folder = Path(text)
-    if not folder.is_dir():
-        return None
-    return folder
+    def folders_for(self, practice: str) -> list[Path]:
+        """Each `.context/rules/{practice}/` folder under the working folder, the working folder's own first."""
+        key = str(self.root.resolve())
+        if key not in self._found:
+            self._found[key] = self._walk()
+        return self._found[key].get(practice, [])
 
-
-def _indexed_rules(root: Path) -> dict[str, list[Path]]:
-    key = str(root.resolve())
-    cached = _INDEX.get(key)
-    if cached is not None:
-        return cached
-    found: dict[str, list[Path]] = {}
-
-    def consider(folder: Path) -> None:
-        rules_root = folder / ".context" / "rules"
-        if not rules_root.is_dir():
-            return
-        for child in rules_root.iterdir():
-            if child.is_dir():
-                found.setdefault(child.name, []).append(child)
-
-    consider(root)
-    for dirpath, dirnames, _filenames in os.walk(root, onerror=lambda _error: None):
-        current = Path(dirpath)
-        dirnames[:] = [
-            name
-            for name in dirnames
-            if name not in _SKIP_DIRS and name != ".context"
-        ]
-        if current == root:
-            continue
-        consider(current)
-    _INDEX[key] = found
-    return found
-
-
-def _fidelity_folders(fidelity: str) -> list[str]:
-    names: list[str] = []
-    for candidate in (
-        fidelity,
-        fidelity.replace("_", "-"),
-        fidelity.replace("-", "_"),
-    ):
-        if candidate and candidate not in names:
-            names.append(candidate)
-    return names
-
-
-def _rules_from(path: Path, practice: str, fidelity: str | None, seen: set[Path], collection_type):
-    if not path.is_file():
-        return []
-    resolved = path.resolve()
-    if resolved in seen:
-        return []
-    seen.add(resolved)
-    text = path.read_text(encoding="utf-8")
-    collection = collection_type.from_markdown(text, fidelity=fidelity)
-    shared = fidelity is None
-    return [
-        rule.attribute_to(practice, tag="project", shared=shared)
-        for rule in collection
-    ]
+    def _walk(self) -> dict[str, list[Path]]:
+        found: dict[str, list[Path]] = {}
+        for dirpath, dirnames, _filenames in os.walk(self.root, onerror=lambda _error: None):
+            dirnames[:] = [name for name in dirnames if name not in _SKIP_DIRS and name != ".context"]
+            rules_root = Path(dirpath) / ".context" / "rules"
+            if not rules_root.is_dir():
+                continue
+            for child in rules_root.iterdir():
+                if child.is_dir():
+                    found.setdefault(child.name, []).append(child)
+        return found

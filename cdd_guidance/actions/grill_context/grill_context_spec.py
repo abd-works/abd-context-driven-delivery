@@ -19,6 +19,14 @@ from mamba import before, context, description, it
 from harness.agent_tools.agent_tools import AgentInstructions
 from grill_context.grill_context import GrillContext
 from harness.agent_tools.agent_tools import AgentToolSet
+from space.session import Session
+
+
+def _session_at(folder: Path) -> Session:
+    """A session that works in folder and keeps no log."""
+    session = Session(folder)
+    session.workpath = Path(folder)
+    return session
 
 
 with description("GrillContext toolset"):
@@ -53,9 +61,16 @@ with description("GrillContext toolset"):
             self.tmp = tempfile.TemporaryDirectory()
             self.root = self.tmp.name
 
+        with context("that names no folder"):
+            with it("should scan the session's root"):
+                (Path(self.root) / "module-context.md").write_text("context\n", encoding="utf-8")
+                gc = GrillContext(_session_at(Path(self.root)))
+                result = json.loads(gc.explore_context_files())
+                expect([item["kind"] for item in result]).to(equal(["context-named"]))
+
         with context("that scans a root with no files"):
             with it("should return an empty JSON array"):
-                result = self.gc.explore_context_files(root=self.root)
+                result = self.gc.explore_context_files(folder=self.root)
                 expect(json.loads(result)).to(equal([]))
 
         with context("that scans a root containing a context-named file"):
@@ -63,7 +78,7 @@ with description("GrillContext toolset"):
                 ctx_file = Path(self.root) / "module-context.md"
                 ctx_file.write_text("# context\n", encoding="utf-8")
 
-                result = json.loads(self.gc.explore_context_files(root=self.root))
+                result = json.loads(self.gc.explore_context_files(folder=self.root))
 
                 expect(len(result)).to(equal(1))
                 expect(result[0]["kind"]).to(equal("context-named"))
@@ -75,7 +90,7 @@ with description("GrillContext toolset"):
                 ctx_dir.mkdir()
                 (ctx_dir / "session.md").write_text("# session\n", encoding="utf-8")
 
-                result = json.loads(self.gc.explore_context_files(root=self.root))
+                result = json.loads(self.gc.explore_context_files(folder=self.root))
 
                 expect(len(result)).to(equal(1))
                 expect(result[0]["kind"]).to(equal("context-folder"))
@@ -86,7 +101,7 @@ with description("GrillContext toolset"):
                 cache_dir.mkdir()
                 (cache_dir / "module.cpython-312.pyc").write_text("", encoding="utf-8")
 
-                result = json.loads(self.gc.explore_context_files(root=self.root))
+                result = json.loads(self.gc.explore_context_files(folder=self.root))
 
                 expect(result).to(equal([]))
 
@@ -96,7 +111,7 @@ with description("GrillContext toolset"):
                 priv_dir.mkdir()
                 (priv_dir / "context.md").write_text("# private\n", encoding="utf-8")
 
-                result = json.loads(self.gc.explore_context_files(root=self.root))
+                result = json.loads(self.gc.explore_context_files(folder=self.root))
 
                 expect(result).to(equal([]))
 
@@ -116,16 +131,15 @@ with description("GrillContext toolset"):
 
     with context("write_grill_answer tool"):
         with before.each:
-            self.gc = GrillContext()
             self.tmp = tempfile.TemporaryDirectory()
             self.root = self.tmp.name
+            self.gc = GrillContext(_session_at(Path(self.root)))
 
-        with context("that writes when root is a session folder"):
-            with it("should write grill-answers.md in path/.context not the session folder"):
+        with context("with a session whose root is inside a .context folder"):
+            with it("should write grill-answers.md in that .context folder, not the session's root"):
                 sprint = Path(self.root) / ".context" / "sessions" / "my-sprint"
                 sprint.mkdir(parents=True)
-                self.gc.write_grill_answer(
-                    root=str(sprint),
+                GrillContext(_session_at(sprint)).write_grill_answer(
                     heading="Session insight",
                     body="Answers survive across sprints.",
                 )
@@ -137,7 +151,6 @@ with description("GrillContext toolset"):
         with context("that writes when no grill-answers.md exists yet"):
             with it("should create grill-answers.md under .context/ in the root"):
                 self.gc.write_grill_answer(
-                    root=self.root,
                     heading="How actions are discovered",
                     body="Actions are discovered by scanning @agent_instructions decorators.",
                 )
@@ -146,7 +159,6 @@ with description("GrillContext toolset"):
 
             with it("should write a fresh header followed by the given entry"):
                 self.gc.write_grill_answer(
-                    root=self.root,
                     heading="Design rationale",
                     body="The design separates context discovery from question framing.",
                 )
@@ -158,7 +170,6 @@ with description("GrillContext toolset"):
 
             with it("should return the path to grill-answers.md as a string"):
                 result = self.gc.write_grill_answer(
-                    root=self.root,
                     heading="Initial insight",
                     body="Context files reveal intent.",
                 )
@@ -168,12 +179,10 @@ with description("GrillContext toolset"):
         with context("that appends when grill-answers.md already exists"):
             with it("should preserve prior content and add the new entry"):
                 self.gc.write_grill_answer(
-                    root=self.root,
                     heading="First insight",
                     body="Exploration precedes questions.",
                 )
                 self.gc.write_grill_answer(
-                    root=self.root,
                     heading="Second insight",
                     body="Answers are accumulated incrementally.",
                 )

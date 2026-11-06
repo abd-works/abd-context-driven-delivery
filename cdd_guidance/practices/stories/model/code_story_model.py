@@ -85,22 +85,16 @@ class CodeStoryNode:
     """Name forms shared by every code node. slug is the kebab folder name."""
 
     def slug(self) -> str:
-        return re.sub(r"[^0-9a-z]+", "-", self.name.strip().lower()).strip("-") or "unnamed"
+        return Name(self.name).title_slug or "unnamed"
 
     def snake(self) -> str:
-        return re.sub(r"[^0-9a-z]+", "_", self.name.strip().lower()).strip("_") or "unnamed"
+        return Name(self.name).title_snake or "unnamed"
 
     def pascal(self) -> str:
-        parts = [word for word in re.split(r"[^0-9A-Za-z]+", self.name.strip()) if word]
-        return "".join(word[:1].upper() + word[1:].lower() for word in parts) or "Unnamed"
+        return Name(self.name).title_pascal or "Unnamed"
 
     def camel(self) -> str:
-        parts = [word for word in re.split(r"[^0-9A-Za-z]+", self.name.strip()) if word]
-        if not parts:
-            return "unnamed"
-        first = parts[0].lower()
-        rest = "".join(word[:1].upper() + word[1:].lower() for word in parts[1:])
-        return first + rest
+        return Name(self.name).title_camel or "unnamed"
 
     @classmethod
     def name_from_slug(cls, slug: str) -> str:

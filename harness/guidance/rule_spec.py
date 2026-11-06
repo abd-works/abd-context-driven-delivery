@@ -191,3 +191,28 @@ with description("a shared rules section containing rule bullets") as self:
             from cdd_guidance.practices.bdd.bdd import Bdd
 
             expect(Bdd(fidelity="behavior").rules.markdown_block).not_to(contain(".ql"))
+
+
+with description("a rules collection a session log names"):
+    with context("that holds one fidelity's rules"):
+        with it("should name its practice"):
+            from cdd_guidance.practices.bdd.bdd import Bdd
+
+            expect(Bdd().fidelities["development"].rules.practice_key).to(equal("bdd"))
+
+        with it("should name that fidelity"):
+            from cdd_guidance.practices.bdd.bdd import Bdd
+
+            expect(Bdd(fidelity="behavior").fidelities["development"].rules.fidelity_name).to(equal("development"))
+
+    with context("that holds a practice's shared rules"):
+        with it("should name the fidelity the practice is working at"):
+            from cdd_guidance.practices.bdd.bdd import Bdd
+
+            expect(Bdd(fidelity="realization").rules.fidelity_name).to(equal("realization"))
+
+    with context("that belongs to no practice"):
+        with it("should name no practice"):
+            from harness.guidance.rule import RulesCollection
+
+            expect(RulesCollection().practice_key).to(equal(""))

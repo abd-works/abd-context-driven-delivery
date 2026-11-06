@@ -29,7 +29,7 @@ Under the deepest heading, a fenced block holds the `it should …` observations
 
 **Do not annotate sketch lines** with `# b` / `# d` (or any margin fidelity tags). Declare fidelity once at the top of the file.
 
-This template is the BDD notation for a section of the engagement sketch. When sketched with another practice in the same session (clean-engineering-model / object model), keep that notation in `{slug}-sketch.md` so the model and behaviors stay paired; do not write `{slug}-bdd-sketch.md`.
+This template is the BDD notation for a section of the engagement sketch. When sketched with another practice in the same session (clean-engineering-model / object model), keep that notation in the session's `{session}-sketch.md` so the model and behaviors stay paired; do not write `{session}-bdd-sketch.md`.
 
 ---
 

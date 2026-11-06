@@ -132,3 +132,18 @@ with description("Render"):
             source="python",
         )
         expect(str(results[0]["content"])).to(contain("Scenario: Show the products in stock"))
+
+    with it("should link a rendered story map to the story files beside the map it reads"):
+        folder = Path(tempfile.mkdtemp(prefix="render-links-"))
+        story_map = folder / "story-map.md"
+        story_map.write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+        story_file = folder / "orders" / "browse_product_catalog_story.test.md"
+        story_file.parent.mkdir(parents=True)
+        story_file.write_text("## Story: Browse Product Catalog\n", encoding="utf-8")
+        results = Render().render(
+            _STORIES,
+            format="drawio",
+            paths=[str(story_map)],
+            source="markdown",
+        )
+        expect(str(results[0]["content"])).to(contain('link="orders/browse_product_catalog_story.test.md"'))
