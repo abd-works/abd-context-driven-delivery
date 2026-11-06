@@ -172,7 +172,7 @@ class Partition(GuidanceAction):
                 scaffold=self._scaffold_of(item),
             )
 
-        self.run(guidance, on, action="partition")
+        self.run(on, action="partition")
         return (
             f"Partition of {source} finished (mode {mode}); "
             "docs under {session.path}/.context/. "

@@ -21,11 +21,6 @@ class Iterate(GuidanceAction):
         """GrillContext toolset for in-method composition (not a tool)."""
         return GrillContext(self.session)
 
-    def _generate(self):
-        from generate.generate import Generate
-
-        return Generate(self.session)
-
     @Mcp
     @agent_tool
     def mark_iterate_tick(self) -> str:
@@ -40,10 +35,13 @@ class Iterate(GuidanceAction):
         """Grill the plan with grill: ask short framed questions and wait for answers. After each small batch of answers, generate or revise only the final deliverable slice those answers unlocked, validate it, apply one fix pass, and get user feedback before asking more. Work in short cycles until the deliverables are agreed. Do not dump the whole product in one tick, and do not sketch — iterate the formal artifacts.
         tools: operation names this cycle may call."""
         self._bind_guidance(guidance)
-        self.run(guidance, self._iterate_item, action="iterate")
+        self.run(self._iterate_item, action="iterate")
         return "Iterate complete; generate instructions applied."
 
     def _iterate_item(self, item) -> None:
+        from generate.generate import Generate
+
         self._grill_context().grill_with_context()
         self.mark_iterate_tick()
-        self._generate().generate(item if isinstance(item, str) else [item])
+        worked_on = item if isinstance(item, str) else [item]
+        self._inside(Generate, worked_on).generate(worked_on)

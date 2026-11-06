@@ -76,7 +76,8 @@ with description("GuidanceAction"):
 
         kit = GuidanceAction()
         seen: list = []
-        kit.run("just this text", seen.append, action="generate")
+        kit._bind_guidance("just this text")
+        kit.run(seen.append, action="generate")
         expect(seen).to(equal(["just this text"]))
 
     with it("should list a practice and a fidelity from their guidance slugs"):
@@ -155,14 +156,18 @@ with description("GuidanceAction"):
             from harness.guidance_actions import GuidanceAction
             from space.session import Session
 
-            GuidanceAction().run(f"stories-story-map format=drawio {self.session_word}", lambda item: None, action="generate")
+            action = GuidanceAction()
+            action._bind_guidance(f"stories-story-map format=drawio {self.session_word}")
+            action.run(lambda item: None, action="generate")
             reloaded = Session.from_file(self.session_word.removeprefix("session="))
             expect(reloaded.practices["stories"]._saved.get("formats")).to(equal({"story_map": "drawio"}))
 
         with it("should work in the kept format when the next command names none"):
             from harness.guidance_actions import GuidanceAction
 
-            GuidanceAction().run(f"stories-story-map format=drawio {self.session_word}", lambda item: None, action="generate")
+            action = GuidanceAction()
+            action._bind_guidance(f"stories-story-map format=drawio {self.session_word}")
+            action.run(lambda item: None, action="generate")
             kit = GuidanceAction()
             kit._bind_guidance(f"stories-story-map {self.session_word}")
             expect([item.format for item in kit.listed()]).to(equal(["drawio"]))
@@ -171,9 +176,46 @@ with description("GuidanceAction"):
             from harness.guidance_actions import GuidanceAction
             from space.session import Session
 
-            GuidanceAction().run(f"stories-story-map format=drawio {self.session_word}", lambda item: None, action="generate")
+            action = GuidanceAction()
+            action._bind_guidance(f"stories-story-map format=drawio {self.session_word}")
+            action.run(lambda item: None, action="generate")
             reloaded = Session.from_file(self.session_word.removeprefix("session="))
             expect(reloaded.practices["stories"].enabled).to(equal(True))
+
+        with it("should log a call in that session"):
+            from generate.generate import Generate
+
+            generate = Generate()
+            generate._discover_instruction_members()["generate"].invoke({"guidance": f"stories-story-map {self.session_word}"})
+            log = self.project / ".sessions" / "sign-up" / "session.log"
+            expect(log.read_text(encoding="utf-8")).to(contain(f"tool {generate.slug}.generate"))
+
+        with it("should work on the same Guidance when a call binds the same guidance again"):
+            from harness.guidance_actions import GuidanceAction
+
+            kit = GuidanceAction()
+            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            first = kit.listed()[0]
+            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            expect(kit.listed()[0]).to(be(first))
+
+        with it("should start the next call with none of this call's guidance"):
+            from harness.guidance_actions import GuidanceAction
+
+            kit = GuidanceAction()
+            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            kit.listed()
+            kit.start_call()
+            expect(kit.listed()).to(equal([]))
+
+        with it("should keep generate's own Guidance as that session's practice once generate reads its rules"):
+            from generate.generate import Generate
+
+            generate = Generate()
+            generate._bind_guidance(f"stories-story-map {self.session_word}")
+            listed = generate.listed()[0]
+            generate._rules()
+            expect(generate.session.practices["stories"].guideline).to(be(listed))
 
         with it("should make an action started inside another work in that action's session"):
             from generate.generate import Generate
@@ -189,7 +231,9 @@ with description("GuidanceAction"):
                 raise RuntimeError("probe failure")
 
             try:
-                GuidanceAction().run(f"stories-story-map {self.session_word}", fail, action="generate")
+                action = GuidanceAction()
+                action._bind_guidance(f"stories-story-map {self.session_word}")
+                action.run(fail, action="generate")
             except RuntimeError:
                 pass
             errors = self.project / ".sessions" / "sign-up" / "session.err"
@@ -228,7 +272,8 @@ with description("GuidanceAction"):
         kit = GuidanceAction()
         first, second = object(), object()
         seen: list = []
-        kit.run([first, second], seen.append, action="generate")
+        kit._bind_guidance([first, second])
+        kit.run(seen.append, action="generate")
         expect(seen).to(equal([first, second]))
 
     with it("should log run action when CDD_PROJECT is the work subfolder"):
@@ -239,7 +284,6 @@ with description("GuidanceAction"):
         from unittest.mock import patch
 
         from space.session import Session
-        from space.session.chat_context import clear_chat_context
 
         tmp = Path(tempfile.mkdtemp(prefix="guidance-action-session-log-"))
         (tmp / ".git").mkdir()
@@ -262,16 +306,16 @@ with description("GuidanceAction"):
         }
         # The chat this server names stays with this example only; later specs read the environment's chat.
         with patch.dict(os.environ, chat):
-            clear_chat_context()
             try:
                 McpServer(repo=tmp, project=work)
                 Session.forget_current()
                 log = tmp / ".sessions" / "alpha" / "session.log"
                 log.write_text("", encoding="utf-8")
-                GuidanceAction().run("probe", lambda item: None, action="generate")
+                action = GuidanceAction()
+                action._bind_guidance("probe")
+                action.run(lambda item: None, action="generate")
                 logged = log.read_text(encoding="utf-8")
             finally:
-                clear_chat_context()
                 Session.forget_current()
         expect(logged).to(contain("generate"))
 

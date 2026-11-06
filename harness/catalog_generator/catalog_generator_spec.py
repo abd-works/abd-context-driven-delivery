@@ -34,7 +34,7 @@ from harness.catalog_generator.catalog_generator import (
     resolve_lifecycle_actions,
 )
 from harness.agent_tools import agent_instructions, agent_toolset
-from harness.installation.files import skill
+from harness.installation.files import Skill, skill
 from harness.installation.installer import Installer
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.stories.stories import Stories
@@ -116,7 +116,7 @@ with description("noCatalog"):
                 return None
 
             expect(omitted_from_catalog(sketch)).to(be_true)
-            expect(getattr(sketch, "_skill", False)).to(be_true)
+            expect(Skill.marks(sketch)).to(be_true)
             expect("noCatalog" in Installer._ANNOTATIONS).to(equal(False))
             expect("Skill" in Installer._ANNOTATIONS).to(be_true)
             source = ast.parse(

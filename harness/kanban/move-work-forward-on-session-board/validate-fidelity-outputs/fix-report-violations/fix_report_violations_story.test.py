@@ -48,7 +48,7 @@ with story("Fix Report Violations"):
         with given("checkout-flow's story_map report is open with verb-noun-format listed"):
             pass
         with when("Claude Code validates the story map again with no violations"):
-            # Validate -> Session.log_validation(Stories story_map, [])
+            # Validate -> PracticeSessionOutput(Stories story_map).log_validation([])
             # Board page -> Board.show()
             # Board page -> Ticket.report('stories-story-map')
             pass
