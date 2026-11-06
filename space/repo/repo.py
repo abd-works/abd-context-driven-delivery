@@ -13,11 +13,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
+from harness.agent_tools.agent_tools import tool_subject
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 from space.repo.latest_release import LatestRelease
-from space.work_state import LEGACY_SESSIONS_FOLDER, WorkState
+from space.work_state import LEGACY_SESSIONS_FOLDER, WorkState, project_checkout
 
 BACKLOG_FOLDER = "_backlog"
 BOARD_FILE = "_board.json"
@@ -870,9 +871,15 @@ class Repo:
         self._project: Project | None = None
         self._tickets: dict[int, ProjectTicket] = {}
         self._annotated_tag_target = "HEAD"
-        self._agent_active: Repo | None = None
         if memory:
             self._init_memory_state()
+
+    @classmethod
+    @tool_subject
+    def current(cls) -> Repo:
+        """The clone of the project the running call names. One cdd server answers every chat, so each call reads its
+        project from the request and acts on that project's clone, never on a clone named by an earlier call."""
+        return cls(project_checkout())
 
     @property
     def in_memory(self) -> bool:
@@ -1108,6 +1115,17 @@ class Repo:
         name = WorkState(self.root).session or MAIN_SESSION_NAME
         return Session.load(self.session_folder(name), self.root)
 
+    def session_named(self, name: str) -> Session:
+        """The session called name, such as a board ticket's, read without becoming the current session. Raises
+        ``SessionNotFoundError`` when this repository has no session of that name, so work meant for it never lands in
+        another session."""
+        from space.session.session import MAIN_SESSION_NAME, Session, SessionNotFoundError
+
+        folder = self.session_folder(name)
+        if name != MAIN_SESSION_NAME and not (folder / "session.json").is_file():
+            raise SessionNotFoundError(name)
+        return Session.load(folder, self.root)
+
     def session_folder(self, name: str) -> Path:
         """The folder of the session called name. A ticket on the board lives in the main checkout's ``.sessions``, so
         a chat in the ticket's linked worktree logs there too and the board shows its work. Each checkout keeps its own
@@ -1208,8 +1226,6 @@ class Repo:
 
     @property
     def current_branch(self) -> str:
-        if self._agent_active is not None:
-            return self._agent_active.current_branch
         if self._memory:
             return self._branch
         return self._git("rev-parse", "--abbrev-ref", "HEAD")
@@ -1908,39 +1924,32 @@ class Repo:
             raise RuntimeError("_branches is only available on Repo.memory()")
         return self._branch_names
 
-    @property
-    def checkout_path(self) -> str:
-        return str(self._agent_repo().root)
-
     def _agent_repo(self) -> Repo:
-        if self._agent_active is not None:
-            return self._agent_active
+        """The checkout repo tools act in. In the main clone that is the worktree saved as open in
+        ``.sessions/session.json`` while its folder exists, so the work goes where ``switch_worktree`` moved the branch;
+        in a linked worktree, or with no worktree open, it is this checkout."""
+        own = self._own_checkout()
+        if own.in_memory or own.is_linked_worktree():
+            return own
+        opened = WorkState(own.root).worktree
+        if opened is not None and Path(opened.path).is_dir():
+            return opened.repository
+        return own
+
+    def _own_checkout(self) -> Repo:
         if self._memory or self.find_root() is not None:
             return self
         return Worktree.open(self.root).repository
 
-    def _bind(self, repository: Repo) -> Repo:
-        self._agent_active = repository
-        return repository
-
     def _primary_repo(self) -> Repo:
         """The main clone; branch commands never act inside a linked worktree."""
-        repository = self._agent_repo()
+        repository = self._own_checkout()
         if repository.in_memory or not repository.is_linked_worktree():
             return repository
         return Repo(repository.primary_root())
 
     def _work_state(self) -> WorkState:
         return WorkState(self._primary_repo().root)
-
-    def _at(self, repo_path: str) -> Repo | None:
-        """The clone at ``repo_path`` when it names one other than this toolset's; else None."""
-        if not (repo_path or "").strip():
-            return None
-        target = Repo.open(repo_path)
-        if not self._memory and target.root == self.find_root():
-            return None
-        return target
 
     def _branch_name(self, name: str) -> str:
         saved = self._work_state().branch
@@ -1951,18 +1960,14 @@ class Repo:
 
     @agent_tool
     @mcp
-    def switch_branch(self, name: str = "", repo_path: str = "") -> str:
+    def switch_branch(self, name: str = "") -> str:
         """Switch the main clone to branch ``name``, creating it when missing.
 
-        ``repo_path`` names the project's clone; omit it to act on the clone the tools started in.
         ``name`` defaults to ``branch`` in ``.sessions/session.json``. Commits the branch being
         left and pushes it (the default branch is committed but not pushed), checks out
         ``name`` (a new branch starts from origin's copy or the default branch), and saves
         ``name`` as ``branch`` in ``.sessions/session.json``. Does not touch worktrees or sessions.
         """
-        other = self._at(repo_path)
-        if other is not None:
-            return other.switch_branch(name)
         wanted = self._branch_name(name)
         repository = self._primary_repo()
         if repository.current_branch != wanted:
@@ -1973,10 +1978,9 @@ class Repo:
 
     @agent_tool
     @mcp
-    def close_branch(self, name: str = "", commit_message: str = "branch: close", repo_path: str = "") -> str:
+    def close_branch(self, name: str = "", commit_message: str = "branch: close") -> str:
         """Close branch ``name``: commit, push, merge into the default branch, push it, delete ``name``.
 
-        ``repo_path`` names the project's clone; omit it to act on the clone the tools started in.
         ``name`` defaults to ``branch`` in ``.sessions/session.json``. Refuses the default branch and
         a branch still open in a worktree. Deletes ``name`` locally and on origin, leaves the main
         clone on the default branch, and saves the default branch as ``branch``. Does not touch sessions.
@@ -1984,9 +1988,6 @@ class Repo:
         screenshots pushed to ``e2e-latest``; every older release's results are removed and that removal is
         committed and pushed on the default branch.
         """
-        other = self._at(repo_path)
-        if other is not None:
-            return other.close_branch(name, commit_message)
         wanted = self._branch_name(name)
         repository = self._primary_repo()
         default = repository.default_branch
@@ -2005,18 +2006,14 @@ class Repo:
 
     @agent_tool
     @mcp
-    def switch_worktree(self, name: str = "", repo_path: str = "") -> str:
+    def switch_worktree(self, name: str = "") -> str:
         """Open the sibling worktree for branch ``name``, creating the branch and folder when missing.
 
-        ``repo_path`` names the project's clone; omit it to act on the clone the tools started in.
         ``name`` defaults to ``branch`` in ``.sessions/session.json`` and must not be the default
         branch. When the main clone has ``name`` checked out, it is committed, pushed, and the main
         clone goes back to the default branch so the worktree can take it. Saves ``branch`` and the
         worktree path as ``worktree`` in ``.sessions/session.json``; later repo tools act in it.
         """
-        other = self._at(repo_path)
-        if other is not None:
-            return other.switch_worktree(name)
         wanted = self._branch_name(name)
         primary = self._primary_repo()
         if wanted == primary.default_branch:
@@ -2026,7 +2023,6 @@ class Repo:
             primary.checkout_from_default(primary.default_branch)
         branch = primary.branch_named(wanted)
         opened = branch.open_in_worktree()
-        self._bind(opened.repository)
         state = WorkState(primary.root)
         state.branch = branch
         state.worktree = opened
@@ -2034,16 +2030,12 @@ class Repo:
 
     @agent_tool
     @mcp
-    def close_worktree(self, commit_message: str = "worktree: close", repo_path: str = "") -> str:
+    def close_worktree(self, commit_message: str = "worktree: close") -> str:
         """Close the worktree saved in ``.sessions/session.json``: commit, push its branch, remove the folder.
 
-        ``repo_path`` names the project's clone; omit it to act on the clone the tools started in.
         Does not merge; the branch stays open as ``branch``. Clears ``worktree`` in
         ``.sessions/session.json`` and returns later repo tools to the main clone.
         """
-        other = self._at(repo_path)
-        if other is not None:
-            return other.close_worktree(commit_message)
         state = self._work_state()
         worktree = state.worktree
         if worktree is None:
@@ -2053,7 +2045,6 @@ class Repo:
         branch.save(commit_message)
         Repo(tree.primary_root()).remove_worktree(worktree)
         state.worktree = None
-        self._agent_active = None
         return f"closed worktree for {branch.name!r}; branch pushed and kept open"
 
     @command(name="switch-branch")
@@ -2062,7 +2053,7 @@ class Repo:
         """Switch the main clone to a branch, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.switch_branch``."""
+        ``.sessions/session.json`` is used. Call MCP ``repo.switch_branch``."""
         return ""
 
     @command(name="close-branch")
@@ -2071,7 +2062,7 @@ class Repo:
         """Close a branch: commit, push, merge into main, push main, delete the branch.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.close_branch``."""
+        ``.sessions/session.json`` is used. Call MCP ``repo.close_branch``."""
         return ""
 
     @command(name="switch-worktree")
@@ -2080,7 +2071,7 @@ class Repo:
         """Open the sibling worktree for a branch other than main, creating it when missing.
 
         Use the branch the user names; otherwise call without a name so the branch saved in
-        ``.sessions/session.json`` is used. Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.switch_worktree``."""
+        ``.sessions/session.json`` is used. Call MCP ``repo.switch_worktree``."""
         return ""
 
     @command(name="close-worktree")
@@ -2088,7 +2079,7 @@ class Repo:
     def close_worktree_command(self) -> str:
         """Close the open worktree: commit, push its branch, remove the folder. The branch stays open.
 
-        Pass ``repo_path`` as the project's clone (the project the calling chat works on). Call MCP ``repo.close_worktree``."""
+        Call MCP ``repo.close_worktree``."""
         return ""
 
     @agent_tool
@@ -2099,13 +2090,9 @@ class Repo:
         *,
         untracked: bool = True,
         sync_remote: bool = True,
-        repo_path: str = "",
     ) -> Commit:
-        """Commit the working tree using ``message`` (subject and optional body).
-
-        ``repo_path`` names the checkout to commit; omit it to commit the one the tools act in."""
-        other = self._at(repo_path)
-        repository = other._agent_repo() if other is not None else self._agent_repo()
+        """Commit the working tree the repo tools act in using ``message`` (subject and optional body)."""
+        repository = self._agent_repo()
         text = (message or "").strip()
         if not text:
             raise ValueError("commit message is required")
@@ -2132,8 +2119,7 @@ class Repo:
         - Calls out key paths when that clarifies scope.
 
         If the working tree is clean, say so and do not call ``repo.push_commit``.
-        Otherwise call MCP ``repo.push_commit`` with the full message (subject plus body when useful)
-        and ``repo_path`` set to the project's checkout (the project the calling chat works on).
+        Otherwise call MCP ``repo.push_commit`` with the full message (subject plus body when useful).
         """
         return ""
 

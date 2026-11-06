@@ -39,7 +39,7 @@ from space.repo.repo import (
     ProjectTicketState,
     issue_theme_label,
 )
-from space.work_state import WorkState
+from space.work_state import WorkState, working_on
 
 
 with description("a ProjectTicket"):
@@ -563,29 +563,31 @@ with description("a branch opened through the repo toolset"):
             with it("should leave screenshots out of main"):
                 expect(_git(self.origin, "ls-tree", "-r", "--name-only", "main")).not_to(contain(".png"))
 
-        with context("named by repo_path from a toolset started in another clone"):
+        with context("loaded for the project a call names"):
             with before.each:
                 (Path(self.tmp.name) / "host").mkdir()
                 self.host_origin, self.host = _clone_with_origin(Path(self.tmp.name) / "host")
-                self.toolset = Repo(self.host)
-                self.toolset.switch_branch("feature/a", repo_path=str(self.clone))
+                with working_on(self.clone):
+                    Repo.current().switch_branch("feature/a")
 
-            with it("should switch the named clone"):
+            with it("should switch that project's clone"):
                 expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/a"))
 
-            with it("should leave the toolset's own clone on main"):
+            with it("should leave another project's clone on main"):
                 expect(_git(self.host, "branch", "--show-current")).to(equal("main"))
 
-            with it("should save the branch in the named clone's .sessions/session.json"):
+            with it("should save the branch in that project's .sessions/session.json"):
                 expect(WorkState(self.clone).branch.name).to(equal("feature/a"))
 
-            with it("should commit and push in the named clone"):
+            with it("should commit and push in that project's clone"):
                 (self.clone / "work.txt").write_text("feature work\n", encoding="utf-8")
-                self.toolset.push_commit("work", repo_path=str(self.clone))
+                with working_on(self.clone):
+                    Repo.current().push_commit("work")
                 expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("work.txt"))
 
-            with it("should close the branch in the named clone"):
-                self.toolset.close_branch(repo_path=str(self.clone))
+            with it("should close the branch in that project's clone"):
+                with working_on(self.clone):
+                    Repo.current().close_branch()
                 expect(_git(self.clone, "branch", "--list", "feature/a")).to(equal(""))
 
 
@@ -644,22 +646,30 @@ with description("a worktree opened through the repo toolset"):
                 with it("should refuse to close the branch while its worktree is open"):
                     expect(lambda: self.toolset.close_branch()).to(raise_error(BranchInWorktreeError))
 
+                with it("should commit in the worktree when pushed from the main clone"):
+                    Repo(self.clone).push_commit("worktree work")
+                    expect(_git(self.origin, "ls-tree", "--name-only", "feature/a")).to(contain("tree.txt"))
+
+                with it("should commit in the worktree when pushed from a new toolset after a restart"):
+                    fresh = Repo(self.clone)
+                    fresh.push_commit("worktree work", sync_remote=False)
+                    expect(_git(self.tree, "status", "--porcelain")).to(equal(""))
+
         with it("should refuse to close a worktree when none is open"):
             expect(lambda: self.toolset.close_worktree()).to(raise_error(NoOpenWorktreeError))
 
-        with context("named by repo_path from a toolset started in another clone"):
+        with context("loaded for the project a call names"):
             with before.each:
-                (Path(self.tmp.name) / "host").mkdir()
-                self.host_origin, self.host = _clone_with_origin(Path(self.tmp.name) / "host")
-                self.toolset = Repo(self.host)
-                self.toolset.switch_worktree("feature/a", repo_path=str(self.clone))
+                with working_on(self.clone):
+                    Repo.current().switch_worktree("feature/a")
                 self.tree = WorkState(self.clone).worktree.path
 
-            with it("should open the worktree beside the named clone"):
+            with it("should open the worktree beside that project's clone"):
                 expect(_git(self.tree, "branch", "--show-current")).to(equal("feature/a"))
 
-            with it("should remove the named clone's worktree when closed"):
-                self.toolset.close_worktree(repo_path=str(self.clone))
+            with it("should remove that project's worktree when closed"):
+                with working_on(self.clone):
+                    Repo.current().close_worktree()
                 expect(self.tree.exists()).to(equal(False))
 
 
@@ -788,8 +798,8 @@ with description("the repo push toolset"):
 
         with it("should commit when push_commit is called"):
             (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")
-            toolset = AgentToolSet.instantiate("space.repo.repo:Repo")
-            commit = toolset.push_commit("push: checkpoint")
+            with working_on(self.repo_root):
+                commit = Repo.current().push_commit("push: checkpoint")
             expect(commit.sha).not_to(equal(""))
             expect(commit.subject).to(equal("push: checkpoint"))
 

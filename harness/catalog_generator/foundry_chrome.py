@@ -768,17 +768,11 @@ def wrap_guidance_body(html_text: str) -> str:
 def catalog_examples_html(fidelity) -> str:
     """Collapsible Examples block for ``{practice}/catalog-examples/{fidelity}.*``.
 
-    Every file named exactly for the fidelity is shown. Markdown renders as HTML, Draw.io
+    Every file ``catalog_example_files`` finds for the fidelity is shown. Markdown renders as HTML, Draw.io
     opens in the diagrams.net viewer, images render as ``<img>``, and other
     text files stay as source.
     """
-    folder = _catalog_examples_folder(fidelity)
-    if not folder.is_dir():
-        return ""
-    files = sorted(
-        (path for path in folder.iterdir() if path.is_file() and path.stem == fidelity.name),
-        key=lambda path: (_EXAMPLE_SUFFIX_ORDER.get(path.suffix.lower(), 50), path.name),
-    )
+    files = catalog_example_files(fidelity)
     if not files:
         return ""
     parts = [_render_catalog_example(path) for path in files]
@@ -1740,7 +1734,7 @@ def _practice_refine_panels(
         if example_sources and catalog_root is not None:
             files = [Path(catalog_root) / relative] if relative else []
         else:
-            files = _fidelity_example_files(fidelity)
+            files = _approach_example_files(fidelity)
         parts: list[str] = []
         for path in files:
             slug = re.sub(
@@ -1786,15 +1780,16 @@ def _catalog_examples_folder(fidelity) -> Path:
     return Path(fidelity.practice_guidance.module_dir) / "catalog-examples"
 
 
-def _fidelity_example_files(fidelity) -> list[Path]:
-    """The fidelity's examples for an approach panel: files named for the fidelity in any spelling or by its board
-    label, with an image or diagram preferred over the source it was drawn from."""
+def catalog_example_files(fidelity) -> list[Path]:
+    """Every example file for the fidelity: files in ``{practice}/catalog-examples`` named for the fidelity in any
+    spelling or by its board label, in display order. The fidelity page and the approach panel both start from this
+    list, so a file shown on one is never missing from the other."""
     folder = _catalog_examples_folder(fidelity)
     if not folder.is_dir():
         return []
     name = fidelity.name
     names = {name, name.replace("_", "-"), name.replace("-", "_"), display_label(name)}
-    files = sorted(
+    return sorted(
         (
             path
             for path in folder.iterdir()
@@ -1802,8 +1797,13 @@ def _fidelity_example_files(fidelity) -> list[Path]:
         ),
         key=lambda path: (_EXAMPLE_SUFFIX_ORDER.get(path.suffix.lower(), 50), path.name),
     )
+
+
+def _approach_example_files(fidelity) -> list[Path]:
+    """The fidelity's examples for an approach panel: of ``catalog_example_files``, an image or diagram is preferred
+    over the source it was drawn from, because the panel has room for one view of each example."""
     stems: dict[str, list[Path]] = {}
-    for path in files:
+    for path in catalog_example_files(fidelity):
         stems.setdefault(path.stem, []).append(path)
     chosen = [path for group in stems.values() for path in _preferred_examples(group)]
     return sorted(chosen, key=lambda path: (_EXAMPLE_SUFFIX_ORDER.get(path.suffix.lower(), 50), path.name))

@@ -33,8 +33,6 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
 
 
-_SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
-_LOAD_FILE_BUDGET = 40
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
 CONTEXT_FOLDER = ".context"
 _HANDOFF_FILES = "handoff-*.md"
@@ -305,9 +303,12 @@ class PracticeSessionOutput:
 
     @property
     def graph(self) -> Graph:
+        """This practice's graph, built once from its first folder, with its saved graph in the session's repository."""
         if self._graph is None:
-            folders = [[Path(item) for item in group] for group in self._folders]
-            self._graph = self._session._graph_for(self.name, folders)
+            from harness.graph.graph import Graph
+
+            primary = Path(self._folders[0][0])
+            self._graph = Graph.of_practice(self._session.repo_path or primary, self.name, primary)
         return self._graph
 
     @property
@@ -1406,33 +1407,6 @@ class Session:
             current = getattr(getattr(guidance, "fidelities", None), "current", None)
             return str(getattr(current, "name", "") or "")
         return str(getattr(parent, "name", "") or "")
-
-    def _graph_for(self, name: str, output_paths: list[list[Path]]) -> Graph:
-        from harness.graph.graph import Graph
-
-        primary = output_paths[0][0]
-        graph = Graph()
-        if self._within_load_budget(primary):
-            root = str(self.repo_path or primary)
-            graph.load_working_copy(root, {name: str(primary)})
-            return graph
-        graph._folder = Path(self.repo_path or primary)
-        graph._practice_roots = {name: primary}
-        practice = graph.practice(name)
-        practice.source_root = str(primary)
-        return graph
-
-    def _within_load_budget(self, folder: Path) -> bool:
-        if not folder.is_dir():
-            return True
-        count = 0
-        for item in folder.rglob("*"):
-            if item.suffix.lower() not in _SOURCE_SUFFIXES:
-                continue
-            count += 1
-            if count > _LOAD_FILE_BUDGET:
-                return False
-        return True
 
     def _stored_folders(self) -> dict:
         return dict(self._parent_folders)
