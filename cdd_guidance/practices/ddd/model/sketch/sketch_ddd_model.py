@@ -63,7 +63,7 @@ def _is_module_heading(stripped: str) -> bool:
 class SketchDddModel(MarkdownBoundedContextMap):
     def parse(self, text: str) -> "SketchDddModel":
         model = type(self)()
-        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.domain_driven_design)
+        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.of("ddd"))
         context: MarkdownBoundedContext | None = None
         aggregate: MarkdownAggregate | None = None
         current_group: str | None = None

@@ -9,11 +9,11 @@
 *When* the Person runs generate on story_map
 *Then* the chat runs /actions-generate stories-story-map format=markdown
 *And* the bar's picks are cleared
-*And* Claude Code goes on to Resolve Fidelity Output Paths for stories-story_map
+*And* Claude Code goes on to Resolve Fidelity Output Paths for stories-story-map
 
 #### Scenario: Render the earlier fidelity into a new format first
 
-*Given* pet-visits' story map is docs/story-map.md, generated in markdown only
+*Given* pet-visits' story map is docs/.context/story-map.md, generated in markdown only
 *When* the Person generates scenarios in drawio
 *Then* the first command is /actions-render stories-story-map format=drawio source=markdown
 *And* the last is /actions-generate stories-scenarios format=drawio

@@ -138,7 +138,7 @@ with description("a practice"):
                 self.child = self.practice.fidelities["behavior"]
 
             with it("should treat that Clean Engineering fidelity as the companion"):
-                expect(self.practice.fidelities.current.clean_engineering.fidelity).to(
+                expect(self.practice.fidelities.current.clean_engineering.name).to(
                     equal("model")
                 )
 

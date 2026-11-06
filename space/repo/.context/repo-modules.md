@@ -80,10 +80,9 @@ checkout_or_create(name): str
 commit(paths, message): str
 push(): None
 merge_branch(source, into, message): str
-list_worktrees(): list
-worktree_for(branch): Worktree | None
-add_worktree(path, branch): Path
-remove_worktree(path): None
+list_worktrees(): list[Worktree]
+add_worktree(path, branch: Branch): Worktree
+remove_worktree(worktree: Worktree): None
 fetch(): None
 pull(): None
 fetch_pull(): None
@@ -91,6 +90,7 @@ merge_from(other, message): str
 push_to(branch): None
 has_stash(): bool
 is_linked_worktree(): bool
+checkout_folder: Path
 primary_root(): Path
 ticket(ref): ProjectTicket | None
 create_ticket(title, body): ProjectTicket
@@ -105,11 +105,25 @@ find_mistakes(entry_ids): list
 Branch(repo, name)
 ------
 name: str
+worktree: Worktree | None
 ----
 checkout(): Branch
+open_in_worktree(): Worktree
 commit(paths, message): Commit
 merge(other, message): Commit
 head: Commit
+
+## Worktree
+
+Worktree(path, branch)
+------
+path: Path
+branch: Branch | None
+repository: Repo
+----
+from_repo(repo): Worktree
+from_checkout(path, branch_name): Worktree
+fetch_pull(): None
 
 ## Commit
 

@@ -8,15 +8,14 @@ local work - render the filing plan for confirmation and write context files.
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
+from harness.agent_tools.name import Name
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 
-_SLUG_RE = re.compile(r"[^a-z0-9]+")
 _CONTEXT_SUBFOLDER = "granola"
 
 
@@ -36,7 +35,7 @@ class Granola:
 
     def _slug(self, title: str) -> str:
         """Kebab-case slug for a note title (pure)."""
-        slug = _SLUG_RE.sub("-", title.lower()).strip("-")
+        slug = Name(title).title_slug
         return slug[:60].rstrip("-") or "untitled"
 
     def _context_dir(self, folder: str) -> Path:

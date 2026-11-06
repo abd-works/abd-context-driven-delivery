@@ -23,7 +23,7 @@ with story("Display Ticket Card"):
             pass
         with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
             # Board -> Board.tickets
-            # Board -> Session.all_in(repo.root)
+            # Board -> Repo.sessions()
             # Session <- pet-visits, sign-up, browse-pets
             pass
         with then("the Discovery [stage](../../../.context/kanban-model.md#stage--column) shows the [tickets](../../../.context/kanban-model.md#ticket--card) Pet visits and Sign up"):
@@ -84,11 +84,11 @@ with story("Display Ticket Card"):
             pass
     with scenario("Name the active ticket on the chat's status line"):
         # Evidence: inferred: statusOf and readActive in harness/chat-ui/pane/hooks/register.ts; no spec runs the mod.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), in Discovery, with violations on stories-story_map"):
+        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), in Discovery, with violations on stories-story-map"):
             pass
         with when("a turn in a chat with the cdd-board mod loaded ends"):
             # chat mod -> Board.show()
             # Board <- the active ticket checkout-flow
             pass
-        with then("the chat's status line reads checkout-flow · Discovery · next: stories-story_map · 1 with violations"):
+        with then("the chat's status line reads checkout-flow · Discovery · next: stories-story-map · 1 with violations"):
             pass

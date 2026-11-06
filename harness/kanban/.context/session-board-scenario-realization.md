@@ -359,7 +359,7 @@ it should show the review done once Run next records it
     -> board-store.saveLayout()
     -> BoardStore.dismissToast()
 -> TicketClient.runNext()
--> TicketClient.actionsOf('stories-story_map')
+-> TicketClient.actionsOf('stories-story-map')
 ```
 
 ### Move Ticket
@@ -473,7 +473,7 @@ it should mark its tile as the next one
 -> TicketClient.runNext()
 -> BoardPage.board
 -> BoardClient.stageNamed('Discovery')
--> TicketClient.isNext(discovery, 'stories-story_map')
+-> TicketClient.isNext(discovery, 'stories-story-map')
 ```
 
 ```
@@ -502,7 +502,7 @@ it should stay off with no chat to send to
 
 ```
 it should let go of the tile of a practice turned off
--> BoardStore.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded_context', stage:)
+-> BoardStore.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded-context', stage:)
   -> board-store.saveLayout()
   -> BoardStore.dismissToast()
 -> TicketClient.enablePractice('ddd', false)
@@ -516,7 +516,7 @@ it should let go of the tile of a practice turned off
 
 ```
 it should say so and where it was saved
--> BoardStore.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded_context', stage:)
+-> BoardStore.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded-context', stage:)
   -> board-store.saveLayout()
   -> BoardStore.dismissToast()
 -> TicketClient.enablePractice('ddd', false)
@@ -1058,7 +1058,7 @@ it should go back to the folder when the last tab closes
     -> FilesPanelClient.chooseMode()
       -> FilesPanelClient.openTab()
         -> FilesPanelClient.textOf()
--> FilesPanelClient.closeTab('tests/story-map.md')
+-> FilesPanelClient.closeTab('.context/story-map.md')
 ```
 
 #### with a violation in a file its fidelity does not declare
@@ -1192,7 +1192,7 @@ it should keep a tab a person closed closed
     -> FilesPanelClient.chooseMode()
       -> FilesPanelClient.openTab()
         -> FilesPanelClient.textOf()
--> FilesPanelClient.closeTab('tests/story-map.drawio')
+-> FilesPanelClient.closeTab('.context/story-map.drawio')
 -> SidePanelClient.reload()
 ```
 
@@ -2838,7 +2838,7 @@ it should write that practice's files there
 -> Ticket.choose_practice_root(ticket="pet-visits", practice="stories", path="src/visits")
   -> Session.choose_output_root(practice: str, root: Path)
 <- Ticket
--> Ticket.files(ticket="pet-visits", fidelities=["stories-story_map"])
+-> Ticket.files(ticket="pet-visits", fidelities=["stories-story-map"])
   -> Session.fidelity_outputs(guidance: PracticeGuidance)
     -> FidelityGuidance.outputs
     <- dict
@@ -2952,7 +2952,7 @@ it should list each rule the report names with its violations
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -2964,7 +2964,7 @@ it should give a violation the line it failed on
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -2976,7 +2976,7 @@ it should show no source for a file that is not in the repository
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -2990,7 +2990,7 @@ it should show the source lines around a violation
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3004,7 +3004,7 @@ it should name the violation's file from the project's root
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3016,7 +3016,7 @@ it should show the source lines of the file in the session's root
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3028,7 +3028,7 @@ it should return exactly the fields ViolationData names
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3040,7 +3040,7 @@ it should return exactly the fields ReportRuleData names
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3052,7 +3052,7 @@ it should count the violations of each rule
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3064,7 +3064,7 @@ it should leave out the violations of other practices in the saved graph
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3076,7 +3076,7 @@ it should say the report has its saved graph
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3090,7 +3090,7 @@ it should say a report has no saved graph
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3102,7 +3102,7 @@ it should still return the report's text
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean_engineering-modules")
+-> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
   -> Graph.write_json(path: str)
   <- str
 <- dict
@@ -3463,7 +3463,7 @@ it should list the files a named part of the path finds there, in folders at any
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.files(ticket="pet-visits", fidelities=["clean_engineering-model"])
+-> Ticket.files(ticket="pet-visits", fidelities=["clean-engineering-model"])
   -> Session.fidelity_outputs(guidance: PracticeGuidance)
     -> FidelityGuidance.outputs
     <- dict
@@ -3481,7 +3481,7 @@ it should list the file with whether it exists
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.files(ticket="pet-visits", fidelities=["stories-story_map"])
+-> Ticket.files(ticket="pet-visits", fidelities=["stories-story-map"])
   -> Session.fidelity_outputs(guidance: PracticeGuidance)
     -> FidelityGuidance.outputs
     <- dict
@@ -3497,7 +3497,7 @@ it should list only the fidelities asked for
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.files(ticket="pet-visits", fidelities=["stories-story_map"])
+-> Ticket.files(ticket="pet-visits", fidelities=["stories-story-map"])
   -> Session.fidelity_outputs(guidance: PracticeGuidance)
     -> FidelityGuidance.outputs
     <- dict
@@ -3644,14 +3644,14 @@ it should count each finding of the judgment
 
 ```
 it should show the fidelity's review done
--> Ticket.finish_review(ticket="sign-up", fidelities=["stories-story_map"])
+-> Ticket.finish_review(ticket="sign-up", fidelities=["stories-story-map"])
   -> Ticket.record(entry: str)
 <- Ticket
 ```
 
 ```
 it should write the review to the session log
--> Ticket.finish_review(ticket="sign-up", fidelities=["stories-story_map"])
+-> Ticket.finish_review(ticket="sign-up", fidelities=["stories-story-map"])
   -> Ticket.record(entry: str)
 <- Ticket
 ```
@@ -3672,7 +3672,7 @@ it should refuse it, naming the fidelity
 
 ```
 it should write no review for the others named with it
--> Ticket.finish_review(ticket="sign-up", fidelities=["stories-story_map", "stories-nothing"])
+-> Ticket.finish_review(ticket="sign-up", fidelities=["stories-story-map", "stories-nothing"])
   -> Ticket.record(entry: str)
 <- Ticket
 ```

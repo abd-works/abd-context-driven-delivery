@@ -40,7 +40,7 @@ with description("Ux fidelity and format defaults"):
             expect(self.ux.format).to(equal("drawio"))
 
         with it("should retain fidelity ia"):
-            expect(self.ux.fidelities.current.fidelity).to(equal("ia"))
+            expect(self.ux.fidelities.current.name).to(equal("ia"))
 
     with context("Ux constructed with fidelity mockup"):
         with before.each:
@@ -50,7 +50,7 @@ with description("Ux fidelity and format defaults"):
             expect(self.ux.format).to(equal("html"))
 
         with it("should retain fidelity mockup"):
-            expect(self.ux.fidelities.current.fidelity).to(equal("mockup"))
+            expect(self.ux.fidelities.current.name).to(equal("mockup"))
 
     with context("Ux constructed with fidelity front_end_code"):
         with it("should default format to html"):

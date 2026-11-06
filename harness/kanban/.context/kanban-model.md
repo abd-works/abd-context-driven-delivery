@@ -37,7 +37,7 @@
 - Its *work required* is every fidelity of its active practices. A practice is active until a person turns it off for this session, so tickets can work on different practices on one board.
 - Each fidelity goes through the same actions in order: Generate, Validate, then Review, where a person approves it. Each action on a fidelity is to do, in progress, or done.
 - A fidelity is done when every action is done. Validate is done when its latest activity on that fidelity names no graph-rule violations and the judgment the validating agent added to its latest report fails no rule. The person checks the AI-judged rules in Review, which counts only after Validate is done.
-- *Next action* is what Run next does on a ticket: on the first fidelity not done in its stage or any stage before it, earliest stage first, the first of generate, validate, and review not done. Violations hold a session on that fidelity, because Review needs a clean Validate, so the next action is satisfy until they are fixed.
+- *Next action* is what Run next does on a ticket: on the first fidelity not done in its stage or any stage before it, earliest stage first, the first of generate, validate, and review not done. Violations hold a session on that fidelity, so the next action is review: a person reads the violations and tells the agent to fix them, and the review itself is recorded only after a clean Validate.
 
 ### activity
 
@@ -243,7 +243,7 @@ The base type of Ticket and BacklogItem.
 	// the first fidelity not done in its stage or any stage before it, earliest stage first, because later work builds on it; none once it is done in its stage
 + next_action: str
 	// data field
-	// generate, validate, or review on the next fidelity; satisfy while it has violations
+	// generate, validate, or review on the next fidelity; review while it has violations
 + last_activity: str
 	// the timestamp of its log's latest line
 + latest_handoff: str
@@ -336,7 +336,7 @@ The base type of Ticket and BacklogItem.
 + workspace(): Workspace
 	// `ticket.workspace`: whether it has its branch and worktree, and whether the ticket being left is on its branch
 	-> Repo.has_branch
-	-> Repo.worktree_for
+	-> Board.worktree_of
 + violations(): Report
 	// `ticket.violations`: the rules of every fidelity with violations, each naming its fidelity, a rule the practice's fidelities share listed once
 	-> Ticket.report
@@ -645,7 +645,7 @@ A caller named a practice, such as `clean_engineering`, that the board does not 
 
 ## FidelityNotFoundError : LookupError
 
-A caller named a fidelity, such as `stories-story_map`, that a ticket or a practice does not have.
+A caller named a fidelity, such as `stories-story-map`, that a ticket or a practice does not have.
 
 ------
 + fidelity: str
@@ -683,8 +683,8 @@ The repository the board shows. Only the members the board's work depends on are
 	// path as written from the repository's top, empty for the top itself, or as it is when it lies outside the repository, where a session may work
 + files_changed_on(branch: str): list[str]
 	// what the branch changed since it left the default branch, with uncommitted changes when it is checked out
-+ worktree_for(branch: str): Worktree
 + list_worktrees(): list[Worktree]
+	// each worktree's `branch` is a `Branch`, none for a detached checkout
 + switch_branch(name: str): str
 	// commits and pushes the branch being left, and leaves the default branch committed but not pushed
 + switch_worktree(name: str): str
@@ -757,7 +757,7 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 + latest_handoff: Path
 	// Intended, replaces `Ticket.latest_handoff`: the newest `handoff-*.md`; none when it has none
 + next_action: GuidanceAction
-	// Intended, replaces `Ticket.next_action`: the first action not done on the first fidelity not done; satisfy while that fidelity has violations, so Run next never validates again over open violations
+	// Intended, replaces `Ticket.next_action`: the first action not done on the first fidelity not done; review while that fidelity has violations, so a person reads them and tells the agent to fix them before Run next validates again
 + is_closed: bool
 + main_session: str
 + default_wip: int

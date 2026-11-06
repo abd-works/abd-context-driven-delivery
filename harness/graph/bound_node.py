@@ -9,7 +9,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Iterable, Iterator, Optional
 
-from harness.graph.graph import Graph, Node, Source
+from harness.graph.graph import Graph, Node, Source, edge_order
 from harness.graph.schema_edges import sync_schema_edges
 
 # The file a new model object names until a loader tells it which file it came from.
@@ -56,27 +56,6 @@ class BoundNode(Node):
     _graph_practice: str = "stories"
     _semantic_type_name: str = "Node"
     _belongs: set[tuple[str, str]] = set()
-    _edge_order: dict[str, int] = {
-        "belongsTo": 8,
-        "participants": 1,
-        "parameters": 2,
-        "screens": 1,
-        "descriptions": 1,
-        "contexts": 2,
-        "observations": 3,
-        "aggregates": 2,
-        "invokes": 5,
-        "invokedBy": 6,
-        "observes": 8,
-        "demonstrates": 3,
-        "demonstratedThrough": 6,
-        "retrievedUsing": 7,
-        "uses": 9,
-        "usedBy": 9,
-        "shownOn": 4,
-        "specifiedBy": 4,
-        "ands": 9,
-    }
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -137,13 +116,13 @@ class BoundNode(Node):
         self._adopt(child)
         child.parent = self
         self.practice.record(
-            {"kind": kind, "order": self._order(kind), "display": "direct"},
+            {"kind": kind, "order": edge_order(kind), "display": "direct"},
             self,
             child,
         )
         if (child.semantic_type(), self.semantic_type()) in type(self)._belongs:
             self.practice.record(
-                {"kind": "belongsTo", "order": self._order("belongsTo"), "display": "relationship"},
+                {"kind": "belongsTo", "order": edge_order("belongsTo"), "display": "relationship"},
                 child,
                 self,
             )
@@ -257,9 +236,6 @@ class BoundNode(Node):
             sync_schema_edges(graph)
         finally:
             graph._syncing_schema = False
-
-    def _order(self, kind: str) -> int:
-        return type(self)._edge_order.get(kind, 1)
 
     def _copies_on_graph(self, semantic: str) -> list:
         return [

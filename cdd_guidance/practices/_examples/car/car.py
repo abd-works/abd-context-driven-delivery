@@ -67,9 +67,9 @@ class Car(PracticeGuidance):
     @agent_instructions
     def generate_output(self) -> str:
         """Write the artifact for the active fidelity — outline, prose, or full journey."""
-        if self.fidelities.current.fidelity == "trip_outline":
+        if self.fidelities.current.name == "trip_outline":
             return "Write bullet beats: destination, conditions, start, drive, speak, stop."
-        if self.fidelities.current.fidelity == "road_story":
+        if self.fidelities.current.name == "road_story":
             return "Write full in-character prose; invoke vehicle tools as the story needs."
         return "Write full journey prose; use wrap_story when inspection output is required."
 

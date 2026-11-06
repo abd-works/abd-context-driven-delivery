@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
-import { cdd } from '../../../cdd-stub'
-import { buttonKeys, CHAT_BAR, drawn, expectMarkLooks, expectMarks } from '../../../chat-bar-screen'
+import { boardOf, checkoutFlow, HEALTHY } from '../../../examples/chat-bar.examples'
+import { CHAT_BAR, buttonKeys, drawn, expectMarkLooks, expectMarks } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -14,30 +14,31 @@ import { scenario, story } from '../../../story-test'
 story('Display Server Health Mark', CHAT_BAR, () => {
   scenario('Show the connected mark', ({ given, when, then }) => {
     // Evidence: observed: pane/hooks/health/server-health-view.tsx draws ✓ for connected; register.test.ts
-    given('cdd answers server-health.report with 116 tools loaded')
+    given('cdd answers server-health.report with 116 tools loaded', async ($, on, scene) => {
+      scene.world.health = HEALTHY
+      scene.world.toolCount = 116
+    })
     when('the Chat Bar draws the active [session](../../../../../../kanban/.context/kanban-model.md#session) checkout-flow')
     // Boot ui.render -> ChatBarView($, chatBar) -> ServerHealthBandView(elements, band)
     // refreshHealth($) -> $.mcp.call('server-health.report')
     then('a green ✓ sits left of checkout-flow', async ($, on, scene) => {
-      await expectMarkLooks(scene.ui, { 'health-icon': ['✓', '#22C55E'] })
+      await expectMarkLooks(scene.ui, { 'health-icon-mark': ['✓', '#22C55E'] })
       expect(buttonKeys(await drawn(scene.ui, 'line')).slice(0, 2)).toEqual(['health-icon', 'session-name-button'])
       await expectMarks(scene.ui, { 'session-name-button': 'checkout-flow' })
     })
   })
-  scenario('Show the disconnected mark', ({ given, when, then, but }) => {
+  scenario('Show the disconnected mark', ({ given, when, then }) => {
     // Evidence: observed: server-health-view.tsx draws ✕ in the error colour for disconnected
-    given('the Chat Bar shows checkout-flow', async ($, on, scene) => {
-      await expectMarks(scene.ui, { 'session-name-button': 'checkout-flow' })
+    given('checkout-flow is the active session', async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlow())
     })
-    but('plugin:cdd:cdd does not answer', async ($, on, scene) => {
+    when('plugin:cdd:cdd stops answering and the Chat Bar draws again', async ($, on, scene) => {
       scene.world.serverLost = true
-    })
-    when('the Chat Bar draws', async ($, on, scene) => {
       await $.prompt.submit({ text: 'again' })
     })
     // refreshHealth($) -> $.mcp.call('server-health.report') <- no connected MCP tool on a server named plugin:cdd:cdd
     then('a red ✕ sits left of checkout-flow', async ($, on, scene) => {
-      await expectMarkLooks(scene.ui, { 'health-icon': ['✕', '#EF4444'] })
+      await expectMarkLooks(scene.ui, { 'health-icon-mark': ['✕', '#EF4444'] })
       await expectMarks(scene.ui, { 'session-name-button': 'checkout-flow' })
     })
   })
@@ -52,7 +53,7 @@ story('Display Server Health Mark', CHAT_BAR, () => {
     when('the Chat Bar draws')
     // refreshHealth($) -> $.tool.list() <- 40 cdd tools, no server-health.report
     then('an amber ! sits left of checkout-flow', async ($, on, scene) => {
-      await expectMarkLooks(scene.ui, { 'health-icon': ['!', '#F59E0B'] })
+      await expectMarkLooks(scene.ui, { 'health-icon-mark': ['!', '#F59E0B'] })
       await expectMarks(scene.ui, { 'session-name-button': 'checkout-flow' })
     })
   })

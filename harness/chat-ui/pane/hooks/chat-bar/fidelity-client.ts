@@ -1,11 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { ActionStatesData, TicketData } from '@cdd/harness/kanban/ticket'
+import type { ActionStatesData, FidelityProgressData } from '@cdd/harness/kanban/fidelity-progress'
 
-import { commandOf } from '../chat-command'
+import { promptCommands } from '../chat-command'
+import { clearChosenAction } from './action-picker-client'
 import { reasonOf } from '../failure'
-import { closeActionPicker } from './action-picker-client'
 import { callTool, currentChatBar, refreshChatBar } from './chat-bar-client'
 
 const selectedFidelity = atom({ plugin: 'cdd-board', key: 'selectedFidelity' } as const, null as string | null)
@@ -20,10 +20,13 @@ const LOOKS: Record<string, { mark: string; word: string; colour: string; shade:
   done: { mark: '✓', word: 'done', colour: '#22C55E', shade: 'FF' },
 }
 export const BUILDER_ACTIONS = ['generate', 'validate', 'review', 'iterate', 'sketch', 'render', 'document']
-export const ACTION_ICONS: Record<string, string> = { generate: '✦', validate: '◎', review: '✓', satisfy: '✚', iterate: '↻', sketch: '✎', render: '⇄', document: '▭', advance: '→' }
+// Glyphs standing for the canvas's action icons: play, check, eye, cycle, pencil, open-out, page, and the move-on arrow.
+export const ACTION_ICONS: Record<string, string> = { generate: '▶', validate: '✓', review: '◉', iterate: '↻', sketch: '✎', render: '↗', document: '▯', advance: '➜' }
 
 export type FidelityJson = {
   slug: string
+  practice: string
+  name: string
   progress: string
   violationCount: number
   actions: ActionStatesData
@@ -42,18 +45,18 @@ export class FidelityClient {
   }
 
   get practice(): string {
-    return this.json.slug.slice(0, this.json.slug.indexOf('-'))
+    return this.json.practice
   }
 
   // The fidelity's own name as the session card shows it, such as Scenarios or Front end code.
   get name(): string {
-    const words = this.json.slug.slice(this.json.slug.indexOf('-') + 1).replace(/_/g, ' ')
+    const words = this.json.name.replace(/_/g, ' ')
     return words.charAt(0).toUpperCase() + words.slice(1)
   }
 
-  // The name the actions take, such as ux-mockup.
+  // The name the actions take, such as ux-mockup: the fidelity's slug.
   get guidance(): string {
-    return this.json.slug.replace(/_/g, '-')
+    return this.json.slug
   }
 
   // A fidelity validated and waiting for review reads to review, as on the canvas.
@@ -91,7 +94,7 @@ export class FidelityClient {
     return this.json.isSelected
   }
 
-  // What the Python Ticket names next on this fidelity: satisfy while it has violations, else the first of generate,
+  // What the Python Ticket names next on this fidelity: review while it has violations, else the first of generate,
   // validate and review not done; nothing once it is done.
   get nextAction(): string {
     return this.json.nextAction
@@ -107,7 +110,7 @@ export class FidelityClient {
   }
 }
 
-// ticket.finish_review refused the review, most often because the latest Validate did not pass. reason is the server's text.
+// fidelity-progress.finish_review refused the review, most often because the latest Validate did not pass. reason is the server's text.
 export class ReviewRefused {
   constructor(readonly reason: string) {}
 }
@@ -118,34 +121,21 @@ export function selectedFidelitySlug($: EngineInterface) {
 }
 
 // Selecting one fidelity replaces the last, so one dot is selected at most.
+// Selecting another fidelity drops an action picked for the one before, so the button shows this one's next action.
 export async function selectFidelity($: EngineInterface, fidelity: FidelityClient): Promise<void> {
   await update($, selectedFidelity, () => fidelity.fidelity)
+  await clearChosenAction($)
 }
 
-// Choosing from the picker runs that action on the fidelity in place of its next one. Review is recorded as the action
-// button records it, never run as a command.
-export async function chooseAction($: EngineInterface, fidelity: FidelityClient, action: string): Promise<void> {
-  await closeActionPicker($)
-  if (action === 'review') await reviewFidelity($, fidelity)
-  else await runAction($, fidelity, action)
-}
-
-async function runCommand($: EngineInterface, text: string): Promise<void> {
-  try {
-    await $.command.run(commandOf(text))
-  } catch (failure) {
-    $.ui.toast(`The chat would not run ${text}: ${reasonOf(failure)}`)
-  }
-}
-
-// Generate can take two commands, a render and then the generate, so ticket.generate_commands names them.
+// Each action goes in the prompt box for the person to send. Generate can take two commands, a render and then the
+// generate, so ticket.generate_commands names them.
 export async function runAction($: EngineInterface, fidelity: FidelityClient, action: string): Promise<void> {
-  if (action !== 'generate') return runCommand($, `/actions-${action} ${fidelity.guidance}`)
+  if (action !== 'generate') return promptCommands($, [`/actions-${action} ${fidelity.guidance}`])
   const chatBar = await currentChatBar($)
   const formats = fidelity.defaultFormat ? [fidelity.defaultFormat] : []
   try {
     const commands = await callTool<string[]>($, 'ticket.generate_commands', { ticket: chatBar.sessionName, fidelities: [fidelity.fidelity], formats })
-    for (const command of commands) await runCommand($, command)
+    await promptCommands($, commands)
   } catch (failure) {
     $.ui.toast(`${fidelity.guidance} cannot generate: ${reasonOf(failure)}`)
   }
@@ -155,7 +145,7 @@ export async function runAction($: EngineInterface, fidelity: FidelityClient, ac
 export async function reviewFidelity($: EngineInterface, fidelity: FidelityClient): Promise<FidelityClient | ReviewRefused> {
   const chatBar = await currentChatBar($)
   try {
-    await callTool<TicketData>($, 'ticket.finish_review', { ticket: chatBar.sessionName, fidelities: [fidelity.fidelity] })
+    await callTool<FidelityProgressData>($, 'fidelity-progress.finish_review', { ticket: chatBar.sessionName, fidelity: fidelity.fidelity })
   } catch (failure) {
     $.ui.toast(`${fidelity.guidance} not reviewed: ${reasonOf(failure)}`)
     return new ReviewRefused(reasonOf(failure))
@@ -165,9 +155,3 @@ export async function reviewFidelity($: EngineInterface, fidelity: FidelityClien
   return (await currentChatBar($)).fidelities.find(entry => entry.fidelity === fidelity.fidelity) ?? fidelity
 }
 
-// A dot opens the board on this session at that fidelity, and the action button follows it.
-export async function openBoard($: EngineInterface, fidelity: FidelityClient): Promise<void> {
-  await selectFidelity($, fidelity)
-  const chatBar = await currentChatBar($)
-  await runCommand($, `/board ${chatBar.sessionName} ${fidelity.fidelity}`)
-}

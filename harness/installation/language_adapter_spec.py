@@ -19,7 +19,7 @@ from harness.installation.destination import (  # noqa: E402
     data_of,
     edited_fields_of,
     edits,
-    identity_field_of,
+    identity_fields_of,
     language_adapter,
     languages_of,
 )
@@ -27,11 +27,16 @@ from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
     MissingIdentityError,
     argument_schema,
-    camel_case,
     schema_type,
 )
 
-_KANBAN = ("harness.kanban.board:Board", "harness.kanban.ticket:Ticket", "harness.kanban.backlog_item:BacklogItem")
+_KANBAN = (
+    "harness.kanban.board:Board",
+    "harness.kanban.ticket:Ticket",
+    "harness.kanban.ticket:FidelityProgress",
+    "harness.kanban.backlog_item:BacklogItem",
+    "space.session.session:PracticeSessionOutput",
+)
 _ADAPTERS = "language-adapters/typescript"
 _IDENTITY_FLAG = "_language_adapter_identity"
 
@@ -62,7 +67,7 @@ with description("a language adapter"):
             class Named:
                 pass
 
-            expect(identity_field_of(Named)).to(equal("name"))
+            expect(identity_fields_of(Named)).to(equal(("name",)))
 
         with it("should name the fields an operation changes when its arguments are named differently"):
             @edits("title")
@@ -149,6 +154,8 @@ with description("a language adapter"):
             self.ticket = (self.root / "harness/kanban/ticket.ts").read_text(encoding="utf-8")
             self.board = (self.root / "harness/kanban/board.ts").read_text(encoding="utf-8")
             self.backlog_item = (self.root / "harness/kanban/backlog-item.ts").read_text(encoding="utf-8")
+            self.progress = (self.root / "harness/kanban/fidelity-progress.ts").read_text(encoding="utf-8")
+            self.practice = (self.root / "space/session/practice-session-output.ts").read_text(encoding="utf-8")
 
         with it("should mirror the folders the toolset's source sits in, with every generated class of an object in one file"):
             written = sorted(path.relative_to(self.root).as_posix() for path in self.root.rglob("*.ts*"))
@@ -160,8 +167,12 @@ with description("a language adapter"):
                 "harness/kanban/backlog-item.ts",
                 "harness/kanban/board-views.tsx",
                 "harness/kanban/board.ts",
+                "harness/kanban/fidelity-progress-views.tsx",
+                "harness/kanban/fidelity-progress.ts",
                 "harness/kanban/ticket-views.tsx",
                 "harness/kanban/ticket.ts",
+                "space/session/practice-session-output-views.tsx",
+                "space/session/practice-session-output.ts",
             ]))
 
         with it("should declare ES modules, so Node loads the files wherever the install sits"):
@@ -286,10 +297,10 @@ with description("a language adapter"):
 
             with context("for an object loaded by its identity"):
                 with it("should hold the identity, so a caller never passes it again"):
-                    expect(self.ticket).to(contain("constructor(protected readonly cdd: CddConnection, protected readonly ticket: string, state: TicketData | null = null) {"))
+                    expect(self.ticket).to(contain("constructor(protected readonly cdd: CddConnection, ticket: string, state: TicketData | null = null) {"))
 
                 with it("should send the identity under its Python name"):
-                    expect(self.ticket).to(contain("'ticket.move_next', { ticket: this.ticket }"))
+                    expect(self.ticket).to(contain("'ticket.move_next', { ticket: this.#ticket }"))
 
                 with it("should build the adapter for the object a request names"):
                     expect(self.ticket).to(contain("static fromRequest(cdd: CddConnection, request: CddRequest): TicketAdapter {"))
@@ -300,13 +311,13 @@ with description("a language adapter"):
 
             with context("for an operation with its own arguments"):
                 with it("should type each argument from the published schema"):
-                    expect(self.ticket).to(contain("async enablePractice(practice: string, isEnabled: boolean): Promise<this> {"))
+                    expect(self.practice).to(contain("async enable(isEnabled: boolean): Promise<this> {"))
 
                 with it("should mark an argument with a Python default as optional"):
                     expect(self.ticket).to(contain("async close(leaving?: string[] | null): Promise<this> {"))
 
                 with it("should send camelCase arguments under their Python names"):
-                    expect(self.ticket).to(contain("is_enabled: isEnabled"))
+                    expect(self.practice).to(contain("is_enabled: isEnabled"))
 
             with context("for a result"):
                 with it("should take on the object's own state its tool returns"):
@@ -319,7 +330,7 @@ with description("a language adapter"):
                     expect(self.ticket).to(contain("movePrevious(): Promise<TicketData | BacklogItemData>"))
 
                 with it("should type a shape Python declares"):
-                    expect(self.ticket).to(contain("report(fidelity: string): Promise<ReportData>"))
+                    expect(self.progress).to(contain("report(): Promise<ReportData>"))
 
                 with it("should type a list of strings"):
                     expect(self.ticket).to(contain("Promise<string[]>"))
@@ -333,13 +344,13 @@ with description("a language adapter"):
                 expect(self.ticket).to(contain("export class TicketClientGenerated extends Ticket {"))
 
             with it("should take its identity from the field the mark names"):
-                expect(self.ticket).to(contain("protected readonly ticket: string = state?.name ?? ''"))
+                expect(self.ticket).to(contain("ticket: string = state?.name ?? ''"))
 
             with it("should post to its object's route, with the name safe in the path"):
-                expect(self.ticket).to(contain("this.api.post<TicketData>(`/ticket/${encodeURIComponent(this.ticket)}/move-next`, {})"))
+                expect(self.ticket).to(contain("this.api.post<TicketData>(`/ticket/${encodeURIComponent(this.#ticket)}/move-next`, {})"))
 
             with it("should send arguments under their Python names"):
-                expect(self.ticket).to(contain("{ practice, is_enabled: isEnabled }"))
+                expect(self.practice).to(contain("{ is_enabled: isEnabled }"))
 
             with it("should keep its state when the page has already shown a failure"):
                 expect(self.ticket).to(contain("return state ? this.changed(state) : null"))
@@ -360,7 +371,7 @@ with description("a language adapter"):
                 expect(self.ticket).to(contain("TicketAdapter.fromRequest(cdd, request).moveNext()"))
 
             with it("should read the operation's arguments from the request, checked against the published schema"):
-                expect(self.ticket).to(contain('readArguments<{ practice: string; is_enabled: boolean }>(request, {"practice": {"type": "string"}, "is_enabled": {"type": "boolean"}}, ["practice", "is_enabled"])'))
+                expect(self.practice).to(contain('readArguments<{ is_enabled: boolean }>(request, {"is_enabled": {"type": "boolean"}}, ["is_enabled"])'))
 
             with context("for an object no tool loads by name"):
                 with it("should leave the name out of the path"):
@@ -434,10 +445,6 @@ with description("a language adapter"):
 
             with it("should take Monaco from the application"):
                 expect(self.file_views).to(contain("from '@monaco-editor/react'"))
-
-    with description("a Python name"):
-        with it("should become camelCase"):
-            expect(camel_case("set_wip_limit")).to(equal("setWipLimit"))
 
     with description("a published schema"):
         with it("should keep only what checking a sent value needs"):

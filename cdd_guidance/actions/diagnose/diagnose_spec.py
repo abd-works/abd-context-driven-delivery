@@ -15,67 +15,73 @@ from expects import contain, equal, expect
 from mamba import context, description, it
 
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
+from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE, marked_as_sub_agent
+
+
+def diagnose_tool():
+    return AgentToolSet.instantiate(Diagnose).tools["diagnose"]
 
 
 with description("Diagnose toolset"):
-    with context("manifest signature"):
+    with context("with its diagnose tool"):
         with it("exposes diagnose as a sub_agent tool"):
             # Arrange / Act
-            entry = Diagnose.manifest.signature["diagnose"]
+            tool = diagnose_tool()
             # Assert
-            expect(entry["kind"]).to(equal("sub_agent"))
+            expect(marked_as_sub_agent(tool.callable)).to(equal(True))
 
         with it("launches non-blocking"):
             # Arrange / Act
-            entry = Diagnose.manifest.signature["diagnose"]
+            tool = diagnose_tool()
             # Assert
-            expect(entry["launch"]).to(equal("non_blocking"))
+            expect(tool.description).to(contain(SUB_AGENT_CALLER_PREAMBLE))
 
         with it("returns str"):
             # Arrange / Act
-            entry = Diagnose.manifest.signature["diagnose"]
+            tool = diagnose_tool()
             # Assert
-            expect(entry["returns"]).to(equal("str"))
+            expect(tool.response).to(equal("str"))
 
     with context("diagnose sub-agent instructions"):
         with it("describes building a feedback loop in Phase 1"):
             # Arrange / Act
-            instructions = Diagnose.manifest.signature["diagnose"]["instructions"]
+            instructions = diagnose_tool().description
             # Assert
             expect(instructions).to(contain("Phase 1"))
             expect(instructions).to(contain("feedback loop"))
 
         with it("requires reproduction before proceeding in Phase 2"):
             # Arrange / Act
-            instructions = Diagnose.manifest.signature["diagnose"]["instructions"]
+            instructions = diagnose_tool().description
             # Assert
             expect(instructions).to(contain("Phase 2"))
             expect(instructions).to(contain("Reproduce"))
 
         with it("demands ranked falsifiable hypotheses in Phase 3"):
             # Arrange / Act
-            instructions = Diagnose.manifest.signature["diagnose"]["instructions"]
+            instructions = diagnose_tool().description
             # Assert
             expect(instructions).to(contain("Phase 3"))
             expect(instructions).to(contain("falsifiable"))
 
         with it("requires targeted instrumentation in Phase 4"):
             # Arrange / Act
-            instructions = Diagnose.manifest.signature["diagnose"]["instructions"]
+            instructions = diagnose_tool().description
             # Assert
             expect(instructions).to(contain("Phase 4"))
             expect(instructions).to(contain("Instrument"))
 
         with it("mandates regression test before fix in Phase 5"):
             # Arrange / Act
-            instructions = Diagnose.manifest.signature["diagnose"]["instructions"]
+            instructions = diagnose_tool().description
             # Assert
             expect(instructions).to(contain("Phase 5"))
             expect(instructions).to(contain("regression test"))
 
         with it("requires cleanup and post-mortem in Phase 6"):
             # Arrange / Act
-            instructions = Diagnose.manifest.signature["diagnose"]["instructions"]
+            instructions = diagnose_tool().description
             # Assert
             expect(instructions).to(contain("Phase 6"))
             expect(instructions).to(contain("post-mortem"))

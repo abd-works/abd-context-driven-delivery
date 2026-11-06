@@ -37,6 +37,8 @@ def private_probe_in_text(text: str, start_line: int) -> dict:
 class BehaviorNode(StoryNode):
     """A describe-tree node read from spec code. Knows its own source lines and loads the facts BDD rules read."""
 
+    graph_facts = ("expect_count", "has_implementation", "private_probe")
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.line = 0

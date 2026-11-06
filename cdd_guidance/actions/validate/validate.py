@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
@@ -11,11 +10,10 @@ from harness.installation.destination import noDeploy
 from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 from harness.guidance import Rule
+from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_catalogue import PracticeCatalogue
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
-_GRAPH_PRACTICES = frozenset({"clean_engineering", "ddd", "stories", "bdd", "ux"})
-REPORT_FOLDER = "validation-reports"
-REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 
 
 class PathsNotFoundError(FileNotFoundError):
@@ -106,18 +104,22 @@ class Validate(GuidanceAction):
         items = [item for item in self.listed() if not isinstance(item, str)]
         if not items:
             return []
-        folder = self._session_path() / REPORT_FOLDER
-        folder.mkdir(parents=True, exist_ok=True)
-        date = datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)
-        paths = [folder / f"{self._report_slug(item)}-{date}.md" for item in items]
+        session = self.acting_session()
+        fidelities = [fidelity for fidelity in (self._fidelity_in(session, item) for item in items) if fidelity is not None]
+        paths = [fidelity.new_report_path() for fidelity in fidelities]
         for path in paths:
             path.write_text(report, encoding="utf-8")
             save_checked_graph(checked_graphs, path.with_suffix(".json"))
         return paths
 
-    def _report_slug(self, item) -> str:
+    def _fidelity_in(self, session, item):
+        """The fidelity a guidance item is validated at, as session's own practice holds it, so its reports go to that
+        session; none when the item has no current fidelity or is no practice a session works on."""
         current = getattr(getattr(item, "fidelities", None), "current", None)
-        return str((current or item).slug)
+        practice = session.practices.get(item.key)
+        if current is None or practice is None:
+            return None
+        return practice.fidelities[current.name]
 
     def _resolve_graph_json_paths(
         self, graph: bool | str | list[str] | None, edited: list[str]
@@ -146,7 +148,7 @@ class Validate(GuidanceAction):
 
         workspace = self._validate_workspace()
         graph = Graph()
-        graph.load_files(str(workspace), sorted(_GRAPH_PRACTICES), edited)
+        graph.load_files(str(workspace), list(PracticeCatalogue.keys()), edited)
         return Path(graph.write_json(str(self._session_path() / "edited-graph.json")))
 
     def _workspace_relative(self, paths: list[str] | None) -> list[str]:
@@ -203,13 +205,9 @@ class Validate(GuidanceAction):
         return self.acting_session().fidelity_outputs(item)
 
     def _graph_practices(self) -> list[str]:
-        """Graph practices of the listed guidance (clean-engineering is clean_engineering); none for other guidance."""
-        names = [
-            str(getattr(item, "slug", "") or "").replace("-", "_")
-            for item in self.listed()
-            if not isinstance(item, str)
-        ]
-        return [name for name in names if name in _GRAPH_PRACTICES]
+        """The catalogue key of each listed practice, such as clean_engineering; none for other guidance."""
+        keys = [PracticeCatalogue.key_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        return [key for key in keys if key]
 
     def _session_path(self) -> Path:
         return Path(self.acting_session().session_path)
@@ -401,7 +399,6 @@ class Validate(GuidanceAction):
         def on(item) -> None:
             if isinstance(item, str):
                 return
-            item.contexts
             item.examples
             item.templates
 

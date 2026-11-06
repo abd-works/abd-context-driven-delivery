@@ -115,7 +115,7 @@ def _(s):
 
     @s.then("each Discovery tile marks Generate, Validate, and Review ○, its segment dim")
     def _(world):
-        tiles = {slug: (world.read["actions"][slug], world.read["progress"][slug]) for slug in DISCOVERY_FIDELITY_SLUGS}
+        tiles = {slug: (world.read["progress"][slug]["actions"], world.read["progress"][slug]["state"]) for slug in DISCOVERY_FIDELITY_SLUGS}
         expect(tiles).to(equal(dict.fromkeys(DISCOVERY_FIDELITY_SLUGS, ({"generate": "to_do", "validate": "to_do", "review": "to_do"}, "not_started"))))
 
 
@@ -128,7 +128,7 @@ def _(s):
 
     @s.when("the Person turns DDD off for checkout-flow")
     def _(world):
-        world.chosen = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).enable_practice(practice="ddd", is_enabled=False))
+        world.chosen = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.practice("ddd").enable(is_enabled=False))
 
     @s.then("a toast says DDD off for Checkout flow · saved to .sessions/checkout-flow/session.json")
     def _(world):
@@ -137,7 +137,7 @@ def _(s):
 
     @s.and_("the card shows no DDD segment")
     def _(world):
-        expect(world.chosen["practices"]["ddd"]).to(be_false)
+        expect(world.data_of(world.Ticket.load(CHECKOUT_FLOW.name))["session"]["practices"]["ddd"]["enabled"]).to(be_false)
 
 
 @shared_stories.scenario("Choose Ticket Practices", "Finish a stage on the practices left on")
@@ -146,16 +146,15 @@ def _(s):
     def _(world):
         world.project.seed_session(PET_VISITS.with_log(*STORY_MAP_REVIEWED))
 
-    @s.and_("DDD and UX are turned off for pet-visits")
+    @s.and_("every practice but Stories is turned off for pet-visits")
     def _(world):
-        world.project.seed_session_fields(PET_VISITS, practices={"ddd": {"enabled": False}, "ux": {"enabled": False}})
+        turned_off = {"enabled": False}
+        world.project.seed_session_fields(PET_VISITS, practices={name: turned_off for name in ("ddd", "ux", "clean_engineering", "bdd")})
 
     @s.when("the session board reads pet-visits")
     def _(world):
         world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
-    # Fails today: the board has five practices, so with DDD and UX off pet-visits still needs Clean Engineering's
-    # modules and BDD's behavior in Discovery. The scenario comes from kanban_spec's board of Stories, DDD, and UX.
     @s.then("pet-visits shows in Discovery's Done")
     def _(world):
         expect_placed(world.read, "Discovery", is_done=True)
@@ -290,7 +289,7 @@ def _(s):
 
     @s.then("Run next read Run next: generate before it ran")
     def _(world):
-        expect((world.before["next_action"], world.before["next"])).to(equal(("generate", STORY_MAP)))
+        expect((world.before["progress"][world.before["next"]]["next_action"], world.before["next"])).to(equal(("generate", STORY_MAP)))
 
     # The command also names the ticket's session.json, as kanban_tools_spec 'should name the ticket's session in the
     # generate command' requires, because a command runs in whichever chat it is sent to.
@@ -301,7 +300,7 @@ def _(s):
 
 @shared_stories.scenario("Send Next Fidelity Action", "Open the report while violations hold the ticket")
 def _(s):
-    @s.given("checkout-flow's story map has a verb-noun-format violation on tests/story-map.md line 6")
+    @s.given("checkout-flow's story map has a verb-noun-format violation on .context/story-map.md line 6")
     def _(world):
         seed_checkout_flow_held_on_violations(world.project)
 
@@ -314,13 +313,13 @@ def _(s):
     def _(world):
         ticket = world.Ticket.load(CHECKOUT_FLOW.name)
         world.before = world.data_of(ticket)
-        world.report = world.data_of(ticket.report(fidelity=world.before["next"]))
+        world.report = world.data_of(ticket.progress_of(world.before["next"]).report())
 
-    @s.then("Run next read Run next: fix violations")
+    @s.then("Run next read Run next: review violations")
     def _(world):
-        expect(world.before["next_action"]).to(equal("satisfy"))
+        expect(world.before["progress"][world.before["next"]]["next_action"]).to(equal("review"))
 
-    @s.and_("the report panel opens on stories-story_map")
+    @s.and_("the report panel opens on stories-story-map")
     def _(world):
         expect(world.report["path"]).to(equal(f".sessions/{CHECKOUT_FLOW.name}/validation-reports/{STORY_MAP_REPORT}.md"))
 
@@ -339,11 +338,11 @@ def _(s):
     @s.when("the Person runs billing-report's next step")
     def _(world):
         ticket = world.Ticket.load(BILLING_REPORT.name)
-        world.reviewed = world.data_of(ticket.finish_review(fidelities=[world.data_of(ticket)["next"]]))
+        world.reviewed = world.data_of(ticket.progress_of(world.data_of(ticket)["next"]).finish_review())
 
     @s.then("billing-report's story_map marks Review ✓")
     def _(world):
-        expect_action(world.reviewed, STORY_MAP, "review", "done")
+        expect((world.reviewed["slug"], world.reviewed["actions"]["review"])).to(equal((STORY_MAP, "done")))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Go back to an earlier stage's fidelity still to review")
@@ -360,9 +359,9 @@ def _(s):
     def _(world):
         world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
-    @s.then("Run next reads Run next: review on stories-story_map")
+    @s.then("Run next reads Run next: review on stories-story-map")
     def _(world):
-        expect((world.read["next_action"], world.read["next"])).to(equal(("review", STORY_MAP)))
+        expect((world.read["progress"][world.read["next"]]["next_action"], world.read["next"])).to(equal(("review", STORY_MAP)))
 
 
 @shared_stories.scenario("Send Next Fidelity Action", "Name nothing to run on a ticket done in its stage")

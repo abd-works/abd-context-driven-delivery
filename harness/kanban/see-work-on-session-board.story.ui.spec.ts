@@ -25,7 +25,7 @@ const PAGE_HEIGHT = 900
 const LATEST_STAMP = '2026-11-02T10:00:00Z'
 const BROKEN_BOARD_PORT = 8782
 const ACTIVE_BORDER = '3px'
-const DISCOVERY_FIDELITIES = ['stories-story_map', 'ddd-bounded_context', 'ux-ia', 'clean_engineering-modules', 'bdd-behavior']
+const DISCOVERY_FIDELITIES = ['stories-story-map', 'ddd-bounded-context', 'ux-ia', 'clean-engineering-modules', 'bdd-behavior']
 
 const region = (page: Page, name: 'board' | 'details') => page.locator(`.${name}-region`)
 const heightOf = async (page: Page, name: 'board' | 'details') => (await region(page, name).boundingBox())!.height
@@ -128,11 +128,11 @@ test.describe('Display Board', () => {
       writeSession(fixtureRoot, { name: 'billing-report', title: 'Billing report', log: [generatedLine('stories', 'story_map'), validatedLine('Stories', 'story_map')] })
       await openBoard(page)
       await expect(card(page, 'billing-report')).toBeVisible()
-      await request.post('/api/ticket/billing-report/finish-review', { headers: BOARD_POST_HEADERS, data: { fidelities: ['stories-story_map'] } })
+      await request.post('/api/fidelity-progress/billing-report/stories-story-map/finish-review', { headers: BOARD_POST_HEADERS, data: {} })
     })
 
-    test('Then a toast says stories-story_map reviewed on billing-report', async ({ page }) => {
-      await expect(toast(page, 'stories-story_map reviewed on billing-report')).toBeVisible({ timeout: 8_000 })
+    test('Then a toast says stories-story-map reviewed on billing-report', async ({ page }) => {
+      await expect(toast(page, 'stories-story-map reviewed on billing-report')).toBeVisible({ timeout: 8_000 })
     })
   })
 })
@@ -295,7 +295,7 @@ test.describe('Display Ticket Details', () => {
     })
 
     test("Then billing-report's card is expanded with the story_map tile's action bar open", async ({ page }) => {
-      await expect(openCard(page, 'billing-report').locator('[data-tile="stories-story_map"] .expansion')).toBeVisible()
+      await expect(openCard(page, 'billing-report').locator('[data-tile="stories-story-map"] .expansion')).toBeVisible()
     })
   })
 })

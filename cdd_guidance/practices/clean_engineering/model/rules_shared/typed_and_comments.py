@@ -54,9 +54,7 @@ def _is_test_code(file: str) -> bool:
 def _operation_name(node) -> str:
     if node.type == "Operation":
         return node.name
-    from harness.graph.rule_context import _operation_name_from_param_node
-
-    return _operation_name_from_param_node(node)
+    return str(node.get_fact("operation_name") or "")
 
 
 def _param_violation(name: str, hint: str) -> list[str]:

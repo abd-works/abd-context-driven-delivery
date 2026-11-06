@@ -4,18 +4,18 @@ import type { BoardPage } from '@src/kanban/board/board-page'
 import type { ColumnClient } from '@src/kanban/board/column-client'
 import { BoardOnProject, ticketOn } from 'test-utils/board-page-support'
 
-import type { TicketFiles } from './ticket'
+import { filesOf, type TicketFiles } from './ticket'
 import { cellPlace, headPlace } from './tile-client'
 import { chipsOf, chosenFormats, defaultPicks } from './tile-formats'
 
 // billing-report is made the active ticket: nothing is recorded on it yet. The project's story map,
 // .context/story-map.md, is its markdown; a spec removes it for a ticket with nothing generated.
 const TICKET = 'billing-report'
-const SLUG = 'stories-story_map'
+const SLUG = 'stories-story-map'
 const STORY_MAP = '.context/story-map.md'
-const TWO_SLUGS = [SLUG, 'ddd-bounded_context']
+const TWO_SLUGS = [SLUG, 'ddd-bounded-context']
 const PLACE = cellPlace('Discovery', SLUG)
-const OTHER_SLUG = 'ddd-bounded_context'
+const OTHER_SLUG = 'ddd-bounded-context'
 const OTHER_PLACE = cellPlace('Discovery', OTHER_SLUG)
 const THIRD_SLUG = 'ux-ia'
 const THIRD_PLACE = cellPlace('Discovery', THIRD_SLUG)
@@ -29,7 +29,7 @@ let STAGE: ColumnClient
 let NOTHING_MADE: TicketFiles
 let MARKDOWN_MADE: TicketFiles
 
-const filesOn = async (): Promise<TicketFiles> => (await board.board.api.post<TicketFiles>(`/ticket/${TICKET}/files`, { fidelities: [SLUG] }))!
+const filesOn = async (): Promise<TicketFiles> => (await filesOf(board.board.api, TICKET, [SLUG]))!
 
 beforeAll(async () => {
   board = await BoardOnProject.start()

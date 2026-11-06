@@ -24,6 +24,7 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
 from harness.mcp.mcp_server import McpServer
+from space.repo.repo import Repo
 from space.session import Session
 from space.session.session import PracticeRootInContextError, SessionNameRequiredError
 from space.session.throwaway_project import ProjectCall
@@ -386,7 +387,7 @@ with description("a session"):
             self.work.mkdir()
             Session.new("alpha", self.work, self.repo)
             session = Session.current()
-            session._append_log("--- 2")
+            session.record("--- 2")
             Session.forget_current()
 
         with it("should append the next loop after switch without in-memory loops"):
@@ -882,10 +883,10 @@ with description("a practice"):
 
         with context("with a practice turned off"):
             with before.each:
-                self.session.enable_practice("ddd", False)
+                self.session.practice("ddd").enable(False)
 
             with it("should leave that practice out of the active practices"):
-                expect([practice.name for practice in self.session.active_practices]).to(equal(["stories", "clean_engineering", "bdd", "ux"]))
+                expect([practice.name for practice in self.session.active_practices]).to(equal(["stories", "ux", "clean_engineering", "bdd"]))
 
             with it("should save it in the session's session.json"):
                 saved = json.loads((self.session.session_path / "session.json").read_text(encoding="utf-8"))
@@ -1036,7 +1037,7 @@ with description("a practice"):
                 self.opened = self.session.practice("bdd")
 
             with it("should keep each set on that practice"):
-                expect(len(self.opened.to_mcp_result()["output_paths"])).to(equal(2))
+                expect(len(json.loads((self.repo / ".context" / "practices.json").read_text(encoding="utf-8"))["bdd"])).to(equal(2))
 
     with context("that a practice has not been invoked"):
         with before.each:
@@ -1181,7 +1182,7 @@ with description("a session switched to without a name"):
             Session.forget_current()
             self.repo = Path(tempfile.mkdtemp())
             ProjectCall(self.repo)
-            WorkState(self.repo).branch = "feature/space-battle"
+            WorkState(self.repo).branch = Repo(self.repo).branch_named("feature/space-battle")
             Session.switch(repo_path=self.repo, workpath=self.repo)
 
         with after.each:
@@ -1198,7 +1199,7 @@ with description("a session switched to without a name"):
             expect(WorkState(self.repo).session).to(equal("feature-space-battle"))
 
         with it("should keep the saved branch"):
-            expect(WorkState(self.repo).branch).to(equal("feature/space-battle"))
+            expect(WorkState(self.repo).branch.name).to(equal("feature/space-battle"))
 
     with context("with nothing saved in .sessions/session.json"):
         with before.each:
@@ -1216,16 +1217,15 @@ with description("a session switched to without a name"):
 # (E) Open Work Session
 # (S) Work State --> Read Saved Session
 with description("a .sessions/session.json written before branch and worktree were saved"):
-    with after.each:
-        ProjectCall.close_all()
-
     with before.each:
         self.repo = Path(tempfile.mkdtemp())
         ProjectCall(self.repo)
         (self.repo / ".sessions").mkdir()
         (self.repo / ".sessions" / "session.json").write_text('{"current": "alpha"}', encoding="utf-8")
 
+    # One after.each: a second one replaces the first, which would leave this project open for every later spec.
     with after.each:
+        ProjectCall.close_all()
         shutil.rmtree(self.repo, ignore_errors=True)
 
     with it("should read its current as the session"):

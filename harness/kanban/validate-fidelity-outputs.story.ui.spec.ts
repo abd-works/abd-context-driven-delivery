@@ -15,18 +15,18 @@ import { card, expect, FakeChat, fixtureRoot, generatedLine, openBoard, received
 import type { Locator, Page } from './app/tests/story-ui'
 
 const REPORTS = join(fixtureRoot, '.sessions', 'checkout-flow', 'validation-reports')
-// The fixture's own report of checkout-flow's story map, with verb-noun-format on tests/story-map.md line 6.
+// The fixture's own report of checkout-flow's story map, with verb-noun-format on .context/story-map.md line 6.
 const STORY_MAP_REPORT = 'stories-story-map-20261101T100000'
 // A report Validate saves later, with the judgment the validating agent adds: a second rule broken on line 7.
-const JUDGED_REPORT = '# Graph rule validation\n\n## Judgment — `tests/story-map.md`\n\n### `do-not-invent-requirements` — Fail\n- story-map.md:7 `Confirm Order`: no source names this story.\n'
+const JUDGED_REPORT = '# Graph rule validation\n\n## Judgment — `.context/story-map.md`\n\n### `do-not-invent-requirements` — Fail\n- story-map.md:7 `Confirm Order`: no source names this story.\n'
 const CLEAN_REPORT = 'stories-story-map-20261101T120000'
 const CLEAN_STAMP = '2026-11-01T12:00:00Z'
-const CLEAN_GRAPH = { practices: { stories: { nodes: [['node-1', '', 'Story', 'stories', 'tests/story-map.md', 6, 6]], rules: [] } } }
+const CLEAN_GRAPH = { practices: { stories: { nodes: [['node-1', '', 'Story', 'stories', '.context/story-map.md', 6, 6]], rules: [] } } }
 
 const report = (page: Page) => page.locator('[data-panel="report"]')
 
 async function openStoryMapReport(page: Page): Promise<Locator> {
-  await page.locator('.details-body [data-tile="stories-story_map"]').getByRole('button', { name: 'violations' }).click()
+  await page.locator('.details-body [data-tile="stories-story-map"]').getByRole('button', { name: 'violations' }).click()
   await expect(report(page).getByRole('button', { name: /verb-noun-format/ })).toBeVisible()
   return report(page)
 }
@@ -42,7 +42,7 @@ test.describe('with no chat connected', () => {
       })
 
       test("Then a band across the page top names checkout-flow's violations", async ({ page }) => {
-        await expect(page.getByRole('status', { name: "Active ticket's violations" })).toHaveText('checkout-flow · Discovery · violations: stories-story_map')
+        await expect(page.getByRole('status', { name: "Active ticket's violations" })).toHaveText('checkout-flow · Discovery · violations: stories-story-map')
       })
     })
 
@@ -63,10 +63,10 @@ test.describe('with no chat connected', () => {
     test.describe("Open a violation's file at its line", () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
-        await (await openStoryMapReport(page)).getByRole('button', { name: 'tests/story-map.md:6', exact: true }).click()
+        await (await openStoryMapReport(page)).getByRole('button', { name: '.context/story-map.md:6', exact: true }).click()
       })
 
-      test('Then the files panel shows tests/story-map.md with line 6 marked', async ({ page }) => {
+      test('Then the files panel shows .context/story-map.md with line 6 marked', async ({ page }) => {
         const files = page.locator('[data-panel="files"]')
         await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
         await expect(files.locator('.code-line.is-failing .line-number')).toHaveText('6')
@@ -116,13 +116,13 @@ test.describe('with a chat connected', () => {
       test.beforeEach(async ({ page }) => {
         await openWithChat(page)
         before = chat.received.length
-        await (await openStoryMapReport(page)).getByRole('button', { name: 'Fix tests/story-map.md:6' }).click()
+        await (await openStoryMapReport(page)).getByRole('button', { name: 'Fix .context/story-map.md:6' }).click()
       })
 
-      test('Then the chat receives one message naming the verb-noun-format rule, the error at tests/story-map.md:6, and the content that failed, with instructions to fix it', async () => {
+      test('Then the chat receives one message naming the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed, with instructions to fix it', async () => {
         await expect.poll(() => sentSince(before).length).toBe(1)
         const [message] = sentSince(before)
-        expect(['verb-noun-format', 'tests/story-map.md:6', 'Handle Payment'].every(part => message!.includes(part))).toBe(true)
+        expect(['verb-noun-format', '.context/story-map.md:6', 'Handle Payment'].every(part => message!.includes(part))).toBe(true)
       })
     })
 
@@ -138,7 +138,7 @@ test.describe('with a chat connected', () => {
       test('Then the chat receives one message with every verb-noun-format violation, each at its file and line with the content that failed, and instructions to fix them', async () => {
         await expect.poll(() => sentSince(before).length).toBe(1)
         const [message] = sentSince(before)
-        expect(['verb-noun-format', 'tests/story-map.md:6', 'Handle Payment'].every(part => message!.includes(part))).toBe(true)
+        expect(['verb-noun-format', '.context/story-map.md:6', 'Handle Payment'].every(part => message!.includes(part))).toBe(true)
       })
     })
 
@@ -157,7 +157,7 @@ test.describe('with a chat connected', () => {
       test('Then the chat receives one message naming each rule with every violation of it, each at its file and line with the content that failed, and instructions to fix them all', async () => {
         await expect.poll(() => sentSince(before).length).toBe(1)
         const [message] = sentSince(before)
-        expect(['verb-noun-format', 'tests/story-map.md:6', 'Handle Payment', 'do-not-invent-requirements', 'tests/story-map.md:7', 'Confirm Order'].every(part => message!.includes(part))).toBe(true)
+        expect(['verb-noun-format', '.context/story-map.md:6', 'Handle Payment', 'do-not-invent-requirements', '.context/story-map.md:7', 'Confirm Order'].every(part => message!.includes(part))).toBe(true)
       })
     })
   })
@@ -165,8 +165,8 @@ test.describe('with a chat connected', () => {
   test.describe('Validate Fidelity', () => {
     async function openBillingStoryMap(page: Page): Promise<Locator> {
       await card(page, 'billing-report').getByRole('button', { name: 'Show Billing report' }).click({ position: { x: 4, y: 4 } })
-      await page.locator('.details-body [data-tile="stories-story_map"] .tile-name').click()
-      const bar = page.locator('.details-body [data-tile="stories-story_map"] .expansion')
+      await page.locator('.details-body [data-tile="stories-story-map"] .tile-name').click()
+      const bar = page.locator('.details-body [data-tile="stories-story-map"] .expansion')
       await expect(bar).toBeVisible()
       return bar
     }
@@ -178,7 +178,7 @@ test.describe('with a chat connected', () => {
         await (await openBillingStoryMap(page)).getByRole('button', { name: 'validate', exact: true }).click({ timeout: 5_000 }).catch(() => undefined)
       })
 
-      // Fails today: the fixture's tests/story-map.md is not where the story_map fidelity declares its markdown
+      // Fails today: the fixture's .context/story-map.md is not where the story_map fidelity declares its markdown
       // (.context/story-map.md), so with nothing recorded the bar has nothing to validate and keeps validate off.
       // The command also names the ticket's session.json.
       test('Then the chat receives the command /actions-validate stories-story-map', async () => {

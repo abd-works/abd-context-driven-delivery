@@ -49,8 +49,8 @@ export async function dueTimers(world: World): Promise<void> {
   await settle()
 }
 
-// A Text's words, however the test kit hands the element back.
-export const textOf = (node: any): string | undefined => node?.text ?? node?.children?.[0]
+// A Text's words, however the test kit hands the element back, or a Button's label.
+export const textOf = (node: any): string | undefined => node?.text ?? node?.children?.[0] ?? node?.props?.label
 
 // The first Text drawn inside an element, such as a dot's mark or the health mark.
 export const markOf = async (ui: any, key: string) => (await ui.find({ key }))?.children?.[0]
@@ -59,6 +59,27 @@ export const markOf = async (ui: any, key: string) => (await ui.find({ key }))?.
 export const labelOf = async (ui: any, key: string): Promise<string | undefined> => {
   const node = await ui.find({ key })
   return node?.props?.label ?? node?.label
+}
+
+// The hover tip drawn above a keyed element, such as a dot's fidelity and state, or the action the button runs.
+export async function tipOf(ui: any, key: string): Promise<string | undefined> {
+  const node = await ui.find({ key })
+  const tip = node?.children?.find((child: any) => child?.props?.position === 'absolute')
+  return tip?.children?.map(textOf).join('')
+}
+
+// The words a Button holding Texts draws, read in order.
+export async function wordsOf(ui: any, key: string): Promise<string | undefined> {
+  return (await ui.find({ key }))?.children?.map(textOf).join('')
+}
+
+// A fidelity's state as the session card draws it, such as ✓ done or ○ to do.
+export const stateOf = async (ui: any, slug: string): Promise<string | undefined> => textOf((await drawn(ui, `card-cell-${slug}`))?.children?.[2])
+
+// Each fidelity's state on the session card reads as given, such as { 'ux-mockup': '✓ done' }.
+export async function expectStates(ui: any, states: Record<string, string>): Promise<void> {
+  const read = await Promise.all(Object.keys(states).map(async slug => [slug, await stateOf(ui, slug)]))
+  expect(Object.fromEntries(read)).toEqual(states)
 }
 
 // Each keyed element's mark reads as given, such as { 'session-name-button': 'checkout-flow' }.

@@ -31,6 +31,7 @@ import textwrap
 from typing import Dict, List, Optional, Tuple, Union
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
+from harness.agent_tools.name import Name
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import (
     Background,
@@ -741,9 +742,7 @@ class CodeStoryModel(StoryModel):
         ):
             if filename.endswith(suffix):
                 stem = filename[: -len(suffix)]
-                if suffix == "Story.java":
-                    return re.sub(r"(?<!^)(?=[A-Z])", "-", stem).lower()
-                return stem.replace("_", "-")
+                return Name(stem).kebab
         return ""
 
     def sub_epic_for(self, epic: Epic, slugs: List[str]) -> Epic:

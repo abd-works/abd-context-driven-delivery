@@ -1,3 +1,4 @@
+import { FidelityProgressClientGenerated } from '@cdd/harness/kanban/fidelity-progress'
 import { BoardClientGenerated } from '@cdd/harness/kanban/board'
 import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
 
@@ -40,8 +41,7 @@ export class SidePanelClient {
   }
 
   private async readReport(ticket: string, fidelity: string): Promise<ReportClient | null> {
-    const named = TicketClientGenerated.named(this.api, ticket)
-    const report = await (fidelity ? named.report(fidelity) : named.violations())
+    const report = await (fidelity ? FidelityProgressClientGenerated.named(this.api, ticket, fidelity).report() : TicketClientGenerated.named(this.api, ticket).violations())
     return report ? new ReportClient(report) : null
   }
 

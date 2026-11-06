@@ -13,6 +13,7 @@ from harness.agent_tools.agent_tools import (
     agent_toolset,
     instructions,
 )
+from harness.agent_tools.name import Name
 from harness.markdown.markdown import MarkdownCollection
 from harness.hooks.hooks import Hook
 
@@ -102,7 +103,7 @@ class Rule:
                 slug = coded.group(1).strip()
                 body = coded.group(2).strip()
         if not slug:
-            slug = re.sub(r"[^a-z0-9]+", "-", body.casefold()).strip("-") or "rule"
+            slug = Name(body).title_slug or "rule"
         return cls(slug=slug, body=body, fidelity=fidelity)
 
 
@@ -241,7 +242,7 @@ class RulesCollection(MarkdownCollection):
             return []
         indexes = []
         for bag in matched:
-            name = getattr(bag.parent, "name", None) or getattr(bag.parent, "fidelity", None)
+            name = getattr(bag.parent, "name", None)
             if name in getattr(fidelities, "entries", {}):
                 indexes.append(names.index(name))
         if not indexes:
@@ -395,9 +396,6 @@ class RulesCollection(MarkdownCollection):
         for rule in self:
             lines.append(f"- **{rule.slug}** — {rule.body}")
         return "\n".join(lines)
-
-    def format_rules(self) -> str:
-        return self.formatted()
 
     @property
     @agent_instructions

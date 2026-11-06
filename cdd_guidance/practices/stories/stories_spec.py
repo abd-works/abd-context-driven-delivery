@@ -40,7 +40,7 @@ with description("Stories"):
             expect(self.stories.format).to(equal("markdown"))
 
         with it("should select story_map"):
-            expect(self.stories.fidelities.current.fidelity).to(equal("story_map"))
+            expect(self.stories.fidelities.current.name).to(equal("story_map"))
 
     with context("that is constructed with fidelity story_map"):
         with before.each:
@@ -50,7 +50,7 @@ with description("Stories"):
             expect(self.stories.format).to(equal("markdown"))
 
         with it("should retain fidelity story_map"):
-            expect(self.stories.fidelities.current.fidelity).to(equal("story_map"))
+            expect(self.stories.fidelities.current.name).to(equal("story_map"))
 
     with context("that is constructed with fidelity scenarios"):
         with before.each:
@@ -60,7 +60,7 @@ with description("Stories"):
             expect(self.stories.format).to(equal("python"))
 
         with it("should retain fidelity scenarios"):
-            expect(self.stories.fidelities.current.fidelity).to(equal("scenarios"))
+            expect(self.stories.fidelities.current.name).to(equal("scenarios"))
 
         # Generate tells the agent to save story tests at the declared path, so a file saved there below its story map
         # must be one validate reads back onto its Story, or every generated test goes unchecked.
@@ -162,7 +162,7 @@ with description("Stories"):
                 "sketch",
                 "iterate",
             ):
-                expect(name in practice.agent_tools).to(equal(False))
+                expect(name in practice.tools).to(equal(False))
 
     with context("whose instructions action is expanded"):
         with it("should name `{story_snake}_story.test.md` at scenarios"):

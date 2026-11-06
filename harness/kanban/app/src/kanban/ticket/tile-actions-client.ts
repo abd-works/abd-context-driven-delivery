@@ -1,6 +1,7 @@
+import { FidelityProgressClientGenerated } from '@cdd/harness/kanban/fidelity-progress'
 import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
 
-import { ACTION_STANDINGS, countOf, guidanceSlug, STEP_FAILED } from '../board/board-brand'
+import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
@@ -10,7 +11,7 @@ import type { FormatChip } from './tile-formats'
 
 const ACTIONS_WITH_FORMATS = ['generate', 'render']
 
-const slugsOf = (tile: Tile): string => tile.slugs.map(guidanceSlug).join(' ')
+const slugsOf = (tile: Tile): string => tile.slugs.join(' ')
 
 export type ChipFace = FormatChip & { hint: string; isOn: boolean; isDone: boolean; count: string }
 export type StepFace = { mark: string; color: string; hint: string; text: string }
@@ -28,7 +29,7 @@ export type TileBar = {
 
 // A tile can hold several fidelities: its link opens the report of the one left with violations, else the first report.
 function reportSlugOf(ticket: TicketClient, tile: Tile): string | undefined {
-  const reported = tile.slugs.filter(slug => ticket.reports[slug])
+  const reported = tile.slugs.filter(slug => ticket.progress[slug]?.report_file)
   return reported.find(slug => ticket.stateOf(slug).key === 'violations') ?? reported[0]
 }
 
@@ -54,8 +55,6 @@ function validateFaceOf(ticket: TicketClient, tile: Tile): StepFace {
 }
 
 const allowsAll = (ticket: TicketClient, tile: Tile, action: string): boolean => tile.slugs.length > 0 && tile.slugs.every(slug => ticket.allows(slug, action))
-
-const hasFiles = (tile: Tile): boolean => Object.values(tile.files).some(formats => Object.values(formats).some(entries => entries.some(entry => entry.exists)))
 
 // What an open action bar offers, and what its controls send to the chat.
 export class TileActionsClient {
@@ -83,9 +82,9 @@ export class TileActionsClient {
     return tile.action !== 'render' || chipsOf(stage, tile.slugs).some(chip => chipDoneCount(tile.files, tile.slugs, chip) > 0)
   }
 
-  // Validate and Review need something to look at: an action the ticket recorded, or files the bar found on disk.
+  // The ticket says when Validate and Review have something to look at: an action it recorded, or a declared file there.
   private hasSomethingToCheck(ticket: TicketClient, tile: Tile, action: string): boolean {
-    return !ticket.isLocked && (allowsAll(ticket, tile, action) || hasFiles(tile))
+    return !ticket.isLocked && allowsAll(ticket, tile, action)
   }
 
   barOf(ticket: TicketClient, stage: ColumnClient, tile: Tile): TileBar {
@@ -131,7 +130,7 @@ export class TileActionsClient {
 
   // The ticket writes the review to its session log, and the board read after it shows the fidelity reviewed.
   async review(tile: Tile): Promise<void> {
-    await TicketClientGenerated.named(this.page.api, tile.ticket).finishReview(tile.slugs)
+    await Promise.all(tile.slugs.map(slug => FidelityProgressClientGenerated.named(this.page.api, tile.ticket, slug).finishReview()))
     await this.page.reader.refresh()
   }
 }

@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { boardOf, checkoutFlowWith, GENERATED } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, expectMarks, findText, labelOf, textOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, findText, markOf, textOf, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -22,9 +22,9 @@ story('Invoke Next Fidelity Action', CHAT_BAR, () => {
       await scene.ui.press({ key: 'next-action' })
     })
     // ChatBarView press -> runAction($, fidelity, 'validate')
-    // runAction -> $.command.run({ command: 'actions-validate', args: 'ux-mockup' }); only generate asks ticket.generate_commands for its commands
-    then('the chat runs /actions-validate ux-mockup', async ($, on, scene) => {
-      expect(scene.world.sent).toContain('/actions-validate ux-mockup')
+    // runAction -> promptCommands -> $.prompt.fill({ text: '/actions-validate ux-mockup', mode: 'append' }); only generate asks ticket.generate_commands for its commands
+    then('/actions-validate ux-mockup waits in the prompt box for the Person to send', async ($, on, scene) => {
+      expect(scene.world.fills).toContain('/actions-validate ux-mockup')
     })
   })
   scenario('Show the next action before it runs', ({ given, when, then }) => {
@@ -37,8 +37,8 @@ story('Invoke Next Fidelity Action', CHAT_BAR, () => {
       await $.prompt.submit({ text: 'again' })
     })
     then('the button shows the validate icon, with validate ux-mockup on hover', async ($, on, scene) => {
-      await expectMarks(scene.ui, { 'next-action': '◎' })
-      expect(await labelOf(scene.ui, 'next-action')).toBe('validate ux-mockup')
+      expect(textOf(await markOf(scene.ui, 'next-action-mark'))).toBe('✓')
+      expect(await tipOf(scene.ui, 'action')).toBe('validate ux-mockup')
       expect(textOf(await findText(scene.ui, 'validate ux-mockup'))).toBe('validate ux-mockup')
     })
   })

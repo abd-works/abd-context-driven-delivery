@@ -1,6 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { called, cdd } from '../../../cdd-stub'
+import { called } from '../../../cdd-stub'
 import { CHAT_BAR, dueTimers, expectMarkLooks, expectMarks, findText, labelOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
@@ -24,14 +24,14 @@ story('Reconnect CDD Server', CHAT_BAR, () => {
     // ServerHealthBandView press -> reconnect($, onRestored)
     // reconnect -> refreshHealth($) -> $.mcp.call('server-health.report')
     then('the mark shows ⟳ and the headline reads Reconnecting, Try 1 of 3.', async ($, on, scene) => {
-      await expectMarkLooks(scene.ui, { 'health-icon': ['⟳', '#F59E0B'] })
+      await expectMarkLooks(scene.ui, { 'health-icon-mark': ['⟳', '#F59E0B'] })
       expect(textOf(await findText(scene.ui, 'Reconnecting'))).toBe('Reconnecting')
       expect(textOf(await findText(scene.ui, /Try 1 of 3/))).toBe('Waiting for plugin:cdd:cdd to answer. Try 1 of 3.')
     })
     and('once cdd answers, the mark shows ✓ and the Chat Bar shows checkout-flow again, as in Display Stage Strip', async ($, on, scene) => {
       scene.world.serverLost = false
       await dueTimers(scene.world)
-      await expectMarkLooks(scene.ui, { 'health-icon': ['✓', '#22C55E'] })
+      await expectMarkLooks(scene.ui, { 'health-icon-mark': ['✓', '#22C55E'] })
       await expectMarks(scene.ui, { 'session-name-button': 'checkout-flow' })
       expect(called(scene.world, 'board.show')).toEqual({})
     })
@@ -50,7 +50,7 @@ story('Reconnect CDD Server', CHAT_BAR, () => {
     })
     // reconnect($, onRestored, attempt 1..3)
     then('after Try 3 of 3 the headline reads Disconnected again', async ($, on, scene) => {
-      await expectMarkLooks(scene.ui, { 'health-icon': ['✕', '#EF4444'] })
+      await expectMarkLooks(scene.ui, { 'health-icon-mark': ['✕', '#EF4444'] })
       expect(textOf(await findText(scene.ui, 'Disconnected'))).toBe('Disconnected')
     })
     and('Reconnect and Run install are still offered', async ($, on, scene) => {

@@ -83,13 +83,27 @@ _AMBIENT_STATE = re.compile(
 
 
 class TacticalBuildingBlock(OoadClass):
-    """A class-shaped DDD building block. Loads the tactical facts DDD rules read from its graph node."""
+    """A class-shaped DDD building block. Loads the tactical facts DDD rules read from its graph node.
+
+    The block is the parsed class seen through DDD, so it also carries that class's own facts.
+    """
+
+    graph_facts = OoadClass.graph_facts + (
+        "peer_private_operations",
+        "public_derive_operations",
+        "delegating_operations",
+        "identity_free_loads",
+        "tactical_stereotype",
+    )
 
     def load_tactical_facts(self, parsed: OoadClass, file_text: str) -> None:
         """Fill the facts this building block owns, from the class its language parser read and the file around it."""
         from cdd_guidance.practices.clean_engineering.model.rules_shared.span_helpers import method_body
         from cdd_guidance.practices.ddd.model.stereotypes import declares_tactical_stereotype
 
+        for name in OoadClass.graph_facts:
+            if hasattr(parsed, name):
+                setattr(self, name, getattr(parsed, name))
         operations = parsed.own_operations()
         public = [op for op in operations if op.name and not op.name.startswith("_")]
         self.peer_private_operations = [op.name for op in operations if op.peer_private_access]

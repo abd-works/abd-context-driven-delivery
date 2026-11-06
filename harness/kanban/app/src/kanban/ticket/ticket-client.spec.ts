@@ -39,7 +39,7 @@ describe('Restrict Actions To Active Session', () => {
 describe('Display Ticket Details', () => {
   it('should say what runs next', async () => {
     const { page } = await board.page()
-    expect(ticketOn(page, OTHER).nextNote).toBe('Next: stories-story_map, generate')
+    expect(ticketOn(page, OTHER).nextNote).toBe('Next: stories-story-map, generate')
   })
 
   it('should say another session must be activated to run it', async () => {
@@ -60,7 +60,7 @@ describe('Display Ticket Details', () => {
   })
 
   it('should keep a practice with two words in its skill', () => {
-    expect(skillOf('clean_engineering-code')).toBe('/practices-clean-engineering-clean-engineering-code')
+    expect(skillOf('clean-engineering-code')).toBe('/practices-clean-engineering-clean-engineering-code')
   })
 })
 
@@ -80,7 +80,7 @@ describe('Review Fidelity', () => {
     it('should show the review done once Run next records it', async () => {
       const page = await validated()
       await ticketOn(page, OTHER).runNext()
-      expect(ticketOn(page, OTHER).actionsOf('stories-story_map').review).toBe('done')
+      expect(ticketOn(page, OTHER).actionsOf('stories-story-map').review).toBe('done')
     })
   })
 })
@@ -133,9 +133,9 @@ describe('Send Next Fidelity Action', () => {
     expect(ticketOn(page, OTHER).runNextLabel).toBe('Run next: generate')
   })
 
-  it('should say fix violations on held violations', async () => {
+  it('should say review violations on held violations', async () => {
     const { page } = await board.page()
-    expect(ticketOn(page, ACTIVE).runNextLabel).toBe('Run next: fix violations')
+    expect(ticketOn(page, ACTIVE).runNextLabel).toBe('Run next: review violations')
   })
 
   describe('with generate next', () => {
@@ -149,7 +149,7 @@ describe('Send Next Fidelity Action', () => {
 
     it('should ask for the commands of the default format', async () => {
       const { asked } = await ran()
-      expect(asked.find(request => request.path === `/api/ticket/${OTHER}/generate-commands`)?.body).toEqual({ fidelities: ['stories-story_map'], formats: ['markdown'] })
+      expect(asked.find(request => request.path === `/api/ticket/${OTHER}/generate-commands`)?.body).toEqual({ fidelities: ['stories-story-map'], formats: ['markdown'] })
     })
 
     it('should send those commands in order', async () => {
@@ -178,7 +178,7 @@ describe('Send Next Fidelity Action', () => {
     it('should mark its tile as the next one', async () => {
       const { page } = await ran()
       const discovery = page.board.stageNamed('Discovery')!
-      expect(ticketOn(page, OTHER).isNext(discovery, 'stories-story_map')).toBe(true)
+      expect(ticketOn(page, OTHER).isNext(discovery, 'stories-story-map')).toBe(true)
     })
   })
 
@@ -213,7 +213,7 @@ describe('Send Next Fidelity Action', () => {
 describe('Choose Ticket Practices', () => {
   async function turnedOff() {
     const { page } = await board.page()
-    page.store.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded_context', stage: 'Discovery', slugs: ['ddd-bounded_context'], action: 'generate', picked: [], isPinned: true, files: {} }] })
+    page.store.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded-context', stage: 'Discovery', slugs: ['ddd-bounded-context'], action: 'generate', picked: [], isPinned: true, files: {} }] })
     await ticketOn(page, ACTIVE).enablePractice('ddd', false)
     return page
   }

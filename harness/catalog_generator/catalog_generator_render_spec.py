@@ -23,7 +23,6 @@ from harness.catalog_generator.catalog_generator import (
     CatalogFidelity,
     CatalogTool,
     CatalogUtility,
-    CatalogFidelityGuidance,
     load_registry,
     ActionResolution,
     resolve_lifecycle_actions,
@@ -44,7 +43,7 @@ with description("Render Action Page With Fixed Sections"):
             hrefs = {name: f"actions/{name}.html" for name in self.resolutions}
             self.catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             resolution = self.resolutions["repair"]
-            action = self.owner.agent_tools["repair"]
+            action = self.owner.tools["repair"]
             self.catalog_action.action = action
             self.catalog_action.owner = self.owner
             self.catalog_action.source_dir = resolution.source_dir
@@ -77,12 +76,8 @@ with description("Render Fidelity Page With Quick-Invoke And Illustrated Example
             hrefs = {r.name: f"../actions/{r.name}.html" for r in self.resolutions}
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             self.catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.resolutions)
-            guidances = CatalogFidelityGuidance.scrape(Ddd)
-            tactics = next(g for g in guidances if g.key == "tactics")
             self.catalog_fidelity.skill_name = "ddd"
-            self.catalog_fidelity.fidelity_name = "tactics"
-            self.catalog_fidelity.owner = self.owner
-            self.catalog_fidelity.guidance = tactics.guidance
+            self.catalog_fidelity.fidelity = self.owner.fidelities["tactics"]
             self.page = (
                 self.catalog_fidelity.section_0_html()
                 + self.catalog_fidelity.generate_catalog()
@@ -119,11 +114,10 @@ with description("Render Context Tool Page"):
             catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
             catalog_fidelity = CatalogFidelity(_REPO_URL, _REF, catalog_action, self.resolutions)
             self.catalog_context_tool = CatalogContextTool(_REPO_URL, _REF, catalog_fidelity)
-            guidances = CatalogFidelityGuidance.scrape(Ddd)
             self.catalog_context_tool.owner = self.owner
             self.catalog_context_tool.display_name = "Domain-Driven Design"
             self.catalog_context_tool.skill_name = "ddd"
-            self.catalog_context_tool.guidances = guidances
+            self.catalog_context_tool.fidelities = list(self.owner.fidelities.entries.values())
             self.page = self.catalog_context_tool.generate_catalog()
 
         with it("shows the practice name, shared rules, and purpose prose"):

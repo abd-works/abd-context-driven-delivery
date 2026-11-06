@@ -284,7 +284,7 @@ def ticket_with(lines: list):
 
 
 def story_map(ticket):
-    return next(progress for progress in ticket.progress if progress.slug == "stories-story_map")
+    return next(progress for progress in ticket.progress if progress.fidelity_slug == "stories-story-map")
 
 
 with description("a ticket") as self:
@@ -302,10 +302,10 @@ with description("a ticket") as self:
             expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", False)))
 
         with it("should keep its title, scope, and parent"):
-            expect((self.ticket.title, self.ticket.scope, self.ticket.parent.name)).to(equal(("Pet visits", "feature", "pawplace")))
+            expect((self.ticket.title, self.ticket.session.scope, self.ticket.session.parent)).to(equal(("Pet visits", "feature", "pawplace")))
 
         with it("should name Generate on story_map as next"):
-            expect((self.ticket.next_fidelity.slug, self.ticket.next_fidelity.remaining_actions[0])).to(equal(("stories-story_map", "generate")))
+            expect((self.ticket.next_fidelity.fidelity_slug, self.ticket.next_fidelity.remaining_actions[0])).to(equal(("stories-story-map", "generate")))
 
     # (S) Board App --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):
@@ -341,7 +341,7 @@ with description("a ticket") as self:
                 expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "validate"]))
 
             with it("should match the practice's class name in the validate line to its folder name"):
-                expect([progress.slug for progress in ticket_with(self.lines).progress if progress.done_actions]).to(equal(["stories-story_map"]))
+                expect([progress.fidelity_slug for progress in ticket_with(self.lines).progress if progress.done_actions]).to(equal(["stories-story-map"]))
 
             with context("that has been reviewed"):
                 with before.each:
@@ -413,7 +413,7 @@ with description("a ticket") as self:
             self.ticket.move_to("Specification")
 
         with it("should name Review on that fidelity as next"):
-            expect((self.ticket.next_fidelity.slug, self.ticket.next_action)).to(equal(("stories-story_map", "review")))
+            expect((self.ticket.next_fidelity.fidelity_slug, self.ticket.next_fidelity.next_action)).to(equal(("stories-story-map", "review")))
 
     # (S) Person --> Drag Ticket To A Stage
     with context("that a person has dragged into a later stage's done part"):
@@ -445,8 +445,8 @@ with description("a ticket") as self:
     with context("with every practice but Stories turned off"):
         with before.each:
             self.ticket = ticket_with(every_action("stories", "Stories", "story_map"))
-            self.ticket.enable_practice("ddd", False)
-            self.ticket.enable_practice("ux", False)
+            self.ticket.session.practice("ddd").enable(False)
+            self.ticket.session.practice("ux").enable(False)
 
         with it("should be done with the one practice it works on"):
             expect(self.ticket.is_done).to(be_true)

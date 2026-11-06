@@ -117,11 +117,11 @@ with story("Display Board"):
         # Evidence: observed: board-client.spec 'should name a fidelity that was reviewed'.
         with given("the [ticket](../../../.context/kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance) generated and validated with no violations"):
             pass
-        with when("a review of stories-story_map is written to billing-report's [session log](../../../.context/kanban-model.md#session)"):
-            # Person -> Ticket.finish_review(['stories-story_map'])
+        with when("a review of stories-story-map is written to billing-report's [session log](../../../.context/kanban-model.md#session)"):
+            # Person -> Ticket.finish_review(['stories-story-map'])
             # Ticket -> Ticket.record('review Stories story_map')
             # Board page -> Board.show()
-            # Board <- stories-story_map done on billing-report
+            # Board <- stories-story-map done on billing-report
             pass
-        with then("a toast says stories-story_map reviewed on billing-report"):
+        with then("a toast says stories-story-map reviewed on billing-report"):
             pass

@@ -8,6 +8,9 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
 
+from harness.agent_tools.name import Name
+from harness.markdown.format import Format
+
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
@@ -63,40 +66,8 @@ def _markdown_to_html(text: str) -> str:
     return "\n".join(chunks)
 
 
-_FORMAT_TEMPLATE_EXT = {
-    "python": ".py",
-    "py": ".py",
-    "javascript": ".js",
-    "js": ".js",
-    "markdown": ".md",
-    "md": ".md",
-    "typescript": ".ts",
-    "ts": ".ts",
-    "java": ".java",
-}
-
-_FORMAT_DIR_ALIAS = {
-    "markdown": "md",
-    "md": "md",
-    "python": "py",
-    "py": "py",
-    "typescript": "ts",
-    "ts": "ts",
-    "javascript": "js",
-    "js": "js",
-    "java": "java",
-}
-
 LocationKind = Literal["file", "folder", "section"]
 _MISSING = object()
-
-
-def _slug_variants(domain_slug: str) -> list[str]:
-    variants = [domain_slug]
-    for alt in (domain_slug.replace("_", "-"), domain_slug.replace("-", "_")):
-        if alt not in variants:
-            variants.append(alt)
-    return variants
 
 
 def _section_heading(label: str) -> str:
@@ -299,7 +270,7 @@ class AssetLocation:
     def _extract_fidelity_file(self) -> str:
         if self.folder is None or not self.fidelity:
             return ""
-        for stem in _slug_variants(self.fidelity):
+        for stem in Name(self.fidelity).spellings:
             text = self._first_stem_text(stem)
             if text:
                 return text
@@ -352,31 +323,16 @@ class AssetLocation:
         wanted = self._format_dir_name()
         if not wanted:
             return False
-        aliases = {"md", "py", "ts", "js", "java"}
-        return name.casefold() in aliases and name.casefold() != wanted
+        return name.casefold() in Format.template_folder_names() and name.casefold() != wanted
 
     def _format_dir_name(self) -> str:
-        fmt = (self.format or "").casefold()
-        return _FORMAT_DIR_ALIAS.get(fmt, fmt if fmt in {"md", "py", "ts", "js", "java"} else "")
+        return Format(self.format).template_folder
 
     def _skip_format_file(self, path: Path) -> bool:
-        fmt = (self.format or "").casefold()
-        if not fmt:
-            return False
-        allowed = {
-            "markdown": {".md"},
-            "md": {".md"},
-            "python": {".py"},
-            "py": {".py"},
-            "typescript": {".ts"},
-            "ts": {".ts"},
-            "javascript": {".js"},
-            "js": {".js"},
-            "java": {".java"},
-        }.get(fmt)
+        allowed = Format(self.format).template_extension
         if not allowed:
             return False
-        return path.suffix.lower() not in allowed
+        return path.suffix.lower() != allowed
 
     def _skip_fidelity_file(self, path: Path) -> bool:
         stem = path.stem.casefold().replace("_", "-")
@@ -416,11 +372,16 @@ class AssetLocator:
         *,
         group: str | None = None,
         filter_key: str | None = None,
+        fidelity: str | None = None,
+        format: str | None = None,
     ) -> None:
         self._instance = instance
         self._label = label
         self._group = group
         self._filter_key = filter_key
+        # A fidelity or format asked for by name wins over the instance's current one, so a caller reads another
+        # fidelity's assets without changing the instance that other threads read.
+        self._asked = {"fidelity": fidelity, "format": format}
         self._module_dir = Path(".")
         self._domain_slug = ""
         self._search_root_path = Path(".")
@@ -442,6 +403,8 @@ class AssetLocator:
     def _active_resource(self, key: str | None) -> str | None:
         if not key:
             return None
+        if self._asked.get(key) is not None:
+            return self._asked[key] or None
         if key == "fidelity":
             return self._current_fidelity()
         value = getattr(self._instance, key, None)
@@ -452,7 +415,7 @@ class AssetLocator:
         if current is None:
             value = getattr(self._instance, "fidelity", None)
             return str(value) if value else None
-        value = getattr(current, "fidelity", None) or getattr(current, "name", None)
+        value = getattr(current, "name", None)
         return str(value) if value else None
 
     def _fidelity_scope(self) -> str | None:
@@ -576,7 +539,7 @@ class AssetLocator:
         return self._module_dir / f"{self._domain_slug}.md"
 
     def _domain_md_in(self, root: Path) -> Path | None:
-        for slug in _slug_variants(self._domain_slug):
+        for slug in Name(self._domain_slug).spellings:
             candidate = root / f"{slug}.md"
             if candidate.is_file():
                 return candidate
@@ -599,15 +562,15 @@ class AssetLocator:
         )
 
     def _named_template_file(self, name: str, *, practice: bool) -> AssetLocation | None:
-        stems = list(_slug_variants(name))
+        stems = list(Name(name).spellings)
         if practice:
             stems = [
                 extra
-                for slug in _slug_variants(name)
+                for slug in Name(name).spellings
                 for extra in (slug, f"{slug}-templates", f"{slug}-template")
             ]
         self._template_stems = stems
-        self._template_ext = _FORMAT_TEMPLATE_EXT.get(self._active_format or "", "")
+        self._template_ext = Format(self._active_format).template_extension
         for folder in self._template_folders():
             located = self._template_in_folder(folder)
             if located is not None:
@@ -618,8 +581,7 @@ class AssetLocator:
         folders: list[Path] = []
         shared = self._module_dir / "templates"
         if self._active_format:
-            alias = _FORMAT_DIR_ALIAS.get(self._active_format, self._active_format)
-            folders.append(shared / alias)
+            folders.append(shared / Format(self._active_format).short)
             folders.append(self._module_dir / "formats" / self._active_format)
         folders.append(shared)
         return folders
@@ -682,7 +644,7 @@ class YamlBinder:
 
     def _wanted_names(self, key: str) -> set[str]:
         folded = key.casefold()
-        snake = _to_snake(key).casefold()
+        snake = Name(key).snake.casefold()
         wanted = {
             folded,
             snake,
@@ -720,12 +682,12 @@ class YamlBinder:
         if isinstance(descriptor, property) and descriptor.fset is None:
             leftovers = getattr(self._instance, "yaml", None)
             if isinstance(leftovers, dict):
-                leftovers[_to_snake(attr)] = self.as_string(value)
+                leftovers[Name(attr).snake] = self.as_string(value)
             return
         if stored == "default_format" and isinstance(value, str):
-            value = canonical_format(value.split()[0].strip("()`"))
+            value = Format(value.split()[0].strip("()`")).name
         elif stored == "clean_engineering" and isinstance(value, str):
-            value = value.split()[0].strip("()`").replace("-", "_")
+            value = Name(value.split()[0].strip("()`")).snake
         setattr(self._instance, stored, value)
 
     def as_string(self, value: Any) -> str:
@@ -757,7 +719,7 @@ class YamlBinder:
         for key, value in fields.items():
             attr = self.matching_attr(key)
             if attr is None:
-                leftovers[_to_snake(key)] = self.as_string(value)
+                leftovers[Name(key).snake] = self.as_string(value)
                 continue
             current = getattr(self._instance, attr, None)
             if isinstance(value, dict) and _is_bindable(current):
@@ -772,16 +734,6 @@ class YamlBinder:
 
 def strip_yaml_fences(text: str) -> str:
     return _YAML_FENCE.sub("", text).strip()
-
-
-def _to_snake(key: str) -> str:
-    token = key.strip().replace(" ", "_").replace("-", "_")
-    chars: list[str] = []
-    for index, char in enumerate(token):
-        if char.isupper() and index and token[index - 1] != "_":
-            chars.append("_")
-        chars.append(char.lower())
-    return "".join(chars).replace("__", "_")
 
 
 def _is_bindable(current: Any) -> bool:
@@ -922,16 +874,20 @@ class MarkdownCollection:
 
 
 class Markdown:
-    def __init__(self, instance: Any, label: str) -> None:
+    def __init__(self, instance: Any, label: str, *, fidelity: str | None = None, format: str | None = None) -> None:
         self._instance = instance
         self._label = label
+        self._fidelity = fidelity
+        self._format = format
 
     @classmethod
-    def from_label(cls, instance: Any, label: str) -> Markdown:
-        return cls(instance, label)
+    def from_label(cls, instance: Any, label: str, *, fidelity: str | None = None, format: str | None = None) -> Markdown:
+        """Markdown for ``label`` on ``instance``, at the fidelity and format named here when given, else at the
+        instance's current ones."""
+        return cls(instance, label, fidelity=fidelity, format=format)
 
     def raw(self) -> str:
-        location = AssetLocator(self._instance, self._label).locate()
+        location = AssetLocator(self._instance, self._label, fidelity=self._fidelity, format=self._format).locate()
         return location.extract()
 
     def extract(self) -> str:
@@ -970,11 +926,10 @@ class Markdown:
     def _format_key_for_template(self, path: Path) -> str:
         parts = path.relative_to(self._templates_folder).parts
         if len(parts) > 1:
-            folder_key = _FORMAT_ALIASES.get(parts[0].casefold())
-            if folder_key:
-                return folder_key
-        ext = path.suffix.lstrip(".").lower()
-        return _EXT_TO_FORMAT.get(ext, ext)
+            folder = Format(parts[0])
+            if folder.is_known:
+                return folder.name
+        return Format.from_extension(path.suffix).name
 
     def templates_path_map(self) -> dict[str, str]:
         class_dir = AssetLocator(self._instance, self._label).class_file_directory()
@@ -1057,57 +1012,21 @@ class Markdown:
         fields = YamlBinder().yaml_fields(body)
         token = fields.get("default_format") or fields.get("defaultFormat")
         if isinstance(token, str) and token.strip():
-            return canonical_format(token.split()[0].strip("()`"))
+            return Format(token.split()[0].strip("()`")).name
         rest = self._fidelity_labeled_line(body, "Default format")
         if not rest:
             return ""
-        return canonical_format(rest.split()[0].strip("()`"))
+        return Format(rest.split()[0].strip("()`")).name
 
     def fidelity_clean_engineering(self, body: str) -> str:
         fields = YamlBinder().yaml_fields(body)
         token = fields.get("clean_engineering") or fields.get("cleanEngineering")
         if isinstance(token, str) and token.strip():
-            return token.split()[0].strip("()`").replace("-", "_")
+            return Name(token.split()[0].strip("()`")).snake
         rest = self._fidelity_labeled_line(body, "Clean Engineering")
         if not rest:
             return ""
-        return rest.split()[0].strip("()`").replace("-", "_")
-
-
-_EXT_TO_FORMAT = {
-    "md": "markdown",
-    "py": "python",
-    "ts": "typescript",
-    "js": "javascript",
-    "java": "java",
-    "drawio": "drawio",
-    "html": "html",
-    "json": "json",
-}
-
-_FORMAT_ALIASES = {
-    "md": "markdown",
-    "markdown": "markdown",
-    "py": "python",
-    "python": "python",
-    "ts": "typescript",
-    "typescript": "typescript",
-    "js": "javascript",
-    "javascript": "javascript",
-    "java": "java",
-    "drawio": "drawio",
-    "miro": "miro",
-    "html": "html",
-    "json": "json",
-}
-
-
-def canonical_format(name: str | None) -> str:
-    """Resolve a format or folder alias to the output-channel key."""
-    if not name:
-        return ""
-    folded = name.casefold()
-    return _FORMAT_ALIASES.get(folded, folded)
+        return Name(rest.split()[0].strip("()`")).snake
 
 
 _MARK_ATTRS = (

@@ -46,7 +46,7 @@ class BacklogItemsAdapterDriver implements BacklogItemsDriver {
   }
 
   async stateOfWork(title: string, fidelity: string): Promise<string> {
-    return this.started.get(title)!.progress[fidelity] ?? ''
+    return this.started.get(title)!.progress[fidelity]?.state ?? ''
   }
 }
 

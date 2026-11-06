@@ -15,6 +15,6 @@ Read a board from a repository; every column and ticket is read again from `.ses
 
 Store only what cannot be read from the work: a ticket's title, scope, parent, workpath, turned-off practices, and each practice root, in its `session.json`, and the WIP limits in `.sessions/_board.json`. Never store a ticket's progress or column; they come from the session log, so a move made by the agent and one made on the board give the same answer.
 
-Progress counts only actions recorded in the session log. A fidelity's files existing is shown on the files list, but it does not mark Generate done. Validate and Review are allowed once any action on a fidelity is recorded, as often as a person wants to check the same output again.
+Progress counts only actions recorded in the session log. A fidelity's files existing is shown on the files list, but it does not mark Generate done. Validate and Review are allowed once any action on a fidelity is recorded or a file it declares is already there, as often as a person wants to check the same output again. The board and the chat bar read `allowed_actions` and add no rule of their own.
 
 Never delete a backlog item's file: it is the only copy of the idea, so starting the item moves it instead.

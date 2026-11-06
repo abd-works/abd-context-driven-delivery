@@ -13,3 +13,7 @@ Correction: name the verb and noun of what the person does, Open Board. The slas
 2026-10-31 story-map.md
 Mistake: a story named after one variant of a behaviour, Move Ticket To Next Column.
 Correction: the story names the whole behaviour, Move Ticket, and each variant is an acceptance criterion.
+
+2026-11-06 ticket.py, kanban-model.md
+Mistake: moved every fidelity action's command onto Ticket.commands(action, fidelities, formats), and proposed the model's Generate.commands_for(session, fidelities, formats) instead. Both pass the session, the fidelities and the formats into the operation as parameters, so every caller has to gather state that the session already holds.
+Correction: keep state on the object it belongs to and let operations read it. A session holds its practices; a practice holds its fidelities and its current fidelity; a fidelity holds its actions and its format; an action is made for its session. A command reads `session.practices.stories.fidelities.story_map.actions.generate(format="drawio")`, and a format given once is saved on the fidelity for the next action on it.
