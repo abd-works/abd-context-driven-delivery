@@ -11,7 +11,8 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from expects import equal, expect, raise_error
-from mamba import context, description, it
+from mamba import after, before, context, description, it
+from space.session.throwaway_project import ThrowawayProject
 
 from agent_bdd.spec_helpers import (
     CAR,
@@ -28,6 +29,13 @@ from agent_bdd.spec_helpers import (
 
 
 with description("spec_helpers"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("build_run_request"):
         with it("should serialize an action request"):
             payload = build_run_request(
