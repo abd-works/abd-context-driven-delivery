@@ -157,11 +157,28 @@ class RulesCollection(MarkdownCollection):
             from space.session import Session
         except ImportError:
             return
-        session = Session.current()
-        guidance = self._owner_practice()
-        if guidance is None:
+        if self._owner_practice() is None:
             return
-        session.note_injected_rules_from_bags(guidance, path, bags)
+        session = Session.current()
+        for bag in bags:
+            session.note_injected_rules(bag, path)
+
+    @property
+    def practice_key(self) -> str:
+        """The folder name of the practice these rules belong to, such as `bdd`, as session log lines name it; empty
+        when the rules belong to no practice."""
+        practice = self._owner_practice()
+        return str(getattr(practice, "key", "") or "") if practice is not None else ""
+
+    @property
+    def fidelity_name(self) -> str:
+        """The fidelity these rules belong to, such as `development`. A practice's shared rules belong to the fidelity
+        the practice is working at, so a log line names where the edit was checked."""
+        parent = self.parent
+        if parent is None or parent is self._owner_practice():
+            current = getattr(getattr(parent, "fidelities", None), "current", None)
+            return str(getattr(current, "name", "") or "")
+        return str(getattr(parent, "name", "") or "")
 
     def _payload_path(self, hook_payload: dict[str, Any]) -> str:
         for key in ("file_path", "path", "uri"):

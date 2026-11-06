@@ -14,6 +14,8 @@ from typing import Any
 # The guidance probed when the caller names none: one practice and one fidelity of another practice.
 GUIDANCE_PROBE = ["stories", "clean-engineering-model"]
 GUIDANCE_SECTION = "guidance"
+# Operations that write under the session's root; the probe calls them in a session of its own.
+_WRITES_UNDER_SESSION_ROOT = frozenset({"sketch.save_sketch", "grill-context.write_grill_answer"})
 
 
 class GuidanceProbe:
@@ -134,20 +136,13 @@ class GuidanceProbe:
             if "mode" in param_names:
                 args.setdefault("mode", "index_only")
         elif mcp_name == "grill-context.explore_context_files":
-            args["root"] = self.repo_root
+            args["folder"] = self.repo_root
         elif mcp_name == "grill-context.read_context_file":
             args["path"] = self._sample_guidance_file()
         elif mcp_name == "grill-context.write_grill_answer":
-            args["root"] = self._temp_dir()
             args["heading"] = "diagnostic-probe"
             args["body"] = "probe"
-        elif mcp_name == "sketch.list_sketches":
-            args["destination"] = self.guidance_folder
-            if "slug" in param_names:
-                args.setdefault("slug", "")
         elif mcp_name == "sketch.save_sketch":
-            args["destination"] = self._temp_dir()
-            args["slug"] = "diagnostic-probe"
             args["paths"] = content_paths
             if "content" in param_names:
                 args.setdefault("content", "")
@@ -156,6 +151,16 @@ class GuidanceProbe:
 
         missing = [name for name in self._required_parameters(member) if name not in args]
         return args, missing
+
+    def work_session(self) -> Any:
+        """A session that works in a new temp folder and keeps no log, for probing operations that write under the
+        session's root, so a probe never writes into the session being worked on."""
+        from space.session import Session
+
+        session = Session(self.repo_root)
+        session.name = "diagnostic-probe"
+        session.workpath = Path(self._temp_dir())
+        return session
 
     def cleanup(self) -> None:
         """Remove the files and folders the probe made."""
@@ -194,6 +199,8 @@ class GuidanceProbe:
         ]
 
     def _action(self, toolset: Any, tool: Any) -> dict[str, Any]:
+        if tool.mcp_name in _WRITES_UNDER_SESSION_ROOT:
+            toolset = type(toolset)(session=self.work_session())
         member = getattr(toolset, tool.name)
         arguments, missing = self.arguments_for(tool.mcp_name, member)
         if missing:

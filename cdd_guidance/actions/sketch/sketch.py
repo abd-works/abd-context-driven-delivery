@@ -24,12 +24,15 @@ class Sketch(GuidanceAction):
         super().__init__(session)
         self._agent_dir = agent_dir
 
-    def _sketch_path(self, destination: str, slug: str) -> Path:
-        """Resolve sketch path under the destination's .context folder."""
-        docs = Path(destination)
-        if docs.name == ".context":
-            return docs / f"{slug}-sketch.md"
-        return docs / ".context" / f"{slug}-sketch.md"
+    def _context_folder(self, module: str) -> Path:
+        """The .context folder sketches go in: the session root's, or a module's under that root."""
+        folder = self.session.root / module if module else self.session.root
+        return folder if folder.name == ".context" else folder / ".context"
+
+    @property
+    def _sketch_name(self) -> str:
+        """The session's sketch file name: a session is named for the subject it works on, so its sketch is too."""
+        return f"{self.session.name or 'main'}-sketch.md"
 
     @property
     def sketch_template(self) -> str:
@@ -66,35 +69,30 @@ class Sketch(GuidanceAction):
     @agent_tool
     def save_sketch(
         self,
-        destination: str,
-        slug: str,
         content: str = "",
         paths: list[str] | str | None = None,
+        module: str = "",
     ) -> str:
-        """Persist a sketch to the destination docs dir as {slug}-sketch.md.
-        Destination is session.path (or session.docs_dir). Files land in
-        {path}/.context/{slug}-sketch.md — never sessions/{name}/ and never
-        {path}/.context/{session-name}/. Module sketches: destination =
-        {session.path}/{module} → {destination}/.context/. Creates parents
-        if missing. Overwrites same path. Returns the resolved sketch path.
+        """Save the session's sketch as {session root}/.context/{session name}-sketch.md, replacing the one there, and
+        return its path. One file holds every practice's section, so a session has one sketch.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the sketch body in content.
-        content: in-process text. Leave this empty on an MCP call."""
-        target = self._sketch_path(destination, slug)
+        content: in-process text. Leave this empty on an MCP call.
+        module: a module's folder under the session root, for a sketch of that module alone; it goes in that module's .context folder."""
+        target = self._context_folder(module) / self._sketch_name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(load_document(content, paths), encoding="utf-8")
         return str(target)
 
     @Mcp
     @agent_tool
-    def list_sketches(self, destination: str, slug: str = "") -> str:
-        """List sketch files under the destination docs dir.
-        If slug is provided, filters to sketches matching that slug prefix.
-        Returns newline-separated paths, or ``no sketches`` when the folder is missing or empty."""
-        context_dir = Path(destination) / ".context"
+    def list_sketches(self, module: str = "") -> str:
+        """List the sketch files in the session root's .context folder, or in a module's under that root.
+        Returns newline-separated paths, or ``no sketches`` when the folder is missing or empty.
+        module: a module's folder under the session root."""
+        context_dir = self._context_folder(module)
         if not context_dir.is_dir():
             return "no sketches"
-        pattern = f"{slug}-sketch.md" if slug else "*-sketch.md"
-        paths = [str(path) for path in sorted(context_dir.glob(pattern))]
+        paths = [str(path) for path in sorted(context_dir.glob("*-sketch.md"))]
         if not paths:
             return "no sketches"
         return "\n".join(paths)

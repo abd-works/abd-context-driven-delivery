@@ -48,7 +48,7 @@ Do **not** separately chain `read_context_index` or `record_context_root` from g
 Two different folders. Do not invent `{path}/.context/{session-name}/` and do not write markdown generate under `{default_workspace_folder}/.context/` or `Scenarios/.context`.
 
 - **path** — durable tool root; code/modules → `{path}/` (or `{path}/{default_workspace_folder}/` for code channels)
-- **docs_dir** — `{path}/.context/` — sketches, generated artifacts (`story-map.md`, `scenarios/`, models, module-context), and `grill-answers.md` (survives across sessions). `save_sketch` / `write_grill_answer` destination is `session.path` (or `session.docs_dir`).
+- **docs_dir** — `{path}/.context/` — sketches, generated artifacts (`story-map.md`, `scenarios/`, models, module-context), and `grill-answers.md` (survives across sessions). `save_sketch` and `write_grill_answer` write under the session's root, which they read from the session.
 - **folder** — `{repo_root}/.sessions/{name}/` — `session.md`, `model`, `logs/`. A live `handoff-latest.md` exists only until the next `open`, which consumes and deletes it. Reopening restores from `{repo_root}/.sessions/_complete/{name}/` when present.
 - **context-index** — `{workspace_root}/.context/context-index.md`
 

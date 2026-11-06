@@ -84,126 +84,56 @@ with description("Sketch toolset") as self:
 
     with context("save_sketch tool"):
         with before.each:
-            import tempfile
-            self.tmp = tempfile.TemporaryDirectory()
-            self.destination = self.tmp.name
-            self.sketcher = Sketch()
+            from space.session import Session
+
+            self.session = Session.current()
+            self.sketcher = Sketch(session=self.session)
+
+        with it("writes the session's sketch in the .context folder under the session root"):
+            path = Path(self.sketcher.save_sketch("rough\n"))
+            expect(path).to(equal(self.session.root / ".context" / f"{self.session.name}-sketch.md"))
 
         with it("reads the sketch from a file when paths is set"):
-            source = Path(self.destination) / "draft.md"
+            source = self.throwaway.root / "draft.md"
             source.write_text("from the file\n", encoding="utf-8")
-            path = self.sketcher.save_sketch(self.destination, "from-file", paths=str(source))
+            path = self.sketcher.save_sketch(paths=str(source))
             expect(Path(path).read_text(encoding="utf-8")).to(equal("from the file\n"))
 
-        with it("writes a session-folder destination into that folder's .context"):
-            session = Path(self.destination) / ".sessions" / "my-sprint"
-            session.mkdir(parents=True)
-            path = Path(
-                self.sketcher.save_sketch(
-                    destination=str(session),
-                    slug="engagement",
-                    content="rough\n",
-                )
-            )
-            expect(path.parent).to(equal(session / ".context"))
-            expect(path.name).to(equal("engagement-sketch.md"))
-            expect((session / "engagement-sketch.md").exists()).to(equal(False))
+        with it("writes a module's sketch in that module's .context folder"):
+            path = Path(self.sketcher.save_sketch("rough\n", module="billing"))
+            expect(path.parent).to(equal(self.session.root / "billing" / ".context"))
 
-        with it("writes straight into a destination that is already a .context folder"):
-            context_dir = Path(self.destination) / ".context"
-            path = Path(
-                self.sketcher.save_sketch(
-                    destination=str(context_dir),
-                    slug="engagement",
-                    content="rough\n",
-                )
-            )
-            expect(path.parent).to(equal(context_dir))
+        with it("writes straight into a module that is already a .context folder"):
+            path = Path(self.sketcher.save_sketch("rough\n", module="billing/.context"))
+            expect(path.parent).to(equal(self.session.root / "billing" / ".context"))
 
-        with it("writes to .context/{slug}-sketch.md under the destination"):
-            path = self.sketcher.save_sketch(
-                destination=self.destination,
-                slug="demo-class",
-                content="thing : base thing\n  sub thing\n",
-            )
-            resolved = Path(path)
-            expect(resolved.is_file()).to(be_true)
-            expect(resolved.name).to(equal("demo-class-sketch.md"))
-            expect(resolved.parent.name).to(equal(".context"))
-            expect(resolved.read_text(encoding="utf-8")).to(contain("thing : base thing"))
-
-        with it("creates the .context/ directory when it does not exist"):
-            context_dir = Path(self.destination) / ".context"
-            expect(context_dir.exists()).to(equal(False))
-
-            self.sketcher.save_sketch(
-                destination=self.destination,
-                slug="fresh-class",
-                content="rough shape\n",
-            )
-
-            expect(context_dir.is_dir()).to(be_true)
-
-        with it("overwrites an existing sketch at the same slug"):
-            self.sketcher.save_sketch(
-                destination=self.destination,
-                slug="mutable-class",
-                content="first draft\n",
-            )
-            path = self.sketcher.save_sketch(
-                destination=self.destination,
-                slug="mutable-class",
-                content="second draft\n",
-            )
+        with it("overwrites the session's sketch when saved again"):
+            self.sketcher.save_sketch("first draft\n")
+            path = self.sketcher.save_sketch("second draft\n")
             expect(Path(path).read_text(encoding="utf-8")).to(equal("second draft\n"))
-
-        with it("returns the resolved sketch path as a string"):
-            path = self.sketcher.save_sketch(
-                destination=self.destination,
-                slug="typed-class",
-                content="typed shape\n",
-            )
-            expect(isinstance(path, str)).to(be_true)
-            expect(path).to(contain("typed-class-sketch.md"))
 
     with context("list_sketches tool"):
         with before.each:
-            import tempfile
-            self.tmp = tempfile.TemporaryDirectory()
-            self.destination = self.tmp.name
-            self.sketcher = Sketch()
+            from space.session import Session
+
+            self.session = Session.current()
+            self.sketcher = Sketch(session=self.session)
 
         with it("returns no sketches when the .context directory does not exist"):
-            result = self.sketcher.list_sketches(destination=self.destination)
-            expect(result).to(equal("no sketches"))
+            expect(self.sketcher.list_sketches()).to(equal("no sketches"))
 
         with it("returns no sketches when the .context directory exists but is empty"):
-            (Path(self.destination) / ".context").mkdir(parents=True)
+            (self.session.root / ".context").mkdir(parents=True)
+            expect(self.sketcher.list_sketches()).to(equal("no sketches"))
 
-            result = self.sketcher.list_sketches(destination=self.destination)
+        with it("lists every *-sketch.md file in the session root's .context folder"):
+            self.sketcher.save_sketch("a\n")
+            (self.session.root / ".context" / "older-sketch.md").write_text("b\n", encoding="utf-8")
+            expect(len(self.sketcher.list_sketches().splitlines())).to(equal(2))
 
-            expect(result).to(equal("no sketches"))
-
-        with it("lists every *-sketch.md file when no slug filter is given"):
-            self.sketcher.save_sketch(self.destination, "alpha", "a\n")
-            self.sketcher.save_sketch(self.destination, "bravo", "b\n")
-
-            result = self.sketcher.list_sketches(destination=self.destination)
-
-            lines = result.splitlines()
-            expect(len(lines)).to(equal(2))
-            expect(any("alpha-sketch.md" in line for line in lines)).to(be_true)
-            expect(any("bravo-sketch.md" in line for line in lines)).to(be_true)
-
-        with it("filters by slug when a slug is provided"):
-            self.sketcher.save_sketch(self.destination, "alpha", "a\n")
-            self.sketcher.save_sketch(self.destination, "bravo", "b\n")
-
-            result = self.sketcher.list_sketches(destination=self.destination, slug="alpha")
-
-            lines = result.splitlines()
-            expect(len(lines)).to(equal(1))
-            expect(all("alpha-sketch.md" in line for line in lines)).to(be_true)
+        with it("lists a module's sketches when a module is named"):
+            self.sketcher.save_sketch("a\n", module="billing")
+            expect(self.sketcher.list_sketches(module="billing")).to(contain("billing"))
 
     with context("sketch action body"):
         with before.each:

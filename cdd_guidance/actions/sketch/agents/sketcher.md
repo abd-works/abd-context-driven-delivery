@@ -22,12 +22,12 @@ When determining scope, use this table to guide lens and agent selection:
 | **Specification** | Concrete scenarios, invariants, mockups, signatures | `stories-scenarios` | `ddd-model` | `ux-mockup` | `clean-engineering-model` | `bdd-behavior` |
 | **Implementation** | Production code, tests, integrations | `stories-acceptance-tests` | `ddd-tactics` | `ux-front-end-code` | `clean-engineering-code` | `bdd-development` |
 
-**Fidelity progression:** Each fidelity deepens in place. One `{slug}-sketch.md` holds every active practice and guidance for the engagement (clean-engineering-model and bdd-behavior live in the same file). Do not create `{slug}-bdd-sketch.md` or a new file per fidelity — update that one file and deepen lens blocks as you move.
+**Fidelity progression:** Each fidelity deepens in place. One `{session}-sketch.md` holds every active practice and guidance for the engagement (clean-engineering-model and bdd-behavior live in the same file). Do not create `{session}-bdd-sketch.md` or a new file per fidelity — update that one file and deepen lens blocks as you move.
 
 ## Mandatory Workflow
 
 1. **Views** — if the command already names fidelities or practices, use those. Do not ask. Otherwise ask which views, then continue.
-2. **Shell** — read each active fidelity's **Scaffold** section and that practice's sketch template. Write the shell at the Scaffold depth, in the template's notation. Save `{destination}/.context/{slug}-sketch.md` in that same turn. One section per active practice: `stories:`, `domain driven design:`, `user experience:`, `behavior driven development:`, and `clean engineering:` only when CE is active without DDD.
+2. **Shell** — read each active fidelity's **Scaffold** section and that practice's sketch template. Write the shell at the Scaffold depth, in the template's notation. Save it with `save_sketch` in that same turn; it goes to `{session root}/.context/{session}-sketch.md`. One section per active practice: `stories:`, `domain driven design:`, `user experience:`, `behavior driven development:`, and `clean engineering:` only when CE is active without DDD.
 3. **Themes** — list themes in priority order and ask which theme to start with.
 4. **Grill** — ask three or four questions from that fidelity's **Sketch** section. Do not sketch during these questions.
 5. **Sketch** — fold the answers into the existing practice sections. Save the same file. Review. Carry every named mistake into the next save.
@@ -42,7 +42,7 @@ When determining scope, use this table to guide lens and agent selection:
 - **Review after the theme sketch** — `review_sketch` after that save. The three or four grill questions come before that sketch.
 - **Deeper, another theme, or render** — After review, offer those three choices.
 - **Render from sketch** — When a fidelity is finished, offer render. Use `SketchRender.build_render_calls(formats, sketch_path)` then `render_approved_sketch(render_calls)`, or `/sketch_render` end-to-end. Required pairs: discovery → **drawio and markdown** (both); specification → **typescript and markdown** (both). Never render only one format at a stage unless the user explicitly overrides. Pass the sketch file as `content` with `source: sketch`. Use `generate.generate` only when the user explicitly wants a fresh AI-authored pass outside the sketch transform.
-- **One sketch per engagement** — One `.context/{slug}-sketch.md`. One section per practice. Deepen those sections in place.
+- **One sketch per session** — One `.context/{session}-sketch.md`. One section per practice. Deepen those sections in place.
 - **Carry-forward mistakes** — Every named mistake shapes the next revision.
 - **Lens notation only** — Practice sections use that practice's sketch template. No free prose.
 
@@ -59,8 +59,8 @@ Invoke these by name as needed:
 ## Artifacts
 
 Every sketch session creates:
-- **`{destination}/.context/{slug}-sketch.md`** — The persistent sketch, updated on every refinement.
-- **`{destination}/.context/grill-answers.md`** — Grill decisions and reasoning (if grilling was part of the session).
+- **`{session root}/.context/{session}-sketch.md`** — The persistent sketch, updated on every refinement.
+- **`{session root}/.context/grill-answers.md`** — Grill decisions and reasoning (if grilling was part of the session).
 - **Summary handoff** — Scope, decisions, artifacts, and deferred questions (when the session is complete).
 
 ## When to Defer to Other Agents
