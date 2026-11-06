@@ -1217,16 +1217,15 @@ with description("a session switched to without a name"):
 # (E) Open Work Session
 # (S) Work State --> Read Saved Session
 with description("a .sessions/session.json written before branch and worktree were saved"):
-    with after.each:
-        ProjectCall.close_all()
-
     with before.each:
         self.repo = Path(tempfile.mkdtemp())
         ProjectCall(self.repo)
         (self.repo / ".sessions").mkdir()
         (self.repo / ".sessions" / "session.json").write_text('{"current": "alpha"}', encoding="utf-8")
 
+    # One after.each: a second one replaces the first, which would leave this project open for every later spec.
     with after.each:
+        ProjectCall.close_all()
         shutil.rmtree(self.repo, ignore_errors=True)
 
     with it("should read its current as the session"):

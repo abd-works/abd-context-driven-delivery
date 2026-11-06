@@ -8,9 +8,6 @@ No archiving, no latest pointer — one timestamped file per call.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
-
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.guidance_actions import load_document
 from harness.agent_tools.agent_tools import agent_tool
@@ -24,11 +21,6 @@ from space.session.session import Session
 class Handoff:
     """Write a compact session handoff for the next agent."""
 
-    def _handoffs_folder(self) -> Path:
-        folder = Session.current_folder()
-        folder.mkdir(parents=True, exist_ok=True)
-        return folder
-
     @mcp
     @skill
     @agent_tool
@@ -40,9 +32,7 @@ class Handoff:
         document = load_document(content, paths)
         if not document.strip():
             return "Nothing written: draft the handoff to a file and pass its path in paths."
-        folder = self._handoffs_folder()
-        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-        path = folder / f"handoff-{ts}.md"
+        path = Session.new_handoff_path()
         path.write_text(document, encoding="utf-8")
         return str(path.resolve())
 
