@@ -128,6 +128,29 @@ with description("catalog examples"):
         expect("data:image/png;base64," in html).to(equal(True))
         expect("<pre>" in html).to(equal(False))
 
+    with it("shows a file named for the fidelity in kebab spelling on the fidelity page"):
+        folder = Path(tempfile.mkdtemp())
+        examples = folder / "catalog-examples"
+        examples.mkdir()
+        (examples / "bounded-context.md").write_text("# Bounded context\n", encoding="utf-8")
+        from types import SimpleNamespace
+
+        fidelity = SimpleNamespace(name="bounded_context", practice_guidance=SimpleNamespace(module_dir=folder))
+        expect(catalog_examples_html(fidelity)).to(contain("bounded-context.md"))
+
+    with it("finds the same files for the fidelity page and the approach panel"):
+        from types import SimpleNamespace
+
+        from harness.catalog_generator.foundry_chrome import _approach_example_files, catalog_example_files
+
+        folder = Path(tempfile.mkdtemp())
+        examples = folder / "catalog-examples"
+        examples.mkdir()
+        (examples / "story_map.drawio").write_text("<mxfile/>", encoding="utf-8")
+        (examples / "story-map.md").write_text("# Map\n", encoding="utf-8")
+        fidelity = SimpleNamespace(name="story_map", practice_guidance=SimpleNamespace(module_dir=folder))
+        expect(set(_approach_example_files(fidelity)) <= set(catalog_example_files(fidelity))).to(equal(True))
+
 
 with description("story scenario markdown normalization"):
     with it("keeps content before a mid-document horizontal rule"):

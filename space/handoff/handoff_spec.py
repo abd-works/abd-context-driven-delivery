@@ -15,12 +15,13 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import equal, expect, match
+from expects import equal, expect, match, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.handoff.handoff import Handoff
-from space.session.session import Session
+from space.session.session import Session, SessionNotFoundError
+from space.session.throwaway_project import ThrowawayProject
 
 
 def _restore_project(previous: str | None) -> None:
@@ -161,3 +162,41 @@ with description("write_handoff"):
         with it("should write under the current working folder's main session"):
             path = Path(self.toolset.write_handoff("content"))
             expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
+
+
+with description("a handoff for a named session"):
+    with before.each:
+        self.project = ThrowawayProject()
+        self.root = self.project.root
+        for name in ("checkout-flow", "billing-report"):
+            folder = self.root / ".sessions" / name
+            folder.mkdir(parents=True)
+            (folder / "session.json").write_text(json.dumps({"name": name}), encoding="utf-8")
+        _save_current(self.root, "billing-report")
+        Session.forget_current()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
+    with context("that names a board ticket other than the open session"):
+        with it("should write into the named ticket's session folder"):
+            path = Path(Handoff.for_session("checkout-flow").write_handoff("content"))
+            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "checkout-flow"))
+
+        with it("should leave the open session's folder without a handoff"):
+            Handoff.for_session("checkout-flow").write_handoff("content")
+            expect(list((self.root / ".sessions" / "billing-report").glob("handoff-*.md"))).to(equal([]))
+
+    with context("that names no session"):
+        with it("should write into the open session's folder"):
+            path = Path(Handoff.for_session("").write_handoff("content"))
+            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "billing-report"))
+
+    with context("that names a session the project does not have"):
+        with it("should refuse rather than write into another session"):
+            expect(lambda: Handoff.for_session("no-such-ticket")).to(raise_error(SessionNotFoundError))
+
+    with context("asked for through its MCP tool"):
+        with it("should take the session as the tool's first argument"):
+            tool = AgentToolSet.instantiate(Handoff).tools["write_handoff"]
+            expect(list(tool.input_schema["properties"])[0]).to(equal("session"))

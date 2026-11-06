@@ -4,7 +4,7 @@ and the generate.generate prompt, on a cdd server started on a throwaway project
 from harness.kanban.session_board_tiers import ServerTier
 from harness.kanban.story_test import load_shared, replay
 
-# Session.fidelity_outputs is not a cdd tool of its own: generate.generate folds the paths into its instructions.
+# FidelityGuidance.output_paths is not a cdd tool of its own: generate.generate folds the paths into its instructions.
 NO_TOOL_FOR_OUTPUT_PATHS = "no cdd tool returns a fidelity's output paths on their own; generate.generate writes them into its instructions"
 
 LEFT_OUT = {

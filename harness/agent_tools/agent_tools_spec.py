@@ -32,7 +32,7 @@ from harness.agent_tools.agent_tools import (
 )
 from harness.hooks.hooks import hook
 from harness.mcp.mcp_server import mcp
-from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionMark
 from cdd_guidance.actions._examples.car_story.car_story import CarStory
 from harness.agent_tools._examples.super_delegation.super_delegation_demo import (
     EmptySuperChild,
@@ -1113,7 +1113,7 @@ with description("a class annotated as a toolset collection"):
         bag = _MarkedBag()
         bag.entries["code"] = object()
         expect(isinstance(bag, ToolSetCollection)).to(equal(True))
-        expect(getattr(type(bag), "_is_toolset_collection", False)).to(equal(True))
+        expect(ToolSetCollectionMark.marks(type(bag))).to(equal(True))
 
     with it("should bind the collection onto the instance"):
         host = type("Host", (), {})()

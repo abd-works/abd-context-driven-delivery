@@ -1,13 +1,16 @@
 # handoff — module context
 
 ## Purpose
-Compacts the current agent session into a structured handoff document so a fresh agent can resume without re-reading the full chat. `Handoff` (`space/handoff`) writes `handoff-{timestamp}.md` into the project's current session folder, `{CDD_PROJECT}/.sessions/{session}/` (the session saved in that project's `.sessions/session.json`), or `.sessions/main/` when the project has no named session; cwd stands in when `CDD_PROJECT` is unset. It does not open a session.
+Compacts an agent session into a structured handoff document so a fresh agent can resume without re-reading the full chat. `Handoff` (`space/handoff`) writes `handoff-{timestamp}.md` into the folder of the session the handoff is for. It does not open a session.
 
 ## Seam
-`Handoff`
+`Handoff`. Its `@tool_subject` loader `Handoff.for_session(session)` makes a handoff for the session called `session`, such as a board ticket's, read through `Repo.current().session_named(session)`; a blank name means the current session of the project the call names (`.sessions/main/` when that project has no named session). The MCP tools are `handoff.write_handoff(session, content, paths)` and the instructions `handoff.handoff_session(next_focus, session)`.
+
+## Constraint
+A handoff asked for a named session is written into that session's folder, never into whichever session the chat has open, because a chat can be asked for another ticket's handoff. A name the project has no session for raises `SessionNotFoundError` instead of writing elsewhere.
 
 ## Dependencies
-`workspace`, `harness.agent_tools`, `tools.tool`
+`harness.agent_tools`, `harness.guidance_actions.load_document`, `space.repo` (`Repo.session_named`), `space.session` (`Session.new_handoff_path`)
 
 ## Mechanism
-`collect_session_state` assembles live state from the working folder (sketches, named artifacts, CDD sketch summary, grill-answer headings) and returns it as JSON. `preview_handoff` collects and renders that markdown without writing files or closing a sprint. `write_handoff` resolves the archive slug (`handoff-YYYY-MM-DD[-focus]`), persists content to both the archive and latest paths, and optionally closes the sprint session. `handoff_session` wraps a turn only when `workspace.current_work_session` is already set. `/backlog` uses `preview_handoff` so the GitHub issue body is canonical.
+`handoff_session` expands into the structure of a handoff (Outcome, Progress, Key Learnings, Approach for Next Agent, Correction trend) and tells the agent to write it to a file and call `write_handoff` with that file in `paths` and the same `session`. `write_handoff` reads the file and writes it to `Session.new_handoff_path()`, one timestamped file per call; `Session.latest_handoff` finds the newest.

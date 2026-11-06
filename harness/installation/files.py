@@ -7,74 +7,27 @@ from pathlib import Path
 from typing import Any
 
 from harness.agent_tools.name import Name
-from harness.installation.destination import Destination, Installation
+from harness.installation.destination import Destination, Installation, NamedDestination
 
 
-class Skill(Destination):
+class Skill(NamedDestination):
     flag = "_skill"
 
-    def __new__(cls, fn: Any = None, name: str | None = None):
-        inst = object.__new__(cls)
-        if isinstance(fn, str):
-            inst.name = fn
-            return inst
-        inst.name = name
-        if callable(fn):
-            return inst.annotate(fn)
-        return inst
 
-
-class Command(Destination):
+class Command(NamedDestination):
     flag = "_command"
-
-    def __new__(cls, fn: Any = None, name: str | None = None):
-        inst = object.__new__(cls)
-        if isinstance(fn, str):
-            inst.name = fn
-            return inst
-        inst.name = name
-        if callable(fn):
-            return inst.annotate(fn)
-        return inst
 
 
 class Rules(Destination):
     flag = "_rules"
 
-    def __new__(cls, fn: Any = None):
-        inst = object.__new__(cls)
-        inst.name = None
-        if callable(fn):
-            return inst.annotate(fn)
-        return inst
 
-
-class Agent(Destination):
+class Agent(NamedDestination):
     flag = "_agent"
 
-    def __new__(cls, fn: Any = None, name: str | None = None):
-        inst = object.__new__(cls)
-        if isinstance(fn, str):
-            inst.name = fn
-            return inst
-        inst.name = name
-        if callable(fn):
-            return inst.annotate(fn)
-        return inst
 
-
-class AgentGuidance(Destination):
+class AgentGuidance(NamedDestination):
     flag = "_agent_guidance"
-
-    def __new__(cls, fn: Any = None, name: str | None = None):
-        inst = object.__new__(cls)
-        if isinstance(fn, str):
-            inst.name = fn
-            return inst
-        inst.name = name
-        if callable(fn):
-            return inst.annotate(fn)
-        return inst
 
 
 skill = Skill
@@ -284,6 +237,8 @@ class FileInstallation(Installation):
         )
 
     def _fidelity_invoke_parts(self, toolset: Any) -> list[str]:
+        from harness.mcp.mcp_server import Mcp
+
         entries = getattr(getattr(toolset, "fidelities", None), "entries", None) or {}
         parts: list[str] = []
         for _name, child in entries.items():
@@ -291,7 +246,7 @@ class FileInstallation(Installation):
             getter = getattr(member, "fget", member)
             invoke = (
                 f"Use MCP tool: `{getattr(child, 'slug', '')}()`"
-                if getattr(getter, "_mcp", False)
+                if Mcp.marks(getter)
                 else ""
             )
             parts.append(

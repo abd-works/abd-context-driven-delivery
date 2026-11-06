@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
 
 from harness.agent_tools.name import Name
-from harness.installation.destination import MARK_FLAGS
+from harness.installation.destination import Mark
 from harness.markdown.format import Format
 
 _F = TypeVar("_F", bound=Callable[..., Any])
@@ -1031,7 +1031,7 @@ class Markdown:
 
 
 def _copy_marks(src: Any, dest: Any) -> None:
-    for attr in MARK_FLAGS:
+    for attr in Mark.copied_flags():
         if hasattr(src, attr):
             setattr(dest, attr, getattr(src, attr))
 

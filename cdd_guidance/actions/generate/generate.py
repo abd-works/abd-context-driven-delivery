@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import Skill
@@ -18,24 +19,24 @@ class Generate(GuidanceAction):
     def generate(self, guidance: GuidanceArg) -> str:
         """Write artifacts for each listed guidance at its current fidelity. The shared rules and that fidelity's rules are part of these instructions. After the artifact is written, call validate with the same guidance and paths set to the files you wrote."""
         self._bind_guidance(guidance)
-        rules = self._rules(guidance)
+        rules = self._rules()
         instructions(rules)
         tools(self._render().render)
-        self.run(guidance, self._generate_item, action="generate")
+        self.run(self._generate_item, action="generate")
         places = self._where_outputs_go()
         instructions(places)
         "After the artifact is written, call validate with this same guidance and paths set to the files you wrote, so the graph rules run on those files as they are now."
         tools(self._validate().validate)
         return ""
 
-    def _rules(self, guidance: GuidanceArg) -> str:
+    def _rules(self) -> str:
         """Shared rules and the active fidelity's rules, inlined into generate. Read without running Validate, because
         nothing has been written yet to check."""
-        return Validate(self.session).rules_of(guidance)
+        return self._inside(Validate).listed_rules()
 
     def _validate(self) -> Validate:
         """Validate as a tool, so its rules are injected again when it is called."""
-        action = Validate(self.session)
+        action = self._inside(Validate)
         action.mode = "tool"
         return action
 
@@ -43,7 +44,7 @@ class Generate(GuidanceAction):
         """Render action, available while generating code from another format."""
         from render.render import Render
 
-        return Render(self.session)
+        return self._inside(Render)
 
     def _generate_item(self, item) -> None:
         if isinstance(item, str):
@@ -56,8 +57,7 @@ class Generate(GuidanceAction):
         self.add_generate_header_to_generated()
 
     def _where_outputs_go(self) -> str:
-        session = self.session
-        outputs = [session.fidelity_outputs(item) for item in self.listed() if not isinstance(item, str)]
+        outputs = [item.output_paths() for item in self.listed() if isinstance(item, PracticeGuidance)]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:
             return ""

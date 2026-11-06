@@ -206,7 +206,7 @@ Observed: the tile's action bar lists the actions and format chips. A tile opens
 
 ### (S) Claude Code --> [Resolve Fidelity Output Paths](move-work-forward-on-session-board/generate-fidelity-outputs/resolve-fidelity-output-paths/resolve_fidelity_output_paths_story.test.py)
 
-Observed: `Generate` and `Session.fidelity_outputs` take the outputs a fidelity declares, with the `session.json` overrides.
+Observed: `Generate` and `FidelityGuidance.output_paths` take the outputs a fidelity declares, with the `session.json` overrides.
 
 ### (S) Person --> [Generate Fidelity Output](move-work-forward-on-session-board/generate-fidelity-outputs/generate-fidelity-output/generate_fidelity_output_story.test.py)
 

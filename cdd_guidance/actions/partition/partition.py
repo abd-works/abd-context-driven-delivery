@@ -161,7 +161,7 @@ class Partition(GuidanceAction):
         def on(item) -> None:
             self.partition_corpus(source, mode)
 
-        self.run(guidance, on, action="partition")
+        self.run(on, action="partition")
         return (
             f"Partition of {source} finished (mode {mode}); "
             f"docs under {self._folder(out_root).as_posix()}/.context/. "

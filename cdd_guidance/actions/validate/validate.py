@@ -77,18 +77,17 @@ class Validate(GuidanceAction):
                 return ""
             return self._rules_for(item)
 
-        parts = [part for part in self.run(guidance, on, action="validate") if part]
+        parts = [part for part in self.run(on, action="validate") if part]
         sections.extend(parts)
         report = "\n\n".join(sections)
         saved = self._save_reports(report, graph_paths)
         where = ", ".join(str(path) for path in saved) if saved else str(self._session_path())
         return f"{report}\n\nValidation report for these artifacts: {where}"
 
-    def rules_of(self, guidance: GuidanceArg) -> str:
+    def listed_rules(self) -> str:
         """The shared rules and the active fidelity's rules of each listed guidance, as text for another action to
         follow. It checks nothing, so it saves no report and writes nothing to the session log, where a validate line
         would tell the session board the work had been checked."""
-        self._bind_guidance(guidance)
         return "\n\n".join(part for part in self.each(self._rules_text_of) if part)
 
     def _rules_text_of(self, item) -> str:
@@ -104,21 +103,19 @@ class Validate(GuidanceAction):
         items = [item for item in self.listed() if not isinstance(item, str)]
         if not items:
             return []
-        fidelities = [fidelity for fidelity in (self._fidelity_in(item) for item in items) if fidelity is not None]
+        fidelities = [fidelity for fidelity in (self._fidelity_of(item) for item in items) if fidelity is not None]
         paths = [fidelity.new_report_path() for fidelity in fidelities]
         for path in paths:
             path.write_text(report, encoding="utf-8")
             save_checked_graph(checked_graphs, path.with_suffix(".json"))
         return paths
 
-    def _fidelity_in(self, item):
-        """The fidelity a guidance item is validated at, as this action's session's own practice holds it, so its
-        reports go to that session; none when the item has no current fidelity or is no practice a session works on."""
+    def _fidelity_of(self, item):
+        """The fidelity a guidance item is validated at. A listed practice is the one this action's session holds, so
+        its fidelity's reports go to that session; none when the item has no current fidelity or is no practice a
+        session works on."""
         current = getattr(getattr(item, "fidelities", None), "current", None)
-        practice = self.session.practices.get(item.key)
-        if current is None or practice is None:
-            return None
-        return practice.fidelities[current.name]
+        return current if current is not None and self._session_practice(item) is not None else None
 
     def _resolve_graph_json_paths(
         self, graph: bool | str | list[str] | None, edited: list[str]
@@ -192,7 +189,13 @@ class Validate(GuidanceAction):
         return sorted(str(folder) for folder in folders if folder == workspace or workspace in folder.parents)
 
     def _fidelity_outputs(self, item) -> dict[str, list[str]]:
-        return self.session.fidelity_outputs(item)
+        return item.output_paths() if isinstance(item, PracticeGuidance) else {}
+
+    def _listed_practices(self) -> list:
+        """Each listed practice as this action's session holds it, which logs its own validate line; guidance that is no
+        practice CDD has is left out."""
+        found = [self._session_practice(item) for item in self.listed() if not isinstance(item, str)]
+        return [practice for practice in found if practice is not None]
 
     def _graph_practices(self) -> list[str]:
         """The catalogue key of each listed practice, such as clean_engineering; none for other guidance."""
@@ -274,15 +277,14 @@ class Validate(GuidanceAction):
     def _log_graph_validation(self, violations: list) -> None:
         if self._guidance_text is not None or not violations:
             return
-        session = self.session
         synopsis = [
             f"graph-rule {item.get('rule_slug', '')} {item.get('location', '')}:{item.get('line_number', '')}"
             for item in violations[:40]
         ]
         if len(violations) > 40:
             synopsis.append(f"graph-rule … and {len(violations) - 40} more")
-        for item in self.listed():
-            session.log_validation(item, synopsis)
+        for practice in self._listed_practices():
+            practice.log_validation(synopsis)
         # This line is the call's validate line; the session board reads the latest one, so no clean line may follow.
         self._logged_session_action = "validate"
 
@@ -298,9 +300,8 @@ class Validate(GuidanceAction):
     def _log_validation_to_session(self) -> None:
         if self._guidance_text is not None:
             return
-        session = self.session
-        for item in self.listed():
-            session.log_validation(item, [])
+        for practice in self._listed_practices():
+            practice.log_validation([])
 
     def _rules_for(self, item) -> str:
         """Shared rules plus the active fidelity's rules. Every fidelity when none is active."""
@@ -348,13 +349,15 @@ class Validate(GuidanceAction):
         """Add a named rule to each listed guidance from a failed example and the wanted behavior. Then validate the asset with that rule so the same mistake is detected.
         failed: path to the example that broke. Pass the file. Do not paste its body.
         wanted: path to the behavior the rule must require. Pass the file. Do not paste its body."""
+        self._bind_guidance(guidance)
+
         def on(item) -> None:
             if isinstance(item, str):
                 return
             item.examples
             item.templates
 
-        self.run(guidance, on, action="createRule")
+        self.run(on, action="createRule")
         return (
             "Write a new named rule into this tool. "
             "Then run collection validate on the asset and detect a failure "

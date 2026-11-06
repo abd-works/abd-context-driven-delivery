@@ -291,7 +291,9 @@ with description("a validate action on practice guidance") as self:
                     with before.each:
                         from harness.guidance_actions import GuidanceAction
 
-                        GuidanceAction().run("stories-story-map format=drawio", lambda item: None, action="generate")
+                        action = GuidanceAction()
+                        action._bind_guidance("stories-story-map format=drawio")
+                        action.run(lambda item: None, action="generate")
 
                     with it("should judge only the drawio"):
                         expect(self.action.validate(guidance=["stories-story-map"])).to(contain("Judge only the checked format's files (drawio: "))

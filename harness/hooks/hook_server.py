@@ -13,7 +13,6 @@ from typing import Any
 
 _READY_WAIT_SECONDS = 90
 _READY_POLL_SECONDS = 0.2
-_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 
 def _lock_pid(lock_path: Path) -> int:
@@ -21,26 +20,6 @@ def _lock_pid(lock_path: Path) -> int:
         return int(lock_path.read_text(encoding="ascii").strip())
     except (OSError, ValueError):
         return 0
-
-
-def _pid_alive(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    if sys.platform == "win32":
-        import ctypes
-
-        handle = ctypes.windll.kernel32.OpenProcess(
-            _PROCESS_QUERY_LIMITED_INFORMATION, False, pid
-        )
-        if not handle:
-            return False
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -56,6 +35,7 @@ if str(_REPO_ROOT) not in sys.path:
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
 from harness.installation.installer import Installer
 from harness.hooks.hooks import Hook
+from harness.hooks.running_process import RunningProcess
 
 Installer(repo=_REPO_ROOT).ensure_import_path()
 
@@ -539,7 +519,7 @@ class HookServer:
     def _release_dead_spawn(cls, lock_path: Path) -> None:
         if not lock_path.is_file():
             return
-        if _pid_alive(_lock_pid(lock_path)):
+        if RunningProcess(_lock_pid(lock_path)).alive:
             return
         try:
             lock_path.unlink()

@@ -41,6 +41,10 @@ Tuple = list[str]
 _GRAPH_JSON_NAME = "graph.json"
 _DIRTY_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py", ".md"}
 _RULE_FILE_NAMES = ("rules.py", "schema.yaml", "rules.yaml")
+# A practice whose source root holds more source files than this opens without reading them, so a session on a large
+# repository starts at once.
+_LOAD_FILE_BUDGET = 40
+_BUDGETED_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
 
 def _under_any(file: str | None, prefixes: list[str]) -> bool:
     """True when ``file`` is one of the prefixes or sits under one."""
@@ -620,6 +624,20 @@ class Filter:
         return False
 
 
+def _within_load_budget(folder: Path) -> bool:
+    """Whether folder holds no more source files than the load budget; a folder not yet there holds none."""
+    if not folder.is_dir():
+        return True
+    count = 0
+    for item in folder.rglob("*"):
+        if item.suffix.lower() not in _BUDGETED_SUFFIXES:
+            continue
+        count += 1
+        if count > _LOAD_FILE_BUDGET:
+            return False
+    return True
+
+
 def _names(request: dict, many: str, one: str) -> bool:
     return many in request or one in request
 
@@ -1120,6 +1138,25 @@ class Graph:
         self.practices: dict[str, PracticeGraph] = {}
         self.filter = Filter(self)
         self.overlays: list[str] = []
+
+    @classmethod
+    def of_practice(cls, folder: Path | str, name: str, source_root: Path | str) -> Graph:
+        """The graph of the practice called name, whose files are under source_root, with its saved graph in folder's
+        ``.context``. A source root with more source files than the load budget is opened without reading them: the
+        graph names the practice and its root, which is all an action's log line needs, so a large repository opens at
+        once."""
+        graph = cls()
+        root = Path(source_root)
+        if _within_load_budget(root):
+            graph.load_working_copy(str(folder), {name: str(root)})
+        else:
+            graph._open_unread(Path(folder), name, root)
+        return graph
+
+    def _open_unread(self, folder: Path, name: str, source_root: Path) -> None:
+        self._folder = folder
+        self._practice_roots = {name: source_root}
+        self.practice(name).source_root = str(source_root)
 
     @classmethod
     @tool_subject

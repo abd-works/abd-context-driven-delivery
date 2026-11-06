@@ -18,7 +18,7 @@ with story("Resolve Fidelity Output Paths"):
         with and_("the story_map fidelity declares markdown .context/story-map.md and drawio .context/story-map.drawio"):
             pass
         with when("Claude Code asks where story_map's files go"):
-            # Generate -> Session.fidelity_outputs(Stories story_map)
+            # Generate -> FidelityGuidance(Stories story_map).output_paths()
             # Session -> FidelityGuidance.outputs
             # Session <- markdown /work/.context/story-map.md, drawio /work/.context/story-map.drawio
             pass
@@ -29,7 +29,7 @@ with story("Resolve Fidelity Output Paths"):
         with given("alpha's session.json names docs/stories as the stories root"):
             pass
         with when("Claude Code asks where story_map's files go"):
-            # Generate -> Session.fidelity_outputs(Stories story_map)
+            # Generate -> FidelityGuidance(Stories story_map).output_paths()
             pass
         with then("the markdown file is /work/docs/stories/.context/story-map.md"):
             pass
@@ -38,7 +38,7 @@ with story("Resolve Fidelity Output Paths"):
         with given("alpha's session.json names docs/stories for stories and docs/map for story_map"):
             pass
         with when("Claude Code asks where story_map's files go"):
-            # Generate -> Session.fidelity_outputs(Stories story_map)
+            # Generate -> FidelityGuidance(Stories story_map).output_paths()
             pass
         with then("the drawio file is /work/docs/map/.context/story-map.drawio"):
             pass
@@ -47,8 +47,8 @@ with story("Resolve Fidelity Output Paths"):
         with given("alpha's session.json names our-map.md for story_map's markdown and one-file.py for scenarios' python"):
             pass
         with when("Claude Code asks where story_map's and scenarios' files go"):
-            # Generate -> Session.fidelity_outputs(Stories story_map)
-            # Generate -> Session.fidelity_outputs(Stories scenarios)
+            # Generate -> FidelityGuidance(Stories story_map).output_paths()
+            # Generate -> FidelityGuidance(Stories scenarios).output_paths()
             pass
         with then("story_map's markdown is /work/.context/our-map.md and its drawio stays /work/.context/story-map.drawio"):
             pass

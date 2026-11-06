@@ -12,12 +12,11 @@ if str(_REPO) not in sys.path:
 
 def main() -> int:
     from harness.agent_tools.agent_tools_probe import (
+        AgentToolsProbe,
         _invoke_skip_reason,
-        _probe_mcp_invoke_host,
         _probe_mcp_ping_host,
-        published_agent_tools_mcp,
     )
-    from harness.guidance.guidance import ActionProbeSession
+    from harness.guidance.guidance_probe import GuidanceProbe
     from harness.installation.installer import Installer
     from harness.mcp.mcp_server import McpHost
 
@@ -29,9 +28,10 @@ def main() -> int:
     host = McpHost.from_refs(refs, repo=str(_REPO), project=str(_REPO))
     print(f"host ready {time.perf_counter() - started:.1f}s", flush=True)
     host._bind_as_serving()
-    names = published_agent_tools_mcp(installer)
+    probe = AgentToolsProbe(installer)
+    names = probe.published
     print(f"published {len(names)}", flush=True)
-    session = ActionProbeSession(installer)
+    files = GuidanceProbe(installer, [])
     try:
         for name in names:
             t1 = time.perf_counter()
@@ -45,12 +45,12 @@ def main() -> int:
                 print(f"invoke skip {name}: {skip}", flush=True)
                 continue
             t1 = time.perf_counter()
-            item = _probe_mcp_invoke_host(host, name, [], session, installer)
+            item = probe.invoke_one(host, name, files)
             dt = time.perf_counter() - t1
             extra = item.get("failure") or item.get("skipped") or ""
             print(f"invoke {name}: {dt:.2f}s {item.get('color')} {extra}"[:140], flush=True)
     finally:
-        session.cleanup()
+        files.cleanup()
         host._unbind_as_serving()
     print("done", flush=True)
     return 0

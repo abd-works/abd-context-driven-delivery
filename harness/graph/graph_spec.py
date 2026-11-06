@@ -1141,3 +1141,44 @@ with description("an example a story test imports"):
     with context("that is a constant the story test declares itself"):
         with it("should stay at the story test"):
             expect(self._aligned("LOCAL").file).to(equal(self.story_test))
+
+
+with description("a practice's graph"):
+    with before.each:
+        import tempfile
+
+        self.folder = Path(tempfile.mkdtemp())
+        self.source = self.folder / "src"
+        self.source.mkdir()
+
+    with after.each:
+        import shutil
+
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    with context("over a source root within the load budget"):
+        with before.each:
+            (self.source / "order.py").write_text("class Order:\n    pass\n", encoding="utf-8")
+            self.graph = Graph.of_practice(self.folder, "clean_engineering", self.source)
+
+        with it("should save its graph in the folder's .context"):
+            expect((self.folder / ".context" / "graph.json").is_file()).to(equal(True))
+
+        with it("should name the practice on its source root"):
+            expect(self.graph.practices["clean_engineering"].source_root).to(equal(str(self.source.resolve())))
+
+    with context("over a source root with more source files than the load budget"):
+        with before.each:
+            for number in range(41):
+                (self.source / f"module_{number}.py").write_text("x = 1\n", encoding="utf-8")
+            self.graph = Graph.of_practice(self.folder, "clean_engineering", self.source)
+
+        with it("should name the practice on its source root"):
+            expect(self.graph.practices["clean_engineering"].source_root).to(equal(str(self.source)))
+
+        with it("should read none of the files"):
+            expect((self.folder / ".context" / "graph.json").exists()).to(equal(False))
+
+        with it("should report the folder it belongs to"):
+            expect(self.graph.folder).to(equal(str(self.folder)))
+
