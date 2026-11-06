@@ -126,9 +126,9 @@ with description("a Repo"):
             ticket = self.repo.create_ticket("Workflow package", "forward requirements")
             ticket.set_status("Backlog")
             expect(ticket.state.name).to(equal("Backlog"))
-            expect(self.repo._ticket_project_state[ticket.number]).to(equal("Backlog"))
+            expect(self.repo.ticket(str(ticket.number)).state.name).to(equal("Backlog"))
             ticket.set_status("In Progress")
-            expect(self.repo._ticket_project_state[ticket.number]).to(equal("In Progress"))
+            expect(self.repo.ticket(str(ticket.number)).state.name).to(equal("In Progress"))
 
         # (S) Repo --> Merge Branch
         with it("should merge branches through Branch objects"):
@@ -160,7 +160,7 @@ with description("a Repo ticket lifecycle"):
         expect(issue_theme_label("theme:cli-agent")).to(equal("theme:cli-agent"))
         self.ticket.add_theme("CLI agent")
         expect(self.ticket.labels).to(equal(["theme:cli-agent"]))
-        expect(self.repo._ticket_project_theme[self.ticket.number]).to(
+        expect(self.ticket.project_theme).to(
             equal("cli-agent")
         )
 
@@ -261,7 +261,7 @@ with description("GitHub project status names"):
         expect(option_ids).to(equal(["OPT_TODO"]))
         repo._memory = True
         ticket.set_status("Backlog")
-        expect(repo._ticket_project_state[ticket.number]).to(equal("Backlog"))
+        expect(repo.ticket(str(ticket.number)).state.name).to(equal("Backlog"))
         expect(ticket.state.name).to(equal("Backlog"))
 
 
@@ -305,7 +305,7 @@ with description("GitHub project theme names"):
         expect(theme_option_ids).to(equal(["OPT_CLI"]))
         repo._memory = True
         ticket.add_theme("CLI agent")
-        expect(repo._ticket_project_theme[ticket.number]).to(equal("cli-agent"))
+        expect(ticket.project_theme).to(equal("cli-agent"))
 
 
 # (E) Open Work Session
@@ -319,28 +319,28 @@ with description("a Repo worktree"):
         with it("should list the primary checkout"):
             trees = self.repo.list_worktrees()
             expect(len(trees)).to(equal(1))
-            expect(trees[0].branch).to(equal("main"))
+            expect(trees[0].branch.name).to(equal("main"))
 
         # (S) Repo --> Open Worktree
         with it("should add a worktree for a session branch"):
-            path = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
-            expect(path).to(equal(Path("/tmp/wt-demo")))
-            found = self.repo.worktree_for("session/demo")
+            added = self.repo.add_worktree("/tmp/wt-demo", self.repo.branch_named("session/demo"))
+            expect(added.path).to(equal(Path("/tmp/wt-demo")))
+            found = self.repo.branch_named("session/demo").worktree
             expect(found is not None).to(be_true)
-            expect(found.branch).to(equal("session/demo"))
+            expect(found.branch.name).to(equal("session/demo"))
 
         # (S) Repo --> Reuse Worktree
         with it("should reuse an existing worktree for the same branch"):
-            first = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
-            second = self.repo.add_worktree("/tmp/wt-demo-2", "session/demo")
+            first = self.repo.add_worktree("/tmp/wt-demo", self.repo.branch_named("session/demo"))
+            second = self.repo.add_worktree("/tmp/wt-demo-2", self.repo.branch_named("session/demo"))
             expect(second).to(equal(first))
             expect(len(self.repo.list_worktrees())).to(equal(2))
 
         # (S) Repo --> Remove Worktree
         with it("should remove a worktree"):
-            path = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
-            self.repo.remove_worktree(path)
-            expect(self.repo.worktree_for("session/demo")).to(equal(None))
+            added = self.repo.add_worktree("/tmp/wt-demo", self.repo.branch_named("session/demo"))
+            self.repo.remove_worktree(added)
+            expect(self.repo.branch_named("session/demo").worktree).to(equal(None))
 
         # (S) Repo --> Remove Worktree
         with it("should run Windows takeown icacls and Remove-Item as last resort"):
@@ -470,10 +470,10 @@ with description("a branch opened through the repo toolset"):
 
         with it("should save the branch in .sessions/session.json"):
             self.toolset.switch_branch("feature/a")
-            expect(WorkState(self.clone).branch).to(equal("feature/a"))
+            expect(WorkState(self.clone).branch.name).to(equal("feature/a"))
 
         with it("should switch to the saved branch when no name is given"):
-            WorkState(self.clone).branch = "feature/saved"
+            WorkState(self.clone).branch = Repo(self.clone).branch_named("feature/saved")
             self.toolset.switch_branch()
             expect(_git(self.clone, "branch", "--show-current")).to(equal("feature/saved"))
 
@@ -519,7 +519,7 @@ with description("a branch opened through the repo toolset"):
 
             with it("should save main as the branch after close"):
                 self.toolset.close_branch()
-                expect(WorkState(self.clone).branch).to(equal("main"))
+                expect(WorkState(self.clone).branch.name).to(equal("main"))
 
         with it("should refuse to close main"):
             expect(lambda: self.toolset.close_branch("main")).to(raise_error(DefaultBranchError))
@@ -577,7 +577,7 @@ with description("a branch opened through the repo toolset"):
                 expect(_git(self.host, "branch", "--show-current")).to(equal("main"))
 
             with it("should save the branch in the named clone's .sessions/session.json"):
-                expect(WorkState(self.clone).branch).to(equal("feature/a"))
+                expect(WorkState(self.clone).branch.name).to(equal("feature/a"))
 
             with it("should commit and push in the named clone"):
                 (self.clone / "work.txt").write_text("feature work\n", encoding="utf-8")
@@ -611,7 +611,7 @@ with description("a worktree opened through the repo toolset"):
             # (S) Repo --> Open Worktree
             with it("should check the branch out in a sibling folder"):
                 self.toolset.switch_worktree()
-                tree = Path(WorkState(self.clone).worktree)
+                tree = WorkState(self.clone).worktree.path
                 expect(_git(tree, "branch", "--show-current")).to(equal("feature/a"))
 
             with it("should move the clone back to main"):
@@ -621,7 +621,7 @@ with description("a worktree opened through the repo toolset"):
             with context("that has an open worktree with uncommitted work"):
                 with before.each:
                     self.toolset.switch_worktree()
-                    self.tree = Path(WorkState(self.clone).worktree)
+                    self.tree = WorkState(self.clone).worktree.path
                     (self.tree / "tree.txt").write_text("worktree work\n", encoding="utf-8")
 
                 # (S) Repo --> Close Worktree
@@ -635,11 +635,11 @@ with description("a worktree opened through the repo toolset"):
 
                 with it("should clear the worktree from .sessions/session.json when closed"):
                     self.toolset.close_worktree()
-                    expect(WorkState(self.clone).worktree).to(equal(""))
+                    expect(WorkState(self.clone).worktree).to(equal(None))
 
                 with it("should keep the branch open when closed"):
                     self.toolset.close_worktree()
-                    expect(WorkState(self.clone).branch).to(equal("feature/a"))
+                    expect(WorkState(self.clone).branch.name).to(equal("feature/a"))
 
                 with it("should refuse to close the branch while its worktree is open"):
                     expect(lambda: self.toolset.close_branch()).to(raise_error(BranchInWorktreeError))
@@ -653,7 +653,7 @@ with description("a worktree opened through the repo toolset"):
                 self.host_origin, self.host = _clone_with_origin(Path(self.tmp.name) / "host")
                 self.toolset = Repo(self.host)
                 self.toolset.switch_worktree("feature/a", repo_path=str(self.clone))
-                self.tree = Path(WorkState(self.clone).worktree)
+                self.tree = WorkState(self.clone).worktree.path
 
             with it("should open the worktree beside the named clone"):
                 expect(_git(self.tree, "branch", "--show-current")).to(equal("feature/a"))

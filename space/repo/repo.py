@@ -223,6 +223,10 @@ class ProjectTicket:
     data: dict[str, str] = field(default_factory=dict)
     parent_number: int | None = None
     sub_issue_numbers: list[int] = field(default_factory=list)
+    comments: list[str] = field(default_factory=list)
+    project_theme: str = ""
+    project_fields: dict[str, str] = field(default_factory=dict)
+    archived: bool = False
     _repo: Repo | None = field(default=None, repr=False, compare=False)
 
     def bind_repo(self, repo: Repo) -> ProjectTicket:
@@ -243,7 +247,6 @@ class ProjectTicket:
         if repo.in_memory:
             if not repo.has_ticket(self.number):
                 raise ProjectTicketNotFoundError(f"GitHub issue not found: {self.number}")
-            repo.mark_closed(self.number)
             self.data["closed"] = "true"
             return
         repo.run_gh("issue", "close", str(self.number))
@@ -269,7 +272,7 @@ class ProjectTicket:
         """Add a comment to this issue."""
         repo = self._require_repo("comment")
         if repo.in_memory:
-            repo._ticket_comments.setdefault(self.number, []).append(body)
+            self.comments.append(body)
             return self
         repo.run_gh("issue", "comment", str(self.number), "--body-file", "-", stdin=body)
         return self
@@ -281,10 +284,6 @@ class ProjectTicket:
             self.sub_issue_numbers.append(child.number)
         child.parent_number = self.number
         if repo.in_memory:
-            children = repo._ticket_children.setdefault(self.number, [])
-            if child.number not in children:
-                children.append(child.number)
-            repo._ticket_parents[child.number] = self.number
             return child
         repo.run_gh(
             "issue",
@@ -337,7 +336,7 @@ class ProjectTicket:
         if project is None:
             return self
         if repo.in_memory:
-            repo._ticket_project_theme[self.number] = slug
+            self.project_theme = slug
             return self
         project.write_theme(self.project_item_id(project), slug)
         return self
@@ -371,7 +370,6 @@ class ProjectTicket:
             raise RuntimeError("attach_project before setting ticket status")
         state = project.state_named(state_name)
         if repo.in_memory:
-            repo._ticket_project_state[self.number] = state.name
             self.state = state
             return self
         resolved = project.write_status(self.project_item_id(project), state.name)
@@ -583,15 +581,13 @@ class Project:
                 return name
         return wanted
 
-    def write_text_field(self, ticket_number: int, value: str) -> None:
-        """Write this project's text field on one issue's project item."""
+    def write_text_field(self, ticket: ProjectTicket, value: str) -> None:
+        """Write this project's text field on the ticket's project item."""
         if self._repo.in_memory:
-            self._repo._ticket_project_fields.setdefault(ticket_number, {})[
-                self.text_field_name
-            ] = value
+            ticket.project_fields[self.text_field_name] = value
             return
         field_id = self._ensure_text_field(self.text_field_name)
-        item_id = self.item_id_for(ticket_number)
+        item_id = self.item_id_for(ticket.number)
         project_id = self._project_id()
         self._repo.run_gh(
             "project",
@@ -621,10 +617,10 @@ class Project:
             option_id,
         )
 
-    def archive_ticket(self, ticket_number: int) -> None:
-        """Archive an issue's project item without deleting the issue."""
+    def archive_ticket(self, ticket: ProjectTicket) -> None:
+        """Archive the ticket's project item without deleting the issue."""
         if self._repo.in_memory:
-            self._repo._archived_project_tickets.add(ticket_number)
+            ticket.archived = True
             return
         self._repo.run_gh(
             "project",
@@ -633,7 +629,7 @@ class Project:
             "--owner",
             self.owner,
             "--id",
-            self.item_id_for(ticket_number),
+            self.item_id_for(ticket.number),
         )
 
     def _project_id(self) -> str:
@@ -748,16 +744,15 @@ class Project:
 
     def _memory_ticket_rows(self) -> list[dict[str, str | int]]:
         rows: list[dict[str, str | int]] = []
-        for number, ticket in self._repo.tickets.items():
-            status = self._repo._ticket_project_state.get(number, "")
-            if not status:
+        for ticket in self._repo.tickets.values():
+            if ticket.state is None:
                 continue
             rows.append(
                 {
-                    "number": number,
+                    "number": ticket.number,
                     "title": ticket.title,
                     "url": ticket.url,
-                    "status": status,
+                    "status": ticket.state.name,
                 }
             )
         return rows
@@ -872,14 +867,6 @@ class Repo:
         self._repo_name = repo_name
         self._project: Project | None = None
         self._tickets: dict[int, ProjectTicket] = {}
-        self._ticket_project_state: dict[int, str] = {}
-        self._ticket_project_theme: dict[int, str] = {}
-        self._ticket_project_fields: dict[int, dict[str, str]] = {}
-        self._ticket_children: dict[int, list[int]] = {}
-        self._ticket_parents: dict[int, int] = {}
-        self._ticket_comments: dict[int, list[str]] = {}
-        self._closed_tickets: set[int] = set()
-        self._archived_project_tickets: set[int] = set()
         self._annotated_tag_target = "HEAD"
         self._agent_active: Repo | None = None
         if memory:
@@ -895,9 +882,6 @@ class Repo:
 
     def has_ticket(self, number: int) -> bool:
         return number in self._tickets
-
-    def mark_closed(self, number: int) -> None:
-        self._closed_tickets.add(number)
 
     def find_root(self) -> Path | None:
         current = self.root
@@ -1067,7 +1051,7 @@ class Repo:
         self._notes: dict[str, dict[str, str]] = {}
         self._project_links: list[tuple[str, int, str]] = []
         self._org_issue_types: list[dict[str, str]] = []
-        self._worktrees: list[Worktree] = [Worktree(self.root, "main")]
+        self._worktrees: list[Worktree] = [Worktree(self.root, self.branch_named("main"))]
         self._fetches: list[str] = []
         self._pulls: list[str] = []
         self._stash = False
@@ -1429,7 +1413,7 @@ class Repo:
                 line, path, branch, trees
             )
         return self._flush_worktree(
-            Worktree(Path(path), branch) if path else None, trees
+            self._listed_worktree(path, branch), trees
         )
 
     def _accumulate_worktree_line(
@@ -1444,7 +1428,7 @@ class Repo:
                 line[len("worktree ") :],
                 "",
                 self._flush_worktree(
-                    Worktree(Path(path), branch) if path else None, trees
+                    self._listed_worktree(path, branch), trees
                 ),
             )
         if line.startswith("branch "):
@@ -1454,7 +1438,7 @@ class Repo:
                 "",
                 "",
                 self._flush_worktree(
-                    Worktree(Path(path), branch) if path else None, trees
+                    self._listed_worktree(path, branch), trees
                 ),
             )
         return path, branch, trees
@@ -1465,6 +1449,11 @@ class Repo:
             return ref[len("refs/heads/") :]
         return ref
 
+    def _listed_worktree(self, path: str, branch_name: str) -> Worktree | None:
+        if not path:
+            return None
+        return Worktree.from_checkout(Path(path), branch_name)
+
     def _flush_worktree(
         self, tree: Worktree | None, trees: list[Worktree]
     ) -> list[Worktree]:
@@ -1472,31 +1461,26 @@ class Repo:
             return trees
         return trees + [tree]
 
-    def worktree_for(self, branch: str) -> Worktree | None:
-        wanted = (branch or "").strip()
-        for tree in self.list_worktrees():
-            if tree.branch == wanted:
-                return tree
-        return None
-
-    def add_worktree(self, path: str | Path, branch: str) -> Path:
-        dest = Path(path)
-        existing = self.worktree_for(branch)
+    def add_worktree(self, path: str | Path, branch: Branch) -> Worktree:
+        """Check ``branch`` out in a new worktree at ``path``; the worktree that already has it, when one does."""
+        existing = branch.worktree
         if existing is not None:
-            return existing.path
-        if self._memory:
-            self._branch_names.add(branch)
-            self._worktrees.append(Worktree(dest, branch))
-            return dest
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        if self._ref_exists(f"refs/heads/{branch}"):
-            self._git("worktree", "add", str(dest), branch)
-        else:
-            self._git("worktree", "add", "-b", branch, str(dest), self._branch_start_point(branch))
-        return dest.resolve()
-
-    def remove_worktree(self, path: str | Path) -> None:
+            return existing
         dest = Path(path)
+        if self._memory:
+            self._branch_names.add(branch.name)
+            added = Worktree(dest, branch)
+            self._worktrees.append(added)
+            return added
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if self._ref_exists(f"refs/heads/{branch.name}"):
+            self._git("worktree", "add", str(dest), branch.name)
+        else:
+            self._git("worktree", "add", "-b", branch.name, str(dest), self._branch_start_point(branch.name))
+        return Worktree.from_checkout(dest, branch.name)
+
+    def remove_worktree(self, worktree: Worktree) -> None:
+        dest = worktree.path
         if self._memory:
             self._worktrees = [tree for tree in self._worktrees if tree.path != dest]
             return
@@ -1621,15 +1605,25 @@ class Repo:
     def is_linked_worktree(self) -> bool:
         return (self.root / ".git").is_file()
 
+    @property
+    def checkout_folder(self) -> Path:
+        """The checkout holding this folder; the folder itself when it is in none."""
+        return self.find_root() or self.root
+
     def primary_root(self) -> Path:
+        """The repository's main checkout. A linked worktree's ``.git`` is a file naming its git folder, whose
+        ``commondir`` leads back to the main checkout's ``.git``; any other checkout is its own main checkout."""
         if self._memory:
             return self.root
-        common = Path(self._git("rev-parse", "--git-common-dir"))
-        if not common.is_absolute():
-            common = (self.root / common).resolve()
-        else:
-            common = common.resolve()
-        return common.parent if common.name == ".git" else common
+        checkout = self.checkout_folder
+        marker = checkout / ".git"
+        if not marker.is_file():
+            return checkout
+        worktree_git = (checkout / marker.read_text(encoding="utf-8").split("gitdir:", 1)[-1].strip()).resolve()
+        common = worktree_git / "commondir"
+        if not common.is_file():
+            return checkout
+        return (worktree_git / common.read_text(encoding="utf-8").strip()).resolve().parent
 
     def _ref_exists(self, ref: str) -> bool:
         try:
@@ -1662,7 +1656,7 @@ class Repo:
             self._commits.append(([], text))
             self._commit = f"merge-{source}-into-{into}"
             return self._commit
-        target = self.worktree_for(into)
+        target = self.branch_named(into).worktree
         merge_root = Path(target.path) if target is not None else Path(self.root)
         if target is None and self.current_branch != into:
             self._git("checkout", into)
@@ -1756,14 +1750,7 @@ class Repo:
         ticket = self._tickets.get(number)
         if ticket is None:
             return None
-        ticket.bind_repo(self)
-        state_name = self._ticket_project_state.get(number)
-        if state_name:
-            ticket.state = ProjectTicketState(state_name)
-        ticket.data["closed"] = "true" if number in self._closed_tickets else "false"
-        ticket.sub_issue_numbers = list(self._ticket_children.get(number, []))
-        ticket.parent_number = self._ticket_parents.get(number)
-        return ticket
+        return ticket.bind_repo(self)
 
     def _github_ticket(self, ref: str) -> ProjectTicket | None:
         number = ProjectTicket.from_number(ref)
@@ -1794,6 +1781,7 @@ class Repo:
                 title=title,
                 body=body,
                 url=f"https://github.com/{owner}/{repo_name}/issues/{number}",
+                data={"closed": "false"},
             )
             ticket.bind_repo(self)
             self._tickets[number] = ticket
@@ -1932,7 +1920,8 @@ class Repo:
         return target
 
     def _branch_name(self, name: str) -> str:
-        cleaned = (name or "").strip() or self._work_state().branch
+        saved = self._work_state().branch
+        cleaned = (name or "").strip() or (saved.name if saved is not None else "")
         if not cleaned:
             raise BranchNameRequiredError()
         return cleaned
@@ -1956,7 +1945,7 @@ class Repo:
         if repository.current_branch != wanted:
             repository.branch_named(repository.current_branch).save(f"branch: switch to {wanted}")
             repository.checkout_from_default(wanted)
-        self._work_state().branch = wanted
+        self._work_state().branch = repository.branch_named(wanted)
         return f"on branch {wanted!r} at {repository.root}"
 
     @agent_tool
@@ -1980,13 +1969,13 @@ class Repo:
         default = repository.default_branch
         if wanted == default:
             raise DefaultBranchError("close", default)
-        occupied = repository.worktree_for(wanted)
+        occupied = repository.branch_named(wanted).worktree
         if occupied is not None and Path(occupied.path).resolve() != Path(repository.root).resolve():
             raise BranchInWorktreeError(wanted, Path(occupied.path))
         release = self._work_state().session or wanted
         self.switch_branch(wanted)
         repository.branch_named(wanted).close(commit_message)
-        self._work_state().branch = default
+        self._work_state().branch = repository.branch_named(default)
         pruned = [] if repository.in_memory else LatestRelease(repository, release).keep()
         kept = f"; kept {release!r} end-to-end results, removed {', '.join(pruned)}" if pruned else ""
         return f"closed branch {wanted!r}: merged into {default!r}, pushed, and deleted{kept}"
@@ -2012,11 +2001,13 @@ class Repo:
         if primary.current_branch == wanted:
             primary.branch_named(wanted).save(f"worktree: move {wanted} to its worktree")
             primary.checkout_from_default(primary.default_branch)
-        opened = self._bind(primary.branch_named(wanted).open_in_worktree())
+        branch = primary.branch_named(wanted)
+        opened = branch.open_in_worktree()
+        self._bind(opened.repository)
         state = WorkState(primary.root)
-        state.branch = wanted
-        state.worktree = str(opened.root)
-        return f"worktree for {wanted!r} at {opened.root}"
+        state.branch = branch
+        state.worktree = opened
+        return f"worktree for {wanted!r} at {opened.path}"
 
     @agent_tool
     @mcp
@@ -2031,15 +2022,16 @@ class Repo:
         if other is not None:
             return other.close_worktree(commit_message)
         state = self._work_state()
-        if not state.worktree:
+        worktree = state.worktree
+        if worktree is None:
             raise NoOpenWorktreeError()
-        tree = Repo(state.worktree)
-        branch = tree.current_branch
-        tree.branch_named(branch).save(commit_message)
-        Repo(tree.primary_root()).remove_worktree(tree.root)
-        state.worktree = ""
+        tree = worktree.repository
+        branch = tree.branch_named(tree.current_branch)
+        branch.save(commit_message)
+        Repo(tree.primary_root()).remove_worktree(worktree)
+        state.worktree = None
         self._agent_active = None
-        return f"closed worktree for {branch!r}; branch pushed and kept open"
+        return f"closed worktree for {branch.name!r}; branch pushed and kept open"
 
     @command(name="switch-branch")
     @agent_instructions
@@ -2124,40 +2116,45 @@ class Repo:
 
 
 class Worktree:
-    """One checkout (path + branch) and git worktree / in-clone operations."""
+    """One checkout of the repository: its folder and the branch checked out there."""
 
     __slots__ = ("path", "branch", "_repository")
 
-    def __init__(
-        self,
-        path_or_repo: Path | str | Repo,
-        branch: str = "",
-    ) -> None:
-        if isinstance(path_or_repo, Repo):
-            self._repository = path_or_repo
-            self.path = Path(path_or_repo.root)
-            self.branch = (path_or_repo.current_branch or "").strip()
-        else:
-            self.path = Path(path_or_repo)
-            self.branch = (branch or "").strip()
-            self._repository = None
+    def __init__(self, path: Path | str, branch: Branch | None, *, repository: Repo | None = None) -> None:
+        self.path = Path(path)
+        self.branch = branch
+        self._repository = repository
+
+    @classmethod
+    def from_repo(cls, repository: Repo) -> Worktree:
+        """The checkout ``repository`` works in, with the branch it has checked out."""
+        name = (repository.current_branch or "").strip()
+        return cls(repository.root, repository.branch_named(name) if name else None, repository=repository)
+
+    @classmethod
+    def from_checkout(cls, path: Path | str, branch_name: str) -> Worktree:
+        """The checkout at ``path`` with ``branch_name`` checked out; its branch acts in that checkout."""
+        repository = Repo(path)
+        name = (branch_name or "").strip()
+        return cls(repository.root, repository.branch_named(name) if name else None, repository=repository)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Worktree):
             return NotImplemented
         return self.path == other.path and self.branch == other.branch
 
-    def __repr__(self) -> str:
-        return f"Worktree(path={self.path!r}, branch={self.branch!r})"
+    def __hash__(self) -> int:
+        return hash((self.path, self.branch))
 
-    def _repo(self) -> Repo:
-        if self._repository is not None:
-            return self._repository
-        return Repo(self.path)
+    def __repr__(self) -> str:
+        branch = self.branch.name if self.branch is not None else ""
+        return f"Worktree(path={self.path!r}, branch={branch!r})"
 
     @property
     def repository(self) -> Repo:
-        return self._repo()
+        if self._repository is not None:
+            return self._repository
+        return Repo(self.path)
 
     @classmethod
     def open(cls, path: str | Path = "") -> Worktree:
@@ -2165,7 +2162,7 @@ class Worktree:
         found = Repo(raw).find_root()
         if found is None:
             raise RepoConnectError("repo tools require a git repository")
-        return cls(Repo(found))
+        return cls.from_repo(Repo(found))
 
     @staticmethod
     def cursor_path(worktree_id: str) -> Path:
@@ -2185,9 +2182,9 @@ class Worktree:
         return tokens[0] + "-" + "".join(token[0] for token in tokens[1:])
 
     @staticmethod
-    def dirname(repo_folder: str, branch: str) -> str:
+    def dirname(repo_folder: str, branch: Branch) -> str:
         """Sibling directory ``{abbrev}-{short-branch}`` next to the primary clone."""
-        slug = (branch or "").strip().replace("/", "-")
+        slug = branch.name.replace("/", "-")
         ticket = re.search(r"-(\d+)$", slug)
         short = ticket.group(1) if ticket else slug
         if ticket is None and len(short) > 24:
@@ -2195,7 +2192,7 @@ class Worktree:
         return f"{Worktree.abbrev_repo_name(repo_folder)}-{short}"
 
     def fetch_pull(self) -> None:
-        repository = self._repo()
+        repository = self.repository
         try:
             repository.fetch()
         except RepoConnectError:
@@ -2215,38 +2212,53 @@ class Branch:
         self._repo = repo
         self.name = (name or "").strip()
 
+    def __eq__(self, other: object) -> bool:
+        # A branch is its name: every checkout of one repository shares the same branches.
+        if not isinstance(other, Branch):
+            return NotImplemented
+        return self.name == other.name
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __repr__(self) -> str:
+        return f"Branch({self.name!r})"
+
     @property
     def repo(self) -> Repo:
         return self._repo
+
+    @property
+    def worktree(self) -> Worktree | None:
+        """The checkout that has this branch checked out; none when no worktree has it."""
+        return next((tree for tree in self._repo.list_worktrees() if tree.branch == self), None)
 
     def checkout(self) -> Branch:
         self._repo.checkout_or_create(self.name)
         return self
 
-    def open_in_worktree(self) -> Repo:
-        """Check out this branch in a sibling worktree and return that clone."""
+    def open_in_worktree(self) -> Worktree:
+        """Check out this branch in a sibling worktree and return that worktree."""
         repository = self._repo
-        if getattr(repository, "_memory", False):
+        if repository.in_memory:
             self.checkout()
-            return repository
-        existing = repository.worktree_for(self.name)
-        if existing is not None and existing.path.resolve() != Path(repository.root).resolve():
-            other = Repo(existing.path)
-            Worktree(other).fetch_pull()
-            return other
+            return Worktree.from_repo(repository)
+        existing = self.worktree
+        if existing is not None and existing.path.resolve() != repository.root:
+            existing.fetch_pull()
+            return existing
         if repository.current_branch == self.name:
-            Worktree(repository).fetch_pull()
-            return repository
+            opened = Worktree.from_repo(repository)
+            opened.fetch_pull()
+            return opened
         try:
             repository.fetch()
         except RepoConnectError:
             pass
         primary = repository.primary_root()
-        dest = primary.parent / Worktree.dirname(primary.name, self.name)
-        tree_path = repository.add_worktree(dest, self.name)
-        other = Repo(tree_path)
-        Worktree(other).fetch_pull()
-        return other
+        opened = repository.add_worktree(primary.parent / Worktree.dirname(primary.name, self), self)
+        opened.fetch_pull()
+        return opened
 
     def cli_agent(self) -> CliAgentBinding:
         return self._repo.read_cli_agent_tag(self.name)

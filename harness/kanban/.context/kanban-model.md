@@ -336,7 +336,7 @@ The base type of Ticket and BacklogItem.
 + workspace(): Workspace
 	// `ticket.workspace`: whether it has its branch and worktree, and whether the ticket being left is on its branch
 	-> Repo.has_branch
-	-> Repo.worktree_for
+	-> Board.worktree_of
 + violations(): Report
 	// `ticket.violations`: the rules of every fidelity with violations, each naming its fidelity, a rule the practice's fidelities share listed once
 	-> Ticket.report
@@ -683,8 +683,8 @@ The repository the board shows. Only the members the board's work depends on are
 	// path as written from the repository's top, empty for the top itself, or as it is when it lies outside the repository, where a session may work
 + files_changed_on(branch: str): list[str]
 	// what the branch changed since it left the default branch, with uncommitted changes when it is checked out
-+ worktree_for(branch: str): Worktree
 + list_worktrees(): list[Worktree]
+	// each worktree's `branch` is a `Branch`, none for a detached checkout
 + switch_branch(name: str): str
 	// commits and pushes the branch being left, and leaves the default branch committed but not pushed
 + switch_worktree(name: str): str
