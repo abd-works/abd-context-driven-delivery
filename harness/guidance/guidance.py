@@ -697,6 +697,12 @@ class FidelityGuidance(Guidance):
         return Markdown.from_label(self, "overview").extract()
 
     @property
+    def scaffold(self) -> str:
+        """This fidelity's Scaffold subsection: the names a first cut writes, which are what a partition index lists;
+        empty when the fidelity has none."""
+        return Markdown.from_label(self, "scaffold").extract().strip()
+
+    @property
     def section(self) -> str:
         """This fidelity's whole ``### {name}`` block in its practice's markdown: overview, sketch, guidance, and rules."""
         practice = self.practice_guidance

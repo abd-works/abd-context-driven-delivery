@@ -89,6 +89,33 @@ with description("a partition action"):
             result = Partition().partition("stories", paths="README.md")
             expect(result).to(start_with("Partition of README.md finished"))
 
+    with context("that an agent calls on a fidelity"):
+        with before.each:
+            from space.session import Session
+
+            operation = Partition()._discover_instruction_members()["partition"]
+            arguments = {"guidance": "stories-story-map", "paths": "README.md", "context": "", "mode": "one_go", "out_root": None}
+            self.reply = operation.invoke(arguments)
+            self.root = Session.current().root.as_posix()
+
+        with it("should name what the index lists from that fidelity's Scaffold subsection"):
+            expect("verb-noun Epic, Sub-Epic, and Story names" in self.reply).to(be_true)
+
+        with it("should name that practice's own file"):
+            expect("`stories.md` cited" in self.reply).to(be_true)
+
+        with it("should name no partition guidance placeholder"):
+            expect("{{" in self.reply).to(be_false)
+
+        with it("should write under the session's root"):
+            expect(f"docs under {self.root}/.context/" in self.reply).to(be_true)
+
+    with context("that names an out_root"):
+        with it("should index the corpus under that folder"):
+            folder = Path(tempfile.mkdtemp())
+            reply = Partition().index(paths="README.md", out_root=str(folder))
+            expect(f"under {folder.resolve().as_posix()}/.context/" in reply).to(be_true)
+
 
 # ---------------------------------------------------------------------------
 # Test fixtures for unit-level coverage
