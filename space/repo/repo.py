@@ -1115,6 +1115,17 @@ class Repo:
         name = WorkState(self.root).session or MAIN_SESSION_NAME
         return Session.load(self.session_folder(name), self.root)
 
+    def session_named(self, name: str) -> Session:
+        """The session called name, such as a board ticket's, read without becoming the current session. Raises
+        ``SessionNotFoundError`` when this repository has no session of that name, so work meant for it never lands in
+        another session."""
+        from space.session.session import MAIN_SESSION_NAME, Session, SessionNotFoundError
+
+        folder = self.session_folder(name)
+        if name != MAIN_SESSION_NAME and not (folder / "session.json").is_file():
+            raise SessionNotFoundError(name)
+        return Session.load(folder, self.root)
+
     def session_folder(self, name: str) -> Path:
         """The folder of the session called name. A ticket on the board lives in the main checkout's ``.sessions``, so
         a chat in the ticket's linked worktree logs there too and the board shows its work. Each checkout keeps its own
