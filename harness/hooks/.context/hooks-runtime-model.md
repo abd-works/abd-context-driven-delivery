@@ -30,7 +30,11 @@ The `@Hook` decorator on an operation. Event is required and must be a Cursor ev
 + EVENTS: frozenset[str]
 ----
 + annotate(operation): operation
-	// sets _hook, _hook_name = event
+	// sets _hook, _hook_name = event; disabled sets _hook_disabled
++ disabled_on(operation): bool
+	// the one reader of the disabled mark
++ name_marked_on(operation): str
+	// the event the mark names; AgentTool.hook_event reads it
 + normalize_event(event: str): str
 	// sessionStart → session_start
 
@@ -56,9 +60,9 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 + << composition >> handlers: list
 ----
 + write(tool: AgentTool): None
-	// skip unless tool.install_to_hook and the member has _hook_name
-	// skip inject_rules on RulesCollection and FidelityGuidance hosts, and on fidelity bags rehosted onto a practice
-	// enroll inject_rules once per (event, operation, ref) so the practice is the host
+	// skip unless tool.install_to_hook and tool.hook_event is set
+	// a disabled inject_rules (RulesCollection's) never reaches here: install_to_hook is false for it
+	// enroll each (event, operation, ref) once
 	-> append { event, operation, ref }
 	-> write_hooks_manifest()
 	-> write_handlers()
@@ -133,17 +137,15 @@ One marked operation that may run for an event.
 + HookHandler(tool: AgentTool, event: CursorEvent, repo_root: Path)
 ------
 + event: CursorEvent
-+ operation: str
-	// tool.name
-+ owner: type
-	// type(tool.toolset)
 + << association >> tool: AgentTool
+	// name, toolset, callable, hook_event, and docstring are read from the tool, never copied
++ label: str
+	// {toolset class}.{tool.name}, for the dispatch log and skipped handlers
 ----
 + is_enabled(): bool
-	// false when owner._hooks_disabled is true
+	// false when the toolset class is marked @Hooks(disabled=True)
 + invoke(payload: HookPayload): HookResult
-	// call the bound operation with payload.as_dict()
-	// inject_rules uses the toolset's own hook method when the class defines one (listed Guidance on an action); otherwise RulesCollection.inject_rules
+	// call tool.callable with payload.as_dict()
 	// agent_message includes tool.docstring unless additional_context is already set
 	-> HookResult.from_handler
 	-> HookResult.with_description
@@ -166,7 +168,8 @@ Installed list of hook handlers. File is next to Cursor config: `{Installer.path
 - _collect_refs(): list[str]
 	// Installer.collect_toolsets
 + for_event(event: CursorEvent): list[HookHandler]
-	// tools_for(HOOK) whose _hook_name matches the event
+	// tools_for(HOOK) whose hook_event matches the event; inject_rules marked postToolUse also serves afterFileEdit
+	// skips toolsets named in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
 
 ## HookStandupFailed                                              <!-- Md -->
 

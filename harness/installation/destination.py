@@ -15,6 +15,23 @@ _IDENTITY_FLAG = "_language_adapter_identity"
 _EDITS_FLAG = "_language_adapter_edits"
 _DATA_FIELD_FLAG = "_data_field"
 
+MARK_FLAGS = (
+    "_skill",
+    "_command",
+    "_rules",
+    "_mcp",
+    "_hook",
+    "_echo",
+    "_is_agent_instructions",
+    "_is_agent_tool",
+    "_is_toolset_collection",
+    "_skill_name",
+    "_command_name",
+    "_hook_name",
+)
+"""The attributes the install marks set on an operation. Code that wraps a marked operation, such as a collected or
+markdown property, copies these so the wrapper installs the way the operation does."""
+
 
 def noCatalog(target: Any = None) -> Any:
     """Omit this class or operation from the catalog.
@@ -126,8 +143,7 @@ def data_of(value: Any) -> Any:
     """value as plain JSON data: an object with marked properties as its fields, each object it holds as its own data.
 
     This is the one way an object becomes data, for MCP results and every other JSON answer, so a path reads the same
-    wherever it is sent: with forward slashes. A git commit still states its data in ``to_mcp_result`` until it marks
-    its properties."""
+    wherever it is sent: with forward slashes."""
     if isinstance(value, Path):
         return value.as_posix()
     if isinstance(value, dict):
@@ -137,9 +153,6 @@ def data_of(value: Any) -> Any:
     fields = data_fields_of(type(value)) if not isinstance(value, type) else {}
     if fields:
         return {key: data_of(field.fget(value)) for key, field in fields.items()}
-    stated = getattr(value, "to_mcp_result", None)
-    if callable(stated) and not isinstance(value, type):
-        return data_of(stated())
     return value
 
 
@@ -178,6 +191,12 @@ class Destination:
         if name is not None:
             setattr(fn, f"{self.flag}_name", name)
         return fn
+
+    @classmethod
+    def name_marked_on(cls, operation: Any) -> str:
+        """The name this destination's mark gave the operation, such as the event a hook runs on; empty when the
+        operation carries no such mark."""
+        return str(getattr(operation, f"{cls.flag}_name", "") or "")
 
     def __call__(self, fn: Callable[..., Any]) -> Callable[..., Any]:
         return self.annotate(fn)

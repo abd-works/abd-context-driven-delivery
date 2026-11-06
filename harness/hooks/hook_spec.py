@@ -159,8 +159,12 @@ with description("a handler catalog"):
         with it("should take hook operations from toolset tools"):
             catalog = HandlerCatalog([_HookToolset(), _ToolOnlyToolset()])
             handlers = catalog.for_event(CursorEvent("stop"))
-            expect([handler.owner for handler in handlers]).to(equal([_HookToolset]))
-            expect([handler.operation for handler in handlers]).to(equal(["on_stop"]))
+            expect([handler.label for handler in handlers]).to(equal(["_HookToolset.on_stop"]))
+
+        with it("should hold the toolset's own agent tool for each hook operation"):
+            toolset = _HookToolset()
+            handler = HandlerCatalog([toolset]).for_event(CursorEvent("stop"))[0]
+            expect(handler.tool.hook_event).to(equal("stop"))
 
 
 with description("hook dispatch"):

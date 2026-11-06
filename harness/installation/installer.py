@@ -70,15 +70,6 @@ class Installer:
     )
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
-    _SKIP_ROOT_TOOLSET_NAMES = frozenset(
-        {
-            "RulesCollection",
-            "MarkdownCollection",
-            "GuidanceCollection",
-            "PracticeGuidance",
-            "FidelityGuidance",
-        }
-    )
     _DEPLOYED_CHANNELS = ("toolset", "skill", "command", "rules", "mcp", "hook", "agent", "language-adapter")
     _GREEN_SURFACE_CHANGE = 0.10
     _YELLOW_SURFACE_CHANGE = 0.50
@@ -190,7 +181,7 @@ class Installer:
         for node in tree_ast.body:
             if not isinstance(node, ast.ClassDef):
                 continue
-            if node.name in self._SKIP_ROOT_TOOLSET_NAMES:
+            if node.name in AgentToolSet.HOSTED_ONLY_CLASS_NAMES:
                 continue
             if not self._class_is_installable(node):
                 continue
