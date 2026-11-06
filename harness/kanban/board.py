@@ -117,7 +117,7 @@ class Board:
         git clone has none."""
         if not self._repo.is_clone:
             return {}
-        return {tree.branch: tree.path for tree in self._repo.list_worktrees()}
+        return {tree.branch.name: tree.path for tree in self._repo.list_worktrees() if tree.branch is not None}
 
     @property
     def practices(self) -> list[PracticeGuidance]:

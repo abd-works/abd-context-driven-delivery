@@ -24,6 +24,7 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceAction
 from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
 from harness.mcp.mcp_server import McpServer
+from space.repo.repo import Repo
 from space.session import Session
 from space.session.session import PracticeRootInContextError, SessionNameRequiredError
 from space.session.throwaway_project import ProjectCall
@@ -1181,7 +1182,7 @@ with description("a session switched to without a name"):
             Session.forget_current()
             self.repo = Path(tempfile.mkdtemp())
             ProjectCall(self.repo)
-            WorkState(self.repo).branch = "feature/space-battle"
+            WorkState(self.repo).branch = Repo(self.repo).branch_named("feature/space-battle")
             Session.switch(repo_path=self.repo, workpath=self.repo)
 
         with after.each:
@@ -1198,7 +1199,7 @@ with description("a session switched to without a name"):
             expect(WorkState(self.repo).session).to(equal("feature-space-battle"))
 
         with it("should keep the saved branch"):
-            expect(WorkState(self.repo).branch).to(equal("feature/space-battle"))
+            expect(WorkState(self.repo).branch.name).to(equal("feature/space-battle"))
 
     with context("with nothing saved in .sessions/session.json"):
         with before.each:

@@ -19,11 +19,10 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 from tools.file_manager.file_manager import FileEntry, FileManager, FileText
+from space.repo.repo import Repo
 from space.work_state import (
     SESSIONS_FOLDER,
     WorkState,
-    checkout_holding,
-    main_checkout_of,
     project_checkout,
     project_folder,
 )
@@ -31,7 +30,6 @@ from space.work_state import (
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
-    from space.repo.repo import Repo
 
 
 _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
@@ -395,7 +393,7 @@ class Session:
     @classmethod
     def _slot(cls, repo_path: Path | str | None = None) -> Session:
         """The in-memory current session of ``repo_path``'s checkout, else of the project being worked on."""
-        repo = checkout_holding(repo_path) if repo_path is not None else project_checkout()
+        repo = Repo(repo_path).checkout_folder if repo_path is not None else project_checkout()
         return cls._current_by_project.setdefault(repo, cls())
 
     @classmethod
@@ -405,12 +403,12 @@ class Session:
         if repo_path is None:
             cls._current_by_project.clear()
             return
-        cls._current_by_project.pop(checkout_holding(repo_path), None)
+        cls._current_by_project.pop(Repo(repo_path).checkout_folder, None)
 
     @classmethod
     def refresh_current_from_repo(cls, repo_path: Path | str | None = None) -> None:
         """Reload in-memory session when repo ``.sessions/session.json`` current changed."""
-        repo = checkout_holding(repo_path) if repo_path is not None else project_checkout()
+        repo = Repo(repo_path).checkout_folder if repo_path is not None else project_checkout()
         slot = cls._slot(repo)
         saved = cls.active_name(repo)
         if slot.name == saved and slot.session_path is not None and slot.repo_path == repo:
@@ -430,7 +428,7 @@ class Session:
         """``.sessions/{current}/`` on the project's checkout; ``.sessions/main/`` when none is named.
 
         Reads the project (``repo_path``, else the project being worked on), not a session held in memory."""
-        repo = checkout_holding(repo_path) if repo_path is not None else project_checkout()
+        repo = Repo(repo_path).checkout_folder if repo_path is not None else project_checkout()
         return cls._session_folder(repo, cls.active_name(repo))
 
     @classmethod
@@ -445,7 +443,7 @@ class Session:
     def repo_from_session(self, repo_path: Path | str | None = None) -> Path:
         """Repo that holds ``.sessions`` — the path already in hand, or the repo it sits in."""
         if repo_path is not None:
-            return checkout_holding(repo_path)
+            return Repo(repo_path).checkout_folder
         if self.repo_path is not None:
             return Path(self.repo_path).resolve()
         return project_checkout()
@@ -553,8 +551,6 @@ class Session:
 
     def from_project(self, path: Path | str) -> str:
         """path as written from the project's top, the way the board names every file and folder."""
-        from space.repo.repo import Repo
-
         return Repo(self.repo_from_session()).path_from_top(path)
 
     @mcp
@@ -596,8 +592,6 @@ class Session:
 
     @property
     def _repo(self) -> Repo:
-        from space.repo.repo import Repo
-
         return Repo(self.repo_from_session())
 
     def _declared_files(self, declared: str, worked_on: Callable[[], set[Path] | None]) -> list[FileEntry]:
@@ -716,8 +710,6 @@ class Session:
         return self.move_folder_to(self.sessions_dir(self.repo_path) / _ARCHIVE_FOLDER)
 
     def move_to_backlog(self) -> Session:
-        from space.repo.repo import Repo
-
         return self.move_folder_to(Repo(self.repo_path).backlog_folder)
 
     def reopen(self) -> Session:
@@ -740,9 +732,9 @@ class Session:
         ``name`` defaults to ``session`` in ``.sessions/session.json``, then to the saved ``branch``.
         Saves ``name`` as ``session`` there. Does not touch branches or worktrees."""
         if repo_path is not None:
-            repo = checkout_holding(repo_path)
+            repo = Repo(repo_path).checkout_folder
         elif workpath is not None:
-            repo = checkout_holding(workpath)
+            repo = Repo(workpath).checkout_folder
         else:
             repo = project_checkout()
         slot = cls._slot(repo)
@@ -757,7 +749,8 @@ class Session:
     @classmethod
     def _session_name(cls, name: str, repo: Path) -> str:
         state = WorkState(repo)
-        cleaned = name_of(name or state.session or state.branch)
+        branch = state.branch
+        cleaned = name_of(name or state.session or (branch.name if branch is not None else ""))
         if not cleaned:
             raise SessionNameRequiredError()
         return cleaned
@@ -900,8 +893,6 @@ class Session:
     def repo(self) -> Repo | None:
         if self.repo_path is None:
             return None
-        from space.repo.repo import Repo
-
         return Repo(self.repo_path)
 
     def remember_parent_folders(self, practice: str, output_paths: list[list[Path]]) -> None:
@@ -959,7 +950,7 @@ class Session:
                 self.workpath = self._env_workpath()
         elif workpath is not None:
             self.workpath = Path(workpath).resolve()
-            self.repo_path = checkout_holding(self.workpath)
+            self.repo_path = Repo(self.workpath).checkout_folder
             self.session_path = self._session_folder(self.repo_path, name)
         else:
             self.repo_path = project_checkout()
@@ -1354,7 +1345,7 @@ class Session:
         legacy = root / _LEGACY_REPO_SESSIONS_DIR / name
         candidates = [preferred, legacy]
         if name != MAIN_SESSION_NAME:
-            candidates.insert(0, cls.sessions_dir(main_checkout_of(root)) / name)
+            candidates.insert(0, cls.sessions_dir(Repo(root).primary_root()) / name)
         for folder in candidates:
             if (folder / "session.json").is_file():
                 return folder
