@@ -31,8 +31,8 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     sys.path.insert(0, _p)
 sys.path.insert(0, _root)
 
-from expects import contain, equal, expect
-from mamba import description, it
+from expects import be, contain, equal, expect
+from mamba import after, before, context, description, it
 
 
 with description("GuidanceAction"):
@@ -96,19 +96,85 @@ with description("GuidanceAction"):
         expect([item.format for item in kit.listed()]).to(equal(["drawio"]))
 
     # The session board names the ticket's session in every command it sends, so the agent works in that session.
-    with it("should still list the guidance slugs when the string names a session"):
-        from harness.guidance_actions import GuidanceAction
+    with context("with a ticket's session that a board command names"):
+        with before.each:
+            from space.session import Session
 
-        kit = GuidanceAction()
-        kit._bind_guidance("stories-story-map format=markdown session=.sessions/sign-up/session.json")
-        expect([type(item).__name__ for item in kit.listed()]).to(equal(["Stories"]))
+            self.project = Path(tempfile.mkdtemp(prefix="guidance-action-ticket-session-"))
+            (self.project / ".git").mkdir()
+            Session.forget_current()
+            Session.new("sign-up", self.project, self.project, is_current=False)
+            self.session_word = f"session={(self.project / '.sessions' / 'sign-up' / 'session.json').as_posix()}"
 
-    with it("should keep the session the string names"):
-        from harness.guidance_actions import GuidanceAction
+        with after.each:
+            from space.session import Session
 
-        kit = GuidanceAction()
-        kit._bind_guidance("stories-story-map session=.sessions/sign-up/session.json")
-        expect(kit.named_session).to(equal(".sessions/sign-up/session.json"))
+            Session.forget_current()
+
+        with it("should still list the guidance slugs"):
+            from harness.guidance_actions import GuidanceAction
+
+            kit = GuidanceAction()
+            kit._bind_guidance(f"stories-story-map format=markdown {self.session_word}")
+            expect([type(item).__name__ for item in kit.listed()]).to(equal(["Stories"]))
+
+        with it("should work in that session"):
+            from harness.guidance_actions import GuidanceAction
+
+            kit = GuidanceAction()
+            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            expect(kit.session.name).to(equal("sign-up"))
+
+        with it("should list the guidance as that session's own practice"):
+            from harness.guidance_actions import GuidanceAction
+
+            kit = GuidanceAction()
+            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            expect(kit.listed()[0]).to(be(kit.session.practices["stories"].guideline))
+
+        with it("should keep the format a generate names on that session's fidelity"):
+            from harness.guidance_actions import GuidanceAction
+            from space.session import Session
+
+            GuidanceAction().run(f"stories-story-map format=drawio {self.session_word}", lambda item: None, action="generate")
+            reloaded = Session.from_file(self.session_word.removeprefix("session="))
+            expect(reloaded.practices["stories"]._saved.get("formats")).to(equal({"story_map": "drawio"}))
+
+        with it("should work in the kept format when the next command names none"):
+            from harness.guidance_actions import GuidanceAction
+
+            GuidanceAction().run(f"stories-story-map format=drawio {self.session_word}", lambda item: None, action="generate")
+            kit = GuidanceAction()
+            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            expect([item.format for item in kit.listed()]).to(equal(["drawio"]))
+
+        with it("should keep the practice turned on when it keeps a format"):
+            from harness.guidance_actions import GuidanceAction
+            from space.session import Session
+
+            GuidanceAction().run(f"stories-story-map format=drawio {self.session_word}", lambda item: None, action="generate")
+            reloaded = Session.from_file(self.session_word.removeprefix("session="))
+            expect(reloaded.practices["stories"].enabled).to(equal(True))
+
+        with it("should make an action started inside another work in that action's session"):
+            from generate.generate import Generate
+
+            generate = Generate()
+            generate._bind_guidance(f"stories-story-map {self.session_word}")
+            expect(generate._validate().session).to(be(generate.session))
+
+        with it("should record a failure in that session"):
+            from harness.guidance_actions import GuidanceAction
+
+            def fail(item):
+                raise RuntimeError("probe failure")
+
+            try:
+                GuidanceAction().run(f"stories-story-map {self.session_word}", fail, action="generate")
+            except RuntimeError:
+                pass
+            errors = self.project / ".sessions" / "sign-up" / "session.err"
+            expect(errors.read_text(encoding="utf-8")).to(contain("probe failure"))
 
     with it("should keep prose made of ordinary words as guidance text"):
         from harness.guidance_actions import GuidanceAction

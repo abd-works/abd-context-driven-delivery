@@ -31,11 +31,11 @@ class Generate(GuidanceAction):
     def _rules(self, guidance: GuidanceArg) -> str:
         """Shared rules and the active fidelity's rules, inlined into generate. Read without running Validate, because
         nothing has been written yet to check."""
-        return Validate().rules_of(guidance)
+        return Validate(self.session).rules_of(guidance)
 
     def _validate(self) -> Validate:
         """Validate as a tool, so its rules are injected again when it is called."""
-        action = Validate()
+        action = Validate(self.session)
         action.mode = "tool"
         return action
 
@@ -43,7 +43,7 @@ class Generate(GuidanceAction):
         """Render action, available while generating code from another format."""
         from render.render import Render
 
-        return Render()
+        return Render(self.session)
 
     def _generate_item(self, item) -> None:
         if isinstance(item, str):
@@ -56,7 +56,7 @@ class Generate(GuidanceAction):
         self.add_generate_header_to_generated()
 
     def _where_outputs_go(self) -> str:
-        session = self.acting_session()
+        session = self.session
         outputs = [session.fidelity_outputs(item) for item in self.listed() if not isinstance(item, str)]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:

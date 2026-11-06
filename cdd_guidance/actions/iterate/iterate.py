@@ -19,12 +19,12 @@ class Iterate(GuidanceAction):
 
     def _grill_context(self) -> GrillContext:
         """GrillContext toolset for in-method composition (not a tool)."""
-        return GrillContext()
+        return GrillContext(self.session)
 
     def _generate(self):
         from generate.generate import Generate
 
-        return Generate()
+        return Generate(self.session)
 
     @Mcp
     @agent_tool

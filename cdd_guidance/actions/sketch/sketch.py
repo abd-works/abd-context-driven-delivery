@@ -20,8 +20,8 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 class Sketch(GuidanceAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
-    def __init__(self, agent_dir: str = "") -> None:
-        super().__init__()
+    def __init__(self, agent_dir: str = "", session=None) -> None:
+        super().__init__(session)
         self._agent_dir = agent_dir
 
     def _sketch_path(self, destination: str, slug: str) -> Path:
@@ -38,12 +38,12 @@ class Sketch(GuidanceAction):
 
     def _grill_context(self) -> GrillContext:
         """GrillContext toolset for in-method composition (not a tool)."""
-        return GrillContext()
+        return GrillContext(self.session)
 
     def _generate(self):
         from generate.generate import Generate
 
-        return Generate()
+        return Generate(self.session)
 
     @Mcp
     @agent_tool

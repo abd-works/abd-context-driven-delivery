@@ -25,5 +25,5 @@ class AgentBdd(PracticeGuidance):
         """"""
         from generate.generate import Generate
 
-        Generate().generate(guidance=[self._bdd()])
+        Generate(self.workspace).generate(guidance=[self._bdd()])
         return ""

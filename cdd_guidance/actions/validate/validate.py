@@ -104,7 +104,7 @@ class Validate(GuidanceAction):
         items = [item for item in self.listed() if not isinstance(item, str)]
         if not items:
             return []
-        session = self.acting_session()
+        session = self.session
         fidelities = [fidelity for fidelity in (self._fidelity_in(session, item) for item in items) if fidelity is not None]
         paths = [fidelity.new_report_path() for fidelity in fidelities]
         for path in paths:
@@ -169,15 +169,7 @@ class Validate(GuidanceAction):
         """Each listed guidance's fidelity outputs, by format, and the one format validate checks: the format the
         guidance names, else the one the latest generate wrote, else the fidelity's default. A fidelity's formats mirror
         each other, so checking every one reports each finding once per format."""
-        session = self.acting_session()
-        named = [item.get("format", "") if isinstance(item, dict) else "" for item in self._tool_items or []]
-        checked: list[tuple[str, dict[str, list[str]]]] = []
-        for item, format in zip(self.listed(), named):
-            if isinstance(item, str):
-                continue
-            chosen = item.format if format else (session.last_generated_format(item) or item.format)
-            checked.append((chosen, self._fidelity_outputs(item)))
-        return checked
+        return [(item.format, self._fidelity_outputs(item)) for item in self.listed() if not isinstance(item, str)]
 
     def _other_format_files(self, checked: list[tuple[str, dict[str, list[str]]]]) -> set[str]:
         """The declared files of every format validate does not check, as graph node files record them."""
@@ -202,7 +194,7 @@ class Validate(GuidanceAction):
         return sorted(str(folder) for folder in folders if folder == workspace or workspace in folder.parents)
 
     def _fidelity_outputs(self, item) -> dict[str, list[str]]:
-        return self.acting_session().fidelity_outputs(item)
+        return self.session.fidelity_outputs(item)
 
     def _graph_practices(self) -> list[str]:
         """The catalogue key of each listed practice, such as clean_engineering; none for other guidance."""
@@ -210,13 +202,13 @@ class Validate(GuidanceAction):
         return [key for key in keys if key]
 
     def _session_path(self) -> Path:
-        return Path(self.acting_session().session_path)
+        return Path(self.session.session_path)
 
     def _validate_workspace(self) -> Path:
-        return Path(self.acting_session().workpath).resolve()
+        return Path(self.session.workpath).resolve()
 
     def _project_checkout(self) -> Path:
-        session = self.acting_session()
+        session = self.session
         return Path(session.repo_path or session.workpath).resolve()
 
     def _graph_json_report(
@@ -322,7 +314,7 @@ class Validate(GuidanceAction):
     def _log_graph_validation(self, violations: list) -> None:
         if self._guidance_text is not None or not violations:
             return
-        session = self.acting_session()
+        session = self.session
         synopsis = [
             f"graph-rule {item.get('rule_slug', '')} {item.get('location', '')}:{item.get('line_number', '')}"
             for item in violations[:40]
@@ -346,7 +338,7 @@ class Validate(GuidanceAction):
     def _log_validation_to_session(self) -> None:
         if self._guidance_text is not None:
             return
-        session = self.acting_session()
+        session = self.session
         for item in self.listed():
             session.log_validation(item, [])
 

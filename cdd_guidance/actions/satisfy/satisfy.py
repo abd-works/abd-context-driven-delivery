@@ -29,14 +29,14 @@ class Satisfy(GuidanceAction):
         sections: list[str] = [_SATISFY_MARKDOWN.strip()]
 
         def on(item) -> None:
-            validate = Validate()
+            validate = Validate(self.session)
             if isinstance(item, str):
                 sections.append(validate.validate(item))
                 fix_guidance: GuidanceArg = item
             else:
                 sections.append(validate.validate(guidance=[item]))
                 fix_guidance = [item]
-            generate = Generate()
+            generate = Generate(self.session)
             generate._bind_guidance(fix_guidance)
             fix_prose = AgentInstructions.for_callable(
                 Generate.generate_fixes_from_validate, generate

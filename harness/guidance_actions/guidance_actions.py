@@ -71,25 +71,21 @@ def _read_entry(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def listed(action) -> list:
-    """Instantiate Guidance bound on ``action._tool_items`` for guidance-action recipe bodies."""
-    if getattr(action, "_guidance_text", None) is not None:
-        return []
-    raw = getattr(action, "_tool_items", None) or []
-    return AgentToolSet.instantiate_all(raw)
-
-
 @agent_toolset
 class GuidanceAction:
     """Bind guidance and run an operation on that string or each listed Guidance.
 
     The MCP server runs calls on several threads against one action, so what a call is working on
     is kept per thread: two calls at once must each answer for their own guidance.
+
+    An action works in one session. An action started inside another is made for that action's session; a board
+    command names its ticket's session in a ``session=`` word; any other call works in the chat's current session.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, session: Any = None) -> None:
         super().__init__()
         self._running = threading.local()
+        self._made_for = session
 
     @property
     def _guidance_text(self) -> str | None:
@@ -115,14 +111,41 @@ class GuidanceAction:
     def _logged_session_action(self, action: str | None) -> None:
         self._running.logged_session_action = action
 
-    # The session.json a command named, a path from the project; empty when it named none.
+    # The session.json a command's session= word named, a path from the project; empty when it named none.
     @property
-    def named_session(self) -> str:
-        return getattr(self._running, "named_session", "")
+    def _named_session_file(self) -> str:
+        return getattr(self._running, "named_session_file", "")
 
-    @named_session.setter
-    def named_session(self, path: str) -> None:
-        self._running.named_session = path
+    @_named_session_file.setter
+    def _named_session_file(self, path: str) -> None:
+        self._running.named_session_file = path
+        self._running.session = None
+
+    @property
+    def _listed_items(self) -> list | None:
+        return getattr(self._running, "listed_items", None)
+
+    @_listed_items.setter
+    def _listed_items(self, items: list | None) -> None:
+        self._running.listed_items = items
+
+    @property
+    def session(self):
+        """The session this action works in: the session.json a command's session= word named, else the session it was
+        made for, else the chat's current session. A board command names its ticket's session, which need not be the
+        session open in the chat that runs it."""
+        found = getattr(self._running, "session", None)
+        if found is None:
+            found = self._session_to_work_in()
+            self._running.session = found
+        return found
+
+    def _session_to_work_in(self):
+        from space.session import Session
+
+        if self._named_session_file:
+            return Session.from_file(self._named_session_file)
+        return self._made_for if self._made_for is not None else Session.current()
 
     def clear_session_action_log(self) -> None:
         self._logged_session_action = None
@@ -148,6 +171,7 @@ class GuidanceAction:
         """Guidance ref or dict: iterate Guidance. Other strings: run once on that text."""
         if guidance is None:
             return
+        self._listed_items = None
         bound = self._as_guidance_item(guidance)
         if bound is not None and not isinstance(guidance, list):
             self._guidance_text = None
@@ -170,7 +194,7 @@ class GuidanceAction:
         if refs:
             self._guidance_text = None
             self._tool_items = refs
-            self.named_session = next((word[len(_SESSION_WORD):] for word in text.split() if word.startswith(_SESSION_WORD)), "")
+            self._named_session_file = next((word[len(_SESSION_WORD):] for word in text.split() if word.startswith(_SESSION_WORD)), "")
             return
         self._guidance_text = text
         self._tool_items = []
@@ -218,8 +242,41 @@ class GuidanceAction:
         return self._guidance_text
 
     def listed(self) -> list:
-        """Return the Guidance bound on this run from the guidance argument."""
-        return listed(self)
+        """The Guidance bound on this run, each practice worked on in this action's session: its practice adopts it,
+        and a fidelity the guidance named no format for works in the format it was last given in that session."""
+        if self._guidance_text is not None:
+            return []
+        if self._listed_items is None:
+            items = AgentToolSet.instantiate_all(self._tool_items)
+            for item, raw in zip(items, self._tool_items):
+                self._work_in_session(item, chose_format=self._chooses_format(raw))
+            self._listed_items = items
+        return self._listed_items
+
+    def _names_format(self, raw: Any) -> bool:
+        return isinstance(raw, dict) and bool(raw.get("format"))
+
+    def _chooses_format(self, raw: Any) -> bool:
+        """Whether the caller chose this guidance's format: a ref naming one, or guidance already built, which carries
+        its own."""
+        return self._names_format(raw) or not isinstance(raw, (str, dict))
+
+    def _session_practice(self, item):
+        """The practice item is, as this action's session holds it; none when item is no practice CDD has."""
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        key = PracticeCatalogue.key_of(item)
+        if key is None or not PracticeCatalogue.has(key):
+            return None
+        return self.session.practice(key)
+
+    def _work_in_session(self, item, chose_format: bool) -> None:
+        practice = self._session_practice(item)
+        if practice is None:
+            return
+        practice.guideline = item
+        if not chose_format:
+            practice.use_kept_format()
 
     def each(self, operation):
         """Run ``operation`` once on a guidance string, or once per Guidance."""
@@ -231,15 +288,21 @@ class GuidanceAction:
     def run(self, guidance: GuidanceArg, operation, *, action: str = "") -> list:
         """Bind guidance and run ``operation`` on the string or each Guidance."""
         self._bind_guidance(guidance)
+        self._keep_named_formats()
         self._log_running_action(action)
-        # self.begin(guidance, action=action)
         try:
             return self.each(operation)
         except BaseException as failure:
-            from space.session import Session
-
-            Session.current().record_failure(failure, tool=action or type(self).__name__)
+            self.session.record_failure(failure, tool=action or type(self).__name__)
             raise
+
+    def _keep_named_formats(self) -> None:
+        """Save the format each listed guidance named on its fidelity in this action's session, so the next action on
+        that fidelity, such as the validate that follows a generate, works in it without being told again."""
+        for item, raw in zip(self.listed(), self._tool_items):
+            practice = self._session_practice(item) if self._names_format(raw) else None
+            if practice is not None:
+                practice.keep_format()
 
     def _log_running_action(self, action: str) -> None:
         """Session trail for this run — override on actions such as Validate that log differently."""
@@ -248,11 +311,7 @@ class GuidanceAction:
         if self._logged_session_action == action:
             return
         self._logged_session_action = action
-        from space.session import Session
-
-        session = Session.current()
-        items = self.listed() if self._guidance_text is None else []
-        session.log_guidance_action(action, items)
+        self.session.log_guidance_action(action, self.listed())
 
     @echo
     @agent_instructions
@@ -274,19 +333,6 @@ class GuidanceAction:
         #         warning = session.branch_warning()
         # return warning
 
-    def acting_session(self):
-        """The session this command acts on: the one its session= word names, else the open session. A board command
-        names its ticket's session, which need not be the session open in the chat that runs it."""
-        from space.session import Session
-        from space.work_state import project_checkout
-
-        session = Session.current()
-        if not self.named_session:
-            return session
-        project = Path(session.repo_path or project_checkout())
-        named = Path(self.named_session)
-        return Session.load((named if named.is_absolute() else project / named).parent, project)
-
     @property
     def session_context(self) -> str:
         """The open session as an agent acting on this command needs it: its session.json, the project root paths
@@ -294,7 +340,7 @@ class GuidanceAction:
         checkout, so every path it sees starts there; told nothing, it guesses where files go under a moved root."""
         from space.work_state import project_checkout
 
-        session = self.acting_session()
+        session = self.session
         if session.session_path is None:
             return ""
         session_json = Path(session.session_path) / "session.json"

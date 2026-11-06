@@ -101,7 +101,7 @@ class GrillContext(GuidanceAction):
     def _generate(self):
         from generate.generate import Generate
 
-        return Generate()
+        return Generate(self.session)
 
     @agent_instructions
     def grill_with_context(self, plan: str = "", paths: list[str] | str | None = None) -> str:

@@ -188,7 +188,7 @@ class LogEntry:
     """One line of a session log: ``<time> <verb> <words...>``, the words being the subject the verb acted on."""
 
     # Action lines name a practice by its folder (`clean_engineering`) and validate lines by its class
-    # (`CleanEngineering`); a generate line lists the practices, then their fidelities, then their formats.
+    # (`CleanEngineering`).
 
     def __init__(self, line: str) -> None:
         self._parts = line.split()
@@ -219,16 +219,6 @@ class LogEntry:
         practice = fidelity.practice_guidance
         words = set(self.words)
         return fidelity.name in words and bool({practice.key, type(practice).__name__} & words)
-
-    def format_written_for(self, practice: str, fidelity: str) -> str:
-        """The format a generate line wrote practice's fidelity in; empty when it does not name them."""
-        joined = " ".join(self._parts[2:]).replace(", ", ",").split(" ")
-        for practices, fidelities, formats in zip(joined, joined[1:], joined[2:]):
-            named = list(zip(practices.split(","), fidelities.split(","), formats.split(",")))
-            written = next((format for name, opened, format in named if (name, opened) == (practice, fidelity)), "")
-            if written:
-                return written
-        return ""
 
 
 @language_adapter(language="typescript", identity=("session_file", "name"))
@@ -301,19 +291,45 @@ class PracticeSessionOutput:
         return self._graph
 
     @property
+    def _saved(self) -> dict:
+        """What session.json keeps for this practice: whether it is on, and the format each fidelity was last given."""
+        return dict(self._session._fields.get("practices", {}).get(self.name, {}))
+
+    def _save(self, **values: object) -> None:
+        saved = self._session._fields.get("practices", {})
+        self._session._save_fields(practices={**saved, self.name: {**self._saved, **values}})
+
+    @property
     @data_field
     def enabled(self) -> bool:
         """Whether the session works on this practice: true until a person turns it off."""
-        return self._session._fields.get("practices", {}).get(self.name, {}).get("enabled", True)
+        return self._saved.get("enabled", True)
 
     @mcp
     @agent_tool
     @noSessionLog
     def enable(self, is_enabled: bool) -> PracticeSessionOutput:
         """Turn this practice on or off for its session, saved in its session.json."""
-        saved = self._session._fields.get("practices", {})
-        self._session._save_fields(practices={**saved, self.name: {"enabled": is_enabled}})
+        self._save(enabled=is_enabled)
         return self
+
+    @property
+    def _working_fidelity(self) -> str:
+        current = getattr(self.guideline.fidelities, "current", None)
+        return str(current.name) if current is not None else ""
+
+    def keep_format(self) -> None:
+        """Save the format this practice works in as its current fidelity's, so the next action on that fidelity in
+        this session works in it without being told."""
+        fidelity = self._working_fidelity
+        if fidelity and self.guideline.format:
+            self._save(formats={**self._saved.get("formats", {}), fidelity: self.guideline.format})
+
+    def use_kept_format(self) -> None:
+        """Work in the format last kept for the current fidelity; the fidelity's own format when none was kept."""
+        kept = self._saved.get("formats", {}).get(self._working_fidelity, "")
+        if kept:
+            self.guideline.format = kept
 
     @property
     @data_field
@@ -1181,7 +1197,6 @@ class Session:
             if key is None:
                 continue
             opened = self.practice(key)
-            opened.guideline = item
             for group in opened._folders:
                 for folder in group:
                     resolved = Path(folder).resolve()
@@ -1517,16 +1532,6 @@ class Session:
             )
             if part
         )
-
-    def last_generated_format(self, guidance: PracticeGuidance) -> str:
-        """The format the latest generate of guidance's fidelity wrote, read from its line in session.log; empty when
-        no generate line names that fidelity."""
-        practice = PracticeCatalogue.key_of(guidance)
-        fidelity = self._fidelity_name(guidance)
-        if not practice or not fidelity:
-            return ""
-        generated = (entry.format_written_for(practice, fidelity) for entry in reversed(self.log_entries) if entry.verb == "generate")
-        return next(filter(None, generated), "")
 
     @property
     def log_path(self) -> Path | None:
