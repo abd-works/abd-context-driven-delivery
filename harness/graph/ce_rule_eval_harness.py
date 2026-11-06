@@ -1,7 +1,7 @@
 """Run PracticeGraphRule checks against a real working-copy build of small fixture trees.
 
 Fixtures go through the same path as a live load: language parser, model nodes loading
-their own facts, recorder rows, rules reading ``node.data``.
+their own facts, each node holding its parsed object, rules reading ``node.get_fact``.
 """
 
 from __future__ import annotations
@@ -43,13 +43,12 @@ def practice_from_files(files: dict[str, str]) -> tuple[PracticeGraph, Path]:
 def practice_from_class_text(name: str, text: str, relative: str) -> tuple[PracticeGraph, Path]:
     """One class node recorded from source the working copy does not scan (markdown model files)."""
     from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-    from harness.graph.working_copy import _CLASS_FACTS, _fact_row, _facts_of
 
     oclass = OoadClass(name=name, sequential_order=1, line=1)
     oclass.load_source_facts(text)
     practice, root = practice_from_files({relative: text})
     row = [f"clean_engineering:OoadClass:{relative}:{name}", name, "OoadClass", "clean_engineering", relative, 1, text.count("\n") + 1]
-    practice.apply_nodes([_fact_row(row, _facts_of(oclass, _CLASS_FACTS))])
+    practice.apply_nodes([row], {row[0]: oclass})
     return practice, root
 
 

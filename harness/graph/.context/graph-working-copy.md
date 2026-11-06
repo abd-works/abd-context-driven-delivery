@@ -2,7 +2,11 @@
 
 The explorer graph is built from source on disk, not from a separate query database.
 
-`Graph.load_working_copy(folder, practices, database?, overlays?)` stores the repo root on `graph._folder`, creates one `PracticeGraph` per practice key, and calls `fill_working_copy` in `harness/graph/working_copy.py`. That module walks folders and TypeScript files, runs the practice parsers (`TypeScriptCleanEngineeringModel`, `TypeScriptStoryModel`, `StoryModel`, DDD stereotypes, optional LERN overlay), and applies node and edge tuples with `PracticeGraph.apply_nodes` / `apply_edges`. `attach_rules` runs practice rule evaluators on the loaded graph. Each practice `root_node.populate()` builds the tree the app serializes.
+`Graph.load_working_copy(folder, practices, database?, overlays?)` stores the repo root on `graph._folder`, creates one `PracticeGraph` per practice key, and calls `fill_working_copy` in `harness/graph/working_copy.py`. That module walks folders and TypeScript files, runs the practice parsers (`TypeScriptCleanEngineeringModel`, `TypeScriptStoryModel`, `StoryModel`, DDD stereotypes, optional LERN overlay), and applies node and edge tuples with `PracticeGraph.apply_nodes` / `apply_edges`.
+
+Each node holds the object its parser built as `Node.model`: the `Operation`, `OoadClass`, `Parameter`, `Module`, BDD spec node, DDD building block, or Story/Scenario/Step. Rules read measurements through `node.get_fact`, which asks the model first, so every measurement has one copy and rules check exactly the object the explorer shows. Each model class lists its saved attributes in `graph_facts`; `graph.json` stores those with the node, so a graph reloaded without parsing still answers `get_fact` from `data`. The node's `data` keeps only what the loader alone knows, such as a class's folder or the interactions a model document adds.
+
+`attach_rules` runs practice rule evaluators on the loaded graph. Each practice `root_node.populate()` builds the tree the app serializes.
 
 The Vite app in `harness/graph/app` follows the CDD web domain access pattern. Its server holds one `CddConnection` and mounts the generated `graphRoutes`, so every call reaches `Graph.current()`, the one graph the cdd server holds. The page's `GraphClient` extends the generated `GraphClientGenerated` and calls `loadWorkingCopy` with every practice name mapped to the chosen folder root. It adds only the folder dialogs, which `choose_folder.py` opens on the server's machine.
 

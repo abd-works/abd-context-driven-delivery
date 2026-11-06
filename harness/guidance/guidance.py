@@ -26,6 +26,7 @@ from harness.markdown import (
     AssetLocator,
     Markdown,
     MarkdownCollection,
+    MarkdownText,
     markdown,
     markdownCollection,
 )
@@ -706,6 +707,17 @@ class FidelityGuidance(Guidance):
     @property
     def overview(self) -> str:  # type: ignore[override]
         return Markdown.from_label(self, "overview").extract()
+
+    @property
+    def section(self) -> str:
+        """This fidelity's whole ``### {name}`` block in its practice's markdown: overview, sketch, guidance, and rules."""
+        practice = self.practice_guidance
+        if practice is None:
+            return ""
+        path = practice.domain_markdown_path()
+        if not path.is_file():
+            return ""
+        return MarkdownText(path.read_text(encoding="utf-8")).fidelity_block(self.name)
 
     @markdown
     def guidance(self) -> str:

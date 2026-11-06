@@ -527,14 +527,6 @@ class Source:
         return re.search(r"(?:async|function|def|public|private|protected|static|get|set)\s+$", line[:start]) is not None
 
 
-class RuleResult:
-    """A rule query row attached to the node it checked."""
-
-    def __init__(self, rule: str, violation: str) -> None:
-        self.rule = rule
-        self.violation = violation
-
-
 class Filter:
     """Narrows a loaded graph. A practice choice reads that practice's node queries, and a node-type choice sets the relationships and rules."""
 
@@ -640,7 +632,15 @@ class Filter:
         self.rules = self._available_rules()
 
 class Node:
-    """children is the list populate writes on this node. Direct edges are the children. Grouped and relationship edges sit under one child named for the kind."""
+    """children is the list populate writes on this node. Direct edges are the children. Grouped and relationship edges sit under one child named for the kind.
+
+    A loader that parsed the code or document behind a node hands the node that parsed object as ``model``: rules read
+    its measurements straight from it. ``data`` holds only what the parsed object does not know, such as the facts a
+    model document adds. A graph reloaded from ``graph.json`` has no ``model``; its saved facts are in ``data``.
+    """
+
+    graph_facts: tuple[str, ...] = ()
+    """The attributes of a parsed object that save with the graph, so a reloaded graph still answers ``get_fact``."""
 
     def __init__(self, practice: PracticeGraph, type: str, node_id: str, name: str, source: Source) -> None:
         self.practice = practice
@@ -650,6 +650,7 @@ class Node:
         self.source = source
         self.stage = ""
         self.data: dict = {}
+        self.model: Node | None = None
         self.children: list[Node] = []
         self.parent: Node | None = None
         self._rules = None
@@ -663,6 +664,8 @@ class Node:
         """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node."""
         node = self
         while node is not None:
+            if node._model_has(key):
+                return getattr(node.model, key)
             if key in node.data:
                 return node.data[key]
             node = node.parent or node.practice.direct_parent(node)
@@ -670,7 +673,18 @@ class Node:
 
     def has_fact(self, key: str) -> bool:
         """True when this node itself records the fact."""
-        return key in self.data
+        return self._model_has(key) or key in self.data
+
+    @property
+    def facts(self) -> dict:
+        """Every fact this node records: its parsed object's saved attributes, then ``data``. This is what ``graph.json`` keeps."""
+        model = self.model
+        found = {} if model is None else {name: getattr(model, name) for name in model.graph_facts if hasattr(model, name)}
+        found.update(self.data)
+        return found
+
+    def _model_has(self, key: str) -> bool:
+        return self.model is not None and key in self.model.graph_facts and hasattr(self.model, key)
 
     @property
     def fidelity(self) -> str:
@@ -902,20 +916,20 @@ class PracticeGraph:
         ordered = sorted(self.edge_types.values(), key=lambda edge_type: edge_type.order)
         return [edge_type.kind for edge_type in ordered]
 
-    def load_nodes(self, tuples: list[Tuple]) -> None:
-        self.apply_nodes(tuples)
-
-    def apply_nodes(self, tuples: list[Tuple]) -> None:
+    def apply_nodes(self, tuples: list[Tuple], models: dict[str, Node] | None = None) -> None:
+        """Register a node for each record. ``models`` gives, by node id, the parsed object a loader read the node from."""
         from harness.graph.node_rules import attach_node_rules
         from harness.graph.schema_rules import bind_practice_rules
 
         bind_practice_rules(self)
+        models = models or {}
         for row in tuples:
             fact = Node.fact(row)
             if fact is None or fact["node_id"] in self.by_id:
                 continue
             self.node_types.add(fact["semantic_type"])
             node = Node.from_fact(self, fact)
+            node.model = models.get(fact["node_id"])
             attach_node_rules(node)
             self.nodes.setdefault(fact["semantic_type"], []).append(node)
             self.by_id[fact["node_id"]] = node
@@ -931,9 +945,6 @@ class PracticeGraph:
             if node is not None:
                 return node
         return None
-
-    def load_edges(self, tuples: list[Tuple]) -> None:
-        self.apply_edges(tuples)
 
     def apply_edges(self, tuples: list[Tuple]) -> None:
         for row in tuples:
@@ -1242,7 +1253,7 @@ class Graph:
             node.source.start_line,
             node.source.end_line,
             node.stage,
-            encode_node_data(node.data),
+            encode_node_data(node.facts),
         ]
 
     def _edge_row(self, edge: Edge) -> list:
@@ -1373,11 +1384,11 @@ class Graph:
         practice = self.practice(name)
         practice.source_root = str(saved.get("source_root") or self._practice_roots[name])
         practice.by_id[practice.root_node.node_id] = practice.root_node
-        practice.load_nodes(list(saved.get("nodes") or []))
+        practice.apply_nodes(list(saved.get("nodes") or []))
 
     def _restore_practice_links(self, name: str, saved: dict) -> None:
         practice = self.practice(name)
-        practice.load_edges(list(saved.get("edges") or []))
+        practice.apply_edges(list(saved.get("edges") or []))
         self._restore_rule_hits(practice, list(saved.get("rules") or []))
         practice.loaded = ["nodes", "edges", "rules"]
 

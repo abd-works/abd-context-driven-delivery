@@ -55,8 +55,8 @@ with description("GraphStoryModel rule data"):
     with it("should attach step payload with phase and concepts"):
         when_nodes = self.practice.nodes.get("When", [])
         expect(len(when_nodes)).to(equal(1))
-        expect(when_nodes[0].data.get("phase")).to(equal("when"))
-        expect(when_nodes[0].data.get("concepts")).to(contain("Cart"))
+        expect(when_nodes[0].get_fact("phase")).to(equal("when"))
+        expect(when_nodes[0].get_fact("concepts")).to(contain("Cart"))
 
     with it("should wire scenario steps edges"):
         scenario = self.practice.nodes["Scenario"][0]

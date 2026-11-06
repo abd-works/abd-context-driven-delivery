@@ -34,8 +34,8 @@ _SPEC_FILE = f"{_STORY_FOLDER}/authenticate_user.story.server.spec.ts"
 
 # Five parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"
-# "Board Stuff" opens with a noun, which verb-noun-format rejects.
-_STORY_MAP = "# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n\n### (S) Person --> Board Stuff\n"
+# "Boarding Stuff" opens with a gerund, which verb-noun-format rejects. A word missing from the verb list passes, so the fixture needs an opening the rule flags.
+_STORY_MAP = "# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n\n### (S) Person --> Boarding Stuff\n"
 # The scenarios of the story map's Open Board story, in the file a story's heading links to.
 _EMPTY_DRAWIO = '<mxfile><diagram name="Story Map"><mxGraphModel><root><mxCell id="0" /></root></mxGraphModel></diagram></mxfile>\n'
 _OPEN_BOARD_SCENARIOS ="""from story_test import given, scenario, story, then, when
@@ -209,7 +209,7 @@ with description("a validate action on practice guidance") as self:
 
         with it("should report the verb-noun-format violation on the story that breaks it"):
             report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
-            expect(report).to(contain("Board Stuff"))
+            expect(report).to(contain("Boarding Stuff"))
 
         # The session board lists the agent's judgment beside the graph's hits only when it is written in this shape.
         with it("should tell the agent to write its judgment under the judged file, one heading per failed rule"):
@@ -265,7 +265,7 @@ with description("a validate action on practice guidance") as self:
                     self.report = self.action.validate(guidance=["stories-story-map"])
 
                 with it("should report the violations in the declared output"):
-                    expect(self.report).to(contain("Board Stuff"))
+                    expect(self.report).to(contain("Boarding Stuff"))
 
                 with it("should save the graph it checked beside the report"):
                     expect([path.suffix for path in (self.session / "validation-reports").iterdir()]).to(contain(".json"))
@@ -309,7 +309,7 @@ with description("a validate action on practice guidance") as self:
 
             with it("should read a path named from the project's root"):
                 report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
-                expect(report).to(contain("Board Stuff"))
+                expect(report).to(contain("Boarding Stuff"))
 
             with it("should report the violation at its path from the session's root"):
                 report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
@@ -317,7 +317,7 @@ with description("a validate action on practice guidance") as self:
 
             with it("should read an absolute path"):
                 report = self.action.validate(guidance=["stories-story-map"], paths=[str(self.folder / "board/.context/story-map.md")])
-                expect(report).to(contain("Board Stuff"))
+                expect(report).to(contain("Boarding Stuff"))
 
         # A graph built from nothing reports no violations, which reads as a clean validate.
         with context("that is named by a path that is not there"):

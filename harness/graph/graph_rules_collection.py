@@ -42,11 +42,6 @@ class GraphRule(PracticeGraphRule, Rule):
     def prose_only(cls, slug: str, body: str = "", node_types: tuple[str, ...] = ()) -> GraphRule:
         return cls(slug, body=body, node_types=node_types, executable=False)
 
-    @classmethod
-    def prompt_only(cls, slug: str, node_types: tuple[str, ...] = ()) -> GraphRule:
-        """Alias for prose-only rules with no markdown body loaded yet."""
-        return cls.prose_only(slug, body="", node_types=node_types)
-
     @property
     def violations(self) -> list[str]:
         return list(self._violations)

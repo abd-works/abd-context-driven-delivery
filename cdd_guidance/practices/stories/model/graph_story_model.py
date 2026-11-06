@@ -1,7 +1,7 @@
 """GraphStoryModel accepts a loaded story model and records it on a practice graph.
 
-Populates schema fields rules depend on: Given/When/Then typing, ``ands`` edges,
-step text/concepts/actor, scenario outline + evidence, example links.
+Each node holds the story object it was written from as ``Node.model``; rules read the scenario, its steps, and
+its story from there. The node records only what the object does not know, such as a story file's exports.
 """
 
 from __future__ import annotations
@@ -50,6 +50,7 @@ class GraphStoryModel:
 
     def __init__(self, model: StoryModel) -> None:
         self.model = model
+        self._models: dict = {}
         self._lines: dict[str, list[str]] = {}
         self._cursor: dict[str, int] = {}
         self._on_node = None
@@ -61,13 +62,14 @@ class GraphStoryModel:
         edges: list[list] = []
         root_id = practice.root_node.node_id
         self._on_node = on_node
+        self._models = {}
         self._node_at = 0
         self._node_total = sum(self._story_count(epic) for epic in self.model.epics)
         try:
             with self.model.batch_schema_sync():
                 for epic in self.model.epics:
                     self._epic(practice.source_root, root_id, epic, True, nodes, edges)
-            practice.apply_nodes(nodes)
+            practice.apply_nodes(nodes, self._models)
             practice.apply_edges(edges)
             practice.loaded = ["nodes", "edges", "rules"]
         finally:
@@ -166,11 +168,8 @@ class GraphStoryModel:
         label = f"{step.keyword.lower()} {step.text}".strip()
         line, end = self._source_span(step, root, file, fallback_text=step.text)
         node_id = f"stories:{semantic}:{file}:{line}:{hash(label) & 0xFFFFFF}"
-        payload = encode_node_data(_step_payload(step))
-        row = [node_id, label, semantic, "stories", file or ".", line, end]
-        if payload:
-            row.extend(["", payload])
-        nodes.append(row)
+        nodes.append([node_id, label, semantic, "stories", file or ".", line, end])
+        self._models[node_id] = step
         edges.append([parent_id, node_id, edge_kind, order, "direct"])
         for continuation in step.ands:
             self._step(root, file, node_id, continuation, nodes, edges, edge_kind="ands", order=9)
@@ -186,26 +185,8 @@ class GraphStoryModel:
         node,
         extra: dict | None = None,
     ) -> list:
-        facts = {
-            "opening_token": getattr(node, "opening_token", ""),
-            "opening_class": getattr(node, "opening_class", ""),
-            "child_count": getattr(node, "child_count", 0),
-            "child_label": getattr(node, "child_label", "children"),
-            "child_band": getattr(node, "child_band", ""),
-            "near_duplicate": bool(getattr(node, "near_duplicate", False)),
-            "generic_handler": bool(getattr(node, "generic_handler", False)),
-            "shared_verb": getattr(node, "shared_verb", "") or "",
-            "one_time_task": bool(getattr(node, "one_time_task", False)),
-            "artifact_name": getattr(node, "artifact_name", "") or "",
-            "camel_case_path": bool(getattr(node, "camel_case_path", False)),
-            "evidence": list(getattr(node, "evidence", []) or []),
-        }
-        scenario_count = getattr(node, "scenario_count", None)
-        if scenario_count is not None:
-            facts["scenario_count"] = scenario_count
-        if extra:
-            facts.update(extra)
-        payload = encode_node_data(facts)
+        self._models[node_id] = node
+        payload = encode_node_data(extra or {})
         row = [node_id, name, semantic, "stories", file, line, end]
         if payload:
             row.extend(["", payload])
@@ -327,27 +308,3 @@ def _step_semantic(step: Step) -> str:
         return "Then"
     return "Step"
 
-
-def _step_payload(step: Step) -> dict:
-    phase = ""
-    if step.step_type is not None:
-        phase = step.step_type.value
-    return {
-        "keyword": step.keyword,
-        "text": step.text,
-        "phase": phase,
-        "concepts": list(step.concepts or []),
-        "values": list(step.values or []),
-        "actor": step.actor or "",
-        "continuation": step.is_continuation,
-        "callees": _callees_from_step(step),
-    }
-
-
-def _callees_from_step(step: Step) -> list[str]:
-    found: list[str] = []
-    for concept in step.concepts or []:
-        token = concept.strip()
-        if token and token[0].isupper() and token not in found:
-            found.append(token)
-    return found

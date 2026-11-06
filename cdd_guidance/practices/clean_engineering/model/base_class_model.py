@@ -174,6 +174,20 @@ class OoadNode(BoundNode):
 
 class OoadClass(OoadNode):
     _semantic_type_name = "OoadClass"
+    graph_facts = (
+        "bases",
+        "method_count",
+        "operation_shapes",
+        "property_names",
+        "constructs",
+        "composes_peers",
+        "peer_names",
+        "module_helpers",
+        "prose_comment",
+        "prototype_swap",
+        "bold_interaction_lines",
+        "bold_invariant_lines",
+    )
 
     def __init__(
         self,
@@ -454,6 +468,17 @@ class Module(OoadNode):
     """A named module boundary grouping closely related classes."""
 
     _semantic_type_name = "Module"
+    graph_facts = (
+        "has_module_context",
+        "has_bounded_context",
+        "modules_heading",
+        "model_blocks",
+        "is_a_in_context",
+        "child_parent_in_context",
+        "public_source_internal",
+        "public_source_files",
+        "dependencies",
+    )
 
     def __init__(
         self,

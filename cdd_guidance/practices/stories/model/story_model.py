@@ -39,6 +39,21 @@ class StoryNode(BoundNode, ABC):
 
     _graph_practice = "stories"
     _semantic_type_name: str = "StoryNode"
+    graph_facts = (
+        "opening_token",
+        "opening_class",
+        "child_count",
+        "child_label",
+        "child_band",
+        "near_duplicate",
+        "generic_handler",
+        "shared_verb",
+        "one_time_task",
+        "artifact_name",
+        "camel_case_path",
+        "evidence",
+        "scenario_count",
+    )
     _belongs = _BELONGS
     _edge_order = {
         "decomposedInto": 1,
@@ -329,6 +344,7 @@ class Increment(StoryNode):
 
 class Step(StoryNode):
     _semantic_type_name = "Step"
+    graph_facts = ("keyword", "text", "phase", "concepts", "values", "actor", "continuation", "callees")
 
     def __init__(
         self,
@@ -401,6 +417,26 @@ class Step(StoryNode):
         if self._keyword:
             return self._keyword.casefold() in ("and", "but")
         return self.text.strip().startswith(("And ", "But "))
+
+    @property
+    def continuation(self) -> bool:
+        """The fact name rules read for ``is_continuation``."""
+        return self.is_continuation
+
+    @property
+    def phase(self) -> str:
+        """given, when, or then from the step type; empty when the step has none."""
+        return self.step_type.value if self.step_type is not None else ""
+
+    @property
+    def callees(self) -> List[str]:
+        """The capitalized concepts the step names: the domain classes it reaches."""
+        found: List[str] = []
+        for concept in self.concepts or []:
+            token = concept.strip()
+            if token and token[0].isupper() and token not in found:
+                found.append(token)
+        return found
 
     def clone(self) -> "Step":
         cloned = type(self)(
