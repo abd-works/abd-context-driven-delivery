@@ -645,7 +645,7 @@ A caller named a practice, such as `clean_engineering`, that the board does not 
 
 ## FidelityNotFoundError : LookupError
 
-A caller named a fidelity, such as `stories-story_map`, that a ticket or a practice does not have.
+A caller named a fidelity, such as `stories-story-map`, that a ticket or a practice does not have.
 
 ------
 + fidelity: str

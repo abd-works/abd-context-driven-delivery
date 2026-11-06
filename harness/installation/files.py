@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from harness.agent_tools.name import Name
 from harness.installation.destination import Destination, Installation
 
 
@@ -131,7 +132,7 @@ class FileInstallation(Installation):
         return Path("-".join(parts) or "toolset")
 
     def _op_slug(self, name: str) -> str:
-        return re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", name).replace("_", "-").lower()
+        return Name(name).kebab
 
     def _kebab_folder(self, folder: Path) -> Path:
         parts: list[str] = []

@@ -27,7 +27,6 @@ from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
     MissingIdentityError,
     argument_schema,
-    camel_case,
     schema_type,
 )
 
@@ -446,10 +445,6 @@ with description("a language adapter"):
 
             with it("should take Monaco from the application"):
                 expect(self.file_views).to(contain("from '@monaco-editor/react'"))
-
-    with description("a Python name"):
-        with it("should become camelCase"):
-            expect(camel_case("set_wip_limit")).to(equal("setWipLimit"))
 
     with description("a published schema"):
         with it("should keep only what checking a sent value needs"):

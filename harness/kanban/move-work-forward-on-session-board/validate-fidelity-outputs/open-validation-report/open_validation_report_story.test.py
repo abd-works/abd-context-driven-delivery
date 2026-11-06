@@ -18,7 +18,7 @@ with story("Open Validation Report"):
         with and_("the graph names verb-noun-format on .context/story-map.md line 6"):
             pass
         with when("the Person opens checkout-flow's story_map report"):
-            # Person -> Ticket.report('stories-story_map')
+            # Person -> Ticket.report('stories-story-map')
             # Ticket -> Ticket.reports <- .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md
             # Ticket <- path, text, rules from the saved graph, has_saved_graph: true
             pass
@@ -41,7 +41,7 @@ with story("Open Validation Report"):
         with given("the ticket's latest story_map report has no graph saved beside it"):
             pass
         with when("the Person opens the story_map report"):
-            # Person -> Ticket.report('stories-story_map') <- rules: [], has_saved_graph: false
+            # Person -> Ticket.report('stories-story-map') <- rules: [], has_saved_graph: false
             pass
         with then("the report panel shows the report's text"):
             pass

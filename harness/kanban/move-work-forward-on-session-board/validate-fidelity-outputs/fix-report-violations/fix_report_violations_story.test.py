@@ -50,7 +50,7 @@ with story("Fix Report Violations"):
         with when("Claude Code validates the story map again with no violations"):
             # Validate -> Session.log_validation(Stories story_map, [])
             # Board page -> Board.show()
-            # Board page -> Ticket.report('stories-story_map')
+            # Board page -> Ticket.report('stories-story-map')
             pass
         with then("the open report lists no rules"):
             pass

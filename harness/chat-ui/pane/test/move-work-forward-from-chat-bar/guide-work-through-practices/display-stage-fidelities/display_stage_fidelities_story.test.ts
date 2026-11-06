@@ -15,20 +15,20 @@ story('Display Stage Fidelities', CHAT_BAR, () => {
   scenario("Show an earlier stage's fidelities", ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 "Clicking a stage shows that stage's fidelities"; no chat bar code yet
     given("the Chat Bar shows checkout-flow's Specification dots with ux-mockup selected")
-    and('its Discovery [fidelity progress](../../../../../../kanban/.context/kanban-model.md#fidelityprogress) is stories-story_map done, ux-ia not started and clean_engineering-modules done', async ($, on, scene) => {
-      scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-story_map': DONE, 'clean_engineering-modules': DONE }))
+    and('its Discovery [fidelity progress](../../../../../../kanban/.context/kanban-model.md#fidelityprogress) is stories-story-map done, ux-ia not started and clean-engineering-modules done', async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'stories-story-map': DONE, 'clean-engineering-modules': DONE }))
       await scene.ui.press({ key: 'dot-ux-mockup' })
     })
     when('the Person shows the Discovery [stage](../../../../../../kanban/.context/kanban-model.md#stage--column)', async ($, on, scene) => {
       await scene.ui.press({ key: 'stage-Discovery' })
     })
     // StageView press -> selectStage($, stage)
-    then('the dots show stories-story_map done, ux-ia not started and clean_engineering-modules done', async ($, on, scene) => {
-      const labels = await Promise.all(['dot-stories-story_map', 'dot-ux-ia', 'dot-clean_engineering-modules'].map(key => labelOf(scene.ui, key)))
-      expect(labels).toEqual(['stories-story_map done', 'ux-ia to do', 'clean_engineering-modules done'])
+    then('the dots show stories-story-map done, ux-ia not started and clean-engineering-modules done', async ($, on, scene) => {
+      const labels = await Promise.all(['dot-stories-story-map', 'dot-ux-ia', 'dot-clean-engineering-modules'].map(key => labelOf(scene.ui, key)))
+      expect(labels).toEqual(['stories-story-map done', 'ux-ia to do', 'clean-engineering-modules done'])
     })
     and('no dot is selected, because ux-mockup is not a Discovery fidelity', async ($, on, scene) => {
-      const marks = await Promise.all(['dot-stories-story_map', 'dot-ux-ia', 'dot-clean_engineering-modules'].map(async key => textOf(await markOf(scene.ui, key))))
+      const marks = await Promise.all(['dot-stories-story-map', 'dot-ux-ia', 'dot-clean-engineering-modules'].map(async key => textOf(await markOf(scene.ui, key))))
       expect(marks).toEqual(['●', '●', '●'])
     })
   })

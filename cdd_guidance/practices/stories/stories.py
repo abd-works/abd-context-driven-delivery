@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+from harness.markdown.format import Format
 
 
 @agent_toolset
@@ -55,7 +56,7 @@ class Stories(PracticeGuidance):
     def read_paths(self, paths: list[str] | str, source: str | None = None):
         """Story tests in code carry their epic and sub-epic only in their folders, under the story map that names them,
         so they are read as files beside that map, not as one run of text."""
-        if self._canonical_format(source or self.format or "") not in self._code_formats:
+        if not Format(source or self.format).is_code:
             return super().read_paths(paths, source)
         from pathlib import Path
 
@@ -66,7 +67,7 @@ class Stories(PracticeGuidance):
         return StoryModel.load_files([path for path in files if path.is_file()], Path.cwd())
 
     def _live_adapter(self, format_name: str):
-        if self.story_test_folder is None or self._canonical_format(format_name) != "typescript":
+        if self.story_test_folder is None or Format(format_name).name != "typescript":
             return super()._live_adapter(format_name)
         return self._format_adapter(format_name)(
             tests_root=self.default_workspace_folder,

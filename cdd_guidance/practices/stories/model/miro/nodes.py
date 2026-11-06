@@ -13,6 +13,7 @@ import time
 import xml.etree.ElementTree as ET
 from typing import Callable, Dict, List, Optional
 
+from harness.agent_tools.name import Name
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
@@ -143,8 +144,7 @@ class MiroStory(DiagramStory):
 
     @property
     def slug(self) -> str:
-        slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
-        return slug or "node"
+        return Name(self.name).title_slug or "node"
 
     @property
     def x(self) -> int:
@@ -212,8 +212,7 @@ class MiroEpic(DiagramEpic):
 
     @property
     def slug(self) -> str:
-        slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
-        return slug or "node"
+        return Name(self.name).title_slug or "node"
 
     @property
     def width(self) -> int:

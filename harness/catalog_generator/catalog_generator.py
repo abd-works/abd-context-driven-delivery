@@ -31,7 +31,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
+from harness.agent_tools.name import Name
 from harness.guidance.guidance import FidelityGuidance
+from harness.markdown.format import Format
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.installation.destination import noCatalog, omitted_from_catalog
 from harness.installation.files import skill
@@ -110,9 +112,7 @@ class RegistryEntry:
         return getattr(module, self.class_name)
 
     def toolset_name(self) -> str:
-        import re
-
-        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", self.cls.__name__).lower()
+        return Name(self.cls.__name__).snake
 
     def fidelity_cards(self) -> list[str]:
         from harness.catalog_generator.foundry_chrome import cap_card
@@ -210,7 +210,7 @@ def fidelity_names_by_stage(practice: type) -> dict[str, str]:
         board_key = stage_to_board.get(str(getattr(child, "stage", "") or "").strip().lower())
         if not board_key:
             continue
-        names[board_key] = str(getattr(child, "fidelity", None) or getattr(child, "name", None) or key)
+        names[board_key] = str(getattr(child, "name", None) or key)
     return names
 
 
@@ -250,28 +250,6 @@ def keep_in_catalog(entry: RegistryEntry) -> bool:
     return not omitted_from_catalog(entry.cls)
 
 # -- Fidelity templates -------------------------------------------------------
-
-_FORMAT_DIR_ALIASES: dict[str, tuple[str, ...]] = {
-    "markdown": ("md", "markdown"),
-    "python": ("py", "python"),
-    "javascript": ("js", "javascript"),
-    "typescript": ("ts", "typescript"),
-    "java": ("java",),
-    "html": ("html",),
-    "drawio": ("drawio",),
-}
-
-_FORMAT_FILE_EXT: dict[str, str] = {
-    "markdown": ".md",
-    "md": ".md",
-    "python": ".py",
-    "py": ".py",
-    "javascript": ".js",
-    "js": ".js",
-    "typescript": ".ts",
-    "ts": ".ts",
-    "java": ".java",
-}
 
 # CDD stage key → frontmatter fidelity tokens used in template YAML/headers.
 _STAGE_FRONTMATTER_TOKENS: dict[str, tuple[str, ...]] = {
@@ -329,14 +307,6 @@ def _template_frontmatter_blob(text: str) -> str:
             blob.append(stripped[2:].lstrip() if stripped.startswith("#") else stripped)
         return "\n".join(blob)
     return ""
-
-def _slug_variants(domain_slug: str) -> list[str]:
-    variants = [domain_slug]
-    for alt in (domain_slug.replace("_", "-"), domain_slug.replace("-", "_")):
-        if alt not in variants:
-            variants.append(alt)
-    return variants
-
 
 class HeadingSection:
     """Body under one markdown heading, up to the next heading of that level."""
@@ -1281,8 +1251,8 @@ class CatalogFidelity:
         return getattr(self.fidelity.practice_guidance, "toolset_name", self._module_dir().name)
 
     def _format_aliases(self) -> tuple[str, ...]:
-        fmt = (self.fidelity.default_format or "").lower()
-        return _FORMAT_DIR_ALIASES.get(fmt, (fmt,))
+        format = Format(self.fidelity.default_format)
+        return tuple(dict.fromkeys((format.short, format.name)))
 
     def default_template_path(self) -> Path | None:
         if not self.fidelity.default_format:
@@ -1303,8 +1273,8 @@ class CatalogFidelity:
         shared = self._module_dir() / "templates"
         if not shared.is_dir():
             return None
-        ext = _FORMAT_FILE_EXT.get(self.fidelity.default_format.lower(), "")
-        for slug in _slug_variants(self._domain_slug()):
+        ext = Format(self.fidelity.default_format).template_extension
+        for slug in Name(self._domain_slug()).spellings:
             for stem in (f"{slug}-templates", f"{slug}-template"):
                 found = self._named_stem_path(shared, stem, ext)
                 if found is not None:
@@ -1403,7 +1373,7 @@ class CatalogFidelity:
         return set(_STAGE_FRONTMATTER_TOKENS.get(stage_key, ()))
 
     def _fallback_root_template(self, templates_root: Path) -> Path | None:
-        ext = _FORMAT_FILE_EXT.get((self.fidelity.default_format or "").lower(), "")
+        ext = Format(self.fidelity.default_format).template_extension
         aliases = self._format_aliases()
         root_files = [
             path for path in templates_root.iterdir()

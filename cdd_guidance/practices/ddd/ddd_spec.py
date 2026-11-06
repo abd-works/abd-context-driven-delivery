@@ -39,7 +39,7 @@ with description("a Ddd toolset"):
         with context("with discovery stage"):
             with it("should resolve to bounded_context and default to markdown format"):
                 tool = Ddd(stage="discovery")
-                expect(tool.fidelities.current.fidelity).to(equal("bounded_context"))
+                expect(tool.fidelities.current.name).to(equal("bounded_context"))
                 expect(tool.format).to(equal("markdown"))
 
         with context("with model fidelity"):
@@ -68,17 +68,17 @@ with description("a Ddd toolset"):
         with context("with bounded_context fidelity"):
             with it("should treat the modules fidelity as the companion"):
                 companion = Ddd(fidelity="bounded_context").fidelities.current.clean_engineering
-                expect(companion.fidelity).to(equal("modules"))
+                expect(companion.name).to(equal("modules"))
 
         with context("with model fidelity"):
             with it("should treat the model fidelity as the companion"):
                 companion = Ddd(fidelity="model").fidelities.current.clean_engineering
-                expect(companion.fidelity).to(equal("model"))
+                expect(companion.name).to(equal("model"))
 
         with context("with tactics fidelity"):
             with it("should treat the code fidelity as the companion"):
                 companion = Ddd(fidelity="tactics").fidelities.current.clean_engineering
-                expect(companion.fidelity).to(equal("code"))
+                expect(companion.name).to(equal("code"))
 
     with context("whose contexts instruction is expanded"):
         with it("should include the experts-words-preferred rule slug"):

@@ -9,12 +9,12 @@ from __future__ import annotations
 import concurrent.futures
 import inspect
 import os
-import re
 import sys
 from pathlib import Path
 from typing import Any
 
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination
+from harness.agent_tools.name import Name
 from harness.agent_tools.cdd_diagnostic_bridge import probe_arguments_from_cdd_diagnostic
 from harness.guidance.guidance import (
     ActionProbeSession,
@@ -92,11 +92,7 @@ def agent_tools_toolset_refs(installer: Any) -> tuple[str, ...]:
 def _slug_for_toolset_ref(ref: str) -> str:
     """Slug for install-log matching — no toolset ``__init__`` on the MCP worker thread."""
     toolset_cls = AgentToolSet._load(ref)
-    domain = getattr(toolset_cls, "domain_slug", None)
-    if domain:
-        return str(domain).replace("_", "-")
-    name = toolset_cls.__name__
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", name).lower()
+    return Name(getattr(toolset_cls, "domain_slug", None) or toolset_cls.__name__).kebab
 
 
 class ProbeRequiresServingHost(RuntimeError):

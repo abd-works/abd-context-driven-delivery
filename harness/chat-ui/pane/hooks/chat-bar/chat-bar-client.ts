@@ -17,7 +17,6 @@ const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: 
 const STAGES = ['Backlog', 'Discovery', 'Specification', 'Implementation', 'Complete']
 
 const ticketsOf = (column: ColumnData): TicketData[] => [...(column.in_progress ?? []), ...(column.done ?? []), ...(column.tickets ?? [])]
-const practiceOf = (slug: string): string => slug.slice(0, slug.indexOf('-'))
 
 // The active session's line: health mark, session name, fidelity dots, action button, stage icons.
 export class ChatBarClient {
@@ -90,18 +89,20 @@ export class ChatBarClient {
     const column = this.board?.columns.find(entry => entry.name === this.shownStage)
     if (!ticket || !column) return []
     return (column.work_required ?? [])
-      .filter(slug => ticket.session.practices[practiceOf(slug)]?.enabled)
+      .filter(slug => ticket.session.practices[ticket.progress[slug]?.practice ?? '']?.enabled)
       .map(
         slug =>
           new FidelityClient({
             slug,
+            practice: ticket.progress[slug]?.practice ?? '',
+            name: column.fidelities?.[slug] ?? '',
             progress: ticket.progress[slug]?.state ?? 'not_started',
             violationCount: ticket.progress[slug]?.violation_count ?? 0,
             actions: ticket.progress[slug]?.actions ?? { generate: 'to_do', validate: 'to_do', review: 'to_do' },
             defaultFormat: column.default_formats?.[slug] ?? '',
             nextAction: ticket.progress[slug]?.next_action ?? '',
             isSelected: slug === this.selected,
-            folder: ticket.session.practices[practiceOf(slug)]?.root ?? '',
+            folder: ticket.session.practices[ticket.progress[slug]?.practice ?? '']?.root ?? '',
           }),
       )
   }

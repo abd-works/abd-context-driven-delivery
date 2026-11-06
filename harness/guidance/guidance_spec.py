@@ -317,7 +317,7 @@ with description("practice guidance with fidelities examples and templates besid
             self.guidance.format = first["sketch"].default_format or self.guidance.format
             expect(self.guidance.fidelities is first).to(equal(True))
             expect(self.guidance.toolset_collections).to(equal([first]))
-            expect(self.guidance.fidelities.current.fidelity).to(equal("sketch"))
+            expect(self.guidance.fidelities.current.name).to(equal("sketch"))
 
 
 with description("practice and fidelity template files"):

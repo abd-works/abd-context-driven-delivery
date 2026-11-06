@@ -105,7 +105,7 @@ def _(s):
     @s.and_("the Discovery stage requires story_map, bounded_context, and ia, each through Generate, Validate, and Review")
     def _(world):
         required = (column_in(world.read, "Discovery")["work_required"], world.board.column("Discovery").actions)
-        expect(required).to(equal((["stories-story_map", "ddd-bounded_context", "ux-ia"], ["generate", "validate", "review"])))
+        expect(required).to(equal((["stories-story-map", "ddd-bounded-context", "ux-ia"], ["generate", "validate", "review"])))
 
 
 @shared_stories.scenario("Display Board", "Show a failing tool in a toast")
@@ -276,9 +276,9 @@ def _(s):
     def _(world):
         expect((world.selected["title"], world.selected["session"]["workpath"], world.selected["column"], world.selected["is_done"])).to(equal(("Billing report", "", "Discovery", False)))
 
-    @s.and_("the details say No handoff yet and Next: stories-story_map, generate")
+    @s.and_("the details say No handoff yet and Next: stories-story-map, generate")
     def _(world):
-        expect((world.selected["session"]["handoff"], world.selected["next"], world.selected["progress"][world.selected["next"]]["next_action"])).to(equal(("", "stories-story_map", "generate")))
+        expect((world.selected["session"]["handoff"], world.selected["next"], world.selected["progress"][world.selected["next"]]["next_action"])).to(equal(("", "stories-story-map", "generate")))
 
     @s.and_("the details show a tile for each enabled fidelity with its fidelity progress")
     def _(world):

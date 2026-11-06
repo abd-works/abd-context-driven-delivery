@@ -58,7 +58,7 @@ Build order: `agent_tools`
 
 # harness/agent_tools
 - **Purpose:** Register, introspect, validate, and expand one decorated *AgentToolSet* and its *AgentTool* members. *agent_tools_probe* pings and invokes workspace MCP tools on the live host for `/agent-tools-diagnostics`.
-- **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, ExpansionMode, ExpansionResult, AgentToolValidationError, InstallDestination, ToolSetCollection, ParameterSchema
+- **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, ExpansionMode, ExpansionResult, AgentToolValidationError, InstallDestination, ToolSetCollection, ParameterSchema, Name
 - **Dependencies (one-way):** *(none)*
 
 ## Public API
@@ -68,6 +68,7 @@ Build order: `agent_tools`
 - `AgentToolSet` — `name`, `description`, `operations`, `instructions`, `tools`, `tools_for`, `mode`, `nested_toolsets`, `instantiate`, `validate`
 - `AgentTool` — `kind`, `description`, `parameters`, `response`, `mcp_name`, `invoke_line`, `input_schema`, `invoke`
 - `ParameterSchema(callable)` — `json_schema` and `coerced(arguments)`, the one reader of a tool's parameter type hints
+- `Name(text)` — `snake`, `kebab`, `camel`, `words`, `spellings`, and `title_slug`: the one place a class, event, field, or fidelity name changes case, so a toolset's name, its slug, and its published tools agree
 - `@agent_instructions` — the member’s **instructions**; `tools(...)` / `instructions(...)` in the body
 
 ## Constraint

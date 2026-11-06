@@ -16,7 +16,7 @@ with story("View Fidelity Files"):
         with given("checkout-flow's story map is .context/story-map.md and .context/story-map.drawio is not there"):
             pass
         with when("the Person views checkout-flow's story_map files"):
-            # Person -> Ticket.files(['stories-story_map'])
+            # Person -> Ticket.files(['stories-story-map'])
             # Person -> Ticket.read_file('.context/story-map.md')
             pass
         with then("the files panel shows the tabs .context/story-map.md and .context/story-map.drawio"):

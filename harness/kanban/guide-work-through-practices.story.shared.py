@@ -319,7 +319,7 @@ def _(s):
     def _(world):
         expect(world.before["progress"][world.before["next"]]["next_action"]).to(equal("satisfy"))
 
-    @s.and_("the report panel opens on stories-story_map")
+    @s.and_("the report panel opens on stories-story-map")
     def _(world):
         expect(world.report["path"]).to(equal(f".sessions/{CHECKOUT_FLOW.name}/validation-reports/{STORY_MAP_REPORT}.md"))
 
@@ -359,7 +359,7 @@ def _(s):
     def _(world):
         world.read = world.data_of(world.Ticket.load(PET_VISITS.name))
 
-    @s.then("Run next reads Run next: review on stories-story_map")
+    @s.then("Run next reads Run next: review on stories-story-map")
     def _(world):
         expect((world.read["progress"][world.read["next"]]["next_action"], world.read["next"])).to(equal(("review", STORY_MAP)))
 

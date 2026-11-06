@@ -221,7 +221,7 @@ def _(s):
     def _(world):
         expect_refused(world.refusal, FidelityNotFoundError, "no fidelity named 'stories-no_such_fidelity' on ticket 'billing-report'")
 
-    @s.but_("no review line is written for stories-story_map")
+    @s.but_("no review line is written for stories-story-map")
     def _(world):
         expect([line for line in log_lines(world, BILLING_REPORT) if " review " in line]).to(equal([]))
 

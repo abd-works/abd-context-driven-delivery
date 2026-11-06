@@ -24,6 +24,8 @@ export const ACTION_ICONS: Record<string, string> = { generate: '✦', validate:
 
 export type FidelityJson = {
   slug: string
+  practice: string
+  name: string
   progress: string
   violationCount: number
   actions: ActionStatesData
@@ -42,18 +44,18 @@ export class FidelityClient {
   }
 
   get practice(): string {
-    return this.json.slug.slice(0, this.json.slug.indexOf('-'))
+    return this.json.practice
   }
 
   // The fidelity's own name as the session card shows it, such as Scenarios or Front end code.
   get name(): string {
-    const words = this.json.slug.slice(this.json.slug.indexOf('-') + 1).replace(/_/g, ' ')
+    const words = this.json.name.replace(/_/g, ' ')
     return words.charAt(0).toUpperCase() + words.slice(1)
   }
 
-  // The name the actions take, such as ux-mockup.
+  // The name the actions take, such as ux-mockup: the fidelity's slug.
   get guidance(): string {
-    return this.json.slug.replace(/_/g, '-')
+    return this.json.slug
   }
 
   // A fidelity validated and waiting for review reads to review, as on the canvas.

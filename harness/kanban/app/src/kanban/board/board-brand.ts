@@ -3,7 +3,7 @@ export const PRACTICES = [
   { key: 'stories', name: 'Stories', prefix: 'stories-', color: '#6BCB77' },
   { key: 'ddd', name: 'DDD', prefix: 'ddd-', color: '#6C5CE7' },
   { key: 'ux', name: 'UX', prefix: 'ux-', color: '#E84393' },
-  { key: 'clean_engineering', name: 'CE', prefix: 'clean_engineering-', color: '#4FC3F7' },
+  { key: 'clean_engineering', name: 'CE', prefix: 'clean-engineering-', color: '#4FC3F7' },
   { key: 'bdd', name: 'BDD', prefix: 'bdd-', color: '#00B894' },
 ]
 
@@ -64,5 +64,3 @@ export function ageOf(now: number, stamp: string): string {
   const days = Math.floor(hours / HOURS_PER_DAY)
   return days === 1 ? 'yesterday' : `${days} days ago`
 }
-
-export const guidanceSlug = (slug: string): string => slug.replaceAll('_', '-')

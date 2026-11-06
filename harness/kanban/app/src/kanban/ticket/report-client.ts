@@ -1,6 +1,5 @@
 import type { ReportData, ReportRuleData, ViolationData } from '@cdd/harness/kanban/ticket'
 
-import { guidanceSlug } from '../board/board-brand'
 
 export const locationOf = (violation: ViolationData): string => (violation.line ? `${violation.location}:${violation.line}` : violation.location)
 
@@ -15,7 +14,7 @@ const EVERY_FORMAT = 'Fix every format of the fidelity: its documents, its diagr
 
 // The agent fixes from the report's own words, so it needs no second validate to find out what failed.
 function fixPrompt(rule: ReportRuleData, violations: ViolationData[]): string {
-  const slug = guidanceSlug(rule.fidelity)
+  const slug = rule.fidelity
   const errors = violations.flatMap((violation, index) => ['', `${index + 1}. ${errorOf(violation).join('\n')}`])
   return [
     `Fix ${violations.length === 1 ? 'this violation' : `these ${violations.length} violations`} of the ${slug} rule.`,

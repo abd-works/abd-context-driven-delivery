@@ -10,6 +10,7 @@ import os
 import re
 from pathlib import Path
 
+from harness.agent_tools.name import Name
 from harness.graph.bound_node import schema_sync_paused
 from harness.graph.graph import Graph, edge_order
 from harness.graph.rules import attach_rules
@@ -812,14 +813,6 @@ def _owner_of(member) -> str:
     return member.node_id.rsplit(":", 1)[-1]
 
 
-def snake_case(name: str) -> str:
-    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
-
-
-def kebab_case(name: str) -> str:
-    return re.sub(r"(?<!^)(?=[A-Z])", "-", name).lower()
-
-
 def _is_test_support(path: str) -> bool:
     """Spec files and the helpers only specs use: they drive the code under test, so an observation never invokes them."""
     from cdd_guidance.practices.bdd.model.spec_source import is_spec_file
@@ -878,9 +871,9 @@ def _invoked_in(text: str, is_python: bool, members_by_name: dict) -> list:
     transports: set[str] = set()
     for match in _TOOL_NAMED.finditer(text):
         transports.add(match.group(1))
-        operation = snake_case(match.group(3))
+        operation = Name(match.group(3)).snake
         for member in members_by_name.get((is_python, operation), ()):
-            if member.type == "Operation" and kebab_case(_owner_of(member)) == match.group(2):
+            if member.type == "Operation" and Name(_owner_of(member)).kebab == match.group(2):
                 add(member)
     code = re.sub(r"""(['"`])(?:\\.|(?!\1).)*\1""", '""', text)
     # A mamba spec keeps its fixtures on `self`; `self.project` is the spec's own state, not a member of the code.

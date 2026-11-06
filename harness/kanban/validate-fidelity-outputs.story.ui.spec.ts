@@ -26,7 +26,7 @@ const CLEAN_GRAPH = { practices: { stories: { nodes: [['node-1', '', 'Story', 's
 const report = (page: Page) => page.locator('[data-panel="report"]')
 
 async function openStoryMapReport(page: Page): Promise<Locator> {
-  await page.locator('.details-body [data-tile="stories-story_map"]').getByRole('button', { name: 'violations' }).click()
+  await page.locator('.details-body [data-tile="stories-story-map"]').getByRole('button', { name: 'violations' }).click()
   await expect(report(page).getByRole('button', { name: /verb-noun-format/ })).toBeVisible()
   return report(page)
 }
@@ -42,7 +42,7 @@ test.describe('with no chat connected', () => {
       })
 
       test("Then a band across the page top names checkout-flow's violations", async ({ page }) => {
-        await expect(page.getByRole('status', { name: "Active ticket's violations" })).toHaveText('checkout-flow · Discovery · violations: stories-story_map')
+        await expect(page.getByRole('status', { name: "Active ticket's violations" })).toHaveText('checkout-flow · Discovery · violations: stories-story-map')
       })
     })
 
@@ -165,8 +165,8 @@ test.describe('with a chat connected', () => {
   test.describe('Validate Fidelity', () => {
     async function openBillingStoryMap(page: Page): Promise<Locator> {
       await card(page, 'billing-report').getByRole('button', { name: 'Show Billing report' }).click({ position: { x: 4, y: 4 } })
-      await page.locator('.details-body [data-tile="stories-story_map"] .tile-name').click()
-      const bar = page.locator('.details-body [data-tile="stories-story_map"] .expansion')
+      await page.locator('.details-body [data-tile="stories-story-map"] .tile-name').click()
+      const bar = page.locator('.details-body [data-tile="stories-story-map"] .expansion')
       await expect(bar).toBeVisible()
       return bar
     }

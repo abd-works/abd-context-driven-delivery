@@ -7,7 +7,7 @@
 *Given* checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card)
 *When* the Person opens a new ticket titled Pet visits
 *Then* pet-visits is In progress in Discovery, titled Pet visits
-*And* its next step is Generate on stories-story_map
+*And* its next step is Generate on stories-story-map
 *And* checkout-flow is still the active ticket
 
 #### Scenario: Ask a chat to open a ticket

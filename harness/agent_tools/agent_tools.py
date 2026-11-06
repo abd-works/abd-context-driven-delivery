@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin, get_type_hints
 
+from harness.agent_tools.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
 
 ContextDocument = dict[str, Any]
@@ -88,11 +89,11 @@ class ToolSetCollection:
 
     @property
     def name(self) -> str:
-        return AgentToolSet()._slugify_class_name(type(self).__name__)
+        return Name(type(self).__name__).snake
 
     @property
     def slug(self) -> str:
-        return self.name.replace("_", "-")
+        return Name(self.name).kebab
 
     @property
     def registration_name(self) -> str:
@@ -216,15 +217,12 @@ class AgentToolSetOrigin:
 
     domain_slug: str | None = None
 
-    def _slugify_class_name(self, name: str) -> str:
-        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name).lower()
-
     @property
     def name(self) -> str:
         stored = getattr(self, "_name", None)
         if isinstance(stored, str) and stored:
             return stored
-        return self._slugify_class_name(type(self).__name__)
+        return Name(type(self).__name__).snake
 
     @name.setter
     def name(self, value: str) -> None:
@@ -232,9 +230,7 @@ class AgentToolSetOrigin:
 
     @property
     def slug(self) -> str:
-        if self.domain_slug:
-            return str(self.domain_slug).replace("_", "-")
-        return self._slugify_class_name(type(self).__name__).replace("_", "-")
+        return Name(self.domain_slug or type(self).__name__).kebab
 
     @property
     def install_folder(self) -> Path:

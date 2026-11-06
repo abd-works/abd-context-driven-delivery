@@ -26,7 +26,7 @@ story('Open Session', CHAT_BAR, () => {
     // session list press -> activateSession($, 'payment-retry') -> $.mcp.call('board.activate', { ticket: 'payment-retry', leaving: ['commit', 'push'], opening: ['branch', 'worktree'] }) -> Board.activate()
     then('the Chat Bar shows payment-retry with its Discovery dots', async ($, on, scene) => {
       await expectMarks(scene.ui, { 'session-name-button': 'payment-retry' })
-      expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-story_map', 'dot-ux-ia', 'dot-clean_engineering-modules'])
+      expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-story-map', 'dot-ux-ia', 'dot-clean-engineering-modules'])
       expect(called(scene.world, 'board.activate')).toEqual({ ticket: 'payment-retry', leaving: ['commit', 'push'], opening: ['branch', 'worktree'] })
     })
   })

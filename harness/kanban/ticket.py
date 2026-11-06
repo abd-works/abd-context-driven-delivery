@@ -118,11 +118,11 @@ class Ticket(Card):
     @property
     @data_field(key="progress")
     def progress_by_fidelity(self) -> dict[str, FidelityProgress]:
-        """Its progress by fidelity slug, such as stories-story_map, the way the board looks a fidelity up."""
+        """Its progress by fidelity slug, such as stories-story-map, the way the board looks a fidelity up."""
         return {entry.fidelity_slug: entry for entry in self.progress}
 
     def progress_of(self, slug: str) -> FidelityProgress:
-        """The progress of the fidelity slug names, such as stories-story_map."""
+        """The progress of the fidelity slug names, such as stories-story-map."""
         found = next((entry for entry in self.progress if entry.fidelity_slug == slug), None)
         if found is None:
             raise FidelityNotFoundError(slug, f"ticket {self.name!r}")
@@ -259,7 +259,7 @@ class Ticket(Card):
     def generate_commands(self, fidelities: list[str], formats: list[str]) -> list[str]:
         """Return the commands that generate fidelities in formats. A format the same practice's earlier fidelity has no file in is rendered from that fidelity first."""
         renders = [self._render_command(self.progress_of(slug), formats) for slug in fidelities]
-        named = " ".join(slug.replace("_", "-") for slug in fidelities)
+        named = " ".join(fidelities)
         commands = [*filter(None, renders), f"/actions-generate {named} format={','.join(formats)}"]
         return [f"{command} session={self._session.session_file_from_project}" for command in commands]
 
@@ -321,7 +321,7 @@ class Ticket(Card):
         wanted = [label for label in formats if label in earlier.fidelity.outputs and label not in made]
         if not made or not wanted:
             return ""
-        return f"/actions-render {earlier.fidelity_slug.replace('_', '-')} format={','.join(wanted)} source={sorted(made)[0]}"
+        return f"/actions-render {earlier.fidelity_slug} format={','.join(wanted)} source={sorted(made)[0]}"
 
 
 @language_adapter(language="typescript", identity=("ticket", "slug"))
@@ -358,7 +358,7 @@ class FidelityProgress:
     @classmethod
     @tool_subject
     def load(cls, ticket: str, fidelity: str) -> FidelityProgress:
-        """The progress of fidelity, a slug such as stories-story_map, on the ticket named ticket."""
+        """The progress of fidelity, a slug such as stories-story-map, on the ticket named ticket."""
         return Ticket.load(ticket).progress_of(fidelity)
 
     @property
@@ -370,8 +370,8 @@ class FidelityProgress:
     @property
     @data_field(key="slug")
     def fidelity_slug(self) -> str:
-        """Its practice and fidelity, such as stories-story_map. Named apart from `slug`, which names the toolset its tools are published under."""
-        return self.slug_of(self._fidelity)
+        """Its practice and fidelity, such as stories-story-map. Named apart from `slug`, which names the toolset its tools are published under."""
+        return self._fidelity.slug
 
     @property
     def fidelity(self) -> FidelityGuidance:
@@ -488,9 +488,6 @@ class FidelityProgress:
         """This progress with its latest validate failed, so validate is to do again; a person's review stands."""
         kept = [action for action in self._done_actions if action in (GENERATE, REVIEW)]
         return FidelityProgress(self._fidelity, self._stage, kept, True, self._ticket)
-
-    def slug_of(self, fidelity: FidelityGuidance) -> str:
-        return f"{self.practice}-{fidelity.name}"
 
     @property
     def earlier_fidelities(self) -> list[FidelityGuidance]:

@@ -193,9 +193,9 @@ def _(s):
         expect_placed(world.opened, "Discovery", is_done=False)
         expect((world.opened["name"], world.opened["title"])).to(equal(("pet-visits", PET_VISITS_TICKET.title)))
 
-    @s.and_("its next step is Generate on stories-story_map")
+    @s.and_("its next step is Generate on stories-story-map")
     def _(world):
-        expect((world.opened["next"], world.opened["progress"][world.opened["next"]]["next_action"])).to(equal(("stories-story_map", "generate")))
+        expect((world.opened["next"], world.opened["progress"][world.opened["next"]]["next_action"])).to(equal(("stories-story-map", "generate")))
 
     @s.and_("checkout-flow is still the active ticket")
     def _(world):

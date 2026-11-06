@@ -22,7 +22,7 @@ story('Display Session Card', CHAT_BAR, () => {
     })
     // ChatBarView paints the session card from the same ChatBarClient
     then("the card opens over the strip with each fidelity's colour, name and state over its dot, such as Scenarios done over the Stories dot", async ($, on, scene) => {
-      const rows = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean_engineering-model'].map(async key => (await drawn(scene.ui, key))?.children?.map(textOf)))
+      const rows = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean-engineering-model'].map(async key => (await drawn(scene.ui, key))?.children?.map(textOf)))
       expect(rows).toEqual([['✓', 'Scenarios done', 'harness/chat-ui/.context'], ['○', 'Mockup to do', 'harness/chat-ui/design'], ['○', 'Model to do', 'harness/chat-ui/pane']])
       expect((await markOf(scene.ui, 'card-stories-scenarios'))?.props?.color).toBe('#6BCB77')
     })
@@ -31,7 +31,7 @@ story('Display Session Card', CHAT_BAR, () => {
       // border and padding take 2. Each dot then takes 2 with its gap. stories-scenarios, which the button follows, is
       // done, so no action button is drawn; │ takes 2 and the stage icons Backlog and Discovery 2 each, so the outlined
       // Specification starts at column 32.
-      const indents = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean_engineering-model', 'card-stage'].map(async key => (await drawn(scene.ui, key))?.props?.marginLeft))
+      const indents = await Promise.all(['card-stories-scenarios', 'card-ux-mockup', 'card-clean-engineering-model', 'card-stage'].map(async key => (await drawn(scene.ui, key))?.props?.marginLeft))
       expect(indents).toEqual([18, 20, 22, 30])
       expect((await findText(scene.ui, 'Specification'))?.props?.color).toBe('#E5531A')
     })

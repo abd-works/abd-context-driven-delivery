@@ -13,6 +13,7 @@ import re
 from html import escape
 from typing import Dict, List, Optional, Tuple
 
+from harness.agent_tools.name import Name
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import (
     GROUP_FILL_COLORS,
     ArrowRouter,
@@ -331,4 +332,4 @@ def _integration_root(integration) -> str:
 
 
 def _slug(name: str) -> str:
-    return re.sub(r"[^0-9a-z]+", "-", name.lower()).strip("-") or "x"
+    return Name(name).title_slug or "x"

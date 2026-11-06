@@ -81,7 +81,7 @@ function activate(world: World, { ticket }: { ticket: string }): TicketData {
 // Ticket.create: a new ticket In progress in Discovery, named from its title.
 function create(world: World, { title }: { title: string }): TicketData {
   const name = title.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-  const created = checkoutFlow({ title, name, column: 'Discovery', next: 'stories-story_map' })
+  const created = checkoutFlow({ title, name, column: 'Discovery', next: 'stories-story-map' })
   world.board = boardOf(world.board.active, ...ticketsOf(world.board), created)
   return created
 }
