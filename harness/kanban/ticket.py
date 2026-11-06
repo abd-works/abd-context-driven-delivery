@@ -152,6 +152,28 @@ class Ticket(Card):
 
     @property
     @data_field
+    def is_closed(self) -> bool:
+        """Whether its session is closed, so it shows in Complete."""
+        return self._session.is_closed
+
+    @property
+    @data_field
+    def is_active(self) -> bool:
+        """Whether its session is the one saved as open, which the agent works in."""
+        return self._board.repo.current_session.name == self.name
+
+    @property
+    @data_field
+    def drop_targets(self) -> list[str]:
+        """The columns besides the stages a person can drop it on. The Backlog takes any ticket, which keeps its whole
+        folder there. Complete takes one from Implementation's Done, or the active ticket through its Close dialog,
+        because closing it asks what to do with its work."""
+        final = self._stages[-1]
+        closes = not self.is_closed and (self.is_active or (self.column is final and self.is_done))
+        return [BACKLOG_COLUMN, *([COMPLETE_COLUMN] if closes else [])]
+
+    @property
+    @data_field
     def is_done(self) -> bool:
         """True in a stage when a person marked it done there, or when all its enabled work there is done."""
         column = self.column

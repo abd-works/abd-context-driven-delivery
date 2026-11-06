@@ -59,7 +59,7 @@ export class BoardClient extends BoardClientGenerated {
   }
 
   get activeTicket(): TicketClient | undefined {
-    return this.tickets.find(ticket => ticket.name === this.active)
+    return this.tickets.find(ticket => ticket.isActive)
   }
 
   private get latestTicket(): TicketClient | undefined {

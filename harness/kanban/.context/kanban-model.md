@@ -263,6 +263,12 @@ The base type of Ticket and BacklogItem.
 	// data field
 	// its session's workpath, as a path from the project; empty for the whole repository
 	-> Session.workpath
++ is_closed: bool
+	// data field: its session is closed, so it shows in Complete
++ is_active: bool
+	// data field: its session is the one saved as open
++ drop_targets: list[str]
+	// data field: the columns besides the stages it can be dropped on: the Backlog always, Complete from Implementation's Done or while it is active
 + worktree: str
 	// data field
 	// the folder of its own worktree, where its chat works; empty while it has none. The board picks the chat working in this folder, or a folder inside it, when a person clicks the ticket

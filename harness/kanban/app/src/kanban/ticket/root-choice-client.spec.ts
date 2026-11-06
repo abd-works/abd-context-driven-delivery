@@ -124,7 +124,7 @@ describe('Choose Session Root', () => {
       })
 
       it("should stay open on the new ticket's roots, so its practices' roots can be set", async () => {
-        expect((await started()).store.state.rootChoice?.ticket).toBe('gift-cards')
+        expect((await started()).store.state.rootChoice?.ticket?.name).toBe('gift-cards')
       })
     })
   })

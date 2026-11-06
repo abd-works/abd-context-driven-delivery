@@ -26,7 +26,7 @@ async function switchingPage() {
   return { page, asked, active: ticketOn(page, ACTIVE), chosen: ticketOn(page, CHOSEN) }
 }
 
-const activatePosts = (asked: Asked[]) => asked.filter(request => request.path === '/api/board/activate' && request.body?.ticket === CHOSEN)
+const activatePosts = (asked: Asked[]) => asked.filter(request => request.path === `/api/ticket/${CHOSEN}/activate`)
 
 describe('Activate Ticket', () => {
   it('should offer commit and push on leaving and open with merge off', async () => {
@@ -64,7 +64,7 @@ describe('Activate Ticket', () => {
 
     it('should send what was chosen', async () => {
       const { asked } = await confirmed()
-      expect(activatePosts(asked)[0]?.body).toEqual({ ticket: CHOSEN, leaving: ['commit', 'push', 'merge'], opening: ['branch'] })
+      expect(activatePosts(asked)[0]?.body).toEqual({ leaving: ['commit', 'push', 'merge'], opening: ['branch'] })
     })
 
     it('should report it', async () => {

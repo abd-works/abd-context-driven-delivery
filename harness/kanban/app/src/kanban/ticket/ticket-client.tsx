@@ -37,14 +37,6 @@ export class TicketClient extends TicketClientGenerated {
     return `${this.column}/${this.name}`
   }
 
-  get isClosed(): boolean {
-    return this.column === 'Complete'
-  }
-
-  get isActive(): boolean {
-    return this.name === this.page.board.active
-  }
-
   // Commands run in the active session, so with Active session only on, another ticket cannot start one.
   get isLocked(): boolean {
     return this.page.store.state.onlyActive && !this.isActive
@@ -138,12 +130,9 @@ export class TicketClient extends TicketClientGenerated {
     return this.isLocked ? 'Activate this session to run actions' : ''
   }
 
-  // The Backlog takes any ticket, which keeps its whole folder there. Complete takes one from Implementation's Done, or
-  // the active ticket through its Close dialog, because closing it asks what to do with its work.
+  // Python says which columns besides the stages take the ticket: the Backlog always, Complete only as it allows.
   canDropOn(edge: string): boolean {
-    if (edge === 'Backlog') return true
-    if (edge === 'Complete') return this.isActive || (this.column === 'Implementation' && this.isDone)
-    return false
+    return this.dropTargets.includes(edge)
   }
 
   async dropOn(edge: string): Promise<void> {

@@ -1031,6 +1031,16 @@ with description("the board tools") as self:
             with it("should make the chosen ticket the current session"):
                 expect(self.project.call("board.show")["active"]).to(equal("sign-up"))
 
+            with it("should mark the chosen ticket active"):
+                expect(self.project.ticket_json("sign-up")["is_active"]).to(be_true)
+
+            # Closing the active ticket asks what to do with its work, so its Close dialog lets it into Complete.
+            with it("should let the active ticket be dropped on the Backlog and on Complete"):
+                expect(self.project.ticket_json("sign-up")["drop_targets"]).to(equal(["Backlog", "Complete"]))
+
+            with it("should let a ticket at work in Discovery be dropped only on the Backlog"):
+                expect(self.project.ticket_json("pet-visits")["drop_targets"]).to(equal(["Backlog"]))
+
         with context("that activates a ticket with a new branch"):
             with before.each:
                 self.project.call("ticket.activate", ticket="sign-up", opening=["branch"])
