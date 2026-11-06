@@ -29,22 +29,15 @@ class Satisfy(GuidanceAction):
         sections: list[str] = [_SATISFY_MARKDOWN.strip()]
 
         def on(item) -> None:
-            validate = Validate(self.session)
-            if isinstance(item, str):
-                sections.append(validate.validate(item))
-                fix_guidance: GuidanceArg = item
-            else:
-                sections.append(validate.validate(guidance=[item]))
-                fix_guidance = [item]
-            generate = Generate(self.session)
-            generate._bind_guidance(fix_guidance)
+            worked_on: GuidanceArg = item if isinstance(item, str) else [item]
+            sections.append(self._inside(Validate, worked_on).validate(worked_on))
             fix_prose = AgentInstructions.for_callable(
-                Generate.generate_fixes_from_validate, generate
+                Generate.generate_fixes_from_validate, self._inside(Generate, worked_on)
             ).expand({}, {}).instructions
             if fix_prose.strip():
                 sections.append(fix_prose.strip())
 
-        self.run(guidance, on, action="satisfy")
+        self.run(on, action="satisfy")
         sections.append(
             "When every applicable rule passes validate for artifacts under {session.path}/, "
             "reply with a short **Fixes** list: file path and rule slug per change."

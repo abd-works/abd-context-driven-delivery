@@ -13,7 +13,7 @@ and document commands and picks the chat). The Thens of the scenarios below that
 are left to those specs too.
 
 The story_map fidelity declares its markdown at `.context/story-map.md` and its drawio at `.context/story-map.drawio`
-(cdd_guidance/practices/stories/stories.md), so `Session.fidelity_outputs` puts them under `<root>/.context/`.
+(cdd_guidance/practices/stories/stories.md), so `FidelityGuidance.output_paths` puts them under `<root>/.context/`.
 """
 
 from __future__ import annotations
@@ -34,13 +34,12 @@ from harness.kanban.session_board_examples import (
     generated,
 )
 from harness.kanban.story_test import SharedStories, expect_action
-from stories.stories import Stories
 
 shared_stories = SharedStories("Generate Fidelity Outputs")
 
 
 def at_work(relative: str) -> str:
-    """A path under alpha's workpath, as Session.fidelity_outputs writes it."""
+    """A path under alpha's workpath, as FidelityGuidance.output_paths writes it."""
     return (Path(ALPHA_WORKPATH) / relative).resolve().as_posix()
 
 
@@ -119,7 +118,7 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
+        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["story_map"].output_paths()
 
     @s.then("the markdown file is /work/.context/story-map.md")
     def _(world):
@@ -135,7 +134,7 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
+        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["story_map"].output_paths()
 
     @s.then("the markdown file is /work/docs/stories/.context/story-map.md")
     def _(world):
@@ -151,7 +150,7 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
+        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["story_map"].output_paths()
 
     @s.then("the drawio file is /work/docs/map/.context/story-map.drawio")
     def _(world):
@@ -167,8 +166,8 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's and scenarios' files go")
     def _(world):
-        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
-        world.scenario_outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="scenarios"))
+        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["story_map"].output_paths()
+        world.scenario_outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).practices["stories"].fidelities["scenarios"].output_paths()
 
     @s.then("story_map's markdown is /work/.context/our-map.md and its drawio stays /work/.context/story-map.drawio")
     def _(world):

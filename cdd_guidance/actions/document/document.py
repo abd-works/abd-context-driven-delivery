@@ -27,5 +27,5 @@ class Document(GuidanceAction):
                 scanner.scan(paths)
             item.generate_output()
 
-        self.run(guidance, on, action="document")
+        self.run(on, action="document")
         return "Document existing state under {session.path}/ - violations flagged, none corrected."

@@ -35,6 +35,8 @@ _FORMAT_WORD = "format="
 # The session a command is for, as the session board names it: `session=.sessions/<name>/session.json`.
 _SESSION_WORD = "session="
 _SKIP_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
+# What a call has bound before it binds any guidance; None cannot stand for it, since binding None keeps the binding.
+_NOTHING_BOUND = object()
 PATHS_NOTE = (
     "paths: a file, a list of files, or a folder. Pass paths on an MCP call. "
     "This action reads them locally. Leave the document body out of the call."
@@ -80,12 +82,24 @@ class GuidanceAction:
 
     An action works in one session. An action started inside another is made for that action's session; a board
     command names its ticket's session in a ``session=`` word; any other call works in the chat's current session.
+
+    A call binds the guidance it works on once, when it starts; the action's operations then read it from the action
+    through ``listed()``, so each practice it lists is one object, the one its session holds.
     """
 
     def __init__(self, session: Any = None) -> None:
         super().__init__()
         self._running = threading.local()
         self._made_for = session
+
+    # The guidance argument this call bound, so binding the same argument again in the same call keeps what it built.
+    @property
+    def _bound_guidance(self) -> Any:
+        return getattr(self._running, "bound_guidance", _NOTHING_BOUND)
+
+    @_bound_guidance.setter
+    def _bound_guidance(self, guidance: Any) -> None:
+        self._running.bound_guidance = guidance
 
     @property
     def _guidance_text(self) -> str | None:
@@ -147,8 +161,22 @@ class GuidanceAction:
             return Session.from_file(self._named_session_file)
         return self._made_for if self._made_for is not None else Session.current()
 
-    def clear_session_action_log(self) -> None:
+    def start_call(self) -> None:
+        """Begin a new call: one action object serves every call while the MCP server runs, so a call starts with no
+        guidance bound, no session found, and no line logged, rather than with the last call's."""
         self._logged_session_action = None
+        self._bound_guidance = _NOTHING_BOUND
+        self._named_session_file = ""
+        self._guidance_text = None
+        self._tool_items = []
+        self._listed_items = None
+
+    def call_session(self, arguments: dict[str, Any]):
+        """The session a call with arguments works in, once it has bound their guidance: a board command names its
+        ticket's session in its guidance, which the call's log line belongs in."""
+        if "guidance" in arguments:
+            self._bind_guidance(arguments.get("guidance"))
+        return self.session
 
     def session_action_for_operation(self, operation: str) -> str:
         """MCP operation name → session action name (``run`` uses the same string)."""
@@ -168,9 +196,12 @@ class GuidanceAction:
         return discovered
 
     def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
-        """Guidance ref or dict: iterate Guidance. Other strings: run once on that text."""
-        if guidance is None:
+        """Guidance ref or dict: iterate Guidance. Other strings: run once on that text. Binding what this call already
+        bound keeps the Guidance it built, so a call's operations all work on the same objects."""
+        if guidance is None or guidance == self._bound_guidance:
             return
+        self._bound_guidance = guidance
+        self._named_session_file = ""
         self._listed_items = None
         bound = self._as_guidance_item(guidance)
         if bound is not None and not isinstance(guidance, list):
@@ -278,6 +309,22 @@ class GuidanceAction:
         if not chose_format:
             practice.use_kept_format()
 
+    def _inside(self, action_type: type, guidance: str | list | None = None):
+        """An action of action_type started inside this one: made for this action's session and working on guidance,
+        this action's text or some of its listed Guidance, or on everything this action works on when guidance is
+        none. It works on the same objects, so the session's practices stay the ones this action listed."""
+        inner = action_type(self.session)
+        worked_on = guidance if guidance is not None else self._guidance_text if self._guidance_text is not None else self.listed()
+        inner._bound_guidance = worked_on
+        if isinstance(worked_on, str):
+            inner._guidance_text = worked_on
+            inner._tool_items = []
+        else:
+            inner._guidance_text = None
+            inner._tool_items = list(worked_on)
+            inner._listed_items = list(worked_on)
+        return inner
+
     def each(self, operation):
         """Run ``operation`` once on a guidance string, or once per Guidance."""
         text = self._guidance_text
@@ -285,9 +332,8 @@ class GuidanceAction:
             return [operation(text)]
         return [operation(item) for item in self.listed()]
 
-    def run(self, guidance: GuidanceArg, operation, *, action: str = "") -> list:
-        """Bind guidance and run ``operation`` on the string or each Guidance."""
-        self._bind_guidance(guidance)
+    def run(self, operation, *, action: str = "") -> list:
+        """Run ``operation`` on the guidance this call bound: once on its string, or once per Guidance."""
         self._keep_named_formats()
         self._log_running_action(action)
         try:
@@ -311,7 +357,8 @@ class GuidanceAction:
         if self._logged_session_action == action:
             return
         self._logged_session_action = action
-        self.session.log_guidance_action(action, self.listed())
+        self.listed()
+        self.session.log_guidance_action(action)
 
     @echo
     @agent_instructions
@@ -346,8 +393,8 @@ class GuidanceAction:
         session_json = Path(session.session_path) / "session.json"
         root = Path(session.workpath or session.repo_path or project_checkout()).resolve().as_posix()
         project = Path(session.repo_path or project_checkout()).resolve().as_posix()
-        practices = [item for item in self.listed() if not isinstance(item, str)]
-        writes = [f"- {item.slug}: {session.practice_root(item).as_posix()}" for item in practices]
+        practices = [(item, self._session_practice(item)) for item in self.listed() if not isinstance(item, str)]
+        writes = [f"- {item.slug}: {practice.folder.as_posix()}" for item, practice in practices if practice is not None]
         stored = session_json.read_text(encoding="utf-8").strip() if session_json.is_file() else "{}"
         return "\n".join([
             "## Session",

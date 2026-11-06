@@ -81,8 +81,8 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 + log_action(action: str, paths: list[Path]): None
 	-> Loop.entries
 	// one timestamped line on session_path / "session.log" for this action
-+ log_guidance_action(action: str, guidance_items: list): None
-	// opens each listed practice on this session, syncs that practice's guideline from the action binding, collects workpath and practice folder paths, then calls log_action
++ log_guidance_action(action: str): None
+	// collects the workpath and the folders of each practice this session has opened, then calls log_action
 + note_injected_rules_for_edit(guidance: PracticeGuidance, payload: dict): None
 	// notes rule slugs that match an edit payload so the next log_action line can name them
 + note_injected_rules_from_bags(guidance: PracticeGuidance, matched_path: str, bags: list): None
@@ -92,7 +92,7 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 	// the line always points at the chat id, transcript file, and line numbers; it does not copy the transcript
 	// the host supplies CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH (or the MCP call names its chat, or note_chat(ChatPointer)) before logging; without them the action still logs and points at a no-chat line on session.err
 	// when a practice guideline's rules were injected, the line lists those rule names only, sorted, separated by that practice and fidelity, and the file that matched the glob
-+ log_validation(guidance: PracticeGuidance, violations: list[str]): None
++ PracticeSessionOutput.log_validation(violations: list[str]): None
 	// one timestamped line on session_path / "session.log"
 	// the line names the practice, the fidelity, and the rules that were run
 	// each violation names the exact rule, a synopsis of the code, and the reported correction
@@ -131,7 +131,7 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 - practice(name) builds that practice's guideline and that practice's graph together. The graph root points at that practice's parent folders. The default folders come from the practice. new and select read repo_path / ".context" / "practices.json" and practice(name) uses a saved set when that practice is listed there.
 - A practice guideline's rules carry a glob. inject_rules runs for content that has been edited. The edit matches the glob and those rules are injected. An edit that misses the glob injects nothing from that guideline.
 - log_action records the injected rule names for that practice guideline and fidelity.
-- Validate.validate calls log_validation. Generate and Satisfy call Validate.validate, so those runs are the same line. Iterate tells the agent to validate and does not call Validate. Sketch does not call Validate.
+- Validate.validate calls each listed practice's log_validation. Generate and Satisfy call Validate.validate, so those runs are the same line. Iterate tells the agent to validate and does not call Validate. Sketch does not call Validate.
 - GuidanceAction.run calls log_guidance_action for the action it is running when session.new or session.switch has bound session_path.
 - RulesCollection.inject_rules calls note_injected_rules_from_bags on the current session when rules are injected.
 - new and select each run a code section and return keep_log. keep_log is the one instruction set both of them return.
@@ -362,7 +362,7 @@ it should show the chat and the response under the lines they belong to
 ##### with a practice and a fidelity
 
 ```
--> session.log_validation(guidance, violations)
+-> session.practice(name).log_validation(violations)
 it should log that practice, that fidelity, and the rules that were run
   -> expect(session.session_path / "session.log").to contain the practice
   -> expect(session.session_path / "session.log").to contain the fidelity
@@ -372,7 +372,7 @@ it should log that practice, that fidelity, and the rules that were run
 ##### with a violation
 
 ```
--> session.log_validation(guidance, violations)
+-> session.practice(name).log_validation(violations)
 it should log the exact rule, a synopsis of the code, and the reported correction
   -> expect(session.session_path / "session.log").to contain the rule
   -> expect(session.session_path / "session.log").to contain the synopsis

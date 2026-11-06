@@ -85,7 +85,7 @@ with story("Open Ticket Session"):
             pass
         with when("the Person chooses src/billing for checkout-flow's Stories root"):
             # Person -> Ticket.choose_practice_root('stories', 'src/billing')
-            # Ticket -> Session.choose_practice_root('stories', <repo>/src/billing)
+            # Ticket -> PracticeSessionOutput(stories).keep_root(<repo>/src/billing)
             pass
         with then("the Stories root reads src/billing, chosen by the Person"):
             pass
@@ -93,7 +93,7 @@ with story("Open Ticket Session"):
             pass
         with when("the Person puts Stories back on its default root"):
             # Person -> Ticket.use_default_practice_root('stories')
-            # Ticket -> Session.use_default_practice_root('stories')
+            # Ticket -> PracticeSessionOutput(stories).use_default_root()
             pass
         with then("the Stories root is the default again"):
             pass
