@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { ActionStatesData, TicketData } from '@cdd/harness/kanban/ticket'
 
-import { sendToChat } from '../chat-command'
+import { promptCommands } from '../chat-command'
 import { clearChosenAction } from './action-picker-client'
 import { reasonOf } from '../failure'
 import { callTool, currentChatBar, refreshChatBar } from './chat-bar-client'
@@ -125,14 +125,15 @@ export async function selectFidelity($: EngineInterface, fidelity: FidelityClien
   await clearChosenAction($)
 }
 
-// Generate can take two commands, a render and then the generate, so ticket.generate_commands names them.
+// Each action goes in the prompt box for the person to send. Generate can take two commands, a render and then the
+// generate, so ticket.generate_commands names them.
 export async function runAction($: EngineInterface, fidelity: FidelityClient, action: string): Promise<void> {
-  if (action !== 'generate') return sendToChat($, `/actions-${action} ${fidelity.guidance}`)
+  if (action !== 'generate') return promptCommands($, [`/actions-${action} ${fidelity.guidance}`])
   const chatBar = await currentChatBar($)
   const formats = fidelity.defaultFormat ? [fidelity.defaultFormat] : []
   try {
     const commands = await callTool<string[]>($, 'ticket.generate_commands', { ticket: chatBar.sessionName, fidelities: [fidelity.fidelity], formats })
-    for (const command of commands) await sendToChat($, command)
+    await promptCommands($, commands)
   } catch (failure) {
     $.ui.toast(`${fidelity.guidance} cannot generate: ${reasonOf(failure)}`)
   }

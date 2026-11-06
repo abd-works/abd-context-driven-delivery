@@ -1,6 +1,5 @@
 import type { EngineInterface } from 'claude-code'
 
-import { after } from './board-chat/board'
 import { reasonOf } from './failure'
 
 // The engine queues a plugin's prompt or slash command until the chat is idle, the same queue a person's Ctrl+Enter
@@ -20,13 +19,13 @@ export async function filledPrompt($: EngineInterface, text: string): Promise<st
   return answer.isFilled ? '' : `the prompt box did not take it (${answer.refusal ?? 'refused by a hook'})`
 }
 
-// Sends a slash command to this chat: it runs as if the person typed it, its line in the transcript, once the chat is
-// idle. The engine refuses a plugin's command in some states, such as after the person stopped the session and has
-// typed nothing since, and may say so only once the chat is idle; whenever it does, the command waits in the prompt
-// box for the person to send, so it is never lost.
-export async function sendToChat($: EngineInterface, text: string): Promise<void> {
-  const refusal = await $.command.run(commandOf(text)).then(() => '', reasonOf)
-  if (!refusal) return
-  const unfilled = await filledPrompt($, text).catch(reasonOf)
-  $.ui.toast(unfilled ? `The chat would not run ${text}: ${refusal}; ${unfilled}` : `The chat would not run ${text} (${refusal}), so it is in the prompt box: press Enter to send it`)
+// Puts slash commands in the prompt box the moment a button is pressed, as the handoff button does, and the person
+// presses Enter to send them. Running them straight away waits until the chat is idle, so a press showed nothing for a
+// long time. A prompt holds one slash command, so the first goes in the box and the person is told the rest.
+export async function promptCommands($: EngineInterface, commands: string[]): Promise<void> {
+  const [first, ...rest] = commands
+  if (!first) return
+  const unfilled = await filledPrompt($, first).catch(reasonOf)
+  if (unfilled) return $.ui.toast(`${first} could not go in the prompt box: ${unfilled}`)
+  if (rest.length) $.ui.toast(`After ${first}, send ${rest.join(', then ')}`)
 }

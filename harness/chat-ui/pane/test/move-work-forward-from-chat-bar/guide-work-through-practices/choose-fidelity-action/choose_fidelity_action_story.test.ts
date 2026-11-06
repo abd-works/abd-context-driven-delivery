@@ -36,14 +36,14 @@ story('Choose Fidelity Action', CHAT_BAR, () => {
       expect(textOf(await markOf(scene.ui, 'next-action-mark'))).toBe('↻')
       expect(await tipOf(scene.ui, 'action')).toBe('iterate ux-mockup')
       expect(await drawn(scene.ui, 'picker')).toBeUndefined()
-      expect(scene.world.sent).not.toContain('/actions-iterate ux-mockup')
+      expect(scene.world.fills).not.toContain('/actions-iterate ux-mockup')
     })
     when('the Person runs the action', async ($, on, scene) => {
       await scene.ui.press({ key: 'next-action' })
     })
-    // action button press -> runAction($, fidelity, 'iterate') -> $.command.run({ command: 'actions-iterate', args: 'ux-mockup' })
-    then('the chat runs /actions-iterate ux-mockup, and the button shows the next action again', async ($, on, scene) => {
-      expect(scene.world.sent).toContain('/actions-iterate ux-mockup')
+    // action button press -> runAction($, fidelity, 'iterate') -> promptCommands -> $.prompt.fill({ text: '/actions-iterate ux-mockup', mode: 'append' })
+    then('/actions-iterate ux-mockup waits in the prompt box for the Person to send, and the button shows the next action again', async ($, on, scene) => {
+      expect(scene.world.fills).toContain('/actions-iterate ux-mockup')
       expect(await tipOf(scene.ui, 'action')).not.toBe('iterate ux-mockup')
     })
   })

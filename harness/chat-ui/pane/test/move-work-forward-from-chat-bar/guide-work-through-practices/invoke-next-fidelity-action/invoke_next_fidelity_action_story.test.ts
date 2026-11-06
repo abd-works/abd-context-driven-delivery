@@ -22,9 +22,9 @@ story('Invoke Next Fidelity Action', CHAT_BAR, () => {
       await scene.ui.press({ key: 'next-action' })
     })
     // ChatBarView press -> runAction($, fidelity, 'validate')
-    // runAction -> $.command.run({ command: 'actions-validate', args: 'ux-mockup' }); only generate asks ticket.generate_commands for its commands
-    then('the chat runs /actions-validate ux-mockup', async ($, on, scene) => {
-      expect(scene.world.sent).toContain('/actions-validate ux-mockup')
+    // runAction -> promptCommands -> $.prompt.fill({ text: '/actions-validate ux-mockup', mode: 'append' }); only generate asks ticket.generate_commands for its commands
+    then('/actions-validate ux-mockup waits in the prompt box for the Person to send', async ($, on, scene) => {
+      expect(scene.world.fills).toContain('/actions-validate ux-mockup')
     })
   })
   scenario('Show the next action before it runs', ({ given, when, then }) => {
