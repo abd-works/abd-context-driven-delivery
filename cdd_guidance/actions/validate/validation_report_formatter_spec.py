@@ -15,7 +15,8 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from validate.validation_report import build_graph_json_report
+from space.session import Session
+from validate.validation_report import ValidationReport
 from validate.verify_report_links import verify_report
 
 
@@ -41,11 +42,10 @@ with description("validation report formatter links"):
             ]
 
         with it("should emit absolute path #L links that verify_report_links accepts"):
-            report_md = build_graph_json_report(
-                self.violations,
-                workspace_directory=self.root,
-                link_from_directory=self.session_dir,
-            )
+            session = Session(self.root)
+            session.workpath = self.root
+            session.session_path = self.session_dir
+            report_md = ValidationReport(session).of_graph_and_ai_rules(self.violations, [])
             report_path = self.session_dir / "validate-clean-engineering-code-src.md"
             report_path.write_text(report_md, encoding="utf-8")
             account = (self.root / "src/customer/account/account.ts").resolve()
