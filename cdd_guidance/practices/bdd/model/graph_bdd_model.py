@@ -2,7 +2,8 @@
 
 The behavior tree is the graph's `bdd` nodes, in each spec file's order. Each observation's call graph starts at what
 its `invokes` edges name, and each call is followed through the Clean Engineering model's interactions, which the
-graph keeps as facts on the code's members and, for every member the model describes, under `model_members`.
+graph saves under `model_members` on the Clean Engineering practice's root. Each code member's row names its class
+under `owner`.
 """
 
 from __future__ import annotations
@@ -70,7 +71,8 @@ class GraphBddModel(BddModel):
         for member_id in self._invoked.get(observation_id, []):
             row = self._code.get(member_id)
             if row is not None:
-                entries.extend(self._call(member_id.rsplit(":", 1)[-1], row[1], 0, set(), {**decode_node_data(row), "kind": row[2]}))
+                facts = {**decode_node_data(row), "kind": row[2]}
+                entries.extend(self._call(facts.get("owner", ""), row[1], 0, set(), facts))
         return entries or [CallGraphEntry(depth=0, kind="call", text=NO_OPERATION)]
 
     def _call(self, owner: str, name: str, depth: int, trail: set, code_facts: Optional[dict] = None) -> List[CallGraphEntry]:
@@ -94,9 +96,11 @@ class GraphBddModel(BddModel):
 
     def _code_facts(self, owner: str, name: str) -> Optional[dict]:
         """The facts on the code's member owner.name, when the graph loaded it."""
-        for node_id, row in self._code.items():
-            if row[1] == name and node_id.rsplit(":", 1)[-1] == owner and row[2] in ("Operation", "Property"):
-                return {**decode_node_data(row), "kind": row[2]}
+        for row in self._code.values():
+            if row[1] == name and row[2] in ("Operation", "Property"):
+                facts = decode_node_data(row)
+                if facts.get("owner") == owner:
+                    return {**facts, "kind": row[2]}
         return None
 
 

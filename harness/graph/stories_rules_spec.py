@@ -12,6 +12,7 @@ from mamba import before, context, description, it
 
 from graph import Node, PracticeGraph, Source
 from harness.graph.rule_context import RuleCheckContext
+from cdd_guidance.practices.stories.model.story_model import Step, StepType
 from cdd_guidance.practices.stories.rules.scenarios import AndChaining, ScenariosShape
 
 
@@ -25,14 +26,18 @@ def _scenario(practice, name: str = "Display Create Account") -> Node:
     )
 
 
-def _step(practice, semantic: str, label: str, line: int) -> Node:
-    return Node(
+def _step(practice, semantic: str, text: str, line: int) -> Node:
+    """A step node holding the Step its story model read: ``When`` with ``the User proceeds``."""
+    label = f"{semantic.lower()} {text}"
+    node = Node(
         practice,
         semantic,
         f"stories:{semantic}:story.ts:{line}:{hash(label) & 0xFFFFFF}",
         label,
         Source("story.ts", line, line),
     )
+    node.model = Step(text, StepType(semantic.lower()), line, keyword=semantic)
+    return node
 
 
 def _record_steps(practice, scenario: Node, steps: list[Node]) -> None:
@@ -46,8 +51,8 @@ with description("ScenariosShape"):
         with before.each:
             self.practice = PracticeGraph("stories")
             self.scenario = _scenario(self.practice)
-            when = _step(self.practice, "When", "when the User proceeds", 1)
-            then = _step(self.practice, "Then", "then the User can enter account credentials", 2)
+            when = _step(self.practice, "When", "the User proceeds", 1)
+            then = _step(self.practice, "Then", "the User can enter account credentials", 2)
             _record_steps(self.practice, self.scenario, [when, then])
             self.context = RuleCheckContext(self.practice, None)
 
@@ -59,9 +64,9 @@ with description("ScenariosShape"):
             self.practice = PracticeGraph("stories")
             self.scenario = _scenario(self.practice)
             steps = [
-                _step(self.practice, "When", "when first", 1),
-                _step(self.practice, "When", "when second", 2),
-                _step(self.practice, "Then", "then outcome", 3),
+                _step(self.practice, "When", "first", 1),
+                _step(self.practice, "When", "second", 2),
+                _step(self.practice, "Then", "outcome", 3),
             ]
             _record_steps(self.practice, self.scenario, steps)
             self.context = RuleCheckContext(self.practice, None)
@@ -75,10 +80,10 @@ with description("ScenariosShape"):
             self.practice = PracticeGraph("stories")
             self.scenario = _scenario(self.practice)
             steps = [
-                _step(self.practice, "When", "when first", 1),
-                _step(self.practice, "Then", "then first", 2),
-                _step(self.practice, "When", "when second", 3),
-                _step(self.practice, "Then", "then second", 4),
+                _step(self.practice, "When", "first", 1),
+                _step(self.practice, "Then", "first", 2),
+                _step(self.practice, "When", "second", 3),
+                _step(self.practice, "Then", "second", 4),
             ]
             _record_steps(self.practice, self.scenario, steps)
             self.context = RuleCheckContext(self.practice, None)

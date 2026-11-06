@@ -106,7 +106,7 @@ def sync_schema_edges(graph) -> None:
         for field in fields:
             if field.owner != semantic or field.kind in _SKIPPED:
                 continue
-            if field.phase and _phase(owner) != field.phase:
+            if field.phase and owner.phase != field.phase:
                 continue
             targets: list = []
             for type_name in field.targets:
@@ -167,7 +167,7 @@ def _matches(kind: str, owner, target, nodes: list) -> bool:
     if kind == "specifiedBy":
         return owner.name.casefold() == target.name.casefold()
     if kind == "given":
-        return _is_given(target) and target in list(getattr(owner, "steps", []) or [])
+        return target.semantic_type() == "Step" and target.phase == "given" and target in list(getattr(owner, "steps", []) or [])
     if kind == "dependsOn":
         names = list(getattr(owner, "collaborators", []) or []) + list(getattr(owner, "dependencies", []) or [])
         return target.name in names
@@ -261,17 +261,6 @@ def _evidence(node) -> str:
         return ""
     stored = getattr(source, "__dict__", {}).get("text")
     return stored if isinstance(stored, str) else ""
-
-
-def _phase(node) -> str:
-    step_type = getattr(node, "step_type", None)
-    if step_type is None:
-        return ""
-    return str(getattr(step_type, "value", step_type)).casefold()
-
-
-def _is_given(node) -> bool:
-    return _phase(node) == "given"
 
 
 # Single-reference LERN / DDD schema fields that appear as children in the explorer tree.

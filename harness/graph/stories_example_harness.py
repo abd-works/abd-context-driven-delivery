@@ -41,11 +41,14 @@ def _record_stories(practice: PracticeGraph, names: list[str], relative: str) ->
 def _story_nodes_from_ts(
     practice: PracticeGraph, source: str, relative: str, *, node_type: str | None = None
 ) -> list[Node]:
+    from cdd_guidance.practices.stories.model.story_model import Step, StepType
+
     names = re.findall(r"""story\s*\(\s*['"]([^'"]+)['"]""", source)
     nodes: list[Node] = _record_stories(practice, names, relative)
     for index, name in enumerate(re.findall(r"""given\s*\(\s*['"]([^'"]+)['"]""", source)):
         node_id = f"stories:Step:map.given.{index}"
         node = Node(practice, "Given", node_id, name, Source(relative, 1, 1))
+        node.model = Step(name, StepType.GIVEN, index + 1, keyword="Given")
         practice.by_id[node_id] = node
         practice.nodes.setdefault("Step", []).append(node)
         nodes.append(node)

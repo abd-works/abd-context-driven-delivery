@@ -24,7 +24,6 @@ _FIELD_INIT = re.compile(
     re.M,
 )
 _STATIC_LINE = re.compile(r"^\s*(?:(?:public|private|protected|readonly|declare|override)\s+)*static\b")
-_HEADING = re.compile(r"^\s*#\s+(.+?)\s*$", re.M)
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
 _CONTEXT_ARROW = re.compile(r"^[\s\-*>]*(.+?)\s*→\s*(.+?)\s*$")
 _MEMBER_CALL = re.compile(r"\.([\w$]+)\s*\(")
@@ -161,38 +160,24 @@ def _record_clean(practice, root: Path) -> list[dict]:
 
 
 def _record_clean_models(practice, root: Path) -> None:
-    """The Clean Engineering model documents for the folders in scope, `{folder}/.context/*-model.md`. A member the code
-    also defines gets the model's word on it as facts: its interactions, parameters, and return type. Every member the
-    model describes is kept on the practice under `model_members`, by `Class.member`, so a realization can follow an
-    interaction into a class the load left out without a second copy of the class among the code's nodes."""
+    """The Clean Engineering model documents for the folders in scope, `{folder}/.context/*-model.md`. The practice's
+    root holds every member they describe, by `Class.member`, so a realization can follow an interaction into a class
+    the load left out without a second copy of the class among the code's nodes. An operation the code also defines
+    holds the member that describes it, and reads its interactions from it."""
     from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
+    from cdd_guidance.practices.clean_engineering.model.model_descriptions import ModelDescriptions
 
-    code_members: dict[tuple[str, str], list] = {}
-    for node in practice.by_id.values():
-        if node.type in {"Operation", "Property"}:
-            code_members.setdefault((_owner_of(node), node.name), []).append(node)
-    described: dict[str, dict] = {}
+    descriptions = ModelDescriptions()
     for file in _model_files(practice.graph, root):
         relative = file.relative_to(root).as_posix()
         _report(practice.graph, f"clean_engineering · model · {relative}")
-        model = MarkdownCleanEngineeringModel(name="", sequential_order=1).parse(file.read_text(encoding="utf-8"))
-        for module in model.modules:
-            for oclass in module.classes:
-                members = [("Property", member) for member in oclass.properties] + [("Operation", member) for member in oclass.operations]
-                for kind, member in members:
-                    facts = {
-                        "kind": kind,
-                        "interactions": list(getattr(member, "callees", [])),
-                        "model_parameters": [[parameter.name, (parameter.type_hint or "").strip()] for parameter in getattr(member, "parameters", [])],
-                        "model_returns": (getattr(member, "return_type", "") or getattr(member, "type_hint", "") or "").strip(),
-                        "model_file": relative,
-                    }
-                    described[f"{oclass.name}.{member.name}"] = facts
-                    for node in code_members.get((oclass.name, member.name), ()):
-                        for key in ("interactions", "model_parameters", "model_returns", "model_file"):
-                            node.set_fact(key, facts[key])
-    if described:
-        practice.root_node.set_fact("model_members", described)
+        descriptions.read(MarkdownCleanEngineeringModel(name="", sequential_order=1).parse(file.read_text(encoding="utf-8")), relative)
+    if descriptions.is_empty:
+        return
+    practice.root_node.model = descriptions
+    for node in practice.nodes.get("Operation", []):
+        if node.model is not None:
+            node.model.described_by = descriptions.describing(node.model.owner, node.name)
 
 
 def _model_files(graph: Graph, root: Path) -> list[Path]:
@@ -426,8 +411,11 @@ def _enclosing_id(path: str, roles: dict[str, str], ids: dict[str, str], root_id
     return ids[owner] if owner else root_id
 
 
-def _bounded_contexts(root: Path) -> list[tuple[str, str, str]]:
-    """Each folder that contains `.context/bounded-context.md` is a bounded context."""
+def _bounded_contexts(root: Path) -> list[tuple]:
+    """Each folder that contains `.context/bounded-context.md` is a bounded context, read by the DDD model:
+    the folder, the context, and its file."""
+    from cdd_guidance.practices.ddd.model.nodes import BoundedContext
+
     found = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [name for name in dirnames if not skips_folder(name)]
@@ -436,11 +424,27 @@ def _bounded_contexts(root: Path) -> list[tuple[str, str, str]]:
             continue
         folder = Path(dirpath)
         rel = "." if folder == root else folder.relative_to(root).as_posix()
-        text = marker.read_text(encoding="utf-8")
-        heading = _HEADING.search(text)
-        name = heading.group(1).strip() if heading else folder.name
-        found.append((rel, name, marker.relative_to(root).as_posix()))
-    return sorted(found)
+        context = BoundedContext(sequential_order=1)
+        context.load_context_folder(folder)
+        found.append((rel, context, marker.relative_to(root).as_posix()))
+    return sorted(found, key=lambda item: item[0])
+
+
+def _unmarked_context(root: Path):
+    """The one bounded context of a folder where no folder marks a context: the whole folder."""
+    from cdd_guidance.practices.ddd.model.nodes import BoundedContext
+
+    context = BoundedContext("bounded context", 1)
+    context.load_folder_facts(root)
+    return context
+
+
+def _aggregate(folder: Path):
+    from cdd_guidance.practices.ddd.model.nodes import Aggregate
+
+    aggregate = Aggregate(folder.name, 1)
+    aggregate.load_folder_facts(folder)
+    return aggregate
 
 
 def _context_for(folder: str, contexts: list[str]) -> str:
@@ -475,7 +479,8 @@ def _class_fact(text: str, relative: str, module_id: str, cls, class_names: set[
     properties = _properties_of(cls, text)
     for prop in properties:
         prop_id = f"clean_engineering:Property:{relative}:{prop['name']}:{cls.name}"
-        nodes.append([prop_id, prop["name"], "Property", "clean_engineering", relative, prop["line"], prop["line"]])
+        # Some properties are found only by a getter or field, with no parsed object to name their class, so the row does.
+        nodes.append(_fact_row([prop_id, prop["name"], "Property", "clean_engineering", relative, prop["line"], prop["line"]], {"owner": cls.name}))
         edges.append([class_id, prop_id, "properties", edge_order("properties"), "grouped"])
         if _names_class(prop["hint"], class_names):
             edges.append([class_id, prop_id, "relative", edge_order("relative"), "direct"])
@@ -495,7 +500,7 @@ def _class_fact(text: str, relative: str, module_id: str, cls, class_names: set[
         start, end = operation_source_span(operation) or _scanned_span(text, operation)
         op_id = f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}"
         operation.load_span_facts("\n".join(lines[start - 1 : end]))
-        signature = {"owner": cls.name, "parameters": [[p.name, (p.type_hint or "").strip()] for p in operation.parameters]}
+        signature = {"parameters": [[p.name, (p.type_hint or "").strip()] for p in operation.parameters]}
         op_row = [op_id, operation.name, "Operation", "clean_engineering", relative, start, end]
         nodes.append(_fact_row(op_row, signature))
         models[op_id] = operation
@@ -649,17 +654,13 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
     nodes = []
     edges = []
     models: dict = {}
-    contexts = _bounded_contexts(root) or [(".", "bounded context", ".")]
+    contexts = _bounded_contexts(root) or [(".", _unmarked_context(root), ".")]
     context_ids = {}
-    for rel, name, markdown in contexts:
-        context_id = f"ddd:BoundedContext:{rel}:{name}"
+    for rel, context, markdown in contexts:
+        context_id = f"ddd:BoundedContext:{rel}:{context.name}"
         context_ids[rel] = context_id
-        end = 1
-        if markdown != ".":
-            text = (root / markdown).read_text(encoding="utf-8")
-            end = max(1, text.count("\n") if text.endswith("\n") else text.count("\n") + 1)
-        nodes.append([context_id, name, "BoundedContext", "ddd", markdown, 1, end])
-        models[context_id] = _folder_module(root / rel)
+        nodes.append([context_id, context.name, "BoundedContext", "ddd", markdown, 1, context.context_file_lines])
+        models[context_id] = context
         parent_rel = _context_for(str(Path(rel).parent).replace("\\", "/"), [item[0] for item in contexts]) if rel != "." else ""
         if rel != "." and parent_rel == rel:
             parent_rel = ""
@@ -673,7 +674,7 @@ def _record_ddd(practice, root: Path, classes: list[dict]) -> None:
         context_id = _bounded_context_id(folder, context_ids, ddd_root_id)
         aggregate_id = f"ddd:Aggregate:{folder}"
         nodes.append([aggregate_id, Path(folder).name, "Aggregate", "ddd", folder, 1, 1])
-        models[aggregate_id] = _folder_module(root / folder)
+        models[aggregate_id] = _aggregate(root / folder)
         edges.append([context_id, aggregate_id, "owns", edge_order("owns"), "direct"])
         edges.append([aggregate_id, context_id, "belongsTo", edge_order("belongsTo"), "relationship"])
         for member in members[folder]:
@@ -740,16 +741,6 @@ def _story_map_model(graph: Graph, source: Path, on_file):
     return StoryModel.load_files(edited, source, on_file=on_file)
 
 
-def _gwt_phase(step) -> str:
-    if step.type in {"Given", "When", "Then"}:
-        return step.type.lower()
-    name = (step.name or "").strip().casefold()
-    for prefix in ("given", "when", "then"):
-        if name.startswith(prefix + " "):
-            return prefix
-    return ""
-
-
 def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
     stories = graph.practice("stories")
     clean = graph.practice("clean_engineering")
@@ -780,7 +771,7 @@ def _record_story_edges(graph: Graph, classes: list[dict]) -> None:
             if module is not None and epic is not None:
                 _edge(clean, "usedBy", "relationship", module, epic)
                 _edge(stories, "uses", "relationship", epic, module)
-        if _gwt_phase(step) not in {"given", "when", "then"}:
+        if not step.get_fact("phase"):
             continue
         for example, pattern in example_patterns:
             if pattern.search(body):
@@ -806,11 +797,6 @@ _MEMBER_READ = re.compile(r"\.([\w$]+)\b(?!\s*\()")
 _BARE_CALL = re.compile(r"(?<![.\w])([A-Za-z_]\w*)\s*\(")
 # A tool called by its name, `<toolset>.<operation>`: `call("ticket.move_next", ticket="pet-visits")`.
 _TOOL_NAMED = re.compile(r"""\b(\w+)\(\s*["']([a-z][a-z-]*)\.([a-zA-Z_]+)["']""")
-
-
-def _owner_of(member) -> str:
-    """The class a member belongs to, the last part of its id: a recorded relationship holds it under that edge's group."""
-    return member.node_id.rsplit(":", 1)[-1]
 
 
 def _is_test_support(path: str) -> bool:
@@ -863,7 +849,7 @@ def _invoked_in(text: str, is_python: bool, members_by_name: dict) -> list:
     seen: set[tuple[str, str]] = set()
 
     def add(member) -> None:
-        key = (_owner_of(member), member.name)
+        key = (member.get_fact("owner"), member.name)
         if key not in seen:
             seen.add(key)
             invoked.append(member)
@@ -873,7 +859,7 @@ def _invoked_in(text: str, is_python: bool, members_by_name: dict) -> list:
         transports.add(match.group(1))
         operation = Name(match.group(3)).snake
         for member in members_by_name.get((is_python, operation), ()):
-            if member.type == "Operation" and Name(_owner_of(member)).kebab == match.group(2):
+            if member.type == "Operation" and Name(member.get_fact("owner")).kebab == match.group(2):
                 add(member)
     code = re.sub(r"""(['"`])(?:\\.|(?!\1).)*\1""", '""', text)
     # A mamba spec keeps its fixtures on `self`; `self.project` is the spec's own state, not a member of the code.
@@ -884,9 +870,9 @@ def _invoked_in(text: str, is_python: bool, members_by_name: dict) -> list:
         members = [
             member for member in members_by_name.get((is_python, name), ())
             # A module function is reached by calling it; a read with its name belongs to some object's field.
-            if not (name in reads and _owner_of(member) == "_module")
+            if not (name in reads and member.get_fact("owner") == "_module")
         ]
-        owners = {_owner_of(member) for member in members}
+        owners = {member.get_fact("owner") for member in members}
         # A name more than two classes share, such as `column`, does not say which one the observation reaches; a read,
         # which has no call to narrow it, links only when one class owns the name.
         if name in transports or len(owners) > (1 if name in reads else 2):

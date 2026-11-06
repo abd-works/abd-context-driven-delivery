@@ -1302,7 +1302,7 @@ class Graph:
         return {
             "source_root": practice.source_root,
             # Facts about the practice as a whole, such as the Clean Engineering model's members, live on its root.
-            "root_facts": encode_node_data(practice.root_node.data),
+            "root_facts": encode_node_data(practice.root_node.facts),
             "nodes": [self._node_row(node) for node in nodes],
             "edges": [self._edge_row(edge) for edge in edges],
             "rules": [[slug, node.node_id, message] for node in nodes for slug, message in node.rules.violations],
@@ -1524,13 +1524,7 @@ class Graph:
         return [self._member(node) for practice in self.practices.values() for node in practice.by_id.values() if node.type in wanted]
 
     def _member(self, node: Node) -> Member:
-        return Member(node, "" if node.type in _CLASS_KINDS else self._owner(node))
-
-    def _owner(self, node: Node) -> str:
-        parent = node.parent
-        while parent is not None and parent.type not in _CLASS_KINDS:
-            parent = parent.parent
-        return parent.name if parent is not None else ""
+        return Member(node, "" if node.type in _CLASS_KINDS else str(node.get_fact("owner", "") or ""))
 
     @mcp
     @agent_tool

@@ -60,22 +60,22 @@ class ButMarksMissingState(PracticeGraphRule):
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node, context) -> list[str]:
-        if context.step_keyword(node).casefold() != "but":
+        if _keyword(node).casefold() != "but":
             return []
-        text = context.step_text(node).casefold()
+        text = _text(node).casefold()
         if any(word in text for word in ("not ", "without ", "absent", "missing", "no ")):
             return []
-        return [f"But step should mark missing or absent state, not a consequence: {context.step_text(node)!r}."]
+        return [f"But step should mark missing or absent state, not a consequence: {_text(node)!r}."]
 
 class WhenHoldsTheOperation(PracticeGraphRule):
     slug = "when-holds-the-operation"
     node_types = ("When", "Step")
 
     def check(self, node, context) -> list[str]:
-        if context.step_keyword(node).casefold() not in {"when", ""}:
+        if _keyword(node).casefold() not in {"when", ""}:
             if node.type not in {"When"}:
                 return []
-        text = context.step_text(node)
+        text = _text(node)
         if not text or " and " in text.casefold():
             return []
         if len(text.split()) < 2:
@@ -139,10 +139,10 @@ class WhenNamesIntentNotInterfaceGesture(PracticeGraphRule):
     node_types = ("When", "Step")
 
     def check(self, node, context) -> list[str]:
-        kw = context.step_keyword(node).casefold()
+        kw = _keyword(node).casefold()
         if kw not in {"when", ""} and node.type != "When":
             return []
-        text = context.step_text(node)
+        text = _text(node)
         if _GESTURE.search(text):
             return [f"When step {text!r} names a UI gesture; state the domain intent instead."]
         return []
@@ -152,10 +152,10 @@ class BehavioralAndSystemObservableOutcomes(PracticeGraphRule):
     node_types = ("Then", "Step")
 
     def check(self, node, context) -> list[str]:
-        kw = context.step_keyword(node).casefold()
+        kw = _keyword(node).casefold()
         if kw not in {"then", ""} and node.type != "Then":
             return []
-        text = context.step_text(node)
+        text = _text(node)
         if _INLINE_CONDITIONAL.search(text):
             return [f"Then step {text!r} embeds a conditional guard; assert an observable outcome instead."]
         return []
@@ -182,9 +182,9 @@ class GivenNamesComplexStateRootFirst(PracticeGraphRule):
     node_types = ("Given", "Step")
 
     def check(self, node, context) -> list[str]:
-        if context.step_keyword(node).casefold() not in {"given", ""} and node.type != "Given":
+        if _keyword(node).casefold() not in {"given", ""} and node.type != "Given":
             return []
-        text = context.step_text(node)
+        text = _text(node)
         if len(text.split()) < 8:
             return []
         if not re.search(r"\b(root|aggregate|cart|order|account)\b", text, re.I):
@@ -198,9 +198,9 @@ class ScenarioNamesContinuation(PracticeGraphRule):
     node_types = ("Then", "Step")
 
     def check(self, node, context) -> list[str]:
-        if context.step_keyword(node).casefold() not in {"then", ""} and node.type != "Then":
+        if _keyword(node).casefold() not in {"then", ""} and node.type != "Then":
             return []
-        text = context.step_text(node)
+        text = _text(node)
         if "next story" in text.casefold() or "continues in" in text.casefold():
             return []
         if re.search(r"\bstory\b", text, re.I) and len(text.split()) > 12:
@@ -214,7 +214,7 @@ def _and_chaining_from_graph(scenario_node, context) -> list[str]:
     steps = context.children(scenario_node, "steps")
     pending_when = False
     for step in steps:
-        kw = _step_keyword(step, context)
+        kw = _step_keyword(step)
         if kw == "when":
             if pending_when:
                 return [
@@ -249,7 +249,7 @@ class ScenariosShape(PracticeGraphRule):
 
 
 def _scenario_phases(scenario_node, context, steps) -> set[str]:
-    phases = {_phase(step, context) for step in steps if _phase(step, context)}
+    phases = {_phase(step) for step in steps if _phase(step)}
     if "given" in phases:
         return phases
     if _background_provides_given(scenario_node, context):
@@ -263,7 +263,7 @@ def _background_provides_given(scenario_node, context) -> bool:
         return False
     for background in context.children(story, "background"):
         for step in context.children(background, "steps"):
-            if _phase(step, context) == "given":
+            if _phase(step) == "given":
                 return True
     return False
 
@@ -280,28 +280,23 @@ def _parent_story(node, context):
     return None
 
 
-def _step_keyword(step, context) -> str:
-    return context.step_keyword(step).casefold() or _phase(step, context)
+def _keyword(step) -> str:
+    """Given, When, Then, And, or But, as the step's model wrote it."""
+    return str(step.get_fact("keyword", "") or "")
 
-def _phase(step, context) -> str:
-    data = context.node_data(step)
-    phase = str(data.get("phase") or "").casefold()
-    if phase in {"given", "when", "then"}:
-        return phase
-    if step.type == "Given":
-        return "given"
-    if step.type == "When":
-        return "when"
-    if step.type == "Then":
-        return "then"
-    keyword = context.step_keyword(step).casefold()
-    if keyword in {"given", "when", "then"}:
-        return keyword
-    label = (step.name or "").casefold()
-    for prefix in ("given", "when", "then"):
-        if label.startswith(prefix + " "):
-            return prefix
-    return ""
+
+def _text(step) -> str:
+    """The step's words after its keyword."""
+    return str(step.get_fact("text", "") or "")
+
+
+def _phase(step) -> str:
+    """given, when, or then from the step's type; an And or But line carries the phase of the line it continues."""
+    return str(step.get_fact("phase", "") or "")
+
+
+def _step_keyword(step) -> str:
+    return _keyword(step).casefold() or _phase(step)
 
 class PlainEnglishGwtSteps(PracticeGraphRule):
     slug = "plain-english-gwt-steps"
