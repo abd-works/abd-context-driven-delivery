@@ -39,6 +39,13 @@ def _section(name: str) -> str:
 
 
 with description("Partition kit prose"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with it("should document partition, index (Step 1), and segment (Step 2) in partition.md"):
         content = _section("partition")
         expect(content.startswith("# Partition")).to(be_true)
@@ -47,6 +54,13 @@ with description("Partition kit prose"):
 
 
 with description("Partition kit on hosts"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with it("should not expose partition on practice Guidance"):
         cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
         practice = cls()
@@ -54,6 +68,13 @@ with description("Partition kit on hosts"):
 
 
 with description("a partition action"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that expands"):
         with it("should include the partition_corpus body in partition"):
             body = AgentInstructions.for_callable(
@@ -136,6 +157,13 @@ No partition-config block present in this document.
 # ---------------------------------------------------------------------------
 
 with description("a SegmentCompletenessConfig"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that uses all defaults"):
         with before.each:
             self.config = SegmentCompletenessConfig()
@@ -155,6 +183,13 @@ with description("a SegmentCompletenessConfig"):
 # ---------------------------------------------------------------------------
 
 with description("a SegmentEntry"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that has no body"):
         with before.each:
             self.entry = SegmentEntry("Hero", None, SegmentCompletenessConfig())
@@ -220,6 +255,13 @@ with description("a SegmentEntry"):
 # ---------------------------------------------------------------------------
 
 with description("a Segment"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that is built from text with no expected-entries marker"):
         with before.each:
             self.segment = Segment.from_text(
@@ -304,6 +346,13 @@ with description("a Segment"):
 # ---------------------------------------------------------------------------
 
 with description("a PartitionIndex"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that is built from text with a partition-config block"):
         with before.each:
             self.index = PartitionIndex.from_text(
@@ -372,6 +421,13 @@ with description("a PartitionIndex"):
 # ---------------------------------------------------------------------------
 
 with description("Partition verifying segment completeness"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("that segment path does not exist"):
         with it("should return completeness FAIL with file-not-found error"):
             result = Partition().verify_segment_completeness(

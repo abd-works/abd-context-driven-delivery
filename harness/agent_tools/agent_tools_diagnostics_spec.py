@@ -16,7 +16,9 @@ from harness.installation.installer import Installer
 Installer(repo=_REPO_ROOT).ensure_import_path()
 
 from expects import contain, equal, expect
-from mamba import description, it
+from mamba import after, before, description, it
+from space.session.throwaway_project import ThrowawayProject
+from space.work_state import project_folder
 
 from harness.agent_tools.agent_tools_diagnostics import AgentToolsDiagnostics
 from harness.mcp.mcp_server import McpHost
@@ -35,7 +37,7 @@ _DIAGNOSTICS_SECONDS = 150
 
 
 def _call_agent_tools_diagnostics() -> tuple[float, str]:
-    """Run the diagnostics tool through a real cdd server, as a chat working on this checkout does."""
+    """Run the diagnostics tool through a real cdd server, as a chat working on the spec's own project does."""
     server = SpecServer((_AGENT_TOOLS_DIAGNOSTICS_REF,))
     server.start()
     try:
@@ -45,7 +47,7 @@ def _call_agent_tools_diagnostics() -> tuple[float, str]:
 
 
 async def _timed_diagnostics(server: SpecServer) -> tuple[float, str]:
-    async with server.chat(_REPO_ROOT, _DIAGNOSTICS_SECONDS) as session:
+    async with server.chat(project_folder(), _DIAGNOSTICS_SECONDS) as session:
         started = time.perf_counter()
         result = await session.call_tool("agent-tools-diagnostics.agent_tools_diagnostics", arguments={})
         return time.perf_counter() - started, result.content[0].text
@@ -66,6 +68,13 @@ def _installer(
 
 
 with description("mcp tools diagnostics"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with it("should scope toolsets to space, harness, and tools only"):
         expect(agent_tools_toolset_ref("space.repo.repo:Repo")).to(equal(True))
         expect(agent_tools_toolset_ref("harness.graph.graph:Graph")).to(equal(True))
