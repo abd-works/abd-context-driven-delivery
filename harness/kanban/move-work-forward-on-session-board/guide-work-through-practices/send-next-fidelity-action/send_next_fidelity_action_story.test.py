@@ -42,7 +42,7 @@ with story("Send Next Fidelity Action"):
             pass
     with scenario("Open the report while violations hold the ticket"):
         # Evidence: observed: ticket-client.spec 'should say fix violations on held violations', 'with violations held and no chat connected' — 'should still offer Run next', 'should open the report'; kanban_tools_spec 'should name satisfy as the next action'; tests/board-surface.spec.ts 'should keep local actions working'.
-        with given("checkout-flow's story map has a verb-noun-format violation on tests/story-map.md line 6"):
+        with given("checkout-flow's story map has a verb-noun-format violation on .context/story-map.md line 6"):
             pass
         with but_("no chat is connected"):
             pass

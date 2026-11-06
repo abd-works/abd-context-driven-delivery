@@ -17,7 +17,7 @@
 
 #### Scenario: Open the report while violations hold the ticket
 
-*Given* checkout-flow's story map has a verb-noun-format violation on tests/story-map.md line 6
+*Given* checkout-flow's story map has a verb-noun-format violation on .context/story-map.md line 6
 *But* no chat is connected
 *When* the Person runs checkout-flow's next step
 *Then* Run next read Run next: fix violations

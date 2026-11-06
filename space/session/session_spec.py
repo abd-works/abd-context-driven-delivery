@@ -386,7 +386,7 @@ with description("a session"):
             self.work.mkdir()
             Session.new("alpha", self.work, self.repo)
             session = Session.current()
-            session._append_log("--- 2")
+            session.record("--- 2")
             Session.forget_current()
 
         with it("should append the next loop after switch without in-memory loops"):
@@ -882,7 +882,7 @@ with description("a practice"):
 
         with context("with a practice turned off"):
             with before.each:
-                self.session.enable_practice("ddd", False)
+                self.session.practice("ddd").enable(False)
 
             with it("should leave that practice out of the active practices"):
                 expect([practice.name for practice in self.session.active_practices]).to(equal(["stories", "clean_engineering", "bdd", "ux"]))
@@ -1036,7 +1036,7 @@ with description("a practice"):
                 self.opened = self.session.practice("bdd")
 
             with it("should keep each set on that practice"):
-                expect(len(self.opened.to_mcp_result()["output_paths"])).to(equal(2))
+                expect(len(json.loads((self.repo / ".context" / "practices.json").read_text(encoding="utf-8"))["bdd"])).to(equal(2))
 
     with context("that a practice has not been invoked"):
         with before.each:

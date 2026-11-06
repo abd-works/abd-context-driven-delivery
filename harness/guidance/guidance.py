@@ -5,6 +5,7 @@ import inspect
 import json
 import os
 import re
+from datetime import datetime, timezone
 import shutil
 import tempfile
 from pathlib import Path
@@ -28,6 +29,17 @@ from harness.markdown import (
     markdown,
     markdownCollection,
 )
+
+
+# Report names end with the time they were made, written so names sort by time.
+REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
+
+
+class FidelityWithoutSessionError(ValueError):
+    """A fidelity was asked where to save a report while its practice works in no session."""
+
+    def __init__(self, slug: str) -> None:
+        super().__init__(f"{slug} works in no session, so it has nowhere to save a validation report")
 
 
 @agent_toolset
@@ -190,6 +202,12 @@ class PracticeGuidance(Guidance):
         """The practice's folder name, such as `clean_engineering`: how session log action lines and session.json name
         the practice."""
         return Path(inspect.getfile(type(self))).parent.name
+
+    def files(self, stage: str = "") -> dict[str, dict[str, list]]:
+        """The files each fidelity of this practice declares in the session it works in, by fidelity name and then
+        format: every fidelity's, or only stage's fidelities when a stage is named."""
+        fidelities = getattr(self, "fidelities", None) or []
+        return {fidelity.name: fidelity.files() for fidelity in fidelities if not stage or fidelity.stage == stage}
 
     @property
     def context_index_key(self) -> str:
@@ -590,6 +608,33 @@ class FidelityGuidance(Guidance):
         self.outputs: dict[str, str | list[str]] = {}
         if clean_engineering is not None:
             self.clean_engineering = clean_engineering
+
+    def files(self) -> dict[str, list]:
+        """The files this fidelity declares, by format, in the session its practice works in, each with its path from
+        the project and whether it exists; none when its practice works in no session."""
+        practice = self.practice_guidance
+        session = getattr(practice, "workspace", None)
+        files_declared_by = getattr(session, "files_declared_by", None)
+        return files_declared_by(self) if files_declared_by else {}
+
+    def reports(self) -> list[Path]:
+        """This fidelity's validation reports in the session its practice works in, oldest first; report names end with
+        their date, which sorts by time. None when its practice works in no session."""
+        folder = self._reports_folder
+        return sorted(folder.glob(f"{self.slug}-*.md")) if folder is not None and folder.is_dir() else []
+
+    def new_report_path(self) -> Path:
+        """Where a validation report of this fidelity made now is saved, in the session its practice works in."""
+        folder = self._reports_folder
+        if folder is None:
+            raise FidelityWithoutSessionError(self.slug)
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder / f"{self.slug}-{datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)}.md"
+
+    @property
+    def _reports_folder(self) -> Path | None:
+        session = getattr(self.practice_guidance, "workspace", None)
+        return getattr(session, "reports_folder", None)
 
     @property
     def practice_guidance(self) -> PracticeGuidance | None:

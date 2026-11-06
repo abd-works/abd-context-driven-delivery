@@ -13,14 +13,14 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 with story("List Ticket Files"):
     with scenario("List a fidelity's files with whether each exists"):
         # Evidence: observed: kanban_tools_spec 'with a fidelity's markdown generated' — 'should list the file with whether it exists', 'should list only the fidelities asked for'; side-panel-client.spec 'should list the files that exist'.
-        with given("checkout-flow's story map tests/story-map.md is there and tests/story-map.drawio is not"):
+        with given("checkout-flow's story map .context/story-map.md is there and .context/story-map.drawio is not"):
             pass
         with when("the Person lists checkout-flow's story_map files"):
             # Person -> Ticket.files(['stories-story_map'])
             # Ticket -> Session.fidelity_outputs(Stories story_map)
-            # Ticket <- markdown tests/story-map.md exists, drawio tests/story-map.drawio missing
+            # Ticket <- markdown .context/story-map.md exists, drawio .context/story-map.drawio missing
             pass
-        with then("the files panel lists tests/story-map.md as there"):
+        with then("the files panel lists .context/story-map.md as there"):
             pass
         with but_("no file of another fidelity is listed"):
             pass
@@ -45,7 +45,7 @@ with story("List Ticket Files"):
         with when("the Person lists no-such-ticket's story_map files"):
             # Person -> Ticket.load('no-such-ticket') <- TicketNotFoundError
             pass
-        with then("a toast says cdd ticket.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board"):
+        with then("a toast says cdd fidelity-progress.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board"):
             pass
         with but_("no panel opens"):
             pass

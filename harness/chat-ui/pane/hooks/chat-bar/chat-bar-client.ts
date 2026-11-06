@@ -48,6 +48,11 @@ export class ChatBarClient {
     return this.ticket?.name ?? ''
   }
 
+  // The session.json that names the session to the session tools.
+  get sessionFile(): string {
+    return this.ticket?.session.session_file ?? ''
+  }
+
   get title(): string {
     return this.ticket?.title ?? ''
   }
@@ -85,18 +90,18 @@ export class ChatBarClient {
     const column = this.board?.columns.find(entry => entry.name === this.shownStage)
     if (!ticket || !column) return []
     return (column.work_required ?? [])
-      .filter(slug => ticket.practices[practiceOf(slug)])
+      .filter(slug => ticket.session.practices[practiceOf(slug)]?.enabled)
       .map(
         slug =>
           new FidelityClient({
             slug,
-            progress: ticket.progress[slug] ?? 'not_started',
-            violationCount: ticket.violation_counts[slug] ?? 0,
-            actions: ticket.actions[slug] ?? { generate: 'to_do', validate: 'to_do', review: 'to_do' },
+            progress: ticket.progress[slug]?.state ?? 'not_started',
+            violationCount: ticket.progress[slug]?.violation_count ?? 0,
+            actions: ticket.progress[slug]?.actions ?? { generate: 'to_do', validate: 'to_do', review: 'to_do' },
             defaultFormat: column.default_formats?.[slug] ?? '',
-            nextAction: ticket.next_actions?.[slug] ?? '',
+            nextAction: ticket.progress[slug]?.next_action ?? '',
             isSelected: slug === this.selected,
-            folder: ticket.practice_roots[practiceOf(slug)]?.root ?? '',
+            folder: ticket.session.practices[practiceOf(slug)]?.root ?? '',
           }),
       )
   }
@@ -115,7 +120,7 @@ export class ChatBarClient {
   get statusLine(): string {
     const ticket = this.ticket
     if (!ticket) return ''
-    const violations = Object.values(ticket.progress).filter(state => state === 'violations').length
+    const violations = Object.values(ticket.progress).filter(progress => progress.state === 'violations').length
     const next = ticket.next ? `next: ${ticket.next}` : ticket.is_done ? 'done' : ''
     return [ticket.name, ticket.column, next, violations ? `${violations} with violations` : ''].filter(Boolean).join(' · ')
   }

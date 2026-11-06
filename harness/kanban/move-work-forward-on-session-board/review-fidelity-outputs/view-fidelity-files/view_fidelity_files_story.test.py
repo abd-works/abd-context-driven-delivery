@@ -13,25 +13,25 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 with story("View Fidelity Files"):
     with scenario("Open one tab per format, generated or not"):
         # Evidence: observed: side-panel-client.spec 'View Fidelity Files' — 'should open one tab per format, generated or not', 'should read the text of the file a tab shows'; story-actions.spec 'should offer a tab for a format not generated yet and say so'; kanban_tools_spec 'should return the file's text'.
-        with given("checkout-flow's story map is tests/story-map.md and tests/story-map.drawio is not there"):
+        with given("checkout-flow's story map is .context/story-map.md and .context/story-map.drawio is not there"):
             pass
         with when("the Person views checkout-flow's story_map files"):
             # Person -> Ticket.files(['stories-story_map'])
-            # Person -> Ticket.read_file('tests/story-map.md')
+            # Person -> Ticket.read_file('.context/story-map.md')
             pass
-        with then("the files panel shows the tabs tests/story-map.md and tests/story-map.drawio"):
+        with then("the files panel shows the tabs .context/story-map.md and .context/story-map.drawio"):
             pass
-        with and_("the tests/story-map.md tab shows # Check Out Order"):
+        with and_("the .context/story-map.md tab shows # Check Out Order"):
             pass
         with and_("the drawio tab says it is not generated yet"):
             pass
     with scenario("Go back to the list when the last tab closes"):
         # Evidence: observed: side-panel-client.spec 'should go back to the list when the last tab closes', 'should keep a tab a person closed closed'.
-        with given("the tabs tests/story-map.md and tests/story-map.drawio are open"):
+        with given("the tabs .context/story-map.md and .context/story-map.drawio are open"):
             pass
         with when("the Person closes both tabs"):
-            # Person -> FilesPanelClient.closeTab('tests/story-map.md')
-            # Person -> FilesPanelClient.closeTab('tests/story-map.drawio')
+            # Person -> FilesPanelClient.closeTab('.context/story-map.md')
+            # Person -> FilesPanelClient.closeTab('.context/story-map.drawio')
             pass
         with then("the files panel shows the list"):
             pass

@@ -7,7 +7,7 @@ section: body
 
 # Story Map — Chat Bar
 
-**Sources / context:** `harness/kanban/.context/story-map.md` (the Session Board map this one follows, story for story); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md` (option B, the stage strip); `harness/chat-ui/design/StageStrip.dc.html` (Claude Design canvas version 48, board "B · Stage strip with action bar"); `harness/chat-ui/pane/.context/module-context.md` and `harness/chat-ui/pane/hooks/register.ts` (the `cdd-board` plugin and `/board`); `harness/chat-ui/pane/hooks/health/server-health-view.tsx` and `server-health-client.ts` (the server health band that works today); `harness/kanban/ticket.py` (`ticket.create`, `ticket.activate`, `ticket.close`, `ticket.files`, `ticket.read_file`, `ticket.finish_review`, `ticket.move_next`).
+**Sources / context:** `harness/kanban/.context/story-map.md` (the Session Board map this one follows, story for story); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md` (option B, the stage strip); `harness/chat-ui/design/StageStrip.dc.html` (Claude Design canvas version 48, board "B · Stage strip with action bar"); `harness/chat-ui/pane/.context/module-context.md` and `harness/chat-ui/pane/hooks/register.ts` (the `cdd-board` plugin and `/board`); `harness/chat-ui/pane/hooks/health/server-health-view.tsx` and `server-health-client.ts` (the server health band that works today); `harness/kanban/ticket.py` (`ticket.create`, `ticket.close`, `ticket.move_next`, `fidelity-progress.files`, `fidelity-progress.finish_review`), `harness/kanban/board.py` (`board.activate`), `space/session/session.py` (`session.read_file`).
 
 **Evidence:** The chat bar is a smaller view of the Session Board, so each Story mirrors a board Story and calls the same `ticket.*` tools. The bar has no tickets: a person in the chat works in a session, so where the board's Story says ticket, the bar's says session (confirmed by the person on 2026-11-04). The line under each Story names the board Story it mirrors and what the bar does differently. Those Stories are **Inferred**: the canvas and the CDR describe them, and no code or spec does them yet. The Stories under Check CDD Server Health are **Observed**: the server health band in `harness/chat-ui/pane/hooks/health/` does them today, as the chat bar's leftmost part.
 
@@ -61,7 +61,7 @@ Mirrors Open Ticket Session: a field in the session list box names a new session
 
 ### (S) Person --> Open Session
 
-Mirrors Activate Ticket: picking a session from the session list box opens the activation dialog, then calls `ticket.activate` (CDR "Session name and session list").
+Mirrors Activate Ticket: picking a session from the session list box opens the activation dialog, then calls `board.activate` (CDR "Session name and session list").
 
 ### (S) Person --> Write Session Handoff
 
@@ -91,15 +91,15 @@ Mirrors Move Ticket, forward only: once every fidelity of the stage is reviewed,
 
 ### (S) Person --> List Session Files
 
-Mirrors List Ticket Files, for the focused fidelity only: files opens a tab per file `ticket.files` declares (CDR "Handoff, files, close").
+Mirrors List Ticket Files, for the focused fidelity only: files opens a tab per file `fidelity-progress.files` declares (CDR "Handoff, files, close").
 
 ### (S) Person --> View Fidelity Files
 
-Mirrors View Fidelity Files: each tab's text comes from `ticket.read_file` (CDR "Handoff, files, close").
+Mirrors View Fidelity Files: each tab's text comes from `session.read_file` (CDR "Handoff, files, close").
 
 ### (S) Person --> Review Fidelity
 
-Mirrors Review Fidelity: review calls `ticket.finish_review` with one fidelity, which needs its latest Validate to have passed (CDR "Actions run on one fidelity at a time").
+Mirrors Review Fidelity: review calls `fidelity-progress.finish_review` on one fidelity, which needs its latest Validate to have passed (CDR "Actions run on one fidelity at a time").
 
 ---
 

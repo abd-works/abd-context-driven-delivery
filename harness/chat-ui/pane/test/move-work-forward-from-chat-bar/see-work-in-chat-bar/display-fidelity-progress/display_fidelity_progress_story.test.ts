@@ -31,7 +31,7 @@ story('Display Fidelity Progress', CHAT_BAR, () => {
       scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'clean_engineering-model': { ...VALIDATED, progress: 'violations', violations: 7 } }))
     })
     when('the Chat Bar draws checkout-flow')
-    // FidelityClient.violationCount <- TicketData.violation_counts
+    // FidelityClient.violationCount <- FidelityProgressData.violation_count
     then('the Clean Engineering dot keeps its colour and shows 7 in red', async ($, on, scene) => {
       await expectMarkColours(scene.ui, { 'dot-clean_engineering-model': '#4FC3F7FF' })
       const count = (await drawn(scene.ui, 'fidelity-clean_engineering-model'))?.children?.[1]

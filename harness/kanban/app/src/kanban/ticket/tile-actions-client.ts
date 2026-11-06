@@ -1,3 +1,4 @@
+import { FidelityProgressClientGenerated } from '@cdd/harness/kanban/fidelity-progress'
 import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
 
 import { ACTION_STANDINGS, countOf, guidanceSlug, STEP_FAILED } from '../board/board-brand'
@@ -28,7 +29,7 @@ export type TileBar = {
 
 // A tile can hold several fidelities: its link opens the report of the one left with violations, else the first report.
 function reportSlugOf(ticket: TicketClient, tile: Tile): string | undefined {
-  const reported = tile.slugs.filter(slug => ticket.reports[slug])
+  const reported = tile.slugs.filter(slug => ticket.progress[slug]?.report_file)
   return reported.find(slug => ticket.stateOf(slug).key === 'violations') ?? reported[0]
 }
 
@@ -131,7 +132,7 @@ export class TileActionsClient {
 
   // The ticket writes the review to its session log, and the board read after it shows the fidelity reviewed.
   async review(tile: Tile): Promise<void> {
-    await TicketClientGenerated.named(this.page.api, tile.ticket).finishReview(tile.slugs)
+    await Promise.all(tile.slugs.map(slug => FidelityProgressClientGenerated.named(this.page.api, tile.ticket, slug).finishReview()))
     await this.page.reader.refresh()
   }
 }

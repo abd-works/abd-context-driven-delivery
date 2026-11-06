@@ -8,13 +8,16 @@ import re
 import shutil
 import traceback
 from datetime import datetime, timezone
+from functools import cache
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
-from harness.installation.destination import language_adapter
+from harness.agent_tools.agent_tools import noSessionLog, tool_subject
+from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
+from tools.file_manager.file_manager import FileEntry, FileManager, FileText
 from space.work_state import (
     SESSIONS_FOLDER,
     WorkState,
@@ -26,21 +29,22 @@ from space.work_state import (
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
-    from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
+    from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
     from space.repo.repo import Repo
-    from tools.file_manager.file_manager import FileManager
 
 
 _SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
 _LOAD_FILE_BUDGET = 40
 _OUTPUT_PATTERN_MARKS = {"*", "{"}
 CONTEXT_FOLDER = ".context"
-_MAIN_SESSION_NAME = "main"
+_HANDOFF_FILES = "handoff-*.md"
+# Verbs older session logs wrote, by the verb that now records the same thing.
+_FORMER_VERBS = {"pull": "move"}
+_REPORT_FOLDER = "validation-reports"
+MAIN_SESSION_NAME = "main"
 _LEGACY_REPO_SESSIONS_DIR = "sessions"
-_COMPLETE_FOLDER = "_complete"
+COMPLETE_FOLDER = "_complete"
 _ARCHIVE_FOLDER = "_archive"
-_BACKLOG_FOLDER = "_backlog"
-_BOARD_FILE = "_board.json"
 # A log line from a chat the server cannot name ends with "no-chat" in place of the chat's id, transcript, and lines.
 NO_CHAT: tuple[str, Path, str] = ("no-chat", Path(), "")
 _TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -164,27 +168,121 @@ class Loop:
         return ""
 
 
+class SessionNotFoundError(LookupError):
+    """A tool named a session.json that is not there, such as a session closed or moved since the board read it."""
+
+    def __init__(self, session: str) -> None:
+        super().__init__(f"no session at {session!r}")
+        self.session = session
+
+
+class UnknownPracticeError(ValueError):
+    """A session was asked for a practice it does not know, such as astrology. It names the practice, so a caller can
+    say which request was refused."""
+
+    def __init__(self, practice: str) -> None:
+        self.practice = practice
+        super().__init__(f"Unknown practice {practice}")
+
+
+class LogEntry:
+    """One line of a session log: ``<time> <verb> <words...>``, the words being the subject the verb acted on."""
+
+    # Action lines name a practice by its folder (`clean_engineering`) and validate lines by its class
+    # (`CleanEngineering`); a generate line lists the practices, then their fidelities, then their formats.
+
+    def __init__(self, line: str) -> None:
+        self._parts = line.split()
+
+    @property
+    def time(self) -> str:
+        return self._parts[0] if self._parts else ""
+
+    @property
+    def verb(self) -> str:
+        """What the line records, such as move or generate; a log written before moves were named move says pull."""
+        written = self._parts[1] if len(self._parts) > 1 else ""
+        return _FORMER_VERBS.get(written, written)
+
+    @property
+    def words(self) -> list[str]:
+        """The words after the verb, without the commas that join the paths and names an action lists."""
+        return [word.rstrip(",") for word in self._parts[2:]]
+
+    @property
+    def stage(self) -> str:
+        """The stage a move or a mark names: the first word after its verb."""
+        words = self.words
+        return words[0] if words else ""
+
+    def names(self, fidelity: FidelityGuidance) -> bool:
+        """Whether this line names fidelity and its practice."""
+        practice = fidelity.practice_guidance
+        words = set(self.words)
+        return fidelity.name in words and bool({practice.key, type(practice).__name__} & words)
+
+    def format_written_for(self, practice: str, fidelity: str) -> str:
+        """The format a generate line wrote practice's fidelity in; empty when it does not name them."""
+        joined = " ".join(self._parts[2:]).replace(", ", ",").split(" ")
+        for practices, fidelities, formats in zip(joined, joined[1:], joined[2:]):
+            named = list(zip(practices.split(","), fidelities.split(","), formats.split(",")))
+            written = next((format for name, opened, format in named if (name, opened) == (practice, fidelity)), "")
+            if written:
+                return written
+        return ""
+
+
+@language_adapter(language="typescript", identity=("session_file", "name"))
+@agent_toolset
 class PracticeSessionOutput:
-    """What one practice has in one session: its guideline, the paths it reads, its graph, and whether it is on."""
+    """What one practice has in one session: its guideline, the paths it reads, its graph, whether it is on, the folder
+    it writes under, and the files each of its fidelities declares."""
 
     # The guideline, folders, and graph load on first use: the board asks every ticket's session
     # which practices are enabled after every cdd call, and that question needs none of them.
 
     def __init__(self, name: str, session: Session) -> None:
-        self.name = name
+        self._name = name
         self._session = session
         self._guideline: PracticeGuidance | None = None
         self._output_paths: list | None = None
         self._graph: Graph | None = None
 
+    @classmethod
+    @tool_subject
+    def load(cls, session: str, practice: str) -> PracticeSessionOutput:
+        """The practice named practice in the session whose session.json is session, a path from the project."""
+        return Session.from_file(session).practice(practice)
+
+    @property
+    @data_field
+    def name(self) -> str:
+        return self._name
+
+    @property
+    @data_field
+    def session_file(self) -> str:
+        """Its session's session.json as a path from the project, which names the session this practice is in."""
+        return self._session.session_file_from_project
+
     @property
     def guideline(self) -> PracticeGuidance:
+        """This session's own copy of the practice's guidance, which knows the session, so each of its fidelities can
+        find the files it declares in this session."""
         if self._guideline is None:
             self._guideline = self._session._guidance_for(self.name)
+            self._guideline._attach_workspace(session=self._session.name, workspace=self._session)
         return self._guideline
+
+    @property
+    def fidelities(self) -> GuidanceCollection:
+        """The practice's fidelities, such as story_map, by name, each able to list its files in this session."""
+        return self.guideline.fidelities
 
     @guideline.setter
     def guideline(self, guidance: PracticeGuidance) -> None:
+        """Work with guidance, the practice an action was given, at its fidelity; it now works in this session."""
+        guidance._attach_workspace(session=self._session.name, workspace=self._session)
         self._guideline = guidance
 
     @property
@@ -204,21 +302,49 @@ class PracticeSessionOutput:
         return self._graph
 
     @property
+    @data_field
     def enabled(self) -> bool:
         """Whether the session works on this practice: true until a person turns it off."""
         return self._session._fields.get("practices", {}).get(self.name, {}).get("enabled", True)
 
-    @enabled.setter
-    def enabled(self, is_enabled: bool) -> None:
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def enable(self, is_enabled: bool) -> PracticeSessionOutput:
+        """Turn this practice on or off for its session, saved in its session.json."""
         saved = self._session._fields.get("practices", {})
         self._session._save_fields(practices={**saved, self.name: {"enabled": is_enabled}})
+        return self
 
-    def to_mcp_result(self) -> dict:
-        """JSON-safe snapshot for MCP tool results."""
-        return {
-            "name": self.name,
-            "output_paths": [[str(Path(item)) for item in group] for group in self._folders],
-        }
+    @property
+    @data_field
+    def root(self) -> str:
+        """The folder this practice writes under, as a path from the project: the one a person chose, or the
+        workpath plus the practice's default folder."""
+        return self._session.from_project(self._session.practice_root(self.guideline, self.name).resolve())
+
+    @property
+    @data_field
+    def is_root_chosen(self) -> bool:
+        """Whether a person chose this practice's root, rather than it being the default."""
+        return self._session.has_chosen_practice_root(self.name)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def choose_root(self, path: str) -> PracticeSessionOutput:
+        """Write this practice's files under path, a folder in the repository."""
+        self._session.choose_practice_root(self.name, self._session.repo_from_session() / path)
+        return self
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def use_default_root(self) -> PracticeSessionOutput:
+        """Write this practice's files under its default root again: the workpath plus the practice's own folder."""
+        self._session.use_default_practice_root(self.name)
+        return self
+
 
 
 _PRACTICE_TYPES = {
@@ -230,12 +356,12 @@ _PRACTICE_TYPES = {
 }
 
 
-@language_adapter(language="typescript")
+@language_adapter(language="typescript", identity="session_file")
 @agent_toolset
 class Session:
     """Work session — one in-memory current for each project; new and switch open named sessions."""
 
-    main_session = _MAIN_SESSION_NAME
+    main_session = MAIN_SESSION_NAME
     default_wip = 3
 
     # One cdd server works on every chat's project, so each project keeps its own current session.
@@ -255,6 +381,7 @@ class Session:
         self._file_manager: FileManager | None = None
 
     @property
+    @data_field
     def name(self) -> str:
         """Named work session (not the toolset slug)."""
         return self._session_name
@@ -267,34 +394,11 @@ class Session:
     def file_manager(self) -> FileManager:
         """The session's file manager, held in memory, reading under the session's roots: the folder each practice works
         in, as ``session.json`` records it or by the practice's default. A new one when those roots change."""
-        from tools.file_manager.file_manager import FileManager
-
         workpath = Path(self.workpath or self.repo_from_session()).resolve()
         roots = tuple(sorted({self.practice_root(self._guidance_for(name), name).resolve() for name in _PRACTICE_TYPES}))
         if self._file_manager is None or self._file_manager.roots != roots:
             self._file_manager = FileManager(workpath, roots)
         return self._file_manager
-
-    def to_mcp_result(self) -> dict:
-        """JSON-safe snapshot for MCP tool results — name, paths, practice roots."""
-        return {
-            "name": self.name,
-            "workpath": None if self.workpath is None else str(self.workpath),
-            "repo_path": None if self.repo_path is None else str(self.repo_path),
-            "session_path": None if self.session_path is None else str(self.session_path),
-            "practices": [entry.to_mcp_result() for entry in self._opened],
-            "parent_folders": self._stored_folders(),
-            "practice_roots": self._practice_roots_snapshot(),
-        }
-
-    def _practice_roots_snapshot(self) -> dict[str, list[list[str]]]:
-        stored = self._stored_folders()
-        roots: dict[str, list[list[str]]] = {}
-        for name in _PRACTICE_TYPES:
-            roots[name] = stored.get(name) or self._default_output_paths(
-                self._guidance_for(name), name
-            )
-        return roots
 
     @classmethod
     def _slot(cls, repo_path: Path | str | None = None) -> Session:
@@ -322,12 +426,12 @@ class Session:
         cls._current_by_project.pop(repo, None)
         session = cls._slot(repo)
         session.repo_path = repo
-        session.resolve(saved, repo if saved == _MAIN_SESSION_NAME else None, repo)
+        session.resolve(saved, repo if saved == MAIN_SESSION_NAME else None, repo)
 
     @classmethod
     def active_name(cls, repo_path: Path) -> str:
         """The session saved as open on ``repo_path``; main, which works on the whole repository, when none is named."""
-        return WorkState(repo_path).session or _MAIN_SESSION_NAME
+        return WorkState(repo_path).session or MAIN_SESSION_NAME
 
     @classmethod
     def current_folder(cls, repo_path: Path | str | None = None) -> Path:
@@ -362,7 +466,7 @@ class Session:
         self.repo_path = self.repo_from_session()
         if self.name and self.name != self.saved_current_session:
             return
-        self.saved_current_session = _MAIN_SESSION_NAME
+        self.saved_current_session = MAIN_SESSION_NAME
         opened = type(self)._current_by_project.get(self.repo_path)
         if opened is not None and opened is not self:
             opened._forget()
@@ -408,42 +512,28 @@ class Session:
         return session
 
     @classmethod
-    def all_in(cls, repo_path: Path | str) -> list[Session]:
-        """The repo's work sessions, open ones first then closed: not main, and not the folders the sessions share."""
-        return [cls.load(folder, Path(repo_path)) for folder in cls._work_folders(Path(repo_path))]
-
-    @classmethod
-    def backlog_folder(cls, repo_path: Path | str) -> Path:
-        """Where sessions wait before work starts, and where a session moved back is held."""
-        return cls.sessions_dir(Path(repo_path)) / _BACKLOG_FOLDER
-
-    @classmethod
-    def board_file(cls, repo_path: Path | str) -> Path:
-        """The file that holds what the repo's sessions share on the board."""
-        return cls.sessions_dir(Path(repo_path)) / _BOARD_FILE
+    @tool_subject
+    def from_file(cls, session: str) -> Session:
+        """The session whose session.json is session, a path from the project or an absolute one, read without becoming
+        the current session; the current session when it names none. A board command names its ticket's session this
+        way, because it runs in whichever chat it is sent to, and that chat's open session can be another."""
+        if not session:
+            return cls.current()
+        project = project_checkout()
+        named = Path(session)
+        found = named if named.is_absolute() else project / named
+        if not found.is_file():
+            raise SessionNotFoundError(session)
+        return cls.load(found.parent, project)
 
     @staticmethod
     def timestamp(moment: datetime) -> str:
         """A moment as session logs write it."""
         return moment.astimezone(timezone.utc).strftime(_TIMESTAMP_FORMAT)
 
-    @classmethod
-    def _work_folders(cls, repo_path: Path) -> list[Path]:
-        sessions = cls.sessions_dir(repo_path)
-        if not sessions.is_dir():
-            return []
-        skipped = {_COMPLETE_FOLDER, _MAIN_SESSION_NAME}
-        open_folders = [
-            folder for folder in sorted(sessions.iterdir())
-            if folder.is_dir() and folder.name not in skipped and not folder.name.startswith("_")
-        ]
-        closed = sessions / _COMPLETE_FOLDER
-        closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
-        return open_folders + closed_folders
-
     @property
     def is_closed(self) -> bool:
-        return self.session_path is not None and self.session_path.parent.name == _COMPLETE_FOLDER
+        return self.session_path is not None and self.session_path.parent.name == COMPLETE_FOLDER
 
     @property
     def session_file(self) -> Path:
@@ -451,16 +541,108 @@ class Session:
         return self.session_path / "session.json"
 
     @property
+    @data_field(key="session_file")
+    def session_file_from_project(self) -> str:
+        """Its session.json as a path from the project: the name every board command gives this session."""
+        return self.from_project(self.session_file)
+
+    @property
+    @data_field(key="workpath")
+    def workpath_from_project(self) -> str:
+        """The folder the session works in, as a path from the project; empty for the whole repository."""
+        return self.from_project(Path(self.workpath or self.repo_from_session()).resolve())
+
+    @property
+    @data_field(key="handoff")
+    def latest_handoff(self) -> str:
+        """The newest handoff file, as a path from the project; handoff names sort by their timestamp."""
+        handoffs = sorted(self.session_path.glob(_HANDOFF_FILES))
+        return self.from_project(handoffs[-1]) if handoffs else ""
+
+    def from_project(self, path: Path | str) -> str:
+        """path as written from the project's top, the way the board names every file and folder."""
+        from space.repo.repo import Repo
+
+        return Repo(self.repo_from_session()).path_from_top(path)
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def files(self, stage: str = "") -> dict[str, dict[str, dict[str, list[FileEntry]]]]:
+        """List the files every practice this session works on declares, by practice, fidelity, and format, each with its path from the project and whether it exists: every fidelity's, or only stage's fidelities when a stage is named."""
+        return {name: practice.guideline.files(stage) for name, practice in self.practices.items() if practice.enabled}
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def folder_files(self) -> list[FileEntry]:
+        """List every file in this session's folder, each with its path from the project: its log, handoffs, kept notes, and validation reports."""
+        repo = self._repo
+        files = sorted(path for path in self.session_path.rglob("*") if path.is_file())
+        return [FileEntry(repo.path_from_top(path), True) for path in files]
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def read_file(self, path: str) -> FileText:
+        """Return the text of path, a file in this repository; no text when the file is gone, such as one deleted since the board listed it."""
+        return self._repo.file_manager.read(path)
+
+    @property
+    def reports_folder(self) -> Path:
+        """Where Validate saves its reports in this session, each with the graph it checked beside it."""
+        return self.session_path / _REPORT_FOLDER
+
+    def files_declared_by(self, fidelity: FidelityGuidance) -> dict[str, list[FileEntry]]:
+        """The files fidelity declares in this session, by format, each with its path from the project and whether it
+        exists. A pattern lists the files this session worked on, not every match in the repository."""
+        outputs = self.fidelity_outputs(fidelity.practice_guidance, fidelity)
+        # Asking git what the branch changed is slow, and a project that is no repository has no branch, so it is asked
+        # only once a pattern finds files.
+        worked_on = cache(self._worked_on_files)
+        return {label: [entry for path in paths for entry in self._declared_files(path, worked_on)] for label, paths in outputs.items()}
+
+    @property
+    def _repo(self) -> Repo:
+        from space.repo.repo import Repo
+
+        return Repo(self.repo_from_session())
+
+    def _declared_files(self, declared: str, worked_on: Callable[[], set[Path] | None]) -> list[FileEntry]:
+        """A declared path, or each file of this session's that a pattern finds; a pattern that finds none stays as
+        written, not yet there."""
+        repo = self._repo
+        relative = repo.path_from_top(declared)
+        pattern = _named_parts_as_wildcards(relative)
+        if "*" not in pattern:
+            return [FileEntry(relative, (repo.root / relative).exists())]
+        found = repo.file_manager.find(pattern)
+        mine = worked_on() if found else None
+        found = [path for path in found if mine is None or path.resolve() in mine]
+        return [FileEntry(repo.path_from_top(path), True) for path in found] or [FileEntry(relative, False)]
+
+    def _worked_on_files(self) -> set[Path] | None:
+        """The files that are this session's work: every file when it works in a folder of its own, which holds only its
+        work; on the whole repository, only the files its branch changed."""
+        repo = self._repo
+        if Path(self.workpath or repo.root).resolve() != repo.root:
+            return None
+        return {(repo.root / path).resolve() for path in repo.files_changed_on(self.name)}
+
+    @property
+    @data_field
     def title(self) -> str:
         """The title a person gave the session's ticket; empty when it has none."""
         return self._fields.get("title", "")
 
     @property
+    @data_field
     def scope(self) -> str:
         """feature, story, or slice; empty when no one said."""
         return self._fields.get("scope", "")
 
     @property
+    @data_field
     def parent(self) -> str:
         """The name of the session this one was split from; empty when it was not split from one."""
         return self._fields.get("parent", "")
@@ -476,10 +658,6 @@ class Session:
         merged = {**self._fields, **values}
         self.session_file.write_text(json.dumps(merged), encoding="utf-8")
 
-    def enable_practice(self, practice: str, is_enabled: bool) -> None:
-        """Turn ``practice`` on or off for this session, saved in its ``session.json``."""
-        self.practices[practice].enabled = is_enabled
-
     def keep_file(self, file: Path) -> Path:
         """Move ``file`` into this session's folder, where it stays with the session's work until it becomes lasting
         context, such as part of a story map. A started backlog item's text is the only copy of the idea."""
@@ -487,16 +665,20 @@ class Session:
         file.replace(kept)
         return kept
 
-    def choose_workpath(self, workpath: Path) -> None:
-        """Work in ``workpath`` from now on: the folder this session's practices write under and its graph loads from.
-        A practice root a person chose is kept relative to the workpath, so each is saved again against the new one and
-        still names the same folder."""
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def choose_workpath(self, path: str) -> Session:
+        """Make path, a folder in the repository, this session's workpath: the folder its practices write under and its graph loads from. An empty path is the whole repository."""
+        # A practice root a person chose is kept relative to the workpath, so each is saved again against the new one
+        # and still names the same folder.
         base = Path(self.workpath or self.repo_path).resolve()
         chosen = {practice: (base / output["root"]).resolve() for practice, output in self._output_overrides().items() if output.get("root")}
-        self.workpath = Path(workpath).resolve()
+        self.workpath = (self.repo_from_session() / path).resolve()
         self._write_session_folder_json()
         for practice, root in chosen.items():
             self.choose_practice_root(practice, root)
+        return self
 
     def choose_practice_root(self, practice: str, root: Path) -> Path:
         """Write ``practice``'s files under ``root``, kept in ``session.json`` relative to the workpath like any output
@@ -536,13 +718,15 @@ class Session:
         return type(self).load(destination, self.repo_path)
 
     def move_to_closed(self) -> Session:
-        return self.move_folder_to(self.sessions_dir(self.repo_path) / _COMPLETE_FOLDER)
+        return self.move_folder_to(self.sessions_dir(self.repo_path) / COMPLETE_FOLDER)
 
     def move_to_archive(self) -> Session:
         return self.move_folder_to(self.sessions_dir(self.repo_path) / _ARCHIVE_FOLDER)
 
     def move_to_backlog(self) -> Session:
-        return self.move_folder_to(self.backlog_folder(self.repo_path))
+        from space.repo.repo import Repo
+
+        return self.move_folder_to(Repo(self.repo_path).backlog_folder)
 
     def reopen(self) -> Session:
         """Back among the open sessions, from closed or the backlog."""
@@ -673,7 +857,7 @@ class Session:
     def saved_current_session(self) -> str:
         """``session`` in repo/.sessions/session.json."""
         if self.repo_path is None:
-            return _MAIN_SESSION_NAME
+            return MAIN_SESSION_NAME
         return type(self).active_name(self.repo_path)
 
     @saved_current_session.setter
@@ -681,7 +865,7 @@ class Session:
         if self.repo_path is None:
             return
         cleaned = (name or "").strip()
-        if cleaned == _MAIN_SESSION_NAME:
+        if cleaned == MAIN_SESSION_NAME:
             cleaned = ""
         WorkState(self.repo_path).session = cleaned
         if cleaned:
@@ -694,12 +878,13 @@ class Session:
         if found is not None:
             return found
         if name not in _PRACTICE_TYPES:
-            raise ValueError(f"Unknown practice {name}")
+            raise UnknownPracticeError(name)
         opened = self.practices[name]
         self._opened.append(opened)
         return opened
 
     @property
+    @data_field
     def practices(self) -> dict[str, PracticeSessionOutput]:
         """Every practice CDD has, by practice key, opened or not."""
         for name in _PRACTICE_TYPES:
@@ -866,7 +1051,7 @@ class Session:
         self.require_chat_noted()
         marker = f"--- {number}"
         chat = self._noted_chat()
-        self._append_log(f"{marker} {chat}".strip() if chat else marker)
+        self.record(f"{marker} {chat}".strip() if chat else marker)
         self._chat = None
         return opened
 
@@ -912,7 +1097,7 @@ class Session:
         if self.session_path is None:
             return
         self.require_chat_noted()
-        self._append_log(self._action_line(action, paths))
+        self.record(self._action_line(action, paths))
         self._injected.clear()
         self._chat = None
 
@@ -943,7 +1128,7 @@ class Session:
             parts.append(rules)
         if chat:
             parts.append(chat)
-        self._append_log(" ".join(parts))
+        self.record(" ".join(parts))
         self._injected.clear()
         self._chat = None
 
@@ -961,7 +1146,7 @@ class Session:
         chat = self._noted_chat()
         if chat:
             parts.append(chat)
-        self._append_log(" ".join(parts))
+        self.record(" ".join(parts))
         self._chat = None
 
     @staticmethod
@@ -1058,7 +1243,7 @@ class Session:
         line = f"validate {practice} {fidelity} {detail}".rstrip()
         if pointer:
             line = f"{line} {pointer}"
-        self._append_log(line)
+        self.record(line)
         self._injected.clear()
         self._chat = None
 
@@ -1086,7 +1271,7 @@ class Session:
         chat = self._noted_chat()
         if chat:
             parts.append(chat)
-        self._append_log(" ".join(parts))
+        self.record(" ".join(parts))
         self._chat = None
 
     def log_error(self, failure: BaseException) -> None:
@@ -1096,7 +1281,7 @@ class Session:
     def append_chat(self, action: str, chat_file: Path) -> None:
         pointer = self._chat_pointer(chat_file)
         self._append_to_action_line(action, pointer)
-        self._append_log(f"{action} chat {pointer}")
+        self.record(f"{action} chat {pointer}")
 
     def keep_log(self) -> str:
         log_file = "session.log"
@@ -1162,7 +1347,7 @@ class Session:
         opened = Loop(1)
         opened._session = self
         self._loops = [opened]
-        self._append_log("--- 1")
+        self.record("--- 1")
 
     @staticmethod
     def sessions_dir(repo_path: Path) -> Path:
@@ -1176,7 +1361,7 @@ class Session:
         preferred = cls.sessions_dir(root) / name
         legacy = root / _LEGACY_REPO_SESSIONS_DIR / name
         candidates = [preferred, legacy]
-        if name != _MAIN_SESSION_NAME:
+        if name != MAIN_SESSION_NAME:
             candidates.insert(0, cls.sessions_dir(main_checkout_of(root)) / name)
         for folder in candidates:
             if (folder / "session.json").is_file():
@@ -1246,7 +1431,7 @@ class Session:
     def _guidance_for(self, name: str) -> PracticeGuidance:
         ref = _PRACTICE_TYPES.get(name)
         if ref is None:
-            raise ValueError(f"Unknown practice {name}")
+            raise UnknownPracticeError(name)
         module_name, class_name = ref.split(":")
         import importlib
 
@@ -1385,28 +1570,22 @@ class Session:
         )
 
     def last_generated_format(self, guidance: PracticeGuidance) -> str:
-        """The format the latest generate of guidance's fidelity wrote, read from its line in session.log, which lists the
-        practices, then their fidelities, then their formats; empty when no generate line names that fidelity."""
+        """The format the latest generate of guidance's fidelity wrote, read from its line in session.log; empty when
+        no generate line names that fidelity."""
         practice = self._practice_key_for_instance(guidance)
         fidelity = self._fidelity_name(guidance)
-        log = self.session_path / "session.log" if self.session_path else None
-        if not practice or not fidelity or log is None or not log.is_file():
+        if not practice or not fidelity:
             return ""
-        for line in reversed(log.read_text(encoding="utf-8").splitlines()):
-            words = line.replace(", ", ",").split(" ")
-            if len(words) > 1 and words[1] == "generate":
-                written = self._written_format(words[2:], practice, fidelity)
-                if written:
-                    return written
-        return ""
+        generated = (entry.format_written_for(practice, fidelity) for entry in reversed(self.log_entries) if entry.verb == "generate")
+        return next(filter(None, generated), "")
 
-    @staticmethod
-    def _written_format(words: list[str], practice: str, fidelity: str) -> str:
-        for practices, fidelities, formats in zip(words, words[1:], words[2:]):
-            named = list(zip(practices.split(","), fidelities.split(","), formats.split(",")))
-            if (practice, fidelity) in [(name, opened) for name, opened, _ in named]:
-                return next(written for name, opened, written in named if (name, opened) == (practice, fidelity))
-        return ""
+    @property
+    def log_entries(self) -> list[LogEntry]:
+        """Every line of session.log, oldest first; none before anything is logged."""
+        log = self.session_path / "session.log" if self.session_path else None
+        if log is None or not log.is_file():
+            return []
+        return [LogEntry(line) for line in log.read_text(encoding="utf-8").splitlines() if line.strip()]
 
     def _fidelity_name(self, guidance: PracticeGuidance) -> str:
         current = getattr(getattr(guidance, "fidelities", None), "current", None)
@@ -1470,7 +1649,8 @@ class Session:
                 lines[index] = f"{line} {pointer}"
         log.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
 
-    def _append_log(self, line: str) -> None:
+    def record(self, line: str) -> None:
+        """Append line to session.log, stamped with the time it was written."""
         if self.session_path is None:
             return
         stamp = self.timestamp(datetime.now(timezone.utc))
@@ -1480,3 +1660,10 @@ class Session:
             handle.write(written + "\n")
         if self._loops and not line.startswith("--- "):
             self._loops[-1].entries.append(written)
+
+
+def _named_parts_as_wildcards(path: str) -> str:
+    """A declared path with its named parts, such as `{module}/{module}-model.md`, as a pattern. A named folder can be
+    a module several folders deep, so it matches folders at any depth; a named part of a file name matches within it."""
+    folders = re.sub(r"\{[^{}/]+\}/", "**/", path)
+    return re.sub(r"\{[^{}/]+\}", "*", folders)

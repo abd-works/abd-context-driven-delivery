@@ -15,7 +15,7 @@ with story("Open Validation Report"):
         # Evidence: observed: kanban_tools_spec 'with validation reports saved for a fidelity' — 'should show that fidelity's latest report', 'should list each rule the report names with its violations', 'should give a violation the line it failed on', 'should show the source lines around a violation'; side-panel-client.spec 'Open Validation Report'; story-actions.spec 'should show the rules with the failing line marked'.
         with given("checkout-flow's story map has the validation report stories-story-map-20261101T100000.md with its saved graph"):
             pass
-        with and_("the graph names verb-noun-format on tests/story-map.md line 6"):
+        with and_("the graph names verb-noun-format on .context/story-map.md line 6"):
             pass
         with when("the Person opens checkout-flow's story_map report"):
             # Person -> Ticket.report('stories-story_map')
@@ -24,7 +24,7 @@ with story("Open Validation Report"):
             pass
         with then("the report panel shows .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md"):
             pass
-        with and_("it lists verb-noun-format with one violation at tests/story-map.md line 6 and the source lines around it"):
+        with and_("it lists verb-noun-format with one violation at .context/story-map.md line 6 and the source lines around it"):
             pass
     with scenario("Show every fidelity's violations at once"):
         # Evidence: observed: side-panel-client.spec 'should show every fidelity's violations with no fidelity named'; kanban_tools_spec 'with violations left on two fidelities', 'should list a rule two fidelities share once'.
@@ -52,9 +52,9 @@ with story("Open Validation Report"):
         with given("checkout-flow's story_map report is open"):
             pass
         with when("the Person opens the verb-noun-format violation"):
-            # Person -> Ticket.read_file('tests/story-map.md')
+            # Person -> Ticket.read_file('.context/story-map.md')
             pass
-        with then("the files panel shows tests/story-map.md with line 6 marked"):
+        with then("the files panel shows .context/story-map.md with line 6 marked"):
             pass
     with scenario("Say there is no report"):
         # Evidence: observed: kanban_tools_spec 'should show no report for a fidelity that has none'.

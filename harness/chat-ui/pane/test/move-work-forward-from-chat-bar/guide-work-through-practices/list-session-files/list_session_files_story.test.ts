@@ -18,17 +18,17 @@ story('List Session Files', CHAT_BAR, () => {
       await scene.ui.press({ key: 'dot-clean_engineering-model' })
     })
     and('it declares pane/hooks/chat-bar/chat-bar-client.ts and pane/hooks/chat-bar/fidelity-client.ts', async ($, on, scene) => {
-      scene.world.answers['ticket.files'] = { 'clean_engineering-model': { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-client.ts', exists: true }] } }
-      scene.world.answers['ticket.read_file'] = { path: 'pane/hooks/chat-bar/chat-bar-client.ts', text: '// Model shell for the chat bar' }
+      scene.world.answers['fidelity-progress.files'] = { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-client.ts', exists: true }] }
+      scene.world.answers['session.read_file'] = { path: 'pane/hooks/chat-bar/chat-bar-client.ts', text: '// Model shell for the chat bar' }
     })
     when('the Person lists the files', async ($, on, scene) => {
       await scene.ui.press({ key: 'files-button' })
     })
-    // ChatBarView press -> openFiles($, fidelity) -> $.mcp.call('ticket.files', { ticket: 'checkout-flow', fidelities: ['clean_engineering-model'] }) -> Ticket.files()
+    // ChatBarView press -> openFiles($, fidelity) -> $.mcp.call('fidelity-progress.files', { ticket: 'checkout-flow', fidelity: 'clean_engineering-model' }) -> FidelityProgress.files()
     then('a tab opens for chat-bar-client.ts and one for fidelity-client.ts, as in View Fidelity Files', async ($, on, scene) => {
       const tabs = await Promise.all(['file-pane/hooks/chat-bar/chat-bar-client.ts', 'file-pane/hooks/chat-bar/fidelity-client.ts'].map(key => labelOf(scene.ui, key)))
       expect(tabs).toEqual(['chat-bar-client.ts', 'fidelity-client.ts'])
-      expect(called(scene.world, 'ticket.files')).toEqual({ ticket: 'checkout-flow', fidelities: ['clean_engineering-model'] })
+      expect(called(scene.world, 'fidelity-progress.files')).toEqual({ ticket: 'checkout-flow', fidelity: 'clean_engineering-model' })
     })
   })
 })

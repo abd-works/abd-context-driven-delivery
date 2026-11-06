@@ -4,15 +4,15 @@
 
 #### Scenario: Open one tab per format, generated or not
 
-*Given* checkout-flow's story map is tests/story-map.md and tests/story-map.drawio is not there
+*Given* checkout-flow's story map is .context/story-map.md and .context/story-map.drawio is not there
 *When* the Person views checkout-flow's story_map files
-*Then* the files panel shows the tabs tests/story-map.md and tests/story-map.drawio
-*And* the tests/story-map.md tab shows # Check Out Order
+*Then* the files panel shows the tabs .context/story-map.md and .context/story-map.drawio
+*And* the .context/story-map.md tab shows # Check Out Order
 *And* the drawio tab says it is not generated yet
 
 #### Scenario: Go back to the list when the last tab closes
 
-*Given* the tabs tests/story-map.md and tests/story-map.drawio are open
+*Given* the tabs .context/story-map.md and .context/story-map.drawio are open
 *When* the Person closes both tabs
 *Then* the files panel shows the list
 

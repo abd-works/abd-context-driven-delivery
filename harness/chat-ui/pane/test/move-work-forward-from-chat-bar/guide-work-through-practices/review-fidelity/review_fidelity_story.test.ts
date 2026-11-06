@@ -23,18 +23,18 @@ story('Review Fidelity', CHAT_BAR, () => {
       expect(await labelOf(scene.ui, 'next-action')).toBe('review ux-mockup')
       await scene.ui.press({ key: 'next-action' })
     })
-    // ChatBarView press -> reviewFidelity($, fidelity) -> $.mcp.call('ticket.finish_review', { ticket: 'checkout-flow', fidelities: ['ux-mockup'] }) -> Ticket.finish_review()
+    // ChatBarView press -> reviewFidelity($, fidelity) -> $.mcp.call('fidelity-progress.finish_review', { ticket: 'checkout-flow', fidelity: 'ux-mockup' }) -> FidelityProgress.finish_review()
     // Ticket -> Ticket.record('review UX mockup')
     then('the UX dot shows reviewed', async ($, on, scene) => {
       expect(await labelOf(scene.ui, 'dot-ux-mockup')).toBe('ux-mockup done')
-      expect(called(scene.world, 'ticket.finish_review')).toEqual({ ticket: 'checkout-flow', fidelities: ['ux-mockup'] })
+      expect(called(scene.world, 'fidelity-progress.finish_review')).toEqual({ ticket: 'checkout-flow', fidelity: 'ux-mockup' })
     })
   })
   scenario('Refuse a review before a clean validate', ({ given, when, then, and }) => {
     // Evidence: inferred: CDR 0001 'which needs its latest Validate to have passed'
     given("checkout-flow's clean_engineering-model has 7 violations in its latest validation report", async ($, on, scene) => {
       scene.world.board = boardOf('checkout-flow', checkoutFlowWith({ 'clean_engineering-model': { ...VALIDATED, progress: 'violations', violations: 7 } }))
-      scene.world.refusals['ticket.finish_review'] = 'clean_engineering-model cannot be reviewed: its latest validation report has 7 violations'
+      scene.world.refusals['fidelity-progress.finish_review'] = 'clean_engineering-model cannot be reviewed: its latest validation report has 7 violations'
     })
     when('the Person reviews clean_engineering-model', async ($, on, scene) => {
       // With violations the Ticket names satisfy next, so the Person picks review from the action picker.
@@ -43,7 +43,7 @@ story('Review Fidelity', CHAT_BAR, () => {
       await scene.ui.press({ key: 'action-picker' })
       await scene.ui.press({ key: 'pick-review' })
     })
-    // picker press -> chooseAction($, fidelity, 'review') -> reviewFidelity($, fidelity) -> $.mcp.call('ticket.finish_review', ...) <- ReviewRefused with the server's text
+    // picker press -> chooseAction($, fidelity, 'review') -> reviewFidelity($, fidelity) -> $.mcp.call('fidelity-progress.finish_review', ...) <- ReviewRefused with the server's text
     then("the Chat Bar shows the server's reason", async ($, on, scene) => {
       expect(scene.world.toasts).toContain('clean-engineering-model not reviewed: clean_engineering-model cannot be reviewed: its latest validation report has 7 violations')
     })

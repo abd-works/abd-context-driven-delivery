@@ -25,7 +25,7 @@ with story("Browse Ticket Folder"):
         with given("checkout-flow's [session](../../../.context/kanban-model.md#session) folder holds its log and validation-reports/stories-story-map-20261101T100000.md"):
             pass
         with when("the Person browses checkout-flow's session folder"):
-            # Person -> Ticket.session_files()
+            # Person -> Ticket.session -> Session.folder_files()
             pass
         with then("the files panel lists .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md under its folder"):
             pass

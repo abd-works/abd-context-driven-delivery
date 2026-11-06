@@ -23,7 +23,7 @@ with story("Display Ticket Card"):
             pass
         with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
             # Board -> Board.tickets
-            # Board -> Session.all_in(repo.root)
+            # Board -> Repo.sessions()
             # Session <- pet-visits, sign-up, browse-pets
             pass
         with then("the Discovery [stage](../../../.context/kanban-model.md#stage--column) shows the [tickets](../../../.context/kanban-model.md#ticket--card) Pet visits and Sign up"):

@@ -17,7 +17,7 @@ from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
 from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
-from harness.installation.destination import Installation, SourceFile, data_fields_of, edited_fields_of, identity_field_of, languages_of
+from harness.installation.destination import Installation, SourceFile, data_fields_of, edited_fields_of, identity_fields_of, languages_of
 
 _FOLDER = "language-adapters"
 _TYPESCRIPT = "typescript"
@@ -48,7 +48,7 @@ class MissingIdentityError(ValueError):
     """A toolset's tools load one object by name, but its mark does not say which field of its data holds that name."""
 
     def __init__(self, toolset_name: str) -> None:
-        super().__init__(f"{toolset_name} loads one object by name; add identity=<field> to its @language_adapter mark")
+        super().__init__(f"{toolset_name} loads one object by name; add identity=<field>, one field for each argument of its loader, to its @language_adapter mark")
 
 
 def camel_case(name: str) -> str:
@@ -185,7 +185,7 @@ class TypeScriptOperation:
         self.is_static = inspect.ismethod(tool.callable)
         self.identity = owner.identity_of(tool)
         schema = owner.input_schema(tool)
-        self.properties = {name: value for name, value in schema["properties"].items() if name != self.identity}
+        self.properties = {name: value for name, value in schema["properties"].items() if name not in self.identity}
         self.required = [name for name in schema.get("required", []) if name in self.properties]
         self.result = owner.result_of(tool)
         self.path_tail = kebab_case(tool.mcp_name.split(".")[1])
@@ -206,7 +206,7 @@ class TypeScriptOperation:
         return [_sent_under_python_name(name) for name in self.properties]
 
     def adapter_lines(self) -> list[str]:
-        held = [f"{self.identity}: this.{camel_case(self.identity)}"] if self.identity else []
+        held = [f"{name}: this.#{camel_case(name)}" for name in self.identity]
         arguments = f"{{ {', '.join([*held, *self._arguments])} }}" if held or self.properties else "{}"
         if self.is_static:
             parameters = ", ".join(filter(None, ["cdd: CddConnection", self._parameters]))
@@ -218,7 +218,7 @@ class TypeScriptOperation:
         if self.is_static:
             parameters = ", ".join(filter(None, ["api: CddApi", self._parameters]))
             return self._posted(f"static {self.name}({parameters})", f"api.post<{self.result}>('{self._route_path(None)}', {body})")
-        address = f"${{encodeURIComponent(this.{camel_case(self.identity)})}}" if self.identity else None
+        address = "/".join(f"${{encodeURIComponent(this.#{camel_case(name)})}}" for name in self.identity) or None
         return self._posted(f"{self.name}({self._parameters})", f"this.api.post<{self.result}>(`{self._route_path(address)}`, {body})")
 
     def _method(self, signature: str, call: str) -> list[str]:
@@ -241,7 +241,7 @@ class TypeScriptOperation:
             target = f"{node}.fromRequest(cdd, request).{self.name}({sent})"
         else:
             target = f"new {node}(cdd).{self.name}({sent})"
-        path = self._route_path(f":{self.identity}" if self.identity else None)
+        path = self._route_path("/".join(f":{name}" for name in self.identity) or None)
         if not self.properties:
             return [f"  {{ path: '{path}', run: (cdd, request) => {target} }},"]
         read = read_arguments_call(self.properties, self.required)
@@ -264,7 +264,7 @@ class TypeScriptToolset:
         self._imports: set[tuple[str, str]] = set()
         self.name = type(toolset).__name__
         self.slug = self._tools[0].mcp_name.split(".")[0]
-        self.identity_field = identity_field_of(type(toolset))
+        self.identity_fields = identity_fields_of(type(toolset))
 
     @property
     def file_path(self) -> PurePosixPath:
@@ -309,7 +309,7 @@ class TypeScriptToolset:
         # The operations come first: writing them is what names the imports and nested shapes the files need.
         operations = [TypeScriptOperation(tool, self) for tool in self._tools]
         identity = self._identity_name()
-        if identity and not self.identity_field:
+        if len(identity) != len(self.identity_fields):
             raise MissingIdentityError(self.name)
         adapter = self._adapter_class(operations, identity)
         routes = self._routes(operations)
@@ -440,50 +440,57 @@ class TypeScriptToolset:
         shown = self._hint_type(get_args(hint)[0] if optional else hint)
         return ["", f"  get {camel_case(name)}(): {shown}{' | undefined' if optional else ''} {{", f"    return this.#read().{name}", "  }"]
 
-    def _adapter_class(self, operations: list[TypeScriptOperation], identity: str | None) -> list[str]:
-        held = f", protected readonly {camel_case(identity)}: string" if identity else ""
+    def _adapter_class(self, operations: list[TypeScriptOperation], identity: tuple[str, ...]) -> list[str]:
+        held = "".join(f", {camel_case(name)}: string" for name in identity)
         return [
             f"export class {self.adapter_name} extends {self.name} {{",
+            *_identity_fields(identity),
             f"  constructor(protected readonly cdd: CddConnection{held}, state: {self.data_name} | null = null) {{",
             "    super(state)",
+            *_identity_kept(identity),
             "  }",
             *self._from_request(identity),
             *[line for operation in operations for line in operation.adapter_lines()],
             "}",
         ]
 
-    def _from_request(self, identity: str | None) -> list[str]:
+    def _from_request(self, identity: tuple[str, ...]) -> list[str]:
         """Builds the server adapter for the object a request names, so an application never parses the address."""
-        if identity is None:
+        if not identity:
             return []
-        read = read_arguments_call({identity: {"type": "string"}}, [identity])
+        read = read_arguments_call({name: {"type": "string"} for name in identity}, list(identity))
+        named = ", ".join(f"named.{name}" for name in identity)
         return [
             "",
             f"  static fromRequest(cdd: CddConnection, request: CddRequest): {self.adapter_name} {{",
-            f"    return new {self.adapter_name}(cdd, {read}.{identity})",
+            f"    const named = {read}",
+            f"    return new {self.adapter_name}(cdd, {named})",
             "  }",
         ]
 
-    def _client_class(self, operations: list[TypeScriptOperation], identity: str | None) -> list[str]:
-        held = f", protected readonly {camel_case(identity)}: string = state?.{self.identity_field} ?? ''" if identity else ""
+    def _client_class(self, operations: list[TypeScriptOperation], identity: tuple[str, ...]) -> list[str]:
+        held = "".join(f", {camel_case(name)}: string = state?.{field} ?? ''" for name, field in zip(identity, self.identity_fields))
         return [
             f"export class {self.client_name} extends {self.name} {{",
+            *_identity_fields(identity),
             f"  constructor(readonly api: CddApi, state: {self.data_name} | null = null{held}) {{",
             "    super(state)",
+            *_identity_kept(identity),
             "  }",
             *self._named(identity),
             *[line for operation in operations for line in operation.client_lines()],
             "}",
         ]
 
-    def _named(self, identity: str | None) -> list[str]:
+    def _named(self, identity: tuple[str, ...]) -> list[str]:
         """Page code that knows only an object's name can still act on it, before it has read the object."""
-        if identity is None:
+        if not identity:
             return []
+        names = [camel_case(name) for name in identity]
         return [
             "",
-            f"  static named(api: CddApi, {camel_case(identity)}: string): {self.client_name} {{",
-            f"    return new {self.client_name}(api, null, {camel_case(identity)})",
+            f"  static named(api: CddApi, {', '.join(f'{name}: string' for name in names)}): {self.client_name} {{",
+            f"    return new {self.client_name}(api, null, {', '.join(names)})",
             "  }",
         ]
 
@@ -491,15 +498,15 @@ class TypeScriptToolset:
         """One route for each tool, so the browser adapter and the server adapter meet at a path neither side writes."""
         return [f"export const {self._routes_name}: CddRoute[] = [", *[line for operation in operations for line in operation.route_lines()], "]"]
 
-    def _identity_name(self) -> str | None:
-        return next(filter(None, map(self.identity_of, self._tools)), None)
+    def _identity_name(self) -> tuple[str, ...]:
+        return next(filter(None, map(self.identity_of, self._tools)), ())
 
-    def identity_of(self, tool: Any) -> str | None:
-        """The argument that names the object: a loader with no parameters, like the current board, has none."""
+    def identity_of(self, tool: Any) -> tuple[str, ...]:
+        """The arguments that name the object, its loader's: a loader with none, like the current board's, names none."""
         if not getattr(tool.callable, ON_SUBJECT_FLAG, False):
-            return None
+            return ()
         load = AgentToolSet.tool_subject_of(type(self._toolset))
-        return next(iter(inspect.signature(load).parameters), None)
+        return tuple(inspect.signature(load).parameters)
 
     def input_schema(self, tool: Any) -> Mapping[str, Any]:
         return self._host.input_schema_for_callable(tool.callable)
@@ -752,3 +759,12 @@ class LanguageAdapterInstallation(Installation):
         path.write_text(text, encoding="utf-8")
         self.track_write(path)
         return path
+
+
+def _identity_fields(identity: tuple[str, ...]) -> list[str]:
+    """The names an object is addressed by stay private, so a data field of the same name keeps its public getter."""
+    return [f"  readonly #{camel_case(name)}: string" for name in identity] + ([""] if identity else [])
+
+
+def _identity_kept(identity: tuple[str, ...]) -> list[str]:
+    return [f"    this.#{camel_case(name)} = {camel_case(name)}" for name in identity]

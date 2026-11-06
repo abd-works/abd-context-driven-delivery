@@ -12,10 +12,8 @@ the board app writes the render command); Send Tile Action To Chat (both: the bo
 and document commands and picks the chat). The Thens of the scenarios below that only the page shows (a bar's picks)
 are left to those specs too.
 
-Several scenarios name a story map at `tests/story-map.md` or under a root as `<root>/story-map.md`. The story_map
-fidelity declares its markdown at `.context/story-map.md` and its drawio at `.context/story-map.drawio`
-(cdd_guidance/practices/stories/stories.md), so `Session.fidelity_outputs` puts them under `<root>/.context/`; those
-Thens fail until the declaration and the scenarios agree.
+The story_map fidelity declares its markdown at `.context/story-map.md` and its drawio at `.context/story-map.drawio`
+(cdd_guidance/practices/stories/stories.md), so `Session.fidelity_outputs` puts them under `<root>/.context/`.
 """
 
 from __future__ import annotations
@@ -66,7 +64,7 @@ def _(s):
 
 @shared_stories.scenario("Generate Fidelity Output", "Render the earlier fidelity into a new format first")
 def _(s):
-    @s.given("pet-visits' story map is docs/story-map.md, generated in markdown only")
+    @s.given("pet-visits' story map is docs/.context/story-map.md, generated in markdown only")
     def _(world):
         world.project.seed_session(PET_VISITS.with_log(generated("stories", "story_map")))
         world.project.seed_session_fields(PET_VISITS, outputs={"stories": {"root": PET_VISITS_STORY_MAP_ROOT}})
@@ -76,8 +74,6 @@ def _(s):
     def _(world):
         world.commands = world.Ticket.load(PET_VISITS.name).generate_commands(fidelities=["stories-scenarios"], formats=["drawio"])
 
-    # Fails today: the story map's markdown is declared at docs/.context/story-map.md, so docs/story-map.md is not its
-    # output and nothing is rendered first.
     @s.then("the first command is /actions-render stories-story-map format=drawio source=markdown")
     def _(world):
         expect(world.commands[0]).to(equal("/actions-render stories-story-map format=drawio source=markdown session=.sessions/pet-visits/session.json"))
@@ -116,19 +112,18 @@ def _(s):
     def _(world):
         world.project.seed_session(ALPHA)
 
-    @s.and_("the story_map fidelity declares root tests, markdown story-map.md, and drawio story-map.drawio")
+    @s.and_("the story_map fidelity declares markdown .context/story-map.md and drawio .context/story-map.drawio")
     def _(world):
         # A fidelity's outputs are declared in its practice's guidance, cdd_guidance/practices/stories/stories.md.
         pass
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.Session.at(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
+        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
 
-    # Fails today: stories.md declares the story map's markdown at .context/story-map.md under the workpath.
-    @s.then("the markdown file is /work/tests/story-map.md")
+    @s.then("the markdown file is /work/.context/story-map.md")
     def _(world):
-        expect(world.outputs["markdown"]).to(equal([at_work("tests/story-map.md")]))
+        expect(world.outputs["markdown"]).to(equal([at_work(".context/story-map.md")]))
 
 
 @shared_stories.scenario("Resolve Fidelity Output Paths", "Use the practice's root named in session.json")
@@ -140,12 +135,11 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.Session.at(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
+        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
 
-    # Fails today: the markdown goes in the root's .context folder, /work/docs/stories/.context/story-map.md.
-    @s.then("the markdown file is /work/docs/stories/story-map.md")
+    @s.then("the markdown file is /work/docs/stories/.context/story-map.md")
     def _(world):
-        expect(world.outputs["markdown"]).to(equal([at_work("docs/stories/story-map.md")]))
+        expect(world.outputs["markdown"]).to(equal([at_work("docs/stories/.context/story-map.md")]))
 
 
 @shared_stories.scenario("Resolve Fidelity Output Paths", "Prefer the fidelity's own root")
@@ -157,12 +151,11 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's files go")
     def _(world):
-        world.outputs = world.Session.at(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
+        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
 
-    # Fails today: the drawio goes in the root's .context folder, /work/docs/map/.context/story-map.drawio.
-    @s.then("the drawio file is /work/docs/map/story-map.drawio")
+    @s.then("the drawio file is /work/docs/map/.context/story-map.drawio")
     def _(world):
-        expect(world.outputs["drawio"]).to(equal([at_work("docs/map/story-map.drawio")]))
+        expect(world.outputs["drawio"]).to(equal([at_work("docs/map/.context/story-map.drawio")]))
 
 
 @shared_stories.scenario("Resolve Fidelity Output Paths", "Rename a single-file output and keep a pattern")
@@ -174,13 +167,12 @@ def _(s):
 
     @s.when("Claude Code asks where story_map's and scenarios' files go")
     def _(world):
-        world.outputs = world.Session.at(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
-        world.scenario_outputs = world.Session.at(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="scenarios"))
+        world.outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="story_map"))
+        world.scenario_outputs = world.Session.load(world.project.sessions / ALPHA.name, world.project.root).fidelity_outputs(Stories(fidelity="scenarios"))
 
-    # Fails today: both files go in the workpath's .context folder, /work/.context/our-map.md and /work/.context/story-map.drawio.
-    @s.then("story_map's markdown is /work/tests/our-map.md and its drawio stays /work/tests/story-map.drawio")
+    @s.then("story_map's markdown is /work/.context/our-map.md and its drawio stays /work/.context/story-map.drawio")
     def _(world):
-        expect((world.outputs["markdown"], world.outputs["drawio"])).to(equal(([at_work("tests/our-map.md")], [at_work("tests/story-map.drawio")])))
+        expect((world.outputs["markdown"], world.outputs["drawio"])).to(equal(([at_work(".context/our-map.md")], [at_work(".context/story-map.drawio")])))
 
     @s.and_("scenarios' python keeps its declared name, such as archive_ticket_story.test.py for the story Archive Ticket")
     def _(world):
