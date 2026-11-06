@@ -737,15 +737,9 @@ class FidelityGuidance(Guidance):
             companion_text = (
                 companion.instructions if isinstance(companion, FidelityGuidance) else ""
             )
-            previous = practice.fidelities.current
-            previous_format = practice.format
-            practice.fidelities.current = practice.fidelities[self.name]
-            practice.format = self.format or self.default_format
-            try:
-                templates = (practice.templates or "").strip()
-            finally:
-                practice.fidelities.current = previous
-                practice.format = previous_format
+            templates = Markdown.from_label(
+                practice, "templates", fidelity=self.name, format=self.format or self.default_format
+            ).extract().strip()
             if templates:
                 templates = f"#### Template\n\n{templates}"
         schema = practice.schema_guide() if practice is not None else ""

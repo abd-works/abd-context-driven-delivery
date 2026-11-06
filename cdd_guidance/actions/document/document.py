@@ -21,7 +21,6 @@ class Document(GuidanceAction):
         def on(item) -> None:
             if isinstance(item, str):
                 return
-            item.contexts
             item.templates
             scanner = getattr(item, "scanner", None)
             if scanner is not None:

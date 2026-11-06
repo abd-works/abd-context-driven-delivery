@@ -56,8 +56,6 @@ function validateFaceOf(ticket: TicketClient, tile: Tile): StepFace {
 
 const allowsAll = (ticket: TicketClient, tile: Tile, action: string): boolean => tile.slugs.length > 0 && tile.slugs.every(slug => ticket.allows(slug, action))
 
-const hasFiles = (tile: Tile): boolean => Object.values(tile.files).some(formats => Object.values(formats).some(entries => entries.some(entry => entry.exists)))
-
 // What an open action bar offers, and what its controls send to the chat.
 export class TileActionsClient {
   constructor(private readonly page: BoardPage) {}
@@ -84,9 +82,9 @@ export class TileActionsClient {
     return tile.action !== 'render' || chipsOf(stage, tile.slugs).some(chip => chipDoneCount(tile.files, tile.slugs, chip) > 0)
   }
 
-  // Validate and Review need something to look at: an action the ticket recorded, or files the bar found on disk.
+  // The ticket says when Validate and Review have something to look at: an action it recorded, or a declared file there.
   private hasSomethingToCheck(ticket: TicketClient, tile: Tile, action: string): boolean {
-    return !ticket.isLocked && (allowsAll(ticket, tile, action) || hasFiles(tile))
+    return !ticket.isLocked && allowsAll(ticket, tile, action)
   }
 
   barOf(ticket: TicketClient, stage: ColumnClient, tile: Tile): TileBar {
