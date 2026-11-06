@@ -138,12 +138,23 @@ with description("Stories"):
         with it("should pass a code format through to the companion"):
             stories = Stories(fidelity="acceptance_tests", format="typescript")
             companion = stories.fidelities.current.clean_engineering
-            expect(companion.practice_guidance.format).to(equal("typescript"))
+            expect(companion.format).to(equal("typescript"))
 
         with it("should pass python through unchanged"):
             stories = Stories(fidelity="acceptance_tests", format="python")
             companion = stories.fidelities.current.clean_engineering
-            expect(companion.practice_guidance.format).to(equal("python"))
+            expect(companion.format).to(equal("python"))
+
+        with it("should follow the code format the practice changes to after the companion is made"):
+            stories = Stories(fidelity="acceptance_tests", format="python")
+            companion = stories.fidelities.current.clean_engineering
+            stories.format = "typescript"
+            expect(companion.format).to(equal("typescript"))
+
+        with it("should leave the companion's own practice in its own format"):
+            stories = Stories(fidelity="acceptance_tests", format="typescript")
+            companion = stories.fidelities.current.clean_engineering
+            expect(companion.practice_guidance.format).not_to(equal("typescript"))
 
         with it("should fall back to CE's own default for a non-code format"):
             stories = Stories(fidelity="acceptance_tests", format="markdown")

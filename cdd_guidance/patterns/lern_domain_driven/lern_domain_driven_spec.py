@@ -112,7 +112,7 @@ with description("a LernDomainDriven generator"):
 
         with it("should carry that format through to the Clean Engineering companion"):
             companion = self.stories.fidelities.current.clean_engineering
-            expect(companion.practice_guidance.format).to(equal("typescript"))
+            expect(companion.format).to(equal("typescript"))
 
         with it("should point the step library at test-utils/story-test"):
             expect(self.stories.story_test_folder).to(equal("test-utils/story-test"))

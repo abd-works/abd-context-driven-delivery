@@ -603,6 +603,10 @@ def _folder_of(paths: list[str] | str) -> str:
 
 @agent_toolset
 class FidelityGuidance(Guidance):
+    host: FidelityGuidance | None = None
+    """The fidelity this one is the Clean Engineering companion of, such as Stories' acceptance_tests for code; none
+    for a fidelity of its own practice."""
+
     def __init__(
         self,
         name: str = "",
@@ -661,6 +665,19 @@ class FidelityGuidance(Guidance):
         return AssetLocator(self, "").class_file_directory().name
 
     @property
+    def format(self) -> str | None:
+        """The format this fidelity works in. A Clean Engineering companion writes its host's code, so while the host's
+        practice works in a code format the companion works in it too, read when asked so it follows the host."""
+        host_practice = self.host.practice_guidance if self.host is not None else None
+        if host_practice is not None and Format(host_practice.format).is_code:
+            return host_practice.format
+        return getattr(self, "_format", None)
+
+    @format.setter
+    def format(self, value: str | None) -> None:
+        self._format = value
+
+    @property
     def default_format(self) -> str:
         return getattr(self, "_default_format", "")
 
@@ -677,6 +694,8 @@ class FidelityGuidance(Guidance):
 
     @property
     def clean_engineering(self) -> FidelityGuidance | None:
+        """The Clean Engineering fidelity this fidelity's `clean_engineering:` field names, whose instructions join
+        this fidelity's. It knows this fidelity as its host and reads the code format from it."""
         stored = getattr(self, "_clean_engineering", None)
         if isinstance(stored, FidelityGuidance):
             return stored
@@ -685,14 +704,7 @@ class FidelityGuidance(Guidance):
         from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
         companion = CleanEngineering().fidelities[stored]
-        host = self.practice_guidance
-        practice = companion.practice_guidance
-        if (
-            host is not None
-            and practice is not None
-            and Format(host.format).is_code
-        ):
-            practice.format = host.format
+        companion.host = self
         self._clean_engineering = companion
         return companion
 
@@ -758,9 +770,7 @@ class FidelityGuidance(Guidance):
             companion_text = (
                 companion.instructions if isinstance(companion, FidelityGuidance) else ""
             )
-            templates = Markdown.from_label(
-                practice, "templates", fidelity=self.name, format=self.format or self.default_format
-            ).extract().strip()
+            templates = self._template(practice)
             if templates:
                 templates = f"#### Template\n\n{templates}"
         schema = practice.schema_guide() if practice is not None else ""
@@ -777,6 +787,16 @@ class FidelityGuidance(Guidance):
             )
             if part
         )
+
+    def _template(self, practice: PracticeGuidance) -> str:
+        """This fidelity's template in the format it works in, else in its default format: a companion writing
+        TypeScript still shows Clean Engineering's reference template when no TypeScript one exists."""
+        formats = [spelling for spelling in dict.fromkeys((self.format, self.default_format)) if spelling] or [""]
+        for format in formats:
+            found = Markdown.from_label(practice, "templates", fidelity=self.name, format=format).extract().strip()
+            if found:
+                return found
+        return ""
 
 
 GUIDANCE_PROBE = ["stories", "clean-engineering-model"]
