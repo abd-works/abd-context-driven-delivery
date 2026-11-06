@@ -172,24 +172,25 @@ def expect_placed(ticket: dict, column: str, is_done: bool) -> None:
 def expect_actions(ticket: dict, fidelity: str, generate: str, validate: str, review: str) -> None:
     """The fidelity's Generate, Validate, and Review each read to_do, in_progress, or done on the ticket."""
     expected = {"generate": generate, "validate": validate, "review": review}
-    actual = ticket["actions"][fidelity]
+    actual = ticket["progress"][fidelity]["actions"]
     if actual != expected:
         raise AssertionError(f"expected {fidelity} on {ticket['name']} to read {expected}, but it reads {actual}")
 
 
 def expect_action(ticket: dict, fidelity: str, action: str, state: str) -> None:
     """One of the fidelity's Generate, Validate, and Review reads state on the ticket."""
-    _expect_equal(ticket["actions"][fidelity][action], state, f"{fidelity} {action} on {ticket['name']}")
+    _expect_equal(ticket["progress"][fidelity]["actions"][action], state, f"{fidelity} {action} on {ticket['name']}")
 
 
 def expect_held_on_violations(ticket: dict, fidelity: str) -> None:
     """The fidelity's Validate is in progress until its violations are fixed, and its segment shows violations."""
-    _expect_equal((ticket["actions"][fidelity]["validate"], ticket["progress"][fidelity]), ("in_progress", "violations"), f"{fidelity} on {ticket['name']}")
+    progress = ticket["progress"][fidelity]
+    _expect_equal((progress["actions"]["validate"], progress["state"]), ("in_progress", "violations"), f"{fidelity} on {ticket['name']}")
 
 
 def expect_no_next(ticket: dict) -> None:
     """Run next has nothing to run on the ticket."""
-    _expect_equal((ticket["next"], ticket["next_action"]), (None, ""), f"the next step of {ticket['name']}")
+    _expect_equal(ticket["next"], None, f"the next step of {ticket['name']}")
 
 
 def expect_active(board: dict, name: str | None) -> None:

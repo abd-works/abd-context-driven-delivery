@@ -78,7 +78,7 @@ with description("AgentBdd action expansion"):
         with context("that does not own kit lifecycle actions"):
             with it("should not expose generate, validate, satisfy, or repair"):
                 for name in ("generate", "validate", "satisfy", "repair"):
-                    expect(name in self.bdd.agent_tools).to(equal(False))
+                    expect(name in self.bdd.tools).to(equal(False))
 
         with context("the guidance action is expanded"):
             with before.each:

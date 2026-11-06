@@ -16,8 +16,9 @@ from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentToolSet, InstallDestination
-from harness.installation.destination import Installation, SourceFile, data_fields_of, edited_fields_of, identity_field_of, languages_of
+from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentTool, AgentToolSet, InstallDestination
+from harness.agent_tools.name import Name
+from harness.installation.destination import Installation, SourceFile, data_fields_of, edited_fields_of, identity_fields_of, languages_of
 
 _FOLDER = "language-adapters"
 _TYPESCRIPT = "typescript"
@@ -48,16 +49,7 @@ class MissingIdentityError(ValueError):
     """A toolset's tools load one object by name, but its mark does not say which field of its data holds that name."""
 
     def __init__(self, toolset_name: str) -> None:
-        super().__init__(f"{toolset_name} loads one object by name; add identity=<field> to its @language_adapter mark")
-
-
-def camel_case(name: str) -> str:
-    head, *rest = name.split("_")
-    return head + "".join(word.capitalize() for word in rest)
-
-
-def kebab_case(name: str) -> str:
-    return name.replace("_", "-")
+        super().__init__(f"{toolset_name} loads one object by name; add identity=<field>, one field for each argument of its loader, to its @language_adapter mark")
 
 
 def schema_type(schema: Mapping[str, Any]) -> str:
@@ -107,7 +99,7 @@ def label_of(name: str) -> str:
 
 def spelled(name: str) -> str:
     """A Python argument name as a TypeScript parameter, kept clear of reserved words."""
-    camel = camel_case(name)
+    camel = Name(name).camel
     return f"{camel}Value" if camel in _RESERVED_WORDS else camel
 
 
@@ -178,18 +170,18 @@ def is_source_file(hint: object) -> bool:
 class TypeScriptOperation:
     """One MCP tool, as the server adapter, the browser adapter, and the route between them each write it."""
 
-    def __init__(self, tool: Any, owner: TypeScriptToolset) -> None:
+    def __init__(self, tool: AgentTool, owner: TypeScriptToolset) -> None:
         self._owner = owner
         self.mcp_name = tool.mcp_name
-        self.name = camel_case(tool.mcp_name.split(".")[1])
+        self.name = Name(tool.name).camel
         self.is_static = inspect.ismethod(tool.callable)
         self.identity = owner.identity_of(tool)
-        schema = owner.input_schema(tool)
-        self.properties = {name: value for name, value in schema["properties"].items() if name != self.identity}
+        schema = tool.input_schema
+        self.properties = {name: value for name, value in schema["properties"].items() if name not in self.identity}
         self.required = [name for name in schema.get("required", []) if name in self.properties]
         self.result = owner.result_of(tool)
-        self.path_tail = kebab_case(tool.mcp_name.split(".")[1])
-        self.label = label_of(tool.mcp_name.split(".")[1])
+        self.path_tail = Name(tool.name).kebab
+        self.label = label_of(tool.name)
         self.marked_edits = edited_fields_of(tool.callable)
 
     @property
@@ -206,7 +198,7 @@ class TypeScriptOperation:
         return [_sent_under_python_name(name) for name in self.properties]
 
     def adapter_lines(self) -> list[str]:
-        held = [f"{self.identity}: this.{camel_case(self.identity)}"] if self.identity else []
+        held = [f"{name}: this.#{Name(name).camel}" for name in self.identity]
         arguments = f"{{ {', '.join([*held, *self._arguments])} }}" if held or self.properties else "{}"
         if self.is_static:
             parameters = ", ".join(filter(None, ["cdd: CddConnection", self._parameters]))
@@ -218,7 +210,7 @@ class TypeScriptOperation:
         if self.is_static:
             parameters = ", ".join(filter(None, ["api: CddApi", self._parameters]))
             return self._posted(f"static {self.name}({parameters})", f"api.post<{self.result}>('{self._route_path(None)}', {body})")
-        address = f"${{encodeURIComponent(this.{camel_case(self.identity)})}}" if self.identity else None
+        address = "/".join(f"${{encodeURIComponent(this.#{Name(name).camel})}}" for name in self.identity) or None
         return self._posted(f"{self.name}({self._parameters})", f"this.api.post<{self.result}>(`{self._route_path(address)}`, {body})")
 
     def _method(self, signature: str, call: str) -> list[str]:
@@ -241,7 +233,7 @@ class TypeScriptOperation:
             target = f"{node}.fromRequest(cdd, request).{self.name}({sent})"
         else:
             target = f"new {node}(cdd).{self.name}({sent})"
-        path = self._route_path(f":{self.identity}" if self.identity else None)
+        path = self._route_path("/".join(f":{name}" for name in self.identity) or None)
         if not self.properties:
             return [f"  {{ path: '{path}', run: (cdd, request) => {target} }},"]
         read = read_arguments_call(self.properties, self.required)
@@ -254,17 +246,16 @@ class TypeScriptOperation:
 class TypeScriptToolset:
     """One marked toolset, written as one TypeScript file of its generated classes and one of its starting-point views."""
 
-    def __init__(self, toolset: Any, tools: list[Any], folder: Path, host: Any, peers: dict[str, TypeScriptToolset]) -> None:
+    def __init__(self, toolset: Any, tools: list[AgentTool], folder: Path, peers: dict[str, TypeScriptToolset]) -> None:
         self._toolset = toolset
         self._tools = sorted(tools, key=lambda tool: tool.mcp_name)
         self._folder = PurePosixPath(folder.as_posix())
-        self._host = host
         self._peers = peers
         self._shapes: dict[str, type] = {}
         self._imports: set[tuple[str, str]] = set()
         self.name = type(toolset).__name__
-        self.slug = self._tools[0].mcp_name.split(".")[0]
-        self.identity_field = identity_field_of(type(toolset))
+        self.slug = toolset.slug
+        self.identity_fields = identity_fields_of(type(toolset))
 
     @property
     def file_path(self) -> PurePosixPath:
@@ -288,7 +279,7 @@ class TypeScriptToolset:
 
     @property
     def _routes_name(self) -> str:
-        return f"{camel_case(self.slug.replace('-', '_'))}Routes"
+        return f"{Name(self.slug).camel}Routes"
 
     @property
     def _data_shape(self) -> type | None:
@@ -309,7 +300,7 @@ class TypeScriptToolset:
         # The operations come first: writing them is what names the imports and nested shapes the files need.
         operations = [TypeScriptOperation(tool, self) for tool in self._tools]
         identity = self._identity_name()
-        if identity and not self.identity_field:
+        if len(identity) != len(self.identity_fields):
             raise MissingIdentityError(self.name)
         adapter = self._adapter_class(operations, identity)
         routes = self._routes(operations)
@@ -438,52 +429,59 @@ class TypeScriptToolset:
     def _getter(self, name: str, hint: object) -> list[str]:
         optional = get_origin(hint) is NotRequired
         shown = self._hint_type(get_args(hint)[0] if optional else hint)
-        return ["", f"  get {camel_case(name)}(): {shown}{' | undefined' if optional else ''} {{", f"    return this.#read().{name}", "  }"]
+        return ["", f"  get {Name(name).camel}(): {shown}{' | undefined' if optional else ''} {{", f"    return this.#read().{name}", "  }"]
 
-    def _adapter_class(self, operations: list[TypeScriptOperation], identity: str | None) -> list[str]:
-        held = f", protected readonly {camel_case(identity)}: string" if identity else ""
+    def _adapter_class(self, operations: list[TypeScriptOperation], identity: tuple[str, ...]) -> list[str]:
+        held = "".join(f", {Name(name).camel}: string" for name in identity)
         return [
             f"export class {self.adapter_name} extends {self.name} {{",
+            *_identity_fields(identity),
             f"  constructor(protected readonly cdd: CddConnection{held}, state: {self.data_name} | null = null) {{",
             "    super(state)",
+            *_identity_kept(identity),
             "  }",
             *self._from_request(identity),
             *[line for operation in operations for line in operation.adapter_lines()],
             "}",
         ]
 
-    def _from_request(self, identity: str | None) -> list[str]:
+    def _from_request(self, identity: tuple[str, ...]) -> list[str]:
         """Builds the server adapter for the object a request names, so an application never parses the address."""
-        if identity is None:
+        if not identity:
             return []
-        read = read_arguments_call({identity: {"type": "string"}}, [identity])
+        read = read_arguments_call({name: {"type": "string"} for name in identity}, list(identity))
+        named = ", ".join(f"named.{name}" for name in identity)
         return [
             "",
             f"  static fromRequest(cdd: CddConnection, request: CddRequest): {self.adapter_name} {{",
-            f"    return new {self.adapter_name}(cdd, {read}.{identity})",
+            f"    const named = {read}",
+            f"    return new {self.adapter_name}(cdd, {named})",
             "  }",
         ]
 
-    def _client_class(self, operations: list[TypeScriptOperation], identity: str | None) -> list[str]:
-        held = f", protected readonly {camel_case(identity)}: string = state?.{self.identity_field} ?? ''" if identity else ""
+    def _client_class(self, operations: list[TypeScriptOperation], identity: tuple[str, ...]) -> list[str]:
+        held = "".join(f", {Name(name).camel}: string = state?.{field} ?? ''" for name, field in zip(identity, self.identity_fields))
         return [
             f"export class {self.client_name} extends {self.name} {{",
+            *_identity_fields(identity),
             f"  constructor(readonly api: CddApi, state: {self.data_name} | null = null{held}) {{",
             "    super(state)",
+            *_identity_kept(identity),
             "  }",
             *self._named(identity),
             *[line for operation in operations for line in operation.client_lines()],
             "}",
         ]
 
-    def _named(self, identity: str | None) -> list[str]:
+    def _named(self, identity: tuple[str, ...]) -> list[str]:
         """Page code that knows only an object's name can still act on it, before it has read the object."""
-        if identity is None:
+        if not identity:
             return []
+        names = [Name(name).camel for name in identity]
         return [
             "",
-            f"  static named(api: CddApi, {camel_case(identity)}: string): {self.client_name} {{",
-            f"    return new {self.client_name}(api, null, {camel_case(identity)})",
+            f"  static named(api: CddApi, {', '.join(f'{name}: string' for name in names)}): {self.client_name} {{",
+            f"    return new {self.client_name}(api, null, {', '.join(names)})",
             "  }",
         ]
 
@@ -491,20 +489,17 @@ class TypeScriptToolset:
         """One route for each tool, so the browser adapter and the server adapter meet at a path neither side writes."""
         return [f"export const {self._routes_name}: CddRoute[] = [", *[line for operation in operations for line in operation.route_lines()], "]"]
 
-    def _identity_name(self) -> str | None:
-        return next(filter(None, map(self.identity_of, self._tools)), None)
+    def _identity_name(self) -> tuple[str, ...]:
+        return next(filter(None, map(self.identity_of, self._tools)), ())
 
-    def identity_of(self, tool: Any) -> str | None:
-        """The argument that names the object: a loader with no parameters, like the current board, has none."""
+    def identity_of(self, tool: AgentTool) -> tuple[str, ...]:
+        """The arguments that name the object, its loader's: a loader with none, like the current board's, names none."""
         if not getattr(tool.callable, ON_SUBJECT_FLAG, False):
-            return None
+            return ()
         load = AgentToolSet.tool_subject_of(type(self._toolset))
-        return next(iter(inspect.signature(load).parameters), None)
+        return tuple(inspect.signature(load).parameters)
 
-    def input_schema(self, tool: Any) -> Mapping[str, Any]:
-        return self._host.input_schema_for_callable(tool.callable)
-
-    def result_of(self, tool: Any) -> str:
+    def result_of(self, tool: AgentTool) -> str:
         annotation = inspect.signature(tool.callable).return_annotation
         text = annotation.__name__ if isinstance(annotation, type) else str(annotation).replace("typing.", "")
         return self._text_type(text, tool.callable)
@@ -568,12 +563,12 @@ class TypeScriptViews:
 
     def _view(self) -> list[str]:
         owner = self._owner
-        variable = camel_case(owner.slug.replace("-", "_"))
+        variable = Name(owner.slug).camel
         shown = [operation for operation in self._operations if not operation.is_static and operation not in [edit[0] for edit in self._edits.values()]]
         return [
             f"export type {owner.name}ViewProps = {{",
             f"  client: {owner.client_name}",
-            f"  fields?: Partial<Record<{self._union(camel_case(field) for field in self._fields)}, (object: {owner.client_name}) => ReactNode>>",
+            f"  fields?: Partial<Record<{self._union(Name(field).camel for field in self._fields)}, (object: {owner.client_name}) => ReactNode>>",
             f"  operations?: Partial<Record<{self._union(operation.name for operation in shown)}, (object: {owner.client_name}) => ReactNode>>",
             "}",
             "",
@@ -598,7 +593,7 @@ class TypeScriptViews:
         return " | ".join(quoted) if quoted else "never"
 
     def _field(self, field: str, hint: object, variable: str) -> str:
-        getter = camel_case(field)
+        getter = Name(field).camel
         if field in self._source_files:
             fallback = self._source(field, variable)
         elif field in self._edits:
@@ -609,19 +604,19 @@ class TypeScriptViews:
 
     def _source(self, field: str, variable: str) -> str:
         """A file field opens the shared source view at the line, or the range, the same data holds."""
-        place = [f" {camel_case(name)}={{{variable}.{camel_case(name)}}}" for name in ("line", "start_line", "end_line") if name in self._fields]
-        return f"<SourceField api={{{variable}.api}} label=\"{label_of(field)}\" path={{{variable}.{camel_case(field)}}}{''.join(place)} />"
+        place = [f" {Name(name).camel}={{{variable}.{Name(name).camel}}}" for name in ("line", "start_line", "end_line") if name in self._fields]
+        return f"<SourceField api={{{variable}.api}} label=\"{label_of(field)}\" path={{{variable}.{Name(field).camel}}}{''.join(place)} />"
 
     def _editable(self, field: str, hint: object, variable: str) -> str:
         operation, argument = self._edits[field]
         sent = ", ".join(self._edit_argument(name, value, argument, variable) for name, value in operation.properties.items())
         save = f"value => {variable}.{operation.name}({sent})"
-        return f"<EditableField label=\"{label_of(field)}\" kind=\"{self._hint_input(hint)}\" value={{{variable}.{camel_case(field)}}} onSave={{{save}}} />"
+        return f"<EditableField label=\"{label_of(field)}\" kind=\"{self._hint_input(hint)}\" value={{{variable}.{Name(field).camel}}} onSave={{{save}}} />"
 
     def _edit_argument(self, name: str, schema: Mapping[str, Any], argument: str, variable: str) -> str:
         if name == argument:
             return f"value as {schema_type(schema)}"
-        return f"{variable}.{camel_case(name)}" if name in self._fields else "undefined"
+        return f"{variable}.{Name(name).camel}" if name in self._fields else "undefined"
 
     def _operation(self, operation: TypeScriptOperation, variable: str) -> str:
         form = self._form(operation, f"{self._values(operation)} => {variable}.{operation.name}({self._sent(operation)})")
@@ -738,13 +733,10 @@ class LanguageAdapterInstallation(Installation):
         return f"{note}\n{(_TEMPLATES / file_name).read_text(encoding='utf-8')}"
 
     def _typescript_toolsets(self) -> dict[str, TypeScriptToolset]:
-        from harness.mcp.mcp_server import McpHost, McpOperationDefinition, McpServer, McpTool
-
-        host = McpHost(McpServer(repo=self.repo))
         peers: dict[str, TypeScriptToolset] = {}
         for toolset in self._recorded:
-            tools = [McpTool(McpOperationDefinition.from_tool(tool)) for tool in toolset.tools.values() if InstallDestination.MCP in tool.destinations]
-            peers[type(toolset).__name__] = TypeScriptToolset(toolset, tools, self.folder_for(toolset), host, peers)
+            tools = toolset.tools_for(InstallDestination.MCP)
+            peers[type(toolset).__name__] = TypeScriptToolset(toolset, tools, self.folder_for(toolset), peers)
         return peers
 
     def _written(self, path: Path, text: str) -> Path:
@@ -752,3 +744,12 @@ class LanguageAdapterInstallation(Installation):
         path.write_text(text, encoding="utf-8")
         self.track_write(path)
         return path
+
+
+def _identity_fields(identity: tuple[str, ...]) -> list[str]:
+    """The names an object is addressed by stay private, so a data field of the same name keeps its public getter."""
+    return [f"  readonly #{Name(name).camel}: string" for name in identity] + ([""] if identity else [])
+
+
+def _identity_kept(identity: tuple[str, ...]) -> list[str]:
+    return [f"    this.#{Name(name).camel} = {Name(name).camel}" for name in identity]

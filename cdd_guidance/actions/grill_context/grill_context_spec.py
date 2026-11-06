@@ -22,30 +22,30 @@ from harness.agent_tools.agent_tools import AgentToolSet
 
 
 with description("GrillContext toolset"):
-    with context("manifest signature"):
+    with context("with its tools listed"):
         with it("should expose explore_context_files as a tool"):
-            sig = GrillContext.manifest.signature
-            expect(sig["explore_context_files"]["kind"]).to(equal("tool"))
+            tools = AgentToolSet.instantiate(GrillContext).tools
+            expect(tools["explore_context_files"].kind).to(equal("tool"))
 
         with it("should expose read_context_file as a tool"):
-            sig = GrillContext.manifest.signature
-            expect(sig["read_context_file"]["kind"]).to(equal("tool"))
+            tools = AgentToolSet.instantiate(GrillContext).tools
+            expect(tools["read_context_file"].kind).to(equal("tool"))
 
         with it("should expose write_grill_answer as a tool"):
-            sig = GrillContext.manifest.signature
-            expect(sig["write_grill_answer"]["kind"]).to(equal("tool"))
+            tools = AgentToolSet.instantiate(GrillContext).tools
+            expect(tools["write_grill_answer"].kind).to(equal("tool"))
 
         with it("should expose grill as an action"):
-            sig = GrillContext.manifest.signature
-            expect(sig["grill"]["kind"]).to(equal("action"))
+            tools = AgentToolSet.instantiate(GrillContext).tools
+            expect(tools["grill"].kind).to(equal("instructions"))
 
         with it("should include the grill_with_context body in grill"):
-            entry = GrillContext.manifest.signature["grill"]
-            expect(entry["kind"]).to(equal("action"))
-            gwc = GrillContext.manifest.signature["grill_with_context"]
-            expect("explore_context_files" in gwc["tools"]).to(be_true)
-            expect("read_context_file" in gwc["tools"]).to(be_true)
-            expect("write_grill_answer" in gwc["tools"]).to(be_true)
+            tools = AgentToolSet.instantiate(GrillContext).tools
+            expect(tools["grill"].kind).to(equal("instructions"))
+            gwc = tools["grill_with_context"]
+            expect("explore_context_files" in gwc.tools).to(be_true)
+            expect("read_context_file" in gwc.tools).to(be_true)
+            expect("write_grill_answer" in gwc.tools).to(be_true)
 
     with context("explore_context_files tool"):
         with before.each:
@@ -194,8 +194,8 @@ with description("GrillContext toolset"):
         with it("should include the grill_with_context body in grill"):
             joined = "\n".join(self.body.prompt)
             expect(joined).to(contain("grill"))
-            expect("explore_context_files" in self.body.tool_steps).to(be_true)
-            expect("read_context_file" in self.body.tool_steps).to(be_true)
+            expect("explore_context_files" in self.body.tools).to(be_true)
+            expect("read_context_file" in self.body.tools).to(be_true)
 
         with it("should prefer thinking questions over syntax trivia"):
             joined = "\n".join(self.body.prompt)
@@ -232,4 +232,4 @@ with description("PracticeGuidance operations for grill"):
             )
         )
         practice = cls()
-        expect("grill" in practice.agent_tools).to(equal(False))
+        expect("grill" in practice.tools).to(equal(False))

@@ -1,9 +1,9 @@
-import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
+import { SessionClientGenerated } from '@cdd/space/session/session'
 
 import type { BoardApi } from '../board/board-api'
 import { FORMAT_GROUPS } from '../board/board-brand'
 import type { BoardStore, FilesPanel, SidePanel } from '../board/board-store'
-import type { TicketFiles } from './ticket'
+import { filesOf, sessionFileOf, type TicketFiles } from './ticket'
 
 const TAB_GROUPS = ['markdown', 'code', 'diagram']
 const SESSION_ENTRY = 'session'
@@ -70,10 +70,13 @@ export class FilesPanelClient {
 
   // A session folder's files are shown as the files of one entry, so the list, folder, and tabs read them the same way.
   private async read(ticket: string, slugs: string[], isSession: boolean): Promise<TicketFiles | null> {
-    const ticketTools = TicketClientGenerated.named(this.api, ticket)
-    if (!isSession) return ticketTools.files(slugs)
-    const entries = await ticketTools.sessionFiles()
+    if (!isSession) return filesOf(this.api, ticket, slugs)
+    const entries = await this.sessionOf(ticket).folderFiles()
     return entries && { [SESSION_ENTRY]: { [SESSION_ENTRY]: entries } }
+  }
+
+  private sessionOf(ticket: string): SessionClientGenerated {
+    return SessionClientGenerated.named(this.api, sessionFileOf(this.store.state.board, ticket))
   }
 
   async openFiles(ticket: string, slugs: string[], mode: string): Promise<void> {
@@ -108,7 +111,7 @@ export class FilesPanelClient {
 
   private async textOf(ticket: string, path: string, isOnDisk: boolean): Promise<string> {
     if (!isOnDisk) return ''
-    return (await TicketClientGenerated.named(this.api, ticket).readFile(path))?.text ?? ''
+    return (await this.sessionOf(ticket).readFile(path))?.text ?? ''
   }
 
   async openTab(path: string): Promise<void> {

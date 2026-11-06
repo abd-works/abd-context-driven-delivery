@@ -15,6 +15,7 @@ from typing import Iterable
 
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, load_approach_copy
 from harness.catalog_generator.catalog_generator import Catalog, GitCitation, load_registry
+from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.catalog_generator.foundry_chrome import (
     Brand,
     page_shell,
@@ -24,7 +25,6 @@ from harness.catalog_generator.foundry_chrome import (
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _STAGE_IDS = ("discovery", "specification", "implementation")
-_PRACTICES = ("stories", "ddd", "ux", "clean_engineering", "bdd")
 
 _PATH_HINTS: tuple[tuple[tuple[str, str], re.Pattern[str]], ...] = (
     (("stories", "discovery"), re.compile(r"story[-_]?map", re.I)),
@@ -232,7 +232,7 @@ def save_examples_manifest(
     root = Path(project_root).resolve()
     manifest = root / ".context" / "project-approach-examples.json"
     manifest.parent.mkdir(parents=True, exist_ok=True)
-    nested: dict[str, dict[str, str]] = {practice: {} for practice in _PRACTICES}
+    nested: dict[str, dict[str, str]] = {practice: {} for practice in PracticeCatalogue.keys()}
     for (practice, stage), path in sorted(examples.items()):
         nested.setdefault(practice, {})[stage] = path.relative_to(root).as_posix()
     payload = {

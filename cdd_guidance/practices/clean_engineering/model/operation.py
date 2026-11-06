@@ -47,6 +47,7 @@ from cdd_guidance.practices.clean_engineering.model.update_report import ChildCo
 
 class Parameter(OoadNode):
     _semantic_type_name = "Parameter"
+    graph_facts = ("type_hint", "operation_name", "property_setter")
 
     def __init__(self, name: str, sequential_order: int = 0, type_hint: str = "") -> None:
         super().__init__(name, sequential_order)
@@ -85,6 +86,29 @@ class Parameter(OoadNode):
 
 class Operation(OoadNode):
     _semantic_type_name = "Operation"
+    graph_facts = (
+        "line_count",
+        "max_control_flow_depth",
+        "has_bare_catch",
+        "swallows_exceptions",
+        "unnamed_literal_numbers",
+        "is_static",
+        "is_classmethod",
+        "is_property",
+        "body_fingerprint",
+        "callees",
+        "peer_private_access",
+        "private_reach",
+        "io_and_domain",
+        "io_and_domain_callees",
+        "raises_on_empty",
+        "exception_without_message",
+        "generic_exception_message",
+        "mutates_without_record",
+        "prose_comment",
+        "bold_interaction_lines",
+        "bold_invariant_lines",
+    )
 
     def __init__(
         self,

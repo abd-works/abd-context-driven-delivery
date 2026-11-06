@@ -3305,7 +3305,7 @@ Announce a ticket that moved
 Announce a reviewed fidelity
   ```
   // the graph holds no operation this observation calls
-  it Then a toast says stories-story_map reviewed on billing-report
+  it Then a toast says stories-story-map reviewed on billing-report
   ```
 
 
@@ -3562,7 +3562,7 @@ with a chat connected
     Ask a chat to open a ticket
       ```
       -> BoardReader.poll()
-      it Then the chat's prompt holds Open a new ticket with ticket.new, titled: for the Person to finish
+      it Then the chat's prompt holds Open a new ticket with ticket.create, titled: for the Person to finish
       ```
   Close Active Session
     Close the active session from its card
@@ -3578,7 +3578,7 @@ with a chat connected
     Ask the chat to split a ticket into child tickets
       ```
       -> BoardReader.poll()
-      it Then the chat's prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.new with parent checkout-flow for each story.
+      it Then the chat's prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story.
       ```
     Keep Split off on a closed ticket
       ```

@@ -48,17 +48,19 @@ def noDeploy(target: Any = None) -> Any:
     return mark(target)
 
 
-def language_adapter(*, language: str, identity: str = "") -> Callable[[Any], Any]:
+def language_adapter(*, language: str, identity: str | tuple[str, ...] = "") -> Callable[[Any], Any]:
     """Deploy typed code in language for this toolset's MCP operations, so an application outside Python reaches them.
 
-    identity names the data field (`@data_field`) that holds the object's name, so code holding only that data
-    knows which object its operations act on. An object its tools never load by name, such as the one board, has none.
+    identity names the data fields (`@data_field`) that hold the object's name, one for each argument its
+    `@tool_subject` loader takes, in the same order, so code holding only that data knows which object its operations
+    act on. A fidelity's progress is named by its ticket and its slug. An object its tools never load by name, such as
+    the one board, has none.
     """
 
     def mark(toolset: Any) -> Any:
         setattr(toolset, _LANGUAGE_ADAPTERS_FLAG, (*languages_of(toolset), language))
         if identity:
-            setattr(toolset, _IDENTITY_FLAG, identity)
+            setattr(toolset, _IDENTITY_FLAG, (identity,) if isinstance(identity, str) else tuple(identity))
         return toolset
 
     return mark
@@ -69,9 +71,9 @@ def languages_of(toolset: Any) -> tuple[str, ...]:
     return tuple(getattr(toolset, _LANGUAGE_ADAPTERS_FLAG, ()))
 
 
-def identity_field_of(toolset: Any) -> str:
-    """The field of the toolset's data that names one object, or empty when its tools load none by name."""
-    return str(getattr(toolset, _IDENTITY_FLAG, ""))
+def identity_fields_of(toolset: Any) -> tuple[str, ...]:
+    """The fields of the toolset's data that name one object, or none when its tools load none by name."""
+    return tuple(getattr(toolset, _IDENTITY_FLAG, ()))
 
 
 def edits(*fields: str) -> Callable[[Any], Any]:
@@ -121,7 +123,11 @@ def data_fields_of(cls: type) -> dict[str, property]:
 
 
 def data_of(value: Any) -> Any:
-    """value as plain JSON data: an object with marked properties as its fields, each object it holds as its own data."""
+    """value as plain JSON data: an object with marked properties as its fields, each object it holds as its own data.
+
+    This is the one way an object becomes data, for MCP results and every other JSON answer, so a path reads the same
+    wherever it is sent: with forward slashes. A git commit still states its data in ``to_mcp_result`` until it marks
+    its properties."""
     if isinstance(value, Path):
         return value.as_posix()
     if isinstance(value, dict):
@@ -131,6 +137,9 @@ def data_of(value: Any) -> Any:
     fields = data_fields_of(type(value)) if not isinstance(value, type) else {}
     if fields:
         return {key: data_of(field.fget(value)) for key, field in fields.items()}
+    stated = getattr(value, "to_mcp_result", None)
+    if callable(stated) and not isinstance(value, type):
+        return data_of(stated())
     return value
 
 

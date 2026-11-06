@@ -41,6 +41,6 @@
 
 #### Scenario: Name the active ticket on the chat's status line
 
-*Given* checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card), in Discovery, with violations on stories-story_map
+*Given* checkout-flow is the active [ticket](../../../kanban-model.md#ticket--card), in Discovery, with violations on stories-story-map
 *When* a turn in a chat with the cdd-board mod loaded ends
-*Then* the chat's status line reads checkout-flow · Discovery · next: stories-story_map · 1 with violations
+*Then* the chat's status line reads checkout-flow · Discovery · next: stories-story-map · 1 with violations

@@ -218,8 +218,9 @@ def approach_principle_grid(
 ) -> str:
     """Static board under one approach principle. ``kind`` is descriptions, windows, spec, or tickets."""
     by_name = {t["toolset_name"]: t for t in practices}
-    row_order = ("stories", "ddd", "ux", "clean_engineering", "bdd")
-    rows = [by_name[name] for name in row_order if name in by_name]
+    from harness.guidance.practice_catalogue import PracticeCatalogue
+
+    rows = [by_name[name] for name in PracticeCatalogue.keys() if name in by_name]
 
     def practice_href(tool: dict) -> str:
         return tool.get("href") or f"context-tools/{tool['toolset_name']}.html"
@@ -1099,15 +1100,9 @@ def _drawio_iframe(path: Path, *, zoom_left: bool = False) -> str:
 
 
 def _stories_stage_overview(stage_id: str) -> str:
-    stage_key = {"discovery": "discovery", "specification": "spec", "implementation": "engineer"}.get(stage_id, "")
-    if not stage_key:
-        return ""
-    guide = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / "stories" / "stories.md"
-    if not guide.is_file():
-        return ""
-    for item in _practice_fidelities(guide.read_text(encoding="utf-8")):
-        if item["stage"] == stage_key:
-            return item["opening"]
+    for fidelity in _practice_fidelities("stories"):
+        if fidelity.stage == stage_id:
+            return _opening_of(fidelity)
     return ""
 
 
@@ -1719,20 +1714,6 @@ def _stage_example_inline(
     )
 
 
-_PRACTICE_GUIDES = {
-    "stories": "stories",
-    "ddd": "ddd",
-    "ux": "ux",
-    "clean_engineering": "clean_engineering",
-    "bdd": "bdd",
-}
-_STAGE_FROM_META = {
-    "discovery": "discovery",
-    "specification": "spec",
-    "spec": "spec",
-    "implementation": "engineer",
-    "engineer": "engineer",
-}
 _BOOKEND_TABS = (
     (
         "customer-discovery",
@@ -1762,12 +1743,6 @@ def copy_practice_examples(out_root: Path) -> None:
                 dest.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, dest / path.name)
 
-
-_STAGE_ID_FROM_KEY = {
-    "discovery": "discovery",
-    "spec": "specification",
-    "engineer": "implementation",
-}
 
 _FIDELITY_STEM_ALIASES = {
     ("ux", "ia"): ("information-architecture",),
@@ -1819,21 +1794,16 @@ def _practice_refine_panels(
     panels: dict[str, str] = {}
     openings: dict[str, str] = {}
     needs_monaco = False
-    guide_name = _PRACTICE_GUIDES.get(practice)
-    if not guide_name:
-        return panels, openings, False
-    guide = Path(__file__).resolve().parents[2] / "cdd_guidance" / "practices" / guide_name / f"{guide_name}.md"
-    if not guide.is_file():
-        return panels, openings, False
-    for item in _practice_fidelities(guide.read_text(encoding="utf-8")):
-        stage_id = _STAGE_ID_FROM_KEY.get(item["stage"])
-        if not stage_id:
+    for fidelity in _practice_fidelities(practice):
+        stage_id = fidelity.stage
+        if stage_id not in dict(_REFINE_STAGES):
             continue
+        opening = _opening_of(fidelity)
         if example_sources and catalog_root is not None:
             relative = example_sources.file_for(practice, stage_id)
             files = [Path(catalog_root) / relative] if relative else []
         else:
-            files = _fidelity_example_files(practice, item["key"])
+            files = _fidelity_example_files(practice, fidelity.name)
         if not files:
             continue
         parts: list[str] = []
@@ -1854,10 +1824,10 @@ def _practice_refine_panels(
             )
             needs_monaco = needs_monaco or "catalog-monaco" in inline
             parts.append(inline)
-        panel = _refine_example_panel(stage_id, item["opening"], "".join(parts))
+        panel = _refine_example_panel(stage_id, opening, "".join(parts))
         if panel:
             panels[stage_id] = panel
-            openings[stage_id] = item["opening"]
+            openings[stage_id] = opening
     return panels, openings, needs_monaco
 
 
@@ -1872,58 +1842,20 @@ _PE_TAB_LABELS = {
 }
 
 
-def _practice_fidelities(text: str) -> list[dict]:
-    match = re.search(r"(?m)^## Fidelities\s*$", text)
-    if not match:
+def _practice_fidelities(practice: str) -> list:
+    """The live fidelities of the practice whose toolset name is ``practice``, in the order the practice declares them."""
+    from harness.guidance.practice_catalogue import PracticeCatalogue
+
+    if not PracticeCatalogue.has(practice):
         return []
-    body = text[match.end() :]
-    nxt = re.search(r"(?m)^## ", body)
-    if nxt:
-        body = body[: nxt.start()]
-    found = []
-    for chunk in re.split(r"(?m)^### ", body)[1:]:
-        title, _, rest = chunk.partition("\n")
-        stage_match = re.search(r"(?m)^stage:\s*(\S+)", rest)
-        if not stage_match:
-            continue
-        stage = _STAGE_FROM_META.get(stage_match.group(1).strip().lower())
-        if not stage:
-            continue
-        found.append(
-            {
-                "key": title.strip(),
-                "stage": stage,
-                "opening": _overview_paragraph(rest),
-            }
-        )
-    return found
+    return list(PracticeCatalogue.practice(practice).fidelities.entries.values())
 
 
-def _overview_paragraph(section: str) -> str:
-    marker = "#### Overview"
-    index = section.find(marker)
-    body = section[index + len(marker) :] if index >= 0 else section
-    lines: list[str] = []
-    started = False
-    fence = False
-    for line in body.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("```"):
-            if started:
-                break
-            fence = not fence
-            continue
-        if fence or stripped.startswith("#"):
-            if started:
-                break
-            continue
-        if not stripped:
-            if started:
-                break
-            continue
-        started = True
-        lines.append(line.rstrip("\r"))
-    return "\n".join(lines).strip()
+def _opening_of(fidelity) -> str:
+    """The first paragraph of the fidelity's overview: the outline a reader sees before its rules."""
+    from harness.catalog_generator.catalog_generator import _first_prose_paragraph
+
+    return _first_prose_paragraph(fidelity.overview or fidelity.section)
 
 
 def _fidelity_example_files(practice: str, fidelity: str) -> list[Path]:

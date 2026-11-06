@@ -1,6 +1,6 @@
 import { expect } from 'claude-code/testing'
 
-import { called, cdd } from '../../../cdd-stub'
+import { called } from '../../../cdd-stub'
 import { CHAT_BAR, dueTimers, expectMarkLooks, expectMarks, findText, labelOf, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 

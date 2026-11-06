@@ -1,9 +1,7 @@
-import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
-
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
-import type { TicketFiles } from './ticket'
+import { filesOf, type TicketFiles } from './ticket'
 import type { TicketClient } from './ticket-client'
 import { defaultPicks } from './tile-formats'
 
@@ -34,7 +32,7 @@ export class TileClient {
   }
 
   private readFiles(ticket: string, slugs: string[]): Promise<TicketFiles | null> {
-    return TicketClientGenerated.named(this.page.api, ticket).files(slugs)
+    return filesOf(this.page.api, ticket, slugs)
   }
 
   // The bar shows at once and its files fill in when they are read, because reading them can take a second. Only the

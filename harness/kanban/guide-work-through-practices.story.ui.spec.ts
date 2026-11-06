@@ -50,7 +50,7 @@ test.describe('with no chat connected', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
         const opened = await openCardOf(page, 'billing-report')
-        await tileIn(opened, 'stories-story_map').hover()
+        await tileIn(opened, 'stories-story-map').hover()
         await page.waitForTimeout(RESTING_MILLISECONDS)
       })
 
@@ -77,22 +77,22 @@ test.describe('with no chat connected', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
         await selectTicket(page, 'billing-report', 'Billing report')
-        await pressTile(details(page), 'stories-story_map')
+        await pressTile(details(page), 'stories-story-map')
         await page.locator('.board-header').hover()
         await page.waitForTimeout(STILL_CLOSED_MILLISECONDS)
       })
 
       test('Then the story_map action bar stays open after the pointer leaves', async ({ page }) => {
-        await expect(barOf(details(page), 'stories-story_map')).toBeVisible()
+        await expect(barOf(details(page), 'stories-story-map')).toBeVisible()
       })
 
       test.describe('the Person presses the story_map tile again', () => {
         test.beforeEach(async ({ page }) => {
-          await pressTile(details(page), 'stories-story_map')
+          await pressTile(details(page), 'stories-story-map')
         })
 
         test('Then the story_map action bar closes', async ({ page }) => {
-          await expect(barOf(details(page), 'stories-story_map')).toHaveCount(0)
+          await expect(barOf(details(page), 'stories-story-map')).toHaveCount(0)
         })
       })
     })
@@ -103,21 +103,21 @@ test.describe('with no chat connected', () => {
         // A bar's action is off on a ticket that is not the active session while Active session only is on.
         await turnOffActiveSessionOnly(page)
         await selectTicket(page, 'billing-report', 'Billing report')
-        await pressTile(details(page), 'stories-story_map')
-        await pressTile(details(page), 'ddd-bounded_context')
+        await pressTile(details(page), 'stories-story-map')
+        await pressTile(details(page), 'ddd-bounded-context')
       })
 
       test('Then both action bars are open', async ({ page }) => {
-        await expect(details(page).locator('[data-tile="stories-story_map"] .expansion, [data-tile="ddd-bounded_context"] .expansion')).toHaveCount(2)
+        await expect(details(page).locator('[data-tile="stories-story-map"] .expansion, [data-tile="ddd-bounded-context"] .expansion')).toHaveCount(2)
       })
 
       test.describe('the Person chooses sketch on the bounded_context bar', () => {
         test.beforeEach(async ({ page }) => {
-          await barOf(details(page), 'ddd-bounded_context').getByRole('combobox', { name: 'Action' }).selectOption('sketch')
+          await barOf(details(page), 'ddd-bounded-context').getByRole('combobox', { name: 'Action' }).selectOption('sketch')
         })
 
         test("Then only the bounded_context bar's action is sketch", async ({ page }) => {
-          const actions = [await barOf(details(page), 'ddd-bounded_context').getByRole('combobox', { name: 'Action' }).inputValue(), await barOf(details(page), 'stories-story_map').getByRole('combobox', { name: 'Action' }).inputValue()]
+          const actions = [await barOf(details(page), 'ddd-bounded-context').getByRole('combobox', { name: 'Action' }).inputValue(), await barOf(details(page), 'stories-story-map').getByRole('combobox', { name: 'Action' }).inputValue()]
           expect(actions).toEqual(['sketch', 'generate'])
         })
       })
@@ -127,7 +127,7 @@ test.describe('with no chat connected', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
         const opened = await openCardOf(page, 'billing-report')
-        await pressTile(opened, 'stories-story_map')
+        await pressTile(opened, 'stories-story-map')
         await tileIn(opened, 'ux-ia').hover()
         await page.waitForTimeout(RESTING_MILLISECONDS)
       })
@@ -144,7 +144,7 @@ test.describe('with no chat connected', () => {
 
         test('Then the ia bar closes and the story_map bar stays open', async ({ page }) => {
           await expect(page.locator('[data-open-card="billing-report"] .expansion')).toHaveCount(1)
-          await expect(barOf(page.locator('[data-open-card="billing-report"]'), 'stories-story_map')).toBeVisible()
+          await expect(barOf(page.locator('[data-open-card="billing-report"]'), 'stories-story-map')).toBeVisible()
         })
       })
     })
@@ -153,12 +153,12 @@ test.describe('with no chat connected', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
         await selectTicket(page, 'billing-report', 'Billing report')
-        await tileIn(details(page), 'stories-story_map').hover()
+        await tileIn(details(page), 'stories-story-map').hover()
         await page.waitForTimeout(STILL_CLOSED_MILLISECONDS)
       })
 
       test('Then the story_map action bar stays closed', async ({ page }) => {
-        await expect(barOf(details(page), 'stories-story_map')).toHaveCount(0)
+        await expect(barOf(details(page), 'stories-story-map')).toHaveCount(0)
       })
     })
   })
@@ -182,8 +182,8 @@ test.describe('with no chat connected', () => {
     test.describe('Turn a practice off for a ticket', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
-        await pressTile(details(page), 'ddd-bounded_context')
-        await expect(barOf(details(page), 'ddd-bounded_context')).toBeVisible()
+        await pressTile(details(page), 'ddd-bounded-context')
+        await expect(barOf(details(page), 'ddd-bounded-context')).toBeVisible()
         await page.getByRole('switch', { name: 'Disable DDD for Checkout flow' }).click()
       })
 
@@ -192,8 +192,8 @@ test.describe('with no chat connected', () => {
       })
 
       test('And the bounded_context tile closes and fades', async ({ page }) => {
-        await expect(barOf(details(page), 'ddd-bounded_context')).toHaveCount(0)
-        await expect(tileIn(details(page), 'ddd-bounded_context')).toHaveCSS('opacity', '0.12')
+        await expect(barOf(details(page), 'ddd-bounded-context')).toHaveCount(0)
+        await expect(tileIn(details(page), 'ddd-bounded-context')).toHaveCSS('opacity', '0.12')
       })
     })
 

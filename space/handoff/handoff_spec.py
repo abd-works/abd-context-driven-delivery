@@ -18,6 +18,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 from expects import equal, expect, match
 from mamba import after, before, context, description, it
 
+from harness.agent_tools.agent_tools import AgentToolSet
 from space.handoff.handoff import Handoff
 from space.session.session import Session
 
@@ -37,25 +38,25 @@ def _open_session(root: Path, name: str = "my-session") -> Path:
     return work
 
 
-with description("the Handoff toolset manifest"):
+with description("the Handoff toolset's tools"):
     with it("should expose write_handoff tool and handoff_session action"):
-        sig = Handoff.manifest.signature
-        expect(sig["write_handoff"]["kind"]).to(equal("tool"))
-        expect(sig["handoff_session"]["kind"]).to(equal("action"))
+        tools = AgentToolSet.instantiate(Handoff).tools
+        expect(tools["write_handoff"].kind).to(equal("tool"))
+        expect(tools["handoff_session"].kind).to(equal("instructions"))
 
     with it("should not expose legacy tools"):
-        sig = Handoff.manifest.signature
+        sig = AgentToolSet.instantiate(Handoff).tools
         expect("resolve_working_folder" in sig).to(equal(False))
         expect("collect_session_state" in sig).to(equal(False))
         expect("compact_handoff" in sig).to(equal(False))
 
     with it("should not expose lifecycle begin or end"):
-        sig = Handoff.manifest.signature
+        sig = AgentToolSet.instantiate(Handoff).tools
         expect("begin" in sig).to(equal(False))
         expect("end" in sig).to(equal(False))
 
     with it("should call write_handoff when running the handoff_session action"):
-        tools = Handoff.manifest.signature["handoff_session"]["tools"]
+        tools = AgentToolSet.instantiate(Handoff).tools["handoff_session"].tools
         expect(tools).to(equal(["write_handoff"]))
 
 

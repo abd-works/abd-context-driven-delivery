@@ -26,7 +26,7 @@ with story("Display Ticket Details"):
             pass
         with then("the details show Billing report, root whole repository, and Discovery · in progress"):
             pass
-        with and_("the details say No handoff yet and Next: stories-story_map, generate"):
+        with and_("the details say No handoff yet and Next: stories-story-map, generate"):
             pass
         with and_("the details show a tile for each enabled [fidelity](../../../.context/kanban-model.md#fidelityguidance) with its [fidelity progress](../../../.context/kanban-model.md#fidelityprogress)"):
             pass
@@ -90,7 +90,7 @@ with story("Display Ticket Details"):
         with given("billing-report's card shows a segment for the story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance)"):
             pass
         with when("the Person opens billing-report's story_map segment"):
-            # Person -> OpenCardClient.openSegment(billing-report, Discovery, 'stories-story_map')
+            # Person -> OpenCardClient.openSegment(billing-report, Discovery, 'stories-story-map')
             pass
         with then("billing-report's card is expanded with the story_map tile's action bar open"):
             pass

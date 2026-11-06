@@ -37,7 +37,7 @@ class SketchCleanEngineeringModel(CleanEngineeringModel):
         module_name = declared.group(1) if declared else "KnowledgeGraph"
         model = cls(name=module_name, sequential_order=1)
         module = Module(name=module_name, sequential_order=1)
-        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.clean_engineering)
+        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.of("clean_engineering"))
         for oclass in _classes_in(body):
             existing = next((row for row in module.classes if row.name == oclass.name), None)
             if existing is None:

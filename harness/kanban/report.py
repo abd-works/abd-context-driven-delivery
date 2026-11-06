@@ -168,6 +168,11 @@ class ReportFile:
         self._workpath = workpath
 
     @property
+    def stamp(self) -> str:
+        """The date the report's name ends with, in a form that sorts by time."""
+        return self._file.stem.rsplit("-", 1)[-1]
+
+    @property
     def text(self) -> str:
         return self._file.read_text(encoding="utf-8", errors="replace")
 
@@ -225,7 +230,7 @@ class ReportFile:
         return [self._rule(progress, rule, violations) for rule, violations in findings.items()]
 
     def _rule(self, progress: FidelityProgress, name: str, violations: list[Violation]) -> ReportRule:
-        return ReportRule(progress.slug, name, progress.rule_descriptions.get(name, ""), violations)
+        return ReportRule(progress.fidelity_slug, name, progress.rule_descriptions.get(name, ""), violations)
 
     def _judged_violation(self, judged_file: str, finding: Violation) -> Violation:
         """A finding names the judged file by its name alone, or no file; one that names another file keeps that file's path."""

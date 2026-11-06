@@ -19,6 +19,7 @@ from harness.guidance.guidance import (
     ActionProbeSession,
     _instruction_result,
     fill_probe_arguments,
+    guidance_prefixes,
     mcp_matches_guidance,
     probe_guidance_actions,
     probe_guidance_instructions,
@@ -54,6 +55,19 @@ with description("guidance diagnostics"):
         expect(mcp_matches_guidance("clean-engineering.instructions", ["stories", "clean-engineering-model"])).to(equal(True))
         expect(mcp_matches_guidance("bdd.instructions", ["stories", "clean-engineering-model"])).to(equal(False))
         expect(mcp_matches_guidance("render.render", ["stories", "clean-engineering-model"])).to(equal(False))
+
+    with description("a filter that names a fidelity whose own name has a hyphen"):
+        with it("should add the practice of that fidelity, so stories-story-map adds stories"):
+            expect(guidance_prefixes(["stories-story-map"])).to(equal(["stories-story-map", "stories"]))
+
+        with it("should match the practice's own instructions"):
+            expect(mcp_matches_guidance("stories.instructions", ["stories-story-map"])).to(equal(True))
+
+        with it("should probe the folder of that fidelity's practice"):
+            session = ActionProbeSession(Installer(repo=_REPO_ROOT))
+            paths = session.content_paths(["stories-story-map"])
+            session.cleanup()
+            expect(paths).to(equal([str(_REPO_ROOT / "cdd_guidance" / "practices" / "stories")]))
 
     with it("should return stories instructions from the installed mcp list"):
         tree = Path(tempfile.mkdtemp())

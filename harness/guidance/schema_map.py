@@ -9,28 +9,14 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-# A type is a key alone on its line, at the top level or nested as ``- entity:`` under the type that owns it.
-_NODE_HEADER = re.compile(r"^\s*(?:- )?([A-Za-z]\w*):\s*$")
-_FIDELITY_LINE = re.compile(r"^\s+(?:- )?fidelity:\s*([A-Za-z0-9_-]+)\s*$")
+from harness.guidance.schema import Schema
+
 _FIDELITY_SECTION = re.compile(r"^### ([A-Za-z0-9_-]+)\s*$")
 
 
 def node_fidelities(schema_text: str) -> dict[str, str]:
     """Return each schema node key mapped to the fidelity that creates it."""
-    mapping: dict[str, str] = {}
-    current: str | None = None
-    for line in schema_text.splitlines():
-        header = _NODE_HEADER.match(line)
-        if header:
-            current = header.group(1)
-            continue
-        if current is None:
-            continue
-        prop = _FIDELITY_LINE.match(line)
-        if prop:
-            mapping[current] = prop.group(1)
-            current = None
-    return mapping
+    return Schema(schema_text).fidelities()
 
 
 def fidelity_sections(practice_markdown: str) -> frozenset[str]:
@@ -70,7 +56,7 @@ def load_node_fidelities(practice_module_dir: Path) -> dict[str, list[str]]:
     if not path.is_file() or not markdown.is_file():
         return {}
     order = fidelity_order(markdown.read_text(encoding="utf-8"))
-    created = node_fidelities(path.read_text(encoding="utf-8"))
+    created = Schema.load(path).fidelities()
     return {node: order[order.index(fidelity):] for node, fidelity in created.items() if fidelity in order}
 
 

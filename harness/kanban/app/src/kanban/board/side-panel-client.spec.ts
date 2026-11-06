@@ -11,7 +11,7 @@ import type { FilesPanel, ReportPanel } from './board-store'
 // checkout-flow is the active ticket: its story map was validated with one rule broken on .context/story-map.md line 6.
 const TICKET = 'checkout-flow'
 const SESSION = 'session=.sessions/checkout-flow/session.json'
-const SLUG = 'stories-story_map'
+const SLUG = 'stories-story-map'
 const REPORT_PATH = '.sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md'
 const FAILING_LINE = 12
 const CLEAN_GRAPH = { practices: { stories: { nodes: [], rules: [] } } }
@@ -51,7 +51,7 @@ describe('List Ticket Files', () => {
     }
 
     it('should say so in a toast', async () => {
-      expect((await refused()).store.state.toasts[0]?.text).toBe("cdd ticket.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board")
+      expect((await refused()).store.state.toasts[0]?.text).toBe("cdd fidelity-progress.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board")
     })
 
     it('should open no panel', async () => {

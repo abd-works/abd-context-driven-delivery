@@ -1,6 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
-import type { TicketData, WorkspaceData } from '@cdd/harness/kanban/ticket'
+import type { WorkspaceData } from '@cdd/harness/kanban/board'
+import type { TicketData } from '@cdd/harness/kanban/ticket'
 
 import { reasonOf } from '../failure'
 import { callTool, currentChatBar, refreshChatBar, type ChatBarClient } from './chat-bar-client'
@@ -21,7 +22,7 @@ export class CloseRefused {
 
 export async function activateSession($: EngineInterface, sessionName: string): Promise<ChatBarClient> {
   try {
-    await callTool<TicketData>($, 'ticket.activate', { ticket: sessionName, leaving: LEAVING, opening: OPENING })
+    await callTool<TicketData>($, 'board.activate', { ticket: sessionName, leaving: LEAVING, opening: OPENING })
   } catch (failure) {
     $.ui.toast(`${sessionName} did not open: ${reasonOf(failure)}`)
   }
@@ -45,7 +46,7 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
 // The close dialog offers to commit and push only when the session has a branch of its own.
 export async function openClose($: EngineInterface, chatBar: ChatBarClient): Promise<void> {
   try {
-    const workspace = await callTool<WorkspaceData>($, 'ticket.workspace', { ticket: chatBar.sessionName })
+    const workspace = await callTool<WorkspaceData>($, 'board.workspace', { ticket: chatBar.sessionName })
     await showClose($, workspace.leaving_has_branch)
   } catch (failure) {
     $.ui.toast(`${chatBar.sessionName} cannot close: ${reasonOf(failure)}`)

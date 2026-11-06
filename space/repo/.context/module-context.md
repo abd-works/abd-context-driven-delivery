@@ -47,7 +47,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `ProjectTicket.add_label(name)` / `ProjectTicket.add_theme(theme)` / `issue_theme_label(theme)` — issue-sidebar `theme:<slug>` (filter/group; not a Status column)
 - `ProjectTicket.write_type(name)` — apply an org issue Type name (WorkTicket owns defect / small change / feature mapping)
 - `Repo.list_issue_types()` / `Repo.ensure_issue_type(name, description=, color=)` — org issue types for the repo owner
-- `ProjectTicket` — `number`, `title`, `body`, `url`, `state`, `issue_type`, `labels`, open `data` map
+- `ProjectTicket` — `number`, `title`, `body`, `url`, `state`, `issue_type`, `labels`, open `data` map, `parent_number`, `sub_issue_numbers`, `comments`, `project_theme`, `project_fields`, `archived`. Each ticket holds its own state; `Repo.memory()` keeps the tickets it created and changes them in place, so nothing about a ticket is stored on `Repo` under its number
 - `ProjectTicketState` — column name (`Backlog`, `In Progress`, `Done`)
 - `Project.github_status_option(state_name, option_names)` / `Project.github_theme_option(theme, option_names)` — exact GitHub field match first, then Status aliases (`Backlog` ↔ `Todo`)
 - `Repo.ticket(ref)` / `Repo.create_ticket(title, body)`
@@ -56,10 +56,11 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
   `merge_branch`, `note`, `read_notes`, `find_mistakes`,
   `write_annotated_tag` / `read_annotated_tag` / `list_annotated_tags`,
   `is_dirty` (ignores `events.log`), `current_branch`
-- Worktree surface: `Worktree` (path + branch record and checkout/sync/close on `repo.py`), `list_worktrees`, `worktree_for`, `add_worktree`,
-  `remove_worktree`, `fetch` / `pull` / `fetch_pull`, `merge_from` (merge into the
+- Worktree surface: `Worktree` (one checkout: its `path` and the `Branch` checked out there, `None` when detached; `Worktree.from_repo(repo)` and `Worktree.from_checkout(path, branch_name)` build one), `Branch.worktree` (the worktree that has the branch checked out), `Branch.open_in_worktree()` (returns that `Worktree`), `list_worktrees`, `add_worktree(path, branch: Branch) -> Worktree`,
+  `remove_worktree(worktree)`, `fetch` / `pull` / `fetch_pull`, `merge_from` (merge into the
   current branch without checking the other out), `push_to`, `has_stash`,
-  `is_linked_worktree`, `primary_root`
+  `is_linked_worktree`, `checkout_folder` (the checkout holding the folder, else the folder itself), `primary_root` (the main checkout, read from a linked worktree's `.git` file and its `commondir`)
+- `space.work_state.WorkState` saves the open branch, worktree, and session in `.sessions/session.json`: `branch` is a `Branch` and `worktree` a `Worktree`, `None` when none is saved. `project_checkout()` and `board_checkout()` answer through `Repo.checkout_folder` and `Repo.primary_root`. The MCP repo operations keep string `name` and `repo_path` parameters and turn them into a `Branch` or `Repo` straight away
 
 ## Dependencies
 

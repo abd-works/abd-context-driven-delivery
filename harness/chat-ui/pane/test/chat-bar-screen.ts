@@ -73,6 +73,15 @@ export async function wordsOf(ui: any, key: string): Promise<string | undefined>
   return (await ui.find({ key }))?.children?.map(textOf).join('')
 }
 
+// A fidelity's state as the session card draws it, such as ✓ done or ○ to do.
+export const stateOf = async (ui: any, slug: string): Promise<string | undefined> => textOf((await drawn(ui, `card-cell-${slug}`))?.children?.[2])
+
+// Each fidelity's state on the session card reads as given, such as { 'ux-mockup': '✓ done' }.
+export async function expectStates(ui: any, states: Record<string, string>): Promise<void> {
+  const read = await Promise.all(Object.keys(states).map(async slug => [slug, await stateOf(ui, slug)]))
+  expect(Object.fromEntries(read)).toEqual(states)
+}
+
 // Each keyed element's mark reads as given, such as { 'session-name-button': 'checkout-flow' }.
 export async function expectMarks(ui: any, marks: Record<string, string>): Promise<void> {
   const read = await Promise.all(Object.keys(marks).map(async key => [key, textOf(await markOf(ui, key))]))

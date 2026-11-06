@@ -18,6 +18,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
+from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.installation.installer import Installer
 from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.mcp_daemon import McpDaemon
@@ -50,11 +51,11 @@ with description("an MCP host input schema"):
 
     with context("that has been derived from an operation whose return type cannot be resolved"):
         with it("should still advertise its boolean parameter as JSON Schema boolean"):
-            expect(self.host.input_schema_for_callable(_moved)["properties"]["done"]).to(equal({"type": "boolean"}))
+            expect(ParameterSchema(_moved).json_schema["properties"]["done"]).to(equal({"type": "boolean"}))
 
     with context("that has been derived from a ParameterTypes echo operation"):
         with before.each:
-            self.schema = self.host.input_schema_for_callable(ParameterTypes().echo)
+            self.schema = ParameterSchema(ParameterTypes().echo).json_schema
             self.properties = self.schema["properties"]
 
         with context("with a string parameter"):
@@ -81,7 +82,7 @@ with description("an MCP host input schema"):
 
         with context("with a dict of unrestricted values parameter"):
             with it("should leave additionalProperties unrestricted"):
-                schema = self.host.input_schema_for_callable(ParameterTypes().echo_open)
+                schema = ParameterSchema(ParameterTypes().echo_open).json_schema
                 expect(schema["properties"]["fields"]).to(
                     equal({"type": "object", "additionalProperties": {}})
                 )
@@ -242,7 +243,7 @@ with description("an MCP host input schema"):
     with context("that has been derived from a ParameterTypes echo_sequence operation"):
         with context("with a Sequence of strings parameter"):
             with it("should advertise JSON Schema array of string"):
-                schema = self.host.input_schema_for_callable(ParameterTypes().echo_sequence)
+                schema = ParameterSchema(ParameterTypes().echo_sequence).json_schema
                 expect(schema["properties"]["value"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )
@@ -250,7 +251,7 @@ with description("an MCP host input schema"):
     with context("that has been derived from a ParameterTypes echo_mapping operation"):
         with context("with a Mapping of integer values parameter"):
             with it("should advertise JSON Schema object with integer additionalProperties"):
-                schema = self.host.input_schema_for_callable(ParameterTypes().echo_mapping)
+                schema = ParameterSchema(ParameterTypes().echo_mapping).json_schema
                 expect(schema["properties"]["value"]).to(
                     equal(
                         {
@@ -263,13 +264,13 @@ with description("an MCP host input schema"):
     with context("that has been derived from a ParameterTypes echo_unannotated operation"):
         with context("with an unannotated parameter"):
             with it("should advertise JSON Schema string"):
-                schema = self.host.input_schema_for_callable(ParameterTypes().echo_unannotated)
+                schema = ParameterSchema(ParameterTypes().echo_unannotated).json_schema
                 expect(schema["properties"]["value"]).to(equal({"type": "string"}))
 
     with context("that has been derived from a ParameterTypes echo_record operation"):
         with context("with a named record parameter"):
             with it("should advertise the record fields and require toolset"):
-                schema = self.host.input_schema_for_callable(ParameterTypes().echo_record)
+                schema = ParameterSchema(ParameterTypes().echo_record).json_schema
                 expect(schema["properties"]["record"]).to(
                     equal(
                         {
@@ -289,7 +290,7 @@ with description("an MCP host input schema"):
             with it("should advertise a toolset object instead of an open object"):
                 from cdd_guidance.actions.generate.generate import Generate
 
-                schema = self.host.input_schema_for_callable(Generate.generate)
+                schema = ParameterSchema(Generate.generate).json_schema
                 guidance = schema["properties"]["guidance"]
                 object_form = next(
                     variant
@@ -317,7 +318,7 @@ with description("an MCP host input schema"):
     with context("that has been derived from iterate.iterate"):
         with context("with a tools list parameter"):
             with it("should advertise JSON Schema array of string"):
-                schema = self.host.input_schema_for_callable(Iterate.iterate)
+                schema = ParameterSchema(Iterate.iterate).json_schema
                 expect(schema["properties"]["tools"]).to(
                     equal({"type": "array", "items": {"type": "string"}})
                 )
@@ -535,9 +536,7 @@ with description("an MCP host tool ping") as self:
         expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
 
     with it("should leave ping out of the tool schema"):
-        schema = self.host.input_schema_for_callable(
-            self.host._runtime.tools["hosting-demo.increment"].callable
-        )
+        schema = self.host._runtime.tools["hosting-demo.increment"].input_schema
         expect("ping" in schema["properties"]).to(equal(False))
 
     with it("should still run a tool when ping is absent"):

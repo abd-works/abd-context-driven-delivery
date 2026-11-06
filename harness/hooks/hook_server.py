@@ -285,17 +285,17 @@ class HookHandler:
         return True
 
     def _context_parents(self, edited: Path) -> list[Path]:
-        from space.context_config import has_context_config
+        from space.context_config import ContextConfig
 
         for parent in edited.resolve().parents:
-            if has_context_config(parent):
+            if ContextConfig(parent).exists():
                 return [parent]
         return []
 
     def _guideline_value(self, root: Path, pattern: str) -> str:
-        from space.context_config import guideline_value
+        from space.context_config import ContextConfig
 
-        return guideline_value(root, pattern)
+        return ContextConfig(root).guideline(pattern)
 
     def invoke(self, payload: HookPayload) -> HookResult:
         toolset = self.tool.toolset

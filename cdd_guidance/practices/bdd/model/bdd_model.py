@@ -20,6 +20,7 @@ from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 class BddModel(BoundNode):
     _graph_practice = "bdd"
     _semantic_type_name = "Spec"
+    graph_facts = ("patches_infrastructure", "signature_marker", "top_level_describes", "code_like_describe_lines", "private_probe")
     _belongs = {("Description", "Spec")}
 
     def __init__(self, graph: Graph | None = None) -> None:

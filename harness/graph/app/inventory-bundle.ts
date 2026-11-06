@@ -1,4 +1,4 @@
-import type { InventoryData, PracticeInventoryData } from '@cdd/harness/graph/graph';
+import type { InventoryData, PracticeGraphData } from '@cdd/harness/graph/graph';
 
 export function normalizeInventoryBundle(raw: unknown): InventoryData {
   if (raw && typeof raw === 'object' && 'practices' in raw) {
@@ -10,7 +10,7 @@ export function normalizeInventoryBundle(raw: unknown): InventoryData {
     };
   }
   return {
-    practices: (raw ?? {}) as Record<string, PracticeInventoryData>,
+    practices: (raw ?? {}) as Record<string, PracticeGraphData>,
     overlays: [],
     available_overlays: [],
   };

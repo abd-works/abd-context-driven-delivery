@@ -150,6 +150,10 @@ with description("a generate action on practice guidance") as self:
             with it("should name that session's root"):
                 expect(self.reply).to(contain(f"The session's root is {(self.project / 'src').resolve().as_posix()}"))
 
+            # The output paths must come from the named session too, or the agent writes the artifact under the open session's root.
+            with it("should save each format under that session's root"):
+                expect(self.reply).to(contain(f"{(self.project / 'src').resolve().as_posix()}/.context/story-map.md"))
+
         with context("that the same cdd server has already generated once"):
             with before.each:
                 server = McpServer(project=self.project)

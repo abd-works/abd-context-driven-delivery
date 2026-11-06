@@ -12,9 +12,9 @@ Fidelity Files "Go back to the list when the last tab closes"; Review Fidelity "
 clean" (the tile's action bar). The Thens of the scenarios below that only the page shows (a toast, a panel that does
 not open) are left to those specs too.
 
-The scenarios name the story map `tests/story-map.md`. The story_map fidelity declares its markdown at
+The scenarios name the story map `.context/story-map.md`. The story_map fidelity declares its markdown at
 `.context/story-map.md` and its drawio at `.context/story-map.drawio` (cdd_guidance/practices/stories/stories.md), so
-`Ticket.files` lists `.context/story-map.md`; the Thens that list `tests/story-map.md` fail until the declaration and
+`Ticket.files` lists `.context/story-map.md`; the Thens that list `.context/story-map.md` fail until the declaration and
 the scenarios agree.
 """
 
@@ -55,23 +55,22 @@ def log_lines(world, seed) -> list[str]:
 
 @shared_stories.scenario("List Ticket Files", "List a fidelity's files with whether each exists")
 def _(s):
-    @s.given("checkout-flow's story map tests/story-map.md is there and tests/story-map.drawio is not")
+    @s.given("checkout-flow's story map .context/story-map.md is there and .context/story-map.drawio is not")
     def _(world):
         world.project.seed_file(STORY_MAP_FILE, STORY_MAP_TEXT)
         world.project.seed_session(CHECKOUT_FLOW)
 
     @s.when("the Person lists checkout-flow's story_map files")
     def _(world):
-        world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).files(fidelities=[STORY_MAP]))
+        world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).progress_of(STORY_MAP).files())
 
-    # Fails today: the story map's markdown is declared at .context/story-map.md, so the list names that, not there.
-    @s.then("the files panel lists tests/story-map.md as there")
+    @s.then("the files panel lists .context/story-map.md as there")
     def _(world):
-        expect(world.files[STORY_MAP]["markdown"]).to(equal([{"path": STORY_MAP_FILE, "exists": True}]))
+        expect(world.files["markdown"]).to(equal([{"path": STORY_MAP_FILE, "exists": True}]))
 
     @s.but_("no file of another fidelity is listed")
     def _(world):
-        expect(list(world.files)).to(equal([STORY_MAP]))
+        expect(sorted(world.files)).to(equal(["drawio", "markdown"]))
 
 
 @shared_stories.scenario("List Ticket Files", "List only what the ticket's branch changed")
@@ -90,15 +89,15 @@ def _(s):
 
     @s.when("the Person lists pet-visits' bdd behavior files")
     def _(world):
-        world.files = world.data_of(world.Ticket.load(PET_VISITS.name).files(fidelities=["bdd-behavior"]))
+        world.files = world.data_of(world.Ticket.load(PET_VISITS.name).progress_of("bdd-behavior").files())
 
     @s.then("the files panel lists src/mine_spec.py")
     def _(world):
-        expect([entry["path"] for entry in world.files["bdd-behavior"]["python"]]).to(equal([SPEC_MINE]))
+        expect([entry["path"] for entry in world.files["python"]]).to(equal([SPEC_MINE]))
 
     @s.but_("src/theirs_spec.py is not listed")
     def _(world):
-        expect(SPEC_THEIRS in [entry["path"] for entry in world.files["bdd-behavior"]["python"]]).to(equal(False))
+        expect(SPEC_THEIRS in [entry["path"] for entry in world.files["python"]]).to(equal(False))
 
 
 @shared_stories.scenario("List Ticket Files", "Say in a toast when the list cannot be read")
@@ -110,9 +109,9 @@ def _(s):
 
     @s.when("the Person lists no-such-ticket's story_map files")
     def _(world):
-        world.refusal = refusal_of(lambda: world.Ticket.load(NO_SUCH_TICKET).files(fidelities=[STORY_MAP]))
+        world.refusal = refusal_of(lambda: world.Ticket.load(NO_SUCH_TICKET).progress_of(STORY_MAP).files())
 
-    @s.then("a toast says cdd ticket.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board")
+    @s.then("a toast says cdd fidelity-progress.files failed: TicketNotFoundError: no ticket named 'no-such-ticket' on the board")
     def _(world):
         expect_refused(world.refusal, TicketNotFoundError, "no ticket named 'no-such-ticket' on the board")
 
@@ -126,7 +125,7 @@ def _(s):
 
     @s.when("the Person browses checkout-flow's session folder")
     def _(world):
-        world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session_files())
+        world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.folder_files())
 
     @s.then("the files panel lists .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md under its folder")
     def _(world):
@@ -135,7 +134,7 @@ def _(s):
 
 @shared_stories.scenario("View Fidelity Files", "Open one tab per format, generated or not")
 def _(s):
-    @s.given("checkout-flow's story map is tests/story-map.md and tests/story-map.drawio is not there")
+    @s.given("checkout-flow's story map is .context/story-map.md and .context/story-map.drawio is not there")
     def _(world):
         world.project.seed_file(STORY_MAP_FILE, STORY_MAP_TEXT)
         world.project.seed_session(CHECKOUT_FLOW)
@@ -143,15 +142,14 @@ def _(s):
     @s.when("the Person views checkout-flow's story_map files")
     def _(world):
         ticket = world.Ticket.load(CHECKOUT_FLOW.name)
-        world.files = world.data_of(ticket.files(fidelities=[STORY_MAP]))[STORY_MAP]
-        world.opened = world.data_of(ticket.read_file(path=STORY_MAP_FILE))
+        world.files = world.data_of(ticket.progress_of(STORY_MAP).files())
+        world.opened = world.data_of(ticket.session.read_file(path=STORY_MAP_FILE))
 
-    # Fails today: the story map's formats are declared at .context/story-map.md and .context/story-map.drawio.
-    @s.then("the files panel shows the tabs tests/story-map.md and tests/story-map.drawio")
+    @s.then("the files panel shows the tabs .context/story-map.md and .context/story-map.drawio")
     def _(world):
-        expect([entry["path"] for entry in [*world.files["markdown"], *world.files["drawio"]]]).to(equal([STORY_MAP_FILE, "tests/story-map.drawio"]))
+        expect([entry["path"] for entry in [*world.files["markdown"], *world.files["drawio"]]]).to(equal([STORY_MAP_FILE, ".context/story-map.drawio"]))
 
-    @s.and_("the tests/story-map.md tab shows # Check Out Order")
+    @s.and_("the .context/story-map.md tab shows # Check Out Order")
     def _(world):
         expect(world.opened["text"].splitlines()[0]).to(equal("# Check Out Order"))
 
@@ -168,7 +166,7 @@ def _(s):
 
     @s.when("a file outside the repository is asked for")
     def _(world):
-        world.refusal = refusal_of(lambda: world.Ticket.load(CHECKOUT_FLOW.name).read_file(path=OUTSIDE_FILE))
+        world.refusal = refusal_of(lambda: world.Ticket.load(CHECKOUT_FLOW.name).session.read_file(path=OUTSIDE_FILE))
 
     @s.then("the board says ../secrets.txt is not a file in this repository")
     def _(world):
@@ -183,7 +181,7 @@ def _(s):
 
     @s.when("the Person reviews story_map on billing-report")
     def _(world):
-        world.reviewed = world.data_of(world.Ticket.load(BILLING_REPORT.name).finish_review(fidelities=[STORY_MAP]))
+        world.reviewed = world.data_of(world.Ticket.load(BILLING_REPORT.name).progress_of(STORY_MAP).finish_review())
 
     @s.then("billing-report's session log ends with review Stories story_map")
     def _(world):
@@ -191,7 +189,7 @@ def _(s):
 
     @s.and_("the story_map tile marks Review ✓ and the fidelity is done")
     def _(world):
-        expect((world.reviewed["actions"][STORY_MAP]["review"], world.reviewed["progress"][STORY_MAP])).to(equal(("done", "done")))
+        expect((world.reviewed["actions"]["review"], world.reviewed["state"])).to(equal(("done", "done")))
 
 
 @shared_stories.scenario("Review Fidelity", "Ignore a review recorded before a clean validate")
@@ -215,15 +213,15 @@ def _(s):
     def _(world):
         world.project.seed_session(BILLING_REPORT.with_log(*STORY_MAP_VALIDATED_CLEAN))
 
-    @s.when("the Person reviews stories-story_map and stories-no_such_fidelity together")
+    @s.when("the Person reviews stories-no_such_fidelity")
     def _(world):
-        world.refusal = refusal_of(lambda: world.Ticket.load(BILLING_REPORT.name).finish_review(fidelities=[STORY_MAP, NO_SUCH_FIDELITY]))
+        world.refusal = refusal_of(lambda: world.Ticket.load(BILLING_REPORT.name).progress_of(NO_SUCH_FIDELITY).finish_review())
 
-    @s.then("the board says no fidelity named stories-no_such_fidelity on this ticket")
+    @s.then("the board says no fidelity named stories-no_such_fidelity on ticket billing-report")
     def _(world):
-        expect_refused(world.refusal, FidelityNotFoundError, "no fidelity named 'stories-no_such_fidelity' on this ticket")
+        expect_refused(world.refusal, FidelityNotFoundError, "no fidelity named 'stories-no_such_fidelity' on ticket 'billing-report'")
 
-    @s.but_("no review line is written for stories-story_map")
+    @s.but_("no review line is written for stories-story-map")
     def _(world):
         expect([line for line in log_lines(world, BILLING_REPORT) if " review " in line]).to(equal([]))
 

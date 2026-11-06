@@ -4,56 +4,60 @@
 // it on the stubbed server (cdd-stub.ts), never on the pane.
 // Interaction: what a person types into the chat bar or reads from it, such as a new session's name.
 import type { BoardData, ColumnData } from '@cdd/harness/kanban/board'
-import type { ActionStatesData, TicketData } from '@cdd/harness/kanban/ticket'
+import type { ActionStatesData, FidelityProgressData } from '@cdd/harness/kanban/fidelity-progress'
+import type { SessionData, TicketData } from '@cdd/harness/kanban/ticket'
+import type { PracticeSessionOutputData } from '@cdd/space/session/practice-session-output'
 
 // Seed: server-health.report while every part runs.
 export const HEALTHY = { kanban_app_port: 8778, graph_app_port: 5173, is_hook_server_running: false }
 
 // Seed: each stage's fidelities, in the order the board's columns name them.
-export const DISCOVERY = ['stories-story_map', 'ddd-bounded_context', 'ux-ia', 'clean_engineering-modules', 'bdd-behavior']
-export const SPECIFICATION = ['stories-scenarios', 'ddd-model', 'ux-mockup', 'clean_engineering-model', 'bdd-realization']
-export const IMPLEMENTATION = ['stories-acceptance_tests', 'ddd-tactics', 'ux-front_end_code', 'clean_engineering-code', 'bdd-development']
+export const DISCOVERY = ['stories-story-map', 'ddd-bounded-context', 'ux-ia', 'clean-engineering-modules', 'bdd-behavior']
+export const SPECIFICATION = ['stories-scenarios', 'ddd-model', 'ux-mockup', 'clean-engineering-model', 'bdd-realization']
+export const IMPLEMENTATION = ['stories-acceptance-tests', 'ddd-tactics', 'ux-front-end-code', 'clean-engineering-code', 'bdd-development']
 export const WORK_OF: Record<string, string[]> = { Discovery: DISCOVERY, Specification: SPECIFICATION, Implementation: IMPLEMENTATION }
 export const STAGE_ORDER = ['Discovery', 'Specification', 'Implementation', 'Complete']
 const NOT_DONE: ActionStatesData = { generate: 'to_do', validate: 'to_do', review: 'to_do' }
 const STEPS: (keyof ActionStatesData)[] = ['generate', 'validate', 'review']
+const EVERY_FIDELITY = [...DISCOVERY, ...SPECIFICATION, ...IMPLEMENTATION]
+const PRACTICES = ['stories', 'ddd', 'ux', 'clean_engineering', 'bdd']
+const ROOTS: Record<string, string> = { stories: 'harness/chat-ui/.context', ux: 'harness/chat-ui/design', clean_engineering: 'harness/chat-ui/pane' }
 
-// Seed: each fidelity's next action as the Python Ticket names it: review while it has violations, else the first of
-// generate, validate and review not done, nothing once it is done.
-export function withNextActions(ticket: TicketData): TicketData {
-  const nextOf = (slug: string): string => (ticket.progress[slug] === 'violations' ? 'review' : (STEPS.find(step => ticket.actions[slug]?.[step] !== 'done') ?? ''))
-  return { ...ticket, next_actions: Object.fromEntries(Object.keys(ticket.actions).map(slug => [slug, nextOf(slug)])) }
+// Seed: the practice whose slug starts a fidelity's slug, such as clean_engineering for clean-engineering-model.
+const practiceOf = (slug: string): string => PRACTICES.find(practice => slug.startsWith(`${practice.replace('_', '-')}-`)) ?? ''
+// Seed: a fidelity's own name, as Python names it: story_map for stories-story-map.
+const fidelityNameOf = (slug: string): string => slug.slice(practiceOf(slug).length + 1).replace(/-/g, '_')
+
+// Seed: one fidelity's progress as the Python FidelityProgress reports it. Its next action is review while it has
+// violations, else the first of generate, validate and review not done, nothing once it is done.
+export function progressOf(ticket: string, slug: string, state = 'not_started', actions: ActionStatesData = NOT_DONE, violations = 0): FidelityProgressData {
+  const nextAction = state === 'violations' ? 'review' : (STEPS.find(step => actions[step] !== 'done') ?? '')
+  return { ticket, slug, practice: practiceOf(slug), is_enabled: true, next_action: nextAction, allowed_actions: [], state, actions, report_file: '', violation_count: violations }
+}
+
+// Seed: a ticket's session with the practices Stories, UX and Clean Engineering turned on, each on its chosen root.
+function sessionOf(name: string, title: string): SessionData {
+  const sessionFile = `.sessions/${name}/session.json`
+  const practiceData = (practice: string): PracticeSessionOutputData => ({ name: practice, session_file: sessionFile, enabled: practice in ROOTS, root: ROOTS[practice] ?? '', is_root_chosen: practice in ROOTS })
+  return { name, session_file: sessionFile, workpath: '', handoff: '', title, scope: '', parent: '', practices: Object.fromEntries(PRACTICES.map(practice => [practice, practiceData(practice)])) }
 }
 
 // Seed: checkout-flow, In progress in Specification with the practices Stories, UX and Clean Engineering, nothing yet done.
 export function checkoutFlow(overrides: Partial<TicketData> = {}): TicketData {
-  return withNextActions({
-    title: 'Checkout flow',
+  const name = overrides.name ?? 'checkout-flow'
+  const title = overrides.title ?? 'Checkout flow'
+  return {
+    title,
     last_activity: '2026-11-05T06:00:00Z',
-    name: 'checkout-flow',
-    scope: '',
-    parent: '',
+    name,
+    session: sessionOf(name, title),
+    progress: Object.fromEntries(EVERY_FIDELITY.map(slug => [slug, progressOf(name, slug)])),
     column: 'Specification',
     is_done: false,
     next: 'stories-scenarios',
-    next_action: 'generate',
-    handoff: '',
-    reports: {},
-    violation_counts: {},
-    practices: { stories: true, ddd: false, ux: true, clean_engineering: true, bdd: false },
-    workpath: '',
     worktree: '',
-    practice_roots: {
-      stories: { root: 'harness/chat-ui/.context', is_chosen: true },
-      ux: { root: 'harness/chat-ui/design', is_chosen: true },
-      clean_engineering: { root: 'harness/chat-ui/pane', is_chosen: true },
-    },
-    session_file: '.sessions/checkout-flow/session.json',
-    progress: {},
-    actions: Object.fromEntries([...DISCOVERY, ...SPECIFICATION, ...IMPLEMENTATION].map(slug => [slug, NOT_DONE])),
-    allowed_actions: {},
     ...overrides,
-  } as TicketData)
+  }
 }
 
 type FidelityState = { progress: string; actions?: Partial<ActionStatesData>; violations?: number }
@@ -64,18 +68,13 @@ export const DONE: FidelityState = { progress: 'done', actions: { generate: 'don
 // Seed: checkout-flow with these fidelities' progress, actions and violation counts as the Python Ticket would report them.
 export function checkoutFlowWith(fidelities: Record<string, FidelityState>, overrides: Partial<TicketData> = {}): TicketData {
   const plain = checkoutFlow(overrides)
-  const entries = Object.entries(fidelities)
-  return withNextActions({
-    ...plain,
-    progress: { ...plain.progress, ...Object.fromEntries(entries.map(([slug, state]) => [slug, state.progress])) },
-    actions: { ...plain.actions, ...Object.fromEntries(entries.map(([slug, state]) => [slug, { ...NOT_DONE, ...state.actions }])) },
-    violation_counts: Object.fromEntries(entries.filter(([, state]) => state.violations).map(([slug, state]) => [slug, state.violations ?? 0])),
-  })
+  const changed = Object.entries(fidelities).map(([slug, state]) => [slug, progressOf(plain.name, slug, state.progress, { ...NOT_DONE, ...state.actions }, state.violations ?? 0)])
+  return { ...plain, progress: { ...plain.progress, ...Object.fromEntries(changed) } }
 }
 
 // Seed: payment-retry, In progress in Discovery.
 export function paymentRetry(): TicketData {
-  return checkoutFlow({ title: 'Payment retry', name: 'payment-retry', column: 'Discovery', next: 'stories-story_map', session_file: '.sessions/payment-retry/session.json' })
+  return checkoutFlow({ title: 'Payment retry', name: 'payment-retry', column: 'Discovery', next: 'stories-story-map' })
 }
 
 const column = (name: string, tickets: TicketData[]): ColumnData => {
@@ -83,7 +82,7 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
   return {
     name,
     in_progress: tickets.filter(ticket => ticket.column === name),
-    ...(work.length ? { work_required: work, default_formats: { 'stories-scenarios': 'typescript', 'clean_engineering-model': 'typescript' } } : {}),
+    ...(work.length ? { work_required: work, fidelities: Object.fromEntries(work.map(slug => [slug, fidelityNameOf(slug)])), default_formats: { 'stories-scenarios': 'typescript', 'clean-engineering-model': 'typescript' } } : {}),
   }
 }
 
@@ -94,3 +93,18 @@ export function boardOf(active: string | null, ...tickets: TicketData[]): BoardD
 
 // Interaction: the name a person types in the session list's field.
 export const NEW_SESSION_NAME = 'payment-retry'
+
+// Seed: the TypeScript files clean-engineering-model declares in checkout-flow's session, as FidelityProgress.files
+// lists them by format.
+export const MODEL_FILES = { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-client.ts', exists: true }] }
+
+// Seed: the text of chat-bar-client.ts under checkout-flow's Clean Engineering root.
+export const CHAT_BAR_CLIENT_TEXT = { 'pane/hooks/chat-bar/chat-bar-client.ts': '// Model shell for the chat bar\nexport class ChatBarClient {}' }
+
+// Seed: clean-engineering-model's latest validation report, failing no-legacy-api-after-refactor.
+export const MODEL_REPORT = {
+  path: '.sessions/checkout-flow/validation-reports/clean-engineering-model.md',
+  text: '# Validation\n\n## no-legacy-api-after-refactor\n\nFail',
+  rules: [],
+  has_saved_graph: false,
+}

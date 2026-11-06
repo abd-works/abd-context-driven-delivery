@@ -51,7 +51,7 @@ def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
 
         session = Session.current()
 
-        log_path = session.session_path / "session.log"
+        log_path = session.log_path
         log_text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
         checks = {
             "generate_line": "generate" in log_text and "bdd" in log_text,
@@ -85,7 +85,7 @@ def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
 def _has_loop_markers(session) -> bool:
     session.loop()
     session.loop()
-    log = session.session_path / "session.log"
+    log = session.log_path
     text = log.read_text(encoding="utf-8") if log.is_file() else ""
     return "--- 1" in text and "--- 2" in text
 
