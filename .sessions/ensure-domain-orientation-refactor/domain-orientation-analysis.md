@@ -115,6 +115,17 @@ You already agreed in cdd-main that the board data moves to `board.repo`; that m
 
 Session also holds loop logging, chat pointers, practice roots, output paths, board paths, and graph loading. The chat pointer is a `(id, Path, lines)` tuple that is parsed in four places, and it needs a `ChatPointer` value. Repo holds ProjectTicket state in parallel dicts keyed by issue number. (K-F13, F18, F19)
 
+### 1.12 State passed around as parameters (added 2026-11-06)
+Operations take, as parameters, state that an object they can reach already holds: `Ticket.generate_commands(fidelities, formats)` and the model's intended `Generate.commands_for(session, fidelities, formats)` are two examples. Every caller then has to gather the session, fidelity, and format and hand them over, and each caller can hand over a different one.
+
+**Fix.** Keep the state on the object it belongs to, and let each operation read it from there:
+- A **Session** holds its practices.
+- A **practice** holds its fidelities and its current fidelity.
+- A **fidelity** holds its actions and the format chosen for it. A format given once is saved there, so the next action on that fidelity uses it.
+- An **action** is made for its session.
+
+A command then reads `session.practices.stories.fidelities.story_map.actions.generate(format="drawio")`. The findings are in appendix area P.
+
 ---
 
 ## 2. Real bugs found along the way
@@ -303,3 +314,48 @@ Ids: **K** kanban/session/repo, **A** guidance/actions, **I** installation/MCP, 
 | A1 | low | graph app overlay-labels.ts | LERN node-type lists repeat the overlay schema |
 
 Other duplicates noted across modules: process liveness is checked in three places (hook_server, hook_daemon, scripts/instances). `GraphStoryModel` copies the parsed story nodes into flat records, the same pattern as G1. About eight slug helpers live in practice files. `space/repo/.context/module-context.md` still describes `space/git`, `GitRepo`, and `WorkSession`.
+
+---
+
+## Progress
+
+Updated 2026-11-06 on `ensure-domain-orientation-refactor`. ✅ done, ◐ partly done, ⬜ not started. Each line names the commit that holds the work.
+
+### Root causes
+- ✅ **1.1 Practice catalogue.** `PracticeCatalogue` in `harness/guidance/practice_catalogue.py` replaces every Python practice list (`54fd3c3f3`). The TypeScript lists `PRACTICES` and `PRACTICE_COLOURS` are left for 1.3.
+- ◐ **1.2 FidelityProgress as data.** Ticket sends one `FidelityProgress` per fidelity, with its state, its actions, and `allowed_actions`; the six dicts are gone (session-board merge `0b1024083`). Bug 5's TypeScript rule is deleted (`6f6370fcd`). Left: the chat bar's `FidelityJson` and its `validated` state (CU-1), the `ActionStates` default copied in TypeScript, and the reviewed/done naming.
+- ⬜ **1.3 Domain rules in TypeScript.** Not started. Commands wait on 1.12, so they are built from the session's practice, fidelity, and action rather than on `Ticket`. The chat bar's findings wait until the cdd-chat-ui work lands, so the two changes do not collide.
+- ◐ **1.4 Graph second model.** Mode A is done: each node holds its parsed object as `Node.model`, and the re-parse helpers and `story_model_lookup.py` are deleted. Edge order, the schema reader, and the explorer copies are fixed too (`d351aeed1`). Left: the graph still builds its own `Node`s rather than registering the parsed `BoundNode`s (Mode B), and G3, G4, G13, and G14 are only partly done.
+- ◐ **1.5 AgentTool is the only operation model.** `McpOperationDefinition` is gone, and MCP and the language adapter read `AgentTool` (`651c7cb30`). Left: `HookHandler` still copies the tool (I-F8).
+- ◐ **1.6 One serializer.** `data_of` is the only serializer, and `McpHost._json_default` is gone (`651c7cb30`). Left: `Commit.to_mcp_result` is still read by a branch in `data_of`; `@data_field` on Commit would remove both.
+- ⬜ **1.7 Catalog renders live guidance.** `CatalogFidelity` still scrapes the practice markdown.
+- ✅ **1.8 Session-folder facts.** Session owns `log_path`, `error_path`, `reports_folder`, `latest_handoff`, and `new_handoff_path`; Generate reads `acting_session()` (`53d1349e2`).
+- ◐ **1.9 Git concepts as objects.** Branch and Worktree are objects, and the board's backlog folder and board file are on Repo (`a0b8dc28c`). Left: `Workspace` is still built from three booleans, and `Session.active_name(repo_path)` is still a classmethod.
+- ✅ **1.10 Slugs, formats, and names.** `FidelityGuidance.slug` everywhere, one `Name` converter, one `Format` vocabulary, and `FidelityGuidance` keeps `name` and `practice_guidance` (`df4361395`). Left: K-F21's `*_name` data fields and some prose in `cdd_guidance` that still writes slugs like `ddd-bounded_context`.
+- ⬜ **1.11 Classes that only read their collaborators.** Not started; `ChatPointer` does not exist yet.
+- ⬜ **1.12 State passed around as parameters.** Recorded today; the search for every instance is running, and its findings go in appendix area P.
+
+### Bugs
+- ✅ 1. `language_adapter.py` no longer splits `mcp_name` (`651c7cb30`).
+- ✅ 2. `Commit.to_mcp_result` is defined once.
+- ✅ 3. Partition and the shared `on(item)` run on a practice, with a spec (`f5c0a030f`).
+- ✅ 4. `stories-story-map` resolves to Stories, with a spec (`df4361395`).
+- ✅ 5. The board reads `allowed_actions` only, and Python allows Validate and Review once a declared file exists (`6f6370fcd`). The board's own spec for it did not run: its setup times out starting a cdd server.
+- ✅ 6. Paths serialize one way, through `data_of` (`651c7cb30`).
+- ✅ 7. Generate's output paths come from the session the command names (`53d1349e2`).
+- ✅ 8. Edge order is defined once, in `graph.py` (`d351aeed1`).
+- ✅ 9. `FidelityGuidance.instructions` reads its own template without swapping the practice's fidelity, with a 20-thread spec (`f5c0a030f`).
+
+### Dead code and legacy aliases
+- ✅ `space/repo/worktree.py` and `space/repo/push.py` are deleted.
+- ✅ `space/context_config.py` free wrappers are deleted.
+- ✅ `cdd_guidance/practices/workspace_bind.py` is deleted.
+- ✅ `AgentToolSet.agent_tools`, `AgentInstructions.tool_steps`, `ToolsetManifest`, `toolsetCollection`, and `deferred_tools`/`deferred_prompt` are deleted.
+- ✅ `Graph.load_nodes`/`load_edges`, `RuleResult`, and `prompt_only` are deleted.
+- ✅ `Source.expand` and the Python folds are deleted (`d351aeed1`).
+- ⬜ `tools/echo` and `tools/echo_instructions`: both still deployed; waiting on your decision.
+- ✅ `rule.py format_rules` is deleted (`f5c0a030f`).
+
+### Not yet checked
+- **TypeScript runtime tests:** the board's vitest setup hangs starting a cdd server, and the chat bar has no plugin manifest, so the TypeScript changes are type-checked only.
+- **Python story tests (`*_story.test.py`):** they fail the same way on the base branch, so they are not counted in the 2645 passing specs.
