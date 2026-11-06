@@ -212,7 +212,7 @@ describe('Send Next Fidelity Action', () => {
 describe('Choose Ticket Practices', () => {
   async function turnedOff() {
     const { page } = await board.page()
-    page.store.change({ tiles: [{ ticket: ACTIVE, place: 'cell-Discovery-ddd-bounded-context', stage: 'Discovery', slugs: ['ddd-bounded-context'], action: 'generate', picked: [], isPinned: true, files: {} }] })
+    page.store.change({ tiles: [{ ticket: ticketOn(page, ACTIVE), place: 'cell-Discovery-ddd-bounded-context', stage: 'Discovery', slugs: ['ddd-bounded-context'], action: 'generate', picked: [], isPinned: true, files: {} }] })
     await ticketOn(page, ACTIVE).enablePractice('ddd', false)
     return page
   }

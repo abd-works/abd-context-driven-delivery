@@ -53,7 +53,7 @@ async function activeTicketPage({ isMarkdownMade = false } = {}) {
   return { page, ticket: ticketOn(page, TICKET), chat: board.chat('chat-1') }
 }
 
-const spot = (slugs = [SLUG], place = PLACE) => ({ ticket: TICKET, stage: STAGE, place, slugs })
+const spot = (page: BoardPage, slugs = [SLUG], place = PLACE) => ({ ticket: ticketOn(page, TICKET), stage: STAGE, place, slugs })
 const barAt = (page: BoardPage, place = PLACE) => page.tiles.openOn(TICKET, place)
 const openPlaces = (page: BoardPage) => page.store.state.tiles.map(tile => tile.place)
 
@@ -77,7 +77,7 @@ describe('Choose Action And Formats', () => {
   describe('with a format generated on one fidelity of two', () => {
     async function markdownChip() {
       const { page, ticket } = await activeTicketPage({ isMarkdownMade: true })
-      await page.tiles.open(spot(TWO_SLUGS, HEAD), true)
+      await page.tiles.open(spot(page, TWO_SLUGS, HEAD), true)
       return page.tileActions.barOf(ticket, STAGE, barAt(page, HEAD)!).chips.find(chip => chip.label === 'markdown')
     }
 
@@ -92,27 +92,27 @@ describe('Choose Action And Formats', () => {
 
   it('should keep Run off until a format is chosen', async () => {
     const { page, ticket } = await activeTicketPage({ isMarkdownMade: true })
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).runOff).toBe(true)
   })
 
   it('should keep Run off on a render with nothing to render', async () => {
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     page.tileActions.chooseAction(barAt(page)!, 'render')
     expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).runOff).toBe(true)
   })
 
   it('should keep Run off on a locked ticket', async () => {
     const { page } = await activeTicketPage()
-    await page.tiles.open({ ...spot(), ticket: 'move-me' }, true)
+    await page.tiles.open({ ...spot(page), ticket: ticketOn(page, 'move-me') }, true)
     expect(page.tileActions.barOf(ticketOn(page, 'move-me'), STAGE, page.tiles.openOn('move-me', PLACE)!).runOff).toBe(true)
   })
 
   it('should keep Run off with no chat connected', async () => {
     const { page, ticket } = await activeTicketPage()
     page.store.change({ targetChat: null })
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).runOff).toBe(true)
   })
 })
@@ -120,13 +120,13 @@ describe('Choose Action And Formats', () => {
 describe('Validate Fidelity', () => {
   it('should allow Validate on files already there, with nothing recorded yet', async () => {
     const { page, ticket } = await activeTicketPage({ isMarkdownMade: true })
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).validateOff).toBe(false)
   })
 
   it('should keep Validate off with no files and nothing recorded', async () => {
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).validateOff).toBe(true)
   })
 
@@ -135,7 +135,7 @@ describe('Validate Fidelity', () => {
     board.write(`.sessions/${TICKET}/validation-reports/stories-story-map-20261101T100000.md`, '# Graph rule validation\n')
     board.write(`.sessions/${TICKET}/validation-reports/ddd-bounded-context-20261101T100000.md`, '# Graph rule validation\n')
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.open(spot(TWO_SLUGS, HEAD), true)
+    await page.tiles.open(spot(page, TWO_SLUGS, HEAD), true)
     expect(page.tileActions.barOf(ticket, STAGE, barAt(page, HEAD)!).reportSlug).toBe(OTHER_SLUG)
   })
 })
@@ -143,7 +143,7 @@ describe('Validate Fidelity', () => {
 describe('Generate Fidelity Output', () => {
   async function ran() {
     const { page, chat } = await activeTicketPage()
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     await page.tileActions.run(barAt(page)!, STAGE)
     return { page, chat }
   }
@@ -162,7 +162,7 @@ describe('Generate Fidelity Output', () => {
 describe('Render Fidelity Format', () => {
   it('should turn existing output into the chosen format', async () => {
     const { page, chat } = await activeTicketPage({ isMarkdownMade: true })
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     page.tileActions.chooseAction(barAt(page)!, 'render')
     page.tileActions.toggleFormat(barAt(page)!, 'diagram')
     await page.tileActions.run(barAt(page)!, STAGE)
@@ -173,7 +173,7 @@ describe('Render Fidelity Format', () => {
 describe('Send Tile Action To Chat', () => {
   it.each(['sketch', 'iterate', 'document'])('should send %s as its own command', async action => {
     const { page, chat } = await activeTicketPage()
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     page.tileActions.chooseAction(barAt(page)!, action)
     await page.tileActions.run(barAt(page)!, STAGE)
     expect(await chat.checkIn()).toEqual([{ kind: 'command', text: `/actions-${action} stories-story-map session=.sessions/billing-report/session.json` }])
@@ -183,14 +183,14 @@ describe('Send Tile Action To Chat', () => {
 describe('Validate Fidelity', () => {
   it('should send the fidelity to validate', async () => {
     const { page, chat } = await activeTicketPage()
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     await page.tileActions.validate(barAt(page)!)
     expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-validate stories-story-map session=.sessions/billing-report/session.json' }])
   })
 
   it('should stay off until the ticket allows it', async () => {
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).validateOff).toBe(true)
   })
 })
@@ -198,7 +198,7 @@ describe('Validate Fidelity', () => {
 describe('Review Fidelity', () => {
   it('should not allow Review until Validate is clean', async () => {
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     expect(page.tileActions.barOf(ticket, STAGE, barAt(page)!).reviewOff).toBe(true)
   })
 })
@@ -206,7 +206,7 @@ describe('Review Fidelity', () => {
 describe('Send Action To Stage Practices', () => {
   it('should name every fidelity of the stage in one command', async () => {
     const { page, chat } = await activeTicketPage()
-    await page.tiles.open(spot(STAGE.workRequired, HEAD), true)
+    await page.tiles.open(spot(page, STAGE.workRequired, HEAD), true)
     page.tileActions.chooseAction(barAt(page, HEAD)!, 'sketch')
     await page.tileActions.run(barAt(page, HEAD)!, STAGE)
     expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-sketch stories-story-map ddd-bounded-context ux-ia clean-engineering-modules bdd-behavior session=.sessions/billing-report/session.json' }])
@@ -224,27 +224,27 @@ describe('Open Practice Tile', () => {
   it('should open a tile after a short hover', async () => {
     const { page } = await activeTicketPage()
     pointerTimers()
-    page.tiles.hoverIn(spot())
+    page.tiles.hoverIn(spot(page))
     await vi.advanceTimersByTimeAsync(HOVER_MILLISECONDS)
     expect(openPlaces(page)).toEqual([PLACE])
   })
 
   it('should show the bar before its files are read', async () => {
     const { page } = await activeTicketPage()
-    const opening = page.tiles.open(spot(), true)
+    const opening = page.tiles.open(spot(page), true)
     expect(openPlaces(page)).toEqual([PLACE])
     await opening
   })
 
   it('should pick formats from the files once they are read', async () => {
     const { page } = await activeTicketPage({ isMarkdownMade: true })
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     expect(barAt(page)?.picked).toEqual([])
   })
 
   it('should close it on leaving', async () => {
     const { page } = await activeTicketPage()
-    await page.tiles.open(spot(), false)
+    await page.tiles.open(spot(page), false)
     pointerTimers()
     page.tiles.hoverOut(TICKET, PLACE)
     await vi.advanceTimersByTimeAsync(LEAVE_MILLISECONDS)
@@ -253,7 +253,7 @@ describe('Open Practice Tile', () => {
 
   it('should keep a tile a person pressed open after the pointer leaves', async () => {
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.toggle(ticket, spot())
+    await page.tiles.toggle(ticket, spot(page))
     pointerTimers()
     page.tiles.hoverOut(TICKET, PLACE)
     await vi.advanceTimersByTimeAsync(LEAVE_MILLISECONDS)
@@ -262,16 +262,16 @@ describe('Open Practice Tile', () => {
 
   it('should close on a second press', async () => {
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.toggle(ticket, spot())
-    await page.tiles.toggle(ticket, spot())
+    await page.tiles.toggle(ticket, spot(page))
+    await page.tiles.toggle(ticket, spot(page))
     expect(page.store.state.tiles).toEqual([])
   })
 
   describe('with two tiles pressed', () => {
     async function pressedTwo() {
       const { page, ticket } = await activeTicketPage()
-      await page.tiles.toggle(ticket, spot())
-      await page.tiles.toggle(ticket, spot([OTHER_SLUG], OTHER_PLACE))
+      await page.tiles.toggle(ticket, spot(page))
+      await page.tiles.toggle(ticket, spot(page, [OTHER_SLUG], OTHER_PLACE))
       return { page, ticket }
     }
 
@@ -282,7 +282,7 @@ describe('Open Practice Tile', () => {
 
     it('should close only the bar pressed again', async () => {
       const { page, ticket } = await pressedTwo()
-      await page.tiles.toggle(ticket, spot())
+      await page.tiles.toggle(ticket, spot(page))
       expect(openPlaces(page)).toEqual([OTHER_PLACE])
     })
 
@@ -296,9 +296,9 @@ describe('Open Practice Tile', () => {
   describe('with a pressed bar and a bar a hover opened', () => {
     async function pressedAndHovered() {
       const { page, ticket } = await activeTicketPage()
-      await page.tiles.toggle(ticket, spot())
+      await page.tiles.toggle(ticket, spot(page))
       pointerTimers()
-      page.tiles.hoverIn(spot([OTHER_SLUG], OTHER_PLACE))
+      page.tiles.hoverIn(spot(page, [OTHER_SLUG], OTHER_PLACE))
       await vi.advanceTimersByTimeAsync(HOVER_MILLISECONDS)
       return page
     }
@@ -309,7 +309,7 @@ describe('Open Practice Tile', () => {
 
     it('should replace the hovered bar with the next one a hover opens, and keep the pressed one', async () => {
       const page = await pressedAndHovered()
-      page.tiles.hoverIn(spot([THIRD_SLUG], THIRD_PLACE))
+      page.tiles.hoverIn(spot(page, [THIRD_SLUG], THIRD_PLACE))
       await vi.advanceTimersByTimeAsync(HOVER_MILLISECONDS)
       expect(openPlaces(page)).toEqual([PLACE, THIRD_PLACE])
     })
@@ -326,8 +326,8 @@ describe('Open Practice Tile', () => {
     it('should keep both stage bars open', async () => {
       const { page, ticket } = await activeTicketPage()
       const specification = page.board.stageNamed('Specification')!
-      await page.tiles.toggle(ticket, spot(STAGE.workRequired, HEAD))
-      await page.tiles.toggle(ticket, { ticket: TICKET, stage: specification, place: headPlace(specification.name), slugs: specification.workRequired })
+      await page.tiles.toggle(ticket, spot(page, STAGE.workRequired, HEAD))
+      await page.tiles.toggle(ticket, { ticket, stage: specification, place: headPlace(specification.name), slugs: specification.workRequired })
       expect(openPlaces(page)).toEqual([HEAD, headPlace('Specification')])
     })
   })
@@ -365,7 +365,7 @@ describe('Expand Ticket', () => {
 
   it('should move an open bar to the tile the ticket works on next when it moves', async () => {
     const { page, ticket } = await activeTicketPage()
-    await page.tiles.open(spot([OTHER_SLUG], OTHER_PLACE), true)
+    await page.tiles.open(spot(page, [OTHER_SLUG], OTHER_PLACE), true)
     await page.cards.follow(ticket)
     expect(openPlaces(page)).toEqual([PLACE])
   })
@@ -374,7 +374,7 @@ describe('Expand Ticket', () => {
 describe('Refresh Board After Tool Calls', () => {
   it("should read an open bar's files again when the board changes", async () => {
     const { page } = await activeTicketPage()
-    await page.tiles.open(spot(), true)
+    await page.tiles.open(spot(page), true)
     board.git('checkout', '--', STORY_MAP)
     board.write(`.sessions/${TICKET}/session.log`, `${LATER_STAMP} generate /work stories story_map markdown stories no-chat\n`)
     await page.reader.refresh()

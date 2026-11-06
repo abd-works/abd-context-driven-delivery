@@ -1,6 +1,3 @@
-import { FidelityProgressClientGenerated } from '@cdd/harness/kanban/fidelity-progress'
-import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
-
 import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
@@ -65,7 +62,7 @@ export class TileActionsClient {
   }
 
   private save(tile: Tile, change: Partial<Tile>): void {
-    this.page.tiles.change(tile.ticket, tile.place, open => ({ ...open, ...change, isPinned: true }))
+    this.page.tiles.change(tile.ticket.name, tile.place, open => ({ ...open, ...change, isPinned: true }))
   }
 
   chooseAction(tile: Tile, action: string): void {
@@ -103,10 +100,9 @@ export class TileActionsClient {
     }
   }
 
-  async runCommandsOf(ticket: string, fidelities: string[], formats: string[]): Promise<void> {
-    const commands = await TicketClientGenerated.named(this.page.api, ticket).generateCommands(fidelities, formats)
-    const worktree = this.page.board.tickets.find(shown => shown.name === ticket)?.worktree
-    for (const command of commands ?? []) await this.chat.command(command, ticket, worktree)
+  async runCommandsOf(ticket: TicketClient, fidelities: string[], formats: string[]): Promise<void> {
+    const commands = await ticket.generateCommands(fidelities, formats)
+    for (const command of commands ?? []) await ticket.chat.command(command)
   }
 
   // One command names every fidelity the bar acts on, so a stage's work stays a single turn.
@@ -124,13 +120,12 @@ export class TileActionsClient {
 
   // The tile's ticket names its own session in the command, which goes to that ticket's chat.
   private sendFor(tile: Tile, command: string): Promise<void> {
-    const ticket = this.page.board.tickets.find(shown => shown.name === tile.ticket)
-    return this.chat.command(ticket ? ticket.actionCommand(command) : command, ticket?.name, ticket?.worktree)
+    return tile.ticket.chat.command(tile.ticket.actionCommand(command))
   }
 
-  // The ticket writes the review to its session log, and the board read after it shows the fidelity reviewed.
+  // The ticket writes the review to its session log, and the board read after it shows the fidelity done.
   async review(tile: Tile): Promise<void> {
-    await Promise.all(tile.slugs.map(slug => FidelityProgressClientGenerated.named(this.page.api, tile.ticket, slug).finishReview()))
+    await Promise.all(tile.slugs.map(slug => tile.ticket.progressClient(slug).finishReview()))
     await this.page.reader.refresh()
   }
 }

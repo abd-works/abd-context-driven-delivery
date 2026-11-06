@@ -1,4 +1,5 @@
 """BDD spec for space/record_decisions/record_decisions.py — RecordDecisions toolset."""
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -11,12 +12,12 @@ for _cat in ("tools", "cdd_guidance/practices"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_a, equal, expect
+from expects import be_a, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from space.record_decisions.record_decisions import RecordDecisions
-from space.session.session import Session
-from space.session.throwaway_project import ProjectCall
+from space.session.session import Session, SessionNotFoundError
+from space.session.throwaway_project import ProjectCall, ThrowawayProject
 from harness.agent_tools.agent_tools import AgentInstructions
 
 
@@ -108,14 +109,14 @@ with description("a RecordDecisions toolset"):
                 _open_session(root)
                 source = root / "draft.md"
                 source.write_text("# From file\n\nKept on disk.", encoding="utf-8")
-                written = Path(_rd().write_cdr("from-file", paths=str(source)))
+                written = Path(_rd().write_cdr(slug="from-file", paths=str(source)))
                 expect(written.read_text(encoding="utf-8")).to(equal("# From file\n\nKept on disk.\n"))
                 Session.forget_current()
 
         with it("should write a file at the session workpath .context/cdr/NNNN-slug.md"):
             with tempfile.TemporaryDirectory() as tmpdir:
                 work = _open_session(Path(tmpdir))
-                _rd().write_cdr("my-decision", "# My Decision\n\nWe chose X.")
+                _rd().write_cdr(slug="my-decision", content="# My Decision\n\nWe chose X.")
                 cdr_dir = work / ".context" / "cdr"
                 files = list(cdr_dir.glob("*.md"))
                 expect(len(files)).to(equal(1))
@@ -126,14 +127,14 @@ with description("a RecordDecisions toolset"):
             with tempfile.TemporaryDirectory() as tmpdir:
                 work = _open_session(Path(tmpdir))
                 cdr_dir = work / ".context" / "cdr"
-                _rd().write_cdr("lazy-dir", "# Lazy\n\nCreated lazily.")
+                _rd().write_cdr(slug="lazy-dir", content="# Lazy\n\nCreated lazily.")
                 expect(cdr_dir.is_dir()).to(equal(True))
                 Session.forget_current()
 
         with it("should return the resolved path as a string"):
             with tempfile.TemporaryDirectory() as tmpdir:
                 _open_session(Path(tmpdir))
-                result = _rd().write_cdr("result-path", "# Result\n\nContent.")
+                result = _rd().write_cdr(slug="result-path", content="# Result\n\nContent.")
                 expect(result).to(be_a(str))
                 expect("result-path" in result).to(equal(True))
                 Session.forget_current()
@@ -146,7 +147,7 @@ with description("a RecordDecisions toolset"):
                 (cdr_dir / "0001-first.md").write_text("# First")
                 (cdr_dir / "0002-second.md").write_text("# Second")
                 rd = _rd()
-                rd.write_cdr("third", "# Third\n\nContent.")
+                rd.write_cdr(slug="third", content="# Third\n\nContent.")
                 files = sorted(cdr_dir.glob("*.md"))
                 expect(len(files)).to(equal(3))
                 expect(files[2].name).to(equal("0003-third.md"))
@@ -156,7 +157,7 @@ with description("a RecordDecisions toolset"):
             with tempfile.TemporaryDirectory() as tmpdir:
                 rd = _rd()
                 _open_session(Path(tmpdir))
-                path = rd.write_cdr("clean", "# Clean\n\nBody.   ")
+                path = rd.write_cdr(slug="clean", content="# Clean\n\nBody.   ")
                 written = Path(path).read_text(encoding="utf-8")
                 expect(written.endswith("\n")).to(equal(True))
                 expect(written.rstrip()).to(equal("# Clean\n\nBody."))
@@ -174,3 +175,39 @@ with description("a RecordDecisions toolset"):
         with it("should mention write_cdr in its prose"):
             prose = _expanded("record_decisions_session")
             expect("write_cdr" in prose).to(equal(True))
+
+
+with description("decision records for a named session"):
+    with before.each:
+        self.project = ThrowawayProject()
+        self.root = self.project.root
+        self.ticket_work = self.root / "ticket-work"
+        self.ticket_work.mkdir()
+        folder = self.root / ".sessions" / "checkout-flow"
+        folder.mkdir(parents=True)
+        (folder / "session.json").write_text(
+            json.dumps({"name": "checkout-flow", "workpath": str(self.ticket_work)}), encoding="utf-8"
+        )
+        self.open_work = _open_session(self.root)
+
+    with after.each:
+        ProjectCall.close_all()
+        ThrowawayProject.close_all()
+
+    with context("that names a board ticket other than the open session"):
+        with it("should write the record under the named session's workpath"):
+            written = Path(RecordDecisions.for_session("checkout-flow").write_cdr(slug="named", content="# Named"))
+            expect(written.parent).to(equal(self.ticket_work / ".context" / "cdr"))
+
+        with it("should leave the open session's workpath without a record"):
+            RecordDecisions.for_session("checkout-flow").write_cdr(slug="named", content="# Named")
+            expect((self.open_work / ".context" / "cdr").exists()).to(equal(False))
+
+    with context("that names no session"):
+        with it("should write the record under the open session's workpath"):
+            written = Path(RecordDecisions.for_session("").write_cdr(slug="open", content="# Open"))
+            expect(written.parent).to(equal(self.open_work / ".context" / "cdr"))
+
+    with context("that names a session the project does not have"):
+        with it("should refuse rather than write into another session"):
+            expect(lambda: RecordDecisions.for_session("no-such-ticket")).to(raise_error(SessionNotFoundError))

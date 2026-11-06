@@ -26,14 +26,13 @@ from harness.hooks.hook_server import HandlerCatalog, HookPayload, HookServer
 from harness.mcp.mcp_server import McpServer
 from space.repo.repo import Repo
 from space.session import Session
+from space.session.chat_pointer import ChatPointer
 from space.session.session import PracticeRootInContextError, SessionNameRequiredError
 from space.session.throwaway_project import ProjectCall
 from space.work_state import WorkState
 
 
 def _bind_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat") -> Path:
-    from space.session.chat_context import set_chat_context
-
     chats = session.session_path / "chats"
     chats.mkdir(parents=True, exist_ok=True)
     transcript = chats / f"{chat_id}.md"
@@ -41,7 +40,6 @@ def _bind_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat
     os.environ["CDD_CONVERSATION_ID"] = chat_id
     os.environ["CDD_TRANSCRIPT_PATH"] = str(transcript)
     os.environ["CDD_TRANSCRIPT_LINES"] = "1"
-    set_chat_context(chat_id, transcript, "1")
     return transcript
 
 
@@ -553,9 +551,6 @@ with description("a session"):
                 work.mkdir()
                 Session.new("alpha", work, bare)
                 self.bare_session = Session.current()
-                from space.session.chat_context import clear_chat_context
-
-                clear_chat_context()
                 os.environ.pop("CDD_CONVERSATION_ID", None)
                 os.environ.pop("CDD_TRANSCRIPT_PATH", None)
                 self.bare_session.log_action("sketch", [work / "x.py"])
@@ -604,7 +599,7 @@ with description("a session"):
             with it("should point at the chat id, the transcript file, and the line numbers"):
                 transcript = self.work / "chat.md"
                 transcript.write_text("hello\n", encoding="utf-8")
-                self.session.note_chat("chat-1", transcript, "1-2")
+                self.session.note_chat(ChatPointer("chat-1", transcript, "1-2"))
                 self.session.log_action("sketch", [self.edited])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
                 expect("chat-1" in log and str(transcript) in log and "1-2" in log).to(equal(True))
@@ -721,7 +716,7 @@ with description("a loop"):
                 encoding="utf-8",
             )
             chat_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-            self.session.note_chat(chat_id, chat, "1")
+            self.session.note_chat(ChatPointer(chat_id, chat, "1"))
             self.session.log_action("validate", [self.work / "cart.py"])
             body = Session.read_loop(self.opened.number)
             expect("loop read" in body and "validate" in body).to(equal(True))
@@ -746,18 +741,17 @@ with description("an action"):
     # (S) Session --> Record Validation Run
     with context("that calls validate"):
         with before.each:
-            self.guidance = self.session.practice("bdd").guideline
+            self.practice = self.session.practice("bdd")
 
         with context("with a practice and a fidelity"):
             with it("should log that practice and that fidelity"):
-                self.session.log_validation(self.guidance, [])
+                self.practice.log_validation([])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
                 expect("Bdd" in log and "behavior" in log).to(equal(True))
 
         with context("with a violation"):
             with it("should log the rule, the synopsis, and the correction"):
-                self.session.log_validation(
-                    self.guidance,
+                self.practice.log_validation(
                     ["hierarchy-preservation synopsis: flattened tree correction: keep the nesting"],
                 )
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
@@ -771,24 +765,27 @@ with description("an action"):
             self.session.log_action("sketch", [self.work / "cart.py"])
             self.chat = self.work / "chat.md"
             self.chat.write_text("chat body\n", encoding="utf-8")
-            self.session.note_chat("chat-9", self.chat, "4")
 
         with it("should add that chat onto that action's log line"):
-            self.session.append_chat("sketch", self.chat)
+            self.session.append_chat("sketch", ChatPointer("chat-9", self.chat, "4"))
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
             expect("chat-9" in log and "4" in log).to(equal(True))
 
     # (S) Session --> Record Session Action
     with context("that names an action"):
         with it("should log that action"):
-            GuidanceAction().run("a note", lambda item: None, action="sketch")
+            action = GuidanceAction()
+            action._bind_guidance("a note")
+            action.run(lambda item: None, action="sketch")
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
             expect("sketch" in log).to(equal(True))
 
         with it("should log workpath and practice context for listed guidance"):
             from harness.guidance_actions import GuidanceAction
 
-            GuidanceAction().run(["bdd"], lambda item: None, action="generate")
+            action = GuidanceAction()
+            action._bind_guidance(["bdd"])
+            action.run(lambda item: None, action="generate")
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
             expect("generate" in log and str(self.work) in log and "bdd" in log).to(equal(True))
 
@@ -806,7 +803,9 @@ with description("an action"):
                 _bind_mandatory_chat(self.session, self.work, "mcp-host-chat")
                 McpServer(repo=self.repo, project=self.work)
                 Session.forget_current()
-                GuidanceAction().run(["bdd"], lambda _item: None, action="generate")
+                action = GuidanceAction()
+                action._bind_guidance(["bdd"])
+                action.run(lambda _item: None, action="generate")
                 Validate().validate(["bdd"])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
                 expect(
@@ -840,7 +839,9 @@ with description("an action"):
         with it("should leave session.log unchanged"):
             log_path = self.session.session_path / "session.log"
             before = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
-            GuidanceAction().run("a note", lambda item: None)
+            action = GuidanceAction()
+            action._bind_guidance("a note")
+            action.run(lambda item: None)
             after_log = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
             expect(after_log).to(equal(before))
 
@@ -914,15 +915,14 @@ with description("a practice"):
 
         with context("with a fidelity's outputs resolved for the session"):
             with before.each:
-                from stories.stories import Stories
-
-                self.guidance = Stories(fidelity="story_map")
+                self.stories = self.session.practice("stories")
+                self.fidelity = self.stories.fidelities["story_map"]
                 self.write_overrides = lambda overrides: (self.session.session_path / "session.json").write_text(
                     json.dumps({"name": "alpha", "outputs": overrides}), encoding="utf-8"
                 )
 
             with it("should put each format's file under the practice's root folder"):
-                outputs = self.session.fidelity_outputs(self.guidance)
+                outputs = self.fidelity.output_paths()
                 expect(outputs["markdown"]).to(equal([(self.work / ".context" / "story-map.md").resolve().as_posix()]))
 
             with context("with session.json naming a root folder for the practice"):
@@ -930,32 +930,39 @@ with description("a practice"):
                     self.write_overrides({"stories": {"root": "docs/stories"}})
 
                 with it("should use that root"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / "docs/stories/.context/story-map.md").resolve().as_posix()]))
 
             with context("that a person chooses a folder as the practice's root"):
-                with it("should return the practice root it saved"):
-                    expect(self.session.choose_practice_root("stories", self.work / "docs")).to(equal((self.work / "docs").resolve()))
+                with it("should write the practice's files under that folder"):
+                    self.stories.keep_root(self.work / "docs")
+                    expect(self.stories.folder).to(equal((self.work / "docs").resolve()))
 
                 with it("should say the practice root is chosen"):
-                    self.session.choose_practice_root("stories", self.work / "docs")
-                    expect(self.session.has_chosen_practice_root("stories")).to(equal(True))
+                    self.stories.keep_root(self.work / "docs")
+                    expect(self.stories.is_root_chosen).to(equal(True))
 
                 with context("that is then put back to the default"):
                     with it("should say the practice root is not chosen"):
-                        self.session.choose_practice_root("stories", self.work / "docs")
-                        self.session.use_default_practice_root("stories")
-                        expect(self.session.has_chosen_practice_root("stories")).to(equal(False))
+                        self.stories.keep_root(self.work / "docs")
+                        self.stories.use_default_root()
+                        expect(self.stories.is_root_chosen).to(equal(False))
+
+                with context("that then moves the session's workpath"):
+                    with it("should still write the practice's files under that folder"):
+                        self.stories.keep_root(self.work / "docs")
+                        self.session.choose_workpath("work/inner")
+                        expect(self.stories.folder).to(equal((self.work / "docs").resolve()))
 
             with context("that a person chooses a .context folder as the practice's root"):
                 with it("should refuse it, since the practice's documents already go in its root's .context"):
-                    expect(lambda: self.session.choose_practice_root("stories", self.work / ".context")).to(
+                    expect(lambda: self.stories.keep_root(self.work / ".context")).to(
                         raise_error(PracticeRootInContextError)
                     )
 
                 with it("should name the practice and the folder it refused"):
                     try:
-                        self.session.choose_practice_root("stories", self.work / ".context")
+                        self.stories.keep_root(self.work / ".context")
                     except PracticeRootInContextError as refused:
                         expect((refused.practice, refused.root)).to(equal(("stories", self.work / ".context")))
 
@@ -964,7 +971,7 @@ with description("a practice"):
                     self.write_overrides({"stories": {"root": "docs/stories", "story_map": {"root": "docs/map"}}})
 
                 with it("should prefer the fidelity's root"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["drawio"]).to(equal([(self.work / "docs/map/.context/story-map.drawio").resolve().as_posix()]))
 
             with context("with session.json naming a file for a single-file output"):
@@ -972,22 +979,20 @@ with description("a practice"):
                     self.write_overrides({"stories": {"story_map": {"markdown": "our-map.md"}}})
 
                 with it("should use that file name"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["markdown"]).to(equal([(self.work / ".context" / "our-map.md").resolve().as_posix()]))
 
                 with it("should keep the declared name for the other formats"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["drawio"]).to(equal([(self.work / ".context" / "story-map.drawio").resolve().as_posix()]))
 
             with context("with session.json naming a file for a patterned output"):
                 with before.each:
-                    from stories.stories import Stories
-
-                    self.guidance = Stories(fidelity="scenarios")
+                    self.fidelity = self.stories.fidelities["scenarios"]
                     self.write_overrides({"stories": {"scenarios": {"python": "one-file.py"}}})
 
                 with it("should keep the declared pattern"):
-                    outputs = self.session.fidelity_outputs(self.guidance)
+                    outputs = self.fidelity.output_paths()
                     expect(outputs["python"][0]).to(contain("{story_snake}_story.test.py"))
 
         with context("with config.json practice_folders pointing a practice at the workpath"):
@@ -1009,7 +1014,7 @@ with description("a practice"):
             with before.each:
                 self.custom = self.repo / "custom-bdd"
                 self.custom.mkdir()
-                self.session.remember_parent_folders("bdd", [[self.custom]])
+                self.session.practice("bdd").remember_folders([[self.custom]])
                 Session.forget_current()
                 Session.switch("alpha", repo_path=self.repo)
                 self.session = Session.current()
@@ -1030,7 +1035,7 @@ with description("a practice"):
                 self.second_set = self.repo / "two"
                 self.first_set.mkdir()
                 self.second_set.mkdir()
-                self.session.remember_parent_folders("bdd", [[self.first_set], [self.second_set]])
+                self.session.practice("bdd").remember_folders([[self.first_set], [self.second_set]])
                 Session.forget_current()
                 Session.switch("alpha", repo_path=self.repo)
                 self.session = Session.current()
@@ -1058,7 +1063,7 @@ with description("a practice"):
             Session.new("alpha", self.work, self.repo)
             self.session = Session.current()
             for practice in ("clean_engineering", "stories", "bdd"):
-                self.session.remember_parent_folders(practice, [[self.tree]])
+                self.session.practice(practice).remember_folders([[self.tree]])
             Session.forget_current()
             Session.switch("alpha", repo_path=self.repo)
             self.session = Session.current()

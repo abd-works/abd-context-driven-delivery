@@ -277,8 +277,8 @@ The base type of Ticket and BacklogItem.
 + practice_roots: dict[str, PracticeRoot]
 	// data field
 	// where each practice writes, as a path from the project, and whether a person chose it or it is the default
-	-> Session.practice_root
-	-> Session.has_chosen_practice_root
+	-> PracticeSessionOutput.folder
+	-> PracticeSessionOutput.is_root_chosen
 + session_file: str
 	// data field
 	// its session's `session.json` as a path from the project; every command the board sends names it, because a command runs in whichever chat it is sent to
@@ -312,10 +312,10 @@ The base type of Ticket and BacklogItem.
 	-> Session.choose_workpath
 + choose_practice_root(practice: str, path: str): Ticket
 	// `ticket.choose_practice_root`: where that practice writes for this ticket
-	-> Session.choose_practice_root
+	-> PracticeSessionOutput.keep_root
 + use_default_practice_root(practice: str): Ticket
 	// `ticket.use_default_practice_root`
-	-> Session.use_default_practice_root
+	-> PracticeSessionOutput.use_default_root
 + close(leaving: list[str]): Ticket
 	// after closing, its session is closed, its folder is in `_complete/`, and its column is Complete. leaving names commit, push, merge
 	-> Ticket.leave
@@ -370,7 +370,8 @@ The base type of Ticket and BacklogItem.
 	// `ticket.report`: the latest report, with the rules broken on the nodes of the graph saved beside it, then each rule its judgment fails. A report with no saved graph lists no graph rules and says so; a fidelity with no report has an empty one. Intended: `Session.report` takes this over, so the ticket only asks its session
 	-> ReportFile.report
 + generate_commands(fidelities: list[str], formats: list[str]): list[str]
-	// `ticket.generate_commands`: renders the earlier fidelity first when a format is new to it; raises `FidelityNotFoundError` for a fidelity the ticket does not have. Intended: `Generate.commands_for` takes this over
+	// `ticket.generate_commands`: the commands the first fidelity's progress builds, naming the others alongside it in one generate; raises `FidelityNotFoundError` for a fidelity the ticket does not have
+	-> FidelityCommands.generate
 + keep_file(file: Path): Path
 	// keeps a file, such as a started backlog item's idea, with the ticket's work
 	-> Session.keep_file
@@ -384,6 +385,10 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + FidelityProgress(fidelity: FidelityGuidance, stage: Stage, done_actions: list[str], has_violations: bool)
 ------
 + << association >> fidelity: FidelityGuidance
+	// the fidelity as the ticket's session holds it, one object per fidelity in a session
++ << composition >> commands: FidelityCommands
++ earlier_progress: FidelityProgress
+	// the progress of this practice's fidelity in the stage before this one
 + stage: Stage
 + practice: str
 	-> PracticeGuidance.key
@@ -405,6 +410,19 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 	// this fidelity's dated validation reports among the session's, in the order given
 + with_violations(): FidelityProgress
 	// the same progress with its latest validate failed, for a judgment that fails a rule
+
+## FidelityCommands
+
+The slash commands that run an action on one fidelity of a ticket. A command runs in whichever chat it is sent to, whose open session can be another ticket's, so each names its ticket's session.json in a `session=` word.
+
++ FidelityCommands(progress: FidelityProgress, session: Session)
+------
+----
++ generate(formats: list[str], alongside: FidelityProgress...): list[str]
+	// the generate command naming this fidelity and those alongside it, after each one's render of its earlier fidelity
+	-> FidelityCommands.render_earlier
++ render_earlier(formats: list[str]): str
+	// renders the earlier fidelity into the formats it has no file in, when it has work to render; empty otherwise
 
 ## Judgment
 
@@ -625,7 +643,7 @@ The files of one ticket's session. It lives in `ticket_files.py`.
 ----
 + declared_by(fidelity: FidelityGuidance): dict[str, list[FileEntry]]
 	// the files fidelity declares, by format. A named part of a path, such as `{module}`, matches folders at any depth, `.context` folders included; a pattern in the whole repository lists only what the ticket's branch changed
-	-> Session.fidelity_outputs
+	-> FidelityGuidance.output_paths
 	-> Repo.files_changed_on
 + in_session_folder(): list[FileEntry]
 + read(path: str): FileText
@@ -816,24 +834,14 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 	-> Judgment.from_report
 + files(fidelities: list[FidelityGuidance]): dict
 	// Intended, replaces `Ticket.files`: the declared files by format of each fidelity, with whether each exists
-	-> Session.fidelity_outputs
+	-> FidelityGuidance.output_paths
 + read_file(path: str): str
 	// Intended, replaces `Ticket.read_file`: the text of a file in the repository, none for one that is gone; raises `FileOutsideRepositoryError` for a path outside it
 + artifacts(fidelity: FidelityGuidance): list[Path]
 	// Intended: the files this fidelity produced, for the list, folder, and files on the card
 	-> PracticeSessionOutput.artifacts
-+ fidelity_outputs(guidance: PracticeGuidance, fidelity: FidelityGuidance): dict
-	// where fidelity's artifacts are saved under the workpath, with the overrides in `session.json`; the practice's active fidelity when none is named. Naming it leaves the practice as it is, because the board's practices are shared by every call
-	-> FidelityGuidance.outputs
 + choose_workpath(workpath: Path)
 	// work in another folder of the repository from now on, saved in `session.json`; a chosen practice root keeps naming the same folder
-+ choose_practice_root(practice: str, root: Path): Path
-	// write that practice's files under root, saved in `session.json` relative to the workpath, and return the practice root now in use. Raises `PracticeRootInContextError` for a root inside a `.context` folder, because the practice's documents already go in its root's own `.context`
-+ use_default_practice_root(practice: str)
-	// write that practice's files under its default practice root again
-+ has_chosen_practice_root(practice: str): bool
-+ practice_root(guidance: PracticeGuidance, practice: str): Path
-	// the practice root a person chose, else the workpath plus the practice's default folder from `.context/config.json` or the practice itself
 + enable_practice(practice: str, is_enabled: bool)
 	// turn a practice on or off for this session, saved in `session.json`
 	-> PracticeSessionOutput.enabled
@@ -860,8 +868,10 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 	-> Session.move_folder_to
 + close()
 	// ends the session; when it is the current one, the repository goes back to the main session
-+ log_guidance_action(action: str, guidance_items: list)
-+ log_validation(guidance: PracticeGuidance, violations: list[str])
++ log_guidance_action(action: str)
+	// logs the action with the workpath and the folders of each practice this session has opened
++ log_line(line: str)
+	// appends line with the noted chat's pointer, such as a practice's validate line
 
 ## PracticeSessionOutput
 
@@ -978,9 +988,15 @@ Intended: an enum in place of the three string constants in `stages.py`, so a st
 + << association >> listed: list[FidelityGuidance]
 	// the guidance this call runs on
 ----
-+ run(guidance: GuidanceArg, operation, action: str)
-	// runs the action on each listed fidelity and writes the action's line to the session log; that line is what the session reads back
++ start_call()
+	// a new call starts with no guidance bound, no session found, and no line logged
++ call_session(arguments: dict): Session
+	// binds the call's guidance once and gives the session the call's log line goes in, the one a board command names
++ run(operation, action: str)
+	// runs the action on each listed fidelity the call bound and writes the action's line to the session log; that line is what the session reads back
 	-> Session.log_guidance_action
++ _inside(action_type: type, guidance): GuidanceAction
+	// an action started inside this one, made for this action's session and working on the same Guidance objects
 
 ## Generate : GuidanceAction
 
@@ -988,11 +1004,8 @@ Intended: an enum in place of the three string constants in `stages.py`, so a st
 ----
 + generate(guidance: GuidanceArg): str
 	// the agent writes the fidelity's artifacts where its outputs say. A guidance string can carry its format (`stories-scenarios format=python`). Reads the rules without running Validate, so it logs only its own `generate` line
-	-> Validate.rules_of
-	-> Session.fidelity_outputs
-+ commands_for(session: Session, fidelities: list[FidelityGuidance], formats: list[str]): list[str]
-	// Intended, replaces `Ticket.generate_commands`: the commands that generate fidelities in formats, rendering the earlier fidelity first when a format is new to it
-	-> Session.files
+	-> Validate.listed_rules
+	-> FidelityGuidance.output_paths
 
 ## Validate : GuidanceAction
 
@@ -1001,8 +1014,8 @@ Intended: an enum in place of the three string constants in `stages.py`, so a st
 + validate(guidance: GuidanceArg, rule: Rule, graph: bool, paths: list[str]): str
 	// builds the knowledge graph from the artifacts in paths, runs the fidelity's rules on it, saves the report in the session's `validation-reports/` with the graph it checked under the same name in `.json`, and logs one `graph-rule` entry per violation
 	-> Graph.load_files
-	-> Session.log_validation
-+ rules_of(guidance: GuidanceArg): str
+	-> PracticeSessionOutput.log_validation
++ listed_rules(): str
 	// the shared and active fidelity's rules as text for another action to follow; checks nothing, saves no report, and writes nothing to the session log
 
 # harness/graph
@@ -1106,9 +1119,9 @@ One schema rule on a node, the guidance Rule of the same slug with its executabl
 - Locking is page state, not a board rule: with Active session only on, the board app turns off what sends commands to a chat for every ticket other than `Board.active`; moving a card stays on. The page reads `active` from the board's data and holds the switch itself.
 - Ticket-wide Run sends one action across a ticket's enabled practices at its current stage. It is a command the board app sends to a chat, so it needs no operation here beyond `Ticket.practices`.
 - `FidelityProgress` and `Stage.work_required` stay until Intended `Session.action_states`, `Session.violations`, and `Session.work_required` are built; then the ticket stops reading the log itself and one list says what is required.
-- `Session.fidelity_outputs` reads the session it is called on, so `Repo.sessions` must give sessions that can be read without one becoming the current session. `Session` today has one in-memory current, and opening one saves it as current.
+- `FidelityGuidance.output_paths` reads the session its practice works in, so `Repo.sessions` must give sessions that can be read without one becoming the current session. `Session` today has one in-memory current, and opening one saves it as current.
 - The GitHub issue class in `space/repo` is `ProjectTicket`, with `ProjectTicketState` and `ProjectTicketNotFoundError`, so `Ticket` names only the board's card.
 - Generate takes its format inside the guidance string (`format=python`) rather than as an argument of its own; a separate `format` argument is still to be decided.
 - One word each: the folder a session works in is its workpath, on the ticket and the session alike, and the folder a practice writes under is its practice root. A card moves with `move_next`, `move_previous`, and `move_to`; a session's folder moves with `move_folder_to`. Every object a tool call names is found with `load`, except the board, found with `current` until the project reaches it as an argument.
-- `Ticket` holds a card's moves, its review, and its lifecycle; its files, file reading, report, and generate commands are Intended to move to `Session.files`, `Session.read_file`, `Session.report`, and `Generate.commands_for`. The `ticket.*` tools keep their names because the board app and the chat pane send them, and each will ask the ticket's session.
+- `Ticket` holds a card's moves, its review, and its lifecycle; each fidelity's progress builds its own generate and render commands (`FidelityProgress.commands`); its files, file reading, and report are Intended to move to `Session.files`, `Session.read_file`, and `Session.report`. The `ticket.*` tools keep their names because the board app and the chat pane send them, and each will ask the ticket's session.
 - Left as they are, each for a reason another rule gives: `Ticket.create` and `Session.new` take every field a new ticket or session is made from, which `limit-operation-parameters` allows a creation factory. `Ticket.name` stays beside `Ticket.session`, because a ticket is an agent toolset whose own name would otherwise answer "ticket". `Ticket.load(ticket)` keeps its parameter name, because the tool layer makes it the argument every `ticket.*` call sends and renaming it changes every call the board app and chat pane make. `Board.current` reads the project from the call rather than taking it as an input, because a `@tool_subject` takes only the tool's own arguments; passing the project needs that change in `harness/agent_tools`.

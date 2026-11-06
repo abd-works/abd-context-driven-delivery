@@ -11,8 +11,9 @@ export type Toast = { id: number; text: string; isFailure: boolean }
 export type Region = 'board' | 'details'
 export type BacklogDraft = { isOpen: boolean; title: string; text: string }
 
-// An open action bar: on a tile or on a stage head. One ticket and place hold at most one bar.
-export type Tile = { ticket: string; place: string; stage: string; slugs: string[]; action: string; picked: string[]; isPinned: boolean; files: TicketFiles }
+// An open action bar: on a tile or on a stage head. One ticket and place hold at most one bar, and the bar holds its
+// ticket, whose tools its controls call.
+export type Tile = { ticket: TicketClient; place: string; stage: string; slugs: string[]; action: string; picked: string[]; isPinned: boolean; files: TicketFiles }
 
 // A dialog or panel holds the ticket it is about, so its actions reach that ticket's tools without looking it up again.
 export type Activation = {

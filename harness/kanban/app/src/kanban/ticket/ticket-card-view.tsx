@@ -36,7 +36,7 @@ function SegmentsView({ ticket, stage, onSkill }: { ticket: TicketClient; stage:
         const { key, label, color } = ticket.stateOf(slug)
         const practice = page.board.practiceOf(slug)
         const skill = practice?.skillOf(slug) ?? slug
-        const isOpen = state.tiles.some(tile => tile.ticket === ticket.name && tile.slugs.length === 1 && tile.slugs[0] === slug)
+        const isOpen = state.tiles.some(tile => tile.ticket.name === ticket.name && tile.slugs.length === 1 && tile.slugs[0] === slug)
         const leave = () => onSkill('')
         const enter = () => onSkill(skill)
         const background = key === 'violations' ? color : practice?.color
@@ -151,7 +151,7 @@ function OpenCardView({ ticket, stage, spot }: { ticket: TicketClient; stage: Co
   const { opensLeft, ...place } = openCardPlace(ticket, spot)
   // The card scrolls back into view whenever one of its bars opens or closes, since the card grows or shrinks with it.
   const openPlaces = state.tiles
-    .filter(tile => tile.ticket === ticket.name)
+    .filter(tile => tile.ticket.name === ticket.name)
     .map(tile => tile.place)
     .join(' ')
   // Braces matter: newer browsers return a promise from scrollIntoView, and React would call it as the effect's cleanup.

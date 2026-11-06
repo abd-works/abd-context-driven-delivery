@@ -127,22 +127,20 @@ export class ChatClient {
   }
 
   // A prompt that starts with / is a command, which runs the skill. The whole command is named, because what is cut off
-  // is often the session it ran on.
-  command(text: string, ticket = '', worktree = ''): Promise<void> {
-    this.chooseChatFor(ticket, worktree)
+  // is often the session it ran on. Given a chat, such as a ticket's own, it goes there, whichever chat was picked last.
+  command(text: string, chat?: ChatData): Promise<void> {
+    this.chooseChat(chat)
     return this.send('command', text, `Sent to ${this.targetName}: ${text}`)
   }
 
   // A fill waits for the chat while a turn runs, so the person is told it has not reached the prompt yet.
-  fill(text: string, ticket = '', worktree = ''): Promise<void> {
-    this.chooseChatFor(ticket, worktree)
+  fill(text: string, chat?: ChatData): Promise<void> {
+    this.chooseChat(chat)
     const wait = this.target?.is_busy ? ' It goes in when this turn ends.' : ''
     return this.send('fill', text, `Queued for the prompt of ${this.targetName}, for you to review: ${shortened(text)}${wait}`)
   }
 
-  // A ticket's command goes to the chat working in its worktree when one is connected, whichever chat was picked last.
-  private chooseChatFor(ticket: string, worktree: string): void {
-    const chat = this.chatFor(ticket, worktree)
+  private chooseChat(chat: ChatData | undefined): void {
     if (chat && chat.id !== this.store.state.targetChat) this.choose(chat.id)
   }
 
@@ -172,11 +170,11 @@ export class TicketChat {
   }
 
   command(text: string): Promise<void> {
-    return this.chats.command(text, this.owner.name, this.owner.worktree)
+    return this.chats.command(text, this.found)
   }
 
   fill(text: string): Promise<void> {
-    return this.chats.fill(text, this.owner.name, this.owner.worktree)
+    return this.chats.fill(text, this.found)
   }
 
   beginOpening(): boolean {

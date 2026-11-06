@@ -303,7 +303,7 @@ export class TicketClient extends TicketClientGenerated {
     if (this.nextAction === 'review') return this.review(slug)
     if (this.nextAction !== 'generate') return this.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${slug}`))
     const format = this.stageRequiring(slug)?.defaultFormats[slug]
-    await this.page.tileActions.runCommandsOf(this.name, [slug], format ? [format] : [])
+    await this.page.tileActions.runCommandsOf(this, [slug], format ? [format] : [])
   }
 
   // Run next can reach back to an earlier stage, so a fidelity's stage is the one that requires it, not the ticket's.

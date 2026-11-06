@@ -754,6 +754,19 @@ with description("the board tools") as self:
                 commands = self.project.call("ticket.generate_commands", ticket="pet-visits", fidelities=["stories-scenarios"], formats=["drawio"])
                 expect(commands[-1]).to(equal("/actions-generate stories-scenarios format=drawio session=.sessions/pet-visits/session.json"))
 
+            with it("should build those commands from the fidelity's own progress"):
+                progress = Ticket.load("pet-visits").progress_of("stories-scenarios")
+                expect(progress.commands.generate(["drawio"])).to(equal(self.project.call("ticket.generate_commands", ticket="pet-visits", fidelities=["stories-scenarios"], formats=["drawio"])))
+
+            with it("should name every fidelity it generates together in one generate command"):
+                commands = self.project.call("ticket.generate_commands", ticket="pet-visits", fidelities=["stories-story-map", "stories-scenarios"], formats=["markdown"])
+                expect(commands).to(equal(["/actions-generate stories-story-map stories-scenarios format=markdown session=.sessions/pet-visits/session.json"]))
+
+            # One fidelity object per session: the progress's fidelity is the one an action on the ticket's session works with.
+            with it("should give each progress the fidelity its ticket's session holds"):
+                ticket = Ticket.load("pet-visits")
+                expect(ticket.progress_of("stories-story-map").fidelity is ticket.session.practices["stories"].fidelities["story_map"]).to(be_true)
+
             with it("should give the board the ticket's session.json"):
                 expect(self.project.ticket_json("pet-visits")["session"]["session_file"]).to(equal(".sessions/pet-visits/session.json"))
 

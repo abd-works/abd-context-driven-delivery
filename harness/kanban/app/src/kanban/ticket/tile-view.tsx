@@ -17,7 +17,7 @@ function TileNameView({ ticket, stage, slug }: TileProps) {
   const place = cellPlace(stage.name, slug)
   const isOn = ticket.isOn(slug)
   const practice = page.board.practiceOf(slug)
-  const toggle = () => page.tiles.toggle(ticket, { ticket: ticket.name, stage, place, slugs: [slug] })
+  const toggle = () => page.tiles.toggle(ticket, { ticket, stage, place, slugs: [slug] })
   return (
     <button className="tile-name" title={practice?.skillOf(slug)} disabled={!isOn} aria-expanded={page.tiles.isOpen(ticket.name, place)} onClick={() => void toggle()}>
       {practice?.fidelityNameOf(slug) ?? slug}
@@ -64,7 +64,7 @@ export function TileView(props: TileProps) {
   const place = cellPlace(stage.name, slug)
   const { key } = ticket.stateOf(slug)
   const borderColor = key === 'violations' ? 'var(--violations)' : ticket.isNext(stage, slug) ? 'var(--accent)' : 'var(--border)'
-  const hover = isOn && opensOnHover ? { onMouseEnter: () => page.tiles.hoverIn({ ticket: ticket.name, stage, place, slugs: [slug] }), onMouseLeave: () => page.tiles.hoverOut(ticket.name, place) } : {}
+  const hover = isOn && opensOnHover ? { onMouseEnter: () => page.tiles.hoverIn({ ticket, stage, place, slugs: [slug] }), onMouseLeave: () => page.tiles.hoverOut(ticket.name, place) } : {}
   const open = isOn ? page.tiles.openOn(ticket.name, place) : undefined
   return (
     <div className="skill-cell" data-tile={slug} {...hover} style={{ opacity: ticket.lightOf(slug), borderColor, borderLeftColor: practice?.color, borderLeftWidth: key === 'done' ? REVIEWED_EDGE_PIXELS : EDGE_PIXELS }}>

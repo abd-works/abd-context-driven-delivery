@@ -16,9 +16,9 @@ from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.agent_tools import ON_SUBJECT_FLAG, AgentTool, AgentToolSet, InstallDestination
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, OnSubject
 from harness.agent_tools.name import Name
-from harness.installation.destination import Installation, SourceFile, data_fields_of, edited_fields_of, identity_fields_of, languages_of
+from harness.installation.destination import Edits, Installation, LanguageAdapter, SourceFile, data_fields_of
 
 _FOLDER = "language-adapters"
 _TYPESCRIPT = "typescript"
@@ -182,7 +182,7 @@ class TypeScriptOperation:
         self.result = owner.result_of(tool)
         self.path_tail = Name(tool.name).kebab
         self.label = label_of(tool.name)
-        self.marked_edits = edited_fields_of(tool.callable)
+        self.marked_edits = Edits.fields_of(tool.callable)
 
     @property
     def returns_itself(self) -> bool:
@@ -255,7 +255,7 @@ class TypeScriptToolset:
         self._imports: set[tuple[str, str]] = set()
         self.name = type(toolset).__name__
         self.slug = toolset.slug
-        self.identity_fields = identity_fields_of(type(toolset))
+        self.identity_fields = LanguageAdapter.identity_fields_of(type(toolset))
 
     @property
     def file_path(self) -> PurePosixPath:
@@ -494,7 +494,7 @@ class TypeScriptToolset:
 
     def identity_of(self, tool: AgentTool) -> tuple[str, ...]:
         """The arguments that name the object, its loader's: a loader with none, like the current board's, names none."""
-        if not getattr(tool.callable, ON_SUBJECT_FLAG, False):
+        if not OnSubject.marks(tool.callable):
             return ()
         load = AgentToolSet.tool_subject_of(type(self._toolset))
         return tuple(inspect.signature(load).parameters)
@@ -700,7 +700,7 @@ class LanguageAdapterInstallation(Installation):
 
     def record(self, toolset: Any) -> None:
         """Remember toolset when its class is marked for TypeScript."""
-        if _TYPESCRIPT in languages_of(type(toolset)):
+        if _TYPESCRIPT in LanguageAdapter.languages_of(type(toolset)):
             self._recorded.append(toolset)
 
     def write_all(self) -> list[Path]:

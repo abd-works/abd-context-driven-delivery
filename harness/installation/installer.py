@@ -853,6 +853,17 @@ class Installer:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
+    def installed_items(self, channel: str) -> list[str]:
+        """What the latest install in diagnostics.json deployed on one channel, such as ``mcp`` operation names or
+        ``toolset`` references; none before the first install."""
+        path = self._diagnostics_log()
+        if not path.is_file():
+            return []
+        installs = list(json.loads(path.read_text(encoding="utf-8")).get("installs") or [])
+        if not installs:
+            return []
+        return [str(item) for item in (installs[-1].get(channel) or {}).get("items") or []]
+
     def _deployed_channels(self) -> dict[str, list[str]]:
         return {
             "toolset": list(self._deployed_toolsets),

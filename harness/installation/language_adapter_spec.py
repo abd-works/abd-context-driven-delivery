@@ -14,14 +14,13 @@ Installer(repo=_REPO).ensure_import_path()
 
 from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
 from harness.installation.destination import (  # noqa: E402
+    Edits,
+    LanguageAdapter,
     data_field,
     data_fields_of,
     data_of,
-    edited_fields_of,
     edits,
-    identity_fields_of,
     language_adapter,
-    languages_of,
 )
 from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
@@ -60,28 +59,28 @@ with description("a language adapter"):
             class Marked:
                 pass
 
-            expect(languages_of(Marked)).to(equal(("typescript",)))
+            expect(LanguageAdapter.languages_of(Marked)).to(equal(("typescript",)))
 
         with it("should name the field of its data that holds an object's name"):
             @language_adapter(language="typescript", identity="name")
             class Named:
                 pass
 
-            expect(identity_fields_of(Named)).to(equal(("name",)))
+            expect(LanguageAdapter.identity_fields_of(Named)).to(equal(("name",)))
 
         with it("should name the fields an operation changes when its arguments are named differently"):
             @edits("title")
             def rename(new_title):
                 return new_title
 
-            expect(edited_fields_of(rename)).to(equal(("title",)))
+            expect(Edits.fields_of(rename)).to(equal(("title",)))
 
         with context("that no mark names"):
             with it("should name no language"):
                 class Unmarked:
                     pass
 
-                expect(languages_of(Unmarked)).to(equal(()))
+                expect(LanguageAdapter.languages_of(Unmarked)).to(equal(()))
 
     with description("the data of a domain object"):
         with before.all:

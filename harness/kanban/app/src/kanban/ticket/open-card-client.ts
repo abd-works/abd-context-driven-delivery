@@ -4,7 +4,7 @@ import type { ColumnClient } from '../board/column-client'
 import type { TicketClient } from './ticket-client'
 import { cellPlace } from './tile-client'
 
-const withoutBarsOf = (tiles: Tile[], ticket: string | null): Tile[] => tiles.filter(tile => tile.ticket !== ticket)
+const withoutBarsOf = (tiles: Tile[], ticket: string | null): Tile[] => tiles.filter(tile => tile.ticket.name !== ticket)
 
 // The card a person has opened over the board, and what stays open on a ticket as it changes.
 export class OpenCardClient {
@@ -29,7 +29,7 @@ export class OpenCardClient {
   // A press on a segment opens the card on that fidelity.
   async openSegment(ticket: TicketClient, stage: ColumnClient, slug: string): Promise<void> {
     if (this.store.state.openCard !== ticket.name) this.toggle(ticket)
-    await this.page.tiles.open({ ticket: ticket.name, stage, place: cellPlace(stage.name, slug), slugs: [slug] }, true)
+    await this.page.tiles.open({ ticket, stage, place: cellPlace(stage.name, slug), slugs: [slug] }, true)
   }
 
   // A ticket's address changes with its column, so the selection goes with it, and its open bars give way to one bar
@@ -38,14 +38,14 @@ export class OpenCardClient {
     moved.select()
     const stage = this.page.board.stageOf(moved)
     if (!stage) return
-    if (this.store.state.tiles.some(tile => tile.ticket === moved.name)) await this.followBars(moved, stage)
+    if (this.store.state.tiles.some(tile => tile.ticket.name === moved.name)) await this.followBars(moved, stage)
   }
 
   private async followBars(moved: TicketClient, stage: ColumnClient): Promise<void> {
     this.store.change(state => ({ tiles: withoutBarsOf(state.tiles, moved.name) }))
     const slugs = moved.enabledSlugs(stage)
     const slug = slugs.find(entry => moved.stateOf(entry).key !== 'done') ?? slugs[0]
-    if (slug) await this.page.tiles.open({ ticket: moved.name, stage, place: cellPlace(stage.name, slug), slugs: [slug] }, true)
+    if (slug) await this.page.tiles.open({ ticket: moved, stage, place: cellPlace(stage.name, slug), slugs: [slug] }, true)
   }
 
   releaseTicket(ticket: string): void {
@@ -58,7 +58,7 @@ export class OpenCardClient {
   // A practice turned off has no tile to act on, so each open bar on the ticket lets go of it.
   dropPractice(ticket: string, practice: string): void {
     const remaining = (tile: Tile): Tile | null => {
-      if (tile.ticket !== ticket) return tile
+      if (tile.ticket.name !== ticket) return tile
       const slugs = tile.slugs.filter(slug => this.page.board.practiceOf(slug)?.key !== practice)
       return slugs.length ? { ...tile, slugs } : null
     }

@@ -24,7 +24,7 @@ function GridCornerView() {
 function GridStageHeadView({ ticket, stage }: { ticket: TicketClient; stage: ColumnClient }) {
   const { page } = useBoard()
   const place = headPlace(stage.name)
-  const spot = { ticket: ticket.name, stage, place, slugs: ticket.enabledSlugs(stage) }
+  const spot = { ticket, stage, place, slugs: ticket.enabledSlugs(stage) }
   const isOpen = page.tiles.isOpen(ticket.name, place)
   return (
     <StageHeadView stage={stage.name}>

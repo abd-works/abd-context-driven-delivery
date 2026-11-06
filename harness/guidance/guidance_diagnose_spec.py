@@ -15,15 +15,7 @@ Installer(repo=_REPO_ROOT).ensure_import_path()
 from expects import contain, equal, expect, have_key
 from mamba import description, it
 
-from harness.guidance.guidance import (
-    ActionProbeSession,
-    _instruction_result,
-    fill_probe_arguments,
-    guidance_prefixes,
-    mcp_matches_guidance,
-    probe_guidance_actions,
-    probe_guidance_instructions,
-)
+from harness.guidance.guidance_probe import GuidanceProbe, instruction_result
 from harness.guidance.guidance_diagnostics import GuidanceDiagnostics
 
 
@@ -49,25 +41,26 @@ with description("guidance diagnostics"):
         expect(len(data["installs"])).to(equal(2))
 
     with it("should treat stories and clean engineering as the installed guidance filter"):
-        expect(mcp_matches_guidance("stories.instructions", ["stories", "clean-engineering-model"])).to(equal(True))
-        expect(mcp_matches_guidance("stories-story-map", ["stories", "clean-engineering-model"])).to(equal(True))
-        expect(mcp_matches_guidance("clean-engineering-model", ["stories", "clean-engineering-model"])).to(equal(True))
-        expect(mcp_matches_guidance("clean-engineering.instructions", ["stories", "clean-engineering-model"])).to(equal(True))
-        expect(mcp_matches_guidance("bdd.instructions", ["stories", "clean-engineering-model"])).to(equal(False))
-        expect(mcp_matches_guidance("render.render", ["stories", "clean-engineering-model"])).to(equal(False))
+        probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories", "clean-engineering-model"])
+        expect(probe.matches("stories.instructions")).to(equal(True))
+        expect(probe.matches("stories-story-map")).to(equal(True))
+        expect(probe.matches("clean-engineering-model")).to(equal(True))
+        expect(probe.matches("clean-engineering.instructions")).to(equal(True))
+        expect(probe.matches("bdd.instructions")).to(equal(False))
+        expect(probe.matches("render.render")).to(equal(False))
 
     with description("a filter that names a fidelity whose own name has a hyphen"):
         with it("should add the practice of that fidelity, so stories-story-map adds stories"):
-            expect(guidance_prefixes(["stories-story-map"])).to(equal(["stories-story-map", "stories"]))
+            probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories-story-map"])
+            expect(probe.prefixes).to(equal(["stories-story-map", "stories"]))
 
         with it("should match the practice's own instructions"):
-            expect(mcp_matches_guidance("stories.instructions", ["stories-story-map"])).to(equal(True))
+            probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories-story-map"])
+            expect(probe.matches("stories.instructions")).to(equal(True))
 
         with it("should probe the folder of that fidelity's practice"):
-            session = ActionProbeSession(Installer(repo=_REPO_ROOT))
-            paths = session.content_paths(["stories-story-map"])
-            session.cleanup()
-            expect(paths).to(equal([str(_REPO_ROOT / "cdd_guidance" / "practices" / "stories")]))
+            probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories-story-map"])
+            expect(probe.content_paths).to(equal([str(_REPO_ROOT / "cdd_guidance" / "practices" / "stories")]))
 
     with it("should return stories instructions from the installed mcp list"):
         tree = Path(tempfile.mkdtemp())
@@ -75,7 +68,7 @@ with description("guidance diagnostics"):
             tree,
             {"installs": [{"mcp": {"items": ["stories.instructions", "bdd.instructions"]}}]},
         )
-        report = probe_guidance_instructions(["stories", "clean-engineering-model"], installer)
+        report = GuidanceProbe(installer, ["stories", "clean-engineering-model"]).instructions()
         data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
         items = data["guidance"]["instructions"]["items"]
         expect(report.startswith("green\n")).to(equal(True))
@@ -86,14 +79,9 @@ with description("guidance diagnostics"):
     with it("should pass index_only mode when probing partition.partition"):
         from partition.partition import Partition
 
-        session = ActionProbeSession(Installer(repo=_REPO_ROOT))
-        args, missing = fill_probe_arguments(
-            "partition.partition",
-            Partition.partition,
-            ["stories", "clean-engineering-model"],
-            session,
-        )
-        session.cleanup()
+        probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories", "clean-engineering-model"])
+        args, missing = probe.arguments_for("partition.partition", Partition.partition)
+        probe.cleanup()
         expect(missing).to(equal([]))
         expect(args["mode"]).to(equal("index_only"))
 
@@ -102,5 +90,5 @@ with description("guidance diagnostics"):
 
         text = Sketch().list_sketches(str(_REPO_ROOT / "cdd_guidance"))
         expect(text).to(equal("no sketches"))
-        item = _instruction_result("sketch.list_sketches", text)
+        item = instruction_result("sketch.list_sketches", text)
         expect(item["color"]).to(equal("green"))

@@ -25,9 +25,8 @@ from harness.mcp.mcp_server import McpHost
 from harness.mcp.spec_support import SpecServer
 from harness.agent_tools.agent_tools_probe import (
     AGENT_TOOLS_PROBE_SECTION,
+    AgentToolsProbe,
     agent_tools_toolset_ref,
-    probe_agent_tools_standalone,
-    published_agent_tools_mcp,
 )
 
 _AGENT_TOOLS_DIAGNOSTICS_REF = (
@@ -124,7 +123,7 @@ with description("mcp tools diagnostics"):
                 ],
                 toolset_items=["space.repo.repo:Repo"],
             )
-            scoped = published_agent_tools_mcp(installer)
+            scoped = AgentToolsProbe(installer).published
             expect(scoped).to(contain("repo.switch_branch"))
             expect(scoped).not_to(contain("agent-tools-diagnostics.agent_tools_diagnostics"))
             expect(scoped).not_to(contain("guidance-diagnostics.guidance_diagnostics"))
@@ -139,7 +138,7 @@ with description("mcp tools diagnostics"):
                 ["repo.switch_branch", "bdd-behavior", "cdd.ping"],
                 toolset_items=["space.repo.repo:Repo"],
             )
-            scoped = published_agent_tools_mcp(installer)
+            scoped = AgentToolsProbe(installer).published
             expect(scoped).to(equal(["repo.switch_branch"]))
             expect(scoped).not_to(contain("bdd-behavior"))
         finally:
@@ -153,7 +152,7 @@ with description("mcp tools diagnostics"):
                 ["repo.switch_branch", "bdd-behavior", "cdd.ping"],
                 toolset_items=["space.repo.repo:Repo"],
             )
-            report = probe_agent_tools_standalone(installer)
+            report = AgentToolsProbe(installer).run_standalone()
             expect("green" in report.split("\n")[0]).to(equal(True))
             data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
             section = data[AGENT_TOOLS_PROBE_SECTION]

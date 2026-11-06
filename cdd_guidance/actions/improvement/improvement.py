@@ -31,6 +31,7 @@ class Improvement(GuidanceAction):
         """Open a domain repair on each listed guidance and instruct the fix.
         asset: path to the file under repair. Pass the file. Do not paste its body.
         violation: the rule name, or a path to the violation report. Do not paste the asset."""
+        self._bind_guidance(guidance)
         self.repair_loop
 
         def on(item) -> None:
@@ -39,7 +40,7 @@ class Improvement(GuidanceAction):
             item.examples
             item.templates
 
-        self.run(guidance, on)
+        self.run(on)
         return (
             "Diagnose why the toolset's expected behavior failed for {{asset}} "
             "(run cdd_guidance.actions.diagnose.diagnose:Diagnose). State the proposed kit change "

@@ -13,9 +13,10 @@ export const cellPlace = (stage: string, slug: string): string => `cell-${stage}
 export const headPlace = (stage: string): string => `head-${stage}`
 
 // Where a bar opens: on which ticket, in which stage, at which place, over which fidelities.
-export type TileSpot = { ticket: string; stage: ColumnClient; place: string; slugs: string[] }
+export type TileSpot = { ticket: TicketClient; stage: ColumnClient; place: string; slugs: string[] }
 
-export const isAt = (tile: Tile, ticket: string, place: string): boolean => tile.ticket === ticket && tile.place === place
+// A bar is found by its ticket's name and its place, because each board read makes new ticket clients.
+export const isAt = (tile: Tile, ticket: string, place: string): boolean => tile.ticket.name === ticket && tile.place === place
 
 // Which action bars are open. A press keeps a bar open, and several can be kept at once; a hover only looks, so it
 // opens one bar that is not kept and closes it again when the pointer leaves.
@@ -31,29 +32,23 @@ export class TileClient {
     return this.page.store
   }
 
-  // A bar keeps its ticket's name, because the tile actions read it, so its files are read through the ticket of that
-  // name on the board.
-  private async readFiles(ticket: string, slugs: string[]): Promise<TicketFiles | null> {
-    const shown = this.page.board.tickets.find(candidate => candidate.name === ticket)
-    return shown ? shown.filesOf(slugs) : null
-  }
 
   // The bar shows at once and its files fill in when they are read, because reading them can take a second. Only the
   // latest open of a place takes the files, so a slow read from an earlier open cannot change the bar shown now.
   async open(spot: TileSpot, isPinned: boolean): Promise<void> {
     const { ticket, stage, place, slugs } = spot
     const order = ++this.opening
-    this.latestOpening.set(`${ticket} ${place}`, order)
+    this.latestOpening.set(`${ticket.name} ${place}`, order)
     const shown: Tile = { ticket, place, stage: stage.name, slugs, action: DEFAULT_ACTION, picked: defaultPicks(stage, slugs, {}), isPinned, files: {} }
     this.store.change(state => ({ tiles: [...this.othersKept(state.tiles, shown), shown] }))
-    const files = (await this.readFiles(ticket, slugs)) ?? {}
-    if (this.latestOpening.get(`${ticket} ${place}`) !== order) return
-    this.change(ticket, place, tile => this.withFiles(tile, shown, files, stage))
+    const files = (await ticket.filesOf(slugs)) ?? {}
+    if (this.latestOpening.get(`${ticket.name} ${place}`) !== order) return
+    this.change(ticket.name, place, tile => this.withFiles(tile, shown, files, stage))
   }
 
   // A bar a hover opens replaces any other bar a hover opened; pressed bars stay.
   private othersKept(tiles: Tile[], shown: Tile): Tile[] {
-    const others = tiles.filter(tile => !isAt(tile, shown.ticket, shown.place))
+    const others = tiles.filter(tile => !isAt(tile, shown.ticket.name, shown.place))
     return shown.isPinned ? others : others.filter(tile => tile.isPinned)
   }
 
@@ -97,7 +92,7 @@ export class TileClient {
   hoverIn(spot: TileSpot): void {
     clearTimeout(this.hoverOpenTimer)
     clearTimeout(this.hoverCloseTimer)
-    if (this.isOpen(spot.ticket, spot.place)) return
+    if (this.isOpen(spot.ticket.name, spot.place)) return
     this.hoverOpenTimer = setTimeout(() => void this.open(spot, false), HOVER_OPEN_MILLISECONDS)
   }
 
@@ -115,7 +110,7 @@ export class TileClient {
   }
 
   private async reloadFiles(tile: Tile): Promise<void> {
-    const files = await this.readFiles(tile.ticket, tile.slugs)
-    if (files) this.change(tile.ticket, tile.place, open => ({ ...open, files }))
+    const files = await tile.ticket.filesOf(tile.slugs)
+    if (files) this.change(tile.ticket.name, tile.place, open => ({ ...open, files }))
   }
 }

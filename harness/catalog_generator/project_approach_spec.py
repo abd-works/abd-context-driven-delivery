@@ -13,7 +13,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from expects import be_true, contain, equal, expect
-from mamba import description, it
+from mamba import context, description, it
 
 from harness.catalog_generator.project_approach import (
     ApproachExampleSlot,
@@ -25,56 +25,67 @@ from harness.catalog_generator.project_approach import (
 
 
 with description("classify_example_path"):
-    with it("should map story map drawio to stories discovery"):
-        slot = classify_example_path("stories/story-map.drawio")
-        expect(slot).to(equal(ApproachExampleSlot("stories", "discovery")))
+    with context("with a file a board fidelity declares in its outputs"):
+        with it("should map the story map drawio to stories discovery"):
+            slot = classify_example_path("stories/.context/story-map.drawio")
+            expect(slot).to(equal(ApproachExampleSlot("stories", "discovery")))
 
-    with it("should map story scenarios markdown to stories specification"):
-        slot = classify_example_path("stories/qualify/story-scenarios.md")
-        expect(slot).to(equal(ApproachExampleSlot("stories", "specification")))
+        with it("should map a story's scenario test to stories specification"):
+            slot = classify_example_path("qualify/offer/cross-sell-offer/cross_sell_offer_story.test.ts")
+            expect(slot).to(equal(ApproachExampleSlot("stories", "specification")))
 
-    with it("should map story tests to stories implementation"):
-        slot = classify_example_path("stories/qualify/qualify_cross_sell_offer_story.test.ts")
-        expect(slot).to(equal(ApproachExampleSlot("stories", "implementation")))
+        with it("should map a sub-epic's shared story steps to stories implementation"):
+            slot = classify_example_path("qualify/qualify-offer.story.shared.ts")
+            expect(slot).to(equal(ApproachExampleSlot("stories", "implementation")))
 
-    with it("should map bounded context drawio to ddd discovery"):
-        slot = classify_example_path("domain/bounded-context.drawio")
-        expect(slot).to(equal(ApproachExampleSlot("ddd", "discovery")))
+        with it("should map the bounded context map to ddd discovery"):
+            slot = classify_example_path("domain/.context/bounded-context-map.md")
+            expect(slot).to(equal(ApproachExampleSlot("ddd", "discovery")))
 
-    with it("should map the domain model markdown to ddd specification"):
-        slot = classify_example_path("domain/single-client-view/domain-model.md")
-        expect(slot).to(equal(ApproachExampleSlot("ddd", "specification")))
+        with it("should map the domain model markdown to ddd specification"):
+            slot = classify_example_path("domain/.context/domain-model.md")
+            expect(slot).to(equal(ApproachExampleSlot("ddd", "specification")))
 
-    with it("should map client model typescript to ddd implementation"):
-        slot = classify_example_path("domain/single-client-view/client/client-model.ts")
-        expect(slot).to(equal(ApproachExampleSlot("ddd", "implementation")))
+        with it("should map an aggregate named for its folder to ddd specification"):
+            slot = classify_example_path("sales/client/client.ts")
+            expect(slot).to(equal(ApproachExampleSlot("ddd", "specification")))
 
-    with it("should map information architecture drawio to ux discovery"):
-        slot = classify_example_path("ux/information-architecture.drawio")
-        expect(slot).to(equal(ApproachExampleSlot("ux", "discovery")))
+        with it("should map the information architecture drawio to ux discovery"):
+            slot = classify_example_path("qualify/.context/information-architecture.drawio")
+            expect(slot).to(equal(ApproachExampleSlot("ux", "discovery")))
 
-    with it("should map mockup html to ux specification"):
-        slot = classify_example_path("ux/mockup/index.html")
-        expect(slot).to(equal(ApproachExampleSlot("ux", "specification")))
+        with it("should map a user goal's html to ux specification"):
+            slot = classify_example_path("qualify/review-offer.html")
+            expect(slot).to(equal(ApproachExampleSlot("ux", "specification")))
+
+        with it("should map a view component to ux implementation"):
+            slot = classify_example_path("src/offers/OfferView.tsx")
+            expect(slot).to(equal(ApproachExampleSlot("ux", "implementation")))
+
+    with context("with a file no fidelity declares"):
+        with it("should leave it unmapped"):
+            expect(classify_example_path("notes/readme.txt")).to(equal(None))
+
+        with it("should leave a typescript file not named for its folder unmapped"):
+            expect(classify_example_path("sales/client/helpers.ts")).to(equal(None))
 
 
 with description("ProjectApproach.generate"):
     with it("should write cdd-approach.html with staged project examples"):
         with tempfile.TemporaryDirectory() as project_dir, tempfile.TemporaryDirectory() as out_dir:
             root = Path(project_dir)
-            (root / "stories").mkdir()
-            (root / "domain").mkdir()
-            (root / "ux").mkdir()
-            (root / "stories" / "story-map.drawio").write_text("<mxfile></mxfile>", encoding="utf-8")
-            (root / "stories" / "story-scenarios.md").write_text("# Story\n", encoding="utf-8")
-            (root / "stories" / "qualify_story.test.ts").write_text(
-                "story('Qualify', () => {});\n", encoding="utf-8"
-            )
-            (root / "domain" / "bounded-context.drawio").write_text("<mxfile></mxfile>", encoding="utf-8")
-            (root / "domain" / "domain-model.md").write_text("# Domain Model\n", encoding="utf-8")
-            (root / "domain" / "client-model.ts").write_text("export class Client {}\n", encoding="utf-8")
-            (root / "ux" / "information-architecture.drawio").write_text("<mxfile></mxfile>", encoding="utf-8")
-            (root / "ux" / "mockup.html").write_text("<html></html>", encoding="utf-8")
+            files = {
+                "stories/.context/story-map.drawio": "<mxfile></mxfile>",
+                "qualify/offer/cross-sell/cross_sell_story.test.ts": "story('Qualify', () => {});\n",
+                "domain/.context/bounded-context-map.md": "# Bounded contexts\n",
+                "domain/.context/domain-model.md": "# Domain Model\n",
+                "sales/client/client.ts": "export class Client {}\n",
+                "ux/.context/information-architecture.drawio": "<mxfile></mxfile>",
+                "ux/review-offer.html": "<html></html>",
+            }
+            for relative, text in files.items():
+                (root / relative).parent.mkdir(parents=True, exist_ok=True)
+                (root / relative).write_text(text, encoding="utf-8")
 
             examples = discover_project_examples(root)
             approach = ProjectApproach(
