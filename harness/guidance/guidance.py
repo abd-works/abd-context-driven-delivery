@@ -216,21 +216,36 @@ class PracticeGuidance(Guidance):
     def context_index_key(self) -> str:
         return AssetLocator(self, "").class_file_directory().name
 
-    def project_rules(self, root=None) -> list:
-        """Custom rulesets from the working folder, tagged project."""
-        from harness.guidance.project_rules import load_project_rules
+    def project_rules(self) -> list:
+        """The custom rules the project keeps for this practice in `.context/rules/{practice}/rules.md`, and for a
+        fidelity in a folder named after it, each tagged project; none when the practice works in no folder."""
+        from harness.guidance.project_rules import ProjectRulesets
 
-        folder = self._working_folder(root)
-        if folder is None:
+        folder = self._working_folder()
+        if folder is None or not folder.is_dir():
             return []
-        fidelities = getattr(self, "fidelities", None)
-        names = list(getattr(fidelities, "entries", {}) or {})
-        return load_project_rules(folder, self.context_index_key, names)
+        rules: list = []
+        seen: set[Path] = set()
+        for rules_dir in ProjectRulesets(folder).folders_for(self.context_index_key):
+            rules.extend(self._project_rules_in(rules_dir / "rules.md", None, seen))
+            for fidelity in self.fidelities.entries:
+                for spelling in Name(fidelity).spellings:
+                    rules.extend(self._project_rules_in(rules_dir / spelling / "rules.md", fidelity, seen))
+        return rules
 
-    def _working_folder(self, root=None) -> Path | None:
+    def _project_rules_in(self, path: Path, fidelity: str | None, seen: set[Path]) -> list:
+        """The rules in one project rules file, once each however many spellings lead to it."""
+        if not path.is_file() or path.resolve() in seen:
+            return []
+        seen.add(path.resolve())
+        collection = RulesCollection.from_markdown(path.read_text(encoding="utf-8"), fidelity=fidelity)
+        return [
+            rule.attribute_to(self.context_index_key, tag="project", shared=fidelity is None) for rule in collection
+        ]
+
+    def _working_folder(self) -> Path | None:
         workspace = getattr(self, "workspace", None)
         candidates = (
-            root,
             getattr(workspace, "path", None) if workspace is not None else None,
             getattr(self, "path", None),
         )
