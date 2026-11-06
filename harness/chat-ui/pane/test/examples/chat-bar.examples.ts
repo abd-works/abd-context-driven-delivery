@@ -12,9 +12,9 @@ import type { PracticeSessionOutputData } from '@cdd/space/session/practice-sess
 export const HEALTHY = { kanban_app_port: 8778, graph_app_port: 5173, is_hook_server_running: false }
 
 // Seed: each stage's fidelities, in the order the board's columns name them.
-export const DISCOVERY = ['stories-story_map', 'ddd-bounded_context', 'ux-ia', 'clean_engineering-modules', 'bdd-behavior']
-export const SPECIFICATION = ['stories-scenarios', 'ddd-model', 'ux-mockup', 'clean_engineering-model', 'bdd-realization']
-export const IMPLEMENTATION = ['stories-acceptance_tests', 'ddd-tactics', 'ux-front_end_code', 'clean_engineering-code', 'bdd-development']
+export const DISCOVERY = ['stories-story-map', 'ddd-bounded-context', 'ux-ia', 'clean-engineering-modules', 'bdd-behavior']
+export const SPECIFICATION = ['stories-scenarios', 'ddd-model', 'ux-mockup', 'clean-engineering-model', 'bdd-realization']
+export const IMPLEMENTATION = ['stories-acceptance-tests', 'ddd-tactics', 'ux-front-end-code', 'clean-engineering-code', 'bdd-development']
 export const WORK_OF: Record<string, string[]> = { Discovery: DISCOVERY, Specification: SPECIFICATION, Implementation: IMPLEMENTATION }
 export const STAGE_ORDER = ['Discovery', 'Specification', 'Implementation', 'Complete']
 const NOT_DONE: ActionStatesData = { generate: 'to_do', validate: 'to_do', review: 'to_do' }
@@ -23,7 +23,10 @@ const EVERY_FIDELITY = [...DISCOVERY, ...SPECIFICATION, ...IMPLEMENTATION]
 const PRACTICES = ['stories', 'ddd', 'ux', 'clean_engineering', 'bdd']
 const ROOTS: Record<string, string> = { stories: 'harness/chat-ui/.context', ux: 'harness/chat-ui/design', clean_engineering: 'harness/chat-ui/pane' }
 
-const practiceOf = (slug: string): string => slug.slice(0, slug.indexOf('-'))
+// Seed: the practice whose slug starts a fidelity's slug, such as clean_engineering for clean-engineering-model.
+const practiceOf = (slug: string): string => PRACTICES.find(practice => slug.startsWith(`${practice.replace('_', '-')}-`)) ?? ''
+// Seed: a fidelity's own name, as Python names it: story_map for stories-story-map.
+const fidelityNameOf = (slug: string): string => slug.slice(practiceOf(slug).length + 1).replace(/-/g, '_')
 
 // Seed: one fidelity's progress as the Python FidelityProgress reports it. Its next action is satisfy while it has
 // violations, else the first of generate, validate and review not done, nothing once it is done.
@@ -71,7 +74,7 @@ export function checkoutFlowWith(fidelities: Record<string, FidelityState>, over
 
 // Seed: payment-retry, In progress in Discovery.
 export function paymentRetry(): TicketData {
-  return checkoutFlow({ title: 'Payment retry', name: 'payment-retry', column: 'Discovery', next: 'stories-story_map' })
+  return checkoutFlow({ title: 'Payment retry', name: 'payment-retry', column: 'Discovery', next: 'stories-story-map' })
 }
 
 const column = (name: string, tickets: TicketData[]): ColumnData => {
@@ -79,7 +82,7 @@ const column = (name: string, tickets: TicketData[]): ColumnData => {
   return {
     name,
     in_progress: tickets.filter(ticket => ticket.column === name),
-    ...(work.length ? { work_required: work, default_formats: { 'stories-scenarios': 'typescript', 'clean_engineering-model': 'typescript' } } : {}),
+    ...(work.length ? { work_required: work, fidelities: Object.fromEntries(work.map(slug => [slug, fidelityNameOf(slug)])), default_formats: { 'stories-scenarios': 'typescript', 'clean-engineering-model': 'typescript' } } : {}),
   }
 }
 

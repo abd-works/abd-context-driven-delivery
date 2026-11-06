@@ -56,5 +56,5 @@
 #### Scenario: Announce a reviewed fidelity
 
 *Given* the [ticket](../../../kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../kanban-model.md#fidelityguidance) generated and validated with no violations
-*When* a review of stories-story_map is written to billing-report's [session log](../../../kanban-model.md#session)
-*Then* a toast says stories-story_map reviewed on billing-report
+*When* a review of stories-story-map is written to billing-report's [session log](../../../kanban-model.md#session)
+*Then* a toast says stories-story-map reviewed on billing-report

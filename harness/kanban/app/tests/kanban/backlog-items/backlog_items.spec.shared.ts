@@ -43,7 +43,7 @@ export const backlogItemsBehavior = shareBehavior<BacklogItemsDriver>(({ describ
       })
 
       it('should bring the ticket back with its work', async () => {
-        expect(await driver().stateOfWork('Back to backlog', 'stories-story_map')).toEqual('in_progress')
+        expect(await driver().stateOfWork('Back to backlog', 'stories-story-map')).toEqual('in_progress')
       })
     })
   })

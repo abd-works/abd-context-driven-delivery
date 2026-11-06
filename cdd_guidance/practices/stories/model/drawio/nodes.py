@@ -11,6 +11,7 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
 
+from harness.agent_tools.name import Name
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
@@ -73,8 +74,7 @@ class DrawIOStory(DiagramStory):
 
     @property
     def slug(self) -> str:
-        slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
-        return slug or "node"
+        return Name(self.name).title_slug or "node"
 
     @property
     def cell_slug(self) -> str:
@@ -152,8 +152,7 @@ class DrawIOEpic(DiagramEpic):
 
     @property
     def slug(self) -> str:
-        slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
-        return slug or "node"
+        return Name(self.name).title_slug or "node"
 
     @property
     def cell_id(self) -> str:
@@ -583,7 +582,7 @@ class DrawIOStoryModel(DiagramStoryModel):
         lane_total_width = DrawIOIncrement.label_width + grid_width
         lane_y = DrawIOIncrement.lane_top_y()
         for inc in canonical.increments:
-            inc_slug = inc.slug if hasattr(inc, "slug") else re.sub(r"[^a-z0-9]+", "-", inc.name.lower()).strip("-") or "node"
+            inc_slug = inc.slug if hasattr(inc, "slug") else Name(inc.name).title_slug or "node"
             # Background strip (no text).
             background = self._cell(f"inc-lane/{inc_slug}/bg", "")
             background.x = lane_start_x
@@ -605,7 +604,7 @@ class DrawIOStoryModel(DiagramStoryModel):
                 if x is None:
                     continue
                 story_vertex = self._cell(
-                    f"inc-lane/{inc_slug}/{re.sub(r'[^a-z0-9]+', '-', story_name.lower()).strip('-') or 'node'}",
+                    f"inc-lane/{inc_slug}/{Name(story_name).title_slug or 'node'}",
                     story_name,
                 )
                 story_vertex.x = x

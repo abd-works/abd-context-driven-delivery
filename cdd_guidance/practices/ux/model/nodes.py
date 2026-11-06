@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from harness.agent_tools.name import Name
 from harness.graph.graph import Graph
 
 from .update_report import ChildCollectionPair
@@ -250,7 +251,7 @@ class Screen(UxNode):
         graph: Optional[Graph] = None,
     ) -> None:
         super().__init__(name, sequential_order, graph)
-        self.slug = slug or _slugify(name)
+        self.slug = slug or Name(name).title_slug
         self.layout = layout
         self.description = description
         self.chrome_of = chrome_of
@@ -457,8 +458,3 @@ class UxContext(UxNode):
         return {"notes": list(self.notes), "invariants": list(self.invariants)}
 
 
-def _slugify(name: str) -> str:
-    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in name.strip())
-    while "--" in slug:
-        slug = slug.replace("--", "-")
-    return slug.strip("-")

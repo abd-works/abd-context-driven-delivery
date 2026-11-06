@@ -60,7 +60,7 @@ class PracticeNotFoundError(LookupError):
 
 
 class FidelityNotFoundError(LookupError):
-    """Raised when a caller names a fidelity, such as stories-story_map, that a ticket or practice does not have. It
+    """Raised when a caller names a fidelity, such as stories-story-map, that a ticket or practice does not have. It
     names the fidelity and the ticket or practice searched, so a caller can say which request was refused."""
 
     def __init__(self, fidelity: str, within: str) -> None:
@@ -350,17 +350,23 @@ class Stage(Column):
     @property
     @data_field(key="work_required")
     def work_required_slugs(self) -> list[str]:
-        return [self._slug(fidelity) for fidelity in self.work_required]
+        return [fidelity.slug for fidelity in self.work_required]
+
+    @property
+    @data_field
+    def fidelities(self) -> dict[str, str]:
+        """Each fidelity's name by its slug, such as story_map for stories-story-map: the name board.help takes."""
+        return {fidelity.slug: fidelity.name for fidelity in self.work_required}
 
     @property
     @data_field
     def formats(self) -> dict[str, list[str]]:
-        return {self._slug(fidelity): list(fidelity.outputs) for fidelity in self.work_required}
+        return {fidelity.slug: list(fidelity.outputs) for fidelity in self.work_required}
 
     @property
     @data_field
     def default_formats(self) -> dict[str, str]:
-        return {self._slug(fidelity): fidelity.default_format for fidelity in self.work_required}
+        return {fidelity.slug: fidelity.default_format for fidelity in self.work_required}
 
     @property
     def work_required(self) -> list[FidelityGuidance]:
@@ -399,9 +405,6 @@ class Stage(Column):
     @data_field
     def done(self) -> list[Ticket]:
         return [ticket for ticket in self.cards if ticket.is_done]
-
-    def _slug(self, fidelity: FidelityGuidance) -> str:
-        return f"{fidelity.practice_guidance.key}-{fidelity.name}"
 
 
 class Card(ABC):
@@ -453,6 +456,12 @@ class Help:
     @data_field
     def fidelity(self) -> str:
         return self._fidelity
+
+    @property
+    @data_field
+    def slug(self) -> str:
+        """The slug of the practice or fidelity this help is about, such as stories-story-map."""
+        return self._subject.slug
 
     @property
     @data_field

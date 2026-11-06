@@ -67,6 +67,15 @@ class PracticeCatalogue:
         return cls._REFS[key].split(":")[0].rsplit(".", 1)[0]
 
     @classmethod
+    def practice_named(cls, slug: str) -> PracticeGuidance | None:
+        """The practice whose slug is ``slug``, such as ``clean-engineering``, or that has a fidelity whose slug is
+        ``slug``, such as ``stories-story-map``; none when no practice goes by it."""
+        for practice in cls.practices():
+            if practice.slug == slug or any(fidelity.slug == slug for fidelity in practice.fidelities):
+                return practice
+        return None
+
+    @classmethod
     def key_of(cls, guidance: PracticeGuidance) -> str | None:
         """The catalogue key of ``guidance``; none for guidance that is not one of the practices, such as a pattern."""
         key = guidance.key

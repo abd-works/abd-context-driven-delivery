@@ -3305,7 +3305,7 @@ Announce a ticket that moved
 Announce a reviewed fidelity
   ```
   // the graph holds no operation this observation calls
-  it Then a toast says stories-story_map reviewed on billing-report
+  it Then a toast says stories-story-map reviewed on billing-report
   ```
 
 

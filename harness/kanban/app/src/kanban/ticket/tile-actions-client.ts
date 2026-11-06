@@ -1,7 +1,7 @@
 import { FidelityProgressClientGenerated } from '@cdd/harness/kanban/fidelity-progress'
 import { TicketClientGenerated } from '@cdd/harness/kanban/ticket'
 
-import { ACTION_STANDINGS, countOf, guidanceSlug, STEP_FAILED } from '../board/board-brand'
+import { ACTION_STANDINGS, countOf, STEP_FAILED } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { Tile } from '../board/board-store'
 import type { ColumnClient } from '../board/column-client'
@@ -11,7 +11,7 @@ import type { FormatChip } from './tile-formats'
 
 const ACTIONS_WITH_FORMATS = ['generate', 'render']
 
-const slugsOf = (tile: Tile): string => tile.slugs.map(guidanceSlug).join(' ')
+const slugsOf = (tile: Tile): string => tile.slugs.join(' ')
 
 export type ChipFace = FormatChip & { hint: string; isOn: boolean; isDone: boolean; count: string }
 export type StepFace = { mark: string; color: string; hint: string; text: string }

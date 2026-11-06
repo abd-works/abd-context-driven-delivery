@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from harness.agent_tools.name import Name
+
 _LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 _EMPHASIS = re.compile(r"\*([^*]+)\*")
 _META = re.compile(r"^([a-z_]+):\s*(.*)$")
@@ -196,4 +198,4 @@ def _bullets_and_caption(text: str) -> tuple[tuple[str, ...], str]:
 
 
 def _slug(title: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    return Name(title).title_slug

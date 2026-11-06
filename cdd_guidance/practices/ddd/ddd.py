@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
+from harness.markdown.format import Format
 
 
 @agent_toolset
@@ -63,9 +64,9 @@ class Ddd(PracticeGuidance):
 
     def _parse_content(self, source_format: str, content):
         parsed = super()._parse_content(source_format, content)
-        if self._canonical_format(source_format) in self._code_formats and isinstance(content, str):
+        if Format(source_format).is_code and isinstance(content, str):
             _take_doc_comments(parsed, content)
-        if self._canonical_format(source_format) == "markdown" and not _has_aggregates(parsed):
+        if Format(source_format).name == "markdown" and not _has_aggregates(parsed):
             # Plain class-model markdown with no contexts or aggregates reads as Clean Engineering.
             from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
                 MarkdownCleanEngineeringModel,

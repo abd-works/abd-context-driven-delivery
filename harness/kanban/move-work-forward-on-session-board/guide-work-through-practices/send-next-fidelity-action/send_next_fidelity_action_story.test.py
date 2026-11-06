@@ -21,8 +21,8 @@ with story("Send Next Fidelity Action"):
         with given("billing-report is the active [ticket](../../../.context/kanban-model.md#ticket--card) with nothing recorded and a chat is connected"):
             pass
         with when("the Person runs billing-report's next step"):
-            # Person -> Ticket.next_action <- generate on stories-story_map
-            # Person -> Ticket.generate_commands(['stories-story_map'], ['markdown'])
+            # Person -> Ticket.next_action <- generate on stories-story-map
+            # Person -> Ticket.generate_commands(['stories-story-map'], ['markdown'])
             # Ticket <- ['/actions-generate stories-story-map format=markdown']
             # Board page -> Chat.send('command', '/actions-generate stories-story-map format=markdown')
             pass
@@ -35,7 +35,7 @@ with story("Send Next Fidelity Action"):
         with given("back-to-backlog is the active [ticket](../../../.context/kanban-model.md#ticket--card) with its story map generated and a chat is connected"):
             pass
         with when("the Person runs back-to-backlog's next step"):
-            # Person -> Ticket.next_action <- validate on stories-story_map
+            # Person -> Ticket.next_action <- validate on stories-story-map
             # Board page -> Chat.send('fill', '/actions-validate stories-story-map')
             pass
         with then("the chat's prompt holds /actions-validate stories-story-map"):
@@ -47,12 +47,12 @@ with story("Send Next Fidelity Action"):
         with but_("no chat is connected"):
             pass
         with when("the Person runs checkout-flow's next step"):
-            # Person -> Ticket.next_action <- satisfy on stories-story_map
-            # Person -> Ticket.report('stories-story_map')
+            # Person -> Ticket.next_action <- satisfy on stories-story-map
+            # Person -> Ticket.report('stories-story-map')
             pass
         with then("Run next read Run next: fix violations"):
             pass
-        with and_("the report panel opens on stories-story_map"):
+        with and_("the report panel opens on stories-story-map"):
             pass
     with scenario("Record a review with no chat"):
         # Evidence: observed: ticket-client.spec 'Review Fidelity' — 'should offer the review with no chat connected, since it is the person's own approval', 'should show the review done once Run next records it'.
@@ -61,8 +61,8 @@ with story("Send Next Fidelity Action"):
         with but_("no chat is connected"):
             pass
         with when("the Person runs billing-report's next step"):
-            # Person -> Ticket.next_action <- review on stories-story_map
-            # Person -> Ticket.finish_review(['stories-story_map'])
+            # Person -> Ticket.next_action <- review on stories-story-map
+            # Person -> Ticket.finish_review(['stories-story-map'])
             # Ticket -> Ticket.record('review Stories story_map')
             # Board page -> Board.show()
             pass
@@ -76,9 +76,9 @@ with story("Send Next Fidelity Action"):
             pass
         with when("the session board reads pet-visits"):
             # Ticket -> Ticket.next_fidelity
-            # Ticket <- the first fidelity not done in Specification or an earlier stage: stories-story_map
+            # Ticket <- the first fidelity not done in Specification or an earlier stage: stories-story-map
             pass
-        with then("Run next reads Run next: review on stories-story_map"):
+        with then("Run next reads Run next: review on stories-story-map"):
             pass
     with scenario("Keep Run next off where it cannot run"):
         # Evidence: observed: ticket-client.spec 'should stay off with no chat to send to'; ticket-client.tsx runNextHint for a locked ticket.

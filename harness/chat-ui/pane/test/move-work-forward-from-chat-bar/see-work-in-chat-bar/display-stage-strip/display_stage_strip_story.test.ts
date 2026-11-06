@@ -27,7 +27,7 @@ story('Display Stage Strip', CHAT_BAR, () => {
         'session-list-button',
         'dot-stories-scenarios',
         'dot-ux-mockup',
-        'dot-clean_engineering-model',
+        'dot-clean-engineering-model',
         'next-action',
         'action-picker',
         'stage-Backlog',
@@ -51,13 +51,13 @@ story('Display Stage Strip', CHAT_BAR, () => {
     // Evidence: inferred: refresh-on-engine-events in patterns-cdd-claude-mod; no chat bar code yet
     given('the Chat Bar shows checkout-flow In progress in Specification')
     when("the agent's tool call moves checkout-flow into Implementation", async ($, on, scene) => {
-      scene.world.board = boardOf('checkout-flow', checkoutFlow({ column: 'Implementation', next: 'stories-acceptance_tests' }))
+      scene.world.board = boardOf('checkout-flow', checkoutFlow({ column: 'Implementation', next: 'stories-acceptance-tests' }))
       await $.tool.call({ tool: 'mcp__plugin_cdd_cdd__ticket_move_next' } as never)
     })
     // Boot tool.call -> refreshChatBar($) -> $.mcp.call('board.show')
     then('the Chat Bar outlines Implementation and its dots show the Implementation fidelities', async ($, on, scene) => {
       expect((await drawn(scene.ui, 'stage-box-Implementation'))?.props?.borderStyle).toBe('single')
-      expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-acceptance_tests', 'dot-ux-front_end_code', 'dot-clean_engineering-code'])
+      expect(buttonKeys(await drawn(scene.ui, 'line')).filter(key => key.startsWith('dot-'))).toEqual(['dot-stories-acceptance-tests', 'dot-ux-front-end-code', 'dot-clean-engineering-code'])
       expect(buttonKeys(await drawn(scene.ui, 'line'))).not.toContain(`dot-${SPECIFICATION[0]}`)
     })
   })

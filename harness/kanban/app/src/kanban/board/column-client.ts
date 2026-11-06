@@ -27,6 +27,11 @@ export class ColumnClient {
     return this.data.work_required ?? []
   }
 
+  // Each fidelity's own name by its slug, such as story_map for stories-story-map: the name help takes.
+  get fidelities(): Record<string, string> {
+    return this.data.fidelities ?? {}
+  }
+
   get formats(): Record<string, string[]> {
     return this.data.formats ?? {}
   }

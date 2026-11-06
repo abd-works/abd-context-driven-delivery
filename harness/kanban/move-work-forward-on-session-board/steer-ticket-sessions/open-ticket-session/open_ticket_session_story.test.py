@@ -25,7 +25,7 @@ with story("Open Ticket Session"):
             pass
         with then("pet-visits is In progress in Discovery, titled Pet visits"):
             pass
-        with and_("its next step is Generate on stories-story_map"):
+        with and_("its next step is Generate on stories-story-map"):
             pass
         with and_("checkout-flow is still the active ticket"):
             pass

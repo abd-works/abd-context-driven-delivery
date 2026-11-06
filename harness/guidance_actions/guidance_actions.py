@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, NotRequired, TypedDict
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
+from harness.agent_tools.name import Name
 from prompt_notify.prompt_notify import PromptNotify, echo
 from harness.hooks.hooks import Hook
 
@@ -341,7 +342,7 @@ class GuidanceAction:
         if not parts:
             return {}
         body = "\n\n".join(parts)
-        action = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", type(self).__name__).lower()
+        action = Name(type(self).__name__).kebab
         echo = PromptNotify()
         echo.toast_roots = data.get("workspace_roots")
         echo.show_ide_toast(
@@ -377,9 +378,8 @@ class GuidanceAction:
         tool = str(payload.get("tool_name") or "").lower()
         if not tool:
             return False
-        name = type(self).__name__
-        snake = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name).lower()
-        aliases = {name.lower(), snake, snake.replace("_", "-"), snake.replace("_", "")}
+        name = Name(type(self).__name__)
+        aliases = {name.snake, name.kebab, "".join(name.words)}
         return any(alias and alias in tool for alias in aliases)
 
     def _bind_guidance_from_payload(self, payload: dict[str, Any]) -> None:

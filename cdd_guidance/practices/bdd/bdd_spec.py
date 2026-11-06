@@ -48,12 +48,12 @@ with description("a Bdd toolset"):
         with context("with behavior fidelity"):
             with it("should treat the model fidelity as the companion"):
                 companion = Bdd(fidelity="behavior").fidelities.current.clean_engineering
-                expect(companion.fidelity).to(equal("model"))
+                expect(companion.name).to(equal("model"))
 
         with context("with development fidelity"):
             with it("should treat the code fidelity as the companion"):
                 companion = Bdd(fidelity="development").fidelities.current.clean_engineering
-                expect(companion.fidelity).to(equal("code"))
+                expect(companion.name).to(equal("code"))
 
     with context("whose guidance action is expanded"):
         with it("should include the Clean Engineering companion's instructions"):

@@ -4,9 +4,9 @@
 
 #### Scenario: Name the active ticket and its next guidance in the system prompt
 
-*Given* checkout-flow, titled Checkout flow, is the active [ticket](../../../kanban-model.md#ticket--card), in Discovery, with stories-story_map next
+*Given* checkout-flow, titled Checkout flow, is the active [ticket](../../../kanban-model.md#ticket--card), in Discovery, with stories-story-map next
 *When* a chat with the cdd-board mod loaded composes its system prompt
-*Then* the system prompt holds CDD session board: you are working on ticket checkout-flow (Checkout flow), in Discovery. Its next guidance is stories-story_map.
+*Then* the system prompt holds CDD session board: you are working on ticket checkout-flow (Checkout flow), in Discovery. Its next guidance is stories-story-map.
 *And* it says each fidelity goes through generate, validate, then review by a person
 
 #### Scenario: Say a done ticket waits for a person to move it

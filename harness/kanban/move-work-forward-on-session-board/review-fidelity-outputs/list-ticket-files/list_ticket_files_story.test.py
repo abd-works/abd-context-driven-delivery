@@ -16,7 +16,7 @@ with story("List Ticket Files"):
         with given("checkout-flow's story map .context/story-map.md is there and .context/story-map.drawio is not"):
             pass
         with when("the Person lists checkout-flow's story_map files"):
-            # Person -> Ticket.files(['stories-story_map'])
+            # Person -> Ticket.files(['stories-story-map'])
             # Ticket -> Session.fidelity_outputs(Stories story_map)
             # Ticket <- markdown .context/story-map.md exists, drawio .context/story-map.drawio missing
             pass

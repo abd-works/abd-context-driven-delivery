@@ -4,7 +4,7 @@ import { TicketClientGenerated, type TicketData } from '@cdd/harness/kanban/tick
 import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
 import { SessionClientGenerated } from '@cdd/space/session/session'
 
-import { guidanceSlug, PRACTICES, practiceOf, STATES, WORK_LIGHT } from '../board/board-brand'
+import { PRACTICES, practiceOf, STATES, WORK_LIGHT } from '../board/board-brand'
 import type { BoardPage } from '../board/board-page'
 import type { ColumnClient } from '../board/column-client'
 
@@ -19,8 +19,8 @@ const CLOSE_SESSION_COMMAND = '/space:session:close-session'
 
 const isBacklogItem = (moved: TicketData | BacklogItemData): moved is BacklogItemData => !('column' in moved)
 
-// The practice's skill for a fidelity: `clean_engineering-code` is /practices-clean-engineering-clean-engineering-code.
-export const skillOf = (slug: string): string => `/practices-${guidanceSlug(practiceOf(slug)?.prefix ?? '')}${guidanceSlug(slug)}`
+// The practice's skill for a fidelity: `clean-engineering-code` is /practices-clean-engineering-clean-engineering-code.
+export const skillOf = (slug: string): string => `/practices-${practiceOf(slug)?.prefix ?? ''}${slug}`
 
 // A ticket as the page knows it, with what a person can do to it. Each operation reaches the ticket's tool through the
 // generated client it extends, then brings the rest of the page up to date.
@@ -100,7 +100,7 @@ export class TicketClient extends TicketClientGenerated {
   get runNextHint(): string {
     if (this.isLocked) return 'Activate this session to run its next step'
     if (!this.next) return 'Nothing to run next'
-    return `${this.runNextLabel} on ${guidanceSlug(this.next)}`
+    return `${this.runNextLabel} on ${this.next}`
   }
 
   get nextNote(): string {
@@ -266,7 +266,7 @@ export class TicketClient extends TicketClientGenerated {
     const slug = this.next ?? ''
     if (this.nextAction === 'satisfy') return this.page.panels.openReport(this.name, slug)
     if (this.nextAction === 'review') return this.review(slug)
-    if (this.nextAction !== 'generate') return this.page.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${guidanceSlug(slug)}`), this.name, this.worktree)
+    if (this.nextAction !== 'generate') return this.page.chat.fill(this.actionCommand(`${RUN_NEXT_COMMANDS[this.nextAction]} ${slug}`), this.name, this.worktree)
     const format = this.stageRequiring(slug)?.defaultFormats[slug]
     await this.page.tileActions.runCommandsOf(this.name, [slug], format ? [format] : [])
   }

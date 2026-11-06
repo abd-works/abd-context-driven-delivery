@@ -10,6 +10,7 @@ from harness.installation.destination import noDeploy
 from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
 from harness.guidance import Rule
+from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
@@ -204,13 +205,9 @@ class Validate(GuidanceAction):
         return self.acting_session().fidelity_outputs(item)
 
     def _graph_practices(self) -> list[str]:
-        """Graph practices of the listed guidance (clean-engineering is clean_engineering); none for other guidance."""
-        names = [
-            str(getattr(item, "slug", "") or "").replace("-", "_")
-            for item in self.listed()
-            if not isinstance(item, str)
-        ]
-        return [name for name in names if PracticeCatalogue.has(name)]
+        """The catalogue key of each listed practice, such as clean_engineering; none for other guidance."""
+        keys = [PracticeCatalogue.key_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        return [key for key in keys if key]
 
     def _session_path(self) -> Path:
         return Path(self.acting_session().session_path)

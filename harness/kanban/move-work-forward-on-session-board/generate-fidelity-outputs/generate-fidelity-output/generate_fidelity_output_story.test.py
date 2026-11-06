@@ -21,7 +21,7 @@ with story("Generate Fidelity Output"):
         with and_("its story_map bar has generate chosen and the markdown chip picked"):
             pass
         with when("the Person runs generate on story_map"):
-            # Person -> Ticket.generate_commands(['stories-story_map'], ['markdown'])
+            # Person -> Ticket.generate_commands(['stories-story-map'], ['markdown'])
             # Ticket <- ['/actions-generate stories-story-map format=markdown']
             # Board page -> Chat.send('command', '/actions-generate stories-story-map format=markdown')
             # chat mod -> Chat.check_in() <- the command
@@ -31,7 +31,7 @@ with story("Generate Fidelity Output"):
             pass
         with and_("the bar's picks are cleared"):
             pass
-        with and_("Claude Code goes on to Resolve Fidelity Output Paths for stories-story_map"):
+        with and_("Claude Code goes on to Resolve Fidelity Output Paths for stories-story-map"):
             pass
     with scenario("Render the earlier fidelity into a new format first"):
         # Evidence: observed: kanban_tools_spec 'with a fidelity's markdown generated' — 'should render the earlier fidelity into the new format first'; Ticket.generate_commands.

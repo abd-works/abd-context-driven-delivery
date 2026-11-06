@@ -16,7 +16,7 @@ with story("Choose Action And Formats"):
         with given("billing-report's story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance) has no file generated"):
             pass
         with when("the Person opens the story_map tile"):
-            # Board page -> Ticket.files(['stories-story_map'])
+            # Board page -> Ticket.files(['stories-story-map'])
             # Ticket <- markdown .context/story-map.md, not there
             pass
         with then("the generate action is chosen with the markdown chip picked"):

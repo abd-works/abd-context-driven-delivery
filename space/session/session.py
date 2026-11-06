@@ -1400,8 +1400,8 @@ class Session:
         parent = getattr(bag, "parent", None)
         if parent is guidance or parent is None:
             current = getattr(getattr(guidance, "fidelities", None), "current", None)
-            return str(getattr(current, "name", "") or getattr(current, "fidelity", "") or "")
-        return str(getattr(parent, "name", "") or getattr(parent, "fidelity", "") or "")
+            return str(getattr(current, "name", "") or "")
+        return str(getattr(parent, "name", "") or "")
 
     def _guidance_for(self, name: str) -> PracticeGuidance:
         if not PracticeCatalogue.has(name):
@@ -1466,7 +1466,7 @@ class Session:
             return {}
         key = PracticeCatalogue.key_of(guidance) or ""
         practice = self._output_overrides().get(key, {})
-        overrides = practice.get(str(getattr(current, "fidelity", "") or getattr(current, "name", "")), {})
+        overrides = practice.get(str(current.name), {})
         chosen_root = overrides.get("root") or practice.get("root") or self._project_default_folder(key)
         root = (Path(self.workpath or self.repo_path or project_folder()) / (chosen_root or ".")).resolve()
         return {
@@ -1561,7 +1561,7 @@ class Session:
         current = getattr(getattr(guidance, "fidelities", None), "current", None)
         if current is None:
             return ""
-        return str(getattr(current, "fidelity", "") or getattr(current, "name", ""))
+        return str(current.name)
 
     def _active_fidelity(self) -> str:
         if not self._opened:

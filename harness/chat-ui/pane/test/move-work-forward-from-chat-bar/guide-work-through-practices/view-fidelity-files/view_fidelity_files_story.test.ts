@@ -17,7 +17,7 @@ story('View Fidelity Files', CHAT_BAR, () => {
     given('the tab pane/hooks/chat-bar/chat-bar-client.ts is open', async ($, on, scene) => {
       scene.world.answers['fidelity-progress.files'] = { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-client.ts', exists: true }] }
       scene.world.answers['session.read_file'] = { path: 'pane/hooks/chat-bar/chat-bar-client.ts', text: '// Model shell for the chat bar\nexport class ChatBarClient {}' }
-      await scene.ui.press({ key: 'dot-clean_engineering-model' })
+      await scene.ui.press({ key: 'dot-clean-engineering-model' })
       await scene.ui.press({ key: 'files-button' })
     })
     when('the Person views the tab', async ($, on, scene) => {
@@ -36,7 +36,7 @@ story('View Fidelity Files', CHAT_BAR, () => {
       scene.world.refusals['session.read_file'] = '../secrets.txt is not a file in this repository'
     })
     when('a file outside the repository is asked for', async ($, on, scene) => {
-      await scene.ui.press({ key: 'dot-clean_engineering-model' })
+      await scene.ui.press({ key: 'dot-clean-engineering-model' })
       await scene.ui.press({ key: 'files-button' })
     })
     // $.mcp.call('session.read_file', { session: '.sessions/checkout-flow/session.json', path: '../secrets.txt' }) <- FileOutsideRepositoryError

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { HelpData } from '@cdd/harness/kanban/board'
 
-import { guidanceSlug, PRACTICES } from './board-brand'
+import { fidelityOf, PRACTICES } from './board-brand'
 import type { HelpPanel } from './board-store'
 import { helpBlocksOf } from './help-text'
 import type { HelpBlock, TextRun } from './help-text'
@@ -55,7 +55,7 @@ export function HelpPanelHeadView({ panel: { help } }: { panel: HelpPanel }) {
       <div className="panel-kind">
         HELP<span className="accent-mark">_</span>
       </div>
-      <h1>{help.fidelity ? guidanceSlug(help.fidelity) : practice?.name}</h1>
+      <h1>{help.fidelity ? fidelityOf(help.slug) : practice?.name}</h1>
       <div className="help-place">
         <span className="practice-chip" style={{ borderLeftColor: practice?.color }}>
           {practice?.name}

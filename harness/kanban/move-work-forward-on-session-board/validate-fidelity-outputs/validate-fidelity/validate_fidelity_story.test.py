@@ -22,7 +22,7 @@ with story("Validate Fidelity"):
             pass
         with then("the chat receives the command /actions-validate stories-story-map"):
             pass
-        with and_("Claude Code goes on to Save Validation Report for stories-story_map"):
+        with and_("Claude Code goes on to Save Validation Report for stories-story-map"):
             pass
     with scenario("Count Validate done only with no graph-rule violations"):
         # Evidence: observed: kanban_spec 'that has a validate with no violations' — 'should show Validate done for that fidelity'; 'that has a validate naming graph-rule violations' — 'should still need Validate for that fidelity'.

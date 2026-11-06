@@ -4,13 +4,13 @@ from __future__ import annotations
 import inspect
 import json
 import os
-import re
 from datetime import datetime, timezone
 import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
 
+from harness.agent_tools.name import Name
 from harness.guidance.rule import RulesCollection
 from harness.agent_tools.agent_tools import (
     collect,
@@ -30,6 +30,7 @@ from harness.markdown import (
     markdown,
     markdownCollection,
 )
+from harness.markdown.format import Format
 
 
 # Report names end with the time they were made, written so names sort by time.
@@ -56,9 +57,7 @@ class Guidance:
 
     @property
     def slug(self) -> str:
-        if self.domain_slug:
-            return str(self.domain_slug).replace("_", "-")
-        return re.sub(r"(?<!^)(?=[A-Z])", "-", type(self).__name__).lower()
+        return Name(self.domain_slug or type(self).__name__).kebab
 
     @property
     def install_folder(self) -> Path:
@@ -277,11 +276,11 @@ class PracticeGuidance(Guidance):
             if fidelity in self.fidelities.entries:
                 self.fidelities.current = self.fidelities[fidelity]
         if self.format:
-            self.format = self._canonical_format(self.format)
+            self.format = Format(self.format).name
         supported = self.supported_formats
         if not supported and not getattr(self, "_formats", None) and self.format:
             allowed = {
-                self._canonical_format(child.default_format)
+                Format(child.default_format).name
                 for child in self.fidelities.entries.values()
                 if getattr(child, "default_format", None)
             }
@@ -409,14 +408,9 @@ class PracticeGuidance(Guidance):
     def formats(self) -> dict[str, Any]:
         return dict(self._formats)
 
-    _format_aliases = {"md": "markdown"}
-
-    def _canonical_format(self, format_name: str) -> str:
-        return self._format_aliases.get(format_name, format_name)
-
     def _format_adapter(self, format_name: str) -> Any:
         adapters = self.formats
-        resolved = self._canonical_format(format_name)
+        resolved = Format(format_name).name
         if resolved not in adapters:
             raise ValueError(
                 f"Unsupported format {format_name!r}. Choose from: {sorted(adapters)}"
@@ -429,8 +423,6 @@ class PracticeGuidance(Guidance):
             return getattr(importlib.import_module(module_path), attr)
         return entry
 
-
-    _code_formats = frozenset({"python", "typescript", "java", "javascript"})
 
     def read_paths(self, paths: list[str] | str, source: str | None = None) -> Any:
         """What render converts from the files at paths: their text, one after another."""
@@ -476,10 +468,10 @@ class PracticeGuidance(Guidance):
             return content
         if self._is_tool(content):
             return self._instantiate_from_tool(content, source)
-        source_format = self._canonical_format(source or self.format or "")
+        source_format = Format(source or self.format).name
         if not source_format:
             raise ValueError("source format is not set")
-        if source_format in self._code_formats and content in ("", None):
+        if Format(source_format).is_code and content in ("", None):
             return self._instantiate_from_tool(self, source_format)
         return self._parse_content(source_format, content)
 
@@ -494,10 +486,8 @@ class PracticeGuidance(Guidance):
         return bool(getattr(type(content), "_is_agent_toolset", False))
 
     def _instantiate_from_tool(self, tool: Any, source: str | None) -> Any:
-        source_format = self._canonical_format(
-            source or getattr(tool, "format", None) or self.format or ""
-        )
-        if source_format in self._code_formats:
+        source_format = Format(source or getattr(tool, "format", None) or self.format).name
+        if Format(source_format).is_code:
             adapter = self._live_adapter(source_format)
             return adapter.parse(self._code_tree(self._context_root(tool), adapter))
         return self._parse_content(source_format, "")
@@ -556,7 +546,7 @@ class PracticeGuidance(Guidance):
                 return adapter
 
     def _incoming(self, format_name: str, content: Any) -> Any:
-        if format_name in {"python", "typescript", "java", "javascript"}:
+        if Format(format_name).is_code:
             if isinstance(content, dict):
                 return content
             if isinstance(content, str):
@@ -575,7 +565,7 @@ class PracticeGuidance(Guidance):
         md_path = self.domain_markdown_path()
         if md_path.is_file():
             current = self.fidelities.current
-            current_name = getattr(current, "fidelity", None) or getattr(current, "name", None)
+            current_name = current.name if current is not None else None
             for name, body in Markdown.from_label(self, "fidelities").fidelity_blocks(
                 md_path.read_text(encoding="utf-8")
             ):
@@ -587,9 +577,7 @@ class PracticeGuidance(Guidance):
     def _skip_inactive_fidelity(self, current_name: str | None, name: str) -> bool:
         if not current_name:
             return False
-        left = str(current_name).casefold().replace("-", "_")
-        right = str(name).casefold().replace("-", "_")
-        return left != right
+        return Name(current_name).snake != Name(name).snake
 
 
 @agent_toolset
@@ -599,15 +587,12 @@ class FidelityGuidance(Guidance):
         name: str = "",
         stage: str = "",
         default_format: str = "",
-        practice_guidance: PracticeGuidance | None = None,
         clean_engineering: FidelityGuidance | None = None,
     ) -> None:
         super().__init__(format=default_format)
         self.name = name
         self.stage = stage
         self.default_format = default_format
-        self.parent = practice_guidance
-        self.fidelity = name
         # The root folder and each format's file, pattern, or folder; the yaml binder fills it, as it does stage.
         self.outputs: dict[str, str | list[str]] = {}
         if clean_engineering is not None:
@@ -684,7 +669,7 @@ class FidelityGuidance(Guidance):
         if (
             host is not None
             and practice is not None
-            and getattr(host, "format", None) in getattr(host, "_code_formats", ())
+            and Format(host.format).is_code
         ):
             practice.format = host.format
         self._clean_engineering = companion
@@ -697,7 +682,7 @@ class FidelityGuidance(Guidance):
     @property
     def slug(self) -> str:
         parent = self.practice_guidance.slug if self.practice_guidance is not None else super().slug
-        leaf = (self.name or "").replace("_", "-")
+        leaf = Name(self.name).kebab
         return f"{parent}-{leaf}" if leaf else parent
 
     @property
@@ -832,13 +817,16 @@ def installed_channel_items(installer: Any, channel: str) -> list[str]:
 
 
 def guidance_prefixes(slugs: list[str]) -> list[str]:
+    """Each slug, then the slug of the practice it names or whose fidelity it names: `stories-story-map` adds
+    `stories`, so the practice's own instructions are probed with its fidelity's."""
+    from harness.guidance.practice_catalogue import PracticeCatalogue
+
     prefixes: list[str] = []
     for slug in slugs:
-        if slug not in prefixes:
-            prefixes.append(slug)
-        stem = slug.rsplit("-", 1)[0] if slug.count("-") >= 2 else ""
-        if stem and stem not in prefixes:
-            prefixes.append(stem)
+        practice = PracticeCatalogue.practice_named(slug)
+        for prefix in (slug, practice.slug if practice is not None else ""):
+            if prefix and prefix not in prefixes:
+                prefixes.append(prefix)
     return prefixes
 
 
@@ -909,21 +897,18 @@ class ActionProbeSession:
         return self.guidance_folder()
 
     def content_paths(self, slugs: list[str]) -> list[str]:
-        """Practice folders for the probe slugs — explicit ``paths`` targets, text-safe."""
+        """The folder of each practice the probe slugs name, or of the practice whose fidelity they name: explicit
+        ``paths`` targets, text-safe. The practices folder when no slug names a practice."""
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
         base = Path(self.guidance_folder()) / "practices"
         found: list[str] = []
         for slug in slugs:
-            stem = slug.rsplit("-", 1)[0] if slug.count("-") >= 2 else slug
-            for name in (slug, stem, slug.replace("-", "_"), stem.replace("-", "_")):
-                folder = base / name
-                if folder.is_dir():
-                    text = str(folder)
-                    if text not in found:
-                        found.append(text)
-                    break
-        if found:
-            return found
-        return [str(base)]
+            practice = PracticeCatalogue.practice_named(slug)
+            folder = str(base / practice.key) if practice is not None else ""
+            if folder and folder not in found:
+                found.append(folder)
+        return found or [str(base)]
 
     def cleanup(self) -> None:
         for path in reversed(self._created):

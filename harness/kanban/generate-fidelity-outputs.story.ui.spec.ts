@@ -37,9 +37,9 @@ async function selectBillingReport(page: Page): Promise<void> {
 
 async function openStoryMapTile(page: Page): Promise<Locator> {
   await selectBillingReport(page)
-  await details(page).locator('[data-tile="stories-story_map"] .tile-name').click()
-  await expect(barOf(page, 'stories-story_map')).toBeVisible()
-  return barOf(page, 'stories-story_map')
+  await details(page).locator('[data-tile="stories-story-map"] .tile-name').click()
+  await expect(barOf(page, 'stories-story-map')).toBeVisible()
+  return barOf(page, 'stories-story-map')
 }
 
 test.beforeEach(() => resetSessions(fixtureRoot))
@@ -150,7 +150,7 @@ test.describe('with a chat connected', () => {
       })
 
       test('Then Run is off', async ({ page }) => {
-        await expect(runOf(barOf(page, 'stories-story_map'))).toBeDisabled()
+        await expect(runOf(barOf(page, 'stories-story-map'))).toBeDisabled()
       })
     })
 
@@ -180,7 +180,7 @@ test.describe('with a chat connected', () => {
 
       test("And the bar's picks are cleared", async ({ page }) => {
         await expect.poll(() => receivedBy(chat)).toContain('/actions-generate stories-story-map format=markdown session=.sessions/billing-report/session.json')
-        await expect(barOf(page, 'stories-story_map').locator('[aria-pressed="true"]')).toHaveCount(0)
+        await expect(barOf(page, 'stories-story-map').locator('[aria-pressed="true"]')).toHaveCount(0)
       })
     })
   })
@@ -211,7 +211,7 @@ test.describe('with a chat connected', () => {
       })
 
       test('Then Run is off', async ({ page }) => {
-        await expect(runOf(barOf(page, 'stories-story_map'))).toBeDisabled()
+        await expect(runOf(barOf(page, 'stories-story-map'))).toBeDisabled()
       })
     })
   })
@@ -219,7 +219,7 @@ test.describe('with a chat connected', () => {
   test.describe('Send Tile Action To Chat', () => {
     test.describe('Send sketch, iterate, or document as its own command', () => {
       async function runAction(page: Page, action: string): Promise<void> {
-        const bar = barOf(page, 'stories-story_map')
+        const bar = barOf(page, 'stories-story-map')
         await bar.getByRole('combobox', { name: 'Action' }).selectOption(action)
         await runOf(bar).click()
       }
@@ -286,7 +286,7 @@ test.describe('with a chat connected', () => {
       test.describe('the Person picks a chat and runs sketch again', () => {
         test.beforeEach(async ({ page }) => {
           await page.getByRole('combobox', { name: 'Chat to send commands to' }).selectOption(chat.id)
-          await runOf(barOf(page, 'stories-story_map')).click()
+          await runOf(barOf(page, 'stories-story-map')).click()
         })
 
         // The toast names the chat and the whole command, the session it runs on included.
