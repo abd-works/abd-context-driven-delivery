@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any
 
 from expects import be_true, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
+from space.session.throwaway_project import ThrowawayProject
 
 _AGENT_BDD_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _AGENT_BDD_DIR.parents[2]
@@ -69,6 +70,13 @@ def _assert_text_inlined(instructions: str, source: str) -> None:
 
 
 with description("AgentBdd action expansion"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("an AgentBdd generator with format python"):
         with before.all:
             self.bdd = _AgentBddSpecFixture().load()
