@@ -432,6 +432,14 @@ class Session:
         return cls._session_folder(repo, cls.active_name(repo))
 
     @classmethod
+    def new_handoff_path(cls, repo_path: Path | str | None = None) -> Path:
+        """A new ``handoff-{timestamp}.md`` in the current session's folder, which it creates; names sort by time, so
+        ``latest_handoff`` finds the newest."""
+        folder = cls.current_folder(repo_path)
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder / f"handoff-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}.md"
+
+    @classmethod
     @mcp
     @command(name="current-session")
     @agent_tool
@@ -835,7 +843,7 @@ class Session:
         path_objs = [Path(item) for item in (paths or []) if str(item).strip()]
         body = text if text.lower().startswith(f"loop {loop_number}") else f"loop {loop_number}: {text}"
         session.log_note(body, path_objs or None)
-        log_path = session.session_path / "session.log" if session.session_path else "session.log"
+        log_path = session.log_path or "session.log"
         return f"appended note to {log_path} (loop {loop_number})"
 
     @property
@@ -976,10 +984,8 @@ class Session:
         return opened
 
     def _max_loop_number_from_log(self) -> int:
-        if self.session_path is None:
-            return 0
-        log = self.session_path / "session.log"
-        if not log.is_file():
+        log = self.log_path
+        if log is None or not log.is_file():
             return 0
         highest = 0
         for line in log.read_text(encoding="utf-8").splitlines():
@@ -1046,10 +1052,8 @@ class Session:
         return int(match.group(1))
 
     def _lines_for_loop(self, number: int) -> list[str]:
-        if self.session_path is None:
-            return []
-        log = self.session_path / "session.log"
-        if not log.is_file():
+        log = self.log_path
+        if log is None or not log.is_file():
             return []
         raw = log.read_text(encoding="utf-8").splitlines()
         marker_index: int | None = None
@@ -1235,7 +1239,7 @@ class Session:
         if self.session_path is None:
             return
         trace = "".join(traceback.format_exception(type(failure), failure, failure.__traceback__))
-        err = self.session_path / "session.err"
+        err = self.error_path
         err.parent.mkdir(parents=True, exist_ok=True)
         prior = err.read_text(encoding="utf-8") if err.is_file() else ""
         line_number = len(prior.splitlines()) + 1
@@ -1267,11 +1271,8 @@ class Session:
         self.record(f"{action} chat {pointer}")
 
     def keep_log(self) -> str:
-        log_file = "session.log"
-        err_file = "session.err"
-        if self.session_path is not None:
-            log_file = str(self.session_path / "session.log")
-            err_file = str(self.session_path / "session.err")
+        log_file = str(self.log_path or "session.log")
+        err_file = str(self.error_path or "session.err")
         return (
             "Session owns logging once session.switch has run. "
             "CHAT POINTERS — required for continued conversations: you must attach chat id, agent "
@@ -1550,9 +1551,19 @@ class Session:
         return next(filter(None, generated), "")
 
     @property
+    def log_path(self) -> Path | None:
+        """The session's session.log, where every action, note, and loop marker is written; none before the session has a folder."""
+        return self.session_path / "session.log" if self.session_path is not None else None
+
+    @property
+    def error_path(self) -> Path | None:
+        """The session's session.err, which keeps the full trace of each failure that session.log points at."""
+        return self.session_path / "session.err" if self.session_path is not None else None
+
+    @property
     def log_entries(self) -> list[LogEntry]:
         """Every line of session.log, oldest first; none before anything is logged."""
-        log = self.session_path / "session.log" if self.session_path else None
+        log = self.log_path
         if log is None or not log.is_file():
             return []
         return [LogEntry(line) for line in log.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -1608,10 +1619,8 @@ class Session:
         return f"{chat_id} {chat_file} {line_numbers}".strip()
 
     def _append_to_action_line(self, action: str, pointer: str) -> None:
-        if self.session_path is None:
-            return
-        log = self.session_path / "session.log"
-        if not log.is_file():
+        log = self.log_path
+        if log is None or not log.is_file():
             return
         lines = log.read_text(encoding="utf-8").splitlines()
         for index, line in enumerate(lines):
@@ -1625,8 +1634,7 @@ class Session:
             return
         stamp = self.timestamp(datetime.now(timezone.utc))
         written = f"{stamp} {line}"
-        log = self.session_path / "session.log"
-        with log.open("a", encoding="utf-8") as handle:
+        with self.log_path.open("a", encoding="utf-8") as handle:
             handle.write(written + "\n")
         if self._loops and not line.startswith("--- "):
             self._loops[-1].entries.append(written)

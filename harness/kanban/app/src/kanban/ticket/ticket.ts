@@ -15,4 +15,4 @@ export async function filesOf(api: CddApi, ticket: string, slugs: string[]): Pro
 
 // The session.json of a ticket on the board, which names it to the session tools.
 export const sessionFileOf = (board: BoardData | null, ticket: string): string =>
-  board?.columns.flatMap(column => column.tickets ?? []).find(shown => shown.name === ticket)?.session.session_file ?? ''
+  board?.columns.flatMap(column => [...(column.in_progress ?? []), ...(column.done ?? []), ...(column.tickets ?? [])]).find(shown => shown.name === ticket)?.session.session_file ?? ''

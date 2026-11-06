@@ -151,7 +151,10 @@ with description("GuidanceAction"):
 
         from harness.guidance_actions import GuidanceAction
         from harness.mcp.mcp_server import McpServer
+        from unittest.mock import patch
+
         from space.session import Session
+        from space.session.chat_context import clear_chat_context
 
         tmp = Path(tempfile.mkdtemp(prefix="guidance-action-session-log-"))
         (tmp / ".git").mkdir()
@@ -165,17 +168,27 @@ with description("GuidanceAction"):
         transcript = chats / "mcp-chat.md"
         transcript.write_text("mcp\n", encoding="utf-8")
         Session.forget_current()
-        os.environ["CDD_REPO"] = str(tmp)
-        os.environ["CDD_PROJECT"] = str(work)
-        os.environ["CDD_CONVERSATION_ID"] = "mcp-chat"
-        os.environ["CDD_TRANSCRIPT_PATH"] = str(transcript)
-        os.environ["CDD_TRANSCRIPT_LINES"] = "1"
-        McpServer(repo=tmp, project=work)
-        Session.forget_current()
-        log = tmp / ".sessions" / "alpha" / "session.log"
-        log.write_text("", encoding="utf-8")
-        GuidanceAction().run("probe", lambda item: None, action="generate")
-        expect("generate" in log.read_text(encoding="utf-8")).to(equal(True))
+        chat = {
+            "CDD_REPO": str(tmp),
+            "CDD_PROJECT": str(work),
+            "CDD_CONVERSATION_ID": "mcp-chat",
+            "CDD_TRANSCRIPT_PATH": str(transcript),
+            "CDD_TRANSCRIPT_LINES": "1",
+        }
+        # The chat this server names stays with this example only; later specs read the environment's chat.
+        with patch.dict(os.environ, chat):
+            clear_chat_context()
+            try:
+                McpServer(repo=tmp, project=work)
+                Session.forget_current()
+                log = tmp / ".sessions" / "alpha" / "session.log"
+                log.write_text("", encoding="utf-8")
+                GuidanceAction().run("probe", lambda item: None, action="generate")
+                logged = log.read_text(encoding="utf-8")
+            finally:
+                clear_chat_context()
+                Session.forget_current()
+        expect(logged).to(contain("generate"))
 
     with it("should inject listed Guidance rules markdown after this action returns"):
         from generate.generate import Generate

@@ -78,5 +78,5 @@ class PracticeCatalogue:
     @classmethod
     def key_of(cls, guidance: PracticeGuidance) -> str | None:
         """The catalogue key of ``guidance``; none for guidance that is not one of the practices, such as a pattern."""
-        key = guidance.key
+        key = getattr(guidance, "key", None)
         return key if key in cls._REFS else None
