@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
-from harness.installation.destination import language_adapter
+from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 from space.repo.latest_release import LatestRelease
@@ -130,11 +130,13 @@ def issue_theme_label(theme: str) -> str:
     return f"theme:{slug}" if slug else ""
 
 
-@dataclass
 class Commit:
-    sha: str
-    message: str
-    data: dict[str, str] = field(default_factory=dict)
+    """One git commit. Its data is its sha, subject, full message, and the trailers the message carries, which is what
+    an MCP tool that makes a commit answers with."""
+
+    def __init__(self, sha: str, message: str) -> None:
+        self._sha = sha
+        self._message = message
 
     @classmethod
     def format(cls, subject: str, trailers: dict[str, str] | None = None) -> str:
@@ -147,16 +149,28 @@ class Commit:
 
     @classmethod
     def from_message(cls, sha: str, message: str) -> Commit:
-        commit = cls(sha=sha, message=message)
-        commit.data = commit.trailers()
-        return commit
+        return cls(sha=sha, message=message)
 
     @property
+    @data_field
+    def sha(self) -> str:
+        return self._sha
+
+    @property
+    @data_field
     def subject(self) -> str:
         lines = (self.message or "").splitlines()
         return lines[0].strip() if lines else ""
 
-    def trailers(self) -> dict[str, str]:
+    @property
+    @data_field
+    def message(self) -> str:
+        return self._message
+
+    @property
+    @data_field
+    def data(self) -> dict[str, str]:
+        """The trailers: each ``Key: value`` line after the subject."""
         lines = (self.message or "").splitlines()
         if not lines:
             return {}
@@ -167,15 +181,6 @@ class Commit:
             key, value = line.split(": ", 1)
             data[key.strip()] = value.strip()
         return data
-
-    def to_mcp_result(self) -> dict:
-        """JSON-safe snapshot for MCP tool results — sha, subject, full message, trailers."""
-        return {
-            "sha": self.sha,
-            "subject": self.subject,
-            "message": self.message,
-            "data": self.data,
-        }
 
     @classmethod
     def note_text(cls, fields: dict[str, str]) -> str:

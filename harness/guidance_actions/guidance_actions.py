@@ -366,7 +366,7 @@ class GuidanceAction:
         if rules is None:
             return ""
         globbed = getattr(rules, "inject_rules", None)
-        if getattr(globbed, "_hook_disabled", False):
+        if Hook.disabled_on(globbed):
             return ""
         if callable(globbed):
             text = (globbed(data).get("additional_context") or "").strip()

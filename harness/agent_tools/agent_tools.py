@@ -14,6 +14,7 @@ from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin,
 
 from harness.agent_tools.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
+from harness.installation.destination import MARK_FLAGS
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
@@ -121,22 +122,6 @@ class ToolSetCollection:
         return AgentToolSet._bind(type(self), self, name, member)
 
 
-_COLLECT_MARKS = (
-    "_skill",
-    "_command",
-    "_rules",
-    "_mcp",
-    "_hook",
-    "_echo",
-    "_is_agent_instructions",
-    "_is_agent_tool",
-    "_is_toolset_collection",
-    "_skill_name",
-    "_command_name",
-    "_hook_name",
-)
-
-
 class Collect:
     """Aggregate the same-named property across a collection's children."""
 
@@ -204,7 +189,7 @@ class Collect:
 
     @classmethod
     def _copy_marks(cls, src: Any, dest: Any) -> None:
-        for attr in _COLLECT_MARKS:
+        for attr in MARK_FLAGS:
             if hasattr(src, attr):
                 setattr(dest, attr, getattr(src, attr))
 
@@ -299,6 +284,17 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
 
     _mode: str = "instructions"
     _MEMBER_MARKS = ("_is_agent_tool", "_is_agent_instructions", "_hook")
+    HOSTED_ONLY_CLASS_NAMES: ClassVar[frozenset[str]] = frozenset(
+        {
+            "RulesCollection",
+            "MarkdownCollection",
+            "GuidanceCollection",
+            "PracticeGuidance",
+            "FidelityGuidance",
+        }
+    )
+    """Classes whose tools run only through the practice or toolset that holds them. Install and the hook server skip
+    them by class name, because the installer reads class names from source without importing it."""
     _member_walk: ClassVar[dict[type, list[tuple[str, Any]]]] = {}
 
     @property
@@ -499,7 +495,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
     @classmethod
     def _marked_function(cls, descriptor: staticmethod | classmethod) -> Any:
         function = descriptor.__func__
-        for flag in _COLLECT_MARKS:
+        for flag in MARK_FLAGS:
             if getattr(descriptor, flag, False) and not getattr(function, flag, False):
                 setattr(function, flag, True)
             named = f"{flag}_name"
@@ -908,9 +904,18 @@ class AgentToolDestination:
 
     @property
     def install_to_hook(self) -> bool:
-        if getattr(self.callable, "_hook_disabled", False):
+        from harness.hooks.hooks import Hook
+
+        if Hook.disabled_on(self.callable):
             return False
-        return not self.deploy_suppressed and bool(getattr(self.callable, "_hook", False))
+        return not self.deploy_suppressed and bool(getattr(self.callable, Hook.flag, False))
+
+    @property
+    def hook_event(self) -> str:
+        """The IDE event this tool's ``@Hook`` mark names, or empty when the tool is not a hook."""
+        from harness.hooks.hooks import Hook
+
+        return Hook.name_marked_on(self.callable)
 
     @property
     def install_to_skill(self) -> bool:

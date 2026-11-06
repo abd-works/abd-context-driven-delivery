@@ -219,19 +219,21 @@ class HookResult:
 
 
 class HookHandler:
-    """One marked operation that may run for an event."""
+    """One hook tool that may run for an event. It reads the tool's name, toolset, callable, and description from the
+    ``AgentTool`` it holds."""
 
     def __init__(self, tool: Any, event: CursorEvent, repo_root: Path) -> None:
         self.tool = tool
         self.event = event
-        self.operation = tool.name
-        self.owner = type(tool.toolset)
         self.repo_root = repo_root
 
+    @property
+    def label(self) -> str:
+        """``{toolset class}.{operation}``, the name the dispatch log and skipped handlers report."""
+        return f"{type(self.tool.toolset).__name__}.{self.tool.name}"
+
     def is_enabled(self, payload: HookPayload | None = None) -> bool:
-        if bool(getattr(self.owner, "_hooks_disabled", False)):
-            return False
-        if bool(getattr(self.tool.callable, "_hook_disabled", False)):
+        if bool(getattr(type(self.tool.toolset), "_hooks_disabled", False)):
             return False
         pattern = self._pattern_name()
         if not pattern:
@@ -298,27 +300,12 @@ class HookHandler:
         return ContextConfig(root).guideline(pattern)
 
     def invoke(self, payload: HookPayload) -> HookResult:
-        toolset = self.tool.toolset
-        operation = self._bound_operation(toolset)
-        raw = operation(payload.as_dict())
+        raw = self.tool.callable(payload.as_dict())
         fields = raw if isinstance(raw, Mapping) else None
         result = HookResult.from_handler(fields)
         if result.additional_context or not fields:
             return result
         return result.with_description(self.tool.docstring)
-
-    def _bound_operation(self, toolset: Any) -> Any:
-        own = getattr(type(toolset), self.operation, None)
-        if callable(own) and getattr(own, "_hook", False):
-            bound_own = getattr(toolset, self.operation, None)
-            if bound_own is not None:
-                return bound_own
-        if self.operation == "inject_rules":
-            rules = getattr(toolset, "rules", None)
-            bound = getattr(rules, "inject_rules", None) if rules is not None else None
-            if bound is not None:
-                return bound
-        return getattr(toolset, self.operation, None) or self.tool.callable
 
 
 class HandlerCatalog:
@@ -356,7 +343,7 @@ class HandlerCatalog:
 
     def _append_loaded(self, loaded: list[Any]) -> None:
         for instance in loaded:
-            if type(instance).__name__ in {"RulesCollection", "FidelityGuidance"}:
+            if type(instance).__name__ in AgentToolSet.HOSTED_ONLY_CLASS_NAMES:
                 continue
             self.toolsets.append(instance)
 
@@ -415,12 +402,13 @@ class HandlerCatalog:
         return handlers
 
     def _serves_event(self, tool: Any, event_name: str) -> bool:
-        hooked = getattr(tool.callable, "_hook_name", None)
-        if hooked == event_name:
+        """A tool serves the event its mark names. Rule injection marked for ``postToolUse`` also serves
+        ``afterFileEdit``, because Cursor reports a file edit under that event as well as ``postToolUse``."""
+        if tool.hook_event == event_name:
             return True
         return (
             event_name == "afterFileEdit"
-            and hooked == "postToolUse"
+            and tool.hook_event == "postToolUse"
             and tool.name == "inject_rules"
         )
 
@@ -624,7 +612,7 @@ class HookServer:
             self._absorb_catalog_failures()
             if not handler.is_enabled(payload):
                 continue
-            label = f"{handler.owner.__name__}.{handler.operation}"
+            label = handler.label
             enabled.append(label)
             try:
                 result = handler.invoke(payload)
@@ -791,9 +779,8 @@ class HookServer:
                 self.skip(self._catalog.ref_label(toolset), error)
                 continue
             for tool in tools:
-                event = getattr(tool.callable, "_hook_name", None)
-                if event and event not in names:
-                    names.append(str(event))
+                if tool.hook_event and tool.hook_event not in names:
+                    names.append(tool.hook_event)
         return names
 
     def diagnose(self) -> dict[str, Any]:

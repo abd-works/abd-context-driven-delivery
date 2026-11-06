@@ -133,7 +133,7 @@ class RulesCollection(MarkdownCollection):
             bags = self._bags_for_path(path) if path else []
             if bags:
                 self._note_session_injected_rules(path, bags)
-        if getattr(type(self).inject_rules, "_hook_disabled", False):
+        if Hook.disabled_on(type(self).inject_rules):
             return {}
         from prompt_notify.prompt_notify import PromptNotify
 

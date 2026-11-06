@@ -32,6 +32,7 @@ class Hooks:
 
 class Hook(Destination):
     flag = "_hook"
+    disabled_flag = "_hook_disabled"
     EVENTS = frozenset(
         {
             "sessionStart",
@@ -72,8 +73,13 @@ class Hook(Destination):
     def annotate(self, fn: Any) -> Any:
         marked = super().annotate(fn)
         if self.disabled:
-            setattr(marked, "_hook_disabled", True)
+            setattr(marked, self.disabled_flag, True)
         return marked
+
+    @classmethod
+    def disabled_on(cls, operation: Any) -> bool:
+        """True when ``@Hook(..., disabled=True)`` turned the hook on this operation off."""
+        return bool(getattr(operation, cls.disabled_flag, False))
 
     @classmethod
     def normalize_event(cls, event: str) -> str:
@@ -117,13 +123,10 @@ class HookInstallation(Installation):
             return
         if getattr(type(getattr(tool, "toolset", None)), "_hooks_deploy", True) is False:
             return
-        if self._omit_inject_rules(tool):
-            return
-        event = getattr(tool.callable, "_hook_name", None)
-        if not event:
+        if not tool.hook_event:
             return
         record = {
-            "event": str(event),
+            "event": tool.hook_event,
             "operation": tool.name,
             "ref": tool.registration_name,
         }
@@ -132,16 +135,6 @@ class HookInstallation(Installation):
         self._handlers.append(record)
         self.write_hooks_manifest()
         self.write_handlers()
-
-    def _omit_inject_rules(self, tool: Any) -> bool:
-        if tool.name != "inject_rules":
-            return False
-        host = type(getattr(tool, "toolset", None)).__name__
-        if host in {"RulesCollection", "FidelityGuidance"}:
-            return True
-        bound = getattr(getattr(tool, "callable", None), "__self__", None)
-        parent = getattr(bound, "parent", None)
-        return type(parent).__name__ == "FidelityGuidance"
 
     def write_handlers(self) -> None:
         if not self._handlers:
