@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from expects import be_true, contain, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
+from space.session.throwaway_project import ThrowawayProject
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -110,6 +111,13 @@ class CleanEngineeringKit:
 
 
 with description("CleanEngineering action expansion"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("a CleanEngineering generator constructed with format python"):
         with before.all:
             kit = CleanEngineeringKit()
@@ -192,6 +200,13 @@ with description("CleanEngineering action expansion"):
 
 
 with description("clean_engineering content helpers"):
+    # Actions log to the open session, so each example works on its own project rather than this repository's.
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
     with context("load_concepts_section"):
         with it("should return non-empty text containing the word Contexts"):
             result = CleanEngineeringKit().contexts_section()
