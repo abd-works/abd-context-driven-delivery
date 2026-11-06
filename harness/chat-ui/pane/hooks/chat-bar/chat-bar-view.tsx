@@ -6,7 +6,7 @@ import { GlyphButtonView } from '../glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { runHandoff, type ChatBarClient } from './chat-bar-client'
 import { selectFidelity, type FidelityClient } from './fidelity-client'
-import { openFiles } from './fidelity-files-client'
+import { openFiles, openReport } from './fidelity-files-client'
 import { FidelityFilesView } from './fidelity-files-view'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose } from './session-client'
@@ -41,13 +41,14 @@ function TipView({ Box, Text }: ElementTable, words: string, detail: string, det
 }
 
 // One square in its practice colour, fainter the less is done, underlined on a light tint when selected, with the violation count in
-// red beside it; the fidelity's name shows above it on hover, its state being on the session card.
+// red beside it, a press on the count opening the validation report; the fidelity's name shows above it on hover, its
+// state being on the session card.
 export function FidelityView($: EngineInterface, elements: ElementTable, fidelity: FidelityClient) {
   const { Box, Text } = elements
   return (
     <Box key={`fidelity-${fidelity.fidelity}`} flexDirection="row" gap={0} backgroundColor={fidelity.isSelected ? BRAND.selectedTint : undefined}>
       {GlyphButtonView(elements, `dot-${fidelity.fidelity}`, '■', fidelity.shade, () => selectFidelity($, fidelity), fidelity.isSelected)}
-      {fidelity.violationCount ? <Text size="caption" weight="bold" color={BRAND.error}>{String(fidelity.violationCount)}</Text> : null}
+      {fidelity.violationCount ? GlyphButtonView(elements, `violations-${fidelity.fidelity}`, String(fidelity.violationCount), BRAND.error, () => openReport($, fidelity)) : null}
       {TipView(elements, fidelity.fidelity, '', BRAND.muted)}
     </Box>
   )

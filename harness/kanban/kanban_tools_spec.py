@@ -731,6 +731,14 @@ with description("the board tools") as self:
             with it("should refuse a file outside the repository"):
                 expect(lambda: self.project.call("ticket.read_file", ticket="pet-visits", path="../elsewhere.md")).to(raise_error(PathOutsideRootsError))
 
+            # A ticket's worktree sits beside the repository, so its practices write outside it.
+            with it("should return the text of a file under a practice root outside the repository, such as the ticket's worktree"):
+                worktree = Path(tempfile.mkdtemp(prefix="kanban-worktree-"))
+                (worktree / "story-map.md").write_text("# Worktree map\n", encoding="utf-8")
+                self.project.call("ticket.choose_practice_root", ticket="pet-visits", practice="stories", path=str(worktree))
+                opened = self.project.call("ticket.read_file", ticket="pet-visits", path=(worktree / "story-map.md").as_posix())
+                expect(opened["text"]).to(equal("# Worktree map\n"))
+
         # (S) Person --> List Ticket Files, the session folder
         with context("with files in its session folder"):
             with before.each:

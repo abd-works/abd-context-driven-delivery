@@ -2,7 +2,7 @@ import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
 import { boardOf, checkoutFlowWith, VALIDATED } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, drawn, textOf, tipOf } from '../../../chat-bar-screen'
+import { CHAT_BAR, drawn, markOf, textOf, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -47,7 +47,7 @@ story('Review Fidelity', CHAT_BAR, () => {
       expect(scene.world.toasts).toContain('clean-engineering-model not reviewed: clean_engineering-model cannot be reviewed: its latest validation report has 7 violations')
     })
     and('the Clean Engineering dot still shows 7 in red', async ($, on, scene) => {
-      const count = (await drawn(scene.ui, 'fidelity-clean_engineering-model'))?.children?.[1]
+      const count = await markOf(scene.ui, 'violations-clean_engineering-model-mark')
       expect([textOf(count), count?.props?.color]).toEqual(['7', '#EF4444'])
     })
   })
