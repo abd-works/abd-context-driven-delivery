@@ -3,7 +3,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { ActionStatesData, TicketData } from '@cdd/harness/kanban/ticket'
 
-import { commandOf } from '../chat-command'
+import { sendToChat } from '../chat-command'
 import { reasonOf } from '../failure'
 import { closeActionPicker } from './action-picker-client'
 import { callTool, currentChatBar, refreshChatBar } from './chat-bar-client'
@@ -131,22 +131,14 @@ export async function chooseAction($: EngineInterface, fidelity: FidelityClient,
   else await runAction($, fidelity, action)
 }
 
-async function runCommand($: EngineInterface, text: string): Promise<void> {
-  try {
-    await $.command.run(commandOf(text))
-  } catch (failure) {
-    $.ui.toast(`The chat would not run ${text}: ${reasonOf(failure)}`)
-  }
-}
-
 // Generate can take two commands, a render and then the generate, so ticket.generate_commands names them.
 export async function runAction($: EngineInterface, fidelity: FidelityClient, action: string): Promise<void> {
-  if (action !== 'generate') return runCommand($, `/actions-${action} ${fidelity.guidance}`)
+  if (action !== 'generate') return sendToChat($, `/actions-${action} ${fidelity.guidance}`)
   const chatBar = await currentChatBar($)
   const formats = fidelity.defaultFormat ? [fidelity.defaultFormat] : []
   try {
     const commands = await callTool<string[]>($, 'ticket.generate_commands', { ticket: chatBar.sessionName, fidelities: [fidelity.fidelity], formats })
-    for (const command of commands) await runCommand($, command)
+    for (const command of commands) await sendToChat($, command)
   } catch (failure) {
     $.ui.toast(`${fidelity.guidance} cannot generate: ${reasonOf(failure)}`)
   }
@@ -170,5 +162,5 @@ export async function reviewFidelity($: EngineInterface, fidelity: FidelityClien
 export async function openBoard($: EngineInterface, fidelity: FidelityClient): Promise<void> {
   await selectFidelity($, fidelity)
   const chatBar = await currentChatBar($)
-  await runCommand($, `/board ${chatBar.sessionName} ${fidelity.fidelity}`)
+  await sendToChat($, `/board ${chatBar.sessionName} ${fidelity.fidelity}`)
 }

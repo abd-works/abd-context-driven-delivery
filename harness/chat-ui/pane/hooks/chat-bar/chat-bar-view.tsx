@@ -88,14 +88,26 @@ function SessionNameView($: EngineInterface, { Box, Button, Text }: ElementTable
   )
 }
 
-// The canvas's three bordered chips. Files shows the action fidelity's files, else the first fidelity's.
-function SessionButtonsView($: EngineInterface, { Box, Button }: ElementTable, { chatBar }: ChatBarDraw) {
+// One icon Button whose words show above it on hover.
+function IconButtonView(elements: ElementTable, key: string, icon: string, words: string, onPress: () => unknown) {
+  const { Box, Button } = elements
+  return (
+    <Box key={`${key}-box`}>
+      <Button key={key} label={icon} onPress={onPress} />
+      {TipView(elements, words, '', BRAND.muted)}
+    </Box>
+  )
+}
+
+// Handoff, files and close as icons. Files shows the action fidelity's files, else the first fidelity's.
+function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar }: ChatBarDraw) {
+  const { Box } = elements
   const fidelity = chatBar.actionFidelity ?? chatBar.fidelities[0]
   return (
     <Box key="session-buttons" flexDirection="row" gap={1}>
-      <Button key="handoff" label="⇥ handoff" onPress={() => runHandoff($, chatBar)} />
-      {fidelity ? <Button key="files-button" label="▤ files" onPress={() => openFiles($, fidelity)} /> : null}
-      <Button key="close-button" label="✕ close" dimColor onPress={() => openClose($, chatBar)} />
+      {IconButtonView(elements, 'handoff', '⇥', 'handoff', () => runHandoff($, chatBar))}
+      {fidelity ? IconButtonView(elements, 'files-button', '▤', 'files', () => openFiles($, fidelity)) : null}
+      {IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>
   )
 }
