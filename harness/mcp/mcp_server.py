@@ -59,13 +59,6 @@ def serving_mcp_host() -> Any:
 class Mcp(Destination):
     flag = "_mcp"
 
-    def __new__(cls, fn: Any = None):
-        inst = object.__new__(cls)
-        inst.name = None
-        if callable(fn):
-            return inst.annotate(fn)
-        return inst
-
 
 mcp = Mcp
 

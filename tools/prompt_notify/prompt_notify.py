@@ -34,13 +34,6 @@ class Echo(Destination):
 
     flag = "_echo"
 
-    def __new__(cls, operation=None):
-        inst = object.__new__(cls)
-        inst.name = None
-        if callable(operation):
-            return inst.annotate(operation)
-        return inst
-
 
 echo = Echo
 
@@ -514,7 +507,7 @@ class PromptNotify:
     def _has_echo(self, operation) -> bool:
         target = operation.fget if isinstance(operation, property) else operation
         inner = getattr(target, "__func__", target)
-        return bool(getattr(inner, "_echo", False) or getattr(target, "_echo", False))
+        return Echo.marks(inner) or Echo.marks(target)
 
     def _echo_kind_label(self, tool) -> tuple[str, str]:
         toolset = tool.toolset

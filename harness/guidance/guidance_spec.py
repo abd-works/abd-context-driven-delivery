@@ -91,9 +91,11 @@ with description("context guidance"):
             )
             expect(result).to(equal({}))
             inject = type(guidance.rules).inject_rules
-            expect(getattr(inject, "_hook", False)).to(equal(True))
-            expect(getattr(inject, "_hook_disabled", False)).to(equal(True))
-            expect(getattr(inject, "_hook_name", "")).to(equal("postToolUse"))
+            from harness.hooks.hooks import Hook
+
+            expect(Hook.marks(inject)).to(equal(True))
+            expect(Hook.disabled_on(inject)).to(equal(True))
+            expect(Hook.name_marked_on(inject)).to(equal("postToolUse"))
 
         with it("should list inject_rules on tools but not enroll a disabled hook"):
             guidance = SampleGuidance(format="markdown")
@@ -295,7 +297,9 @@ with description("a guidance collection of context guidance children") as self:
             from harness.agent_tools.agent_tools import ToolSetCollection
 
             expect(isinstance(self.collection, ToolSetCollection)).to(equal(True))
-            expect(getattr(type(self.collection), "_is_toolset_collection", False)).to(equal(True))
+            from harness.agent_tools.agent_tools import ToolSetCollectionMark
+
+            expect(ToolSetCollectionMark.marks(type(self.collection))).to(equal(True))
             from harness.markdown import MarkdownCollection
 
             expect(isinstance(self.collection, MarkdownCollection)).to(equal(True))

@@ -14,7 +14,7 @@ from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin,
 
 from harness.agent_tools.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
-from harness.installation.destination import MARK_FLAGS
+from harness.installation.destination import Mark
 
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
@@ -198,7 +198,7 @@ class Collect:
 
     @classmethod
     def _copy_marks(cls, src: Any, dest: Any) -> None:
-        for attr in MARK_FLAGS:
+        for attr in Mark.copied_flags():
             if hasattr(src, attr):
                 setattr(dest, attr, getattr(src, attr))
 
@@ -254,7 +254,7 @@ class AgentToolSetTools:
         for name, member in self._annotated_members(type(self)):
             if name in self._COLLECTION_SKIP:
                 continue
-            if not getattr(member, "_is_toolset_collection", False):
+            if not ToolSetCollectionMark.marks(member):
                 continue
             value = getattr(self, name, None)
             if value is None or value is self:
@@ -292,7 +292,6 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
     """Injected by @agent_toolset — operations and @agent_instructions on one toolset."""
 
     _mode: str = "instructions"
-    _MEMBER_MARKS = ("_is_agent_tool", "_is_agent_instructions", "_hook")
     HOSTED_ONLY_CLASS_NAMES: ClassVar[frozenset[str]] = frozenset(
         {
             "RulesCollection",
@@ -319,10 +318,23 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             raise ValueError(f"mode must be 'instructions' or 'tool', got {value!r}")
         self._mode = value
 
+    @staticmethod
+    def _member_marked(member: Any) -> bool:
+        """True when member is a tool, an instructions operation, or a hook."""
+        from harness.hooks.hooks import Hook
+
+        return AgentToolMark.marks(member) or AgentInstructionsMark.marks(member) or Hook.marks(member)
+
+    @staticmethod
+    def _rules_marked(member: Any) -> bool:
+        from harness.installation.files import Rules
+
+        return Rules.marks(member)
+
     def _discover_operations(self) -> dict[str, AgentOperation]:
         discovered: dict[str, AgentOperation] = {}
         for name, member in self._marked_members(type(self)):
-            if getattr(member, "_is_agent_tool", False):
+            if AgentToolMark.marks(member):
                 discovered[name] = AgentOperation(
                     name=name,
                     callable=self._operation_callable(name, member),
@@ -350,13 +362,12 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
 
         on_subject.__signature__ = inspect.Signature(identity + own, return_annotation=inspect.signature(operation).return_annotation)
         on_subject.__annotations__ = {**load.__func__.__annotations__, **operation.__annotations__}
-        setattr(on_subject, ON_SUBJECT_FLAG, True)
-        return on_subject
+        return OnSubject(on_subject)
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
         discovered: dict[str, AgentInstructions] = {}
         for name, member in self._marked_members(type(self)):
-            if getattr(member, "_is_agent_instructions", False):
+            if AgentInstructionsMark.marks(member):
                 discovered[name] = AgentInstructions(
                     name=name,
                     callable=self._bound_callable(name, member),
@@ -365,9 +376,11 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         return discovered
 
     def _discover_hook_members(self) -> dict[str, AgentTool]:
+        from harness.hooks.hooks import Hook
+
         discovered: dict[str, AgentTool] = {}
         for name, member in self._marked_members(type(self)):
-            if getattr(member, "_hook", False):
+            if Hook.marks(member):
                 discovered[name] = AgentTool(
                     name=name,
                     callable=self._bound_callable(name, member),
@@ -416,7 +429,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             if name in self._COLLECTION_SKIP:
                 continue
             annotation = self._return_type(member, owner)
-            marked = any(getattr(member, mark, False) for mark in (*self._MEMBER_MARKS, "_rules"))
+            marked = self._member_marked(member) or self._rules_marked(member)
             if not self._is_collection_type(annotation) and not marked:
                 continue
             value = getattr(instance, name, None)
@@ -442,20 +455,14 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             return False
         if issubclass(annotation, ToolSetCollection):
             return True
-        return bool(
-            getattr(annotation, "_is_toolset_collection", False)
-            or getattr(annotation, "_is_agent_toolset", False)
-        )
+        return ToolSetCollectionMark.marks(annotation) or AgentToolSetMark.marks(annotation)
 
     def _is_tool_collection(self, value: Any) -> bool:
         if value is None:
             return False
         if isinstance(value, ToolSetCollection):
             return True
-        return bool(
-            getattr(type(value), "_is_toolset_collection", False)
-            or getattr(type(value), "_is_agent_toolset", False)
-        )
+        return ToolSetCollectionMark.marks(type(value)) or AgentToolSetMark.marks(type(value))
 
     def _annotated_members(self, owner: type) -> list[tuple[str, Any]]:
         """Walk each class once — every hook dispatch asks this of every toolset, and
@@ -488,7 +495,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         return [
             (name, member)
             for name, member in self._annotated_members(owner)
-            if any(getattr(member, mark, False) for mark in self._MEMBER_MARKS)
+            if self._member_marked(member)
         ]
 
     def _bound_callable(self, name: str, member: Any) -> Any:
@@ -504,12 +511,9 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
     @classmethod
     def _marked_function(cls, descriptor: staticmethod | classmethod) -> Any:
         function = descriptor.__func__
-        for flag in MARK_FLAGS:
-            if getattr(descriptor, flag, False) and not getattr(function, flag, False):
-                setattr(function, flag, True)
-            named = f"{flag}_name"
-            if getattr(descriptor, named, None) and not getattr(function, named, None):
-                setattr(function, named, getattr(descriptor, named))
+        for flag in Mark.copied_flags():
+            if getattr(descriptor, flag, None) and not getattr(function, flag, None):
+                setattr(function, flag, getattr(descriptor, flag))
         return function
 
     @classmethod
@@ -527,14 +531,14 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         return {
             name
             for name, member in self._marked_members(toolset_cls)
-            if getattr(member, "_is_agent_tool", False)
+            if AgentToolMark.marks(member)
         }
 
     def instruction_names(self, toolset_cls: type) -> frozenset[str]:
         return frozenset(
             name
             for name, member in self._marked_members(toolset_cls)
-            if getattr(member, "_is_agent_instructions", False)
+            if AgentInstructionsMark.marks(member)
         )
 
 
@@ -686,7 +690,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             self.instruction_names(toolset_cls)
         )
         for name, member in self._annotated_members(toolset_cls):
-            if not getattr(member, "_is_agent_instructions", False):
+            if not AgentInstructionsMark.marks(member):
                 continue
             descriptor = AgentToolSet._descriptor(toolset_cls, name)
             if isinstance(descriptor, staticmethod):
@@ -778,7 +782,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         """The classmethod marked ``@tool_subject`` on ``toolset``, bound to it, when it has one."""
         for name in dir(toolset):
             member = inspect.getattr_static(toolset, name, None)
-            if isinstance(member, classmethod) and getattr(member.__func__, TOOL_SUBJECT_FLAG, False):
+            if isinstance(member, classmethod) and ToolSubject.marks(member.__func__):
                 return getattr(toolset, name)
         return None
 
@@ -818,7 +822,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
 
     @classmethod
     def _check_toolset(cls, candidate: type) -> bool:
-        return isinstance(candidate, type) and getattr(candidate, "_is_agent_toolset", False)
+        return isinstance(candidate, type) and AgentToolSetMark.marks(candidate)
 
     @classmethod
     def _load(cls, path: str) -> type:
@@ -909,7 +913,9 @@ class AgentToolDestination:
 
     @property
     def install_to_mcp(self) -> bool:
-        return not self.deploy_suppressed and bool(getattr(self.callable, "_mcp", False))
+        from harness.mcp.mcp_server import Mcp
+
+        return not self.deploy_suppressed and Mcp.marks(self.callable)
 
     @property
     def install_to_hook(self) -> bool:
@@ -917,7 +923,7 @@ class AgentToolDestination:
 
         if Hook.disabled_on(self.callable):
             return False
-        return not self.deploy_suppressed and bool(getattr(self.callable, Hook.flag, False))
+        return not self.deploy_suppressed and Hook.marks(self.callable)
 
     @property
     def hook_event(self) -> str:
@@ -928,15 +934,21 @@ class AgentToolDestination:
 
     @property
     def install_to_skill(self) -> bool:
-        return not self.deploy_suppressed and bool(getattr(self.callable, "_skill", False))
+        from harness.installation.files import Skill
+
+        return not self.deploy_suppressed and Skill.marks(self.callable)
 
     @property
     def install_to_command(self) -> bool:
-        return not self.deploy_suppressed and bool(getattr(self.callable, "_command", False))
+        from harness.installation.files import Command
+
+        return not self.deploy_suppressed and Command.marks(self.callable)
 
     @property
     def install_to_rule(self) -> bool:
-        return not self.deploy_suppressed and bool(getattr(self.callable, "_rules", False))
+        from harness.installation.files import Rules
+
+        return not self.deploy_suppressed and Rules.marks(self.callable)
 
     def install_to(self, destination: str) -> bool:
         if destination == InstallDestination.MCP:
@@ -984,11 +996,9 @@ class AgentTool(AgentToolDestination):
 
     @property
     def deploy_name(self) -> str:
-        return (
-            getattr(self.callable, "_command_name", None)
-            or getattr(self.callable, "_skill_name", None)
-            or self.name
-        )
+        from harness.installation.files import Command, Skill
+
+        return Command.name_marked_on(self.callable) or Skill.name_marked_on(self.callable) or self.name
 
     @property
     def mcp_name(self) -> str:
@@ -1023,9 +1033,9 @@ class AgentTool(AgentToolDestination):
     def should_log_session_invocation(self, arguments: dict[str, Any] | None) -> bool:
         if arguments and arguments.get("ping") is True:
             return False
-        if getattr(self.callable, NO_SESSION_LOG_FLAG, False):
+        if NoSessionLog.marks(self.callable):
             return False
-        if getattr(self.callable, "_is_agent_tool", False):
+        if AgentToolMark.marks(self.callable):
             return True
         return self.install_to_mcp
 
@@ -1051,9 +1061,9 @@ class AgentTool(AgentToolDestination):
 
     @property
     def kind(self) -> str:
-        if getattr(self.callable, "_is_agent_tool", False):
+        if AgentToolMark.marks(self.callable):
             return "tool"
-        if getattr(self.callable, "_is_agent_instructions", False):
+        if AgentInstructionsMark.marks(self.callable):
             return "instructions"
         return "none"
 
@@ -1219,7 +1229,7 @@ class AgentInstructions(AgentTool):
 
     @property
     def kind(self) -> str:
-        if getattr(self.callable, "_is_agent_tool", False):
+        if AgentToolMark.marks(self.callable):
             return "tool"
         return "instructions"
 
@@ -1446,7 +1456,7 @@ class AgentInstructions(AgentTool):
             func = klass.__dict__[method_name]
             if after_class is None and func is own_func:
                 continue
-            if callable(func) and getattr(func, "_is_agent_instructions", False):
+            if callable(func) and AgentInstructionsMark.marks(func):
                 return func, klass
         return None
 
@@ -1561,7 +1571,7 @@ class AgentInstructions(AgentTool):
 
     def _resolve_provider(self, instance: Any, provider_name: str) -> Any:
         raw = getattr(instance, provider_name)
-        if getattr(type(raw), "_is_agent_toolset", False):
+        if AgentToolSetMark.marks(type(raw)):
             return raw
         return raw() if callable(raw) else raw
 
@@ -2090,46 +2100,23 @@ def instructions(*calls: Callable[..., Any]) -> str:
     return "\n\n".join(part for part in parts if part)
 
 
-class AgentToolMark:
+class AgentToolMark(Mark):
     """Mark a method as a tool; description comes from the method docstring."""
 
     flag = "_is_agent_tool"
 
-    def __new__(cls, fn: Callable[..., Any] | None = None):
-        mark = object.__new__(cls)
-        if callable(fn):
-            return mark.annotate(fn)
-        return mark
 
-    def annotate(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        setattr(fn, self.flag, True)
-        return fn
-
-    def __call__(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        return self.annotate(fn)
-
-
-class AgentInstructionsMark:
+class AgentInstructionsMark(Mark):
     """Mark a method as @agent_instructions; unwrapped body code runs during expand."""
 
     flag = "_is_agent_instructions"
 
-    def __new__(cls, fn: Callable[..., Any] | None = None):
-        mark = object.__new__(cls)
-        if callable(fn):
-            return mark.annotate(fn)
-        return mark
 
-    def annotate(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        setattr(fn, self.flag, True)
-        return fn
-
-    def __call__(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        return self.annotate(fn)
-
-
-class AgentToolSetMark:
+class AgentToolSetMark(Mark):
     """Mark a class as an agent toolset — @agent_tool and @agent_instructions."""
+
+    flag = "_is_agent_toolset"
+    copied = False
 
     def __new__(cls, target: type | None = None):
         mark = object.__new__(cls)
@@ -2141,9 +2128,9 @@ class AgentToolSetMark:
         return self.annotate(target)
 
     def annotate(self, toolset_cls: type) -> type:
-        if "_is_agent_toolset" in toolset_cls.__dict__:
+        if self.flag in toolset_cls.__dict__:
             return toolset_cls
-        if getattr(toolset_cls, "_is_agent_toolset", False):
+        if self.marks(toolset_cls):
             AgentToolSet()._validate_toolset(toolset_cls)
             return toolset_cls
         if issubclass(toolset_cls, AgentToolSet):
@@ -2162,12 +2149,12 @@ class AgentToolSetMark:
         merged.__doc__ = toolset_cls.__doc__
         merged.__module__ = toolset_cls.__module__
         merged.__qualname__ = toolset_cls.__qualname__
-        setattr(merged, "_is_agent_toolset", True)
+        setattr(merged, self.flag, True)
         AgentToolSet()._validate_toolset(merged)
         return merged
 
 
-class ToolSetCollectionMark:
+class ToolSetCollectionMark(Mark):
     """Mark a class as a ToolSetCollection, or a property as one of this toolset's collections."""
 
     flag = "_is_toolset_collection"
@@ -2186,9 +2173,9 @@ class ToolSetCollectionMark:
             fn = getattr(target, "fget", target)
             setattr(fn, self.flag, True)
             return target
-        if "_is_toolset_collection" in target.__dict__:
+        if self.flag in target.__dict__:
             return target
-        if getattr(target, "_is_toolset_collection", False):
+        if self.marks(target):
             return target
         if issubclass(target, ToolSetCollection):
             raise TypeError(
@@ -2206,28 +2193,37 @@ class ToolSetCollectionMark:
         merged.__doc__ = target.__doc__
         merged.__module__ = target.__module__
         merged.__qualname__ = target.__qualname__
-        setattr(merged, "_is_toolset_collection", True)
+        setattr(merged, self.flag, True)
         return merged
 
 
-NO_SESSION_LOG_FLAG = "_no_session_log"
-TOOL_SUBJECT_FLAG = "_is_tool_subject"
-ON_SUBJECT_FLAG = "_runs_on_subject"
-
-
-def noSessionLog(target: Callable[..., Any]) -> Callable[..., Any]:
+class NoSessionLog(Mark):
     """Keep an operation's calls out of the session log. Use it on reads an agent or a mod repeats often, such as the
     session board, so the log keeps the work that was done rather than every look at it."""
-    setattr(target, NO_SESSION_LOG_FLAG, True)
-    return target
+
+    flag = "_no_session_log"
+    copied = False
 
 
-def tool_subject(target: Callable[..., Any]) -> Callable[..., Any]:
+class ToolSubject(Mark):
     """Mark the classmethod that finds the object a tool call acts on, so ``@agent_tool`` can sit on a domain class
     whose constructor takes collaborators. Each instance operation's tool takes this loader's arguments before its
     own: ``load(ticket)`` and ``move_next(self)`` make the tool ``ticket.move_next(ticket)``."""
-    setattr(target, TOOL_SUBJECT_FLAG, True)
-    return target
+
+    flag = "_is_tool_subject"
+    copied = False
+
+
+class OnSubject(Mark):
+    """Set on the tool made from an instance operation of a ``@tool_subject`` class: it loads its object from its
+    leading arguments before it runs the operation."""
+
+    flag = "_runs_on_subject"
+    copied = False
+
+
+noSessionLog = NoSessionLog
+tool_subject = ToolSubject
 
 
 agent_tool = AgentToolMark
