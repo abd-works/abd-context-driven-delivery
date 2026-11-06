@@ -247,8 +247,8 @@ test.describe('with a chat connected', () => {
         await page.getByRole('button', { name: '+ Ticket' }).click()
       })
 
-      test("Then the chat's prompt holds Open a new ticket with ticket.new, titled: for the Person to finish", async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('Open a new ticket with ticket.new, titled: ')
+      test("Then the chat's prompt holds Open a new ticket with ticket.create, titled: for the Person to finish", async () => {
+        await expect.poll(() => receivedBy(chat)).toContain('Open a new ticket with ticket.create, titled: ')
       })
     })
   })
@@ -276,8 +276,8 @@ test.describe('with a chat connected', () => {
         await card(page, 'checkout-flow').getByRole('button', { name: 'Split' }).first().click()
       })
 
-      test("Then the chat's prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.new with parent checkout-flow for each story.", async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.new with parent checkout-flow for each story.')
+      test("Then the chat's prompt holds Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story.", async () => {
+        await expect.poll(() => receivedBy(chat)).toContain('Split ticket checkout-flow into child tickets, one per story on its story map: call ticket.create with parent checkout-flow for each story.')
       })
     })
 
