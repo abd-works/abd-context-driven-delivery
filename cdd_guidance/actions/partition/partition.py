@@ -5,11 +5,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
+from harness.guidance.guidance import FidelityGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
 from harness.agent_tools import agent_instructions, agent_toolset
-from harness.markdown import markdown
+from harness.markdown import Markdown, markdown
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
@@ -65,6 +66,15 @@ class Partition(GuidanceAction):
 
     @markdown
     def partition_guidance(self) -> str: ...
+
+    def _scaffold_of(self, guidance) -> str:
+        """The Scaffold subsection of the fidelity the guidance is at, which names what the index lists; empty when
+        the guidance has no fidelity or that fidelity has no Scaffold subsection."""
+        fidelities = getattr(guidance, "fidelities", None)
+        fidelity = guidance if isinstance(guidance, FidelityGuidance) else getattr(fidelities, "current", None)
+        if fidelity is None:
+            return ""
+        return Markdown.from_label(fidelity, "scaffold").extract().strip()
 
     def _read_partition_index(
         self, segment_path: Path, index_path: str
@@ -154,13 +164,12 @@ class Partition(GuidanceAction):
             if isinstance(item, str):
                 self.partition_corpus(source, mode, out_root)
                 return
-            item.contexts
             self.partition_corpus(
                 source,
                 mode,
                 out_root,
                 slug=getattr(item, "context_index_key", None),
-                scaffold=item.scaffold,
+                scaffold=self._scaffold_of(item),
             )
 
         self.run(guidance, on, action="partition")

@@ -14,7 +14,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_false, be_none, be_true, equal, expect
+from expects import be_false, be_none, be_true, equal, expect, start_with
 from mamba import after, before, context, description, it
 
 from partition.partition_index import PartitionIndex
@@ -62,6 +62,11 @@ with description("a partition action"):
             joined = "\n".join(body.prompt)
             expect("Hard fail" in joined or "partition" in joined.lower()).to(be_true)
             expect("index" in body.tools or "segment" in body.tools).to(be_true)
+
+    with context("that runs on a practice"):
+        with it("should finish partitioning the corpus for that practice"):
+            result = Partition().partition("stories", paths="README.md")
+            expect(result).to(start_with("Partition of README.md finished"))
 
 
 # ---------------------------------------------------------------------------

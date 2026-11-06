@@ -21,6 +21,31 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 from harness.guidance.fixtures.split_tool.split_tool import SplitPracticeGuidance
 from harness.markdown import HTML, Markdown
 
+_READS_PER_FIDELITY = 10
+
+
+def _read_together(*fidelities) -> dict[str, list[str]]:
+    """Each fidelity's instructions read on its own thread, every thread started at once, as MCP calls arrive."""
+    import threading
+
+    start = threading.Barrier(len(fidelities) * _READS_PER_FIDELITY)
+    read: dict[str, list[str]] = {fidelity.name: [] for fidelity in fidelities}
+
+    def read_instructions(fidelity) -> None:
+        start.wait()
+        read[fidelity.name].append(fidelity.instructions)
+
+    threads = [
+        threading.Thread(target=read_instructions, args=(fidelity,))
+        for fidelity in fidelities
+        for _ in range(_READS_PER_FIDELITY)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    return read
+
 
 with description("context guidance"):
     with context("with the instructions property read"):
@@ -222,6 +247,23 @@ with description("a context tool module with one domain markdown file named for 
             text = story_map.instructions
             expect(text).to(contain("#### Template"))
             expect(text.index("#### Template")).to(be_below(text.index("Story Map")))
+
+    with context("with two fidelities of one practice reading their instructions at the same time"):
+        with before.each:
+            from cdd_guidance.practices.stories.stories import Stories
+
+            self.stories = Stories(fidelity="story_map")
+            fidelities = self.stories.fidelities.entries
+            self.read = _read_together(fidelities["story_map"], fidelities["scenarios"])
+
+        with it("should give the story map fidelity the story map template"):
+            expect(all("artifact: [story-map]" in text for text in self.read["story_map"])).to(equal(True))
+
+        with it("should give the scenarios fidelity the scenarios template"):
+            expect(all("artifact: [story-scenarios]" in text for text in self.read["scenarios"])).to(equal(True))
+
+        with it("should leave the practice at its current fidelity"):
+            expect(self.stories.fidelities.current.name).to(equal("story_map"))
 
     with context("with two fidelities declared shallower before deeper in the collection"):
         with context("with the instructions property read on the deeper fidelity guidance"):
