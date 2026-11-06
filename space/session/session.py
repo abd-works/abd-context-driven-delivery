@@ -598,6 +598,21 @@ class Session:
         worked_on = cache(self._worked_on_files)
         return {label: [entry for path in paths for entry in self._declared_files(path, worked_on)] for label, paths in outputs.items()}
 
+    def has_declared_output(self, fidelity: FidelityGuidance) -> bool:
+        """Whether a file fidelity declares is already in this session, such as one a person wrote. Unlike
+        ``files_declared_by`` it never asks git: a pattern counts only in a session with a folder of its own, since on
+        the whole repository a pattern also finds other sessions' files, and the board asks this of every fidelity."""
+        repo = self._repo
+        own_folder = Path(self.workpath or repo.root).resolve() != repo.root
+        for paths in self.fidelity_outputs(fidelity.practice_guidance, fidelity).values():
+            for declared in paths:
+                pattern = _named_parts_as_wildcards(repo.path_from_top(declared))
+                if "*" not in pattern and (repo.root / pattern).exists():
+                    return True
+                if "*" in pattern and own_folder and repo.file_manager.find(pattern):
+                    return True
+        return False
+
     @property
     def _repo(self) -> Repo:
         return Repo(self.repo_from_session())

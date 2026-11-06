@@ -372,11 +372,16 @@ class AssetLocator:
         *,
         group: str | None = None,
         filter_key: str | None = None,
+        fidelity: str | None = None,
+        format: str | None = None,
     ) -> None:
         self._instance = instance
         self._label = label
         self._group = group
         self._filter_key = filter_key
+        # A fidelity or format asked for by name wins over the instance's current one, so a caller reads another
+        # fidelity's assets without changing the instance that other threads read.
+        self._asked = {"fidelity": fidelity, "format": format}
         self._module_dir = Path(".")
         self._domain_slug = ""
         self._search_root_path = Path(".")
@@ -398,6 +403,8 @@ class AssetLocator:
     def _active_resource(self, key: str | None) -> str | None:
         if not key:
             return None
+        if self._asked.get(key) is not None:
+            return self._asked[key] or None
         if key == "fidelity":
             return self._current_fidelity()
         value = getattr(self._instance, key, None)
@@ -867,16 +874,20 @@ class MarkdownCollection:
 
 
 class Markdown:
-    def __init__(self, instance: Any, label: str) -> None:
+    def __init__(self, instance: Any, label: str, *, fidelity: str | None = None, format: str | None = None) -> None:
         self._instance = instance
         self._label = label
+        self._fidelity = fidelity
+        self._format = format
 
     @classmethod
-    def from_label(cls, instance: Any, label: str) -> Markdown:
-        return cls(instance, label)
+    def from_label(cls, instance: Any, label: str, *, fidelity: str | None = None, format: str | None = None) -> Markdown:
+        """Markdown for ``label`` on ``instance``, at the fidelity and format named here when given, else at the
+        instance's current ones."""
+        return cls(instance, label, fidelity=fidelity, format=format)
 
     def raw(self) -> str:
-        location = AssetLocator(self._instance, self._label).locate()
+        location = AssetLocator(self._instance, self._label, fidelity=self._fidelity, format=self._format).locate()
         return location.extract()
 
     def extract(self) -> str:

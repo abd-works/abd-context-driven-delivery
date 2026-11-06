@@ -807,6 +807,18 @@ with description("the board tools") as self:
         with it("should allow only Generate before anything is generated"):
             expect(self.project.ticket_json("sign-up")["progress"]["stories-story-map"]["allowed_actions"]).to(equal(["generate"]))
 
+        # A person can write a fidelity's file by hand, and checking it should not wait for a generate.
+        with context("whose story map is already written, with nothing recorded"):
+            with before.each:
+                (self.project.root / ".context").mkdir(exist_ok=True)
+                (self.project.root / ".context" / "story-map.md").write_text("# Story Map\n", encoding="utf-8")
+
+            with it("should allow Validate and Review on that file"):
+                expect(self.project.ticket_json("sign-up")["progress"]["stories-story-map"]["allowed_actions"]).to(equal(["generate", "validate", "review"]))
+
+            with it("should still name generate as the next action"):
+                expect(self.project.ticket_json("sign-up")["progress"]["stories-story-map"]["next_action"]).to(equal("generate"))
+
     # (S) Person --> Review Fidelity
     with context("with a ticket whose story map has passed validate"):
         with before.each:

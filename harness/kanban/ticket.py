@@ -413,9 +413,14 @@ class FidelityProgress:
     @property
     @data_field
     def allowed_actions(self) -> list[str]:
-        """Generate always; Validate and Review as soon as any action on the fidelity is recorded, so a person can check
-        the same output again as often as they like."""
-        return [*ALWAYS_ALLOWED, *ONCE_THERE_IS_OUTPUT] if self._done_actions else list(ALWAYS_ALLOWED)
+        """Generate always; Validate and Review once there is output to check: an action on the fidelity is recorded, or
+        a file it declares is already there, such as one a person wrote. A person can check the same output again as
+        often as they like."""
+        return [*ALWAYS_ALLOWED, *ONCE_THERE_IS_OUTPUT] if self._done_actions or self._has_files else list(ALWAYS_ALLOWED)
+
+    @property
+    def _has_files(self) -> bool:
+        return self._ticket.session.has_declared_output(self._fidelity)
 
     @property
     def has_violations(self) -> bool:
