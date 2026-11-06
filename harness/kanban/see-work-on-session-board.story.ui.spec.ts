@@ -128,7 +128,7 @@ test.describe('Display Board', () => {
       writeSession(fixtureRoot, { name: 'billing-report', title: 'Billing report', log: [generatedLine('stories', 'story_map'), validatedLine('Stories', 'story_map')] })
       await openBoard(page)
       await expect(card(page, 'billing-report')).toBeVisible()
-      await request.post('/api/ticket/billing-report/finish-review', { headers: BOARD_POST_HEADERS, data: { fidelities: ['stories-story_map'] } })
+      await request.post('/api/fidelity-progress/billing-report/stories-story_map/finish-review', { headers: BOARD_POST_HEADERS, data: {} })
     })
 
     test('Then a toast says stories-story_map reviewed on billing-report', async ({ page }) => {

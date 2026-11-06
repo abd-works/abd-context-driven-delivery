@@ -593,7 +593,7 @@ def _(s):
 @shared_stories.scenario("Split Ticket Into Child Tickets", "Ask the chat to split a ticket into child tickets")
 def _(s):
     # The chat connected here, and the prompt the board app fills in it, are the board app's; this scenario starts
-    # where the chat opens the child ticket through ticket.new.
+    # where the chat opens the child ticket through ticket.create.
     @s.given("checkout-flow is the active ticket and a chat is connected")
     def _(world):
         world.project.seed_session(CHECKOUT_FLOW)
