@@ -125,7 +125,7 @@ class Property(OoadNode):
         self.origin = ""
         self.relationship: Relationship | None = None
         self.invariants: List[Invariant] = []
-        # A derived property can ask collaborators for its value, written under it as `-> Session.active_name`.
+        # A derived property can ask collaborators for its value, written under it as `-> Repo.current_session`.
         self.callees: List[str] = []
 
     def clone(self) -> "Property":

@@ -17,7 +17,7 @@ from harness.installation.destination import language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
 from space.repo.latest_release import LatestRelease
-from space.work_state import WorkState
+from space.work_state import LEGACY_SESSIONS_FOLDER, WorkState
 
 BACKLOG_FOLDER = "_backlog"
 BOARD_FILE = "_board.json"
@@ -1093,6 +1093,27 @@ class Repo:
         from space.session.session import Session
 
         return [Session.load(folder, self.root) for folder in self._work_session_folders()]
+
+    @property
+    def current_session(self) -> Session:
+        """The session saved as open in ``.sessions/session.json``; main, which works on the whole repository, when none
+        is named. Read without becoming the current session."""
+        from space.session.session import MAIN_SESSION_NAME, Session
+
+        name = WorkState(self.root).session or MAIN_SESSION_NAME
+        return Session.load(self.session_folder(name), self.root)
+
+    def session_folder(self, name: str) -> Path:
+        """The folder of the session called name. A ticket on the board lives in the main checkout's ``.sessions``, so
+        a chat in the ticket's linked worktree logs there too and the board shows its work. Each checkout keeps its own
+        main session."""
+        from space.session.session import MAIN_SESSION_NAME
+
+        preferred = self.sessions_folder / name
+        candidates = [preferred, self.root / LEGACY_SESSIONS_FOLDER / name]
+        if name != MAIN_SESSION_NAME:
+            candidates.insert(0, Repo(self.primary_root()).sessions_folder / name)
+        return next((folder for folder in candidates if (folder / "session.json").is_file()), preferred)
 
     def _work_session_folders(self) -> list[Path]:
         from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME
@@ -2224,6 +2245,16 @@ class Branch:
     @property
     def repo(self) -> Repo:
         return self._repo
+
+    @property
+    def exists(self) -> bool:
+        """Whether the repository has this branch yet."""
+        return self._repo.has_branch(self.name)
+
+    @property
+    def is_checked_out(self) -> bool:
+        """Whether the repository has this branch checked out; a commit lands on whatever is checked out."""
+        return self.exists and self._repo.current_branch == self.name
 
     @property
     def worktree(self) -> Worktree | None:

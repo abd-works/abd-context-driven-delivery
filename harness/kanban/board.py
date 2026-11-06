@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from harness.guidance.rule import Rule
     from harness.kanban.backlog_item import BacklogItem
     from harness.kanban.ticket import Ticket
-    from space.repo.repo import Repo
+    from space.repo.repo import Branch, Repo
 
 BACKLOG_COLUMN = "Backlog"
 COMPLETE_COLUMN = "Complete"
@@ -37,6 +37,8 @@ LEAVE_PUSH = "push"
 LEAVE_MERGE = "merge"
 OPEN_BRANCH = "branch"
 OPEN_WORKTREE = "worktree"
+# How many tickets a stage holds before its count shows as over its limit, until a person sets another.
+DEFAULT_WIP_LIMIT = 3
 FORGE = "https://forge.abdworks.net/abd-context-driven-delivery"
 FIDELITIES_WITHOUT_PAGE = ("ddd-model", "bdd-realization")
 
@@ -154,7 +156,7 @@ class Board:
     @property
     def active(self) -> Ticket | None:
         """The ticket of the session saved as open; none while main is, since main is not on the board."""
-        return self.ticket(Session.active_name(self._repo.root))
+        return self.ticket(self._repo.current_session.name)
 
     @property
     @data_field(key="active")
@@ -200,7 +202,7 @@ class Board:
     def leave(self, ticket: Ticket, leaving: list[str]) -> None:
         """Do what leaving names with ticket's work: commit, push, merge. Only on its own branch, checked out, because
         those steps act on whatever is checked out."""
-        if not leaving or not self._is_on_its_branch(ticket.name):
+        if not leaving or not ticket.branch.is_checked_out:
             return
         if LEAVE_COMMIT in leaving or LEAVE_PUSH in leaving:
             self.repo.push_commit(f"{ticket.name}: leave session", sync_remote=LEAVE_PUSH in leaving)
@@ -212,18 +214,17 @@ class Board:
     @noSessionLog
     def open_worktree(self, ticket: str) -> Ticket:
         """Open ticket's own worktree beside the repository, creating its branch when missing: the folder its chat works in, named as its worktree. The open session is left as it is."""
-        name = self._named_ticket(ticket).name
-        self.repo.branch_named(name).open_in_worktree()
-        return Board.load(self.repo.root)._named_ticket(name)
+        opened = self._named_ticket(ticket)
+        opened.branch.open_in_worktree()
+        return Board.load(self.repo.root)._named_ticket(opened.name)
 
     @mcp
     @agent_tool
     @noSessionLog
     def workspace(self, ticket: str) -> Workspace:
         """Say whether ticket already has its branch and its worktree, so activating it offers only what is missing, and whether the active ticket being left is on a branch of its own, so its work can be committed, pushed, and merged."""
-        name = self._named_ticket(ticket).name
         active = self.active
-        return Workspace(self.repo.has_branch(name), self.worktree_of(name) is not None, active is not None and self._is_on_its_branch(active.name))
+        return Workspace(self._named_ticket(ticket).branch, active.branch if active is not None else None)
 
     def _named_ticket(self, name: str) -> Ticket:
         from harness.kanban.ticket import TicketNotFoundError
@@ -232,10 +233,6 @@ class Board:
         if found is None:
             raise TicketNotFoundError(name)
         return found
-
-    def _is_on_its_branch(self, name: str) -> bool:
-        """Whether the repository has the branch name checked out; a commit lands on whatever is checked out."""
-        return self.repo.has_branch(name) and self.repo.current_branch == name
 
     @mcp
     @agent_tool
@@ -270,7 +267,7 @@ class Board:
         return found
 
     def wip_limit(self, stage: str) -> int:
-        return self._saved_wip_limits.get(stage, Session.default_wip)
+        return self._saved_wip_limits.get(stage, DEFAULT_WIP_LIMIT)
 
     @property
     def _saved_wip_limits(self) -> dict[str, int]:
@@ -509,22 +506,22 @@ class HelpRule:
 class Workspace:
     """Whether a ticket has its branch and its worktree, and whether the active ticket being left is on a branch of its own."""
 
-    def __init__(self, has_branch: bool, has_worktree: bool, leaving_has_branch: bool) -> None:
-        self._has_branch = has_branch
-        self._has_worktree = has_worktree
-        self._leaving_has_branch = leaving_has_branch
+    def __init__(self, branch: Branch, leaving: Branch | None) -> None:
+        self._branch = branch
+        self._leaving = leaving
 
     @property
     @data_field
     def has_branch(self) -> bool:
-        return self._has_branch
+        return self._branch.exists
 
     @property
     @data_field
     def has_worktree(self) -> bool:
-        return self._has_worktree
+        return self._branch.worktree is not None
 
     @property
     @data_field
     def leaving_has_branch(self) -> bool:
-        return self._leaving_has_branch
+        """Whether the active ticket being left has its own branch checked out, so its work can be committed, pushed, and merged."""
+        return self._leaving is not None and self._leaving.is_checked_out

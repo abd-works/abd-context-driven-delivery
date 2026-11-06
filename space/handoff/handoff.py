@@ -3,7 +3,7 @@
 Writes handoff-{timestamp}.md into the session folder of the project being worked on:
 ``{work folder}/.sessions/{current session}/``, or ``{work folder}/.sessions/main/`` when the
 project has no named current session. The work folder is the checkout of the project the calling chat
-works on, as :meth:`Session.current_folder` resolves it.
+works on, as :attr:`Repo.current_session` names it.
 No archiving, no latest pointer — one timestamped file per call.
 """
 from __future__ import annotations
@@ -32,7 +32,7 @@ class Handoff:
         document = load_document(content, paths)
         if not document.strip():
             return "Nothing written: draft the handoff to a file and pass its path in paths."
-        path = Session.new_handoff_path()
+        path = Session.current().new_handoff_path()
         path.write_text(document, encoding="utf-8")
         return str(path.resolve())
 

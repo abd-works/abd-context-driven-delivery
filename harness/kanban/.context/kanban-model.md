@@ -85,7 +85,7 @@ A member noted *data field* is marked `@data_field`: MCP sends an object as exac
 	// its tickets, then its backlog items
 + active: Ticket
 	// the ticket of the session saved as open; none while the main session is, since main is not on the board
-	-> Session.active_name
+	-> Repo.current_session
 + project: str
 	// data field: the repository folder's name
 + active_name: str
@@ -101,6 +101,7 @@ A member noted *data field* is marked `@data_field`: MCP sends an object as exac
 + set_wip_limit(stage: str, limit: int): Board
 	// `board.set_wip_limit`: saved in `.sessions/_board.json`
 + wip_limit(stage: str): int
+	// the limit saved for stage, else 3
 + worktree_of(ticket: str): Path
 	// the worktree that has ticket's branch checked out; none when it has none. The worktrees are listed once per board read, because the board is read after every call, and a project that is no git clone has none
 	-> Repo.is_clone
@@ -206,6 +207,9 @@ The base type of Ticket and BacklogItem.
 	// data field
 	// its session's name; a ticket is an agent toolset, whose own name is the toolset's, so without this it would answer "ticket"
 	-> Session.name
++ << association >> branch: Branch
+	// its own branch, named as the ticket; the repository may not have it yet
+	-> Repo.branch_named
 + title: str
 	-> Session.title
 + scope: str
@@ -332,11 +336,11 @@ The base type of Ticket and BacklogItem.
 	-> Repo.switch_worktree
 + open_worktree(): Ticket
 	// `ticket.open_worktree`: opens its own worktree beside the repository, creating its branch when missing, and leaves the open session as it is; the ticket comes back from a new board read, which lists the new worktree
+	-> Ticket.branch
 	-> Branch.open_in_worktree
 + workspace(): Workspace
 	// `ticket.workspace`: whether it has its branch and worktree, and whether the ticket being left is on its branch
-	-> Repo.has_branch
-	-> Board.worktree_of
+	-> Ticket.branch
 + violations(): Report
 	// `ticket.violations`: the rules of every fidelity with violations, each naming its fidelity, a rule the practice's fidelities share listed once
 	-> Ticket.report
@@ -467,13 +471,18 @@ Where each of a stage's actions stands on one fidelity: a value the ticket repor
 
 Whether a ticket has its branch and its worktree, and whether the active ticket being left is on a branch of its own: what activating a ticket offers.
 
++ Workspace(branch: Branch, leaving: Branch)
+	// leaving is the active ticket's branch, none when no ticket is active
 ------
 + has_branch: bool
 	// data field
+	-> Branch.exists
 + has_worktree: bool
 	// data field
+	-> Branch.worktree
 + leaving_has_branch: bool
 	// data field
+	-> Branch.is_checked_out
 ----
 
 ## Help
@@ -676,8 +685,12 @@ The repository the board shows. Only the members the board's work depends on are
 + << composition >> sessions: list[Session]
 	// Intended, replaces `Session.all_in`: every session in `.sessions/` and `.sessions/_complete/`. The main session is not listed, and folders whose names start with `_`, other than `_complete`, are not sessions
 + current_session: Session
-	// Intended: the session saved in `.sessions/session.json`, else the main session
+	// the session saved in `.sessions/session.json`, else the main session, read without becoming the current session. The one place that reads `session` from `.sessions/session.json`
+	-> Repo.session_folder
 ----
++ session_folder(name: str): Path
+	// the folder of the session called name; a ticket's session is found in the main checkout's `.sessions/`, so a chat in its linked worktree logs there too
++ branch_named(name: str): Branch
 + has_branch(name: str): bool
 + path_from_top(path: Path): str
 	// path as written from the repository's top, empty for the top itself, or as it is when it lies outside the repository, where a session may work
@@ -692,6 +705,21 @@ The repository the board shows. Only the members the board's work depends on are
 + push_commit(message: str, sync_remote: bool): Commit
 + close_branch(name: str): str
 	// merges into the default branch, pushes it, and deletes the branch locally and on origin
+
+## Branch
+
+One named branch of the repository. Only the members the board's work depends on are shown.
+
+------
++ name: str
++ exists: bool
+	// whether the repository has it yet
++ is_checked_out: bool
+	// whether the repository has it checked out; a commit lands on whatever is checked out
++ worktree: Worktree
+	// the checkout that has it checked out; none when no worktree has it
+----
++ open_in_worktree(): Worktree
 
 # tools/file_manager
 
@@ -759,8 +787,6 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 + next_action: GuidanceAction
 	// Intended, replaces `Ticket.next_action`: the first action not done on the first fidelity not done; satisfy while that fidelity has violations, so Run next never validates again over open violations
 + is_closed: bool
-+ main_session: str
-+ default_wip: int
 ----
 + practice(name: str): PracticeSessionOutput
 + action_states(fidelity: FidelityGuidance): dict[GuidanceAction, ActionState]
@@ -790,8 +816,6 @@ Has the work that is done. Its log says what happened, and the knowledge graph s
 + fidelity_outputs(guidance: PracticeGuidance, fidelity: FidelityGuidance): dict
 	// where fidelity's artifacts are saved under the workpath, with the overrides in `session.json`; the practice's active fidelity when none is named. Naming it leaves the practice as it is, because the board's practices are shared by every call
 	-> FidelityGuidance.outputs
-+ active_name(repo_path: Path): str
-	// the session saved as open on the repository; main when none is named. The one place that reads `session` from `.sessions/session.json`
 + choose_workpath(workpath: Path)
 	// work in another folder of the repository from now on, saved in `session.json`; a chosen practice root keeps naming the same folder
 + choose_practice_root(practice: str, root: Path): Path
