@@ -18,7 +18,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
     SampleTool,
 )
-from harness.markdown import AssetLocator, HTML, Markdown, MarkdownTypeUnresolved, YamlBinder, markdown
+from harness.markdown import AssetLocator, HTML, Markdown, MarkdownTypeUnresolved, YamlFields, markdown
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
 _STORIES_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "stories"
@@ -176,7 +176,7 @@ with description("a markdown section containing a yaml fence"):
                 clean_engineering = ""
 
             self.instance = _YamlSubject()
-            YamlBinder(self.instance).bind_yaml(
+            YamlFields(self.instance).assign_yaml(
                 """```yaml
 default_format: python
 stage: specification

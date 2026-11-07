@@ -145,7 +145,7 @@ This pattern answers the questions `patterns-lern-domain-driven` answers: where 
 
 ### The Kanban, layer by layer
 
-`harness/kanban/` is the worked example, and every new domain component follows it.
+`space/kanban/` is the worked example, and every new domain component follows it.
 
 | Layer | In the Kanban |
 |---|---|
@@ -213,7 +213,7 @@ class Ticket:
         ...
 ```
 
-**Domain**, the body of that operation in `harness/kanban/ticket.py`. `Ticket` decides what moving next means and records it in the session log.
+**Domain**, the body of that operation in `space/kanban/ticket.py`. `Ticket` decides what moving next means and records it in the session log.
 
 ```python
 def move_next(self) -> Ticket:

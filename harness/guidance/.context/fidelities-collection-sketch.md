@@ -27,7 +27,7 @@ PracticeGuidance : Guidance
   from_markdown text
        -> Markdown.fidelity_blocks
        -> FidelityGuidance
-       -> bind_yaml
+       -> assign_yaml
        // EXTEND coerce: return type GuidanceCollection, not key-value map
   ----
  FidelityGuidance : Guidance
@@ -42,7 +42,7 @@ PracticeGuidance : Guidance
 theme: what this unlocks
 ---------
 ce:
-// attach_fidelities gone — collection.bind(practice) holds the bag
+// attach_fidelities gone — collection.attach(practice) holds the bag
 // load_fidelities_from_markdown body moves to GuidanceCollection.from_markdown
 // selected / current already on the collection; activate sets it
 // ToolSetCollection does not load markdown — only GuidanceCollection.from_markdown
@@ -55,7 +55,7 @@ ce:
 //    fidelities.markdown is the raw ## Fidelities extract. Replacing the loop with
 //    + fidelities.markdown inlines raw section text and drops the tools() list.
 // 2. FidelityGuidance.instructions != collection.markdown (parent prose, templates, CE).
-// 3. @markdownCollection getter coerces, then collection.bind(instance) — later
+// 3. @markdownCollection getter coerces, then collection.attach(instance) — later
 //    reads return that same bag so current stays. No attach_fidelities.
 // 4. CE companion wiring is after load; not generic coerce.
 // 5. fidelityInstructions(name) still needed for MCP give-me-sketch; selected is activate.

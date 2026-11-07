@@ -60,8 +60,20 @@ class ChatPointer:
         lines = cls._taken(remaining, _LINES_ARGUMENTS)
         if not chat_id and not transcript:
             return None, remaining
-        transcript = transcript or cls._claude_transcript_of(chat_id) or "unknown"
+        if not transcript:
+            found = cls.from_claude_chat(chat_id)
+            transcript = str(found.transcript) if found is not None else "unknown"
         return cls.of(chat_id or "unknown", transcript, lines), remaining
+
+    @classmethod
+    def from_claude_chat(cls, chat_id: str) -> ChatPointer | None:
+        """A Claude Code chat's pointer, found by its id alone: its transcript is the file named for that id under the
+        Claude projects folder, in the folder of the project the chat started in. None when no such transcript is there."""
+        if not _CHAT_ID.fullmatch(chat_id or ""):
+            return None
+        projects = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "projects"
+        found = next(projects.glob(f"*/{chat_id}.jsonl"), None) if projects.is_dir() else None
+        return cls.of(chat_id, found) if found is not None else None
 
     @classmethod
     def current(cls) -> ChatPointer | None:
@@ -187,15 +199,6 @@ class ChatPointer:
             return "1"
         count = len(path.read_text(encoding="utf-8").splitlines()) or 1
         return f"1-{count}" if count > 1 else "1"
-
-    @staticmethod
-    def _claude_transcript_of(chat_id: str) -> str:
-        """A Claude Code chat's id is its transcript's file name under the Claude projects folder."""
-        if not _CHAT_ID.fullmatch(chat_id or ""):
-            return ""
-        projects = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "projects"
-        found = next(projects.glob(f"*/{chat_id}.jsonl"), None) if projects.is_dir() else None
-        return str(found) if found else ""
 
     @staticmethod
     def _event_text(line: str, line_no: int) -> str:

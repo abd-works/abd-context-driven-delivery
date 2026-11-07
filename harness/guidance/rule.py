@@ -14,6 +14,7 @@ from harness.agent_tools.agent_tools import (
     instructions,
 )
 from harness.agent_tools.name import Name
+from harness.installation.destination import data_field
 from harness.markdown.markdown import MarkdownCollection
 from harness.hooks.hooks import Hook
 
@@ -47,9 +48,9 @@ class AppliesTo:
 
     @classmethod
     def from_markdown(cls, text: str) -> AppliesTo:
-        from harness.markdown.markdown import YamlBinder
+        from harness.markdown.markdown import YamlFields
 
-        return cls.from_value(YamlBinder().yaml_fields(text))
+        return cls.from_value(YamlFields().yaml_fields(text))
 
     @classmethod
     def strip_fence(cls, text: str) -> str:
@@ -66,13 +67,25 @@ class Rule:
         fidelity: str | None = None,
         tag: str = "base",
     ) -> None:
-        self.slug = slug
-        self.body = body
+        self._slug = slug
+        self._body = body
         self.fidelity = fidelity
         self.tag = tag or "base"
         self.practice = ""
         self.pattern = ""
         self.shared = False
+
+    @property
+    @data_field
+    def slug(self) -> str:
+        """The rule's name, such as `hide-inner-details`."""
+        return self._slug
+
+    @property
+    @data_field
+    def body(self) -> str:
+        """What the rule asks for, as its markdown says it."""
+        return self._body
 
     def attribute_to(self, practice: str, *, tag: str = "base", shared: bool = False) -> Rule:
         """Name the practice that owns this rule and whether it is shared across fidelities."""
@@ -135,7 +148,7 @@ class RulesCollection(MarkdownCollection):
                 self._note_session_injected_rules(path, bags)
         if Hook.disabled_on(type(self).inject_rules):
             return {}
-        from prompt_notify.prompt_notify import PromptNotify
+        from tools.prompt_notify.prompt_notify import PromptNotify
 
         if not self._just_edited(hook_payload):
             return {}

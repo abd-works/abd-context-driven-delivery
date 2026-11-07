@@ -16,7 +16,7 @@
 
 from mamba import context, description, it
 
-from agent_bdd import (
+from cdd_guidance.practices.agent_bdd import (
     agent,
     expect_instructions_contain,
     expect_ok_action,

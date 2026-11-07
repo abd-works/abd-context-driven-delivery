@@ -8,16 +8,20 @@ from contextvars import ContextVar
 from pathlib import Path
 
 from expects import be_true, equal, expect, raise_error
-from mamba import context, description, it
+from mamba import after, before, context, description, it
 
-from agent_bdd import agent
-from agent_bdd.agent_bdd_common import (
+from cdd_guidance.practices.agent_bdd import agent
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
+    AgentHarnessError,
     ToolRunDeadline,
+    ToolsetInvoke,
     ToolRunTimedOut,
     looks_like_tools_run_output,
     read_manifest,
     yaml_from_prompt,
 )
+from space.session.session import Session
+from space.session.throwaway_project import ThrowawayProject
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _TOOLS_SPEC = _REPO_ROOT / "retired" / "harness" / "agent_tools" / "agent_tools_agent_spec.py"
@@ -107,3 +111,25 @@ with description("an in-process toolset run with a timeout"):
     with context("that outlives its timeout"):
         with it("should fail naming the timeout"):
             expect(lambda: ToolRunDeadline(0.1).run(_slow_run, "car")).to(raise_error(ToolRunTimedOut))
+
+
+with description("a toolset run request") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        Session(self.project.root).switch("checkout-flow", repo_path=self.project.root)
+        Session(self.project.root).switch("main", repo_path=self.project.root)
+
+    with after.each:
+        self.project.close()
+
+    with context("that names a session the project has"):
+        with it("should make the toolset for that session, not the one the project has open"):
+            invoke = ToolsetInvoke.create(
+                {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "checkout-flow"}
+            )
+            expect(invoke.toolset.session.name).to(equal("checkout-flow"))
+
+    with context("that names a session the project does not have"):
+        with it("should fail naming that session"):
+            request = {"toolset": "cdd_guidance.actions.sketch.sketch:Sketch", "action": "sketch", "session": "billing"}
+            expect(lambda: ToolsetInvoke.create(request)).to(raise_error(AgentHarnessError, "request names session 'billing', which the project does not have"))

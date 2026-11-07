@@ -380,17 +380,6 @@ class Repo:
         name = WorkState(self.root).session or MAIN_SESSION_NAME
         return Session.load(self.session_folder(name), self.root)
 
-    def session_named(self, name: str) -> Session:
-        """The session called name, such as a board ticket's, read without becoming the current session. Raises
-        ``SessionNotFoundError`` when this repository has no session of that name, so work meant for it never lands in
-        another session."""
-        from space.session.session import MAIN_SESSION_NAME, Session, SessionNotFoundError
-
-        folder = self.session_folder(name)
-        if name != MAIN_SESSION_NAME and not (folder / "session.json").is_file():
-            raise SessionNotFoundError(name)
-        return Session.load(folder, self.root)
-
     def work_session(self, name: str) -> Session | None:
         """This repository's work session called name, open before closed; none when it has none. Only that session's
         folder is read, so a tool that names one session does not load every other."""
@@ -1242,11 +1231,11 @@ class Worktree:
 class Branch:
     """Named branch on a *Repo* — checkout, commit, merge, and close."""
 
-    __slots__ = ("_repo", "name")
+    __slots__ = ("_repo", "_name")
 
     def __init__(self, repo: Repo, name: str) -> None:
         self._repo = repo
-        self.name = (name or "").strip()
+        self._name = (name or "").strip()
 
     def __eq__(self, other: object) -> bool:
         # A branch is its name: every checkout of one repository shares the same branches.
@@ -1265,11 +1254,18 @@ class Branch:
         return self._repo
 
     @property
+    @data_field
+    def name(self) -> str:
+        return self._name
+
+    @property
+    @data_field
     def exists(self) -> bool:
         """Whether the repository has this branch yet."""
         return self._repo.has_branch(self.name)
 
     @property
+    @data_field
     def is_checked_out(self) -> bool:
         """Whether the repository has this branch checked out; a commit lands on whatever is checked out."""
         return self.exists and self._repo.current_branch == self.name

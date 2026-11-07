@@ -27,7 +27,7 @@ from harness.mcp.spec_support import SpecServer
 
 _LINGER_SECONDS = 1
 _HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
-_ECHO = "echo.echo:Echo"
+_ECHO = "tools.echo.echo:Echo"
 _PARAMETER_TYPES = "harness.mcp._examples.parameter_types.parameter_types:ParameterTypes"
 _RENDER = "cdd_guidance.actions.render.render:Render"
 _SESSION = "space.session.session:Session"

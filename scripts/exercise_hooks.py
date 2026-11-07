@@ -189,12 +189,11 @@ class HookExercise:
         }
 
     def _fire(self, path: Path) -> tuple[str, str]:
-        from harness.hooks.session_logs import SessionLogs
+        from space.repo.repo import Repo
 
         result = self._server().handle_stdin(json.dumps(self._payload(path)).encode("utf-8"))
         injected = result.additional_context or ""
-        logs = SessionLogs(self.repo)
-        folder = logs.session_folder(logs.active_session_name())
+        folder = Repo(self.repo).current_session.session_path
         chat = folder / "last-chat-injected-rules.md"
         remembered = folder / "chat-injections" / "hook-exercise.md"
         chat_text = chat.read_text(encoding="utf-8") if chat.is_file() else ""

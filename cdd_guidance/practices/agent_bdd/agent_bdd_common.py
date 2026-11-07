@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Generic, TypeVar
 
-from agent_bdd.cursor_cli import CursorCli
-from agent_bdd.yaml_fence import YamlFence
+from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
+from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 
 try:
     import yaml
@@ -505,7 +505,6 @@ class ToolsetInvoke:
     def __init__(self, instance: Any, toolset_path: str) -> None:
         self._instance = instance
         self._toolset_path = toolset_path
-        self._context: dict[str, Any] = {}
         self._arguments: dict[str, Any] = {}
         self._action_name: str | None = None
         self._tool_name: str | None = None
@@ -517,23 +516,39 @@ class ToolsetInvoke:
         toolset_path = request.get("toolset")
         if not toolset_path:
             raise AgentHarnessError("request missing toolset")
-        session = request.get("session")
-        if session is not None:
-            from workspace import SessionLog
-
-            SessionLog.instance().set_session(str(session))
         context = dict(request.get("context") or {})
+        if request.get("session"):
+            context["session"] = cls._session_named(str(request["session"]))
         arguments = dict(request.get("arguments") or {})
         try:
             instance = AgentToolSet.instantiate({"toolset": str(toolset_path), "context": context})
         except TypeError as exc:
             raise AgentHarnessError(str(exc)) from exc
         invoke = cls(instance, str(toolset_path))
-        invoke._context = context
         invoke._arguments = arguments
         invoke._action_name = str(request["action"]) if request.get("action") else None
         invoke._tool_name = str(request["tool"]) if request.get("tool") else None
         return invoke
+
+    @classmethod
+    def _session_named(cls, name: str) -> Any:
+        """The project's session a run request names, which the toolset is made for, so the run works in that session
+        and not in whichever session the project has open."""
+        from space.repo.repo import Repo
+        from space.session.session import MAIN_SESSION_NAME, Session
+
+        repo = Repo.current()
+        if name == MAIN_SESSION_NAME:
+            return Session.load(repo.session_folder(name), repo.root)
+        session = repo.work_session(name)
+        if session is None:
+            raise AgentHarnessError(f"request names session {name!r}, which the project does not have")
+        return session
+
+    @property
+    def toolset(self) -> Any:
+        """The toolset the request is run on, made for the session the request names."""
+        return self._instance
 
     def response(self) -> RunResponse:
         if self._action_name:
@@ -545,7 +560,7 @@ class ToolsetInvoke:
     def expanded_action(self) -> RunResponse:
         try:
             expanded = self._instance.instructions[self._action_name].expand(
-                self._context, self._arguments
+                self._arguments
             )
         except KeyError as exc:
             raise AgentHarnessError(f"unknown action {self._action_name!r}") from exc

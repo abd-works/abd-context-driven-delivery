@@ -11,7 +11,7 @@ from typing import Any, Mapping, Sequence
 
 from expects import be_true, equal, expect
 
-from agent_bdd.agent_bdd_common import RunResponse, invoke_run_request
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import RunResponse, invoke_run_request
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -213,14 +213,14 @@ def run_toolset(
 
 def read_workspace(path: str, *, timeout_seconds: int = 120) -> Any:
     """Prime the agent by reading a workspace-relative file."""
-    from agent_bdd import instruct
+    from cdd_guidance.practices.agent_bdd import instruct
 
     return instruct(f"Read {path} from the workspace.", timeout_seconds=timeout_seconds)
 
 
 def follow_instructions(prompt: str, *, timeout_seconds: int = 300) -> Any:
     """Natural-language step after an action returned ``response.instructions``."""
-    from agent_bdd import instruct
+    from cdd_guidance.practices.agent_bdd import instruct
 
     return instruct(prompt, timeout_seconds=timeout_seconds)
 
@@ -319,7 +319,7 @@ def generate_and_judge(
 
     Must be called inside ``with agent(...)``.
     """
-    from agent_bdd import ai_judge, follow_instructions
+    from cdd_guidance.practices.agent_bdd import ai_judge, follow_instructions
 
     artifact = follow_instructions(
         generate_similar_prompt(pass_path),

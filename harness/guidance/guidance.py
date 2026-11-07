@@ -494,7 +494,8 @@ class PracticeGuidance(Guidance):
             return owner._render(format, content, source, previous, folder)
         model = self._to_object_model(content, source)
         target = self._live_adapter(format)
-        if (source or "").lower() == "sketch" and isinstance(content, str) and content.strip():
+        # A sketch rendered to a document format keeps the sketch's own wording; code is never read from a sketch.
+        if (source or "").lower() == "sketch" and isinstance(content, str) and content.strip() and not Format(format).is_code:
             previous = previous or content
         rendered = self._call_render(target, self._model_for(target, model), previous, folder)
         return {"format": format, "content": rendered}
@@ -631,7 +632,7 @@ def _folder_of(paths: list[str] | str) -> str:
 
 @agent_toolset
 class FidelityGuidance(Guidance):
-    host: FidelityGuidance | None = None
+    companion_of: FidelityGuidance | None = None
     """The fidelity this one is the Clean Engineering companion of, such as Stories' acceptance_tests for code; none
     for a fidelity of its own practice."""
     session_output: Any = None
@@ -649,10 +650,30 @@ class FidelityGuidance(Guidance):
         self.name = name
         self.stage = stage
         self.default_format = default_format
-        # The root folder and each format's file, pattern, or folder; the yaml binder fills it, as it does stage.
-        self.outputs: dict[str, str | list[str]] = {}
+        self.outputs = {}
         if clean_engineering is not None:
             self.clean_engineering = clean_engineering
+
+    @property
+    @data_field
+    def name(self) -> str:
+        """The fidelity's name in its practice, such as `story_map`."""
+        return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value or ""
+
+    @property
+    @data_field
+    def outputs(self) -> dict[str, str | list[str]]:
+        """Each format this fidelity writes, with its file, pattern, or folder; the yaml binder fills it, as it does
+        stage."""
+        return dict(self._outputs)
+
+    @outputs.setter
+    def outputs(self, value: dict[str, str | list[str]]) -> None:
+        self._outputs = dict(value or {})
 
     def output_paths(self) -> dict[str, list[str]]:
         """Where this fidelity writes each format in the session its practice works in: its declared paths under the
@@ -703,11 +724,12 @@ class FidelityGuidance(Guidance):
 
     @property
     def format(self) -> str | None:
-        """The format this fidelity works in. A Clean Engineering companion writes its host's code, so while the host's
-        practice works in a code format the companion works in it too, read when asked so it follows the host."""
-        host_practice = self.host.practice_guidance if self.host is not None else None
-        if host_practice is not None and Format(host_practice.format).is_code:
-            return host_practice.format
+        """The format this fidelity works in. A Clean Engineering companion writes the code of the fidelity it is the
+        companion of, so while that fidelity's practice works in a code format the companion works in it too, read when
+        asked so it follows that practice."""
+        served = self.companion_of.practice_guidance if self.companion_of is not None else None
+        if served is not None and Format(served.format).is_code:
+            return served.format
         return getattr(self, "_format", None)
 
     @format.setter
@@ -715,6 +737,7 @@ class FidelityGuidance(Guidance):
         self._format = value
 
     @property
+    @data_field
     def default_format(self) -> str:
         return getattr(self, "_default_format", "")
 
@@ -732,7 +755,7 @@ class FidelityGuidance(Guidance):
     @property
     def clean_engineering(self) -> FidelityGuidance | None:
         """The Clean Engineering fidelity this fidelity's `clean_engineering:` field names, whose instructions join
-        this fidelity's. It knows this fidelity as its host and reads the code format from it."""
+        this fidelity's. It knows this fidelity as the one it is the companion of and reads the code format from it."""
         stored = getattr(self, "_clean_engineering", None)
         if isinstance(stored, FidelityGuidance):
             return stored
@@ -741,7 +764,7 @@ class FidelityGuidance(Guidance):
         from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
         companion = CleanEngineering().fidelities[stored]
-        companion.host = self
+        companion.companion_of = self
         self._clean_engineering = companion
         return companion
 
@@ -750,6 +773,7 @@ class FidelityGuidance(Guidance):
         self._clean_engineering = value
 
     @property
+    @data_field
     def slug(self) -> str:
         parent = self.practice_guidance.slug if self.practice_guidance is not None else super().slug
         leaf = Name(self.name).kebab

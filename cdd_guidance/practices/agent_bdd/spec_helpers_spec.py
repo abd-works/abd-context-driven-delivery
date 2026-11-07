@@ -14,7 +14,7 @@ from expects import equal, expect, raise_error
 from mamba import after, before, context, description, it
 from space.session.throwaway_project import ThrowawayProject
 
-from agent_bdd.spec_helpers import (
+from cdd_guidance.practices.agent_bdd.spec_helpers import (
     CAR,
     CAR_START,
     build_run_request,

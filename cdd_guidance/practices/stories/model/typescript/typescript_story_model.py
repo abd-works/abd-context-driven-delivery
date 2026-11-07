@@ -24,7 +24,6 @@ _STORY_TEST_SUFFIX = "_story.test.ts"
 
 class TypeScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = ".ts"
-    LANGUAGE_LINE_COMMENT = "//"
     epic_type = TypeScriptEpic
     story_type = TypeScriptStory
     language = CodeLanguage.named("typescript")

@@ -76,7 +76,7 @@ with description("GuidanceAction"):
 
         kit = GuidanceAction()
         seen: list = []
-        kit._bind_guidance("just this text")
+        kit._work_on("just this text")
         kit.run(seen.append, action="generate")
         expect(seen).to(equal(["just this text"]))
 
@@ -84,7 +84,7 @@ with description("GuidanceAction"):
         from harness.guidance_actions import GuidanceAction
 
         kit = GuidanceAction()
-        kit._bind_guidance(["stories", "clean-engineering-model"])
+        kit._work_on(["stories", "clean-engineering-model"])
         listed = kit.listed()
         expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
         expect(listed[0].fidelities.current.name).to(equal("story_map"))
@@ -94,7 +94,7 @@ with description("GuidanceAction"):
         from harness.guidance_actions import GuidanceAction
 
         kit = GuidanceAction()
-        kit._bind_guidance(["scenarios"])
+        kit._work_on(["scenarios"])
         listed = kit.listed()
         expect(len(listed)).to(equal(1))
         expect(type(listed[0]).__name__).to(equal("Stories"))
@@ -104,7 +104,7 @@ with description("GuidanceAction"):
         from harness.guidance_actions import GuidanceAction
 
         kit = GuidanceAction()
-        kit._bind_guidance("stories-story-map clean-engineering-modules format=markdown")
+        kit._work_on("stories-story-map clean-engineering-modules format=markdown")
         listed = kit.listed()
         expect([type(item).__name__ for item in listed]).to(equal(["Stories", "CleanEngineering"]))
 
@@ -112,7 +112,7 @@ with description("GuidanceAction"):
         from harness.guidance_actions import GuidanceAction
 
         kit = GuidanceAction()
-        kit._bind_guidance("ux-ia format=drawio")
+        kit._work_on("ux-ia format=drawio")
         expect([item.format for item in kit.listed()]).to(equal(["drawio"]))
 
     # The session board names the ticket's session in every command it sends, so the agent works in that session.
@@ -135,21 +135,21 @@ with description("GuidanceAction"):
             from harness.guidance_actions import GuidanceAction
 
             kit = GuidanceAction()
-            kit._bind_guidance(f"stories-story-map format=markdown {self.session_word}")
+            kit._work_on(f"stories-story-map format=markdown {self.session_word}")
             expect([type(item).__name__ for item in kit.listed()]).to(equal(["Stories"]))
 
         with it("should work in that session"):
             from harness.guidance_actions import GuidanceAction
 
             kit = GuidanceAction()
-            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            kit._work_on(f"stories-story-map {self.session_word}")
             expect(kit.session.name).to(equal("sign-up"))
 
         with it("should list the guidance as that session's own practice"):
             from harness.guidance_actions import GuidanceAction
 
             kit = GuidanceAction()
-            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            kit._work_on(f"stories-story-map {self.session_word}")
             expect(kit.listed()[0]).to(be(kit.session.practices["stories"].guideline))
 
         with it("should keep the format a generate names on that session's fidelity"):
@@ -157,7 +157,7 @@ with description("GuidanceAction"):
             from space.session import Session
 
             action = GuidanceAction()
-            action._bind_guidance(f"stories-story-map format=drawio {self.session_word}")
+            action._work_on(f"stories-story-map format=drawio {self.session_word}")
             action.run(lambda item: None, action="generate")
             reloaded = Session.from_file(self.session_word.removeprefix("session="))
             expect(reloaded.practices["stories"]._saved.get("formats")).to(equal({"story_map": "drawio"}))
@@ -166,10 +166,10 @@ with description("GuidanceAction"):
             from harness.guidance_actions import GuidanceAction
 
             action = GuidanceAction()
-            action._bind_guidance(f"stories-story-map format=drawio {self.session_word}")
+            action._work_on(f"stories-story-map format=drawio {self.session_word}")
             action.run(lambda item: None, action="generate")
             kit = GuidanceAction()
-            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            kit._work_on(f"stories-story-map {self.session_word}")
             expect([item.format for item in kit.listed()]).to(equal(["drawio"]))
 
         with it("should keep the practice turned on when it keeps a format"):
@@ -177,13 +177,13 @@ with description("GuidanceAction"):
             from space.session import Session
 
             action = GuidanceAction()
-            action._bind_guidance(f"stories-story-map format=drawio {self.session_word}")
+            action._work_on(f"stories-story-map format=drawio {self.session_word}")
             action.run(lambda item: None, action="generate")
             reloaded = Session.from_file(self.session_word.removeprefix("session="))
             expect(reloaded.practices["stories"].enabled).to(equal(True))
 
         with it("should log a call in that session"):
-            from generate.generate import Generate
+            from cdd_guidance.actions.generate.generate import Generate
 
             generate = Generate()
             generate._discover_instruction_members()["generate"].invoke({"guidance": f"stories-story-map {self.session_word}"})
@@ -194,34 +194,34 @@ with description("GuidanceAction"):
             from harness.guidance_actions import GuidanceAction
 
             kit = GuidanceAction()
-            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            kit._work_on(f"stories-story-map {self.session_word}")
             first = kit.listed()[0]
-            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            kit._work_on(f"stories-story-map {self.session_word}")
             expect(kit.listed()[0]).to(be(first))
 
         with it("should start the next call with none of this call's guidance"):
             from harness.guidance_actions import GuidanceAction
 
             kit = GuidanceAction()
-            kit._bind_guidance(f"stories-story-map {self.session_word}")
+            kit._work_on(f"stories-story-map {self.session_word}")
             kit.listed()
             kit.start_call()
             expect(kit.listed()).to(equal([]))
 
         with it("should keep generate's own Guidance as that session's practice once generate reads its rules"):
-            from generate.generate import Generate
+            from cdd_guidance.actions.generate.generate import Generate
 
             generate = Generate()
-            generate._bind_guidance(f"stories-story-map {self.session_word}")
+            generate._work_on(f"stories-story-map {self.session_word}")
             listed = generate.listed()[0]
             generate._rules()
             expect(generate.session.practices["stories"].guideline).to(be(listed))
 
         with it("should make an action started inside another work in that action's session"):
-            from generate.generate import Generate
+            from cdd_guidance.actions.generate.generate import Generate
 
             generate = Generate()
-            generate._bind_guidance(f"stories-story-map {self.session_word}")
+            generate._work_on(f"stories-story-map {self.session_word}")
             expect(generate._validate().session).to(be(generate.session))
 
         with it("should record a failure in that session"):
@@ -232,7 +232,7 @@ with description("GuidanceAction"):
 
             try:
                 action = GuidanceAction()
-                action._bind_guidance(f"stories-story-map {self.session_word}")
+                action._work_on(f"stories-story-map {self.session_word}")
                 action.run(fail, action="generate")
             except RuntimeError:
                 pass
@@ -243,7 +243,7 @@ with description("GuidanceAction"):
         from harness.guidance_actions import GuidanceAction
 
         kit = GuidanceAction()
-        kit._bind_guidance("write the story map")
+        kit._work_on("write the story map")
         expect(kit.guidance_text()).to(equal("write the story map"))
 
     with it("should keep prose that contains a colon as guidance text"):
@@ -251,7 +251,7 @@ with description("GuidanceAction"):
 
         kit = GuidanceAction()
         prose = "Three client perspectives: prospect onboarding, subscription, and active account."
-        kit._bind_guidance(prose)
+        kit._work_on(prose)
         expect(kit.guidance_text()).to(equal(prose))
         expect(kit.listed()).to(equal([]))
 
@@ -259,7 +259,7 @@ with description("GuidanceAction"):
         from harness.guidance_actions import GuidanceAction
 
         kit = GuidanceAction()
-        kit._bind_guidance(
+        kit._work_on(
             "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
         )
         listed = kit.listed()
@@ -272,7 +272,7 @@ with description("GuidanceAction"):
         kit = GuidanceAction()
         first, second = object(), object()
         seen: list = []
-        kit._bind_guidance([first, second])
+        kit._work_on([first, second])
         kit.run(seen.append, action="generate")
         expect(seen).to(equal([first, second]))
 
@@ -312,7 +312,7 @@ with description("GuidanceAction"):
                 log = tmp / ".sessions" / "alpha" / "session.log"
                 log.write_text("", encoding="utf-8")
                 action = GuidanceAction()
-                action._bind_guidance("probe")
+                action._work_on("probe")
                 action.run(lambda item: None, action="generate")
                 logged = log.read_text(encoding="utf-8")
             finally:
@@ -320,7 +320,7 @@ with description("GuidanceAction"):
         expect(logged).to(contain("generate"))
 
     with it("should inject listed Guidance rules markdown after this action returns"):
-        from generate.generate import Generate
+        from cdd_guidance.actions.generate.generate import Generate
         from harness.guidance.fixtures.sample_tool.sample_tool_host import SampleGuidance
 
         kit = Generate()
@@ -333,7 +333,7 @@ with description("GuidanceAction"):
         expect(result).to(equal({}))
 
     with it("should inject listed BDD rules after sketch returns without a matching path"):
-        from sketch.sketch import Sketch
+        from cdd_guidance.actions.sketch.sketch import Sketch
 
         kit = Sketch()
         result = kit.inject_rules(
@@ -345,7 +345,7 @@ with description("GuidanceAction"):
         expect(result).to(equal({}))
 
     with it("should skip inject_rules for document"):
-        from document.document import Document
+        from cdd_guidance.actions.document.document import Document
         from harness.guidance.fixtures.sample_tool.sample_tool_host import SampleGuidance
 
         kit = Document()
@@ -360,18 +360,18 @@ with description("GuidanceAction"):
     with it("should document and bind the same guidance slugs on every guidance action"):
         import inspect
 
-        from diagnose.diagnose import Diagnose
-        from document.document import Document
-        from generate.generate import Generate
-        from grill_context.grill_context import GrillContext
+        from cdd_guidance.actions.diagnose.diagnose import Diagnose
+        from cdd_guidance.actions.document.document import Document
+        from cdd_guidance.actions.generate.generate import Generate
+        from cdd_guidance.actions.grill_context.grill_context import GrillContext
         from harness.guidance_actions.guidance_actions import GUIDANCE_PARAMETER
-        from improvement.improvement import Improvement
-        from iterate.iterate import Iterate
-        from partition.partition import Partition
-        from render.render import Render
-        from satisfy.satisfy import Satisfy
-        from sketch.sketch import Sketch
-        from validate.validate import Validate
+        from cdd_guidance.actions.improvement.improvement import Improvement
+        from cdd_guidance.actions.iterate.iterate import Iterate
+        from cdd_guidance.actions.partition.partition import Partition
+        from cdd_guidance.actions.render.render import Render
+        from cdd_guidance.actions.satisfy.satisfy import Satisfy
+        from cdd_guidance.actions.sketch.sketch import Sketch
+        from cdd_guidance.actions.validate.validate import Validate
 
         classes = [
             Diagnose,
@@ -398,7 +398,7 @@ with description("GuidanceAction"):
             for tool in guidance_tools:
                 expect(tool.docstring).to(contain(GUIDANCE_PARAMETER))
                 seen.append(f"{cls.__name__}.{tool.name}")
-            kit._bind_guidance(["clean-engineering-model", "bdd-behavior"])
+            kit._work_on(["clean-engineering-model", "bdd-behavior"])
             listed = kit.listed()
             expect([type(item).__name__ for item in listed]).to(equal(["CleanEngineering", "Bdd"]))
             expect(listed[0].fidelities.current.name).to(equal("model"))

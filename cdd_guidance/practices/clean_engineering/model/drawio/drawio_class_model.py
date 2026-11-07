@@ -618,9 +618,10 @@ class _ClassDiagramPage:
         )
 
     def _cards(self, arrows: List[DiagramArrow]) -> Dict[str, DrawIOClass]:
-        """One card per class on the page, wide enough to give every arrow on it its own port."""
+        """One card per class on the page, in the model's order so the diagram reads back in that order, wide enough
+        to give every arrow on it its own port."""
         cards: Dict[str, DrawIOClass] = {}
-        for cell_id in sorted(self._page_ids):
+        for cell_id in (cell_id for cell_id in self._writer.classes_by_cell if cell_id in self._page_ids):
             node = self._card_node(cell_id)
             arrow_count = sum(1 for arrow in arrows if cell_id in (arrow.source, arrow.target))
             width = max(node.width(), SMALLEST_PORT_SPACING * (arrow_count + 1))

@@ -30,13 +30,10 @@ from harness.installation.destination import Destination
 from harness.hooks.hooks import Hook
 
 
-class Echo(Destination):
-    """Mark an AgentOperation or AgentInstructions so PromptNotify toasts it."""
+class Toast(Destination):
+    """Mark an AgentOperation or AgentInstructions so PromptNotify toasts it when an agent calls it."""
 
-    flag = "_echo"
-
-
-echo = Echo
+    flag = "_toast"
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
 IDE_TOAST_EXTENSION = "cdd.prompt-notify-0.0.1"
@@ -311,19 +308,19 @@ class PromptNotify:
         )
         if match is None:
             return None
-        if self._has_echo(match.callable):
+        if self._has_toast(match.callable):
             return self._echo_kind_label(match)
-        if match.name == "instructions" and self._inherited_echo(toolset, "instructions"):
+        if match.name == "instructions" and self._inherited_toast(toolset, "instructions"):
             return self._echo_kind_label(match)
         self._begin_tools = tools
         self._begin_toolset = toolset
-        return self._begin_echo(match)
+        return self._begin_toast(match)
 
-    def _begin_echo(self, match) -> tuple[str, str] | None:
+    def _begin_toast(self, match) -> tuple[str, str] | None:
         begin = self._begin_tools.get("begin")
         if begin is None or match.name in _SKIP_BEGIN_FALLBACK:
             return None
-        if not self._has_echo(begin.callable):
+        if not self._has_toast(begin.callable):
             return None
         return "action", str(getattr(self._begin_toolset, "slug", match.name)).replace("_", "-")
 
@@ -439,10 +436,10 @@ class PromptNotify:
                 return match.group(1).replace("_", "-")
         return None
 
-    def _has_echo(self, operation) -> bool:
+    def _has_toast(self, operation) -> bool:
         target = operation.fget if isinstance(operation, property) else operation
         inner = getattr(target, "__func__", target)
-        return Echo.marks(inner) or Echo.marks(target)
+        return Toast.marks(inner) or Toast.marks(target)
 
     def _echo_kind_label(self, tool) -> tuple[str, str]:
         toolset = tool.toolset
@@ -454,13 +451,13 @@ class PromptNotify:
             return "action", getattr(toolset, "slug", tool.name)
         return "action", tool.name.replace("_", "-")
 
-    def _inherited_echo(self, toolset, name: str) -> bool:
+    def _inherited_toast(self, toolset, name: str) -> bool:
         for cls in type(toolset).mro():
             member = cls.__dict__.get(name)
             if member is None:
                 continue
             target = member.fget if isinstance(member, property) else member
-            if self._has_echo(target):
+            if self._has_toast(target):
                 return True
         return False
 

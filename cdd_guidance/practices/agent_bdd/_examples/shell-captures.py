@@ -7,7 +7,7 @@
 from expects import be_true, expect
 from mamba import context, description, it
 
-from agent_bdd import (
+from cdd_guidance.practices.agent_bdd import (
     agent,
     ai_judge,
     combined_capture_text,

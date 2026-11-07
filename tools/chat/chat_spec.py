@@ -46,15 +46,17 @@ def _titled(title: str) -> str:
 with description("a chat") as self:
     with before.each:
         self.chats = Path(tempfile.mkdtemp(prefix="cdd-chats-"))
-        self.projects = Path(tempfile.mkdtemp(prefix="claude-projects-"))
+        self.claude_config = Path(tempfile.mkdtemp(prefix="claude-config-"))
+        self.projects = self.claude_config / "projects"
+        self.projects.mkdir()
         os.environ["CDD_CHATS_FOLDER"] = str(self.chats)
-        os.environ["CDD_CLAUDE_PROJECTS"] = str(self.projects)
+        os.environ["CLAUDE_CONFIG_DIR"] = str(self.claude_config)
         CLOCK[0] = 1000.0
         Chat.clock = staticmethod(lambda: CLOCK[0])
 
     with after.each:
         os.environ.pop("CDD_CHATS_FOLDER", None)
-        os.environ.pop("CDD_CLAUDE_PROJECTS", None)
+        os.environ.pop("CLAUDE_CONFIG_DIR", None)
 
     with context("with no chat checked in"):
         with it("should list no chats"):

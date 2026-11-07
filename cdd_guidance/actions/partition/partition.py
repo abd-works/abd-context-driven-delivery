@@ -8,7 +8,7 @@ from pathlib import Path
 from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
 from cdd_guidance.actions.partition.partition_index import PartitionIndex
 from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment, SegmentCompletenessConfig
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import Skill
@@ -128,11 +128,9 @@ class Partition(GuidanceAction):
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
         out_root: folder for the index and segments. Omit it to use the session's root."""
         source = source_label(context, paths)
-        self.index(context, out_root, paths)
-        self.segment(out_root)
-        self.verify_segment_completeness(
-            segment_path="{artifact}-segment.md", index_path="{subject}-index.md"
-        )
+        tools(self.index)
+        tools(self.segment)
+        tools(self.verify_segment_completeness)
         return (
             f"Partition of {source} finished (mode {mode}). "
             "Read those files locally. "
@@ -160,7 +158,7 @@ class Partition(GuidanceAction):
         context: in-process text. Leave this empty on an MCP call.
         mode: one_go, or the named partition mode.
         out_root: folder for the index and segments. Omit it to use the session path."""
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
         source = source_label(context, paths)
 
         def on(item) -> str:

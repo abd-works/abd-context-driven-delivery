@@ -1,123 +1,149 @@
 # agent_tools — class model (model fidelity)
 
-Markdown channel for the *AgentToolSet* primitive. Target design: root *AgentToolSet* owns *AgentTool* members — subtypes *AgentOperation* and *AgentInstructions*. **Wire-out** lives in `installation` — not in this module.
+Markdown channel for the *AgentToolSet* primitive. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet* is the toolset the author marks with `@agent_toolset`; its members are *AgentTool* objects — *AgentOperation* for `@agent_tool` and *AgentInstructions* for `@agent_instructions`. Writing members out to MCP, skills, commands, rules, and hooks belongs to `harness/installation`, `harness/mcp`, and `harness/hooks`; *Mark* and *Destination* belong to `harness/installation`, *Session* to `space/session`, and *Markdown* to `harness/markdown`, and they appear here only as names this module uses.
 
-**Out of scope:** manifest CLI, `Cls.manifest`, `for_introspection`, `instantiate_refs`, YAML front-matter fences, `run_request`, `ToolsetExtensions`, JSON Schema / MCP shapes on members, **`@resource`**, **`@focus` / `focus_entries`**, **`@instruction` / instruction slots / `_inline`** (markdown lives in string literals inside `@agent_instructions` bodies or in harness deploy — not a third member type), parallel `*Reader` / `*Catalog` / `*Validator` / `*Expander` doer classes, **`listed()` / `_tool_items` / session batch orchestration**, and **guidance action kits** (`harness/guidance_actions`, Generate, Scan, SubAgent, …). Those kits keep their own model; this document does not change them. Persistent server state between MCP calls is the server's job — not a domain member type.
-
-**Only two member marks exist:** `@agent_tool` → *AgentOperation*; `@agent_instructions` → *AgentInstructions*. Nothing else is a toolset member in this module.
-
-**Interfaces:** Clean Engineering treats a separate `I{Class}` contract as optional — add one only when asked.
+**Out of scope:** guidance actions (`harness/guidance_actions`, Generate, Validate, …) keep their own model; *GuidanceAgentOperation* is listed only because this module defines it.
 
 ---
 
 ## Language companion                                             <!-- L -->
 
-*AgentToolSet* is the root a practice decorates with `@agent_toolset`. Callable members are *AgentTool* subtypes: *AgentOperation* (`@agent_tool`) runs Python; *AgentInstructions* (`@agent_instructions`) expands its body statically.
+*AgentToolSet* is the toolset a practice or tool decorates with `@agent_toolset`. Callable members are *AgentTool* subtypes: *AgentOperation* (`@agent_tool`) runs Python; *AgentInstructions* (`@agent_instructions`) expands its body into a recipe the agent follows.
 
-Each *AgentTool* exposes introspection fields — `kind`, `description`, `parameters`, `response` — read from the callable. Each member holds a **`toolset`** reference to the parent *AgentToolSet* instance that created it. **`@agent_tool` and `@agent_instructions` both use normal Python `self` (the toolset).** Member **description** is docstring prose for deploy and introspection; do not confuse it with *AgentInstructions* or expansion output. Read `description`, `operations`, `instructions`, or `tools` on a live *AgentToolSet* instance — no aggregate dict in this module.
+Each *AgentTool* exposes `kind`, `description`, `parameters`, `response`, and `input_schema`, read from the callable, and holds the **`toolset`** that made it. Both marks use ordinary Python `self` (the toolset).
 
-### agent_toolset                                              <!-- L -->
-
-- One root — do not split a “tool-only” set from an “agent” set. <!-- L -->
-- `@agent_toolset` merges *AgentToolSet* behavior onto the decorated class. <!-- L -->
-- Class docstring is toolset-level **description**. <!-- L -->
-- **Invariant:** A member has exactly one mark — `@agent_tool` or `@agent_instructions`. No `@resource`, `@instruction`, or `@focus` on toolset members. <!-- L -->
-
-### agent_operation                                            <!-- L -->
-
-- `@agent_tool` — body **runs as Python** when called on a toolset instance. <!-- L -->
-- Modeled as *AgentOperation* : *AgentTool*. <!-- L -->
-
-### agent_instructions                                         <!-- L -->
-
-- `@agent_instructions` — unwrapped body code **runs during expand** to build instructions; `tools(...)` and `instructions(...)` are handled by the expander without running their targets. **First parameter must be `self`** (the toolset), same as `@agent_tool`. <!-- L -->
-- Prose in the expanded runbook comes from string literals in the body and from wrapped member calls — not from `@instruction` slots or focus file injection. <!-- L -->
-- **Wrappers (required for defer/expand):** `tools(...)` defers to agent invoke (`@agent_tool` semantics); `instructions(...)` expands inline (`@agent_instructions` semantics) and **walks that nested body recursively**. Unwrapped code runs during expand. <!-- L -->
-- Orchestration uses **toolset state on `self`** (for example `self.cars` populated by constructor or `@agent_tool` add/remove) — not a framework-injected peer list. <!-- L -->
-- Modeled as *AgentInstructions* : *AgentTool*. <!-- L -->
-- **`tools`** (read-only) — walk the `@agent_instructions` body; collect deferred names from `tools(...)`; for each `instructions(...)`, walk that nested *AgentInstructions* and **merge its tools**. Any caller can ask one action what it defers without running `expand`. <!-- L -->
-- **`toolset`** is set when the parent builds its `instructions` registry — not passed again on `expand`. <!-- L -->
-- **Invariant:** First parameter name is **`self`**. <!-- L -->
-- **Invariant:** **Cycles** in nested `instructions(...)` calls rejected at validation or expansion — nesting itself is allowed. <!-- L -->
-- Action-body validation runs on the **toolset** at decorate time — not a method on *AgentInstructions*. <!-- L -->
-
-### expansion_mode                                             <!-- L -->
-
-- On the **callee** *AgentToolSet* instance (`mode` field). <!-- L -->
-- `instructions` — nested `@agent_instructions` expand inline; `tool` — defer to tools list. <!-- L -->
-- Ordinary toolset state — not a separate member. <!-- L -->
-
-### introspection                                              <!-- L -->
-
-- *AgentToolSet* instance (via `instantiate(context)`): `name`, `description`, `operations`, `instructions`, `tools`. <!-- L -->
-- Cross-call collections and relationships (for example `cars`, `addCar`, `removeCar`) are ordinary toolset fields and `@agent_tool` members — not framework list injection. <!-- L -->
-
-## Modules                                                        <!-- Mu -->
-
-Build order: `agent_tools` only. One-way consumer: `installation`.
+- `@agent_toolset` merges *AgentToolSet* onto the decorated class; do not subclass *AgentToolSet* directly. The class docstring is the toolset's **description**.
+- Inside an `@agent_instructions` body, `tools(...)` names operations the agent calls while following the recipe, and `instructions(...)` includes another recipe inline. A recipe that includes itself is rejected when the class is decorated.
+- *ExpansionMode* on the called toolset decides whether a nested recipe expands inline (`instructions`) or is listed as a tool to call (`tool`).
+- `@toolset_collection` on a class makes it a *ToolSetCollection*; on a property it marks one of the toolset's collections, whose children are published as nested toolsets.
+- `@tool_subject` marks the class method that loads the object a tool call acts on; `@noSessionLog` keeps a repeated read out of the session log.
 
 ---
 
-# agent_tools                                                     <!-- Mu -->
+## AgentToolSet                                                   <!-- Md -->
 
-- **Purpose:** Register, introspect, and validate one decorated *AgentToolSet* and its members. <!-- Mu -->
-- **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, `@agent_toolset`, `@agent_tool`, `@agent_instructions` <!-- Mu -->
+Merged onto the decorated class by `@agent_toolset`.
 
-## AgentTool                                                     <!-- Md -->
+AgentToolSet()
+------
+name: str
+	// snake-case class name unless set
+slug: str
+	Interaction:
+		return Name(domain_slug or class name).kebab
+description: str
+	Interaction:
+		return (self.__class__.__doc__ or "").strip()
+registration_name: str
+	// "{module}:{Class}", the ref installers and the hook server load by
+install_folder: Path
+<< aggregation >> operations: dict[str, AgentOperation]
+	// every @agent_tool on this instance, each made with toolset=self
+instructions: Mapping[str, AgentInstructions]
+	// every @agent_instructions on this instance, each made with toolset=self
+tools: dict[str, AgentTool]
+	// instructions, then operations (an @agent_tool wins the same name), then hooks, then collection tools
+toolset_collections: list[ToolSetCollection]
+mode: ExpansionMode
+	Invariant: value is "instructions" or "tool"
+HOSTED_ONLY_CLASS_NAMES: frozenset[str]
+	// classes whose tools run only through the practice or toolset that holds them; install and the hook server skip them
+----
+tools_for(destination: str): list[AgentTool]
+	-> AgentTool.install_to
+child_toolsets(): Iterator[AgentToolSet]
+instantiate(item: Any = None): AgentToolSet
+	// item is None, a "{module}:{Class}" ref, a {toolset, context} dict, a class, or an instance
+from_items(items: list, context: dict | None = None, skip_errors: bool = False): list[AgentToolSet]
+	// one instance per toolset class
+tool_subject_of(toolset: type): Callable | None
+	// the @tool_subject loader, given the called project when it takes one
+validate(): None
+	Invariant: a recipe body names callable operations only through tools(...) and nested recipes only through instructions(...)
+	Invariant: nested instructions(...) may not form a cycle
+	// also runs at @agent_toolset decorate time, on the class
+	// raises AgentToolValidationError
+
+## AgentTool                                                      <!-- Md -->
+
+One member of a toolset an agent can see and call.
 
 AgentTool(name: str, callable: Callable, toolset: AgentToolSet)
 ------
 name: str
+callable: Callable
 toolset: AgentToolSet
-	Invariant: parent *AgentToolSet* that owns this member; set when the toolset builds operations or instructions on a live instance
+	Invariant: the toolset instance that made this member
+slug: str
+	// the toolset's slug
+registration_name: str
+	// the toolset's registration_name
+deploy_name: str
+	// the name a @command or @skill mark gives, else name
+mcp_name: str
+	// "{toolset slug}.{name}"; a practice's own instructions publish under the practice slug alone
 kind: str
+	// "tool", "instructions", or "none"
+docstring: str
 description: str
-	Interaction:
-		return member_description(callable)
+	// the docstring expanded once through Markdown
 parameters: dict[str, str]
-	Interaction:
-		return parameter names and type names from the callable
 response: str | None
-	Interaction:
-		return callable return type name when present
+input_schema: dict
+	-> ParameterSchema.json_schema
+install_to_mcp, install_to_hook, install_to_skill, install_to_command, install_to_rule: bool
+hook_event: str
+destinations: list[str]
+----
+install_to(destination: str): bool
+invoke_line(): str
+	// the "Use MCP tool:" line a skill or command ends with
+invoke(arguments: dict | None = None): Any
+	-> log_session_invocation(arguments)
+	-> ParameterSchema.coerced
+	// then call the callable
+log_session_invocation(arguments: dict | None): None
+	// skipped for ping calls and @noSessionLog members
+	-> Session.log_agent_tool
 
-## AgentOperation : AgentTool                                    <!-- Md -->
+## AgentOperation : AgentTool                                     <!-- Md -->
 
 AgentOperation(name: str, callable: Callable, toolset: AgentToolSet)
 ------
 	Invariant: kind == "tool"
 ----
-invoke(arguments: dict): Any
-	Interaction:
-		return callable(**arguments)
 
-## AgentInstructions : AgentTool                                 <!-- Md -->
+## GuidanceAgentOperation : AgentOperation                        <!-- Md -->
+
+An `@agent_tool` on a guidance action; the call is logged as the action running in its own session.
+
+GuidanceAgentOperation(name: str, callable: Callable, toolset: AgentToolSet)
+------
+----
+invoke(arguments: dict | None = None): Any
+	-> toolset.start_call
+log_session_invocation(arguments: dict | None): None
+	-> toolset.call_session
+
+## AgentInstructions : AgentTool                                  <!-- Md -->
 
 AgentInstructions(name: str, callable: Callable, toolset: AgentToolSet)
 ------
-	Invariant: kind == "instructions"
-----
-expand(context: dict, arguments: dict): ExpansionResult
-	Interaction:
-		walked = _scan(callable, instruction=self, context, arguments)
-		return ExpansionResult(instructions=walked.instructions, tools=self.tools, result=walked.result)
+	Invariant: kind == "instructions" unless the callable is also marked @agent_tool
+prompt: tuple[str, ...]
 tools: list[str]
-	Invariant: read-only — not set by expand
-	Interaction:
-		return _collect_deferred_tools(callable, instruction=self)
-- _parse_body(callable: Callable): ast.Module
-- _scan(callable, instruction, context, arguments, visited): WalkResult
-	Interaction:
-		for each `tools(...)` in body: collect deferred @agent_tool names
-		for each `instructions(...)` in body: _scan on nested member (merge prose); _collect_deferred_tools on nested member (merge tools)
-		reject if visit_key already in visited (cycle)
-- _collect_deferred_tools(callable, instruction, visited): list[str]
-	Interaction:
-		for each `tools(...)` in body: collect deferred @agent_tool names
-		for each `instructions(...)` in body: extend with _collect_deferred_tools on nested member
-		reject if visit_key already in visited (cycle)
+	// deferred operation names from tools(...), merged with those of every nested instructions(...); read-only
+result_template: str
+----
+for_callable(callable: Callable, instance: AgentToolSet | None = None): AgentInstructions
+expand(context: dict, arguments: dict): ExpansionResult
+	// raises RecipeLineFailed when a recipe line raises
+invoke(arguments: dict | None = None): str
+	// the instructions an agent follows for this call, with the session context of a guidance action appended
+	-> expand
+substitute_template(template: str, arguments: dict, parameter_names: set[str], instance: Any = None): str
 
-## ExpansionMode                                                 <!-- Md -->
+## ExpansionMode                                                  <!-- Md -->
 
 ExpansionMode(value: str)
 ------
@@ -134,85 +160,123 @@ tools: list[str]
 result: str
 ----
 
-## AgentToolSet                                                   <!-- Md -->
+## ToolSetCollection                                              <!-- Md -->
 
-AgentToolSet()
+Named child toolsets, iterated in entry order. The collection itself may have tools.
+
+ToolSetCollection(entries: dict | None = None, parent: Any = None)
 ------
-description: str
-	Interaction:
-		return (self.__class__.__doc__ or "").strip()
+entries: dict[str, AgentToolSet]
+parent: Any
 name: str
-	Interaction:
-		return slugify(type(self).__name__)
-<< aggregation >> operations: dict[str, AgentOperation]
-	Interaction:
-		for each @agent_tool on this instance, build AgentOperation(..., toolset=self)
-instructions: dict[str, AgentInstructions]
-	Interaction:
-		for each @agent_instructions on this instance, build AgentInstructions(..., toolset=self)
+slug: str
+registration_name: str
 tools: dict[str, AgentTool]
-	Interaction:
-		return merge(operations, instructions)
-mode: ExpansionMode
+	// tools declared on the collection, not on its entries
 ----
-instantiate(context: dict): AgentToolSet
-	Interaction:
-		return cls(**context)
-validate(): None
-	Invariant: Runs at `@agent_toolset` decorate time on the **class** — before any live toolset instance exists
-	Interaction:
-		allowed: set[str] = operation names | instruction names on cls
-		for each @agent_instructions method on cls:
-			body = _parse_body(method)
-			_InstructionBodyValidator(body, allowed, method.__name__)
-- _parse_body(callable: Callable): ast.Module
-- _InstructionBodyValidator(body, allowed, action_name): None
+attach(instance: Any, name: str | None = None): None
+
+## Collect                                                        <!-- Md -->
+
+`@collect` on a collection property: the same-named property gathered across the collection's children, joined as text or wrapped in the return type.
+
+Collect(fn: Callable): property
+------
+----
+of(collection: Any, name: str, return_type: Any): Any
+
+## Name                                                           <!-- Md -->
+
+One name written in several cases, so a class name, a toolset slug, and a published tool name always agree.
+
+Name(text: str)
+------
+words: list[str]
+snake: str
+kebab: str
+camel: str
+spellings: list[str]
+title_words: list[str]
+title_slug: str
+title_snake: str
+title_pascal: str
+title_camel: str
+----
+
+## ParameterSchema                                                <!-- Md -->
+
+The parameters a caller passes to one callable, read from its type hints, so the schema MCP publishes and the arguments it hands on agree.
+
+ParameterSchema(callable: Callable)
+------
+json_schema: dict
+----
+coerced(arguments: Mapping): dict
+	// text sent for a Path parameter becomes a Path
+
+## SubAgent                                                       <!-- Md -->
+
+The `sub-agent.sub_agent` operation; `@subAgent` on a member prepends the hand-off instructions to its description.
+
+SubAgent()
+------
+----
+sub_agent(instructions: str, summary: str = ""): str
+
+## AgentToolsProbe                                                <!-- Md -->
+
+Checks the space, harness, and tools operations one install published, through the running MCP server.
+
+AgentToolsProbe(installer: Installer, guidance: list[str] | None = None)
+------
+toolset_refs: tuple[str, ...]
+published: list[str]
+host: Any
+	// the running CDD MCP server; raises ProbeRequiresServingHost when none is serving
+----
+run(): str
+	// ping, invoke, and heavy invoke; on a one-off server when none is serving
+run_standalone(): str
+ping(): str
+invoke(host: Any | None = None): str
+
+## AgentToolsDiagnostics                                          <!-- Md -->
+
+AgentToolsDiagnostics()
+------
+----
+agent_tools_diagnostics(guidance: list[str] | None = None): str
+	// appends results under agent_tools in diagnostics.json
+	-> AgentToolsProbe.run
+
+## AgentToolValidationError : Exception                           <!-- Md -->
+
+AgentToolValidationError(message: str, class_name: str = "", action_name: str = "", lineno: int | None = None)
+------
+class_name: str
+action_name: str
+lineno: int | None
+----
+
+## RecipeLineFailed : Exception                                   <!-- Md -->
+
+A line of an `@agent_instructions` recipe raised while the recipe was expanded.
+
+RecipeLineFailed(recipe: Callable, line: ast.AST, cause: BaseException)
+------
+recipe_name: str
+line_source: str
+path: str
+lineno: int
+----
 
 ---
 
-## Deploy boundary (installation)                           <!-- Mu -->
+## Deploy boundary (installation)                                 <!-- Mu -->
 
-| Concern | Owner | Reads from domain |
-| ------- | ----- | ----------------- |
-| Skill/command markdown | `FileInstallation` | live toolset: `description`, `tools`; `toolset.instructions[name].expand(context, arguments)` |
-| MCP enrollment | `McpInstallation` | live toolset; reads each member's `kind`, `description`, `parameters`, `response` |
-| Runtime call | `McpServer` | `toolset.<operation>(**arguments)` |
-| Server state between calls | `McpServer` | toolset instance lifetime — not domain `@resource` entries |
-
----
-
-## Requirements trace (code → model)                              <!-- Mu -->
-
-| Requirement | Source in code | Model placement |
-| ----------- | -------------- | --------------- |
-| Root toolset | `AgenticToolset`, `@agentic_toolset` | `AgentToolSet` |
-| Member base | `_Tool`, `ToolSetMember` | `AgentTool` |
-| Execute vs expand | `@agent_tool` / `@agent_instructions` | `AgentOperation` / `AgentInstructions` : `AgentTool` |
-| Toolset name | `toolset_name`, `domain_slug` (slugified class name) | `AgentToolSet.name` |
-| Toolset description | `AgenticToolset.instructions` | `AgentToolSet.description` |
-| Member description | `_Tool.instructions`, `_SignatureReader.member_instructions` | `AgentTool.description`, `member_description()` |
-| Member introspection | `_Tool.signature_entry`, `AgentTool.owner`, `tool_steps` | `AgentTool.toolset`; `.kind`, `.description`, `.parameters`, `.response`; retire `tool_steps` → read-only `AgentInstructions.tools` (body walk) |
-| Toolset introspection | `Cls.manifest`, `tools`, `agent_tools` | `instantiate(context)` → `operations`, `instructions`, `tools` |
-| Nested `@agent_instructions` walk | `AgentInstructions._scan`, `_expand_member`, `_check_and_advance_visited`; nested `instructions(...)` merges deferred tools into parent | `_scan` / `.tools`: `instructions(...)` walks nested action and merges tools; cycles rejected |
-| Deferred tool names | `_AgentToolBody.tool_steps`, `AgentTool.signature_entry["tools"]` from `parse_body` | read-only `AgentInstructions.tools` via body walk (same merge rules as expand) |
-| Action-body validation | `AgentToolSet._InstructionBodyValidator`, `_validate_action` | `AgentToolSet.validate()` at decorate time — not on *AgentInstructions* |
-| Expansion mode | `@resource` `mode` property (`"action"` in code) | `AgentToolSet.mode` — values `"instructions"` \| `"tool"` (rename `"action"` → `"instructions"`) |
-| Retire from agent_tools | `@resource`, `@instruction`, `@focus`, `signature`, `_ManifestBuilder`, `manifest` classproperty, `for_introspection`, `instantiate_refs`, `listed`, `_tool_items`, manifest CLI, `run_request`, runners, extensions | delete from this module; harness uses live toolsets; lifecycle kits keep batch orchestration outside this model |
-
-## Target state vs current code                                    <!-- Mu -->
-
-1. **Rename root** — `AgenticToolset` → `AgentToolSet` (root type; not a member type).
-2. **Rename member base** — `_Tool` / `ToolSetMember` → `AgentTool`; subtypes `AgentOperation` | `AgentInstructions` only.
-3. **Rename prose** — `.instructions` → `.description` on toolset and members; `member_instructions()` → `member_description()`. **`ExpansionResult.instructions`** stays — expanded runbook output, not description prose.
-4. **Drop manifest** — retire `Cls.manifest`, `for_introspection`, `instantiate_refs`, manifest CLI, fenced YAML, `_ManifestBuilder`, `signature_entry`, `add_to_signature`. Introspection is `instantiate(context)` on a real toolset — tests follow prod.
-5. **Rename registries** — `tools` → `operations`; `agent_tools` → `instructions`; `toolset_name` / `domain_slug` → `name`.
-6. **Drop resources** — retire `@resource`, `_Resource`, `resource_entries`, `resources`. MCP server holds toolset instances; cross-call state is server-managed.
-7. **Drop focus** — retire `@focus`, `_focus_entries`, `_inject_focus` from expander.
-8. **Drop instruction slots** — retire `instruction_slot_names`, `_inline`, and `@instruction` as allowed action-body steps. Prose in an expanded action = string literals + `tools(...)` + `instructions(...)` + loops over `self.<collection>`.
-9. **Drop list injection** — retire `listed()`, `_tool_items`, and `arguments.tools` binding on *AgentToolSet*. Orchestration toolsets own their collections; lifecycle action kits are unchanged and out of scope here.
-10. **Validate on toolset** — `AgentToolSet.validate()` at decorate time scans **class** methods via `_InstructionBodyValidator`; scan logic is private to the toolset module.
-11. **`self` on actions** — `@agent_instructions` first parameter is **`self`** (the toolset instance), same as `@agent_tool`. The expander binds `self` to the owning toolset during hybrid body execution.
-12. **Rename action → instructions** — member `kind` and expansion `mode` value `"action"` → `"instructions"` (default `"instructions"`).
-13. **Retire tool_steps** — deferred ops are *AgentInstructions* `.tools` (read-only walk) and *ExpansionResult* `.tools` (same list from `expand`, does not mutate the member).
-14. **Retire** — doer classes, invoke bus, `_Tool.manifest`.
-15. **Decorator** — `@agentic_toolset` → `@agent_toolset` (when code catches up).
+| Concern | Owner | Reads from this module |
+| ------- | ----- | ---------------------- |
+| Skill, command, and rules markdown | `FileInstallation` | live toolset: `description`, `tools_for(destination)`; `AgentTool.invoke_line`; `AgentInstructions.expand` |
+| MCP enrollment | `McpInstallation.enroll_operations` | each member's `mcp_name`, `kind`, `description`, `parameters` |
+| Runtime call | `McpServer` | `AgentTool.invoke(arguments)` |
+| Hooks | `HookInstallation`, `HookServer` | `tools_for("hook")`, `hook_event`, `HOSTED_ONLY_CLASS_NAMES` |

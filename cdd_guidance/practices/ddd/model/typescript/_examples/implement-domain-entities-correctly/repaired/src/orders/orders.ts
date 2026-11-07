@@ -3,7 +3,7 @@ export class Orders {
   constructor(id: string) {
     this.id = id;
   }
-  bill() {
+  bill(): string {
     return this.id;
   }
 }

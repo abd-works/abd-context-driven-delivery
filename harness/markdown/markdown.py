@@ -15,13 +15,13 @@ from harness.markdown.format import Format
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
-class MarkdownSlot(str):
+class ExtractedMarkdown(str):
     """Extracted markdown that still answers ``expand()`` and ``templates()``."""
 
-    def expand(self) -> "MarkdownSlot":
+    def expand(self) -> "ExtractedMarkdown":
         return self
 
-    def __call__(self) -> "MarkdownSlot":
+    def __call__(self) -> "ExtractedMarkdown":
         return self
 
 
@@ -616,7 +616,7 @@ class AssetLocator:
 _YAML_FENCE = re.compile(r"```ya?ml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
-class YamlBinder:
+class YamlFields:
     """Parse YAML fences and assign matching fields onto an instance."""
 
     def __init__(self, instance: Any | None = None) -> None:
@@ -715,7 +715,7 @@ class YamlBinder:
             merged.update(self.mapping(match.group(1)))
         return merged
 
-    def bind_yaml_mapping(self, fields: dict[str, Any]) -> None:
+    def assign_yaml_mapping(self, fields: dict[str, Any]) -> None:
         leftovers: dict[str, str] = {}
         for key, value in fields.items():
             attr = self.matching_attr(key)
@@ -724,13 +724,13 @@ class YamlBinder:
                 continue
             current = getattr(self._instance, attr, None)
             if isinstance(value, dict) and _is_bindable(current):
-                YamlBinder(current).bind_yaml_mapping(value)
+                YamlFields(current).assign_yaml_mapping(value)
                 continue
             self.assign(attr, value)
         self.merge_map(leftovers)
 
-    def bind_yaml(self, text: str) -> None:
-        self.bind_yaml_mapping(self.yaml_fields(text))
+    def assign_yaml(self, text: str) -> None:
+        self.assign_yaml_mapping(self.yaml_fields(text))
 
 
 def strip_yaml_fences(text: str) -> str:
@@ -784,7 +784,7 @@ class MarkdownCollection:
             entry = cls.child(name, body)
             if entry is None:
                 continue
-            YamlBinder(entry).bind_yaml(body)
+            YamlFields(entry).assign_yaml(body)
             entries[name] = entry
         collection = cls(entries, parent=parent)
         collection.markdown = text
@@ -814,7 +814,7 @@ class MarkdownCollection:
         # EXTEND: one entry per section bullet or folder file
         return collection
 
-    def bind(self, instance: Any, name: str | None = None) -> None:
+    def attach(self, instance: Any, name: str | None = None) -> None:
         self.parent = instance
         previous = vars(instance).get(name) if name else None
         if name is not None:
@@ -844,12 +844,12 @@ class MarkdownCollection:
             hints = md._return_hints(fn)
             return_type = hints.get("return", MarkdownCollection)
             raw = md.raw()
-            YamlBinder(owner).bind_yaml(raw)
+            YamlFields(owner).assign_yaml(raw)
             result = MarkdownCollection.coerce(md, return_type, parent=owner)
-            YamlBinder(result).bind_yaml(raw)
-            bind = getattr(result, "bind", None)
-            if callable(bind):
-                bind(owner, name)
+            YamlFields(result).assign_yaml(raw)
+            attach = getattr(result, "attach", None)
+            if callable(attach):
+                attach(owner, name)
             else:
                 vars(owner)[name] = result
             return result
@@ -903,7 +903,7 @@ class Markdown:
 
     def extract(self) -> str:
         text = self.raw()
-        YamlBinder(self._instance).bind_yaml(text)
+        YamlFields(self._instance).assign_yaml(text)
         return strip_yaml_fences(text)
 
     def expand_docstring(self, docstring: str | None) -> str:
@@ -922,7 +922,7 @@ class Markdown:
         if return_type is HTML or origin is HTML:
             return HTML.from_markdown(text)
         if return_type is str or return_type is inspect.Signature.empty or return_type is None:
-            return MarkdownSlot(text)
+            return ExtractedMarkdown(text)
         if origin is dict:
             return self.templates_path_map()
         from harness.guidance.rule import RulesCollection
@@ -965,7 +965,7 @@ class Markdown:
             hints = md._return_hints(fn)
             return_type = hints.get("return", str)
             raw = md.raw()
-            YamlBinder(owner).bind_yaml(raw)
+            YamlFields(owner).assign_yaml(raw)
             text = strip_yaml_fences(raw)
             if return_type is HTML:
                 return HTML.from_markdown(text)
@@ -977,9 +977,9 @@ class Markdown:
                 if args and args[0] is HTML:
                     return HTML.from_markdown(text)
             if return_type is str or return_type is inspect.Signature.empty or return_type is None:
-                return MarkdownSlot(text)
+                return ExtractedMarkdown(text)
             result = md.coerce(raw, return_type)
-            YamlBinder(result).bind_yaml(raw)
+            YamlFields(result).assign_yaml(raw)
             return result
 
         getter.__doc__ = fn.__doc__
@@ -1002,7 +1002,7 @@ class Markdown:
         ]
 
     def fidelity_stage(self, body: str) -> str:
-        stage = YamlBinder().yaml_fields(body).get("stage")
+        stage = YamlFields().yaml_fields(body).get("stage")
         if isinstance(stage, str) and stage.strip():
             return stage.strip().strip("`")
         match = re.search(r"(?im)^\*\*Stage:\*\*\s*`?(\S+?)`?\s*$", body)
@@ -1019,7 +1019,7 @@ class Markdown:
         return match.group(1).strip().strip("`") if match else ""
 
     def fidelity_format(self, body: str) -> str:
-        fields = YamlBinder().yaml_fields(body)
+        fields = YamlFields().yaml_fields(body)
         token = fields.get("default_format") or fields.get("defaultFormat")
         if isinstance(token, str) and token.strip():
             return Format(token.split()[0].strip("()`")).name
@@ -1029,7 +1029,7 @@ class Markdown:
         return Format(rest.split()[0].strip("()`")).name
 
     def fidelity_clean_engineering(self, body: str) -> str:
-        fields = YamlBinder().yaml_fields(body)
+        fields = YamlFields().yaml_fields(body)
         token = fields.get("clean_engineering") or fields.get("cleanEngineering")
         if isinstance(token, str) and token.strip():
             return Name(token.split()[0].strip("()`")).snake

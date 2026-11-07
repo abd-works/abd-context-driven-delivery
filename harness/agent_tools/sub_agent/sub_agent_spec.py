@@ -45,7 +45,6 @@ with description("@subAgent mark"):
     with context("on @agent_instructions"):
         with it("prepends delegation instructions when expanded"):
             expanded = MarkedActionExample().instructions["plan_work"].expand(
-                {},
                 {"task": "refactor auth"},
             )
             expect(expanded.instructions).to(contain(SUB_AGENT_CALLER_PREAMBLE))

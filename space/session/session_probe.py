@@ -42,8 +42,8 @@ def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
         transcript.write_text("guidance diagnostics probe\n", encoding="utf-8")
         Session.forget_current(repo)
 
-        from generate.generate import Generate
-        from validate.validate import Validate
+        from cdd_guidance.actions.generate.generate import Generate
+        from cdd_guidance.actions.validate.validate import Validate
 
         with ChatPointer.serving(ChatPointer("guidance-probe", transcript, "1")):
             Generate().generate(["bdd"])

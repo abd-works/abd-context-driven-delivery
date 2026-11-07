@@ -8,7 +8,7 @@ from harness.agent_tools.agent_tools import AgentInstructions
 
 
 def _expanded(practice: CleanEngineering):
-    return AgentInstructions.for_callable(CleanEngineering.generate_output, practice).expand({}, {})
+    return AgentInstructions.for_callable(CleanEngineering.generate_output, practice).expand({})
 
 
 with description("a clean engineering practice writing its artifact"):

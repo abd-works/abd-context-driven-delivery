@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
 
-from agent_bdd.agent_bdd_common import (
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     CMDLINE_SAFE,
     JUDGE_LAUNCH,
     JUDGE_TASK,
@@ -26,8 +26,8 @@ from agent_bdd.agent_bdd_common import (
     _ShellCapture,
     yaml_from_prompt,
 )
-from agent_bdd.cursor_cli import CursorAgentNotFound, CursorCli
-from agent_bdd.yaml_fence import YamlFence
+from cdd_guidance.practices.agent_bdd.cursor_cli import CursorAgentNotFound, CursorCli
+from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 
 _TOOLS_RUN = re.compile(
     r"(?:python\s+-m\s+tools\s+run|tools\.ps1\s+run|tools\s+run\b)",

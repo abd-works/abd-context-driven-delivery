@@ -13,7 +13,7 @@ from harness.mcp.mcp_server import mcp
 from scripts.instances import GRAPH_APP_PORTS
 
 PROBE_SECONDS = 0.2
-# The session board's own port, set in harness/kanban/app/packages/session-board/serve.ts.
+# The session board's own port, set in space/kanban/app/packages/session-board/serve.ts.
 KANBAN_APP_PORTS = (8778,)
 
 

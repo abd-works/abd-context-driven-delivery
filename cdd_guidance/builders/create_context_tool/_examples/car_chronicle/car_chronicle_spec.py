@@ -14,10 +14,10 @@ for _cat in ("practices", "tools", "actions"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from builders.create_context_tool._examples.car_chronicle.car_chronicle import (
+from cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle import (
     CarChronicle,
 )
-from builders.create_context_tool._examples.car_chronicle.chronicle_with_output import (
+from cdd_guidance.builders.create_context_tool._examples.car_chronicle.chronicle_with_output import (
     ChronicleWithOutput,
 )
 

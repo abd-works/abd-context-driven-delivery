@@ -21,16 +21,16 @@ from harness.agent_tools.agent_tools import AgentToolSet
 import cdd_guidance.practices  # noqa: F401 - generator package on path
 from harness.markdown import Markdown
 
-from satisfy.satisfy import Satisfy
-from validate.validate import Validate
+from cdd_guidance.actions.satisfy.satisfy import Satisfy
+from cdd_guidance.actions.validate.validate import Validate
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "clean_engineering"
 _GENERATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "generate"
 _VALIDATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "validate"
 _SATISFY_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "satisfy"
 _CLEAN_ENGINEERING_TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
-_VALIDATE_TOOLSET = "validate.validate:Validate"
-_SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
+_VALIDATE_TOOLSET = "cdd_guidance.actions.validate.validate:Validate"
+_SATISFY_TOOLSET = "cdd_guidance.actions.satisfy.satisfy:Satisfy"
 
 
 class CleanEngineeringKit:
@@ -51,7 +51,7 @@ class CleanEngineeringKit:
 
         func = getattr(type(instance), self.action_name)
         return AgentInstructions.for_callable(func, instance).expand(
-            self.context, self.arguments
+            self.arguments
         )
 
     def action_prose(self) -> str:

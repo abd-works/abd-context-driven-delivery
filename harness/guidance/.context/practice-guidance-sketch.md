@@ -107,9 +107,8 @@ clean-engineering-model (Skill)
             -> Render.render guidance format content
                  -> GuidanceAction.run guidance
                       -> begin action="render"
-                           -> Workspace.open
-                           -> Turn.action
-                           -> RecordDecisions.record_decisions_session
+                           -> _work_on guidance
+                           -> act_quickly
                       -> listed
                            -> AgentToolSet.instantiate_all
                                 -> CleanEngineering fidelity="model"

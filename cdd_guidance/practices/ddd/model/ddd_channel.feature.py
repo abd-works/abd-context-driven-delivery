@@ -14,28 +14,32 @@ from mamba import before, describe, included_context, it, shared_context
 
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
-from cdd_guidance.practices.ddd.model.nodes import DomainEvent, ValueObject
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContextMap, DomainEvent, ValueObject
 
 EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected" / "bounded-context-map.md"
 ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
 
 
-def _events(aggregate):
+def _events(aggregate: Aggregate) -> list:
     if aggregate.root is None:
         return []
     return [item for item in aggregate.root.properties if isinstance(item, DomainEvent)]
 
 
-def check_map(loaded) -> None:
+def check_map(loaded: BoundedContextMap) -> None:
     expect(len(loaded.contexts)).to(equal(2))
     sales, catalog = loaded.contexts
     expect(sales.name).to(equal("Sales"))
     expect(sales.owner).to(equal("custom"))
     expect(catalog.name).to(equal("Catalog"))
     expect(catalog.owner).to(equal("bespoke"))
-
     expect(len(sales.aggregates)).to(equal(1))
-    cart = sales.aggregates[0]
+    _check_cart(sales.aggregates[0])
+    expect(catalog.aggregates[0].name).to(equal("Product"))
+    expect(catalog.aggregates[0].root.is_root).to(equal(True))
+
+
+def _check_cart(cart: Aggregate) -> None:
     expect(cart.name).to(equal("ShoppingCart"))
     expect(cart.root.name).to(equal("ShoppingCart"))
     expect(cart.root.is_root).to(equal(True))
@@ -50,15 +54,15 @@ def check_map(loaded) -> None:
     expect(integration.direction).to(equal("downstream"))
     expect(integration.crosses).to(equal("unit price"))
     expect(integration.integration).to(equal("synchronous call to Catalog.Product.unit_price at add_item"))
+    _check_cart_event(cart)
 
+
+def _check_cart_event(cart: Aggregate) -> None:
     expect(len(_events(cart))).to(equal(1))
     event = _events(cart)[0]
     expect(event.producer).to(equal(cart))
     expect(isinstance(event.subject, Property)).to(equal(True))
     expect([item.name for item in event.consumers]).to(equal(["Product"]))
-
-    expect(catalog.aggregates[0].name).to(equal("Product"))
-    expect(catalog.aggregates[0].root.is_root).to(equal(True))
 
 
 with shared_context("a domain driven design model saved through a channel"):

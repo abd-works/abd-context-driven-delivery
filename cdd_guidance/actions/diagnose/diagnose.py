@@ -125,7 +125,7 @@ class Diagnose(GuidanceAction):
         """
         if guidance is None:
             return ""
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
         parts = [part for part in self.run(self._guidance_rules, action="diagnose") if part]
         return "\n\n".join(parts)
 

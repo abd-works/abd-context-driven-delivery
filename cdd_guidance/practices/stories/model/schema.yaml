@@ -62,7 +62,7 @@ story:
     - story-name-captures-system-mechanic
     - right-size-story-nodes
     - behaviours-not-one-time-tasks
-    - story-scenarios-one-to-four
+    - story-scenarios-at-most-seven
 
 scenario:
   fidelity: scenarios

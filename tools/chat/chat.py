@@ -11,8 +11,9 @@ from typing import Callable, Literal, TypeVar
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.installation.destination import data_field, language_adapter
+from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import Mcp
+from space.session.chat_pointer import ChatPointer
 
 # The mod checks in every second, so a chat silent for this long has gone.
 CHAT_GONE_SECONDS = 5
@@ -99,11 +100,8 @@ def _chats_folder() -> Path:
     return Path(os.environ.get("CDD_CHATS_FOLDER") or Path.home() / ".claude" / "cdd-chats")
 
 
-def _claude_projects() -> Path:
-    return Path(os.environ.get("CDD_CLAUDE_PROJECTS") or Path.home() / ".claude" / "projects")
-
-
-@language_adapter(language="typescript", identity="id")
+@identity("id")
+@language_adapter(language="typescript")
 @agent_toolset
 class Chat:
     """Reach a Claude Code chat from outside it: list the chats that are connected, and send one a command.
@@ -299,12 +297,10 @@ class Chat:
         sent = json.loads(path.read_text(encoding="utf-8"))
         return ChatMessage(path.stem, sent["kind"], sent["text"], sent.get("sent_at", 0.0), state, sent.get("reason", ""))
 
-    # The app writes a chat's transcript under the folder of the project the chat started in.
     @property
     def _transcript(self) -> Path | None:
-        projects = _claude_projects()
-        found = projects.glob(f"*/{self.id}.jsonl") if projects.is_dir() else []
-        return next(iter(found), None)
+        found = ChatPointer.from_claude_chat(self.id)
+        return found.transcript if found is not None else None
 
 
 # A mod that reloads checks in twice at once, and one cdd server answers every chat, so both arrive in this process. Each

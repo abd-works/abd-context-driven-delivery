@@ -10,7 +10,7 @@ from pathlib import Path
 
 from expects import equal, expect
 from harness.agent_tools.name import Name
-from harness.output_folder import OutputFolder
+from cdd_guidance.practices.output_folder import OutputFolder
 from mamba import describe, context, it, before, shared_context, included_context
 
 from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
@@ -38,72 +38,65 @@ def _kebab(name: str) -> str:
 
 def walk(story_map: StoryModel) -> list:
     """Every epic, story, background, scenario, step, and, and increment, in map order."""
-    rows = []
-
-    def visit_step(step, depth: int) -> None:
-        rows.append(("step", depth, step.keyword, step.text))
-        for extra in step.ands:
-            rows.append(("and", depth + 1, extra.keyword, extra.text))
-
-    def visit_epic(epic, depth: int) -> None:
-        rows.append(("epic", depth, epic.name, epic.sequential_order, (epic.estimate or "").strip()))
-        for story in epic.stories:
-            story_type = getattr(story.story_type, "value", story.story_type)
-            rows.append((
-                "story",
-                depth + 1,
-                story.name,
-                story.sequential_order,
-                tuple(story.actors),
-                story_type,
-            ))
-            for background in story.backgrounds:
-                rows.append(("background", depth + 2, background.name))
-                for step in background.steps:
-                    visit_step(step, depth + 3)
-            for scenario in story.scenarios:
-                rows.append(("scenario", depth + 2, scenario.name, scenario.sequential_order))
-                for background in scenario.backgrounds:
-                    rows.append(("background", depth + 3, background.name))
-                    for step in background.steps:
-                        visit_step(step, depth + 4)
-                for step in scenario.steps:
-                    visit_step(step, depth + 3)
-        for child in epic.epics:
-            visit_epic(child, depth + 1)
-
-    for epic in story_map.epics:
-        visit_epic(epic, 0)
+    entries = [entry for epic in story_map.epics for entry in _epic_entries(epic, 0)]
     for increment in story_map.increments:
         names = tuple(getattr(story, "name", story) for story in increment.stories)
-        rows.append(("increment", increment.name, increment.sequential_order, names))
-    return rows
+        entries.append(("increment", increment.name, increment.sequential_order, names))
+    return entries
 
 
-def kept(rows: list, channel: str) -> list:
+def _epic_entries(epic, depth: int) -> list:
+    entries = [("epic", depth, epic.name, epic.sequential_order, (epic.estimate or "").strip())]
+    for story in epic.stories:
+        entries.extend(_story_entries(story, depth + 1))
+    for child in epic.epics:
+        entries.extend(_epic_entries(child, depth + 1))
+    return entries
+
+
+def _story_entries(story, depth: int) -> list:
+    story_type = getattr(story.story_type, "value", story.story_type)
+    entries = [("story", depth, story.name, story.sequential_order, tuple(story.actors), story_type)]
+    entries.extend(entry for background in story.backgrounds for entry in _background_entries(background, depth + 1))
+    for scenario in story.scenarios:
+        entries.append(("scenario", depth + 1, scenario.name, scenario.sequential_order))
+        entries.extend(entry for background in scenario.backgrounds for entry in _background_entries(background, depth + 2))
+        entries.extend(entry for step in scenario.steps for entry in _step_entries(step, depth + 2))
+    return entries
+
+
+def _background_entries(background, depth: int) -> list:
+    return [("background", depth, background.name), *(entry for step in background.steps for entry in _step_entries(step, depth + 1))]
+
+
+def _step_entries(step, depth: int) -> list:
+    return [("step", depth, step.keyword, step.text), *(("and", depth + 1, extra.keyword, extra.text) for extra in step.ands)]
+
+
+def kept(entries: list, channel: str) -> list:
     """The nodes this channel writes into its files."""
     if channel in _DIAGRAM:
-        return [row for row in rows if row[0] in ("epic", "story", "increment")]
+        return [entry for entry in entries if entry[0] in ("epic", "story", "increment")]
     if channel in _CODE:
-        return _stored_code(_code_rows(rows))
-    return rows
+        return _stored_code(_code_entries(entries))
+    return entries
 
 
-def _code_rows(rows: list) -> list:
+def _code_entries(entries: list) -> list:
     """Code folders store a slug. Scenario and step text stay as written."""
     selected = []
     index = 0
-    while index < len(rows):
-        row = rows[index]
-        if row[0] != "story":
-            if row[0] == "epic":
-                selected.append(("epic", row[1], _kebab(row[2]), row[3], row[4]))
+    while index < len(entries):
+        entry = entries[index]
+        if entry[0] != "story":
+            if entry[0] == "epic":
+                selected.append(("epic", entry[1], _kebab(entry[2]), entry[3], entry[4]))
             index += 1
             continue
-        block = [row]
+        block = [entry]
         index += 1
-        while index < len(rows) and rows[index][0] not in ("story", "epic"):
-            block.append(rows[index])
+        while index < len(entries) and entries[index][0] not in ("story", "epic"):
+            block.append(entries[index])
             index += 1
         story = block[0]
         selected.append(("story", story[1], _kebab(story[2]), story[3], tuple(story[4]), story[5]))
@@ -119,63 +112,63 @@ def _code_rows(rows: list) -> list:
 
 
 
-def _grouped(rows: list) -> list:
+def _grouped(entries: list) -> list:
     """Sort each epic's children by name. Code files are read in path order."""
     def take(items: list, depth: int) -> list:
         blocks = []
         index = 0
         while index < len(items):
-            row = items[index]
-            if row[0] == "epic" and row[1] == depth:
+            entry = items[index]
+            if entry[0] == "epic" and entry[1] == depth:
                 end = index + 1
                 while end < len(items) and not (items[end][0] == "epic" and items[end][1] <= depth):
                     end += 1
-                blocks.append((row[2], [row, *take(items[index + 1:end], depth + 1)]))
+                blocks.append((entry[2], [entry, *take(items[index + 1:end], depth + 1)]))
                 index = end
                 continue
-            if row[0] == "story" and row[1] == depth:
+            if entry[0] == "story" and entry[1] == depth:
                 end = index + 1
                 while end < len(items) and items[end][0] not in ("story", "epic"):
                     end += 1
-                blocks.append((row[2], items[index:end]))
+                blocks.append((entry[2], items[index:end]))
                 index = end
                 continue
-            blocks.append(("", [row]))
+            blocks.append(("", [entry]))
             index += 1
         ordered = []
         for _name, block in sorted(blocks, key=lambda item: item[0]):
             ordered.extend(block)
         return ordered
 
-    return take(rows, 0)
+    return take(entries, 0)
 
 
-def _normalize_loaded(rows: list, channel: str) -> list:
+def _normalize_loaded(entries: list, channel: str) -> list:
     if channel not in _CODE:
-        return rows
+        return entries
     normalized = []
-    for row in rows:
-        if row[0] == "epic":
-            normalized.append(("epic", row[1], _kebab(row[2]), row[3], row[4]))
-        elif row[0] == "story":
-            normalized.append(("story", row[1], _kebab(row[2]), row[3], tuple(row[4]), row[5]))
-        elif row[0] == "background":
+    for entry in entries:
+        if entry[0] == "epic":
+            normalized.append(("epic", entry[1], _kebab(entry[2]), entry[3], entry[4]))
+        elif entry[0] == "story":
+            normalized.append(("story", entry[1], _kebab(entry[2]), entry[3], tuple(entry[4]), entry[5]))
+        elif entry[0] == "background":
             continue
-        elif row[0] in ("step", "and"):
-            normalized.append(row)
+        elif entry[0] in ("step", "and"):
+            normalized.append(entry)
         else:
-            normalized.append(row)
+            normalized.append(entry)
     return _stored_code(normalized)
 
 
-def _stored_code(rows: list) -> list:
+def _stored_code(entries: list) -> list:
     """Code files keep names, actors, and steps. Folder order replaces sequential order."""
     stored = []
-    for row in rows:
-        if row[0] in ("epic", "story", "scenario"):
-            stored.append((*row[:3], 0, *row[4:]))
+    for entry in entries:
+        if entry[0] in ("epic", "story", "scenario"):
+            stored.append((*entry[:3], 0, *entry[4:]))
         else:
-            stored.append(row)
+            stored.append(entry)
     return _grouped(stored)
 
 
@@ -240,42 +233,56 @@ def load_source(name: str) -> StoryModel:
     return TypeScriptStoryModel().load(_expected_typescript())
 
 
+_CODE_MAPS = {
+    "typescript": TypeScriptStoryModel,
+    "python": PythonStoryModel,
+    "javascript": JavaScriptStoryModel,
+    "java": JavaStoryModel,
+}
+
+
 def save_channel(source_name: str, target: str, source: StoryModel) -> StoryModel:
+    """Write source through the target channel, then read the written files back."""
     folder = ACTUAL / f"from-{source_name}" / f"to-{target}"
     OutputFolder(folder).clear()
     folder.mkdir(parents=True)
+    _write_channel(folder, target, source)
+    return _read_channel(folder, target)
+
+
+def _write_channel(folder: Path, target: str, source: StoryModel) -> None:
     if target == "markdown":
         _write_markdown(source, folder)
+    elif target == "json":
+        _write(folder / "story-graph.json", JsonStoryModel().render(JsonStoryModel(source)))
+    elif target == "drawio":
+        _write(folder / "story-map.drawio", DrawIOStoryModel(source).save())
+    elif target == "miro":
+        _write(folder / "story-map.svg", MiroStoryModel(source).save())
+    else:
+        _write_tree(folder, _CODE_MAPS[target](source).save())
+
+
+def _read_channel(folder: Path, target: str) -> StoryModel:
+    if target == "markdown":
         return MarkdownStoryModel.from_workspace(folder)
     if target == "json":
-        copied = JsonStoryModel(source)
-        _write(folder / "story-graph.json", JsonStoryModel().render(copied))
         return JsonStoryModel().parse((folder / "story-graph.json").read_text(encoding="utf-8"))
     if target == "drawio":
-        _write(folder / "story-map.drawio", DrawIOStoryModel(source).save())
         return DrawIOStoryModel().load((folder / "story-map.drawio").read_text(encoding="utf-8"))
     if target == "miro":
-        _write(folder / "story-map.svg", MiroStoryModel(source).save())
         return MiroStoryModel().load((folder / "story-map.svg").read_text(encoding="utf-8"))
-    maps = {
-        "typescript": TypeScriptStoryModel,
-        "python": PythonStoryModel,
-        "javascript": JavaScriptStoryModel,
-        "java": JavaStoryModel,
-    }
-    story_map_type = maps[target]
-    _write_tree(folder, story_map_type(source).save())
-    return story_map_type().load(_read_tree(folder))
+    return _CODE_MAPS[target]().load(_read_tree(folder))
 
 
-def _story_names(rows: list) -> list:
-    return [row[2] for row in rows if row[0] == "story"]
+def _story_names(entries: list) -> list:
+    return [entry[2] for entry in entries if entry[0] == "story"]
 
 
-def _as_loaded(example, rows):
+def _as_loaded(example, entries):
     if example.channel in _CODE:
-        return _normalize_loaded(rows, example.channel)
-    return rows
+        return _normalize_loaded(entries, example.channel)
+    return entries
 
 
 _STORY_WITHOUT_SCENARIOS = "Hand Off Sign Up To Onboarding"
@@ -296,14 +303,14 @@ with shared_context("a story map saved through a channel"):
         def clauses(steps):
             """(keyword, text, [(keyword, text)]) per clause. The fluent brace surface chains a step that
             repeats the previous step's phase as .and(), so for those channels it reads back as an And."""
-            rows = []
+            entries = []
             for step in steps:
                 ands = [(extra.keyword, extra.text) for extra in step.ands]
-                if self.channel in _FLUENT and rows and step.step_type == rows[-1][3]:
-                    rows[-1][2].extend([("And", step.text)] + ands)
+                if self.channel in _FLUENT and entries and step.step_type == entries[-1][3]:
+                    entries[-1][2].extend([("And", step.text)] + ands)
                     continue
-                rows.append((step.keyword, step.text, ands, step.step_type))
-            return [row[:3] for row in rows]
+                entries.append((step.keyword, step.text, ands, step.step_type))
+            return [entry[:3] for entry in entries]
 
         def check_steps(actual_steps, expected_steps):
             expect(clauses(actual_steps)).to(equal(clauses(expected_steps)))
@@ -365,7 +372,7 @@ with describe("a story map"):
 
     with context("that is loaded from the expected markdown"):
         with it("should include every epic, story, scenario, and step"):
-            kinds = {row[0] for row in self.walks["markdown"]}
+            kinds = {entry[0] for entry in self.walks["markdown"]}
             expect(kinds.issuperset({"epic", "story", "scenario", "step"})).to(equal(True))
 
     with describe("from markdown"):
@@ -384,7 +391,7 @@ with describe("a story map"):
             with included_context("a story map saved through a channel"):
                 pass
             with it("should bring the scenarios back with their steps"):
-                kinds = {row[0] for row in walk(self.loaded)}
+                kinds = {entry[0] for entry in walk(self.loaded)}
                 expect(kinds.issuperset({"scenario", "step"})).to(equal(True))
         with describe("to drawio"):
             with before.all:
@@ -393,7 +400,7 @@ with describe("a story map"):
                 pass
             with context("with scenarios left out of the file"):
                 with it("should bring the epics and stories back and leave the scenarios out"):
-                    kinds = {row[0] for row in walk(self.loaded)}
+                    kinds = {entry[0] for entry in walk(self.loaded)}
                     expect("story" in kinds and "scenario" not in kinds).to(equal(True))
         with describe("to miro"):
             with before.all:
@@ -402,7 +409,7 @@ with describe("a story map"):
                 pass
             with context("with scenarios left out of the file"):
                 with it("should bring the epics and stories back and leave the scenarios out"):
-                    kinds = {row[0] for row in walk(self.loaded)}
+                    kinds = {entry[0] for entry in walk(self.loaded)}
                     expect("story" in kinds and "scenario" not in kinds).to(equal(True))
         with describe("to typescript"):
             with before.all:

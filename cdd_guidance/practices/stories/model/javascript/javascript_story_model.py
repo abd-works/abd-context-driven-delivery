@@ -18,7 +18,6 @@ from cdd_guidance.practices.stories.model.story_model import Epic
 
 class JavaScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = "_story.test.js"
-    LANGUAGE_LINE_COMMENT = "//"
     epic_type = JavaScriptEpic
     story_type = JavaScriptStory
     language = CodeLanguage.named("javascript")
@@ -50,9 +49,6 @@ class JavaScriptStoryModel(BraceStoryModel):
         return sorted(
             p for p in tree if p.endswith(self.LEAF_EXTENSION) and "/story-test.js" not in p
         )
-
-    def _epic_helper_path(self, epic_root: str, epic: Epic) -> str:
-        return f"{epic_root}/{epic.slug()}-helper.js"
 
     def load(self, external: Dict[str, str]) -> "JavaScriptStoryModel":
         if not isinstance(external, dict):

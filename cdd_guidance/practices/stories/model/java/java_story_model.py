@@ -11,12 +11,8 @@ from cdd_guidance.practices.stories.model.story_model import Epic, Story
 
 class JavaStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "Story.java"
-    LANGUAGE_LINE_COMMENT = "//"
     epic_type = JavaEpic
     story_type = JavaStory
-
-    def save(self) -> Dict[str, str]:
-        return self.write_epics({})
 
     def file_name(self, epic: Epic) -> str:
         return f"{epic.pascal()}Story.java"

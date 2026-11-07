@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
@@ -47,6 +48,10 @@ def _python_class_folder(node: "Node", context: "RuleCheckContext") -> "Node | N
 
 
 class MissingModuleContext(PracticeGraphRule):
+    """A folder of classes needs a module card: its own, or one on a folder above it inside the project, because a
+    nested folder without a card rolls up to the nearest enclosing module (`deep-module`). The project's own root card
+    lists the modules; it is not a module's card."""
+
     slug = "missing-module-context"
     node_types = ("OoadClass",)
 
@@ -54,10 +59,23 @@ class MissingModuleContext(PracticeGraphRule):
         folder = _python_class_folder(node, context)
         if folder is None or folder.get_fact("has_module_context", True):
             return []
+        if self._enclosing_card(folder, context):
+            return []
         return [
             f"Module folder '{folder.name}' defines classes but has no .context/module-context.md. "
             "Add one with at minimum: Purpose, Seam, Dependencies."
         ]
+
+
+    def _enclosing_card(self, folder: "Node", context: "RuleCheckContext") -> bool:
+        if context.source_root is None:
+            return False
+        for parent in Path(folder.source.file or "").parents:
+            if parent == Path("."):
+                return False
+            if (Path(context.source_root) / parent / ".context" / "module-context.md").is_file():
+                return True
+        return False
 
 
 class LanguageModulesOneSection(PracticeGraphRule):

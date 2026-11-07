@@ -28,7 +28,7 @@ class ValidationReportFormatter:
         graph_tag = " **[graph rule]**"
         icon = "[X]" if severity == "error" else "[!]" if severity == "warning" else "[i]"
         location_link = self.create_file_link(str(location), line_number)
-        formatted_message = self.format_violation_message(str(message))
+        formatted_message = str(message)
         if "\n" not in formatted_message:
             return [
                 f"- {icon} **{severity.upper()}**{graph_tag} - {location_link}: {formatted_message}"
@@ -45,9 +45,6 @@ class ValidationReportFormatter:
             else:
                 lines.append(f"  {part}")
         return lines
-
-    def format_violation_message(self, message: str) -> str:
-        return message
 
     def create_file_link(self, location: str, line_number: int | None) -> str:
         if not location or location == "unknown":

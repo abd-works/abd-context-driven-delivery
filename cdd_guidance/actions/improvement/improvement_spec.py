@@ -42,7 +42,6 @@ with description("Improvement repair recipe"):
             cls = type(AgentToolSet.instantiate(_IMPROVEMENT))
             self.action = cls()
             self.response = self.action.instructions["repair"].expand(
-                {},
                 {
                     "guidance": [],
                     "asset": "cdd_guidance/practices/base/base_context_tool.md",

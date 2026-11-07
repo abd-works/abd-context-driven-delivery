@@ -27,7 +27,7 @@ def main() -> int:
     started = time.perf_counter()
     host = McpHost.from_refs(refs, repo=str(_REPO), project=str(_REPO))
     print(f"host ready {time.perf_counter() - started:.1f}s", flush=True)
-    host._bind_as_serving()
+    host._mark_as_serving()
     probe = AgentToolsProbe(installer)
     names = probe.published
     print(f"published {len(names)}", flush=True)

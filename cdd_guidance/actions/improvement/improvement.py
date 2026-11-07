@@ -32,7 +32,7 @@ class Improvement(GuidanceAction):
         """Open a domain repair on each listed guidance and instruct the fix.
         asset: path to the file under repair. Pass the file. Do not paste its body.
         violation: the rule name, or a path to the violation report. Do not paste the asset."""
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
         self.repair_loop
 
         def on(item) -> None:
@@ -55,7 +55,7 @@ class Improvement(GuidanceAction):
     def verify_fix(self, guidance: GuidanceArg, theme: str) -> str:
         """Re-run the regression check for a themed repair bucket on each listed guidance.
         theme: the repair bucket to re-check."""
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
         return (
             f"Re-check the repair theme {theme}: re-run the fail-first test written for it, then the original scenario "
             "of each mistake tagged with it. Report each as passing or failing; a failing one reopens the theme for "

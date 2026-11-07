@@ -8,11 +8,11 @@ from harness.installation.installer import Installer
 
 Installer(repo=Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from bdd.bdd import Bdd  # noqa: E402
-from clean_engineering.clean_engineering import CleanEngineering  # noqa: E402
-from ddd.ddd import Ddd  # noqa: E402
-from stories.stories import Stories  # noqa: E402
-from ux.ux import Ux  # noqa: E402
+from cdd_guidance.practices.bdd.bdd import Bdd  # noqa: E402
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering  # noqa: E402
+from cdd_guidance.practices.ddd.ddd import Ddd  # noqa: E402
+from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
+from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
 
 
 with description("a fidelity's declared outputs") as self:

@@ -240,7 +240,7 @@ with description("an agent toolset") as self:
 
                 with it("should return that operation's instructions when the installed tool is invoked"):
                     server = McpServer()
-                    server.bind_from(self.mcp)
+                    server.enroll_from(self.mcp)
                     result = server.invoke_prompt("sample-mcp.generate")
                     expect(result).to(equal("full generate instructions that must not appear in the slash file"))
 
@@ -258,7 +258,7 @@ with description("an agent toolset") as self:
                 with context("with an MCP server started from manifest toolset refs written during that install"):
                     with before.each:
                         self.server = McpServer()
-                        self.server.bind_from(self.mcp)
+                        self.server.enroll_from(self.mcp)
 
                     with it("should enroll that operation as a prompt under the mcp name for generate"):
                         expect("sample-mcp.generate" in self.server.prompts).to(equal(True))
@@ -359,7 +359,7 @@ with description("an agent toolset") as self:
 
             with it("should return the instructions the property assembles when the installed tool is invoked"):
                 server = McpServer()
-                server.bind_from(self.mcp)
+                server.enroll_from(self.mcp)
                 result = server.invoke_prompt("sample-tool.instructions")
                 expect(result).to(equal(self.tool.instructions))
 
@@ -868,7 +868,7 @@ with description("a practice guidance class") as self:
 
         with it("should return the instructions the property assembles when the installed tool is invoked"):
             server = McpServer()
-            server.bind_from(self.mcp)
+            server.enroll_from(self.mcp)
             result = server.invoke_prompt("sample-tool.instructions")
             expect(result).to(equal(self.tool.instructions))
 
@@ -1094,7 +1094,7 @@ with description("a practice guidance class") as self:
 
             with it("should return that fidelity's instructions when the installed tool is invoked"):
                 server = McpServer()
-                server.bind_from(self.mcp)
+                server.enroll_from(self.mcp)
                 sketch = self.tool.fidelities.entries["sketch"]
                 result = server.invoke_prompt("sample-tool-sketch")
                 expect(result).to(equal(sketch.instructions))
@@ -1110,7 +1110,7 @@ with description("a practice guidance class") as self:
                         [self.tool]
                     )
                     self.server = McpServer()
-                    self.server.bind_from(self.mcp)
+                    self.server.enroll_from(self.mcp)
 
                 with after.each:
                     shutil.rmtree(self._branch_tmp, ignore_errors=True)
@@ -1266,7 +1266,7 @@ with description("lifecycle actions annotated for installation") as self:
 
                 with it("should return that operation's instructions when the installed tool is invoked"):
                     server = McpServer()
-                    server.bind_from(self.mcp)
+                    server.enroll_from(self.mcp)
                     result = server.invoke_prompt("generate.generate")
                     expect(str(result)).to(contain("Write artifacts for each listed guidance"))
 

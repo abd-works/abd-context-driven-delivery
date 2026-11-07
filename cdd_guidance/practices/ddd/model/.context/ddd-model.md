@@ -1,8 +1,10 @@
 # Domain Driven Design Model
 
-*BoundedContextMap* reads a path into bounded contexts and aggregates, the way the class model reads files and folders. It looks for markers that stereotype a folder, a file, or a class as a DDD building block. A top-level folder with that marker is a bounded context. A nested bounded context is a bounded context whose parent is a bounded context. Each bounded context holds one or more aggregates. When the path has no bounded context folder, the map has one bounded context and there is no folder for it; the aggregates sit in that context. A bounded context is a module. An aggregate is a module. Entity, value object, repository, domain service, domain event, specification, and factory are classes. An aggregate's root is an entity in that model with `is_root` true. Each one carries its stereotype and the constraints on its operations and relationships. Markdown continues through a class block when the file has one, and stops at the class name when the file has only the name. The graph explorer continues through stereotyped classes it finds in source. Every channel uses the same walk. A channel only differs in how the next node is taken out of the path.
+*BoundedContextMap* reads text into bounded contexts and aggregates, the way the class model reads files and folders. A nested bounded context is a bounded context whose parent is a bounded context. Each bounded context holds one or more aggregates. When the text has no bounded context, the map has one bounded context and there is no folder for it; the aggregates sit in that context. A bounded context is a module. An aggregate is a module. Entity, value object, repository, domain service, specification, and factory are classes; a domain event and an invariant object are properties. An aggregate's root is an entity with `is_root` true. Markdown continues through a class card when the file has one, and stops at the class name when the file has only the name.
 
-Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, draw.io) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back.
+The graph (`DddGraph` in `practices/ddd/graph_practice.py`) reads a bounded context from each folder holding `.context/bounded-context.md`, through `BoundedContext.load_context_folder`, and a building block from each class Clean Engineering read whose declaration or name gives it a DDD stereotype, through `TacticalBuildingBlock.load_tactical_facts`.
+
+Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, drawio) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back. The python and typescript formats are Clean Engineering's class models: `Ddd` converts the map with `to_clean_engineering` and back with `from_clean_engineering`.
 
 ```
 bounded_context_map = MarkdownBoundedContextMap().parse(text)
@@ -11,106 +13,103 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 # practices/ddd/model
 
 - **Purpose:** Structure the software as DDD building blocks — bounded contexts, aggregates, and the stereotyped classes — so the model answers domain logic questions.
-- **Seam (terms):** BoundedContextMap, BoundedContext, Aggregate, Entity, InvariantObject, ValueObject, Repository, DomainService, DomainEvent, Specification, Factory
-- **Dependencies (one-way):** practices/clean_engineering/model — Module, OoadClass, Property, Operation, Relationship
+- **Seam (terms):** BoundedContextMap, BoundedContext, Aggregate, Integration, TacticalBuildingBlock, Entity, InvariantObject, ValueObject, Repository, DomainService, DomainEvent, Specification, Factory, MarkdownBoundedContextMap, SketchDddModel, DrawIOBoundedContextMap, ClassCard
+- **Dependencies (one-way):** practices/clean_engineering/model — Module, OoadClass, Property, Operation, CleanEngineeringModel; harness/graph — Graph, BoundChildren; actions/sketch — SketchOutline, SketchLens
+
+*Module*, *OoadClass*, *Property*, *Operation*, and *CleanEngineeringModel* belong to Clean Engineering; this model only extends or uses them.
 
 ## BoundedContextMap
 
-+ BoundedContextMap(source: BoundedContextMap)
++ BoundedContextMap(source: BoundedContextMap | None = None)
 	// source empty: the map is empty until load
-	// source set: contexts, aggregates, and classes are this channel's types. A nested bounded context uses bounded_context_type
-	// the new map does not keep the source's channel types
+	// source set: each source context becomes this format's context
 ------
 + path: str
 + contexts: list[BoundedContext]
 	// composition — a context has no map outside this bounded context map
 	// a nested bounded context is a bounded context whose parent is a bounded context
-	// no context folder: the map has one context, and that context has no folder
+	// no context in the text: the map has one context, and that context has no folder
 + bounded_context_type: type
 + aggregate_type: type
++ every_aggregate: list[Aggregate]
+	// every context's aggregates, nested contexts included
 ----
 + load(path: str): BoundedContextMap
-	// stores path, then runs the same walk for every channel
+	// stores path, then runs the same walk for every format
 	self.path = path
 	self.load_bounded_context_map_content()
 	self.load_bounded_contexts()
 + save(): str
-	// every channel writes its path with this operation
++ append_context(context: BoundedContext): None
 - load_bounded_context_map_content(): None
-	// channel prepares its cursor over path
+	// the format prepares its cursor over path
 - load_bounded_contexts(): None
 	// while has_more_bounded_context: append load_next_bounded_context()
 - has_more_bounded_context(): bool
-	// channel: another context folder remains in the path
-	// no context folder: one context, and it has no folder
 - load_next_bounded_context(): BoundedContext
 	// context = get_next_bounded_context_from_file()
 	// -> context.load_bounded_contexts()
 	// -> context.load_aggregates()
 - get_next_bounded_context_from_file(): BoundedContext
-	// channel: the next context shell from the path, in bounded_context_type
-	// the marker on the folder says this folder is a bounded context
+	// the format: the next context shell, in bounded_context_type
 
 ## BoundedContext : Module
 
-+ BoundedContext(source: BoundedContext)
++ BoundedContext(name: str, sequential_order: int, source: BoundedContext | None = None, graph: Graph | None = None)
 	// copies name, owner, and order
 	// a nested bounded context is a bounded context whose parent is a bounded context
-	// each source child context becomes this channel's context
-	// each source aggregate becomes this channel's aggregate
 ------
 + owner: str
 	// the heading text after |
-+ contexts: list[BoundedContext]
-	// a nested bounded context is a bounded context whose parent is a bounded context
-+ aggregates: list[Aggregate]
++ contexts: BoundChildren[BoundedContext]
++ aggregates: BoundChildren[Aggregate]
 	// composition — an aggregate has no context outside this one
-	// one or more aggregates in this context
++ every_aggregate: list[Aggregate]
+	// this context's aggregates, then those of every context nested in it
++ enclosing_contexts: list[BoundedContext]
+	// outermost first, ending with this context
 ----
 + append_context(context: BoundedContext): None
 + append_aggregate(aggregate: Aggregate): None
-- load_bounded_contexts(): None
++ load_context_folder(folder: Path): None
+	// the name is the title of .context/bounded-context.md, else the folder's name
++ load_bounded_contexts(): None
 	// while has_more_bounded_context: append_context(load_next_bounded_context())
-- has_more_bounded_context(): bool
-	// channel: another child context folder remains
-- load_next_bounded_context(): BoundedContext
-	// child = get_next_bounded_context_from_file()
-	// -> child.load_bounded_contexts()
-	// -> child.load_aggregates()
-- get_next_bounded_context_from_file(): BoundedContext
-	// channel: the next child context, in the map's bounded_context_type
-- load_aggregates(): None
++ load_aggregates(): None
 	// while has_more_aggregate: append_aggregate(load_next_aggregate())
+- has_more_bounded_context(): bool
+- load_next_bounded_context(): BoundedContext
+- get_next_bounded_context_from_file(): BoundedContext
+	// the next child context, in the map's bounded_context_type
 - has_more_aggregate(): bool
-	// channel: another aggregate remains in this context
 - load_next_aggregate(): Aggregate
 	// aggregate = get_next_aggregate_from_file()
 	// -> aggregate.load_root()
 - get_next_aggregate_from_file(): Aggregate
-	// channel: the next aggregate shell from the path, in the map's aggregate_type
-	// the marker on the folder or file says this is an aggregate
+	// the next aggregate shell, in the map's aggregate_type
 
 ## Aggregate : Module
 
-+ Aggregate(source: Aggregate)
++ Aggregate(name: str, sequential_order: int, source: Aggregate | None = None)
 	// copies name and order
-	// the root is this channel's entity, the same entity already in the model
-	// each source integration becomes this channel's integration
+	// each source integration becomes this format's integration
 ------
-+ root: Entity
++ root: Entity | None
 	// the entity in this aggregate whose is_root is true
 + integrations: list[Integration]
 	// an arrow that sits on the aggregate
++ events: list[DomainEvent]
+	// the domain events the root emits
 ----
-- load_root(): None
-	// root is the Entity in this aggregate whose is_root is true
-	// that entity's aggregate is this aggregate
++ take_root(entity: Entity): None
+	// the entity becomes the root, its only way in, and records this aggregate
++ load_root(): None
+	// -> take_root(root)
 	// -> root.load_invariant_objects()
-	// iterating this aggregate includes those objects. The entity does that walk
 
 ## Integration
 
-+ Integration(source: Integration)
++ Integration(source: Integration | None = None)
 	// copies the target and the arc
 ------
 + context: str
@@ -122,116 +121,153 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 + integration: str
 + pattern: str
 	// Shared Kernel, Customer/Supplier, Conformist, Anticorruption Layer, Open Host / Published Language, or Separate Ways
++ target_parts: tuple[str, str, str]
+	// the target's context, aggregate, and entity
++ target_name: str
+	// the entity when the target names one, else the aggregate
 
-## Entity : OoadClass
+## TacticalBuildingBlock : OoadClass
 
-+ Entity(source: Entity)
-	// copies identity and is_root
-	// each source invariant object becomes this channel's property
-	// when is_root: copies the aggregate this root is for
+A class-shaped DDD building block. It is the parsed class seen through DDD, so it carries that class's facts and the tactical facts DDD rules read.
+
+------
++ peer_private_operations: list[str]
++ public_derive_operations: list[str]
++ delegating_operations: list[str]
++ identity_free_loads: list[str]
+	// load, get, find, or fetch with no parameters that reads ambient state such as the session or request
++ tactical_stereotype: bool
+----
++ load_tactical_facts(parsed: OoadClass, file_text: str): None
++ tactical_kind(): str
+	// EntityRoot for a root entity, else the building block's name
+
+## Entity : TacticalBuildingBlock
+
++ Entity(name: str, sequential_order: int, source: Entity | None = None)
+	// copies identity, is_root, and the aggregate
+	// each source invariant object becomes an invariant object here
 ------
 + identity: list[Property]
 	// the properties that keep this entity the same thing
 + is_root: bool
 	// true when this entity is an aggregate's root
-+ aggregate: Aggregate
++ aggregate: Aggregate | None
 	// the aggregate this root is for. Set when is_root is true
 + invariant_objects: list[InvariantObject]
 	// composition — properties with the invariant stereotype. These sub-objects change with this entity
 + invariant_object_type: type
 ----
-- load_invariant_objects(): None
++ load_invariant_objects(): None
 	// while has_more_invariant_object: append load_next_invariant_object()
 - has_more_invariant_object(): bool
 - load_next_invariant_object(): InvariantObject
-	// object = get_next_invariant_object_from_file()
 - get_next_invariant_object_from_file(): InvariantObject
-	// channel: the next property with the invariant stereotype
+	// the format: the next property with the invariant stereotype
 
 ## InvariantObject : Property
 
-+ InvariantObject(source: InvariantObject)
++ InvariantObject(name: str, sequential_order: int, source: InvariantObject | None = None)
 	// copies name, order, type hint, description, and access
-	// stereotype is invariant
 ------
 + stereotype: str
 	// invariant
 
-## ValueObject : OoadClass
+## ValueObject : TacticalBuildingBlock
 
-+ ValueObject(source: ValueObject)
-	// no write operations
-	// no setters
-	// create, clone, and mix are only state mutation ops EG always returns a new instance
++ ValueObject(name: str, sequential_order: int, source: ValueObject | None = None)
+	// no write operations and no setters
+	// create, clone, and mix always return a new instance
 ------
 ----
 + create(): ValueObject
 + clone(): ValueObject
 + mix(other: ValueObject): ValueObject
 
-## Repository : OoadClass
+## Repository : TacticalBuildingBlock
 
-+ Repository(source: Repository)
-	// a repository is a collection
-	// each operation is create, read, update, delete, or search
-	// a repository has any of these, not all of them
-	// search may appear more than once. Its name is search and what it searches
-	// copies the root this repository collects
++ Repository(name: str, sequential_order: int, source: Repository | None = None)
+	// a repository is a collection; it copies the root it collects
 ------
-+ accesses: Entity
++ accesses: Entity | None
 	// the entity in the model whose is_root is true
 + operations: list[Operation]
 	// any of create, read, update, delete, and search. Not all of them
 	// a search may appear more than once. Its name is search and what it searches
 
-## DomainService : OoadClass
+## DomainService : TacticalBuildingBlock
 
-+ DomainService(source: DomainService)
++ DomainService(name: str, sequential_order: int, source: DomainService | None = None)
 	// no state
 	// an operation here is one no domain object can perform
-------
 
 ## DomainEvent : Property
 
-+ DomainEvent(source: DomainEvent)
-	// copies name, order, type hint, description, and access
-	// copies the producer and the subject
-	// each source consumer becomes this channel's aggregate or domain service
++ DomainEvent(name: str, sequential_order: int, source: DomainEvent | None = None)
+	// copies name, order, type hint, description, access, producer, consumers, and subject
 ------
-+ producer: Aggregate
++ producer: Aggregate | None
 + consumers: list[Aggregate | DomainService]
 	// one or many
 + subject: Property
 	// the state of the event. A domain event always has one
 
-## Specification : OoadClass
+## Specification : TacticalBuildingBlock
 
-## Factory : OoadClass
+## Factory : TacticalBuildingBlock
+
+`building_block_type(stereotypes)` names the class a card with those stereotypes is read into: specification, value object, repository, domain service (or service), factory, entity, or aggregate root (an entity); a card with none is a plain *OoadClass*.
 
 ## MarkdownDomainNode
 
 + plain_name(text: str): str
-	// stars and << >> removed. Context, aggregate, and class names all come through this
+	// ** and backticks removed, and the text before |. Context, aggregate, and class names all come through this
 + owner_from(heading: str): str
 	// the text after | on a context heading
-+ stereotypes(text: str): list[str]
-	// the << >> tags on a class block
-+ building_block_type(text: str): type
-	// specification, entity, value object, repository, domain event, domain service, factory. An entity with is_root is the aggregate root
-	// no tag: OoadClass
 
-## MarkdownBoundedContextMap : BoundedContextMap
+## ClassCard
 
-+ MarkdownBoundedContextMap(source: BoundedContextMap)
+One `####` card in markdown: a classified class with its stereotypes.
+
++ ClassCard(node: OoadClass, stereotypes: list[str])
++ ClassCard.from_heading(heading: str): ClassCard
++ ClassCard.from_name(name: str, stereotypes: list[str]): ClassCard
+	// the class is typed by building_block_type
+------
++ node: OoadClass
++ stereotypes: list[str]
++ invariants: list[str]
++ is_root: bool
++ is_repository: bool
++ heading: str
+----
++ add_member(line: str, as_operation: bool): Property | Operation | None
+	// one `+ name: Type` or `+ name(parameters): Type` line onto the card's class
++ lines(): list[str]
++ property_lines(): list[str]
++ operation_lines(): list[str]
++ sketch_lines(): list[str]
+
+## MarkdownBoundedContextMap : BoundedContextMap, MarkdownDomainNode
+
+The `markdown` format.
+
++ MarkdownBoundedContextMap(source: BoundedContextMap | None = None)
 ------
 + bounded_context_type: MarkdownBoundedContext
 + aggregate_type: MarkdownAggregate
 ----
++ parse(text: str): MarkdownBoundedContextMap
++ render(canonical: BoundedContextMap | None = None, previous: str | None = None): str
++ save(): str
+	// contexts, then the event map
++ wire_events(entries: list[str]): None
+	// each `Event: emitted by Producer; consumed by A, B` entry onto its producer's root
 - load_bounded_context_map_content(): None
-	// cursor is the markdown headings and bullets in file
+	// the lines of the file at path
 - has_more_bounded_context(): bool
 - get_next_bounded_context_from_file(): MarkdownBoundedContext
-+ save(): str
+	// the next `## Context | owner` heading
 
 ## MarkdownBoundedContext : BoundedContext, MarkdownDomainNode
 
@@ -245,6 +281,8 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 	// the notes under each heading that groups aggregates
 ----
 + lines(): list[str]
++ read_note(line: str, group: str | None): None
+	// to the group it sits under, else the module, else the context
 
 ## MarkdownAggregate : Aggregate, MarkdownDomainNode
 
@@ -262,35 +300,53 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 ----
 + load_root(): None
 + take_root_card(): None
+	// the <<Aggregate Root>> card's class becomes the root
 + lines(): list[str]
-
-## MarkdownIntegration : Integration, MarkdownDomainNode
-
-## MarkdownProperty : Property, MarkdownDomainNode
-
-## MarkdownOperation : Operation, MarkdownDomainNode
++ integration_lines(indent: str = ""): list[str]
+	// the aggregate's arcs under `Integrations:` and the root's events under `emits events:`
 
 ## MarkdownEntity : Entity, MarkdownDomainNode
 
++ MarkdownEntity(name: str, sequential_order: int, member_lines: list[str] | None = None)
+----
 - has_more_invariant_object(): bool
 - get_next_invariant_object_from_file(): MarkdownInvariantObject
 
 ## MarkdownInvariantObject : InvariantObject, MarkdownDomainNode
 
-## MarkdownValueObject : ValueObject, MarkdownDomainNode
+## MarkdownIntegration : Integration, MarkdownDomainNode
 
-## MarkdownRepository : Repository, MarkdownDomainNode
+## SketchDddModel : MarkdownBoundedContextMap
 
-## MarkdownDomainService : DomainService, MarkdownDomainNode
+The `sketch` format: the `domain driven design:` section of an integrated sketch.
 
-## MarkdownDomainEvent : DomainEvent, MarkdownDomainNode
+----
++ parse(text: str): SketchDddModel
+	-> SketchOutline.body_for
++ render(canonical: BoundedContextMap | None = None, previous: str | None = None): str
 
-## MarkdownSpecification : Specification, MarkdownDomainNode
+## DrawIOBoundedContextMap : MarkdownBoundedContextMap
 
-## MarkdownFactory : Factory, MarkdownDomainNode
+The `drawio` format.
 
-## Graph explorer loading
+----
++ parse(text: str): DrawIOBoundedContextMap
+	// the aggregate view page reads through DrawIOAggregateModel; any other page is the context map
++ render(canonical: BoundedContextMap | None = None, previous: str | None = None): str
+	// aggregates with class cards (model fidelity): the aggregate view; otherwise the context map
+	-> DrawIOAggregateModel.render
 
-`harness/graph/working_copy.py` builds DDD nodes from bounded-context markdown, folder structure, and clean-engineering class stereotypes via `_record_ddd`.
+## DrawIOAggregateModel
 
-`BoundedContextMap` loads the contexts. A nested bounded context is a bounded context whose parent is a bounded context. When the path has no context folder, the map has one context and that context has no folder. `BoundedContext` loads its child contexts and its aggregates. `Aggregate` knows its root: the `Entity` in the model whose `is_root` is true, and that entity records the aggregate. `Entity` loads its invariant objects. An invariant object is a property with the invariant stereotype, and it changes with the entity. An iteration of an aggregate includes those properties, and that walk stays on the entity. Every map implements `save(): str`. Markdown extends the base types and adds `MarkdownDomainNode`: `plain_name`, `owner_from`, `stereotypes`, and `building_block_type`. The graph loader registers stereotyped types from source and continues through the building block. A channel overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its path contains. A markdown map is one file. A folder path is context folders, then nested context folders, then aggregate folders. No context folder means one context and no folder for it. The loader reads the same markers on source files.
+Writes and reads the aggregate view: each context a dashed box, its aggregates inside, and each aggregate's class cards.
+
++ DrawIOAggregateModel()
+----
++ render(model: BoundedContextMap): str
++ contexts_in(diagram: DrawnDiagram): list[MarkdownBoundedContext]
+
+## Clean Engineering conversion
+
+`to_clean_engineering(bounded_context_map)` makes one *Module* per aggregate, each class keeping its stereotypes and place (`Context · Aggregate`) in its intent. `from_clean_engineering(model)` rebuilds contexts and aggregates from each class's place, or groups classes around their roots. Both live in `clean_engineering_bridge.py`.
+
+`BoundedContextMap` loads the contexts. `BoundedContext` loads its child contexts and its aggregates. `Aggregate` knows its root: the `Entity` whose `is_root` is true, and that entity records the aggregate. `Entity` loads its invariant objects; an invariant object is a property with the invariant stereotype, and it changes with the entity. A format overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its text contains, plus `parse` and `render`.

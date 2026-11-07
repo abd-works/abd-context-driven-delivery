@@ -11,7 +11,6 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
-sys.modules.pop("sketch", None)
 
 from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it

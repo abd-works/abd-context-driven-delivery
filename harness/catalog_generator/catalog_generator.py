@@ -38,7 +38,7 @@ from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.markdown.format import Format
 from harness.markdown.markdown import MarkdownText
-from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.installation.destination import NoCatalog, noCatalog
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
@@ -168,7 +168,7 @@ def catalog_practices() -> list[CatalogPractice]:
 UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("installer", "harness.installation.installer", "Installer"),
     ("diagnose", "cdd_guidance.actions.diagnose.diagnose", "Diagnose"),
-    ("echo", "echo.echo", "Echo"),
+    ("echo", "tools.echo.echo", "Echo"),
     ("repo", "space.repo.repo", "Repo"),
 )
 
@@ -465,9 +465,9 @@ class LifecycleAction:
 
     @property
     def request_toolset(self) -> str:
-        """The kit as a run request names it, with the actions folder on the import path, such as
-        ``generate.generate:Generate``."""
-        return f"{self.module.removeprefix('cdd_guidance.actions.')}:{self.class_name}"
+        """The kit as a run request names it, by the module's full name so the run loads it only once, such as
+        ``cdd_guidance.actions.generate.generate:Generate``."""
+        return f"{self.module}:{self.class_name}"
 
 
 # Every lifecycle action, in the order the catalog lists them. createRule is an action of the Validate kit.
@@ -1515,7 +1515,7 @@ class Catalog:
 
         Call ``generate_project_approach`` with ``project_root``, ``out_root``,
         ``project_title``, ``repo_url``, and ``examples_json``."""
-        self.generate_project_approach()
+        tools(self.generate_project_approach)
         return "Project approach slide generated."
 
     def write_page(self, relative_path: str, html: str) -> Path:

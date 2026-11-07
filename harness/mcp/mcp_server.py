@@ -161,7 +161,6 @@ class McpInstallation(Installation):
     def __init__(self, ide: str, path: Path | str, toolset_ref: str = "", repo: Path | str | None = None) -> None:
         super().__init__(ide, path, toolset_ref, repo=repo)
         self.mcp_operations: list[AgentTool] = []
-        self._bound = False
         self.host: McpHost | None = None
         self.diagnosis: dict[str, Any] | None = None
 
@@ -337,8 +336,7 @@ class McpInstallation(Installation):
         path = Path(self.path)
         return path.parent if path.name in {".cursor", ".claude"} else path
 
-    def bind(self, server: Any) -> None:
-        self._bound = True
+    def enroll_operations(self, server: Any) -> None:
         for tool in self.mcp_operations:
             server.enroll(tool)
 
@@ -468,8 +466,8 @@ class McpServer:
         else:
             self._prompts[name] = tool
 
-    def bind_from(self, installation: McpInstallation) -> None:
-        installation.bind(self)
+    def enroll_from(self, installation: McpInstallation) -> None:
+        installation.enroll_operations(self)
         if installation not in self.mcp_installations:
             self.mcp_installations.append(installation)
 
@@ -646,7 +644,7 @@ class McpHost:
         with self._runtimes_lock:
             return sorted(self._runtimes)
 
-    def _bind_as_serving(self) -> None:
+    def _mark_as_serving(self) -> None:
         global _SERVING_MCP_HOST
         _SERVING_MCP_HOST = self
 
@@ -857,7 +855,7 @@ class McpHost:
 
         from harness.mcp.listening_loop import ListeningLoop
 
-        self._bind_as_serving()
+        self._mark_as_serving()
         daemon.publish(self._runtime.repo)
         try:
             server = uvicorn.Server(uvicorn.Config(self.http_app(daemon.port), log_level="warning"))

@@ -49,12 +49,6 @@ def project_checkout() -> Path:
     return _repo_at(project_folder()).checkout_folder
 
 
-def board_checkout() -> Path:
-    """The checkout whose ``.sessions/`` holds the board. A ticket's worktree is a linked worktree of the project, so
-    a chat working there reads the same board as one in the main checkout."""
-    return _repo_at(project_checkout()).primary_root()
-
-
 @contextmanager
 def working_on(project: Path | str) -> Iterator[Path]:
     """Run one call on ``project``: inside it, ``project_folder()`` is that folder and ``project_checkout()`` the

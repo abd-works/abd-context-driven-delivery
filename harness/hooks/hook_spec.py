@@ -700,7 +700,7 @@ with description("inject_rules hook dispatch"):
                     "hook_event_name": "postToolUse",
                     "tool_name": "Write",
                     "tool_input": {
-                        "path": "harness/kanban/.context/kanban-sketch.md"
+                        "path": "space/kanban/.context/kanban-sketch.md"
                     },
                 },
                 toolsets=[Bdd()],
@@ -715,7 +715,7 @@ with description("inject_rules hook dispatch"):
                     "hook_event_name": "postToolUse",
                     "tool_name": "Write",
                     "tool_input": {
-                        "path": "harness/kanban/.context/kanban-sketch.md"
+                        "path": "space/kanban/.context/kanban-sketch.md"
                     },
                 },
                 toolsets=[CleanEngineering()],
@@ -725,7 +725,7 @@ with description("inject_rules hook dispatch"):
     with context("that receives a sketch action payload with listed BDD"):
 
         with it("should inject listed BDD rules without a matching path"):
-            from sketch.sketch import Sketch
+            from cdd_guidance.actions.sketch.sketch import Sketch
 
             out = _dispatch(
                 {

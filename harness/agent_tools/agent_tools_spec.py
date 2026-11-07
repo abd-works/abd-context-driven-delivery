@@ -41,7 +41,7 @@ from harness.agent_tools._examples.super_delegation.super_delegation_demo import
     ExplicitSuperChild,
     SuperBase,
 )
-from agent_bdd.yaml_fence import load_fenced
+from cdd_guidance.practices.agent_bdd.yaml_fence import load_fenced
 from harness.agent_tools.agent_tools import AgentToolSet, agent_tool as _tool, tool_subject, tools, instructions
 
 Car = AgentToolSet._load("cdd_guidance.practices._examples.car.car:Car")
@@ -217,7 +217,7 @@ with description("a class"):
                     "destination": "Hazzard County courthouse",
                     "conditions": "muddy back roads",
                 }
-                response = CarStory().instructions["travelTo"].expand({}, arguments)
+                response = CarStory().instructions["travelTo"].expand(arguments)
                 expect(response.result).to(
                     equal("Instructions for traveling to Hazzard County courthouse")
                 )
@@ -232,7 +232,6 @@ with description("a class"):
                 from harness.agent_tools._examples.logged_probe import LoggedProbe
 
                 response = LoggedProbe().instructions["narrate"].expand(
-                    {},
                     {"message": "hello"},
                 )
                 expect(response.tools).to(equal(["ping"]))
@@ -293,7 +292,6 @@ with description("an action"):
             from harness.agent_tools._examples.templated_md import TemplatedMdDemo
 
             response = TemplatedMdDemo(label="Desk").instructions["greet"].expand(
-                {},
                 {"name": "Pat"},
             )
             expect("Greet Pat on behalf of Desk" in response.instructions).to(be_true)
@@ -959,7 +957,7 @@ with description("an @agent_instructions body with a line that fails"):
     with context("with a return that fails"):
         with it("should stop the expansion instead of sending the return's source as instructions"):
             body = AgentInstructions.for_callable(_BrokenLineAgent.return_missing, _BrokenLineAgent())
-            expect(lambda: body.expand({}, {})).to(raise_error(RecipeLineFailed, contain("self.missing_text")))
+            expect(lambda: body.expand({})).to(raise_error(RecipeLineFailed, contain("self.missing_text")))
 
 
 with description("a cross-instance call whose provider cannot resolve"):
@@ -1187,11 +1185,11 @@ with description("a class annotated as a toolset collection"):
         expect(isinstance(bag, ToolSetCollection)).to(equal(True))
         expect(ToolSetCollectionMark.marks(type(bag))).to(equal(True))
 
-    with it("should bind the collection onto the instance"):
+    with it("should attach the collection to the instance"):
         host = type("Host", (), {})()
         host.bag = _MarkedBag()
         replacement = _MarkedBag()
-        replacement.bind(host)
+        replacement.attach(host)
         expect(host.bag is replacement).to(equal(True))
         expect(replacement.parent).to(equal(host))
 
@@ -1275,6 +1273,29 @@ class Parcel:
         return f"{self.label} from {self.depot} to {destination}"
 
 
+@agent_toolset
+class Crate:
+    """A crate in the project a call works on."""
+
+    def __init__(self, label: str, project: Path) -> None:
+        self.label = label
+        self.project = project
+
+    @classmethod
+    @tool_subject
+    def load(cls, crate: str, *, project: Path) -> "Crate":
+        return cls(crate, Path(project))
+
+    @classmethod
+    @_tool
+    def pack(cls, label: str, *, project: Path) -> str:
+        return f"{label} packed in {Path(project).name}"
+
+    @_tool
+    def ship(self) -> str:
+        return f"{self.label} shipped from {self.project.name}"
+
+
 with description("a domain class whose constructor takes collaborators"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
@@ -1298,3 +1319,24 @@ with description("a domain class whose constructor takes collaborators"):
         with it("should leave a classmethod tool to take only its own arguments"):
             receive = AgentToolSet.instantiate(Parcel).tools["receive"]
             expect(list(receive.parameters)).to(equal(["label"]))
+
+    with context("whose loader takes the project the call works on"):
+        with before.each:
+            self.project = ThrowawayProject().root
+
+        with it("should leave the project out of the tool's arguments, since no caller passes it"):
+            ship = AgentToolSet.instantiate(Crate).tools["ship"]
+            expect(list(ship.parameters)).to(equal(["crate"]))
+
+        with it("should load the object from the project the call works on"):
+            ship = AgentToolSet.instantiate(Crate).tools["ship"]
+            expect(ship.callable(crate="crate-1")).to(equal(f"crate-1 shipped from {self.project.name}"))
+
+        with context("with a classmethod tool that takes the project too"):
+            with it("should leave the project out of its arguments"):
+                pack = AgentToolSet.instantiate(Crate).tools["pack"]
+                expect(list(pack.parameters)).to(equal(["label"]))
+
+            with it("should hand it the project the call works on"):
+                pack = AgentToolSet.instantiate(Crate).tools["pack"]
+                expect(pack.callable(label="crate-2")).to(equal(f"crate-2 packed in {self.project.name}"))

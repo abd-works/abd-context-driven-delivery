@@ -42,6 +42,9 @@ class _DddReading:
         self._blocks: dict[str, Node] = {}
 
     def read(self) -> None:
+        """Read the practice's folder; a folder not written yet, such as a session's code root, holds no contexts."""
+        if not self.root.is_dir():
+            return
         self.practice.graph.report_progress("ddd · bounded contexts")
         contexts = self._contexts()
         for folder, members in sorted(self._members_by_folder().items()):

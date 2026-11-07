@@ -30,7 +30,7 @@ How anything outside Python reaches the **CDD domain**. The domain, its rules, a
 | Domain | `cdd_guidance/practices/<practice>/*.py`, `cdd_guidance/patterns/<pattern>/*.py`, `cdd_guidance/actions/<action>/*.py`, `space/<domain>/*.py` | The Python classes. Every rule, decision, and piece of state lives here. |
 | Tool | The same file, marked `@mcp @agent_tool` | One operation for each thing a person or agent does. The tool reads `{object}.{operation}`. |
 | Contract | The class's properties marked `@data_field`, with their return types | The only agreement between the languages. MCP sends exactly those properties, and the language adapter writes `{Object}Data` from the same ones, so the two cannot disagree. |
-| Mark | `@language_adapter(language="typescript", identity="name")` on the class | Opts the toolset in to the language adapter for that language. `identity` names the data field that holds the object's name, so a browser object knows which object its routes act on. |
+| Mark | `@language_adapter(language="typescript")` and `@identity("name")` on the class | `@language_adapter` opts the toolset in to the language adapter for that language. `@identity` names the data field that holds the object's name, so a browser object knows which object its routes act on, and a reference field elsewhere can name the object by it. |
 | Language adapter | `<install path>/language-adapters/<language>/<source folders>/<object>.<ext>` | Generated: `{Object}Data`, `{Object}`, `{Object}Adapter`, `{Object}ClientGenerated`, `{object}Routes`, `use{Object}`, and the starting-point views. |
 | Connection | `<install path>/language-adapters/<language>/cdd-connection.<ext>` | Generated: `CddConnection`, once per install. |
 
@@ -137,7 +137,8 @@ The route is the tool's object, then the object's identity when the tool loads o
 The installer treats a language adapter as one more channel, beside skills, commands, rules, MCP, and hooks. It walks the same toolsets, reads the same marks, tracks what it writes so `clean` removes it, and reports it in `diagnostics.json`. Like the rest of the install it is generated, never edited, and not committed, so run the installer on a fresh clone before building. Each language gets its own folder under `language-adapters/`; a new language adds a writer for that folder and changes nothing in the Python domain or its tools. The TypeScript adapter below is the first.
 
 ```python
-@language_adapter(language="typescript", identity="name")
+@identity("name")
+@language_adapter(language="typescript")
 @agent_toolset
 class Ticket(Card):
     @property
@@ -145,8 +146,10 @@ class Ticket(Card):
     def name(self) -> str: ...
 
     @property
-    @data_field(key="column")
-    def column_name(self) -> str: ...
+    @data_field(reference=True)
+    def column(self) -> Column: ...
+        # sent as {"name": "Discovery"}: the column sends the ticket in full, so the ticket names the column by its
+        # @identity alone
 ```
 
 ```
@@ -154,7 +157,7 @@ class Ticket(Card):
 ├── cdd-connection.ts            CddConnection, using only Node's own modules
 ├── cdd-shared.ts                what every object shares and a browser can load: reading a request, the page's API, the errors
 ├── cdd-views.tsx                the inputs, buttons, and forms every generated view draws
-├── harness/kanban/
+├── space/kanban/
 │   ├── ticket.ts                every generated class: TicketData, Ticket, TicketClientGenerated, TicketAdapter, ticketRoutes
 │   ├── ticket-views.tsx         useTicket, TicketViewGenerated, TicketNewViewGenerated
 │   ├── board.ts
@@ -231,7 +234,7 @@ export const ticketRoutes: CddRoute[] = [
 - A route reads the operation's arguments from the body, checked against the tool's published schema, and raises `CddRequestError` when one is missing or the wrong type. The schema already says what each argument is, so the application writes no parsing.
 - `CddApi.post` answers `null` once the page has shown the person a failure, so a browser operation then keeps its state and returns `null`, and the page stops there.
 - Page code that knows only a name builds `{Object}ClientGenerated.named(api, name)` and acts on that object before it has read it.
-- An object without `identity`, such as the one board, has routes with no name in them.
+- An object without `@identity`, such as the one board, has routes with no name in them.
 
 ### Generated views
 
@@ -337,7 +340,7 @@ The Python domain keeps its own Mamba specs, and `{object}.{operation}` keeps it
 ## Generate
 
 1. Follow **session_guidance**. Start from the Python: name the classes this slice exposes, read their `.context/`, and list their `@mcp @agent_tool` operations.
-2. Add any missing domain operation and its Mamba spec first. Mark each property the application reads with `@data_field`, annotate each operation with the class it returns, and mark the class with `@language_adapter(language=..., identity=...)`: the application's language, such as `"typescript"`, and the data field that names the object.
+2. Add any missing domain operation and its Mamba spec first. Mark each property the application reads with `@data_field`, annotate each operation with the class it returns, mark the class with `@language_adapter(language=...)`, the application's language such as `"typescript"`, and with `@identity(...)`, the data field that names the object.
 3. Run `python scripts/install.py --ide Claude`. The language adapter follows, with the skills, commands, and MCP entry.
 4. Point the `@cdd/*` path alias at `<install path>/language-adapters/typescript/`, and alias `react` to the application's own copy so the generated views resolve it.
 5. Construct one `CddConnection` on the application's server and mount every `{object}Routes` on it. Subclass `{Object}ClientGenerated` for what only the page knows, and build pages by composing the generated views, or copying one and changing it. The application's pattern says where each lives.
@@ -366,7 +369,7 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - **`views-are-a-starting-point`** — Compose a generated view into the application's own page, or copy it into the application's source and change it; never ship one as the page itself. It knows the object's fields and operations but nothing about the page it sits on.
 - **`edits-go-through-operations`** — A view changes a field only by calling the domain operation that changes it, and shows a field no operation changes as read-only. A view that writes a field directly decides in the browser what only Python may decide.
 - **`views-share-the-client-state`** — A view reads its object through `use{Object}(client)` and keeps no copy of the object's state. A second copy shows the old state after an operation returns.
-- **`mark-toolsets-that-return-data`** — Mark a toolset with `@language_adapter` when an application needs its results as data, and name its `identity` when a tool loads one object. Marking one that returns prompt text adds an adapter nobody can type.
+- **`mark-toolsets-that-return-data`** — Mark a toolset with `@language_adapter` when an application needs its results as data, and mark its `@identity` when a tool loads one object. Marking one that returns prompt text adds an adapter nobody can type.
 
 ### One line from adapter to domain
 

@@ -38,15 +38,15 @@ from harness.installation.files import Skill, skill
 from harness.installation.installer import Installer
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.stories.stories import Stories
-from generate.generate import Generate
-from partition.partition import Partition
+from cdd_guidance.actions.generate.generate import Generate
+from cdd_guidance.actions.partition.partition import Partition
 
 
 with description("Build Run Request From Live Toolset Manifest"):
     with description("given a context tool class and an action name"):
         with it("fills toolset, constructor context, action, and action arguments from Cls.manifest"):
             req = build_run_request(Partition, action="partition")
-            expect(req["toolset"]).to(equal("partition.partition:Partition"))
+            expect(req["toolset"]).to(equal("cdd_guidance.actions.partition.partition:Partition"))
             expect(req["action"]).to(equal("partition"))
             expect("context" in req["arguments"]).to(be_true)
             expect("mode" in req["arguments"]).to(be_true)
@@ -58,13 +58,13 @@ with description("Build Run Request From Live Toolset Manifest"):
 
         with it("fills Generate kit generate with a guidance argument"):
             req = build_run_request(Generate, action="generate")
-            expect(req["toolset"]).to(equal("generate.generate:Generate"))
+            expect(req["toolset"]).to(equal("cdd_guidance.actions.generate.generate:Generate"))
             expect(req["action"]).to(equal("generate"))
             expect("guidance" in req["arguments"]).to(be_true)
 
         with it("routes Stories generate through the Generate kit so action generate is live"):
             req = build_run_request(Stories, action="generate", fidelity="story_map")
-            expect(req["toolset"]).to(equal("generate.generate:Generate"))
+            expect(req["toolset"]).to(equal("cdd_guidance.actions.generate.generate:Generate"))
             expect(req["action"]).to(equal("generate"))
             host = req["arguments"]["guidance"][0]
             expect(host["toolset"]).to(equal("cdd_guidance.practices.stories.stories:Stories"))

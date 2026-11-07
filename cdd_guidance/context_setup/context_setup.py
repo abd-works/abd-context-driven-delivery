@@ -357,9 +357,9 @@ class ContextSetup:
         Keep capture_repo set, then call complete_capture(repo_path=repo_path, missing_pages=missing_pages).
         After capture, call context_index.embed(segments_paths=[capture_result.overview_path])
         to index the updated overview and report all pages captured."""
-        self.smoke_test()
-        self.scout_app()
-        self.complete_capture()
+        tools(self.smoke_test)
+        tools(self.scout_app)
+        tools(self.complete_capture)
         tools(self.context_index.embed())
         return "Live app captured and indexed."
 
@@ -378,7 +378,7 @@ class ContextSetup:
         Inspect the returned structure_notes.  If any note shows heading_depth=0 and
         word_count > 200, note it for the user — the document may need a semantic re-pass
         before partitioning gives useful results (do not block; continue to Step 2)."""
-        self.convert()
+        tools(self.convert)
         """Step 2 — Choose Indexers:
         If indexers is None or empty, ask the user via AskQuestion (allow_multiple=True):
           Which context tools should index this content?

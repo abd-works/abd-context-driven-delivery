@@ -9,7 +9,7 @@ from pathlib import Path
 from expects import be_true, contain, equal, expect
 from mamba import context, description, it
 
-from agent_bdd import agent, instruct, instruct_use_tool
+from cdd_guidance.practices.agent_bdd import agent, instruct, instruct_use_tool
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"

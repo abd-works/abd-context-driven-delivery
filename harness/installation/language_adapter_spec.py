@@ -16,10 +16,13 @@ from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
 from harness.installation.destination import (  # noqa: E402
     DataField,
     Edits,
+    Identity,
     LanguageAdapter,
+    ReferenceWithoutIdentityError,
     data_field,
     data_of,
     edits,
+    identity,
     language_adapter,
 )
 from harness.installation.language_adapter import (  # noqa: E402
@@ -30,14 +33,14 @@ from harness.installation.language_adapter import (  # noqa: E402
 )
 
 _KANBAN = (
-    "harness.kanban.board:Board",
-    "harness.kanban.ticket:Ticket",
-    "harness.kanban.ticket:FidelityProgress",
-    "harness.kanban.backlog_item:BacklogItem",
+    "space.kanban.board:Board",
+    "space.kanban.ticket:Ticket",
+    "space.kanban.ticket:FidelityProgress",
+    "space.kanban.backlog_item:BacklogItem",
     "space.session.session:PracticeSessionOutput",
 )
 _ADAPTERS = "language-adapters/typescript"
-_IDENTITY_FLAG = "_language_adapter_identity"
+_IDENTITY_FLAG = Identity.flag
 
 
 def _install(install_path, references=_KANBAN):
@@ -62,11 +65,21 @@ with description("a language adapter"):
             expect(LanguageAdapter.languages_of(Marked)).to(equal(("typescript",)))
 
         with it("should name the field of its data that holds an object's name"):
-            @language_adapter(language="typescript", identity="name")
+            @identity("name")
             class Named:
                 pass
 
-            expect(LanguageAdapter.identity_fields_of(Named)).to(equal(("name",)))
+            expect(Identity.fields_of(Named)).to(equal(("name",)))
+
+        with it("should name a subclass as its base is named"):
+            @identity("name")
+            class Named:
+                pass
+
+            class Kind(Named):
+                pass
+
+            expect(Identity.fields_of(Kind)).to(equal(("name",)))
 
         with it("should name the fields an operation changes when its arguments are named differently"):
             @edits("title")
@@ -93,10 +106,27 @@ with description("a language adapter"):
                 def folder(self) -> Path:
                     return self._folder
 
+            @identity("name")
+            class Stage:
+                def __init__(self, name, cards):
+                    self._name = name
+                    self._cards = cards
+
+                @property
+                @data_field
+                def name(self) -> str:
+                    return self._name
+
+                @property
+                @data_field
+                def cards(self) -> list:
+                    return self._cards
+
             class Card:
                 def __init__(self, title, places):
                     self._title = title
                     self._places = places
+                    self._stage = Stage("Discovery", [self])
 
                 @property
                 @data_field
@@ -104,9 +134,9 @@ with description("a language adapter"):
                     return self._title
 
                 @property
-                @data_field(key="column")
-                def column_name(self) -> str:
-                    return "Discovery"
+                @data_field(key="column", reference=True)
+                def stage(self) -> Stage:
+                    return self._stage
 
                 @property
                 @data_field
@@ -137,7 +167,23 @@ with description("a language adapter"):
             expect(list(DataField.fields_of(self.pinned_class))).to(equal(["title", "column", "places", "is_pinned"]))
 
         with it("should be written as a plain value, each object it holds written as its own data"):
-            expect(data_of(self.card)).to(equal({"title": "Pinned: Visits", "column": "Discovery", "places": [{"folder": "notes"}], "is_pinned": True}))
+            expect(data_of(self.card)).to(equal({"title": "Pinned: Visits", "column": {"name": "Discovery"}, "places": [{"folder": "notes"}], "is_pinned": True}))
+
+        with it("should send an object a reference field holds by that object's identity alone, so an object can name the one holding it"):
+            expect(data_of(self.card)["column"]).to(equal({"name": "Discovery"}))
+
+        with context("whose reference field holds an object with no identity"):
+            with it("should refuse, because nothing could say which object it names"):
+                class Unnamed:
+                    pass
+
+                class Holder:
+                    @property
+                    @data_field(reference=True)
+                    def held(self) -> Unnamed:
+                        return Unnamed()
+
+                expect(lambda: data_of(Holder())).to(raise_error(ReferenceWithoutIdentityError))
 
         with it("should read a field a subclass overrides from the subclass, though only the base marks it"):
             expect(data_of(self.card)["title"]).to(equal("Pinned: Visits"))
@@ -150,10 +196,10 @@ with description("a language adapter"):
             self.install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
             self.adapters = _install(self.install_path)
             self.root = self.install_path / _ADAPTERS
-            self.ticket = (self.root / "harness/kanban/ticket.ts").read_text(encoding="utf-8")
-            self.board = (self.root / "harness/kanban/board.ts").read_text(encoding="utf-8")
-            self.backlog_item = (self.root / "harness/kanban/backlog-item.ts").read_text(encoding="utf-8")
-            self.progress = (self.root / "harness/kanban/fidelity-progress.ts").read_text(encoding="utf-8")
+            self.ticket = (self.root / "space/kanban/ticket.ts").read_text(encoding="utf-8")
+            self.board = (self.root / "space/kanban/board.ts").read_text(encoding="utf-8")
+            self.backlog_item = (self.root / "space/kanban/backlog-item.ts").read_text(encoding="utf-8")
+            self.progress = (self.root / "space/kanban/fidelity-progress.ts").read_text(encoding="utf-8")
             self.practice = (self.root / "space/session/practice-session-output.ts").read_text(encoding="utf-8")
 
         with it("should mirror the folders the toolset's source sits in, with every generated class of an object in one file"):
@@ -162,14 +208,14 @@ with description("a language adapter"):
                 "cdd-connection.ts",
                 "cdd-shared.ts",
                 "cdd-views.tsx",
-                "harness/kanban/backlog-item-views.tsx",
-                "harness/kanban/backlog-item.ts",
-                "harness/kanban/board-views.tsx",
-                "harness/kanban/board.ts",
-                "harness/kanban/fidelity-progress-views.tsx",
-                "harness/kanban/fidelity-progress.ts",
-                "harness/kanban/ticket-views.tsx",
-                "harness/kanban/ticket.ts",
+                "space/kanban/backlog-item-views.tsx",
+                "space/kanban/backlog-item.ts",
+                "space/kanban/board-views.tsx",
+                "space/kanban/board.ts",
+                "space/kanban/fidelity-progress-views.tsx",
+                "space/kanban/fidelity-progress.ts",
+                "space/kanban/ticket-views.tsx",
+                "space/kanban/ticket.ts",
                 "space/session/practice-session-output-views.tsx",
                 "space/session/practice-session-output.ts",
             ]))
@@ -185,7 +231,7 @@ with description("a language adapter"):
             tracked = []
             adapters = LanguageAdapterInstallation("Claude", self.install_path, repo=_REPO)
             adapters.bind_tracker(tracked.append)
-            adapters.record(AgentToolSet.instantiate("harness.kanban.ticket:Ticket"))
+            adapters.record(AgentToolSet.instantiate("space.kanban.ticket:Ticket"))
             adapters.write_all()
             expect(sorted(path.name for path in tracked)).to(equal(["cdd-connection.ts", "cdd-shared.ts", "cdd-views.tsx", "package.json", "ticket-views.tsx", "ticket.ts"]))
 
@@ -197,7 +243,7 @@ with description("a language adapter"):
 
         with context("whose tools load one object by name, with no identity on its mark"):
             with it("should refuse, because a browser object could not say which object its routes act on"):
-                ticket_class = type(AgentToolSet.instantiate("harness.kanban.ticket:Ticket"))
+                ticket_class = type(AgentToolSet.instantiate("space.kanban.ticket:Ticket"))
                 named = getattr(ticket_class, _IDENTITY_FLAG)
                 delattr(ticket_class, _IDENTITY_FLAG)
                 try:
@@ -250,7 +296,7 @@ with description("a language adapter"):
                 expect(self.board).to(contain("  wip_limit?: number\n"))
 
             with it("should keep a field that may be null nullable"):
-                expect(self.board).to(contain("  active: string | null\n"))
+                expect(self.ticket).to(contain("  next: FidelityProgressData | null\n"))
 
             with it("should state a nested shape in the file that uses it"):
                 expect(self.ticket).to(contain("export type ReportData = {"))
@@ -332,7 +378,7 @@ with description("a language adapter"):
                     expect(self.progress).to(contain("report(): Promise<ReportData>"))
 
                 with it("should type a list of strings"):
-                    expect(self.ticket).to(contain("Promise<string[]>"))
+                    expect(self.board).to(contain("Promise<string[]>"))
 
             with context("for a class operation, which no loaded object runs"):
                 with it("should be a static operation that takes the connection and returns the new object's data"):
@@ -344,6 +390,13 @@ with description("a language adapter"):
 
             with it("should take its identity from the field the mark names"):
                 expect(self.ticket).to(contain("ticket: string = state?.name ?? ''"))
+
+            with it("should type a reference field as the identity of the object it names"):
+                expect(self.ticket).to(contain("  column: { name: string }"))
+
+            with it("should show a reference field in its view by the field that names the object it refers to"):
+                views = (self.root / "space/kanban/ticket-views.tsx").read_text(encoding="utf-8")
+                expect(views).to(contain('<ReadOnlyField label="Column" value={ticket.column.name} />'))
 
             with it("should post to its object's route, with the name safe in the path"):
                 expect(self.ticket).to(contain("this.api.post<TicketData>(`/ticket/${encodeURIComponent(this.#ticket)}/move-next`, {})"))

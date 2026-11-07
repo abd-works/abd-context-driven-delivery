@@ -32,7 +32,7 @@ from space.session.throwaway_project import ProjectCall
 from space.work_state import WorkState
 
 
-def _bind_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat") -> Path:
+def _attach_mandatory_chat(session: Session, work: Path, chat_id: str = "spec-chat") -> Path:
     chats = session.session_path / "chats"
     chats.mkdir(parents=True, exist_ok=True)
     transcript = chats / f"{chat_id}.md"
@@ -419,7 +419,7 @@ with description("a session"):
             self.work.mkdir()
             Session.new("alpha", self.work, self.repo)
             self.session = Session.current()
-            _bind_mandatory_chat(self.session, self.work, "mcp-fail-chat")
+            _attach_mandatory_chat(self.session, self.work, "mcp-fail-chat")
 
         with it("should append session.err and session.log when an agent tool raises"):
             from harness.mcp.mcp_server import McpHost
@@ -451,7 +451,7 @@ with description("a session"):
             self.work.mkdir()
             Session.new("alpha", self.work, self.repo)
             self.session = Session.current()
-            _bind_mandatory_chat(self.session, self.work, "mcp-dispatch-chat")
+            _attach_mandatory_chat(self.session, self.work, "mcp-dispatch-chat")
 
         with it("should append a tool line when the MCP host invokes an agent tool"):
             from harness.mcp.mcp_server import McpHost
@@ -474,7 +474,7 @@ with description("a session"):
             self.work.mkdir()
             Session.new("alpha", self.work, self.repo)
             self.session = Session.current()
-            _bind_mandatory_chat(self.session, self.work, "note-chat")
+            _attach_mandatory_chat(self.session, self.work, "note-chat")
 
         with it("should append a note line with message paths and chat pointer"):
             touched = self.work / "repo.py"
@@ -487,7 +487,7 @@ with description("a session"):
             ).to(equal(True))
 
         with it("should append via append_log with loop number and chat fields"):
-            transcript = _bind_mandatory_chat(self.session, self.work, "append-chat")
+            transcript = _attach_mandatory_chat(self.session, self.work, "append-chat")
             result = Session.current().append_log(
                 "correction recorded",
                 loop=1,
@@ -513,7 +513,7 @@ with description("a session"):
             self.work.mkdir()
             Session.new("alpha", self.work, self.repo)
             self.session = Session.current()
-            _bind_mandatory_chat(self.session, self.work)
+            _attach_mandatory_chat(self.session, self.work)
             self.edited = self.work / "cart.py"
             self.edited.write_text("class Cart:\n    pass\n", encoding="utf-8")
 
@@ -650,7 +650,7 @@ with description("a loop"):
             self.work.mkdir()
             Session.new("alpha", self.work, self.repo)
             self.session = Session.current()
-            _bind_mandatory_chat(self.session, self.work, "loop-chat")
+            _attach_mandatory_chat(self.session, self.work, "loop-chat")
             self.opened = self.session.loop()
             self.session.log_action("sketch", [self.work / "cart.py"])
 
@@ -710,7 +710,7 @@ with description("an action"):
         self.work.mkdir()
         Session.new("alpha", self.work, self.repo)
         self.session = Session.current()
-        _bind_mandatory_chat(self.session, self.work, "action-chat")
+        _attach_mandatory_chat(self.session, self.work, "action-chat")
 
     # (S) Session --> Record Validation Run
     with context("that calls validate"):
@@ -749,7 +749,7 @@ with description("an action"):
     with context("that names an action"):
         with it("should log that action"):
             action = GuidanceAction()
-            action._bind_guidance("a note")
+            action._work_on("a note")
             action.run(lambda item: None, action="sketch")
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
             expect("sketch" in log).to(equal(True))
@@ -758,7 +758,7 @@ with description("an action"):
             from harness.guidance_actions import GuidanceAction
 
             action = GuidanceAction()
-            action._bind_guidance(["bdd"])
+            action._work_on(["bdd"])
             action.run(lambda item: None, action="generate")
             log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
             expect("generate" in log and str(self.work) in log and "bdd" in log).to(equal(True))
@@ -768,17 +768,17 @@ with description("an action"):
                 import os
 
                 from harness.mcp.mcp_server import McpServer
-                from validate.validate import Validate
+                from cdd_guidance.actions.validate.validate import Validate
 
                 Session.forget_current()
                 (self.repo / ".git").mkdir(exist_ok=True)
                 os.environ["CDD_REPO"] = str(self.repo.resolve())
                 os.environ["CDD_PROJECT"] = str(self.work.resolve())
-                _bind_mandatory_chat(self.session, self.work, "mcp-host-chat")
+                _attach_mandatory_chat(self.session, self.work, "mcp-host-chat")
                 McpServer(repo=self.repo, project=self.work)
                 Session.forget_current()
                 action = GuidanceAction()
-                action._bind_guidance(["bdd"])
+                action._work_on(["bdd"])
                 action.run(lambda _item: None, action="generate")
                 Validate().validate(["bdd"])
                 log = (self.session.session_path / "session.log").read_text(encoding="utf-8")
@@ -814,7 +814,7 @@ with description("an action"):
             log_path = self.session.session_path / "session.log"
             before = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
             action = GuidanceAction()
-            action._bind_guidance("a note")
+            action._work_on("a note")
             action.run(lambda item: None)
             after_log = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
             expect(after_log).to(equal(before))
@@ -1123,7 +1123,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
             expect(Repo(self.project).current_session.session_path).to(equal(self.project.resolve() / ".sessions" / "beta"))
 
         with it("should append log notes to the project's session log"):
-            transcript = _bind_mandatory_chat(Session.current(), self.project, "project-chat")
+            transcript = _attach_mandatory_chat(Session.current(), self.project, "project-chat")
             Session.current().append_log(
                 "project note",
                 loop=1,
@@ -1137,7 +1137,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
             expect("project note" in log and "project note" not in cdd_text).to(equal(True))
 
         with it("should mark loops on the project's session log"):
-            _bind_mandatory_chat(Session.current(), self.project, "project-loop-chat")
+            _attach_mandatory_chat(Session.current(), self.project, "project-loop-chat")
             Session.current().mark_loop()
             log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")
             expect("--- " in log).to(equal(True))
@@ -1156,7 +1156,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
                 project=str(self.project),
             )
             Session.forget_current()
-            _bind_mandatory_chat(Session.current(), self.project, "project-dispatch-chat")
+            _attach_mandatory_chat(Session.current(), self.project, "project-dispatch-chat")
             Session.forget_current()
             host.dispatch("session.mark_loop", {})
             log = (self.project / ".sessions" / "beta" / "session.log").read_text(encoding="utf-8")

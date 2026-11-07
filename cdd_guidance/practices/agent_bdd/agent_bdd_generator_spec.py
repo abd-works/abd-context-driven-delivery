@@ -24,15 +24,15 @@ from harness.agent_tools.agent_tools import AgentToolSet
 import cdd_guidance.practices  # noqa: F401
 from harness.markdown import Markdown
 from harness.agent_tools import AgentToolSet
-from validate.validate import Validate
+from cdd_guidance.actions.validate.validate import Validate
 from cdd_guidance.practices.bdd.bdd import Bdd
 
-_AGENT_BDD_TOOLSET = "agent_bdd.agent_bdd:AgentBdd"
+_AGENT_BDD_TOOLSET = "cdd_guidance.practices.agent_bdd.agent_bdd:AgentBdd"
 _BDD_DIR = _REPO_ROOT / "cdd_guidance" / "practices" / "bdd"
 _GENERATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "generate"
 _VALIDATE_DIR = _REPO_ROOT / "cdd_guidance" / "actions" / "validate"
-_GENERATE_TOOLSET = "generate.generate:Generate"
-_VALIDATE_TOOLSET = "validate.validate:Validate"
+_GENERATE_TOOLSET = "cdd_guidance.actions.generate.generate:Generate"
+_VALIDATE_TOOLSET = "cdd_guidance.actions.validate.validate:Validate"
 
 
 def _kit_prose(action: str, kit_dir: Path) -> str:
@@ -59,7 +59,6 @@ def _expand_action(
 
     func = getattr(type(instance), action_name)
     return AgentInstructions.for_callable(func, instance).expand(
-        context or {},
         arguments or {},
     )
 

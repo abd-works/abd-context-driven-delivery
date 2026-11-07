@@ -19,7 +19,7 @@ class CarStory(GuidanceAction):
         """Scripted trip to a destination under stated conditions."""
         "Tell an interesting story about how the car gets to {destination}."
         "Conditions: {conditions}. Start the engine, then decide what to do according to personality."
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
         for car in self.listed():
             tools(car.start())
             """Options include accelerate, decelerate, or stop - invoke as the story needs."""
@@ -36,7 +36,7 @@ class CarStory(GuidanceAction):
     def inspect_trip(self, guidance: GuidanceArg, plan: str) -> str:
         """Collect the trip plan into one string, call wrap_story, emit the fenced block only."""
         """Do not execute the plan — inspection output is the entire result of this invocation."""
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
         for car in self.listed():
             tools(car.wrap_story())
         return "Trip plan inspection complete — nothing executed."

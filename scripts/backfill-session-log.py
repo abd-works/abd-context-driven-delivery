@@ -55,13 +55,12 @@ def main() -> int:
     transcript = Path(args.transcript).resolve()
     line_numbers = _transcript_line_count(transcript)
     workpath = _REPO / "space"
-    Session.forget_current()
-    Session.switch(args.session, workpath=workpath, repo_path=_REPO)
-    session = Session.current()
+    session = Session(_REPO)
+    session.switch(args.session, workpath=workpath, repo_path=_REPO)
 
     chat = ChatPointer(args.chat_id, transcript, line_numbers)
     session.note_chat(chat)
-    session._append_log("--- retroactive backfill")
+    session.log_line("--- retroactive backfill")
 
     reparented: list[str] = []
     for name in args.from_session:

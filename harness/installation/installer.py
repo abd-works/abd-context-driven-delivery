@@ -258,7 +258,7 @@ class Installer:
         if normalized not in self._installed_paths:
             self._installed_paths.append(normalized)
 
-    def _bind_install_tracker(self, installation: Installation) -> None:
+    def _track_installation(self, installation: Installation) -> None:
         installation.bind_tracker(self._track_write)
 
     def _load_state(self) -> dict[str, Any]:
@@ -294,7 +294,7 @@ class Installer:
         installations: list[Installation] = []
         mcp_mode = InstallDestination.MCP in destinations
         if mcp_mode:
-            self._bind_install_tracker(self._mcp)
+            self._track_installation(self._mcp)
             installations.append(self._mcp)
         for destination in (
             InstallDestination.SKILL,
@@ -309,11 +309,11 @@ class Installer:
                     mcp_mode=mcp_mode,
                     repo=self.repo,
                 )
-                self._bind_install_tracker(markdown)
+                self._track_installation(markdown)
                 installations.append(markdown)
         # Claude Code hooks are not wired yet; its install carries no hook channel.
         if InstallDestination.HOOK in destinations and self.ide != "Claude":
-            self._bind_install_tracker(self._hook)
+            self._track_installation(self._hook)
             installations.append(self._hook)
         return installations
 
@@ -487,7 +487,7 @@ class Installer:
         if not source.is_dir():
             return
         rules = FileInstallation(self.ide, self.path, "rules", repo=self.repo)
-        self._bind_install_tracker(rules)
+        self._track_installation(rules)
         for path in sorted([*source.glob("*.md"), *source.glob("*.mdc")]):
             rules.write_standing_rule(path)
 
@@ -511,7 +511,7 @@ class Installer:
         self._mcp = McpInstallation(self.ide, self.path, repo=self.repo)
         self._hook = HookInstallation(self.ide, self.path, repo=self.repo)
         self._language_adapters = LanguageAdapterInstallation(self.ide, self.path, repo=self.repo)
-        self._bind_install_tracker(self._language_adapters)
+        self._track_installation(self._language_adapters)
 
     def _install_installer_toolset(self) -> None:
         toolset = AgentToolSet.instantiate(self.TOOLSET_REF)

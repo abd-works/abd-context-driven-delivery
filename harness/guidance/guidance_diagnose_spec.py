@@ -77,7 +77,7 @@ with description("guidance diagnostics"):
         expect(items[0]["chars"] > 0).to(equal(True))
 
     with it("should pass index_only mode when probing partition.partition"):
-        from partition.partition import Partition
+        from cdd_guidance.actions.partition.partition import Partition
 
         probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories", "clean-engineering-model"])
         args, missing = probe.arguments_for("partition.partition", Partition.partition)
@@ -86,7 +86,7 @@ with description("guidance diagnostics"):
         expect(args["mode"]).to(equal("index_only"))
 
     with it("should treat an empty sketch list as a successful probe"):
-        from sketch.sketch import Sketch
+        from cdd_guidance.actions.sketch.sketch import Sketch
 
         probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories"])
         text = Sketch(session=probe.work_session()).list_sketches()

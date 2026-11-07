@@ -1,4 +1,4 @@
-"""First-order guidance-action prelude — bind guidance, then run the operation."""
+"""First-order guidance-action prelude: take the guidance a call names, then run the operation on it."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any, NotRequired, TypedDict
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
 from harness.agent_tools.name import Name
-from prompt_notify.prompt_notify import PromptNotify, echo
+from tools.prompt_notify.prompt_notify import PromptNotify, Toast
 from harness.hooks.hooks import Hook
 
 class GuidanceRef(TypedDict):
@@ -35,8 +35,8 @@ _FORMAT_WORD = "format="
 # The session a command is for, as the session board names it: `session=.sessions/<name>/session.json`.
 _SESSION_WORD = "session="
 _SKIP_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
-# What a call has bound before it binds any guidance; None cannot stand for it, since binding None keeps the binding.
-_NOTHING_BOUND = object()
+# What a call works on before it names any guidance; None cannot stand for it, since naming None keeps what it had.
+_NOTHING_WORKED_ON = object()
 PATHS_NOTE = (
     "paths: a file, a list of files, or a folder. Pass paths on an MCP call. "
     "This action reads them locally. Leave the document body out of the call."
@@ -83,7 +83,7 @@ class GuidanceAction:
     An action works in one session. An action started inside another is made for that action's session; a board
     command names its ticket's session in a ``session=`` word; any other call works in the chat's current session.
 
-    A call binds the guidance it works on once, when it starts; the action's operations then read it from the action
+    A call takes the guidance it works on once, when it starts; the action's operations then read it from the action
     through ``listed()``, so each practice it lists is one object, the one its session holds.
     """
 
@@ -92,14 +92,14 @@ class GuidanceAction:
         self._running = threading.local()
         self._made_for = session
 
-    # The guidance argument this call bound, so binding the same argument again in the same call keeps what it built.
+    # The guidance argument this call works on, so naming the same argument again in the same call keeps what it built.
     @property
-    def _bound_guidance(self) -> Any:
-        return getattr(self._running, "bound_guidance", _NOTHING_BOUND)
+    def _guidance_worked_on(self) -> Any:
+        return getattr(self._running, "guidance_worked_on", _NOTHING_WORKED_ON)
 
-    @_bound_guidance.setter
-    def _bound_guidance(self, guidance: Any) -> None:
-        self._running.bound_guidance = guidance
+    @_guidance_worked_on.setter
+    def _guidance_worked_on(self, guidance: Any) -> None:
+        self._running.guidance_worked_on = guidance
 
     @property
     def _guidance_text(self) -> str | None:
@@ -163,19 +163,19 @@ class GuidanceAction:
 
     def start_call(self) -> None:
         """Begin a new call: one action object serves every call while the MCP server runs, so a call starts with no
-        guidance bound, no session found, and no line logged, rather than with the last call's."""
+        no guidance taken, no session found, and no line logged, rather than with the last call's."""
         self._logged_session_action = None
-        self._bound_guidance = _NOTHING_BOUND
+        self._guidance_worked_on = _NOTHING_WORKED_ON
         self._named_session_file = ""
         self._guidance_text = None
         self._tool_items = []
         self._listed_items = None
 
     def call_session(self, arguments: dict[str, Any]):
-        """The session a call with arguments works in, once it has bound their guidance: a board command names its
+        """The session a call with arguments works in, once it has taken their guidance: a board command names its
         ticket's session in its guidance, which the call's log line belongs in."""
         if "guidance" in arguments:
-            self._bind_guidance(arguments.get("guidance"))
+            self._work_on(arguments.get("guidance"))
         return self.session
 
     def session_action_for_operation(self, operation: str) -> str:
@@ -195,30 +195,30 @@ class GuidanceAction:
                 )
         return discovered
 
-    def _bind_guidance(self, guidance: GuidanceArg | None = None) -> None:
-        """Guidance ref or dict: iterate Guidance. Other strings: run once on that text. Binding what this call already
-        bound keeps the Guidance it built, so a call's operations all work on the same objects."""
-        if guidance is None or guidance == self._bound_guidance:
+    def _work_on(self, guidance: GuidanceArg | None = None) -> None:
+        """Guidance ref or dict: iterate Guidance. Other strings: run once on that text. Naming again what this call
+        already works on keeps the Guidance it built, so a call's operations all work on the same objects."""
+        if guidance is None or guidance == self._guidance_worked_on:
             return
-        self._bound_guidance = guidance
+        self._guidance_worked_on = guidance
         self._named_session_file = ""
         self._listed_items = None
-        bound = self._as_guidance_item(guidance)
-        if bound is not None and not isinstance(guidance, list):
+        listed = self._as_guidance_item(guidance)
+        if listed is not None and not isinstance(guidance, list):
             self._guidance_text = None
-            self._tool_items = [bound]
+            self._tool_items = [listed]
             return
         if isinstance(guidance, str):
-            self._bind_guidance_string(guidance)
+            self._work_on_text(guidance)
             return
         self._guidance_text = None
         items = []
         for item in list(guidance or []):
-            bound = self._as_guidance_item(item)
-            items.append(item if bound is None else bound)
+            listed = self._as_guidance_item(item)
+            items.append(item if listed is None else listed)
         self._tool_items = items
 
-    def _bind_guidance_string(self, text: str) -> None:
+    def _work_on_text(self, text: str) -> None:
         """Agents on MCP often send several slugs, a ``format=`` word, and a ``session=`` word in one string; list the
         slugs as Guidance and keep the session. Any other word keeps the whole string as text, so prose still runs once."""
         refs = self._slug_words(text)
@@ -273,7 +273,7 @@ class GuidanceAction:
         return self._guidance_text
 
     def listed(self) -> list:
-        """The Guidance bound on this run, each practice worked on in this action's session: its practice adopts it,
+        """The Guidance this run works on, each practice worked on in this action's session: its practice adopts it,
         and a fidelity the guidance named no format for works in the format it was last given in that session."""
         if self._guidance_text is not None:
             return []
@@ -315,7 +315,7 @@ class GuidanceAction:
         none. It works on the same objects, so the session's practices stay the ones this action listed."""
         inner = action_type(self.session)
         worked_on = guidance if guidance is not None else self._guidance_text if self._guidance_text is not None else self.listed()
-        inner._bound_guidance = worked_on
+        inner._guidance_worked_on = worked_on
         if isinstance(worked_on, str):
             inner._guidance_text = worked_on
             inner._tool_items = []
@@ -333,7 +333,7 @@ class GuidanceAction:
         return [operation(item) for item in self.listed()]
 
     def run(self, operation, *, action: str = "") -> list:
-        """Run ``operation`` on the guidance this call bound: once on its string, or once per Guidance."""
+        """Run ``operation`` on the guidance this call works on: once on its string, or once per Guidance."""
         self._keep_named_formats()
         self._log_running_action(action)
         try:
@@ -360,25 +360,13 @@ class GuidanceAction:
         self.listed()
         self.session.log_guidance_action(action)
 
-    @echo
+    @Toast
     @agent_instructions
     def begin(self, guidance: GuidanceArg | None = None, action: str = "") -> str:
-        """Start a guidance action: open the workspace if needed, attach this action to the session turn, and load decision records. With no named session the action runs in the main session. Follow act_quickly."""
-        self._bind_guidance(guidance)
+        """Start a guidance action on the guidance it names, in the session the call names. With no named session the action runs in the main session. Follow act_quickly."""
+        self._work_on(guidance)
         tools(self.act_quickly)
         return ""
-        # warning = ""
-        # session = self.workspace.current_work_session
-        # if session is not None:
-        #     try:
-        #         session.turn
-        #         if action:
-        #             session.turn.action = action
-        #     except (AttributeError, TypeError):
-        #         pass
-        #     if not warning:
-        #         warning = session.branch_warning()
-        # return warning
 
     @property
     def session_context(self) -> str:
@@ -419,7 +407,7 @@ class GuidanceAction:
             "Do not rerun the same call outside the tool."
         )
 
-    @echo
+    @Toast
     @Hook("postToolUse")
     def inject_rules(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """Inject listed Guidance rules markdown after this action returns."""
@@ -428,7 +416,7 @@ class GuidanceAction:
         data = payload or {}
         if not self._payload_is_this_action(data):
             return {}
-        self._bind_guidance_from_payload(data)
+        self._work_on_payload_guidance(data)
         parts, labels = self._listed_inject_parts(data)
         if not parts:
             return {}
@@ -473,7 +461,7 @@ class GuidanceAction:
         aliases = {name.snake, name.kebab, "".join(name.words)}
         return any(alias and alias in tool for alias in aliases)
 
-    def _bind_guidance_from_payload(self, payload: dict[str, Any]) -> None:
+    def _work_on_payload_guidance(self, payload: dict[str, Any]) -> None:
         raw = payload.get("tool_input") or {}
         if isinstance(raw, str):
             try:
@@ -483,7 +471,7 @@ class GuidanceAction:
         if not isinstance(raw, dict):
             return
         if "guidance" in raw:
-            self._bind_guidance(raw.get("guidance"))
+            self._work_on(raw.get("guidance"))
 
 
 class GuidanceCatalog:

@@ -253,8 +253,8 @@ section: body
 ###     (S) User --> Advance Coverage Increment
 ####        Tests
                 # actions/iterate/iterate_spec.py
-                with context("that records an iterate tick")
-                    with it("should return the iterate-tick marker")
+                with context("that marks an iterate cycle due")
+                    with it("should return the iterate-round marker")
 
                 # actions/iterate/iterate_spec.py
                 with context("that expands")

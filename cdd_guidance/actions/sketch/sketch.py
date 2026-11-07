@@ -9,7 +9,7 @@ from pathlib import Path
 
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.guidance_actions import GuidanceArg, GuidanceAction, load_document
-from harness.agent_tools import agent_instructions, agent_toolset, instructions
+from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
@@ -112,8 +112,8 @@ class Sketch(GuidanceAction):
             instructions(item.rules.markdown_block)
             instructions(item.sketch_template)
         self._grill_context().grill_with_context()
-        self.find_template()
-        self.save_sketch()
-        self.review_sketch()
+        tools(self.find_template)
+        tools(self.save_sketch)
+        tools(self.review_sketch)
         self._grill_context().generate_each()
         return "Sketch complete; generate instructions applied."

@@ -17,21 +17,14 @@ _VERBS = {"Given": "given", "When": "when", "Then": "then", "But": "but_", "And"
 
 class PythonStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "_story.test.py"
-    LANGUAGE_LINE_COMMENT = "#"
     epic_type = PythonEpic
     story_type = PythonStory
     language = CodeLanguage.named("python")
     scenario_indent = "        "
     scenario_gap: List[str] = []
 
-    def save(self) -> Dict[str, str]:
-        return self.write_epics({})
-
     def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
         return sorted(p for p in tree if p.endswith(self.LEAF_EXTENSION))
-
-    def _epic_helper_path(self, epic_root: str, epic: Epic) -> str:
-        return f"{epic_root}/{epic.snake()}_helper.py"
 
     def load(self, external: Dict[str, str]) -> "PythonStoryModel":
         if not isinstance(external, dict):

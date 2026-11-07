@@ -16,7 +16,7 @@ from mamba import context, description, it
 from harness.installation.installer import Installer  # noqa: F401 — load Destination before hooks
 from tempfile import TemporaryDirectory
 
-from tools.prompt_notify.prompt_notify import PromptNotify, echo
+from tools.prompt_notify.prompt_notify import PromptNotify, Toast
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 
 _prompt_notify = PromptNotify()
@@ -337,9 +337,9 @@ with description("prompt echo detection"):
 
 @agent_toolset
 class EchoAction:
-    """An action that pins @echo on begin and on a method."""
+    """An action that pins @Toast on begin and on a method."""
 
-    @echo
+    @Toast
     @agent_instructions
     def begin(self, guidance=None, action: str = "") -> str:
         return action
@@ -352,7 +352,7 @@ class EchoAction:
     def enact(self) -> str:
         return "enact"
 
-    @echo
+    @Toast
     @agent_instructions
     def spotlight(self) -> str:
         return "spotlight"
@@ -362,7 +362,7 @@ class EchoAction:
 class EchoPractice:
     """Practice-shaped Guidance with echoed instructions."""
 
-    @echo
+    @Toast
     @agent_instructions
     def instructions(self) -> str:
         return "practice"
@@ -375,8 +375,8 @@ class EchoPracticeChild(EchoPractice):
         return "child"
 
 
-with description("prompt echo @echo mark"):
-    with context("that inherits @echo on begin"):
+with description("prompt echo @Toast mark"):
+    with context("that inherits @Toast on begin"):
         with it("should toast the action by its name when a recipe runs"):
             kind, label = _prompt_notify.detect_echo(
                 {"tool_name": "echo-action.enact", "tool_input": {}},
@@ -411,7 +411,7 @@ with description("prompt echo @echo mark"):
             expect(kind).to(equal("practice"))
             expect(label).to(equal("echo-practice"))
 
-    with context("that inherits @echo on practice instructions"):
+    with context("that inherits @Toast on practice instructions"):
             kind, label = _prompt_notify.detect_echo(
                 {"tool_name": "echo-practice-child.instructions", "tool_input": {}},
                 toolsets=[EchoPracticeChild()],

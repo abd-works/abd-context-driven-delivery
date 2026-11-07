@@ -16,7 +16,7 @@ from expects import be_true, contain, equal, expect
 from mamba import context, description, it
 
 from harness.catalog_generator.project_approach import (
-    ApproachExampleSlot,
+    PracticeStage,
     classify_example_path,
     discover_project_examples,
     merge_example_sources,
@@ -27,40 +27,40 @@ from harness.catalog_generator.project_approach import (
 with description("classify_example_path"):
     with context("with a file a board fidelity declares in its outputs"):
         with it("should map the story map drawio to stories discovery"):
-            slot = classify_example_path("stories/.context/story-map.drawio")
-            expect(slot).to(equal(ApproachExampleSlot("stories", "discovery")))
+            place = classify_example_path("stories/.context/story-map.drawio")
+            expect(place).to(equal(PracticeStage("stories", "discovery")))
 
         with it("should map a story's scenario test to stories specification"):
-            slot = classify_example_path("qualify/offer/cross-sell-offer/cross_sell_offer_story.test.ts")
-            expect(slot).to(equal(ApproachExampleSlot("stories", "specification")))
+            place = classify_example_path("qualify/offer/cross-sell-offer/cross_sell_offer_story.test.ts")
+            expect(place).to(equal(PracticeStage("stories", "specification")))
 
         with it("should map a sub-epic's shared story steps to stories implementation"):
-            slot = classify_example_path("qualify/qualify-offer.story.shared.ts")
-            expect(slot).to(equal(ApproachExampleSlot("stories", "implementation")))
+            place = classify_example_path("qualify/qualify-offer.story.shared.ts")
+            expect(place).to(equal(PracticeStage("stories", "implementation")))
 
         with it("should map the bounded context map to ddd discovery"):
-            slot = classify_example_path("domain/.context/bounded-context-map.md")
-            expect(slot).to(equal(ApproachExampleSlot("ddd", "discovery")))
+            place = classify_example_path("domain/.context/bounded-context-map.md")
+            expect(place).to(equal(PracticeStage("ddd", "discovery")))
 
         with it("should map the domain model markdown to ddd specification"):
-            slot = classify_example_path("domain/.context/domain-model.md")
-            expect(slot).to(equal(ApproachExampleSlot("ddd", "specification")))
+            place = classify_example_path("domain/.context/domain-model.md")
+            expect(place).to(equal(PracticeStage("ddd", "specification")))
 
         with it("should map an aggregate named for its folder to ddd specification"):
-            slot = classify_example_path("sales/client/client.ts")
-            expect(slot).to(equal(ApproachExampleSlot("ddd", "specification")))
+            place = classify_example_path("sales/client/client.ts")
+            expect(place).to(equal(PracticeStage("ddd", "specification")))
 
         with it("should map the information architecture drawio to ux discovery"):
-            slot = classify_example_path("qualify/.context/information-architecture.drawio")
-            expect(slot).to(equal(ApproachExampleSlot("ux", "discovery")))
+            place = classify_example_path("qualify/.context/information-architecture.drawio")
+            expect(place).to(equal(PracticeStage("ux", "discovery")))
 
         with it("should map a user goal's html to ux specification"):
-            slot = classify_example_path("qualify/review-offer.html")
-            expect(slot).to(equal(ApproachExampleSlot("ux", "specification")))
+            place = classify_example_path("qualify/review-offer.html")
+            expect(place).to(equal(PracticeStage("ux", "specification")))
 
         with it("should map a view component to ux implementation"):
-            slot = classify_example_path("src/offers/OfferView.tsx")
-            expect(slot).to(equal(ApproachExampleSlot("ux", "implementation")))
+            place = classify_example_path("src/offers/OfferView.tsx")
+            expect(place).to(equal(PracticeStage("ux", "implementation")))
 
     with context("with a file no fidelity declares"):
         with it("should leave it unmapped"):

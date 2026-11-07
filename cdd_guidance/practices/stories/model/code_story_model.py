@@ -1,26 +1,21 @@
 """CodeStoryModel - a StoryModel stored as a source-code tree.
 
-Layout produced (identical shape across TS/Python/Java backends):
+Layout written, the same shape in every language:
 
     <tests-root>/
       <epic-slug>/
+        <epic story file>                    # the epic's own stories, when it has any
+        <sub-epic story file>                # one file per sub-epic that has no sub-epics of its own
         <sub-epic-slug>/
-          <sub-epic-slug>.<ext>              # leaf file for this Epic
-          <nested-sub-epic-slug>/
-            <nested-sub-epic-slug>.<ext>     # nested leaf file when the Epic is not a leaf
+          <nested sub-epic story file>       # a sub-epic with sub-epics of its own is a folder
 
-A leaf Epic is one with no nested Epics of its own. Only leaf Epics get
-`<sub-epic-slug>.<ext>` leaf files; if a previously-leaf Epic gains a nested
-Epic, its own leaf file disappears.
-
-Backends override `_render_leaf_file(sub_epic, epic)` and `_render_epic_helper(epic)`
-to produce their language-specific text.
+Each language names its story files (`file_name`) and spells the code inside them.
 
 Every story, background, scenario, and step read from a file keeps the code it was written with
 (`written`, `setup`, and each step's `body`). Rendered back in the same language and unchanged, a node
 is written exactly as read; otherwise it is spelled again with its bodies kept.
 
-load fills this map from the files. save writes this map's epics and stories.
+load fills this map from the files; each language reads its own. save writes this map's epics and stories.
 render writes another map in this language and parse reads a tree into a new map, through save and load.
 """
 
@@ -336,8 +331,6 @@ class CodeEpic(Epic, CodeStoryNode):
 class CodeStoryModel(StoryModel):
     """Source-tree story map. The epics and stories are the story map. load and save are the files."""
 
-    LEAF_EXTENSION: str = ""
-    LANGUAGE_LINE_COMMENT: str = "//"
     epic_type = CodeEpic
     story_type = CodeStory
     increment_type = CodeIncrement
@@ -366,14 +359,7 @@ class CodeStoryModel(StoryModel):
 
     def save(self) -> Dict[str, str]:
         """Write this story map's epics and stories to source files."""
-        tree: Dict[str, str] = {}
-        for epic in self.epics:
-            self._render_epic(
-                epic=epic,
-                epic_slug=self._folder_slug(epic, self.epics),
-                tree=tree,
-            )
-        return tree
+        return self.write_epics({})
 
     def render(
         self,
@@ -402,9 +388,13 @@ class CodeStoryModel(StoryModel):
     statement_end = ""
 
     def write_epics(self, files: Dict[str, str]) -> Dict[str, str]:
-        """Every epic's folders and sub-epic files, added to files."""
+        """Every epic's folders and sub-epic files, added to files. A top-level epic is always a folder, so the
+        file holding its own stories sits inside it and reads back onto that epic."""
         for epic in self.epics:
-            self._write_epic(epic, self.tests_root, files)
+            if epic.epics:
+                self._write_epic(epic, self.tests_root, files)
+            else:
+                self._write_stories(epic, f"{self.tests_root}/{epic.slug()}", files)
         return files
 
     def read_from_code(self) -> bool:
@@ -622,31 +612,8 @@ class CodeStoryModel(StoryModel):
             step.body = step.body.in_language_of(bodies.get(step.text, CodeBody()), language)
 
     def load(self, external: Dict[str, str]) -> "CodeStoryModel":
-        """Read source files into this story map's epics and stories."""
-        if not isinstance(external, dict):
-            raise CodeStoryModelError("Tree must be a mapping of paths to file content")
-        self.epics.clear()
-        epics_by_slug: Dict[str, Epic] = {}
-        for path in self._ordered_paths(external):
-            parts = path.split("/")
-            if not parts or parts[0] != self._tests_root:
-                continue
-            if len(parts) < 3:
-                continue
-            _, epic_slug, *rest = parts
-            epic = epics_by_slug.get(epic_slug)
-            if epic is None:
-                epic = self.epic_for(epic_slug)
-                epics_by_slug[epic_slug] = epic
-            if len(rest) < 2:
-                continue
-            *sub_epic_slugs, _file_name = rest
-            self.sub_epic_for(epic, sub_epic_slugs)
-        if not self.epics and external:
-            raise CodeStoryModelError(
-                "Tree contains no recognisable Epic folders under the tests root"
-            )
-        return self
+        """Read source files into this story map's epics and stories. Each language reads its own files."""
+        raise NotImplementedError(f"{type(self).__name__} must read its story files")
 
     def parse(self, external: Dict[str, str]) -> "CodeStoryModel":
         return type(self)(self._tests_root).load(external)
@@ -670,8 +637,8 @@ class CodeStoryModel(StoryModel):
     def take_sub_epic_file(self, parts: List[str], content: str, source_file: str = "") -> bool:
         """One file is one sub-epic. Every story in the file belongs to it.
 
-        A parent folder with the same slug is that sub-epic, so the file is not a second level.
-        A file in its own top folder is the epic itself, and its stories sit on the epic.
+        A parent folder with the same slug as the file, or as the epic its header names, is that sub-epic, so the
+        file is not a second level. A file in its own top folder is the epic itself, and its stories sit on the epic.
         """
         if len(parts) < 2:
             return False
@@ -683,10 +650,10 @@ class CodeStoryModel(StoryModel):
         if not leaf_slug:
             return False
         folders = list(parts[:-1])
-        if folders[-1] == stem_slug:
+        if folders[-1] in (stem_slug, leaf_slug):
             folders = folders[:-1]
         if not folders:
-            holder = self.epic_for(stem_slug)
+            holder = self.epic_for(leaf_slug)
         else:
             epic = self.epic_for(folders[0])
             nested = folders[1:]
@@ -746,92 +713,3 @@ class CodeStoryModel(StoryModel):
         if current is None:
             raise CodeStoryModelError("A story file needs a sub-epic folder")
         return current
-
-    def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(
-            p for p in tree if p.endswith(self.LEAF_EXTENSION) and self._is_leaf_path(p)
-        )
-
-    def folders_of(self, tree: Dict[str, str]) -> List[str]:
-        folders: set = set()
-        for path in tree:
-            parts = path.split("/")
-            for i in range(1, len(parts)):
-                folders.add("/".join(parts[:i]))
-        return sorted(folders)
-
-    def _is_leaf_path(self, path: str) -> bool:
-        parts = path.split("/")
-        return len(parts) >= 4 and parts[-1].endswith(self.LEAF_EXTENSION)
-
-    def _render_epic(
-        self,
-        epic: Epic,
-        epic_slug: str,
-        tree: Dict[str, str],
-    ) -> None:
-        epic_root = f"{self._tests_root}/{epic_slug}"
-        helper_content = self._render_epic_helper(epic)
-        if helper_content is not None:
-            helper_path = self._epic_helper_path(epic_root, epic)
-            tree[helper_path] = helper_content
-        if not epic.epics and helper_content is None:
-            tree[self._epic_marker_path(epic_root)] = self._render_epic_marker(epic)
-        for sub_epic in epic.epics:
-            self._render_sub_epic(
-                sub_epic=sub_epic,
-                sibling_epics=epic.epics,
-                parent_path=epic_root,
-                owning_epic=epic,
-                tree=tree,
-            )
-
-    def _render_sub_epic(
-        self,
-        sub_epic: Epic,
-        sibling_epics: List[Epic],
-        parent_path: str,
-        owning_epic: Epic,
-        tree: Dict[str, str],
-    ) -> None:
-        folder = f"{parent_path}/{self._folder_slug(sub_epic, sibling_epics)}"
-        for nested in sub_epic.epics:
-            self._render_sub_epic(
-                sub_epic=nested,
-                sibling_epics=sub_epic.epics,
-                parent_path=folder,
-                owning_epic=owning_epic,
-                tree=tree,
-            )
-        if sub_epic.stories or not sub_epic.epics:
-            leaf_path = f"{folder}/{sub_epic.slug()}{self.LEAF_EXTENSION}"
-            tree[leaf_path] = self._render_leaf_file(sub_epic, owning_epic)
-
-    def _epic_helper_path(self, epic_root: str, epic: Epic) -> str:
-        return ""  # WHY: only backends that need a helper (Python, Java) override.
-
-    def _render_epic_helper(self, epic: Epic) -> Optional[str]:
-        # WHY: TypeScript backend needs no per-Epic helper file; Python/Java do.
-        return None
-
-    def _epic_marker_path(self, epic_root: str) -> str:
-        return f"{epic_root}/.epic"
-
-    def _render_epic_marker(self, epic: Epic) -> str:
-        return f"epic:{epic.name}\n"
-
-    def _folder_slug(
-        self,
-        node: Union[Epic, Epic],
-        siblings: List[Union[Epic, Epic]],
-    ) -> str:
-        base = node.slug()
-        duplicate_count = sum(
-            1 for sibling in siblings if sibling.slug() == base
-        )
-        if duplicate_count <= 1:
-            return base
-        return f"{base}--{node.sequential_order}"
-
-    def _render_leaf_file(self, sub_epic: Epic, owning_epic: Epic) -> str:
-        raise NotImplementedError

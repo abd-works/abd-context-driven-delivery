@@ -43,7 +43,7 @@ tests/<epic>/<sub-epic>/examples/          existing examples (loaded into both s
 
 Before each sub-epic, read `.sessions/legacy-compare/watch-list.md`: the mistakes already made and corrected. Check the work against it before each run and before reporting. Add every new correction to it.
 
-Copy this checklist and tick it off for each sub-epic:
+Copy this checklist and check it off for each sub-epic:
 
 ```
 - [ ] 1 Render the shell, every label verbatim

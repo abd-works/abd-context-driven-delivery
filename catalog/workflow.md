@@ -114,7 +114,7 @@ Use when nothing exists yet and you need to shape the solution before building i
   [/stories /generate story_map](actions/generate.html)
 
 - **[Iterate](actions/iterate.html) one slice at a time.**
-  For large artifacts, iterate generates one small validated slice per tick instead of dumping everything at once.
+  For large artifacts, iterate generates one small validated slice per round instead of dumping everything at once.
   [/stories /iterate scenarios](actions/iterate.html)
 
 - **Run several context tools at one stage by listing them.**

@@ -15,7 +15,7 @@ for _cat in ("tools", "cdd_guidance/practices"):
 from expects import be_true, equal, expect
 from mamba import context, description, it
 
-from granola.granola import Granola
+from tools.granola.granola import Granola
 from harness.agent_tools.agent_tools import AgentInstructions
 
 

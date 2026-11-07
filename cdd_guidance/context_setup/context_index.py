@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Optional, Protocol, Sequence
 
 _log = logging.getLogger(__name__)
 
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
@@ -176,7 +176,7 @@ class ContextIndex:
         Read question and formulate a concise search phrase that captures the core intent.
         No tool fires during this step."""
         """Step 2 — call search(query, index_path) to retrieve the top ranked chunks."""
-        self.search()
+        tools(self.search)
         """Step 3 — Compose answer:
         Read each chunk's view field to weight results — story chunks for user-facing behaviour,
         domain chunks for logic, architecture chunks for structure, ux chunks for screens.

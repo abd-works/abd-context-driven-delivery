@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-from agent_bdd.agent_bdd_common import (  # noqa: F401
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import (  # noqa: F401
     AgentResult,
     AgentSession,
     AgentSpecManifest,
@@ -15,7 +15,7 @@ from agent_bdd.agent_bdd_common import (  # noqa: F401
     RunResponse,
     read_manifest,
 )
-from agent_bdd.conf import AgentBddConf
+from cdd_guidance.practices.agent_bdd.conf import AgentBddConf
 
 # Spec helpers (expects/mamba) are lazy — importing agent_bdd must not require test deps.
 _SPEC_HELPER_EXPORTS = frozenset(
@@ -55,7 +55,7 @@ __all__ = [
 
 def __getattr__(name: str) -> Any:
     if name in _SPEC_HELPER_EXPORTS:
-        from agent_bdd import spec_helpers
+        from cdd_guidance.practices.agent_bdd import spec_helpers
 
         return getattr(spec_helpers, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
@@ -96,7 +96,7 @@ def agent(
     if in_chat is None:
         in_chat = _in_chat_from_env()
     if in_chat:
-        from agent_bdd.agent_chat_bdd import _ChatAgentBlock
+        from cdd_guidance.practices.agent_bdd.agent_chat_bdd import _ChatAgentBlock
         with _ChatAgentBlock.opened(workspace, session_file) as block:
             _agent_blocks.use(block)
             try:
@@ -104,7 +104,7 @@ def agent(
             finally:
                 _agent_blocks.clear()
         return
-    from agent_bdd.agent_cli_bdd import _ToolAgentBlock
+    from cdd_guidance.practices.agent_bdd.agent_cli_bdd import _ToolAgentBlock
     with _ToolAgentBlock.opened(workspace, session_file) as block:
         _agent_blocks.use(block)
         try:

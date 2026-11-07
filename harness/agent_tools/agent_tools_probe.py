@@ -153,7 +153,7 @@ class AgentToolsProbe:
         refs = tuple(self.installer.collect_toolsets())
         project = str(self.installer.path) if getattr(self.installer, "path", None) else str(self.installer.repo)
         host = McpHost.from_refs(refs, repo=str(self.installer.repo), project=project)
-        host._bind_as_serving()
+        host._mark_as_serving()
         try:
             return self._all_phases(host)
         finally:

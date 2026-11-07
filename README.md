@@ -51,7 +51,7 @@ Every session in `.sessions/` is a ticket on a kanban: Backlog, Discovery, Speci
 /plugin install cdd-board --marketplace abd-works/abd-context-driven-delivery
 ```
 
-Or from a local checkout: `/plugin marketplace add <path to this repo>`, then `/plugin install cdd-board@abd-works`. See `harness/kanban/.context/module-context.md`.
+Or from a local checkout: `/plugin marketplace add <path to this repo>`, then `/plugin install cdd-board@abd-works`. See `space/kanban/.context/module-context.md`.
 
 ## Practices
 

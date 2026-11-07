@@ -22,7 +22,7 @@ class AgentBdd(PracticeGuidance):
     @agent_instructions
     def generate_output(self) -> str:
         """"""
-        from generate.generate import Generate
+        from cdd_guidance.actions.generate.generate import Generate
 
         Generate(self.workspace).generate(guidance=[self._bdd()])
         return ""

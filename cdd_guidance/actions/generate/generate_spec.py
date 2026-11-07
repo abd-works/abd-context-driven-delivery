@@ -28,7 +28,7 @@ from space.session.throwaway_project import ProjectCall, ThrowawayProject
 
 def _expanded_generate(action, arguments):
     return AgentInstructions.for_callable(Generate.generate, action).expand(
-        {}, arguments
+        arguments
     )
 
 

@@ -1,8 +1,16 @@
 export class Orders {}
 
 export class OrdersRepository {
-  load() {}
-  create() {}
-  search() {}
-  update() {}
+  load(id: string): Orders {
+    return new Orders()
+  }
+  create(): Orders {
+    return new Orders()
+  }
+  search(): Orders[] {
+    return []
+  }
+  update(orders: Orders): void {
+    return
+  }
 }

@@ -67,6 +67,10 @@
 <li><a href="harness/catalog_generator/markdown/cdd-approach.md#implement">Implementation</a> — tests, touchpoints, and the solution on the target stack. </li>
 </ul>
 <p><em>Use the <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/cdd_guidance/agents/implementation.md">Implementation</a> agent to run implementation.</em></p>
+<h2>Session board</h2>
+<p>Every session in <code>.sessions/</code> is a ticket on a kanban: Backlog, Discovery, Specification, Implementation, Complete. Install the board pane for Claude Code after <code>scripts/install.py --ide Claude</code> has set up the <code>cdd</code> MCP server:</p>
+<pre><code>/plugin install cdd-board --marketplace abd-works/abd-context-driven-delivery</code></pre>
+<p>Or from a local checkout: <code>/plugin marketplace add &lt;path to this repo&gt;</code>, then <code>/plugin install cdd-board@abd-works</code>. See <code>space/kanban/.context/module-context.md</code>.</p>
 <h2>Practices</h2>
 <p>Tools that refine context in stages, according to a particular perspective.</p>
 <ul>

@@ -25,7 +25,7 @@ class Satisfy(GuidanceAction):
         from harness.agent_tools.agent_tools import AgentInstructions
         from cdd_guidance.actions.validate.validate import Validate
 
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
         sections: list[str] = [_SATISFY_MARKDOWN.strip()]
 
         def on(item) -> None:
@@ -33,7 +33,7 @@ class Satisfy(GuidanceAction):
             sections.append(self._inside(Validate, worked_on).validate(worked_on))
             fix_prose = AgentInstructions.for_callable(
                 Generate.generate_fixes_from_validate, self._inside(Generate, worked_on)
-            ).expand({}, {}).instructions
+            ).expand({}).instructions
             if fix_prose.strip():
                 sections.append(fix_prose.strip())
 

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Callable
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
-from harness.installation.destination import data_field, language_adapter
+from harness.installation.destination import data_field, identity, language_adapter
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance_actions import load_document
 from harness.installation.files import command, skill
@@ -201,7 +201,8 @@ class LogEntry:
         return fidelity.name in words and bool({practice.key, type(practice).__name__} & words)
 
 
-@language_adapter(language="typescript", identity=("session_file", "name"))
+@identity("session_file", "name")
+@language_adapter(language="typescript")
 @agent_toolset
 class PracticeSessionOutput:
     """What one practice has in one session: its guideline, the paths it reads, its graph, whether it is on, the folder
@@ -506,7 +507,8 @@ class FidelitySessionOutput:
         return [FileEntry(repo.path_from_top(path), True) for path in found] or [FileEntry(relative, False)]
 
 
-@language_adapter(language="typescript", identity="session_file")
+@identity("session_file")
+@language_adapter(language="typescript")
 @agent_toolset
 class Session:
     """Work session — one in-memory current for each project; new and switch open named sessions."""

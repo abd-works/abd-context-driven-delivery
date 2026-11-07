@@ -8,6 +8,7 @@ import inspect
 import re
 import sys
 import textwrap
+import types
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, ClassVar, Mapping, cast, get_args, get_origin, get_type_hints
@@ -19,6 +20,9 @@ from harness.installation.destination import Mark
 ContextDocument = dict[str, Any]
 ArgumentDocument = dict[str, Any]
 TypeAnnotation = Any
+# A `@tool_subject` loader or a class tool that takes this argument is handed the folder of the project the running call
+# works on. No caller passes it, so it is not one of the tool's arguments.
+CALLED_PROJECT = "project"
 
 
 class AgentToolValidationError(Exception):
@@ -138,10 +142,10 @@ class ToolSetCollection:
         typ = type(self)
         return f"{typ.__module__}:{typ.__name__}"
 
-    def bind(self, instance: Any, name: str | None = None) -> None:
+    def attach(self, instance: Any, name: str | None = None) -> None:
         from harness.markdown.markdown import MarkdownCollection
 
-        MarkdownCollection.bind(self, instance, name)
+        MarkdownCollection.attach(self, instance, name)
 
     @property
     def tools(self) -> dict[str, AgentTool]:
@@ -156,7 +160,7 @@ class ToolSetCollection:
         return found
 
     def _bound_callable(self, name: str, member: Any) -> Any:
-        return AgentToolSet._bind(type(self), self, name, member)
+        return AgentToolSet._callable_on(type(self), self, name, member)
 
 
 class Collect:
@@ -373,7 +377,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
     def _operation_callable(self, name: str, member: Any) -> Any:
         load = self.tool_subject_of(type(self))
         if load is None or isinstance(inspect.getattr_static(type(self), name), classmethod):
-            return self._bound_callable(name, member)
+            return self.given_the_called_project(self._bound_callable(name, member))
         return self._on_subject(load, member)
 
     def _on_subject(self, load: Callable[..., Any], operation: Callable[..., Any]) -> Callable[..., Any]:
@@ -389,7 +393,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
             return operation(found, **arguments)
 
         on_subject.__signature__ = inspect.Signature(identity + own, return_annotation=inspect.signature(operation).return_annotation)
-        on_subject.__annotations__ = {**load.__func__.__annotations__, **operation.__annotations__}
+        on_subject.__annotations__ = {**load.__annotations__, **operation.__annotations__}
         return OnSubject(on_subject)
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
@@ -527,7 +531,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         ]
 
     def _bound_callable(self, name: str, member: Any) -> Any:
-        return AgentToolSet._bind(type(self), self, name, member)
+        return AgentToolSet._callable_on(type(self), self, name, member)
 
     @classmethod
     def _descriptor(cls, owner: type, name: str) -> Any:
@@ -545,7 +549,7 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
         return function
 
     @classmethod
-    def _bind(cls, owner: type, instance: Any, name: str, member: Any) -> Any:
+    def _callable_on(cls, owner: type, instance: Any, name: str, member: Any) -> Any:
         descriptor = cls._descriptor(owner, name)
         if isinstance(descriptor, staticmethod):
             return descriptor.__func__
@@ -807,12 +811,34 @@ class AgentToolSet(AgentToolSetOrigin, AgentToolSetTools):
 
     @classmethod
     def tool_subject_of(cls, toolset: type) -> Callable[..., Any] | None:
-        """The classmethod marked ``@tool_subject`` on ``toolset``, bound to it, when it has one."""
+        """The classmethod marked ``@tool_subject`` on ``toolset``, bound to it, when it has one; it is handed the call's
+        project when it takes one."""
         for name in dir(toolset):
             member = inspect.getattr_static(toolset, name, None)
             if isinstance(member, classmethod) and ToolSubject.marks(member.__func__):
-                return getattr(toolset, name)
+                return cls.given_the_called_project(getattr(toolset, name))
         return None
+
+    @classmethod
+    def given_the_called_project(cls, operation: Any) -> Any:
+        """A class operation that takes the call's project, as one that is handed the folder of the project the
+        running call works on and leaves it out of its signature, so no caller passes it. Any other operation as it
+        is."""
+        if not inspect.ismethod(operation) or CALLED_PROJECT not in inspect.signature(operation).parameters:
+            return operation
+        function = operation.__func__
+        signature = inspect.signature(function)
+
+        @functools.wraps(function)
+        def on_called_project(owner: Any, *arguments: Any, **named: Any) -> Any:
+            # WHY: space sits above the framework; the MCP host names each call's project with working_on.
+            from space.work_state import project_folder
+
+            return function(owner, *arguments, **named, **{CALLED_PROJECT: project_folder()})
+
+        on_called_project.__signature__ = signature.replace(parameters=[parameter for parameter in signature.parameters.values() if parameter.name != CALLED_PROJECT])
+        on_called_project.__annotations__ = {name: hint for name, hint in function.__annotations__.items() if name != CALLED_PROJECT}
+        return types.MethodType(on_called_project, operation.__self__)
 
     @classmethod
     def instantiate_all(cls, items: list) -> list:
@@ -1288,7 +1314,7 @@ class AgentInstructions(AgentTool):
 
     def _expanded_reply(self, arguments: dict[str, Any]) -> str:
         toolset = self.toolset
-        expanded = AgentInstructions.for_callable(self.callable, toolset).expand({}, arguments)
+        expanded = AgentInstructions.for_callable(self.callable, toolset).expand(arguments)
         body = (expanded.instructions or "").strip()
         doc = (inspect.getdoc(self.callable) or "").strip()
         if doc and doc not in body:
@@ -1321,8 +1347,7 @@ class AgentInstructions(AgentTool):
             template, arguments, parameter_names, instance=instance,
         )
 
-    def expand(self, context: dict[str, Any], arguments: dict[str, Any]) -> ExpansionResult:
-        del context
+    def expand(self, arguments: dict[str, Any]) -> ExpansionResult:
         self._scan_arguments = arguments
         self._reset_scan = True
         self._scan()
@@ -1345,7 +1370,7 @@ class AgentInstructions(AgentTool):
             self._seen_prompt = set()
             self._loop_item_modes = {}
             self._execution_locals = dict(self._scan_arguments or {})
-            self._bind_parameter_defaults()
+            self._apply_parameter_defaults()
         self._defining_class = self._scan_defining_class
         self._mode = self._read_mode(self.toolset)
         self._visited = self._check_and_advance_visited(
@@ -1360,7 +1385,7 @@ class AgentInstructions(AgentTool):
         else:
             self._walk_statements(function_def)
 
-    def _bind_parameter_defaults(self) -> None:
+    def _apply_parameter_defaults(self) -> None:
         try:
             signature = inspect.signature(self.callable)
         except (TypeError, ValueError):
@@ -2229,7 +2254,9 @@ class NoSessionLog(Mark):
 class ToolSubject(Mark):
     """Mark the classmethod that finds the object a tool call acts on, so ``@agent_tool`` can sit on a domain class
     whose constructor takes collaborators. Each instance operation's tool takes this loader's arguments before its
-    own: ``load(ticket)`` and ``move_next(self)`` make the tool ``ticket.move_next(ticket)``."""
+    own: ``load(ticket)`` and ``move_next(self)`` make the tool ``ticket.move_next(ticket)``. A loader that takes
+    ``project`` is handed the folder of the project the call works on, so ``load(ticket, *, project)`` loads the
+    ticket from that project's board and the tool still takes only ``ticket``."""
 
     flag = "_is_tool_subject"
     copied = False

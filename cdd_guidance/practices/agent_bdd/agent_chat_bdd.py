@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from agent_bdd.agent_bdd_common import (
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     AgentHarnessError,
     AgentJudgeError,
     AgentResult,
@@ -22,7 +22,7 @@ from agent_bdd.agent_bdd_common import (
     _ShellCapture,
     yaml_from_prompt,
 )
-from agent_bdd.yaml_fence import YamlFence
+from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
 
 
 class _ChatAgentBlock:

@@ -27,7 +27,7 @@ class Render(GuidanceAction):
         paths: a file, a list of files, or a folder. Required on every call. Pass paths so this action reads locally. Do not pass the document body in content on MCP.
         content: in-process text when paths is empty. Leave this empty on an MCP call.
         source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, java, javascript, json, or drawio. md is markdown. Omit source when content is already the current format."""
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
         loaded = load_document(content, paths)
 
         def on(item):

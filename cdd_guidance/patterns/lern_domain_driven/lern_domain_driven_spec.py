@@ -26,9 +26,6 @@ sys.path.insert(0, _root)
 from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.clean_engineering.specifications._scan_kit import (
-    DOMAIN_MODULE_RULE_GLOBS,
-)
 from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import (
     LernDomainDriven,
 )
@@ -183,7 +180,7 @@ with description("a LernDomainDriven generator"):
             expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
 
         with it("should scope inject globs to src domains and epic packages"):
-            expect(self.rules.glob).to(equal(DOMAIN_MODULE_RULE_GLOBS))
+            expect(self.rules.glob).to(equal("packages/**/*,src/**/*"))
 
         with it("should match domain node files under src"):
             expect(self.rules.matches("src/customer/customer-node.ts")).to(equal(True))

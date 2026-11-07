@@ -1,6 +1,6 @@
 """Generate a project-specific ``cdd-approach.html`` slide from project artifacts.
 
-Maps each file the user (or the classifier) supplies to a practice × stage slot on
+Maps each file the user (or the classifier) supplies to a practice × stage place on
 the approach page — the same layout as ``catalog/cdd-approach.html``, with project
 content in the Iterate and Learn and Product Engineering example columns.
 """
@@ -27,7 +27,7 @@ from harness.catalog_generator.foundry_chrome import (
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 @dataclass(frozen=True)
-class ApproachExampleSlot:
+class PracticeStage:
     practice: str
     stage: str
 
@@ -53,10 +53,10 @@ class ProjectApproach:
         resolved: dict[tuple[str, str], Path] = {}
         for raw in example_paths:
             path = _resolve_project_path(root, raw)
-            slot = classify_example_path(path, project_root=root)
-            if slot is None:
+            place = classify_example_path(path, project_root=root)
+            if place is None:
                 continue
-            resolved[(slot.practice, slot.stage)] = path
+            resolved[(place.practice, place.stage)] = path
         citation = GitCitation.from_checkout(root) if root.is_dir() else GitCitation("", "")
         return cls(
             project_root=root,
@@ -65,7 +65,7 @@ class ProjectApproach:
             examples=resolved,
         )
 
-    def with_slot(self, practice: str, stage: str, path: str | Path) -> ProjectApproach:
+    def with_example(self, practice: str, stage: str, path: str | Path) -> ProjectApproach:
         updated = dict(self.examples)
         updated[(practice, stage)] = _resolve_project_path(self.project_root, path)
         return ProjectApproach(
@@ -121,7 +121,7 @@ def classify_example_path(
     path: str | Path,
     *,
     project_root: Path | None = None,
-) -> ApproachExampleSlot | None:
+) -> PracticeStage | None:
     """The practice and stage of the first board fidelity that declares a file at ``path``, read from each fidelity's
     ``outputs``, the same declarations the session uses to find a fidelity's files. None when no fidelity declares it."""
     candidate = Path(path).resolve()
@@ -131,7 +131,7 @@ def classify_example_path(
             if STAGE_COLUMNS.of(fidelity.stage) is None:
                 continue
             if any(pattern.search(relative) for pattern in _declared_file_patterns(fidelity)):
-                return ApproachExampleSlot(practice.key, fidelity.stage)
+                return PracticeStage(practice.key, fidelity.stage)
     return None
 
 
@@ -194,10 +194,10 @@ def discover_project_examples(project_root: str | Path) -> dict[tuple[str, str],
             for part in path.parts
         ):
             continue
-        slot = classify_example_path(path, project_root=root)
-        if slot is None:
+        place = classify_example_path(path, project_root=root)
+        if place is None:
             continue
-        key = (slot.practice, slot.stage)
+        key = (place.practice, place.stage)
         if key not in found:
             found[key] = path
     return found
@@ -270,7 +270,7 @@ def merge_example_sources(
     if explicit:
         for raw in explicit:
             path = _resolve_project_path(root, raw)
-            slot = classify_example_path(path, project_root=root)
-            if slot:
-                merged[(slot.practice, slot.stage)] = path
+            place = classify_example_path(path, project_root=root)
+            if place:
+                merged[(place.practice, place.stage)] = path
     return merged

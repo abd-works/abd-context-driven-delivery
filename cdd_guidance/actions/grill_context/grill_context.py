@@ -120,7 +120,7 @@ class GrillContext(GuidanceAction):
         plan: in-process text. Leave this empty on an MCP call."""
         """Step 0 - The session's root is where context is explored and where grill-answers.md is written ({session root}/.context/grill-answers.md); the tools read it from the session, so pass no root."""
         """Step 1 - Context discovery: call explore_context_files() for the session's root, and explore_context_files(folder=...) for each folder referenced in the plan. Prefer-read any active *-sketch.md for this plan so later questions can validate the sketch's thinking."""
-        self.explore_context_files()
+        tools(self.explore_context_files)
         """Step 2 - MUST read before asking. Upward context is more general; downward is more specific. Read every relevant context file referenced or implied by the decision - owning `*-segment.md`, module-context, grill-answers, sketches, peer story-context, build-order, and any path the plan or prior answers cite. A consumed handoff is gone — do not hunt archives for current state. Index/overlay mid-epic stubs are never enough for inventory. Call read_context_file to confirm each path, then Read that file locally. Do not paste the file body into an MCP call. Grep, titles, memory, or primer-only reads do not count."""
         tools(self.read_context_file)
         """Step 2a - Proof gate: do not proceed to Step 3 until this turn can name the path(s) read and cite concrete terms from them. Missing a referenced file means read it - do not ask yet. Asking from a skim is a defect."""

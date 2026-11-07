@@ -68,4 +68,4 @@ Build the feature on the LERN stack and prove it end to end.
 
 ## Handoff
 
-Run `space-handoff-handoff-session` when the feature is done or the session ends. Name the phase reached, the artifacts and files changed in each phase, decisions and their reasons, test commands and results, deferred items, and the next exact step. Feed what was learned back into context, so the next feature starts from it.
+Run `space-session-handoff-session` when the feature is done or the session ends. Name the phase reached, the artifacts and files changed in each phase, decisions and their reasons, test commands and results, deferred items, and the next exact step. Feed what was learned back into context, so the next feature starts from it.

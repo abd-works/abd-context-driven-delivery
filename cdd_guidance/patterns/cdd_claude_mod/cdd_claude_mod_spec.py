@@ -83,7 +83,7 @@ with description("a Claude Code mod pattern"):
             expect(self.rules.matches("harness/report/pane/hooks/register.tsx")).to(be_true)
 
         with it("should not match Python outside a mod"):
-            expect(self.rules.matches("harness/kanban/board.py")).to(equal(False))
+            expect(self.rules.matches("space/kanban/board.py")).to(equal(False))
 
     with context("whose graph overlay has been read"):
         with before.each:
