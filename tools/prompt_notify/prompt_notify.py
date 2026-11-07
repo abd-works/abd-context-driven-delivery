@@ -28,7 +28,7 @@ from harness.installation.destination import noCatalog
 from harness.annotations.annotation import Toast
 from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
 from harness.hooks.hooks import hook
-from space.session.session_log import SessionLog
+from space.session.session_log import LogTimestamp
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
 IDE_TOAST_EXTENSION = "cdd.prompt-notify-0.0.1"
@@ -156,7 +156,7 @@ class PromptNotify:
         return self.detect(payload)
 
     def _log_echo(self, tool_name: str, kind: str, label: str) -> None:
-        stamp = SessionLog.timestamp(datetime.now(timezone.utc))
+        stamp = LogTimestamp.now()
         sys.stderr.write(f"{stamp} [prompt-notify] tool={tool_name} {kind}={label}\n")
 
     def _catalog_match(
@@ -313,7 +313,7 @@ class ToastFile:
 
     def show(self, message: str, now: datetime) -> Path:
         """Write message as this folder's toast, joined with the toast already there when it is from the same burst."""
-        notice = {"message": self._joined_with_previous(message, now), "at": SessionLog.timestamp(now)}
+        notice = {"message": self._joined_with_previous(message, now), "at": str(LogTimestamp(now))}
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(notice, ensure_ascii=False) + "\n", encoding="utf-8")
         return self.path
@@ -340,7 +340,7 @@ class ToastFile:
 
     def _time_of(self, stamp: str) -> datetime | None:
         try:
-            return datetime.fromisoformat(stamp)
+            return LogTimestamp.read(stamp).moment
         except ValueError:
             return None
 

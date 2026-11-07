@@ -44,7 +44,7 @@ from space.kanban.session_board_examples import (
 )
 from space.kanban.story_test import SharedStories, expect_action, expect_no_next, expect_placed, expect_refused, refusal_of
 from space.kanban.ticket import FidelityNotFoundError, TicketNotFoundError
-from tools.file_manager.file_manager import PathOutsideRootsError
+from space.session.file_manager import PathOutsideRootsError
 
 shared_stories = SharedStories("Review Fidelity Outputs")
 

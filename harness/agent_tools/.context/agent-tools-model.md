@@ -151,6 +151,9 @@ sent(arguments: dict | None, project: Path | None): ToolCall
 	-> ChatPointer.taken_from
 open_sessions_with(opener: SessionOpener): None
 	// space/session registers its opener when it is imported, so this module never imports space
+session_in(project: Path): Session | None
+	// the session saved as open in project's checkout, for work that serves no call, such as a hook event or a probe
+	-> SessionOpener.saved_in(project)
 session_named(session_file: str): Session
 	// the session a board command names by its session.json
 	-> SessionOpener.named_in(session_file, self)
@@ -163,6 +166,7 @@ How a call finds the sessions it works in. A protocol: the module that keeps ses
 SessionOpener
 ------
 ----
+saved_in(project: Path): Session
 open_in(call: ToolCall): Session
 named_in(session_file: str, call: ToolCall): Session
 

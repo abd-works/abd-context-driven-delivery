@@ -4,20 +4,16 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command
 from harness.mcp.mcp_server import long_call, mcp
-from harness.process.git import Git, RepoConnectError
+from harness.process.git import Git
 from space.repo.latest_release import LatestRelease
 from space.repo.worktree import Worktree, Worktrees
 from space.work_state import WorkState
-
-if TYPE_CHECKING:
-    from tools.file_manager.file_manager import FileManager
 
 # A file git reports as changed that is the hook server's running log, not work: it never blocks a switch or a close.
 _RUNTIME_LOG = "events.log"
@@ -160,13 +156,6 @@ class Repo:
             return checkout
         return (worktree_git / common.read_text(encoding="utf-8").strip()).resolve().parent
 
-    @cached_property
-    def file_manager(self) -> FileManager:
-        """Lists, finds, and reads the files anywhere in this repository; made once."""
-        from tools.file_manager.file_manager import FileManager
-
-        return FileManager(self.root, (self.root,))
-
     def path_from_top(self, path: Path | str) -> str:
         """path as written from the repository's top, empty for the top itself, or as it is when it lies outside the
         repository, where a session may work."""
@@ -254,9 +243,8 @@ class Repo:
     @cached_property
     def main_clone(self) -> Repo:
         """The repository's main checkout, found once: this clone unless it is a linked worktree. Branch commands act
-        there, never inside a linked worktree."""
-        if self.find_root() is None:
-            raise RepoConnectError("repo tools require a git repository")
+        there, never inside a linked worktree. A folder in no repository is its own main clone, which keeps the sessions
+        of a project that is no clone; a branch command there fails the way git does."""
         primary = self.primary_root()
         return self if primary == self.root else Repo(primary)
 

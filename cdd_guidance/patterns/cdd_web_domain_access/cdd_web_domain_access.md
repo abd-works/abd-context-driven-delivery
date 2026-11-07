@@ -271,7 +271,7 @@ export function TicketViewGenerated({ client, fields, operations }: TicketViewPr
 
 Every application ends up showing files: a ticket's outputs, a report's failing line, the source behind a graph node. The page cannot read the disk, so a tool reads it, and one shared tool does it for every application rather than a read operation on each object.
 
-**The file manager is `FileManager`, in `tools/file_manager/`, and the session owns it.** The session holds it in memory; nothing about it is written to the session's files, because it keeps no state of its own beyond the roots it reads. Its loader takes the current session's file manager, so a page names no root and no session to reach it, the same way it reaches the one board. Reading and listing files needs no git, which is why it belongs to the session and not to the repository.
+**The file manager is `FileManager`, in `space/session/`, and the session owns it.** The session holds it in memory; nothing about it is written to the session's files, because it keeps no state of its own beyond the roots it reads. Its loader takes the current session's file manager, so a page names no root and no session to reach it, the same way it reaches the one board. Reading and listing files needs no git, which is why it belongs to the session and not to the repository.
 
 **It reads under the session's roots, and nowhere else.** The session's roots are its workpath: the folder each practice works in, as the session's `session.json` records it, or the practice's default folder when it records none. They are not the session's own folder under `.sessions/`. A page names a path from the workpath, so a root outside it reads back as `../reports/...`.
 
