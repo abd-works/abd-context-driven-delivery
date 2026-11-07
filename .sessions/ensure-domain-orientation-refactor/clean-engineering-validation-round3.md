@@ -4,7 +4,7 @@ Branch `ensure-domain-orientation-refactor` at `42ab935c`, after every item in `
 
 **Limitation.** The CDD MCP host serves the pinned main runtime, so validate's graph scanners are main's older ones. The judges applied this branch's rules, which they read from the worktree, and treated graph hits as leads. Serving from this checkout would have switched every open chat to it.
 
-**The short answer.** The round-1 and round-2 items hold: no global current objects, one registry, one Violation, no module cycles, Session and Repo split, all 34 bugs fixed. Round 3 found a second layer: round trips that still lose data, failures still swallowed, a few copies that came back, and paths resolved against the host's folder. Four of the mistakes the corrections logs record have come back. Every finding below is being fixed (task list at the end).
+**The short answer.** The round-1 and round-2 items hold: no global current objects, one registry, one Violation, no module cycles, Session and Repo split, all 34 bugs fixed. Round 3 found a second layer: round trips that still lose data, failures still swallowed, a few copies that came back, and paths resolved against the host's folder. Four of the mistakes the corrections logs record have come back. Every finding below is fixed or deliberately decided (task list at the end; decisions 26–37 in `clean-engineering-validation.md`). Full suite: 3,201 examples, 0 failed.
 
 Severity: **high** means wrong behaviour or a second object model; **medium** a rule plainly broken; **low** naming or documentation. **New** means found this round; **left** means it was in rounds 1–2 and is not finished.
 
@@ -73,8 +73,8 @@ B1, B2, B12, B13, B14, B16, B23, B27, B30, B34; no global current object; ToolCa
 
 # Task list
 
-1. ◐ Practices, actions, patterns (one agent): round trips (bases, stereotypes, actors, `story_type`, `story_outline`), swallowed parse errors, paths from the session root, the `@mcp` rule, factories, UX story links as references, DDD Entity by stereotype, duplication, validate's rule assembly.
-2. ◐ Board and chat bar (one agent): references instead of string and object copies, the chat bar on generated types, slug lookups, rule assembly once.
-3. ◐ Session, repo, tools (one agent): one owner for a practice's folder, `session.files`, chat pointers, Granola's project, named failures in repo and worktree, `Name`, legacy readers, prompt_notify and prompt_log.
-4. ◐ Harness (one agent): `ToolRequest`, diagnostics timeout and probes, hook safety and `hooks.json`, swallowed exceptions, per-call state, globals, import side effects, one graph JSON shape, the framework naming practices, duplication, free-function files, large classes, deep modules, dead code, `BoundNode`, module cards.
-5. ○ Lead: one mark spelling across the repository (decision 26), reinstall, catalog, full suite including heavy specs, then a short re-check of the fixed areas.
+1. ✅ Practices, actions, patterns (one agent): round trips (bases, stereotypes, actors, `story_type`, `story_outline`), swallowed parse errors, paths from the session root, the `@mcp` rule, factories, UX story links as references, DDD Entity by stereotype, duplication, validate's rule assembly.
+2. ✅ Board and chat bar (one agent): references instead of string and object copies, the chat bar on generated types, slug lookups, rule assembly once.
+3. ✅ Session, repo, tools (one agent): one owner for a practice's folder, `session.files`, chat pointers, Granola's project, named failures in repo and worktree, `Name`, legacy readers, prompt_notify and prompt_log.
+4. ✅ Harness (one agent): `ToolRequest`, diagnostics timeout and probes, hook safety and `hooks.json`, swallowed exceptions, per-call state, globals, import side effects, one graph JSON shape, the framework naming practices, duplication, free-function files, large classes, deep modules, dead code, `BoundNode`, module cards.
+5. ✅ Lead: one mark spelling across the repository (decision 26), reinstall, catalog, full suite including heavy specs, then a short re-check of the fixed areas.

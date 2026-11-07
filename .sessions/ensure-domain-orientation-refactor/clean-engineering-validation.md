@@ -349,3 +349,15 @@ Ordered so each step unblocks the next. **Decide** marks a choice that is yours.
 | 23 | DDD stereotypes | A decorator with no arguments (or a `<<Mark>>` doc comment) is a stereotype | Clean Engineering keeps no list of DDD's words |
 | 24 | LERN slug `outline-rows-loop-over-examples` | Renamed `outline-entries-loop-over-examples` | Banned word |
 | 25 | `.secrets` | Untracked and ignored | It held a `CURSOR_API_KEY`; the key is still in history and must be rotated |
+| 26 | Mark spelling | `@mcp`, `@skill`, `@hook` everywhere | Two spellings let a rule that matched `@mcp` pass every `@Mcp` operation; lowercase matches `agent_tool`, `data_field` |
+| 27 | Clean Engineering Miro adapter | Removed | Miro is not a listed format and nothing reached the adapter |
+| 28 | A file that does not parse | Reported by the `source-parses` rule; readers raise `UnreadableSource` | One broken file should not stop the graph, and must not read as empty |
+| 29 | DDD classification | By stereotype first, then the naming conventions the tactics rules allow | Capitalisation alone made every class an Entity |
+| 30 | UX links to stories | `StoryLink` objects holding the Stories node | A renamed story no longer silently drops its screens |
+| 31 | Saved graph | One versioned `SavedGraph`, read by field name; older files are refused and the graph re-read | Four positional readers and three shapes |
+| 32 | What the graph knows about a practice | Declared on its `GraphPractice` (class, member, anchor and rule types) | The framework no longer names Stories, UX, DDD or Clean Engineering |
+| 33 | Context setup | Made per call (`for_call`); capture values are parameters (`LiveAppCapture`) | Its partition worked in no session and fields were shared across chats |
+| 34 | A practice's folder | session.json root, then config.json `practice_folders`, then the practice default; `practices.json` deleted | One owner chain instead of three files read four ways |
+| 35 | Saved graphs in git | Untracked and ignored (fixtures kept) | They are a cache and had gone stale |
+| 36 | Identity fields that hold an object | Sent by reference | FidelityProgress sends its ticket, fidelity and practice without copying them |
+| 37 | Render probe | Hands render its own markdown file, read as markdown | It used to hand whole practice folders with no source |
