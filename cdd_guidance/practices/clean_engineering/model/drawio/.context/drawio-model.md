@@ -108,10 +108,12 @@ The `drawio` format. A modules view when the model has modules and no class memb
 
 The toolset a caller types. Create writes a path. Scan judges layout. Repair fixes the layout generator, not one diagram by hand.
 
-+ Drawio(workspace = None)
++ Drawio(practice: CleanEngineering)
 ------
++ practice: CleanEngineering
+	// the practice that makes it; its formats read the content a diagram is drawn from
 + source_format: str
-	// markdown, json, python, or drawio: the format create_diagram parses its content from
+	// the format create_diagram parses its content from: any format the practice reads
 + << composition >> channel: DrawIOCleanEngineeringModel
 	// the one Draw.io model it writes; its previous and keep_positioning are the layout policy
 + scan_root: str | None
@@ -119,6 +121,7 @@ The toolset a caller types. Create writes a path. Scan judges layout. Repair fix
 ----
 + create_diagram(content: str, path: str): str
 	// with keep_positioning, the diagram already at path is the previous one
+	-> CleanEngineering.model_in
 	-> DrawIOCleanEngineeringModel.render
 + scan(paths: list[str]): str
 	-> DrawioScanner.run_report
@@ -162,17 +165,28 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 
 ## DrawioPage
 
-One page of a scanned file. It is read once, so every check on the page sees the same boxes and edges.
+One page of a draw.io file (`drawio/drawio_page.py`): its cells, the class boxes on it, and the edges between them. It is the one reader of draw.io cells: *DrawIOCleanEngineeringModel* parses a diagram and keeps the positions and routes of the one it replaces through it, and every scanner checks one.
 
-+ DrawioPage(file_path: Path, name: str, root: Element)
++ DrawioPage(file_path: Path | None, name: str, root: Element)
 ------
++ cells: list[Element]
++ vertices: list[Element]
++ edges: list[Element]
 + boxes: dict[str, tuple]
 + class_names: dict[str, str]
-+ edges: list[Element]
 ----
++ pages_in(mxfile: Element, file_path: Path | None = None): list[DrawioPage]
+	// class operation: each diagram page that holds a graph model
++ whole(text: str): DrawioPage | None
+	// class operation: every cell of a document as one page
++ cell(cell_id: str): Element | None
++ positions(): dict[str, tuple[float, float]]
++ edges_by_ends(): dict[tuple[str, str], Element]
++ kind_of(edge: Element): str
+	// inheritance, composition, aggregation, dependency, or association
 + describe(edge: Element): str
 	// Source->Target (kind)
 + segments(edge: Element): tuple[list, bool]
 	// the polyline an edge draws, and whether Draw.io's router may draw it differently
 
-The graph checks the same rules on diagram files: `drawio/rules/__init__.py` wraps each discovered scanner in a *PracticeGraphRule* for `OoadClass`, `Module`, and `Package` nodes whose source is a `.drawio` file, and `CleanEngineeringGraph.language_rules("drawio")` returns them.
+The graph checks the same rules on diagram files: `drawio/rules/__init__.py` wraps each discovered scanner in a *PracticeGraphRule* whose `check_practice` scans each `.drawio` file the practice read a class, module, or package from once, and reports on the first of those nodes; `CleanEngineering.language_checks("drawio")` returns them.

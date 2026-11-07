@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import re
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
@@ -19,11 +17,6 @@ _MAX_PUBLIC_SHARE = 0.4
 # A module of one or two classes cannot keep 60% private while exposing anything, so it is not measured.
 _MIN_MEASURED_CLASSES = 3
 _FOLDER_TYPES = ("Module", "Package")
-_CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx")
-_PY_FROM_IMPORT = re.compile(r"^\s*from\s+[\w.]+\s+import\s+(\([^)]*\)|[^\n]+)", re.M)
-_JS_IMPORT = re.compile(r"\bimport\s+(?:type\s+)?([\w$]+)?\s*,?\s*(?:\{([^}]*)\})?\s*from\b")
-_QUALIFIED_CLASS = re.compile(r"\.([A-Z]\w*)\b")
-_IMPORT_ALIAS = re.compile(r"\s+as\s+\w+")
 
 
 class OneWayDeps(PracticeGraphRule):
@@ -34,7 +27,7 @@ class OneWayDeps(PracticeGraphRule):
 
     def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
         imports = {
-            folder.node_id: set(folder.get_fact("dependencies", []))
+            folder.node_id: {imported.node_id for imported in context.targets(folder, "dependsOn")}
             for folder in _folders(context)
         }
         hits: list[tuple[str, str]] = []
@@ -122,33 +115,14 @@ def _owning_module(file: str | None, modules: list["Node"]) -> "Node | None":
 
 
 def _importers_by_name(context: "RuleCheckContext", modules: list["Node"]) -> dict[str, set[str]]:
-    """Each class name production code imports or qualifies, with the modules whose code does it."""
-    if context.source_root is None:
-        return {}
+    """Each class name production code imports or qualifies, with the modules whose code does it: the names each
+    folder's files import, which the reading kept on the folder."""
     importers: dict[str, set[str]] = {}
     for folder in _folders(context):
-        directory = Path(context.source_root) / folder.source.file
-        if not directory.is_dir():
-            continue
-        for file in directory.iterdir():
-            relative = f"{folder.source.file}/{file.name}"
-            if file.suffix.lower() not in _CODE_SUFFIXES or is_test_code(relative):
-                continue
-            importer = _owning_module(relative, modules)
-            for name in _imported_names(file.read_text(encoding="utf-8", errors="replace")):
-                importers.setdefault(name, set()).add(importer.node_id if importer else "")
+        importer = _owning_module(f"{folder.source.file}/", modules)
+        for name in folder.get_fact("imported_names", []) or []:
+            importers.setdefault(name, set()).add(importer.node_id if importer else "")
     return importers
-
-
-def _imported_names(text: str) -> set[str]:
-    names: set[str] = set(_QUALIFIED_CLASS.findall(text))
-    for match in _PY_FROM_IMPORT.finditer(text):
-        names.update(_IMPORT_ALIAS.sub("", item).strip() for item in match.group(1).strip("()").split(","))
-    for default, braced in _JS_IMPORT.findall(text):
-        names.add(default)
-        names.update(_IMPORT_ALIAS.sub("", item).strip() for item in (braced or "").split(","))
-    names.discard("")
-    return names
 
 
 class ExtensionsLiveWithTheDomain(PracticeGraphRule):
@@ -212,9 +186,8 @@ def _imports_under(node: "Node", context: "RuleCheckContext") -> set[str]:
     for folder in _folders(context):
         if not _is_under(folder.source.file, node.source.file):
             continue
-        for dependency in folder.get_fact("dependencies", []):
-            imported = context.node(dependency)
-            if imported is not None and imported.source.file:
+        for imported in context.targets(folder, "dependsOn"):
+            if imported.source.file:
                 targets.add(imported.source.file)
     return targets
 

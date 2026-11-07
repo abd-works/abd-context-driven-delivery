@@ -11,7 +11,6 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import Cla
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
-from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 _CLASS_RE = re.compile(
@@ -38,8 +37,9 @@ _CALL_RE = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
 # A name after ``new`` is constructed, not called.
 _CONSTRUCTION_RE = re.compile(r"\bnew\s+$")
 _STRING_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
+# A declared field, `name: Type;` or `name: Type = value;`, with its modifiers.
 _FIELD_RE = re.compile(
-    r"^\s*(?:(?:public|private|protected|readonly|static)\s+)*(\w+)\s*:\s*([^;=]+);",
+    r"^\s*((?:(?:public|private|protected|readonly|static|declare|override)\s+)*)(\w+)\s*:\s*([^;=\n]+?)(?:\s*=\s*[^;\n]*)?\s*;",
     re.M,
 )
 _ASSIGN_FIELD_RE = re.compile(
@@ -52,35 +52,22 @@ class CFamilyParse:
 
     language: CodeLanguage
     modules: list
-
-    @staticmethod
-    def method_span_in_text(text: str, name: str, fallback_line: int = 1) -> tuple[int, int]:
-        """Brace-language method extent in full file text (used by graph load when end_line missing)."""
-        match = re.search(rf"\b{re.escape(name)}\s*\([^)]*\)\s*(?::\s*[^{{]+)?\s*\{{", text)
-        if match is None:
-            line = fallback_line
-            return line, line
-        start = text[: match.start()].count("\n") + 1
-        depth = 0
-        opened = False
-        for index in range(match.end() - 1, len(text)):
-            if text[index] == "{":
-                depth += 1
-                opened = True
-            elif text[index] == "}":
-                depth -= 1
-                if opened and depth == 0:
-                    return start, text[:index].count("\n") + 1
-        return start, start
+    module_type: type
+    class_type: type
+    operation_type: type
+    property_type: type
 
     def parse(self, text: str) -> "CFamilyParse":
-        """Read the text's classes and top-level functions into this model's one module, and return the model."""
+        """Read the text's classes and top-level functions into this model's one module, and return the model. The
+        module keeps the text, and each class and operation the lines it spans."""
         self._text = text
         self.modules = []
-        module = Module(name="", sequential_order=1)
+        module = self.module_type(name="", sequential_order=1)
         module.preamble = self._read_preamble()
         self._append_classes(module)
         self._attach_top_level(module)
+        module.take_lines(text)
+        self._file_module = module
         if module.classes:
             self.modules.append(module)
         return self
@@ -101,7 +88,7 @@ class CFamilyParse:
                 continue
             self._body_start = body_start
             head = ClassHead.above(self._text[: match.start()])
-            oclass = OoadClass(
+            oclass = self.class_type(
                 name=match.group(1),
                 sequential_order=class_order,
                 intent=head.doc,
@@ -132,7 +119,7 @@ class CFamilyParse:
             ctor_body, _rel = self._brace_body(body, ctor.end() - 1)
             if ctor_body is None:
                 continue
-            op = Operation(name="constructor", parameters=self._split_params(ctor.group(1)))
+            op = self.operation_type(name="constructor", parameters=self._split_params(ctor.group(1)))
             op.line = self._line_at(self._text, self._body_start + ctor.start())
             self._apply_method_end_line(op, body, ctor.end() - 1)
             oclass.operations.insert(0, self._operation_from_body(op, ctor_body))
@@ -141,7 +128,8 @@ class CFamilyParse:
         top_ops = self._top_level_functions()
         if not top_ops:
             return
-        holder = OoadClass(name="_module", sequential_order=len(module.classes) + 1)
+        holder = self.class_type(name="_module", sequential_order=len(module.classes) + 1, line=1)
+        holder.end_line = 1
         holder.operations = top_ops
         module.classes.append(holder)
 
@@ -151,22 +139,24 @@ class CFamilyParse:
         for match in _TOP_FN_RE.finditer(self._text):
             if any(start <= match.start() <= end for start, end in class_spans):
                 continue
-            body, _rel = self._brace_body(self._text, match.end() - 1)
+            body, body_start = self._brace_body(self._text, match.end() - 1)
             if body is None:
                 continue
-            op = Operation(name=match.group(1), parameters=self._split_params(match.group(2) or ""))
+            op = self.operation_type(name=match.group(1), parameters=self._split_params(match.group(2) or ""))
             op.line = self._line_at(self._text, match.start())
+            op.end_line = self._line_at(self._text, body_start + len(body))
             ops.append(self._operation_from_body(op, body))
         for match in _TOP_ARROW_RE.finditer(self._text):
             if any(start <= match.start() <= end for start, end in class_spans):
                 continue
             body = self._arrow_body(match.end())
-            op = Operation(
+            op = self.operation_type(
                 name=match.group(1),
                 parameters=self._split_params(match.group(2) or ""),
                 return_type=(match.group(3) or "").strip(),
             )
             op.line = self._line_at(self._text, match.start())
+            op.end_line = self._line_at(self._text, self._text.find(body, match.end()) + len(body))
             ops.append(self._operation_from_body(op, body))
         return sorted(ops, key=lambda op: op.line)
 
@@ -205,7 +195,7 @@ class CFamilyParse:
                 continue
             # Reading on after the body keeps a statement inside it, such as `for (…) {`, from being taken for the next header.
             position = body_start + len(method_body) + 1
-            op = Operation(
+            op = self.operation_type(
                 name=op_name,
                 parameters=self._split_params(match.group(2) or ""),
                 return_type=(match.group(3) or "").strip(),
@@ -313,16 +303,18 @@ class CFamilyParse:
         return -1
 
     def _fields_from_body(self, oclass: OoadClass, body: str) -> list:
+        """Each field the class body declares, with its line, in the order it declares them."""
         outside = self._outside_braces(body)
         props = []
         seen: set[str] = set()
         cursor = 0
         for match in _FIELD_RE.finditer(outside):
-            name = match.group(1)
+            name = match.group(2)
             if name in seen:
                 continue
             seen.add(name)
-            prop = Property(name=name, sequential_order=len(props) + 1, type_hint=match.group(2).strip())
+            prop = self._field(name, len(props) + 1, match.start(2), match.group(3).strip())
+            prop.is_static = "static" in match.group(1).split()
             for note in self._comments_above(outside[cursor:match.start()]):
                 prop.take_note(note)
             props.append(prop)
@@ -332,8 +324,15 @@ class CFamilyParse:
             if name in seen:
                 continue
             seen.add(name)
-            props.append(Property(name=name, sequential_order=len(props) + 1))
+            prop = self._field(name, len(props) + 1, match.start(1))
+            prop.is_static = bool(re.search(r"\bstatic\b", match.group(0)))
+            props.append(prop)
         return props
+
+    def _field(self, name: str, order: int, at: int, type_hint: str = ""):
+        prop = self.property_type(name=name, sequential_order=order, type_hint=type_hint)
+        prop.line = self._line_at(self._text, self._body_start + at)
+        return prop
 
     def _comments_above(self, prefix: str) -> list[str]:
         """// lines that sit immediately above a field. A blank line ends the run."""

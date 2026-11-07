@@ -417,3 +417,34 @@ with description("call graph lines"):
             CallGraphEntry(depth=1, kind="out", text="a.fetch()"),
             CallGraphEntry(depth=2, kind="out", text="b.save()"),
         ]))
+
+
+with description("a class's property list reconciling itself with another class's"):
+    with before.each:
+        self.target = OoadClass("Cart", 1, properties=[Property("items", 1), Property("owner", 2)])
+        self.kept = self.target.properties[0]
+        self.source = OoadClass("Cart", 1, properties=[Property("items", 1, type_hint="list[Item]")])
+        self.target.properties.reconcile(self.source.properties, self.target.load_property)
+
+    with it("should keep the property of the same name"):
+        expect(self.target.properties[0]).to(be(self.kept))
+
+    with it("should take what the source says of it"):
+        expect(self.kept.type_hint).to(equal("list[Item]"))
+
+    with it("should drop the property the source does not hold"):
+        expect([prop.name for prop in self.target.properties]).to(equal(["items"]))
+
+
+with description("a class read from its file"):
+    with before.each:
+        self.oclass = OoadClass("Cart", 1, line=2)
+        self.oclass.end_line = 3
+        self.oclass.stereotypes = ["Aggregate Root"]
+        self.oclass.take_lines(["# head", "class Cart:", "    # Interaction: total", "tail"])
+
+    with it("should keep the lines it spans"):
+        expect(self.oclass.span.text).to(equal("class Cart:\n    # Interaction: total"))
+
+    with it("should compose its peers as an aggregate root"):
+        expect(self.oclass.composes_peers).to(be_true)

@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
     DrawioPage,
-    DrawioScanner,
     segment_hits_box,
 )
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 # How close, in pixels, an edge may pass a class box before it counts as touching it.
 BOX_MARGIN = 3

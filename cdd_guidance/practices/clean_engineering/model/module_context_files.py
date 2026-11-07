@@ -18,17 +18,13 @@ _MODEL_BLOCKS = (
 _CARD_NAME = "module-context.md"
 
 
-def module_card(folder: Path) -> Path:
-    """The folder's module card: `module-context.md` in its `.context`."""
-    return folder / ".context" / _CARD_NAME
-
-
 class ModuleContext:
     """The module card of one code folder."""
 
     def __init__(self, folder: Path) -> None:
         self.folder = folder
-        self.path = module_card(folder)
+        # The folder's module card: `module-context.md` in its `.context`.
+        self.path = folder / ".context" / _CARD_NAME
 
     def exists(self) -> bool:
         return self.path.is_file()

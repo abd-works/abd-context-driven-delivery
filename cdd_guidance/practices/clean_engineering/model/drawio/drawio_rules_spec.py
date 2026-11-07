@@ -73,12 +73,19 @@ with description("class-title-no-markdown-bold drawio graph rule"):
         self.context = RuleCheckContext(self.practice, self.root)
 
     with context("a class title that still contains markdown bold markers"):
-        with it("should report a violation"):
+        with it("should report a violation on the diagram's class"):
             node = _drawio_node(self.practice, self.root, _FAULTY)
-            hits = self.rule.check(node, self.context)
-            expect(len(hits) > 0).to(be_true)
+            hits = self.rule.check_practice(self.context)
+            expect({node_id for node_id, _message in hits}).to(equal({node.node_id}))
+
+    with context("a diagram the graph read two classes from"):
+        with it("should scan the diagram once"):
+            node = _drawio_node(self.practice, self.root, _FAULTY)
+            self.practice.graph.hold(Node(self.practice, "OoadClass", "clean_engineering:OoadClass:model.drawio:Other", "Other", Source("model.drawio", 11, 20)))
+            hits = self.rule.check_practice(self.context)
+            expect(len(hits)).to(equal(len(self.rule.scanner.scan_file(self.root, self.root / "model.drawio"))))
 
     with context("a class title that is plain text inside the HTML bold tag"):
         with it("should produce no violations"):
-            node = _drawio_node(self.practice, self.root, _CLEAN)
-            expect(self.rule.check(node, self.context)).to(equal([]))
+            _drawio_node(self.practice, self.root, _CLEAN)
+            expect(self.rule.check_practice(self.context)).to(equal([]))
