@@ -142,9 +142,9 @@ class FileManager:
     @tool_subject
     def load(cls, *, project: Path) -> FileManager:
         """The file manager of the session open in project, the checkout a tool call works on."""
-        from space.repo.repo import Repo
+        from space.session.sessions import Sessions
 
-        return Repo(project).current_session.file_manager
+        return Sessions(project).saved.session_files.file_manager
 
     @property
     @data_field

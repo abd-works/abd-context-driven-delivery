@@ -13,7 +13,8 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import be, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from space.session import Session
+from harness.agent_tools.agent_tools import AgentToolSet
+from space.session import Session, Sessions
 from tools.file_manager.file_manager import FileManager, PathOutsideRootsError
 
 ORDER = b"export class Order {}\n"
@@ -42,10 +43,33 @@ with description("a session's file manager"):
             self.session.session_path = folder
 
         with it("should read under the root session.json records for a practice"):
-            expect(self.session.file_manager.roots).to(contain(self.workpath / "src"))
+            expect(self.session.session_files.file_manager.roots).to(contain(self.workpath / "src"))
 
         with it("should be the same file manager each time the session is asked"):
-            expect(self.session.file_manager).to(be(self.session.file_manager))
+            expect(self.session.session_files.file_manager).to(be(self.session.session_files.file_manager))
+
+    with context("that a tool call on a project loads"):
+
+        with before.each:
+            sessions = Sessions(self.workpath)
+            sessions.open(sessions.create("orders", self.workpath / "src"))
+            self.other = Path(tempfile.mkdtemp()).resolve()
+            (self.other / "notes.md").write_bytes(b"# Notes\n")
+
+        with after.each:
+            shutil.rmtree(self.other, ignore_errors=True)
+
+        with it("should read under the session open in that project"):
+            expect(FileManager.load(project=self.workpath).workpath).to(equal(self.workpath / "src"))
+
+        with it("should list the files of the project its call names"):
+            listing = AgentToolSet.instantiate(FileManager).tools["list"].invoke({}, project=self.other)
+            expect([entry.name for entry in listing.entries]).to(contain("notes.md"))
+
+        with it("should list each project's own files when calls name different projects"):
+            tool = AgentToolSet.instantiate(FileManager).tools["list"]
+            tool.invoke({}, project=self.other)
+            expect([entry.name for entry in tool.invoke({}, project=self.workpath).entries]).to(equal(["order.ts"]))
 
     with context("that lists a folder"):
 

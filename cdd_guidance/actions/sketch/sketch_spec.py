@@ -19,6 +19,7 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from space.session.throwaway_project import ThrowawayProject
 from cdd_guidance.actions.sketch.sketch import Sketch
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.tool_call import ToolCall
 
 
 with description("Sketch toolset") as self:
@@ -83,9 +84,7 @@ with description("Sketch toolset") as self:
 
     with context("save_sketch tool"):
         with before.each:
-            from space.session import Session
-
-            self.session = Session.current()
+            self.session = ToolCall(project=self.throwaway.root).session
             self.sketcher = Sketch(session=self.session)
 
         with it("writes the session's sketch in the .context folder under the session root"):
@@ -113,9 +112,7 @@ with description("Sketch toolset") as self:
 
     with context("list_sketches tool"):
         with before.each:
-            from space.session import Session
-
-            self.session = Session.current()
+            self.session = ToolCall(project=self.throwaway.root).session
             self.sketcher = Sketch(session=self.session)
 
         with it("returns no sketches when the .context directory does not exist"):

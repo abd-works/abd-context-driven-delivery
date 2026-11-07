@@ -316,7 +316,7 @@ class GuidanceAction:
             return self.each(operation)
         except BaseException as failure:
             if self._session is not None:
-                self._session.record_failure(failure, tool=action or type(self).__name__)
+                self._session.log.failure(failure, tool=action or type(self).__name__)
             raise
 
     def _keep_named_formats(self) -> None:
@@ -333,7 +333,7 @@ class GuidanceAction:
             return
         self._logged_session_action = action
         self.listed()
-        self._session.log_guidance_action(action)
+        self._session.log.guidance_action(action)
 
     @Toast
     @agent_instructions

@@ -134,9 +134,6 @@ class HookPayload(Mapping[str, Any]):
         tool_input = self.tool_input
         return str(tool_input.get("path") or tool_input.get("file_path") or tool_input.get("target_notebook") or "")
 
-    def as_dict(self) -> dict[str, Any]:
-        return dict(self._fields)
-
 
 class HookResult:
     """Fields Cursor reads back from the hook process."""
@@ -595,12 +592,11 @@ class HookServer:
     def dispatch(self, payload: HookPayload) -> HookResult:
         self._payload = payload
         event = CursorEvent(payload.hook_event_name)
-        fields = payload.as_dict()
         path = payload.edited_path()
         self._append_debug(
-            f"EVENT {event.name!r} tool={fields.get('tool_name')!r} path={path!r} "
+            f"EVENT {event.name!r} tool={payload.tool_name!r} path={path!r} "
             f"conversation_id={payload.conversation_id!r} "
-            f"payload_keys={sorted(fields.keys())}"
+            f"payload_keys={sorted(payload)}"
         )
         if not event.name:
             self._append_debug("NO_EVENT merged={}")
@@ -667,9 +663,9 @@ class HookServer:
     def session(self) -> Session:
         """The session saved as open in the project's ``.sessions/session.json``, main when none is. It is read for each
         event, so hooks follow a switch or a close made through MCP at once."""
-        from space.repo.repo import Repo
+        from space.session.sessions import Sessions
 
-        return Repo(self._repo_root).current_session
+        return Sessions(self._repo_root).saved
 
     def _write_last_chat_injected(self, result: HookResult) -> None:
         folder = self.session.session_path
@@ -753,7 +749,7 @@ class HookServer:
         if self._payload is None:
             return ""
         if self._payload.hook_event_name == "subagentStop":
-            transcript = str(self._payload.as_dict().get("agent_transcript_path") or "")
+            transcript = str(self._payload.get("agent_transcript_path") or "")
             stem = Path(transcript).stem.strip()
             if stem:
                 return stem

@@ -23,6 +23,7 @@ from harness.agent_tools.agent_tools import (
     tools,
     instructions,
     AgentToolValidationError,
+    CallNamesNoProject,
     RecipeLineFailed,
     AgentToolSet,
     InstallDestination,
@@ -1330,7 +1331,12 @@ with description("a domain class whose constructor takes collaborators"):
 
         with it("should load the object from the project the call works on"):
             ship = AgentToolSet.instantiate(Crate).tools["ship"]
-            expect(ship.callable(crate="crate-1")).to(equal(f"crate-1 shipped from {self.project.name}"))
+            expect(ship.invoke({"crate": "crate-1"}, project=self.project)).to(equal(f"crate-1 shipped from {self.project.name}"))
+
+        with context("with a call that names no project"):
+            with it("should refuse to load the object"):
+                ship = AgentToolSet.instantiate(Crate).tools["ship"]
+                expect(lambda: ship.invoke({"crate": "crate-1"})).to(raise_error(CallNamesNoProject))
 
         with context("with a classmethod tool that takes the project too"):
             with it("should leave the project out of its arguments"):
@@ -1339,4 +1345,4 @@ with description("a domain class whose constructor takes collaborators"):
 
             with it("should hand it the project the call works on"):
                 pack = AgentToolSet.instantiate(Crate).tools["pack"]
-                expect(pack.callable(label="crate-2")).to(equal(f"crate-2 packed in {self.project.name}"))
+                expect(pack.invoke({"label": "crate-2"}, project=self.project)).to(equal(f"crate-2 packed in {self.project.name}"))

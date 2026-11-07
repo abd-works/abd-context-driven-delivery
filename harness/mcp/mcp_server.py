@@ -833,7 +833,7 @@ class McpHost:
                     return runtime.invoke_prompt(resolved, args)
                 return runtime.invoke_tool(resolved, args)
             except BaseException as failure:
-                ToolCall(args, checkout).session.record_failure(failure, tool=resolved)
+                ToolCall(args, checkout).session.log.failure(failure, tool=resolved)
                 raise
 
     def _enrolled(self, name: str) -> bool:

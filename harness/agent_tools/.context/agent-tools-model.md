@@ -98,19 +98,37 @@ destinations: list[str]
 install_to(destination: str): bool
 invoke_line(): str
 	// the "Use MCP tool:" line a skill or command ends with
-invoke(arguments: dict | None = None): Any
-	-> log_session_invocation(arguments)
+invoke(arguments: dict | None = None, project: Path | None = None): Any
+	-> answer(ToolCall(arguments, project))
+answer(call: ToolCall): Any
+	// runs on the toolset made for the call, toolset.for_call(call); a callable that takes the project is handed call.project
+	-> on(toolset.for_call(call)).log_session_invocation(call)
 	-> ParameterSchema.coerced
 	// then call the callable
-log_session_invocation(arguments: dict | None): None
-	// skipped for ping calls and @noSessionLog members
-	-> Session.log_agent_tool
+on(toolset: AgentToolSet): AgentTool
+	// this tool on a toolset of the same class made for one call
+log_session_invocation(call: ToolCall): None
+	// skipped for ping calls and @noSessionLog members, and for a call that works in no session
+	-> toolset.session_for(call).log_agent_tool
 
 ## AgentOperation : AgentTool                                     <!-- Md -->
 
 AgentOperation(name: str, callable: Callable, toolset: AgentToolSet)
 ------
 	Invariant: kind == "tool"
+----
+
+## ToolCall                                                      <!-- Md -->
+
+One call of a tool: the arguments its caller sent and the folder of the project the calling chat works on. A tool reads its project, and the session open there, from its own call, because one cdd server answers every chat.
+
+ToolCall(arguments: dict | None = None, project: Path | None = None)
+------
+arguments: dict
+project: Path | None
+session: Session | None
+	// the session saved as open in the project's checkout, read once for this call; none when the call names no project
+	-> Repo.current_session
 ----
 
 ## GuidanceAgentOperation : AgentOperation                        <!-- Md -->
@@ -120,10 +138,8 @@ An `@agent_tool` on a guidance action; the call is logged as the action running 
 GuidanceAgentOperation(name: str, callable: Callable, toolset: AgentToolSet)
 ------
 ----
-invoke(arguments: dict | None = None): Any
-	-> toolset.start_call
-log_session_invocation(arguments: dict | None): None
-	-> toolset.call_session
+log_session_invocation(call: ToolCall): None
+	-> toolset._log_running_action
 
 ## AgentInstructions : AgentTool                                  <!-- Md -->
 
@@ -138,8 +154,8 @@ result_template: str
 for_callable(callable: Callable, instance: AgentToolSet | None = None): AgentInstructions
 expand(context: dict, arguments: dict): ExpansionResult
 	// raises RecipeLineFailed when a recipe line raises
-invoke(arguments: dict | None = None): str
-	// the instructions an agent follows for this call, with the session context of a guidance action appended
+answer(call: ToolCall): str
+	// the instructions an agent follows for this call, expanded by the toolset made for it, with the session context of a guidance action appended
 	-> expand
 substitute_template(template: str, arguments: dict, parameter_names: set[str], instance: Any = None): str
 
@@ -278,5 +294,5 @@ lineno: int
 | ------- | ----- | ---------------------- |
 | Skill, command, and rules markdown | `FileInstallation` | live toolset: `description`, `tools_for(destination)`; `AgentTool.invoke_line`; `AgentInstructions.expand` |
 | MCP enrollment | `McpInstallation.enroll_operations` | each member's `mcp_name`, `kind`, `description`, `parameters` |
-| Runtime call | `McpServer` | `AgentTool.invoke(arguments)` |
+| Runtime call | `McpServer` | `AgentTool.invoke(arguments, project=...)`, the project of the runtime the call's project names |
 | Hooks | `HookInstallation`, `HookServer` | `tools_for("hook")`, `hook_event`, `HOSTED_ONLY_CLASS_NAMES` |

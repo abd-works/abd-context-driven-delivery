@@ -30,8 +30,8 @@ from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
 from space.repo.repo import Commit, DefaultBranchError
-from space.session import Session
-from space.work_state import working_on
+from space.session import Sessions
+from space.work_state import WorkState, working_on
 
 
 def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":
@@ -327,17 +327,16 @@ with description("an MCP host input schema"):
 with description("an MCP host tool result") as self:
     with context("that is a named session"):
         with before.each:
-            Session.forget_current()
             self.repo = Path(tempfile.mkdtemp())
             self.work = self.repo / "work"
             self.work.mkdir()
-            Session.new("alpha", self.work, self.repo)
+            Sessions(self.repo).switch("alpha", self.work)
             self.host = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo))
-            self.blocks = self.host._content_blocks(Session.current(self.repo))
+            self.blocks = self.host._content_blocks(Sessions(self.repo).current())
             self.payload = json.loads(self.blocks[0].text)
 
         with after.each:
-            Session.forget_current()
+            shutil.rmtree(self.repo, ignore_errors=True)
 
         with it("should expose the session name as JSON"):
             expect(self.payload["name"]).to(equal("alpha"))
@@ -351,7 +350,7 @@ with description("an MCP host tool result") as self:
     with context("that is a commit"):
         with before.each:
             self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
-            commit = Commit.from_message("abc123", "push: checkpoint\nReviewed-By: human")
+            commit = Commit("abc123", "push: checkpoint\nReviewed-By: human")
             self.payload = json.loads(self.host._content_blocks(commit)[0].text)
 
         with it("should expose the commit sha as JSON"):
@@ -405,29 +404,25 @@ with description("an MCP host") as self:
                 lambda: self.host.dispatch("repo.close_branch", {"name": "main"})
             ).to(raise_error(DefaultBranchError))
 
-    with context("that has enrolled the session toolset"):
+    with context("that has enrolled the sessions toolset on a project"):
         with before.each:
+            self.project = Path(tempfile.mkdtemp())
             self.host = McpHost.from_refs(
-                ("space.session.session:Session",),
+                ("space.session.sessions:Sessions",),
                 repo=str(_REPO_ROOT),
-                project=str(_REPO_ROOT),
+                project=str(self.project),
             )
 
-        with it("should expose session.switch as the one way to open a session"):
-            tools = self.host.diagnose()["tools"]
-            expect(tools).to(contain("session.switch"))
+        with after.each:
+            shutil.rmtree(self.project, ignore_errors=True)
 
-        with it("should run session.switch with string repo_path"):
-            repo = Path(tempfile.mkdtemp())
-            try:
-                result = self.host.dispatch(
-                    "session.switch",
-                    {"name": "mcp-host-spec-session", "repo_path": str(repo)},
-                )
-                expect(str(result)).not_to(equal(""))
-            finally:
-                Session.forget_current()
-                shutil.rmtree(repo, ignore_errors=True)
+        with it("should expose sessions.switch as the one way to open a session"):
+            tools = self.host.diagnose()["tools"]
+            expect(tools).to(contain("sessions.switch"))
+
+        with it("should open the named session in that project through sessions.switch"):
+            self.host.dispatch("sessions.switch", {"name": "mcp-host-spec-session"})
+            expect(WorkState(self.project).session).to(equal("mcp-host-spec-session"))
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):
         with before.each:

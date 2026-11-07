@@ -1144,7 +1144,7 @@ class AgentTool(AgentToolDestination):
             for key, value in call.arguments.items()
             if isinstance(value, (str, int, float, bool, list))
         }
-        session.log_agent_tool(self.mcp_name, logged_args)
+        session.log.tool(self.mcp_name, logged_args)
 
     @property
     def kind(self) -> str:

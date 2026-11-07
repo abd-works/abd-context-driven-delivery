@@ -18,12 +18,18 @@ from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.generate.generate import Generate
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
 from harness.mcp.mcp_server import McpServer
-from space.session import Session
-from space.session.throwaway_project import ProjectCall, ThrowawayProject
+from space.session import Sessions
+from space.session.throwaway_project import ThrowawayProject
+
+
+def _made_for(project):
+    """A generate made for a call on project, working in the session open there."""
+    return Generate().for_call(ToolCall({}, project))
 
 
 def _expanded_generate(action, arguments):
@@ -49,7 +55,6 @@ with description("a generate action on practice guidance") as self:
         self.action = Generate()
 
     with after.each:
-        ProjectCall.close_all()
         self.throwaway.close()
 
     with context("with a fidelity active"):
@@ -73,13 +78,10 @@ with description("a generate action on practice guidance") as self:
     with context("with no named session on the project"):
         with before.each:
             self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
-            ProjectCall(self.project)
             (self.project / ".git").mkdir()
-            Session.forget_current()
-            Session.current(self.project)
+            self.action = _made_for(self.project)
 
         with after.each:
-            Session.forget_current()
             shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should say where each format of the artifact is saved in the main session"):
@@ -89,13 +91,12 @@ with description("a generate action on practice guidance") as self:
     with context("with a session open"):
         with before.each:
             self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
-            ProjectCall(self.project)
             (self.project / ".git").mkdir()
-            Session.forget_current()
-            Session.new("alpha", self.project, self.project)
+            sessions = Sessions(self.project)
+            sessions.open(sessions.create("alpha", self.project))
+            self.action = _made_for(self.project)
 
         with after.each:
-            Session.forget_current()
             shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should say where each format of the artifact is saved"):

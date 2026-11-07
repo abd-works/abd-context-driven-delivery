@@ -19,6 +19,7 @@ from mamba import after, before, context, description, it
 from harness.markdown import Markdown
 from cdd_guidance.actions.improvement.improvement import Improvement
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.tool_call import ToolCall
 from space.session.throwaway_project import ThrowawayProject
 
 _IMPROVEMENT = "cdd_guidance.actions.improvement.improvement:Improvement"
@@ -76,7 +77,7 @@ with description("an improvement action in a project being worked on"):
 
     with context("that repairs a listed practice"):
         with before.each:
-            Improvement().repair("stories-story-map")
+            Improvement(session=ToolCall(project=self.project.root).session).repair("stories-story-map")
 
         with it("should log the repair in the session's log"):
             log = self.project.root / ".sessions" / "main" / "session.log"

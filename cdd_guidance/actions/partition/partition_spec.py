@@ -25,12 +25,18 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from harness.markdown import Markdown
 from space.session.throwaway_project import ThrowawayProject
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.tool_call import ToolCall
 
 _CAR_CHRONICLE_TOOLSET = (
     "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _STORIES_TOOLSET = "cdd_guidance.practices.stories.stories:Stories"
 _DEFAULT_PARTITION_SNIPPET = "Hard fail"
+
+
+def _session_of(project: Path):
+    """The session open in project, as a call on that project works in it."""
+    return ToolCall(project=project).session
 
 
 def _section(name: str) -> str:
@@ -69,7 +75,7 @@ with description("a practice guidance beside the partition action"):
 with description("a partition action"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
-        ThrowawayProject()
+        self.project = ThrowawayProject().root
 
     with after.each:
         ThrowawayProject.close_all()
@@ -85,17 +91,15 @@ with description("a partition action"):
 
     with context("that runs on a practice"):
         with it("should finish partitioning the corpus for that practice"):
-            result = Partition().partition("stories", paths="README.md")
+            result = Partition(session=_session_of(self.project)).partition("stories", paths="README.md")
             expect(result).to(start_with("Partition of README.md finished"))
 
     with context("that an agent calls on a fidelity"):
         with before.each:
-            from space.session import Session
-
             operation = Partition()._discover_instruction_members()["partition"]
             arguments = {"guidance": "stories-story-map", "paths": "README.md", "context": "", "mode": "one_go", "out_root": None}
-            self.reply = operation.invoke(arguments)
-            self.root = Session.current().root.as_posix()
+            self.reply = operation.invoke(arguments, project=self.project)
+            self.root = _session_of(self.project).root.as_posix()
 
         with it("should name what the index lists from that fidelity's Scaffold subsection"):
             expect("verb-noun Epic, Sub-Epic, and Story names" in self.reply).to(be_true)
@@ -120,7 +124,7 @@ with description("a partition action"):
             self.folder = Path(tempfile.mkdtemp()).resolve().as_posix()
             operation = Partition()._discover_instruction_members()["partition"]
             arguments = {"guidance": "stories-story-map", "paths": "README.md", "context": "", "mode": "one_go", "out_root": self.folder}
-            self.reply = operation.invoke(arguments)
+            self.reply = operation.invoke(arguments, project=self.project)
 
         with it("should index the named corpus under that folder"):
             expect(f"Index the corpus at README.md under {self.folder}/.context/" in self.reply).to(be_true)
@@ -132,7 +136,7 @@ with description("a partition action"):
         with before.each:
             operation = Partition()._discover_instruction_members()["partition"]
             arguments = {"guidance": "stories-story-map ddd-bounded-context", "paths": "README.md", "context": "", "mode": "one_go", "out_root": None}
-            self.reply = operation.invoke(arguments)
+            self.reply = operation.invoke(arguments, project=self.project)
 
         with it("should name what each practice's index lists from its own file"):
             expect(("`stories.md` cited" in self.reply, "`ddd.md` cited" in self.reply)).to(equal((True, True)))
@@ -532,6 +536,6 @@ with description("a partition that is given files") as self:
         folder = Path(tempfile.mkdtemp())
         corpus = folder / "corpus.md"
         corpus.write_text("a very long corpus that must stay on disk\n", encoding="utf-8")
-        result = Partition().partition("corpus note", paths=str(corpus))
+        result = Partition(session=_session_of(self.throwaway.root)).partition("corpus note", paths=str(corpus))
         expect(str(corpus) in result).to(equal(True))
         expect("must stay on disk" in result).to(equal(False))

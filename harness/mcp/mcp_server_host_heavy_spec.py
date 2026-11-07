@@ -30,7 +30,7 @@ _HOSTING_DEMO = "harness.mcp._examples.hosting_demo.hosting_demo:HostingDemo"
 _ECHO = "tools.echo.echo:Echo"
 _PARAMETER_TYPES = "harness.mcp._examples.parameter_types.parameter_types:ParameterTypes"
 _RENDER = "cdd_guidance.actions.render.render:Render"
-_SESSION = "space.session.session:Session"
+_SESSION = "space.session.sessions:Sessions"
 _TOOLSETS = (_HOSTING_DEMO, _ECHO, _PARAMETER_TYPES, _RENDER, _SESSION)
 _ECHO_ARGUMENTS = {
     "text": "parcel",
@@ -252,8 +252,8 @@ with description("the cdd server") as self:
         with before.each:
             self.worktrees = TwoWorktrees()
             self.worktrees.create()
-            self.chat.run(lambda session: session.call_tool("session.switch", arguments={"name": "alpha"}), self.worktrees.first)
-            self.chat.run(lambda session: session.call_tool("session.switch", arguments={"name": "beta"}), self.worktrees.second)
+            self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "alpha"}), self.worktrees.first)
+            self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "beta"}), self.worktrees.second)
 
         with after.each:
             self.worktrees.remove()
@@ -269,7 +269,7 @@ with description("the cdd server") as self:
 
         with it("should give each chat its own worktree's session"):
             def current(worktree: Path) -> str:
-                result = self.chat.run(lambda session: session.call_tool("session.current", arguments={}), worktree)
+                result = self.chat.run(lambda session: session.call_tool("sessions.current", arguments={}), worktree)
                 return json.loads(_text(result))["name"]
 
             expect((current(self.worktrees.first), current(self.worktrees.second))).to(equal(("alpha", "beta")))

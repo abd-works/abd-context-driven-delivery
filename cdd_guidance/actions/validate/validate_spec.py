@@ -19,6 +19,7 @@ from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.tool_call import ToolCall
 from space.session import Session
 from space.session.throwaway_project import ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
@@ -66,9 +67,10 @@ def _write(root: Path, relative: str, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def _working_in(project: Path, root: Path) -> Session:
-    """The open session, made to work in root, a folder of the project checked out at project."""
-    session = Session.current()
+def _working_in(throwaway: ThrowawayProject, project: Path, root: Path) -> Session:
+    """The main session of the spec's own project, where its logs and reports go, made to work in root, a folder of the
+    project checked out at project."""
+    session = ToolCall(project=throwaway.root).session
     session.repo_path = Path(project).resolve()
     session.workpath = Path(root).resolve()
     return session
@@ -92,7 +94,7 @@ with description("a validate action on practice guidance") as self:
     with before.each:
         self.project = ThrowawayProject()
         self.guidance = SamplePracticeGuidance(format="markdown")
-        self.action = Validate()
+        self.action = Validate(session=ToolCall(project=self.project.root).session)
 
     with after.each:
         self.project.close()
@@ -168,8 +170,8 @@ with description("a validate action on practice guidance") as self:
     with context("with the saved graph"):
         with before.each:
             self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
-            self.session = Path(Session.current().session_path)
-            self.action = Validate(session=_working_in(self.folder, self.folder))
+            self.action = Validate(session=_working_in(self.project, self.folder, self.folder))
+            self.session = Path(self.action.session.session_path)
 
         with it("should report the guidance practice's graph hits from graph.json when graph is true"):
             prose = _expanded_validate(self.action, {"guidance": ["ddd-tactics"], "graph": True})
@@ -190,8 +192,8 @@ with description("a validate action on practice guidance") as self:
             self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
             _write(self.folder, "src/orders/order.ts", _OVER_LIMIT.format(name="Order"))
             _write(self.folder, "src/billing/invoice.ts", _OVER_LIMIT.format(name="Invoice"))
-            self.session = Path(Session.current().session_path)
-            self.action = Validate(session=_working_in(self.folder, self.folder))
+            self.action = Validate(session=_working_in(self.project, self.folder, self.folder))
+            self.session = Path(self.action.session.session_path)
 
         with after.each:
             shutil.rmtree(self.folder, ignore_errors=True)
@@ -213,8 +215,8 @@ with description("a validate action on practice guidance") as self:
         with before.each:
             self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
             _write(self.folder, "board/.context/story-map.md", _STORY_MAP)
-            self.session = Path(Session.current().session_path)
-            self.action = Validate(session=_working_in(self.folder, self.folder))
+            self.action = Validate(session=_working_in(self.project, self.folder, self.folder))
+            self.session = Path(self.action.session.session_path)
 
         with after.each:
             shutil.rmtree(self.folder, ignore_errors=True)
@@ -246,7 +248,7 @@ with description("a validate action on practice guidance") as self:
         with context("that has been validated"):
             with before.each:
                 self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
-                log = Path(Session.current().session_path) / "session.log"
+                log = self.session / "session.log"
                 self.validate_lines = [line for line in log.read_text(encoding="utf-8").splitlines() if " validate " in line]
 
             with it("should write one validate line"):
@@ -261,8 +263,9 @@ with description("a validate action on practice guidance") as self:
                 self.other = self.folder / ".sessions" / "pet-visits"
                 self.other.mkdir(parents=True)
                 (self.other / "session.json").write_text(f'{{"workpath": "{(self.folder / "board").as_posix()}"}}', encoding="utf-8")
-                self.action = Validate()
-                self.report = self.action.validate(guidance=f"stories-story-map session={(self.other / 'session.json').as_posix()}", paths=[(self.folder / "board/.context/story-map.md").as_posix()])
+                guidance = f"stories-story-map session={(self.other / 'session.json').as_posix()}"
+                self.action = Validate().for_call(ToolCall({"guidance": guidance}, self.folder))
+                self.report = self.action.validate(guidance=guidance, paths=[(self.folder / "board/.context/story-map.md").as_posix()])
 
             with it("should check the named session's files"):
                 expect(self.report).to(contain("Epic `Move Work On Board`"))
@@ -302,15 +305,15 @@ with description("a validate action on practice guidance") as self:
                     with before.each:
                         from harness.guidance_actions import GuidanceAction
 
-                        action = GuidanceAction()
+                        action = GuidanceAction(session=self.action.session)
                         action._work_on("stories-story-map format=drawio")
                         action.run(lambda item: None, action="generate")
 
                     with it("should judge only the drawio"):
                         expect(self.action.validate(guidance=["stories-story-map"])).to(contain("Judge only the checked format's files (drawio: "))
 
-                # One action serves every MCP call at once, so a call checking the drawio must not change which files
-                # a call checking the markdown leaves out of its report.
+                # Each call has an action of its own, so a call checking the drawio must not change which files a call
+                # checking the markdown, in the same session, leaves out of its report.
                 with context("while another call checks the drawio"):
                     with before.each:
                         resolve = self.action._resolve_graph_json_paths
@@ -330,7 +333,7 @@ with description("a validate action on practice guidance") as self:
                         markdown_call = threading.Thread(target=check_the_markdown)
                         markdown_call.start()
                         markdown_call_waiting.wait(60)
-                        self.action.validate(guidance="stories-story-map format=drawio")
+                        self.action.made_for(self.action.session).validate(guidance="stories-story-map format=drawio")
                         drawio_call_done.set()
                         markdown_call.join()
 
@@ -348,7 +351,7 @@ with description("a validate action on practice guidance") as self:
         # An agent works from the project's checkout, so every path it sees starts there, not at the session's root.
         with context("in a session whose root is a folder of the project"):
             with before.each:
-                self.action = Validate(session=_working_in(self.folder, self.folder / "board"))
+                self.action = Validate(session=_working_in(self.project, self.folder, self.folder / "board"))
 
             with it("should read a path named from the project's root"):
                 report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
@@ -378,8 +381,8 @@ with description("a validate action on practice guidance") as self:
 
     with context("with edited files of a working copy that every graph practice reads"):
         with before.each:
-            self.session = Path(Session.current().session_path)
-            self.action = Validate(session=_working_in(_SAMPLE, _SAMPLE))
+            self.action = Validate(session=_working_in(self.project, _SAMPLE, _SAMPLE))
+            self.session = Path(self.action.session.session_path)
 
         with it("should report the private-method-naming violation on the edited entity root"):
             report = self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
@@ -472,19 +475,19 @@ with description("a validate action on practice guidance") as self:
                 expect([report.with_suffix(".json").is_file() for report in self.reports]).to(equal([True, True]))
 
 
-with description("two validate calls running at once on one action") as self:
+with description("two validate calls running at once on one cdd server") as self:
     with after.each:
         ThrowawayProject.close_all()
 
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
-        ThrowawayProject()
-        action = Validate()
+        project = ThrowawayProject().root
+        served = Validate()
         self.wrong = []
 
         def validate_repeatedly(slug, own_rule, other_rule):
             for _ in range(4):
-                report = action.validate(slug)
+                report = served.for_call(ToolCall({"guidance": slug}, project)).validate(slug)
                 if own_rule not in report or other_rule in report:
                     self.wrong.append(slug)
 

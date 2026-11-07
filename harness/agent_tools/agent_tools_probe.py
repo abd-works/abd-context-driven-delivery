@@ -18,11 +18,12 @@ from harness.agent_tools.name import Name
 from harness.agent_tools.cdd_diagnostic_bridge import probe_arguments_from_cdd_diagnostic
 from harness.guidance.guidance_probe import GuidanceProbe, failure_text, instruction_result, probe_subsection
 
-_HEAVY_INVOKE_PREFIXES = ("session.", "graph.")
+_HEAVY_INVOKE_PREFIXES = ("session.", "sessions.", "graph.")
 
 _INVOKE_DISPATCH_TIMEOUT_SECONDS = 12.0
 _INVOKE_SKIP_PREFIXES = (
     "session.",
+    "sessions.",
     "graph.",
     "partition.",
     "catalog.",
@@ -401,8 +402,8 @@ def _builtin_workspace_probe_arguments(
     repo_root: str,
     param_names: set[str],
 ) -> dict[str, Any]:
-    if mcp_name == "session.switch":
-        return {"name": "_cdd_mcp_probe", "repo_path": repo_root}
+    if mcp_name == "sessions.switch":
+        return {"name": "_cdd_mcp_probe"}
     if mcp_name.startswith("echo.") and "body" in param_names:
         return {"body": "agent-tools-diagnostics probe"}
     return {}

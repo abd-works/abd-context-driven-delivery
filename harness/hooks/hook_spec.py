@@ -33,7 +33,7 @@ from harness.hooks.hook_server import (
 )
 from harness.hooks.hooks import Hook, Hooks
 from harness.installation.installer import Installer
-from space.session.session import Session
+from space.session.sessions import Sessions
 from space.work_state import WorkState
 
 
@@ -51,7 +51,7 @@ def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
     @agent_toolset
     class _PracticeInject:
         @Hook("postToolUse")
-        def on_inject(self, payload: dict) -> dict:
+        def on_inject(self, payload: HookPayload) -> dict:
             return {
                 "additional_context": (
                     "- `put-logic-on-the-owning-resource` - practice body of put-logic\n"
@@ -72,7 +72,7 @@ class _DisabledFixture:
     calls: list[str] = []
 
     @Hook("afterAgentResponse")
-    def on_after(self, payload: dict) -> dict:
+    def on_after(self, payload: HookPayload) -> dict:
         type(self).calls.append("after")
         return {"agent_message": "ran"}
 
@@ -82,7 +82,7 @@ class _DispatchFixture:
     calls: list[str] = []
 
     @Hook("afterAgentResponse")
-    def on_after(self, payload: dict) -> dict:
+    def on_after(self, payload: HookPayload) -> dict:
         type(self).calls.append("after")
         return {"agent_message": "ran"}
 
@@ -92,7 +92,7 @@ class _StopFixture:
     calls: list[str] = []
 
     @Hook("stop")
-    def on_stop(self, payload: dict) -> dict:
+    def on_stop(self, payload: HookPayload) -> dict:
         type(self).calls.append("stop")
         return {"followup_message": "/turn"}
 
@@ -103,9 +103,19 @@ class _PatternInject:
     calls: list[str] = []
 
     @Hook("postToolUse")
-    def inject_rules(self, payload: dict) -> dict:
+    def inject_rules(self, payload: HookPayload) -> dict:
         type(self).calls.append("lern")
         return {"additional_context": "lern rules"}
+
+
+@agent_toolset
+class _PayloadReader:
+    seen: list[HookPayload] = []
+
+    @Hook("postToolUse")
+    def on_used(self, payload: HookPayload) -> dict:
+        type(self).seen.append(payload)
+        return {}
 
 
 @agent_toolset
@@ -113,7 +123,7 @@ class _CoreInject:
     calls: list[str] = []
 
     @Hook("postToolUse")
-    def inject_rules(self, payload: dict) -> dict:
+    def inject_rules(self, payload: HookPayload) -> dict:
         type(self).calls.append("core")
         return {"additional_context": "core rules"}
 
@@ -143,7 +153,7 @@ def _guidelines_dispatch(root: Path, toolsets: list, config: str | dict | None =
 @agent_toolset
 class _HookToolset:
     @Hook("stop")
-    def on_stop(self, payload: dict) -> dict:
+    def on_stop(self, payload: HookPayload) -> dict:
         return {}
 
 
@@ -256,7 +266,7 @@ with description("hook dispatch"):
             @agent_toolset
             class _MessageFixture:
                 @Hook("beforeSubmitPrompt")
-                def on_before(self, payload: dict) -> dict:
+                def on_before(self, payload: HookPayload) -> dict:
                     return {
                         "user_message": "for user",
                         "agent_message": "for agent",
@@ -273,13 +283,13 @@ with description("hook dispatch"):
             @agent_toolset
             class _FirstRules:
                 @Hook("preToolUse")
-                def on_first(self, payload: dict) -> dict:
+                def on_first(self, payload: HookPayload) -> dict:
                     return {"additional_context": "clean engineering code rules"}
 
             @agent_toolset
             class _SecondRules:
                 @Hook("preToolUse")
-                def on_second(self, payload: dict) -> dict:
+                def on_second(self, payload: HookPayload) -> dict:
                     return {"additional_context": "ddd tactics rules"}
 
             out = _dispatch(
@@ -295,7 +305,7 @@ with description("hook dispatch"):
             @agent_toolset
             class _FileEditRules:
                 @Hook("postToolUse")
-                def inject_rules(self, payload: dict) -> dict:
+                def inject_rules(self, payload: HookPayload) -> dict:
                     return {"additional_context": payload.get("file_path") or ""}
 
             out = _dispatch(
@@ -313,13 +323,13 @@ with description("hook dispatch"):
             @agent_toolset
             class _Once:
                 @Hook("postToolUse")
-                def on_first(self, payload: dict) -> dict:
+                def on_first(self, payload: HookPayload) -> dict:
                     return {"additional_context": "keep-operations-small-focused"}
 
             @agent_toolset
             class _Again:
                 @Hook("postToolUse")
-                def on_second(self, payload: dict) -> dict:
+                def on_second(self, payload: HookPayload) -> dict:
                     return {"additional_context": "keep-operations-small-focused"}
 
             out = _dispatch(
@@ -337,7 +347,7 @@ with description("hook dispatch"):
                 @agent_toolset
                 class _ChatInject:
                     @Hook("postToolUse")
-                    def on_inject(self, payload: dict) -> dict:
+                    def on_inject(self, payload: HookPayload) -> dict:
                         return {"additional_context": "stories scenario rules"}
 
                 server = HookServer(root, HandlerCatalog([_ChatInject], root))
@@ -431,7 +441,7 @@ with description("hook dispatch"):
                 @agent_toolset
                 class _EditCheck:
                     @Hook("postToolUse")
-                    def inject_rules(self, payload: dict) -> dict:
+                    def inject_rules(self, payload: HookPayload) -> dict:
                         path = (payload.get("tool_input") or {}).get("path") or ""
                         if path.endswith("story-map.md"):
                             return {
@@ -501,7 +511,7 @@ with description("hook dispatch"):
             @agent_toolset
             class _DescribedFixture:
                 @Hook("preToolUse")
-                def on_pre_tool(self, payload: dict) -> dict:
+                def on_pre_tool(self, payload: HookPayload) -> dict:
                     """Honor the hook operation description."""
                     return {"permission": "allow"}
 
@@ -515,7 +525,7 @@ with description("hook dispatch"):
             @agent_toolset
             class _StatusFixture:
                 @Hook("sessionStart")
-                def on_session_start(self, payload: dict) -> str:
+                def on_session_start(self, payload: HookPayload) -> str:
                     return "running"
 
             out = _dispatch({"hook_event_name": "sessionStart"}, toolsets=[_StatusFixture])
@@ -525,7 +535,7 @@ with description("hook dispatch"):
             @agent_toolset
             class _StatusFixture:
                 @Hook("sessionStart")
-                def on_session_start(self, payload: dict) -> str:
+                def on_session_start(self, payload: HookPayload) -> str:
                     """Report whether the host already runs."""
                     return "running"
 
@@ -536,7 +546,7 @@ with description("hook dispatch"):
 
         with it("should strip a UTF-8 BOM"):
             raw = b'\xef\xbb\xbf{"hook_event_name":"stop"}'
-            expect(HookPayload.from_stdin(raw).as_dict()).to(
+            expect(dict(HookPayload.from_stdin(raw))).to(
                 equal({"hook_event_name": "stop"})
             )
 
@@ -565,8 +575,8 @@ with description("a project's hook logs") as self:
     with context("with a work session open"):
 
         with before.each:
-            self.session = Session(self.root)
-            self.session.switch("checkout", workpath=self.root, repo_path=self.root)
+            self.sessions = Sessions(self.root)
+            self.sessions.switch("checkout", workpath=self.root)
 
         with it("should go to that session's logs folder"):
             expect(_dispatch_log_folder(self.root).as_posix()).to(
@@ -576,13 +586,13 @@ with description("a project's hook logs") as self:
         with context("that was closed"):
 
             with it("should go to the main session's logs folder"):
-                self.session.close()
+                self.sessions.close(self.sessions.current())
                 expect(_dispatch_log_folder(self.root).as_posix()).to(equal(self.main_logs))
 
         with context("that was switched to main"):
 
             with it("should go to the main session's logs folder"):
-                self.session.switch("main", workpath=self.root, repo_path=self.root)
+                self.sessions.switch("main", workpath=self.root)
                 expect(_dispatch_log_folder(self.root).as_posix()).to(equal(self.main_logs))
 
 
@@ -671,7 +681,7 @@ with description("a hook server") as self:
             @agent_toolset
             class _RaisingFixture:
                 @Hook("stop")
-                def on_stop(self, payload: dict) -> dict:
+                def on_stop(self, payload: HookPayload) -> dict:
                     raise RuntimeError("handler misconfigured")
 
             self.server = HookServer(_REPO_ROOT, HandlerCatalog([_RaisingFixture], _REPO_ROOT))
@@ -764,6 +774,35 @@ with description("inject_rules hook dispatch"):
                 toolsets=[_ListedInjectAction()],
             )
             expect(out.get("additional_context") or "").to(equal(""))
+
+
+with description("a hook handler"):
+    with before.each:
+        _PayloadReader.seen = []
+        self.root = Path(tempfile.mkdtemp())
+        HookServer(self.root, HandlerCatalog([_PayloadReader], self.root)).dispatch(
+            HookPayload(
+                {
+                    "hook_event_name": "postToolUse",
+                    "tool_name": "mcp__cdd__generate_generate",
+                    "tool_input": json.dumps({"guidance": "stories-story-map"}),
+                    "workspace_roots": [str(self.root)],
+                }
+            )
+        )
+
+    with it("should be handed the tool the event is about"):
+        expect(_PayloadReader.seen[0].tool_name).to(equal("mcp__cdd__generate_generate"))
+
+    with it("should be handed the tool's arguments, read from the text the IDE sent"):
+        expect(_PayloadReader.seen[0].tool_input).to(equal({"guidance": "stories-story-map"}))
+
+    with it("should be handed the project the event happened in"):
+        expect(_PayloadReader.seen[0].project).to(equal(self.root))
+
+    with context("with an event Claude Code sent, which names the folder it ran in"):
+        with it("should take that folder as the project"):
+            expect(HookPayload({"cwd": str(self.root)}).project).to(equal(self.root))
 
 
 with description("hook process helpers"):
