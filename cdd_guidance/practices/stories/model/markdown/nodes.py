@@ -58,6 +58,22 @@ _KV_DECISION = re.compile(r"^\*\*Decision\s+prompt\s*:\*\*\s*(.+)$", re.IGNORECA
 _BULLET = re.compile(r"^\s*[-*]\s+(.+)$")
 
 
+def strip_backticks(text: str) -> str:
+    """The text without the backticks wrapped around it."""
+    s = text.strip()
+    while s.startswith("`") and s.endswith("`") and len(s) >= 2:
+        s = s[1:-1].strip()
+    return s
+
+
+def strip_markup(text: str) -> str:
+    """The text without its links, backticks, and the emphasis wrapped around it."""
+    s = strip_backticks(unlink(text))
+    while s.startswith("*") and s.endswith("*") and len(s) >= 2:
+        s = strip_backticks(s[1:-1].strip())
+    return strip_backticks(s)
+
+
 class MarkdownIncrement(Increment):
     """Increment leaf node for the Markdown format. Knows how to parse thin-slicing.md."""
 
@@ -92,21 +108,20 @@ class MarkdownIncrement(Increment):
             if m_inc:
                 if current is not None:
                     increments.append(current)
-                current = cls(MarkdownScenario()._strip_markup(m_inc.group(1)), len(increments) + 1)
+                current = cls(strip_markup(m_inc.group(1)), len(increments) + 1)
                 current.source = SourceLocation(rel_file, idx)
                 in_stories = False
                 continue
             if current is None:
                 continue
-            markup = MarkdownScenario()
             if m := _KV_OUTCOME.match(stripped):
-                current.outcome = markup._strip_markup(m.group(1))
+                current.outcome = strip_markup(m.group(1))
                 in_stories = False
             elif m := _KV_SLICING.match(stripped):
-                current.slicing_notes = markup._strip_markup(m.group(1))
+                current.slicing_notes = strip_markup(m.group(1))
                 in_stories = False
             elif m := _KV_DECISION.match(stripped):
-                current.decision_prompt = markup._strip_markup(m.group(1))
+                current.decision_prompt = strip_markup(m.group(1))
                 in_stories = False
             elif _KV_STORIES.match(stripped):
                 in_stories = True
@@ -114,7 +129,7 @@ class MarkdownIncrement(Increment):
                 in_stories = False
             elif in_stories:
                 if m := _BULLET.match(raw):
-                    current.stories.append(markup._strip_markup(m.group(1)))
+                    current.stories.append(strip_markup(m.group(1)))
                 else:
                     in_stories = False
 
@@ -299,7 +314,7 @@ class MarkdownScenario(Scenario):
         match = _TREE_HEADING.match(self._raw_line)
         if match is None or self.tree_heading is not None or self.sections:
             return False
-        self.tree_heading = (match.group(1), self._strip_markup(match.group(2)), self._kept_line)
+        self.tree_heading = (match.group(1), strip_markup(match.group(2)), self._kept_line)
         self.document_parts.append(_HEADING_LINE)
         return True
 
@@ -328,7 +343,7 @@ class MarkdownScenario(Scenario):
         if match is None:
             return False
         self._flush_current()
-        self._story_name = self._strip_markup(match.group(1))
+        self._story_name = strip_markup(match.group(1))
         self._shared_background = self._open_section(self._story_name, self._kept_line).background
         self._local_background = None
         self._background_took_step = False
@@ -346,7 +361,7 @@ class MarkdownScenario(Scenario):
             return False
         self._flush_current()
         self._current = type(self)(
-            name=self._strip_markup(match.group(1)),
+            name=strip_markup(match.group(1)),
             story_name=self._story_name,
         )
         self._current.is_outline = "outline" in self._raw_line.lower()
@@ -408,7 +423,7 @@ class MarkdownScenario(Scenario):
 
     def _begin_example_group(self) -> bool:
         heading = _HEADING_PATTERN.match(self._raw_line)
-        self._example_group = self._strip_markup(heading.group(2)) if heading else ""
+        self._example_group = strip_markup(heading.group(2)) if heading else ""
         self._example_headers = []
         return True
 
@@ -475,11 +490,11 @@ class MarkdownScenario(Scenario):
         cells = [c.strip() for c in table_line.group(1).split("|")]
         if not self._example_headers:
             if not all(re.fullmatch(r"-+|:-+:?|:?-+:?", c) for c in cells):
-                self._example_headers = [self._strip_markup(c) for c in cells]
+                self._example_headers = [strip_markup(c) for c in cells]
             return
         if all(set(c.strip(":")) <= {"-"} for c in cells):
             return
-        fields = dict(zip(self._example_headers, (self._strip_markup(c) for c in cells)))
+        fields = dict(zip(self._example_headers, (strip_markup(c) for c in cells)))
         if set(fields) <= {"example", "group"} and fields.get("example"):
             fields = {"example": fields["example"]}
         self._record_example(fields)
@@ -521,18 +536,6 @@ class MarkdownScenario(Scenario):
         self._scenarios.append(self._current)
         self._current = None
         self._local_background = None
-
-    def strip_backticks(self, text: str) -> str:
-        s = text.strip()
-        while s.startswith("`") and s.endswith("`") and len(s) >= 2:
-            s = s[1:-1].strip()
-        return s
-
-    def _strip_markup(self, text: str) -> str:
-        s = self.strip_backticks(unlink(text))
-        while s.startswith("*") and s.endswith("*") and len(s) >= 2:
-            s = self.strip_backticks(s[1:-1].strip())
-        return self.strip_backticks(s)
 
     def _parse_step(self, raw: str) -> Optional[tuple[str, str]]:
         match = _ITALIC_STEP.match(raw) or _BULLET_STEP.match(raw)
@@ -705,11 +708,11 @@ class MarkdownScenario(Scenario):
         for line in self._lines[:20]:
             match = _STORY_H2.match(line)
             if match:
-                return self._strip_markup(match.group(1))
+                return strip_markup(match.group(1))
         for line in self._lines[:5]:
             match = _H1.match(line)
             if match:
-                return self._strip_markup(match.group(1))
+                return strip_markup(match.group(1))
         parts = self._path.parts
         if len(parts) >= 2 and parts[-2] == "scenarios":
             return parts[-3].replace("-", " ") if len(parts) >= 3 else ""
@@ -903,7 +906,7 @@ class _StoryMapWriter:
         return f"[{name}]({target})" if target else name
 
     def _plain(self, text: str) -> str:
-        return MarkdownScenario().strip_backticks(text)
+        return strip_backticks(text)
 
 
 class MarkdownParseError(Exception):
@@ -990,9 +993,11 @@ class MarkdownStoryModel(StoryModel):
         previous: Optional[str] = None,
         workspace: Optional[str] = None,
     ) -> str:
-        """Write the story map. In a *workspace* folder, each story that has its own markdown file
-        there links to it; a story with no file stays plain text."""
-        document = story_map.scenario_document if isinstance(story_map, MarkdownStoryModel) else None
+        """Write the story map, copied into a markdown map when it is in another format. In a *workspace* folder,
+        each story that has its own markdown file there links to it; a story with no file stays plain text."""
+        if not isinstance(story_map, MarkdownStoryModel):
+            story_map = type(self)(story_map)
+        document = story_map.scenario_document
         if document is not None:
             return self._render_scenario_document(document)
         links = StoryMapLinks.from_workspace(workspace) if workspace else None
@@ -1028,9 +1033,6 @@ class MarkdownStoryModel(StoryModel):
             if self._sub_tree_has_outline_signal(nested):
                 return True
         return False
-
-    def strip_backticks(self, text: str) -> str:
-        return MarkdownScenario().strip_backticks(text)
 
     def _is_discovery_story_map(self, story_map: "MarkdownStoryModel") -> bool:
         return not any(story.scenarios or story.backgrounds for story in story_map.every_story())
@@ -1220,7 +1222,7 @@ class MarkdownStoryModel(StoryModel):
 
             if m_epic_out:
                 indent = _outline_depth(m_epic_out)
-                name = self.strip_backticks(m_epic_out.group("name"))
+                name = strip_backticks(m_epic_out.group("name"))
                 if indent == 0:
                     if epic_index < len(self.epics):
                         self.epics[epic_index].source = SourceLocation(rel_file, i)
@@ -1230,7 +1232,7 @@ class MarkdownStoryModel(StoryModel):
                 continue
             if m_story_out:
                 story_text = m_story_out.group("name")
-                name = self.strip_backticks(story_text.split("-->", 1)[-1] if "-->" in story_text else story_text)
+                name = strip_backticks(story_text.split("-->", 1)[-1] if "-->" in story_text else story_text)
                 self._stamp_story(name, SourceLocation(rel_file, i))
                 continue
             if is_outline:
@@ -1438,7 +1440,7 @@ class MarkdownStoryModel(StoryModel):
         if match is None:
             return False
         indent = _outline_depth(match)
-        name = self.strip_backticks(match.group("name"))
+        name = strip_backticks(match.group("name"))
         self._current_outline_story = None
         if indent <= 0:
             self._current_epic = MarkdownEpic(name, len(self._story_map.epics) + 1)
@@ -1487,9 +1489,9 @@ class MarkdownStoryModel(StoryModel):
 
     def _split_outline_story(self, raw_text: str) -> tuple[str, str]:
         if "-->" not in raw_text:
-            return "", self.strip_backticks(raw_text)
+            return "", strip_backticks(raw_text)
         actor_part, story_part = raw_text.split("-->", 1)
-        return self.strip_backticks(actor_part), self.strip_backticks(story_part)
+        return strip_backticks(actor_part), strip_backticks(story_part)
 
     def _accept_outline_estimate(self) -> bool:
         match = _OUTLINE_ESTIMATE_PATTERN.match(self._raw_line)
