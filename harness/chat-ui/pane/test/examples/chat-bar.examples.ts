@@ -98,6 +98,9 @@ export const NEW_SESSION_NAME = 'payment-retry'
 // lists them by format.
 export const MODEL_FILES = { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-client.ts', exists: true }] }
 
+// Seed: clean-engineering-model declares its class diagram beside the model's markdown.
+export const MODEL_DIAGRAM_FILES = { markdown: [{ path: 'pane/.context/chat-bar-model.md', exists: true }], drawio: [{ path: 'pane/.context/chat-bar-model.drawio', exists: true }] }
+
 // Seed: the text of chat-bar-client.ts under checkout-flow's Clean Engineering root.
 export const CHAT_BAR_CLIENT_TEXT = { 'pane/hooks/chat-bar/chat-bar-client.ts': '// Model shell for the chat bar\nexport class ChatBarClient {}' }
 

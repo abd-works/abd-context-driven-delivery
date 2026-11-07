@@ -149,6 +149,10 @@ function getTemplate(layoutName) {
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
 const SCREEN_W   = 720   // screen box width
+const CALLOUT_GAP = 6    // space between a screen and its stories callout
+const CALLOUT_H  = 52    // stories callout height
+const LANE_GAP   = 30    // space between the screens and the first transition lane above them
+const LANE_STEP  = 24    // space between transition lanes
 const SCREEN_HDR = 32    // height of bold name bar at top of screen
 const CHROME_H   = 28    // height of a chrome region band
 const ROW_H      = 22    // height of one representative list row
@@ -543,10 +547,27 @@ function generateXml(state) {
       cells.push(mkCell(counter, {
         value: lines.join('<br>'),
         style: S.callout, vertex: true, parent: '1',
-        x: pos.x, y: pos.y + pos.h + 6, w: pos.w, h: 52,
+        x: pos.x, y: pos.y + pos.h + CALLOUT_GAP, w: pos.w, h: CALLOUT_H,
       }).xml)
     }
   }
+
+  // A line between screens in different columns runs up from its source, along a lane of its own above every
+  // screen, and down into its target, so it crosses neither a screen nor the stories callout beneath it. Each line
+  // leaves and enters at its own point along a screen's top edge, so lines sharing a screen do not run on top of each other.
+  const placed      = Object.values(positions)
+  const laneBottom  = Math.min(...placed.map(p => p.y)) - LANE_GAP
+  const ends        = {}
+  for (const conn of state.connections) {
+    for (const name of [conn.from, conn.to]) ends[name] = (ends[name] || 0) + 1
+  }
+  const usedEnds    = {}
+  const nextEndX = (name) => {
+    const pos   = positions[name]
+    const index = usedEnds[name] = (usedEnds[name] || 0) + 1
+    return pos.x + Math.round(pos.w * index / (ends[name] + 1))
+  }
+  let lane = 0
 
   // Merge A→B + B→A into one bidirectional arrow
   const allConnKeys  = new Set(state.connections.map(c => `${c.from}|${c.to}`))
@@ -581,6 +602,13 @@ function generateXml(state) {
         { x: wx, y: tgtPos.y },
       ]
       edgeStyle += 'exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;'
+    } else if (srcPos && tgtPos) {
+      const exitX  = nextEndX(conn.from)
+      const entryX = nextEndX(conn.to)
+      const laneY  = laneBottom - lane++ * LANE_STEP
+      waypoints = [{ x: exitX, y: laneY }, { x: entryX, y: laneY }]
+      edgeStyle += `exitX=${((exitX - srcPos.x) / srcPos.w).toFixed(3)};exitY=0;exitDx=0;exitDy=0;` +
+        `entryX=${((entryX - tgtPos.x) / tgtPos.w).toFixed(3)};entryY=0;entryDx=0;entryDy=0;`
     }
 
     cells.push(mkCell(counter, {

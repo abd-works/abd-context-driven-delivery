@@ -57,6 +57,13 @@ export async function showFile($: EngineInterface, path: string): Promise<void> 
   await update($, fidelityFiles, files => (files ? { ...files, shown: path, tabs: files.tabs.map(tab => (tab.path === path ? { path, text } : tab)) } : files))
 }
 
+// The chat cannot draw a diagram, so the agent opens it in the draw.io editor in the browser pane, as the drawio-viewer
+// rule says.
+export async function openInDrawio($: EngineInterface, path: string): Promise<void> {
+  const answer = await $.prompt.submit({ text: `Open ${path} in the draw.io viewer.`, asUser: true })
+  if (answer.drop !== undefined) $.ui.toast(`${path} did not open: ${answer.drop || 'the chat dropped it'}`)
+}
+
 export async function closeFiles($: EngineInterface): Promise<void> {
   await update($, fidelityFiles, () => null)
 }

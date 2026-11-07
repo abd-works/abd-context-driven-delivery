@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Knowledge graph explorer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#E5531A}a:hover{color:#FF6A2E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; background: #0B0B0B; color: #E8E8ED; font-family: 'Inter', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column">
+
+<div style="display: flex; align-items: center; gap: 14px; padding: 14px 22px; border-bottom: 1px solid #2A2A2A">
+<span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px">abd<span style="color: #E5531A">.</span>works</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9B9BA8">KNOWLEDGE GRAPH</span>
+<span style="flex-grow: 1"></span>
+<span style="display: flex; border: 1px solid #2A2A2A; border-radius: 999px; overflow: hidden; font-size: 12px"><span style="padding: 4px 12px; color: #9B9BA8">Executive ☀</span><span style="padding: 4px 12px; background: #1B1B20">Engineering ☾</span></span>
+<button type="button" style="font: inherit; color: #E8E8ED; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; padding: 5px 12px">Force reload</button>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; padding: 10px 22px; border-bottom: 1px solid #2A2A2A; background: #111113">
+<button type="button" style="font: inherit; font-weight: 600; color: #0B0B0B; background: #E5531A; border: 1px solid #E5531A; border-radius: 3px; padding: 5px 12px">Repo folder</button>
+<button type="button" onClick="{{toggleFilters}}" aria-label="Show filters" style="font: inherit; color: #E8E8ED; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; padding: 5px 10px">{{filterChevron}}</button>
+<label style="flex-grow: 1; display: flex"><span style="position: absolute; left: -9999px">Repository folder</span><input value="C:\dev\abd-context-driven-delivery\harness" readonly style="flex-grow: 1; font: inherit; font-family: 'JetBrains Mono', monospace; color: #E8E8ED; background: #0B0B0B; border: 1px solid #2A2A2A; border-radius: 3px; padding: 5px 10px"></label>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9BA8">opened on the session's files · Invoke Knowledge Graph Explorer In Session Context</span>
+</div>
+<sc-if value="{{filtersOpen}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; gap: 24px; padding: 10px 22px; border-bottom: 1px solid #2A2A2A; font-size: 12px">
+<span><span style="color: #9B9BA8">Practice</span> ☑ Stories ☑ Clean Engineering ☐ DDD ☐ UX ☐ BDD</span>
+<span><span style="color: #9B9BA8">Node type</span> all</span>
+<span><span style="color: #9B9BA8">Connector</span> all</span>
+<button type="button" onClick="{{toggleViolations}}" style="{{violationsStyle}}">Only violations</button>
+</div>
+</sc-if>
+
+<div style="flex-grow: 1; display: flex; min-height: 0">
+<div style="width: 520px; flex-shrink: 0; border-right: 1px solid #2A2A2A; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; overflow: hidden">
+<sc-for list="{{nodes}}" as="node" hint-placeholder-count="10">
+<button type="button" onClick="{{node.pick}}" style="{{node.style}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9B9BA8; width: 64px; flex-shrink: 0">{{node.kind}}</span><span style="flex-grow: 1">{{node.name}}</span><span style="color: #E5531A; font-family: 'JetBrains Mono', monospace; font-size: 11px">{{node.violations}}</span></button>
+</sc-for>
+</div>
+<div style="flex-grow: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #E5531A">SOURCE</span>
+<span style="font-weight: 700; font-size: 16px">{{selectedName}}</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9BA8">{{selectedFile}}</span>
+<div style="background: #111113; border: 1px solid #2A2A2A; border-radius: 4px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 20px; white-space: pre-wrap">{{selectedSource}}</div>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9B9BA8">RULES ON THIS NODE</span>
+<sc-for list="{{rules}}" as="rule" hint-placeholder-count="3">
+<div style="display: flex; gap: 8px; align-items: center"><span style="{{rule.markStyle}}">{{rule.mark}}</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px">{{rule.name}}</span></div>
+</sc-for>
+<div style="flex-grow: 1"></div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9BA8">Mockup of the Graph app (harness/graph/app). Stubs: the tree is a hand-picked slice of the harness graph; Repo folder, Force reload and the practice filters do nothing.</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { selected: 'Activate Ticket', filtersOpen: true, onlyViolations: false };
+  }
+  renderVals() {
+    const all = [
+      { kind: 'epic', name: 'Move Work Forward On Session Board', depth: 0, violations: '', file: 'harness/.context/story-map-v2.md', source: '# (E) Move Work Forward On Session Board' },
+      { kind: 'sub-epic', name: 'Steer Ticket Sessions', depth: 1, violations: '', file: 'harness/.context/story-map-v2.md', source: '## (E) Steer Ticket Sessions' },
+      { kind: 'story', name: 'Activate Ticket', depth: 2, violations: '', file: 'harness/.context/story-map-v2.md', source: '### (S) Person --> Activate Ticket\n\nObserved: Activate opens a dialog with what to do on leaving and on opening, then calls board.activate.' },
+      { kind: 'scenario', name: 'Switch to another ticket, committing, pushing, and merging the one left', depth: 3, violations: '', file: 'activate_ticket_story.test.md', source: '#### Scenario: Switch to another ticket, committing, pushing, and merging the one left\n\n*When* the Person activates billing-report' },
+      { kind: 'operation', name: 'Ticket.activate', depth: 3, violations: '', file: 'harness/kanban/ticket.py', source: 'def activate(self, ...):' },
+      { kind: 'story', name: 'Customize Workflow Stages', depth: 2, violations: '1', file: 'harness/.context/story-map-v2.md', source: '#### (S) Person --> Customize Workflow Stages' },
+      { kind: 'sub-epic', name: 'Register Agent Toolsets', depth: 1, violations: '', file: 'harness/.context/story-map-v2.md', source: '## (E) Register Agent Toolsets' },
+      { kind: 'story', name: 'Validate Instruction Body', depth: 2, violations: '1', file: 'harness/.context/story-map-v2.md', source: '### (S) Agent Toolset --> Validate Instruction Body' },
+    ];
+    const shown = this.state.onlyViolations ? all.filter((node) => node.violations) : all;
+    const picked = all.find((node) => node.name === this.state.selected) || all[2];
+    const row = 'display: flex; gap: 8px; align-items: center; width: 100%; box-sizing: border-box; text-align: left; font: inherit; color: #E8E8ED; border: 0; border-radius: 4px; padding: 5px 8px; cursor: pointer; ';
+    const rules = picked.violations
+      ? [{ name: 'right-size-story-nodes', failed: true }, { name: 'verb-noun-format', failed: false }]
+      : [{ name: 'verb-noun-format', failed: false }, { name: 'story-map-links-to-markdown', failed: false }];
+    return {
+      nodes: shown.map((node) => ({
+        ...node,
+        pick: () => this.setState({ selected: node.name }),
+        style: row + 'padding-left: ' + (8 + node.depth * 18) + 'px; ' + (node.name === picked.name ? 'background: rgba(229,83,26,0.16);' : 'background: transparent;'),
+      })),
+      selectedName: picked.name,
+      selectedFile: picked.file,
+      selectedSource: picked.source,
+      rules: rules.map((rule) => ({ name: rule.name, mark: rule.failed ? '✕ fail' : '✓ pass', markStyle: 'font-family: JetBrains Mono, monospace; font-size: 11px; width: 52px; color: ' + (rule.failed ? '#FF6A6A' : '#6FD39F') })),
+      filtersOpen: this.state.filtersOpen,
+      filterChevron: this.state.filtersOpen ? '▼' : '▶',
+      toggleFilters: () => this.setState({ filtersOpen: !this.state.filtersOpen }),
+      toggleViolations: () => this.setState({ onlyViolations: !this.state.onlyViolations }),
+      violationsStyle: 'font: inherit; border-radius: 3px; padding: 2px 10px; ' + (this.state.onlyViolations ? 'color: #0B0B0B; background: #E5531A; border: 1px solid #E5531A;' : 'color: #E8E8ED; background: #1B1B20; border: 1px solid #2A2A2A;'),
+    };
+  }
+}
+</script>
+</body>
+</html>

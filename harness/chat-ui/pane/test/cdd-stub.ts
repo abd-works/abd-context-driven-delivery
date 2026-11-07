@@ -17,6 +17,7 @@ export type World = {
   calls: Call[]
   sent: string[]
   fills: string[]
+  submits: string[]
   toasts: string[]
   declared: Record<string, Record<string, FileEntryData[]>>
   reports: Record<string, ReportData>
@@ -163,6 +164,7 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
     calls: [],
     sent: [],
     fills: [],
+    submits: [],
     toasts: [],
     declared: {},
     reports: {},
@@ -198,7 +200,10 @@ export function cdd(on: any, board: BoardData = boardOf('checkout-flow', checkou
     world.fills.push(e.text)
     return { isFilled: true }
   })
-  on('prompt.submit', (_: unknown, e: { text: string }) => ({ text: e.text }))
+  on('prompt.submit', (_: unknown, e: { text: string }) => {
+    world.submits.push(e.text)
+    return { text: e.text }
+  })
   on('command.run', (_: unknown, e: { command: string; args: string }) => {
     world.sent.push(`/${e.command} ${e.args}`.trim())
     return { value: { text: '' } }

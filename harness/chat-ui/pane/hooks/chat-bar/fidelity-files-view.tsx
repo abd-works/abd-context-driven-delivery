@@ -2,7 +2,7 @@ import type { EngineInterface } from 'claude-code'
 
 import type { FidelityFilesJson } from '../../types'
 import { BRAND } from '../brand'
-import { closeFiles, showFile } from './fidelity-files-client'
+import { closeFiles, openInDrawio, showFile } from './fidelity-files-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
 
@@ -34,6 +34,7 @@ export function FidelityFilesView($: EngineInterface, elements: ElementTable, fi
         {files.tabs.map(tab => (
           <Button key={`file-${tab.path}`} label={tab.path.split('/').at(-1) ?? tab.path} variant={tab.path === files.shown ? 'primary' : undefined} onPress={() => showFile($, tab.path)} />
         ))}
+        {shown?.path.endsWith('.drawio') ? <Button key="file-drawio" label="Open in draw.io" variant="primary" onPress={() => openInDrawio($, shown.path)} /> : null}
         <Button key="files-close" label="✕" onPress={() => closeFiles($)} />
       </Box>
       {shown ? FileTextView(elements, shown.path, shown.text ?? '') : <Text color={BRAND.muted}>{`${files.fidelity} declares no files.`}</Text>}

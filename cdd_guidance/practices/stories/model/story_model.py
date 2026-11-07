@@ -737,10 +737,9 @@ class Epic(StoryNode):
         return any(child._has_estimate() for child in self.epics)
 
     def span_columns(self) -> int:
-        """Story-grid columns this epic occupies. An empty epic is one column."""
-        if not self.epics:
-            return 1
-        return sum(max(child.diagram_span_columns(), 1) for child in self.epics)
+        """Story-grid columns this epic occupies: its own stories, then its sub-epics. An empty epic is one column."""
+        nested = sum(max(child.diagram_span_columns(), 1) for child in self.epics)
+        return max(len(self.stories) + nested, 1)
 
     def layout_column_count(self) -> int:
         """Story grid columns. Named stories only. Estimates are not story cells."""

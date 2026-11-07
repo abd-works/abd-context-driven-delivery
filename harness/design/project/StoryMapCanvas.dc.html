@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Story map canvas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#E5531A}a:hover{color:#FF6A2E}
+</style>
+</helmet>
+<div style="width: 1600px; height: 860px; box-sizing: border-box; background: #0B0B0B; color: #E8E8ED; font-family: 'Inter', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column; gap: 16px; padding: 24px 28px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9B9BA8; flex-grow: 1">STORY MAP ARTBOARD · ONE SCREEN THUMBNAIL UNDER EACH STORY · PRESS A THUMBNAIL TO PLAY IT IN THE STORY EXPLORER</span>
+<button type="button" onClick="{{zoomOut}}" aria-label="Zoom out" style="font: inherit; color: #E8E8ED; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; width: 30px; height: 30px">−</button>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; width: 48px; text-align: center">{{zoomLabel}}</span>
+<button type="button" onClick="{{zoomIn}}" aria-label="Zoom in" style="font: inherit; color: #E8E8ED; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; width: 30px; height: 30px">+</button>
+</div>
+
+<div style="flex-grow: 1; background: #111113; border: 1px solid #2A2A2A; border-radius: 4px; padding: 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden">
+<div style="background: #2A1A12; border: 1px solid #5A3020; border-radius: 4px; padding: 10px 14px; font-weight: 700">Move Work Forward On Session Board</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+<sc-for list="{{subEpics}}" as="sub" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<div style="background: #12201A; border: 1px solid #24402F; border-radius: 4px; padding: 8px 12px; font-weight: 600">{{sub.name}}</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{sub.stories}}" as="story" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #9B9BA8">Person</span>
+<div style="background: #3A3220; border: 1px solid #6A5A30; border-radius: 3px; padding: 6px 8px; min-height: 44px; font-size: 12px; font-weight: 600">{{story.name}}</div>
+<sc-if value="{{story.hasScreen}}" hint-placeholder-val="{{false}}">
+<a href="StoryExplorer.dc.html" style="display: flex; flex-direction: column; gap: 3px; height: 92px; box-sizing: border-box; padding: 6px; background: #0B0B0B; border: 1px solid #E5531A; border-radius: 3px; text-decoration: none">
+<span style="height: 8px; background: #2A2A2A; border-radius: 2px"></span>
+<span style="display: flex; gap: 3px; flex-grow: 1"><span style="flex: 1; background: #1B1B20; border-radius: 2px"></span><span style="flex: 1; background: #1B1B20; border: 2px solid #E5531A; border-radius: 2px"></span><span style="flex: 1; background: #1B1B20; border-radius: 2px"></span></span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #E5531A">play ▶</span>
+</a>
+</sc-if>
+<sc-if value="{{story.noScreen}}" hint-placeholder-val="{{true}}">
+<div style="height: 92px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: #0B0B0B; border: 1px dashed #2A2A2A; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #6B6B78">No screenshot</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="flex-grow: 1"></div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9BA8">Mockup of the design canvas's story map artboard (harness/design_canvas, Browse The Story Map Artboard). Stubs: only Activate Ticket has a screen; zoom changes the label only.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":860}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { zoom: 100 };
+  }
+  renderVals() {
+    const groups = [
+      { name: 'See Work On Session Board', stories: ['Open Board', 'Display Board', 'Display Ticket Card', 'Display Ticket Details'] },
+      { name: 'Steer Ticket Sessions', stories: ['Open Ticket Session', 'Activate Ticket', 'Close Active Session', 'Move Ticket'] },
+      { name: 'Maintain Tickets', stories: ['Add Backlog Item', 'Edit Ticket Text', 'Reorder Tickets In Column', 'Archive Ticket'] },
+    ];
+    const subEpics = groups.map((group) => ({
+      name: group.name,
+      stories: group.stories.map((name) => ({ name, hasScreen: name === 'Activate Ticket', noScreen: name !== 'Activate Ticket' })),
+    }));
+    return {
+      subEpics,
+      zoomLabel: this.state.zoom + '%',
+      zoomIn: () => this.setState({ zoom: Math.min(200, this.state.zoom + 25) }),
+      zoomOut: () => this.setState({ zoom: Math.max(50, this.state.zoom - 25) }),
+    };
+  }
+}
+</script>
+</body>
+</html>

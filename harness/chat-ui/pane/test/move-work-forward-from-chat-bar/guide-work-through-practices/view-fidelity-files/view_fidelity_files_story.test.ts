@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { called } from '../../../cdd-stub'
-import { boardOf, CHAT_BAR_CLIENT_TEXT, checkoutFlowWith, MODEL_FILES, MODEL_REPORT, VALIDATED } from '../../../examples/chat-bar.examples'
+import { boardOf, CHAT_BAR_CLIENT_TEXT, checkoutFlowWith, MODEL_DIAGRAM_FILES, MODEL_FILES, MODEL_REPORT, VALIDATED } from '../../../examples/chat-bar.examples'
 import { CHAT_BAR, drawn, findText, textOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
@@ -28,6 +28,26 @@ story('View Fidelity Files', CHAT_BAR, () => {
     then("the tab shows the file's text, starting // Model shell for the chat bar", async ($, on, scene) => {
       expect(textOf(await findText(scene.ui, /^\/\/ Model shell/))).toBe('// Model shell for the chat bar')
       expect(called(scene.world, 'session.read_file')).toEqual({ session: '.sessions/checkout-flow/session.json', path: 'pane/hooks/chat-bar/chat-bar-client.ts' })
+    })
+  })
+  scenario('Open a diagram in the draw.io editor', ({ given, when, then, and }) => {
+    // Evidence: requested: a button that loads a .drawio file shown in the chat bar's files into the draw.io viewer
+    given('the tab pane/.context/chat-bar-model.drawio is open', async ($, on, scene) => {
+      scene.world.declared['clean-engineering-model'] = MODEL_DIAGRAM_FILES
+      await scene.ui.press({ key: 'dot-clean-engineering-model' })
+      await scene.ui.press({ key: 'files-button' })
+      await scene.ui.press({ key: 'file-pane/.context/chat-bar-model.drawio' })
+    })
+    when('the Person opens the diagram in draw.io', async ($, on, scene) => {
+      await scene.ui.press({ key: 'file-drawio' })
+    })
+    // Open in draw.io press -> openInDrawio($, path) -> $.prompt.submit; the agent follows the drawio-viewer rule
+    then('the chat is asked to open pane/.context/chat-bar-model.drawio in the draw.io viewer', async ($, on, scene) => {
+      expect(scene.world.submits).toContain('Open pane/.context/chat-bar-model.drawio in the draw.io viewer.')
+    })
+    and('a markdown tab offers no draw.io button', async ($, on, scene) => {
+      await scene.ui.press({ key: 'file-pane/.context/chat-bar-model.md' })
+      expect(await drawn(scene.ui, 'file-drawio')).toBeUndefined()
     })
   })
   scenario("Refuse a file outside the session's roots", ({ given, when, then }) => {

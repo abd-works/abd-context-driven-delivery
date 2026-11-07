@@ -1,0 +1,34 @@
+# UX context — Integrated Session Flow
+
+Notes the [information architecture](information-architecture.drawio) cannot show. Its screens come from the epic Connect Sessions Across Channels And Apps in [story-map.md](story-map.md#e-connect-sessions-across-channels-and-apps), and from two others: the Chat Bar's Generate Fidelity Outputs In Chat Bar (Display Action Before Fidelity Dots, Select Several Fidelities, Choose Format), and Play Stories On Design Canvas Screens (Show Screen Frames In Story UI, Navigate The Browser Story Explorer, Frame Design Canvas Screens In Explorer). Every story on them was requested on 2026-11-06 and none is built yet.
+
+## Invariants
+
+- One screen per app. The Session Board and the Story UI editor are the same screen whether they open as their own page or as a side panel beside the chat; a side panel only changes where the screen sits.
+- The chat bar, the board, the Story UI editor, the story explorer and the Graph app always show the same ticket's session, so a selection in one is never about a different ticket in another.
+- The story map lives in the Story UI editor. Its base view is the plain map; the screen frames view adds each story's design canvas screen as a frame under its card.
+- The story explorer runs in the browser. Its core frame is the selected step's design canvas screen; the design canvas keeps the screens, their files, versions and fixture bar, and no longer draws the story map or the explorer.
+- Violations are read from the latest graph. A validation report is written only when Validate runs on its own; generate no longer needs one.
+- Fix works on one rule, one file, or by default every violation of every rule in every file, the same way from the board and the chat bar. Generate and Fix are actions on both channels; Validate is only the `/actions-validate` slash command, since generate judges the rules.
+
+## Integrated journey options
+
+One integrated journey, an interactive artboard on the Integrated Harness Flow canvas's Integrated options page (https://claude.ai/artifact/Fv63emedWtR8CoLL5QGevW). It keeps the Kanban board, the story map and the chat band, and assumes Integrate Practice Content Editor Apps, Suggest The Next Step and Fully Integrated App Flow are built, so every change reloads the graph with its violations. Two other options, one docked workspace and the board as home, were dropped as adding nothing.
+
+- **The chat is home.** Claude Code with its chat band in the left column, and up to four views beside it; opening a fifth closes the oldest. By default the board sits above the story map in the middle, the story explorer opens below the story map, and the Inspector is on the right. As in Claude's own panes, the views sit in columns, and the arrows on a view move it into the next column, under the views already there, or up and down its own column, leaving every other view in place; an arrow with nowhere to go is hidden. A layout picker sets a starting arrangement: the default, one column each, all in one column, or two columns.
+
+Consolidated, because the separate apps came from building ad hoc rather than from separate goals:
+
+- **Inspector** joins the Graph app's file view and the board's validation report, and works with or without violations. Across its top, a tab for each of the ticket's files for its practices, each with its violation count; a ticket's ▾ on the board opens the Inspector on the whole ticket's files or on one practice's. The open file shows below the tabs, where a heading, a def or a diagram folds with everything under it, as the editor folds today, and a folded section says how many violations it hides; every line a violation covers is light red. A `.drawio` file opens as its diagram, with a Source tab for the XML; a violation marks its shape in red, and pressing a shape opens its lines in the source (Display Drawio File As Diagram). On its right, each violation from the latest graph as a card of its own, with its file and line and what is wrong, grouped under its rule as the board's violation report groups them; each rule folds and unfolds, and This file only keeps the open file's violations. Fix rule sits on the rule, Open shows the violation at its line (unfolding what holds it), and Fix this one fixes that one; Fix every violation sits under the cards. One Show violations switch shows or hides the cards and the marks in the file together. The graph's trace from a story to its scenarios, tests and code sits under the file.
+- **Knowledge Graph** stays a view of its own for browsing: the ticket's practice trees on its session folders, filtered to the ticket's practices, with an Only violations filter. A press on a node with a violation opens that violation in the Inspector, so the graph is for finding and the Inspector is for reading and fixing.
+- **The story explorer is its own view**: Screen frames on the story map shows each story's design canvas screen; pressing one opens the story explorer as a view below the story map, and pressing another story's screen changes what the explorer shows.
+
+## Notes
+
+- The chat band keeps the chat bar's stage strip design and only adds to it. From the left: the server check, the session name with ▾ opening the session list box, the ticket's practice squares with their violation counts, which pick the practices the next action runs on (one, several or all), the ▶ action button with ▾ choosing generate, render, sketch, iterate, document or fix (validate runs inside generate), the board's diagram, markdown and code format icons, each turned on or off, and icons that open and close the other views (board, story map, knowledge graph, Inspector). Squares, ▶ and icons show their text on hover.
+- Selecting a stage or fidelity on the board, as a page or beside the chat, changes the chat bar's shown stage and selected fidelity, its chat and its practices to that ticket's (Sync Chat Bar With Board Selection); the formats picked for a fidelity stay picked across its actions (Keep Chosen Formats Across Actions In A Fidelity).
+- An increment in the Story UI editor can become a ticket of its own, with its own session holding the increment's stories (Start Ticket Session From Increment).
+- Opening the Graph app from the board or the chat bar loads the ticket's session folders and sets the practice filter to the ticket's practices; from the board header, to every practice on the board.
+- Pressing a screen frame opens the story explorer at that story, scenario and step; Return To Story UI Map goes back to the frames view.
+
+- The story map's Increments view lists the map's increments; Create ticket on one adds a ticket to the board's backlog named after the story map and the increment (Start Ticket Session From Increment), and that increment then shows its ticket (Show Increment Ticket In Story UI).
