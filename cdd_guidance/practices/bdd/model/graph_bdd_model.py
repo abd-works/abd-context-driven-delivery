@@ -26,7 +26,7 @@ _MEMBER_TYPES = ("Operation", "Property")
 
 
 class GraphBddModel(BddModel):
-    """Reads a saved graph (`Graph.write_json`, `graph.save_json`) into descriptions whose observations carry their realization."""
+    """Reads a saved graph (`Graph.saved`, `graph.save_json`) into descriptions whose observations carry their realization."""
 
     def parse(self, text: str) -> "GraphBddModel":
         graph = SavedGraph.from_text(text).restored_graph()

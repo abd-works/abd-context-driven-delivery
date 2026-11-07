@@ -2,9 +2,9 @@
 
 *BoundedContextMap* reads text into bounded contexts and aggregates, the way the class model reads files and folders. A nested bounded context is a bounded context whose parent is a bounded context. Each bounded context holds one or more aggregates. When the text has no bounded context, the map has one bounded context and there is no folder for it; the aggregates sit in that context. A bounded context is a module. An aggregate is a module. Entity, value object, repository, domain service, specification, and factory are classes; a domain event and an invariant object are properties. An aggregate's root is an entity with `is_root` true. Markdown continues through a class card when the file has one, and stops at the class name when the file has only the name.
 
-The graph (*Ddd*'s `read_working_copy`, with its readers in `practices/ddd/model/graph_reading.py`) reads a bounded context from each folder holding `.context/bounded-context.md`, through `BoundedContext.load_context_folder`, and a building block from each class Clean Engineering read whose stereotypes or name give it a DDD kind. The building block's node holds the class's own facts and the tactical facts `tactical_facts(parsed, kind)` reads from the parsed class; the class itself stays Clean Engineering's node.
+The graph (*Ddd*'s `read_working_copy`, with its readers in `practices/ddd/model/graph_reading.py`) reads a bounded context from each folder holding `.context/bounded-context.md`, through `BoundedContext.load_context_folder`, and a building block from each class Clean Engineering read whose stereotypes or name give it a DDD kind. Each building block is a *BuildingBlock* node that holds the class Clean Engineering read (through a *TacticalClass*): the class's own facts are the class's, and the tactical facts DDD's rules read are the block's, worked out from the class's operations; the class itself stays Clean Engineering's node.
 
-Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, drawio) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back. The python and typescript formats are Clean Engineering's class models: `Ddd` converts the map with `to_clean_engineering` and back with `from_clean_engineering`. A card's stereotypes are the class's `stereotypes`, which the code channels write as decorators (`@aggregate_root`, `@AggregateRoot()`) and read back: a decorator with no arguments, or a `<<Mark>>` on the first line of the doc comment, is a stereotype, so Clean Engineering keeps no list of DDD's words. `tactical_stereotypes` keeps DDD's own words from that list — aggregate root, entity, value object, repository, domain service or service, domain event, specification, factory, and system — and `building_block_type` reads a card's class from them. Where the class lives rides in its intent's first line (`Customer · Customer Profile`).
+Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, drawio) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back. The python and typescript formats are Clean Engineering's class models: the markdown map writes itself as one (`class_model()`) and reads one back (`read_class_model(model)`); a markdown text with no aggregate is a plain class model, which `Ddd` hands to its Clean Engineering companion's own adapter. A card's stereotypes are the class's `stereotypes`, which the code channels write as decorators (`@aggregate_root`, `@AggregateRoot()`) and read back: a decorator with no arguments, or a `<<Mark>>` on the first line of the doc comment, is a stereotype, so Clean Engineering keeps no list of DDD's words. `tactical_stereotypes` keeps DDD's own words from that list — aggregate root, entity, value object, repository, domain service or service, domain event, specification, factory, and system — and `ClassCard.named` makes the card of the building block they name. Where the class lives rides in its intent's first line (`Customer · Customer Profile`).
 
 ```
 bounded_context_map = MarkdownBoundedContextMap().parse(text)
@@ -20,9 +20,8 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 ## BoundedContextMap
 
-+ BoundedContextMap(source: BoundedContextMap | None = None)
-	// source empty: the map is empty until load
-	// source set: each source context becomes this format's context
++ BoundedContextMap()
+	// empty until load or parse
 ------
 + path: str
 + contexts: list[BoundedContext]
@@ -55,12 +54,13 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 ## BoundedContext : Module
 
-+ BoundedContext(name: str, sequential_order: int, source: BoundedContext | None = None, graph: Graph | None = None)
-	// copies name, owner, and order
++ BoundedContext(name: str, sequential_order: int, graph: Graph | None = None)
 	// a nested bounded context is a bounded context whose parent is a bounded context
 ------
 + owner: str
 	// the heading text after |
++ label: str
+	// the name, with the owner after | when it has one
 + contexts: ModelChildren[BoundedContext]
 + aggregates: ModelChildren[Aggregate]
 	// composition — an aggregate has no context outside this one
@@ -92,9 +92,7 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 ## Aggregate : Module
 
-+ Aggregate(name: str, sequential_order: int, source: Aggregate | None = None)
-	// copies name and order
-	// each source integration becomes this format's integration
++ Aggregate(name: str, sequential_order: int, graph: Graph | None = None)
 ------
 + root: Entity | None
 	// the entity in this aggregate whose is_root is true
@@ -102,6 +100,8 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 	// an arrow that sits on the aggregate
 + events: list[DomainEvent]
 	// the domain events the root emits
++ members: list
+	// what the root holds: its invariant objects; at model fidelity, the member cards
 ----
 + take_root(entity: Entity): None
 	// the entity becomes the root, its only way in, and records this aggregate
@@ -111,8 +111,7 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 ## Integration
 
-+ Integration(source: Integration | None = None)
-	// copies the target and the arc
++ Integration()
 ------
 + context: str
 + aggregate: str
@@ -127,9 +126,17 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 	// the target's context, aggregate, and entity
 + target_name: str
 	// the entity when the target names one, else the aggregate
+----
++ lines(): list[str]
+	// `- target`, then each field it has, indented: what an aggregate writes under `Integrations:`
 
-`tactical_facts(parsed: OoadClass, kind: str): dict` — the facts DDD's tactical rules read about a parsed class seen as a building block of kind, recorded on the building block's graph node:
+## BuildingBlock : Node
 
+A class Clean Engineering read, as the DDD building block it is in the graph (`graph_reading.py`). It holds the class
+(`ooad_class`, through its *TacticalClass*); `get_fact` answers its own facts, then the class's, then the DDD nodes
+around it, and it saves both.
+
++ BuildingBlock(practice: Ddd, tactical: TacticalClass, kind: str)
 ------
 + peer_private_operations: list[str]
 + public_derive_operations: list[str]
@@ -138,12 +145,19 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 	// load, get, find, or fetch with no parameters that reads ambient state such as the session or request
 + tactical_stereotype: bool
 	// the class carries a DDD stereotype, or its name says its kind
++ public_operation_names: list[str]
++ lifecycle_operations: list[str]
++ drives_a_screen: bool
++ in_screen_module: bool
++ foreign_names: list[str]
+	// the roots its lines name with `// foreign Name`
+
+*DddReading* is one read of a working copy into the graph that holds the DDD practice: bounded contexts, aggregates,
+and a *BuildingBlock* for each class the Clean Engineering practice it extends read.
 
 ## Entity : OoadClass
 
-+ Entity(name: str, sequential_order: int, source: Entity | None = None)
-	// copies identity, is_root, and the aggregate
-	// each source invariant object becomes an invariant object here
++ Entity(name: str, sequential_order: int)
 ------
 + identity: list[Property]
 	// the properties that keep this entity the same thing
@@ -164,15 +178,14 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 ## InvariantObject : Property
 
-+ InvariantObject(name: str, sequential_order: int, source: InvariantObject | None = None)
-	// copies name, order, type hint, description, and access
++ InvariantObject(name: str, sequential_order: int)
 ------
 + stereotype: str
 	// invariant
 
 ## ValueObject : OoadClass
 
-+ ValueObject(name: str, sequential_order: int, source: ValueObject | None = None)
++ ValueObject(name: str, sequential_order: int)
 	// no write operations and no setters
 	// create, clone, and mix always return a new instance
 ------
@@ -183,8 +196,7 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 ## Repository : OoadClass
 
-+ Repository(name: str, sequential_order: int, source: Repository | None = None)
-	// a repository is a collection; it copies the root it collects
++ Repository(name: str, sequential_order: int)
 ------
 + accesses: Entity | None
 	// the entity in the model whose is_root is true
@@ -194,14 +206,13 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 ## DomainService : OoadClass
 
-+ DomainService(name: str, sequential_order: int, source: DomainService | None = None)
++ DomainService(name: str, sequential_order: int)
 	// no state
 	// an operation here is one no domain object can perform
 
 ## DomainEvent : Property
 
-+ DomainEvent(name: str, sequential_order: int, source: DomainEvent | None = None)
-	// copies name, order, type hint, description, access, producer, consumers, and subject
++ DomainEvent(name: str, sequential_order: int)
 ------
 + producer: Aggregate | None
 + consumers: list[Aggregate | DomainService]
@@ -213,7 +224,7 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 
 ## Factory : OoadClass
 
-`building_block_type(stereotypes)` names the class a card with those stereotypes is read into: specification, value object, repository, domain service (or service), factory, entity, or aggregate root (an entity); a card with none is a plain *OoadClass*.
+`ClassCard.named(name, stereotypes)` makes the card a class with those stereotypes is read into: specification, value object, repository, domain service (or service), factory, entity, or aggregate root (an entity); a card with none is a plain class card.
 
 ## MarkdownDomainNode
 
@@ -222,34 +233,42 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 + owner_from(heading: str): str
 	// the text after | on a context heading
 
-## ClassCard
+## ClassCard : MarkdownDomainNode
 
-One `####` card in markdown: a classified class with its stereotypes.
+The `####` card a building block reads and writes itself in markdown, and in a sketch's fence. Each markdown building
+block is one: *MarkdownEntity*, *MarkdownValueObject*, *MarkdownRepository*, *MarkdownDomainService*,
+*MarkdownSpecification*, *MarkdownFactory*, and *MarkdownClass* for a card whose stereotypes name no building block. Its
+stereotypes are the class's `stereotypes`.
 
-+ ClassCard(node: OoadClass, stereotypes: list[str])
++ ClassCard.named(name: str, stereotypes: list[str]): ClassCard
 + ClassCard.from_heading(heading: str): ClassCard
-+ ClassCard.from_name(name: str, stereotypes: list[str]): ClassCard
-	// the class is typed by building_block_type
++ ClassCard.read(section: list[str]): ClassCard
++ ClassCard.from_sketch(heading: str, lines: list[str]): list[ClassCard]
+	// the card, then the repository its fence's `repo:` names
 ------
-+ node: OoadClass
-+ stereotypes: list[str]
 + invariants: list[str]
 + is_root: bool
+	// marked <<Aggregate Root>>, or made its aggregate's root
 + is_repository: bool
 + heading: str
++ plain_properties: list[Property]
+	// what the class holds, not its events or invariant objects
 ----
 + add_member(line: str, as_operation: bool): Property | Operation | None
-	// one `+ name: Type` or `+ name(parameters): Type` line onto the card's class
++ read_lines(lines: list[str]): None
++ read_sketch_lines(lines: list[str]): list[ClassCard]
 + lines(): list[str]
 + property_lines(): list[str]
 + operation_lines(): list[str]
 + sketch_lines(): list[str]
++ code_class(place: str, order: int): OoadClass
+	// the class a code file writes for the card: a copy of its members, its place first in its intent
 
 ## MarkdownBoundedContextMap : BoundedContextMap, MarkdownDomainNode
 
 The `markdown` format.
 
-+ MarkdownBoundedContextMap(source: BoundedContextMap | None = None)
++ MarkdownBoundedContextMap()
 ------
 + bounded_context_type: MarkdownBoundedContext
 + aggregate_type: MarkdownAggregate
@@ -257,8 +276,15 @@ The `markdown` format.
 + parse(text: str): MarkdownBoundedContextMap
 	// fills this map and returns it
 + render(canonical: BoundedContextMap | None = None, previous: str | None = None): str
+	// saves the map it is given as it is
 + save(): str
 	// contexts, then the event map
++ holds_classes_only: bool
+	// the text named no aggregate: a plain class model
++ class_model(): CleanEngineeringModel
+	// one module per aggregate, named by its place; each card a class with its place first in its intent and the arcs after the first class's
++ read_class_model(model: CleanEngineeringModel): MarkdownBoundedContextMap
+	// each class's place names its context and aggregate; classes with no place gather around their roots
 + wire_events(entries: list[str]): None
 	// each `Event: emitted by Producer; consumed by A, B` entry onto its producer's root
 - load_bounded_context_map_content(): None
@@ -285,6 +311,10 @@ The `markdown` format.
 + lines(): list[str]
 + read_note(line: str, group: str | None): None
 	// to the group it sits under, else the module, else the context
++ read_sketch_lines(lines: list[str]): None
+	// its lines of a sketch: holders, entities, notes, and each aggregate's fences
++ sketch_lines(): list[str]
++ aggregate_named(name: str): MarkdownAggregate
 
 ## MarkdownAggregate : Aggregate, MarkdownDomainNode
 
@@ -292,6 +322,12 @@ The `markdown` format.
 + source_lines: list[str]
 	// the lines under the aggregate's heading; load_root reads the root, its cards, and its arcs from them
 + cards: list[ClassCard]
++ sketch_fences: list[tuple[str, list[str]]]
+	// the entity fences a sketch lists under the aggregate
++ members: list
+	// the member cards, else the root's invariant objects
++ code_place: str
+	// each enclosing context's label, then the aggregate's name, joined by ` · `
 + group: str | None
 	// the sketch heading the aggregate was listed under
 + root_card: ClassCard | None
@@ -306,8 +342,14 @@ The `markdown` format.
 + lines(): list[str]
 + integration_lines(indent: str = ""): list[str]
 	// the aggregate's arcs under `Integrations:` and the root's events under `emits events:`
++ load_sketch(): None
++ sketch_lines(): list[str]
++ class_module(order: int): Module
++ take_code_integrations(): None
+	// the arcs a code file kept after a class's intent, read by MarkdownIntegration
++ infer_relationships(): None
 
-## MarkdownEntity : Entity, MarkdownDomainNode
+## MarkdownEntity : ClassCard, Entity
 
 + MarkdownEntity(name: str, sequential_order: int, member_lines: list[str] | None = None)
 ----
@@ -318,13 +360,19 @@ The `markdown` format.
 
 ## MarkdownIntegration : Integration, MarkdownDomainNode
 
++ MarkdownIntegration.read_arcs(lines: list[str]): list[MarkdownIntegration]
+	// each `- target` line opens an arc and the `key: value` lines under it fill it; markdown and code both read arcs this way
++ read_field(line: str): None
+
 ## SketchDddModel : MarkdownBoundedContextMap
 
 The `sketch` format: the `domain driven design:` section of an integrated sketch.
 
 ----
 + parse(text: str): SketchDddModel
+	// where each context starts, the prose it skips, and the event map; each context reads its own lines
 	-> SketchOutline.body_for
+	-> MarkdownBoundedContext.read_sketch_lines
 + render(canonical: BoundedContextMap | None = None, previous: str | None = None): str
 
 ## DrawIOBoundedContextMap : MarkdownBoundedContextMap
@@ -349,6 +397,6 @@ Writes and reads the aggregate view: each context a dashed box, its aggregates i
 
 ## Clean Engineering conversion
 
-`to_clean_engineering(bounded_context_map)` makes one *Module* per aggregate, each class keeping its stereotypes and place (`Context · Aggregate`) in its intent. `from_clean_engineering(model)` rebuilds contexts and aggregates from each class's place, or groups classes around their roots. Both live in `clean_engineering_bridge.py`.
+A code file is a Clean Engineering class model. `MarkdownBoundedContextMap.class_model()` writes the map as one: each aggregate a *Module* named by its place (`Context | owner · Aggregate`), each card a class of its own that keeps its stereotypes and has the place as the first line of its intent; a class belongs to one model, so code keeps its own copy of each card's members. `read_class_model(model)` reads one back. The arcs ride after the first class's intent under `Integrations:`, written by `Integration.lines` and read by `MarkdownIntegration.read_arcs`, the same as in markdown.
 
 `BoundedContextMap` loads the contexts. `BoundedContext` loads its child contexts and its aggregates. `Aggregate` knows its root: the `Entity` whose `is_root` is true, and that entity records the aggregate. `Entity` loads its invariant objects; an invariant object is a property with the invariant stereotype, and it changes with the entity. A format overrides only the `has_more_*` and `get_next_*_from_file` reads for the nodes its text contains, plus `parse` and `render`.

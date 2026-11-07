@@ -7,7 +7,7 @@ from typing import Any
 
 from harness.guidance.rule import Rule, RulesCollection
 from harness.graph.practice_rule import PracticeGraphRule
-from harness.graph.violation import Violation
+from harness.graph.violation import NodeViolation, Violation
 from harness.installation.destination import data_field
 
 
@@ -76,14 +76,22 @@ class GraphRule(PracticeGraphRule, Rule):
 
     def record(self, message: str) -> None:
         """Keep message as a violation of this rule at the node's place in its file; the same message is kept once."""
-        violation = Violation.on_node(self.slug, message, self.node)
+        violation = NodeViolation.at_node(self, message)
         if violation.message and all(kept.message != violation.message for kept in self._violations):
             self._violations.append(violation)
 
     def restore(self, violation: Violation) -> None:
-        """Keep a violation a saved graph recorded, at the place it was saved with."""
-        if violation not in self._violations:
-            self._violations.append(violation)
+        """Keep a violation a saved graph recorded, at the place it was saved with, as this rule's own."""
+        restored = NodeViolation(
+            self,
+            violation.message,
+            location=violation.location,
+            line=violation.line,
+            end_line=violation.end_line,
+            severity=violation.severity,
+        )
+        if restored not in self._violations:
+            self._violations.append(restored)
 
     def clear_violations(self) -> None:
         self._violations.clear()

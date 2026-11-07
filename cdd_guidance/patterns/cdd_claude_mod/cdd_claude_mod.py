@@ -4,7 +4,10 @@ See space/kanban for the worked example."""
 
 from __future__ import annotations
 
+from functools import cached_property
+
 from harness.agent_tools.agent_tools import agent_toolset
+from harness.graph.pattern_overlays import GraphOverlay
 from harness.guidance.guidance import PracticeGuidance
 
 
@@ -19,3 +22,8 @@ class CddClaudeMod(PracticeGuidance):
             format="typescript",
             default_workspace_folder="harness",
         )
+
+    @cached_property
+    def graph_overlay(self) -> GraphOverlay:
+        """What this pattern gives the knowledge graph on top of the practices: no nodes, only the rules it adds to each practice. Made once and kept."""
+        return GraphOverlay(self)

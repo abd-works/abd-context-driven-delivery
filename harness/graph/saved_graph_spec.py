@@ -39,7 +39,7 @@ with description("a saved graph"):
         (self.root / "src" / "cart.ts").write_text(_CART, encoding="utf-8")
         self.graph = Graph()
         self.graph.load_files(str(self.root), ["clean_engineering"], ["src"])
-        self.text = Path(self.graph.write_json(str(self.root / "saved.json"))).read_text(encoding="utf-8")
+        self.text = self.graph.saved().text
         self.restored = SavedGraph.from_text(self.text).restored_graph()
 
     with after.all:

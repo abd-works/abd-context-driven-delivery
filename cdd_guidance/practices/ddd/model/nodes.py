@@ -14,7 +14,6 @@ from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, OoadClass
-from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 # The `# Title` line of a bounded context's `.context/bounded-context.md`: the context's name.
@@ -40,7 +39,10 @@ _HELD_BY = "(by"
 class Integration:
     """An arrow from an aggregate to another class."""
 
-    def __init__(self, source: "Integration | None" = None) -> None:
+    FIELDS = ("pattern", "direction", "crosses", "integration")
+    """The fields of an arc, in the order its lines write them under its target."""
+
+    def __init__(self) -> None:
         self.context = ""
         self.aggregate = ""
         self.target = ""
@@ -48,14 +50,6 @@ class Integration:
         self.crosses = ""
         self.integration = ""
         self.pattern = ""
-        if source is not None:
-            self.context = source.context
-            self.aggregate = source.aggregate
-            self.target = source.target
-            self.direction = source.direction
-            self.crosses = source.crosses
-            self.integration = source.integration
-            self.pattern = source.pattern
 
     @property
     def target_parts(self) -> tuple[str, str, str]:
@@ -75,6 +69,10 @@ class Integration:
         _context, aggregate, entity = self.target_parts
         return entity or aggregate or self.aggregate
 
+    def lines(self) -> list[str]:
+        """The arc as an aggregate writes it under `Integrations:`: `- target`, then each field it has, indented."""
+        return [f"- {self.target}"] + [f"  {key}: {getattr(self, key)}" for key in self.FIELDS if getattr(self, key)]
+
 
 class InvariantObject(Property):
     """A property that changes with its entity. Stereotype is invariant."""
@@ -82,45 +80,9 @@ class InvariantObject(Property):
     _semantic_type_name = "InvariantObject"
     _practice_key = "ddd"
 
-    def __init__(self, name: str = "", sequential_order: int = 0, source: "InvariantObject | None" = None, **kwargs) -> None:
-        if source is not None:
-            super().__init__(source.name, source.sequential_order, source.type_hint, source.description)
-            self.access = source.access
-        else:
-            super().__init__(name, sequential_order, kwargs.get("type_hint", ""), kwargs.get("description", ""))
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, kwargs.get("type_hint", ""), kwargs.get("description", ""))
         self.stereotype = "invariant"
-
-
-_DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
-_ONLY_DELEGATES = re.compile(r"return\s+\w+\.\w+\s*\(")
-_LOAD_NAMES = frozenset({"load", "get", "find", "fetch"})
-# A load with no identity is fine when it returns the one record its store holds; it is wrong when it finds the
-# identity in ambient state (the session, the request, a cookie, the signed-in user, the browser).
-_AMBIENT_STATE = re.compile(
-    r"(?<![A-Za-z])(?:[Ss]ession|[Cc]urrent|[Rr]eq(?:uest)?|[Cc]ookies?|[Aa]uth|[Ll]ogged|[Cc]tx|[Cc]ontext"
-    r"|localStorage|sessionStorage|window|process\.env)(?![a-z])"
-)
-
-
-def tactical_facts(parsed: OoadClass, kind: str) -> dict:
-    """The facts DDD's tactical rules read about a class its language parser read, seen as a building block of kind:
-    which operations reach into other objects, which helpers are public, which only delegate, which loads find their
-    identity in ambient state, and whether the class says which building block it is."""
-    from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
-
-    operations = list(parsed.operations)
-    public = [op for op in operations if op.name and not op.name.startswith("_")]
-    return {
-        "peer_private_operations": [op.name for op in operations if op.peer_private_access],
-        "public_derive_operations": [op.name for op in public if _DERIVE_PREFIX.match(op.name)],
-        "delegating_operations": [op.name for op in public if _ONLY_DELEGATES.search(op.body.text)],
-        "identity_free_loads": [
-            op.name
-            for op in operations
-            if op.name.lower() in _LOAD_NAMES and not op.parameters and _AMBIENT_STATE.search(op.body.text)
-        ],
-        "tactical_stereotype": TacticalClass(parsed.name, parsed.stereotypes).declares_stereotype(kind, parsed.peer_names),
-    }
 
 
 class Entity(OoadClass):
@@ -130,21 +92,12 @@ class Entity(OoadClass):
     _practice_key = "ddd"
     _belongs = {("InvariantObject", "Entity")}
 
-    def __init__(self, name: str = "", sequential_order: int = 0, source: "Entity | None" = None, **kwargs) -> None:
-        if source is not None:
-            super().__init__(source.name, source.sequential_order, intent=source.intent)
-            self.identity = list(source.identity)
-            self.is_root = source.is_root
-            self.aggregate = source.aggregate
-            self.invariant_objects = [
-                InvariantObject(source=item) for item in source.invariant_objects
-            ]
-        else:
-            super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
-            self.identity = []
-            self.is_root = False
-            self.aggregate = None
-            self.invariant_objects = []
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+        self.identity = []
+        self.is_root = False
+        self.aggregate = None
+        self.invariant_objects = []
         self.invariant_object_type = InvariantObject
 
     def load_invariant_objects(self) -> None:
@@ -168,11 +121,8 @@ class ValueObject(OoadClass):
     _semantic_type_name = "ValueObject"
     _practice_key = "ddd"
 
-    def __init__(self, name: str = "", sequential_order: int = 0, source: "ValueObject | None" = None, **kwargs) -> None:
-        if source is not None:
-            super().__init__(source.name, source.sequential_order, intent=source.intent)
-        else:
-            super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
     def create(self) -> "ValueObject":
         return type(self)(self.name, self.sequential_order, intent=self.intent)
@@ -190,18 +140,9 @@ class Repository(OoadClass):
     _semantic_type_name = "Repository"
     _practice_key = "ddd"
 
-    def __init__(self, name: str = "", sequential_order: int = 0, source: "Repository | None" = None, **kwargs) -> None:
-        if source is not None:
-            super().__init__(
-                source.name,
-                source.sequential_order,
-                intent=source.intent,
-                operations=list(source.operations),
-            )
-            self.accesses = source.accesses
-        else:
-            super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
-            self.accesses = None
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+        self.accesses = None
 
 
 class DomainService(OoadClass):
@@ -210,16 +151,8 @@ class DomainService(OoadClass):
     _semantic_type_name = "DomainService"
     _practice_key = "ddd"
 
-    def __init__(self, name: str = "", sequential_order: int = 0, source: "DomainService | None" = None, **kwargs) -> None:
-        if source is not None:
-            super().__init__(
-                source.name,
-                source.sequential_order,
-                intent=source.intent,
-                operations=list(source.operations),
-            )
-        else:
-            super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
 class DomainEvent(Property):
@@ -228,28 +161,11 @@ class DomainEvent(Property):
     _semantic_type_name = "DomainEvent"
     _practice_key = "ddd"
 
-    def __init__(self, name: str = "", sequential_order: int = 0, source: "DomainEvent | None" = None, **kwargs) -> None:
-        if source is not None:
-            super().__init__(source.name, source.sequential_order, source.type_hint, source.description)
-            self.access = source.access
-            self.producer = source.producer
-            self.consumers = list(source.consumers)
-            self.subject = Property(
-                source.subject.name,
-                source.subject.sequential_order,
-                source.subject.type_hint,
-                source.subject.description,
-            )
-        else:
-            super().__init__(
-                name,
-                sequential_order,
-                kwargs.get("type_hint", ""),
-                kwargs.get("description", ""),
-            )
-            self.producer = None
-            self.consumers = []
-            self.subject = Property("subject", 0, description="the state of the event")
+    def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
+        super().__init__(name, sequential_order, kwargs.get("type_hint", ""), kwargs.get("description", ""))
+        self.producer = None
+        self.consumers = []
+        self.subject = Property("subject", 0, description="the state of the event")
 
 
 class Specification(OoadClass):
@@ -268,25 +184,6 @@ class Factory(OoadClass):
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
 
 
-# Which building block a class card's stereotypes make it, first match first; a card with none is a plain class.
-_BLOCK_TYPES: tuple[tuple[str, type[OoadClass]], ...] = (
-    ("specification", Specification),
-    ("value object", ValueObject),
-    ("repository", Repository),
-    ("domain service", DomainService),
-    ("service", DomainService),
-    ("factory", Factory),
-    ("entity", Entity),
-    ("aggregate root", Entity),
-)
-
-
-def building_block_type(stereotypes: list[str]) -> type[OoadClass]:
-    """The class a card with these stereotypes is read into."""
-    marks = {item.lower() for item in stereotypes}
-    return next((block for mark, block in _BLOCK_TYPES if mark in marks), OoadClass)
-
-
 class Aggregate(Module):
     """Knows its root entity and its integrations. The entity loads invariant objects."""
 
@@ -303,17 +200,10 @@ class Aggregate(Module):
         ("OoadClass", "Aggregate"),
     }
 
-    def __init__(self, name: str = "", sequential_order: int = 0, source: "Aggregate | None" = None, **kwargs) -> None:
-        if source is not None:
-            super().__init__(source.name, source.sequential_order)
-            self.root = None
-            self.integrations = [Integration(item) for item in source.integrations]
-        else:
-            super().__init__(name, sequential_order)
-            self.root = None
-            self.integrations = []
-        self._lines: list[str] = []
-        self._index = 0
+    def __init__(self, name: str = "", sequential_order: int = 0, graph: Graph | None = None, **kwargs) -> None:
+        super().__init__(name, sequential_order, graph=graph)
+        self.root = None
+        self.integrations = []
 
     def load_root(self) -> None:
         # The entity records this aggregate and loads its own invariant objects.
@@ -335,6 +225,11 @@ class Aggregate(Module):
             return []
         return [item for item in self.root.properties if isinstance(item, DomainEvent)]
 
+    @property
+    def members(self) -> list:
+        """What the root holds: the invariant objects its lines name."""
+        return list(self.root.invariant_objects) if self.root is not None else []
+
 
 class BoundedContext(Module):
     """A module of aggregates. A nested context is a context whose parent is a context."""
@@ -346,20 +241,21 @@ class BoundedContext(Module):
         ("BoundedContext", "BoundedContext"),
     }
 
-    def __init__(self, name: str = "", sequential_order: int = 0, source: "BoundedContext | None" = None, graph: Graph | None = None, **kwargs) -> None:
+    def __init__(self, name: str = "", sequential_order: int = 0, graph: Graph | None = None, **kwargs) -> None:
         if isinstance(name, Graph):
             graph = name
             name = "bounded context"
-        if source is not None:
-            super().__init__(source.name, source.sequential_order, graph=graph)
-            self.owner = source.owner
-        else:
-            super().__init__(name, sequential_order, graph=graph)
-            self.owner = ""
+        super().__init__(name, sequential_order, graph=graph)
+        self.owner = ""
         self.contexts = ModelChildren(self, "contexts")
         self.aggregates = ModelChildren(self, "aggregates")
         self._map: BoundedContextMap | None = None
         self.context_file_lines = 1
+
+    @property
+    def label(self) -> str:
+        """The context's name, with its owner after `|` when it has one: `Customer | custom`."""
+        return f"{self.name} | {self.owner}" if self.owner else self.name
 
     def load_context_folder(self, folder: Path) -> None:
         """Read the folder that holds this context in code: its name is the title of `.context/bounded-context.md`,
@@ -433,19 +329,13 @@ class BoundedContext(Module):
 class BoundedContextMap:
     """Reads a path into bounded contexts. Each context loads its own children."""
 
-    def __init__(self, source: "BoundedContextMap | None" = None) -> None:
+    def __init__(self) -> None:
         self.path = ""
         self.contexts: list[BoundedContext] = []
         self.bounded_context_type = BoundedContext
         self.aggregate_type = Aggregate
         self._lines: list[str] = []
         self._index = 0
-        if source is not None:
-            self.path = source.path
-            for context in source.contexts:
-                copied = self.bounded_context_type(source=context)
-                copied._map = self
-                self.contexts.append(copied)
 
     def load(self, path: str) -> "BoundedContextMap":
         self.path = path
@@ -484,3 +374,9 @@ class BoundedContextMap:
     def every_aggregate(self) -> list[Aggregate]:
         """Every aggregate on the map, those in nested contexts included."""
         return [aggregate for context in self.contexts for aggregate in context.every_aggregate]
+
+    @property
+    def holds_classes_only(self) -> bool:
+        """Whether the text this map read is a plain class model rather than a map: never, for a map of its own
+        notation; a markdown map says so when its text names no aggregate."""
+        return False

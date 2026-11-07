@@ -13,13 +13,12 @@ from cdd_guidance.practices.ddd.model.drawio.drawio_aggregate_model import (
     has_class_cards,
 )
 from cdd_guidance.practices.ddd.model.drawio.drawn_diagram import DrawnCell, DrawnDiagram
+from cdd_guidance.practices.ddd.model.markdown.class_cards import MarkdownEntity, MarkdownInvariantObject
 from cdd_guidance.practices.ddd.model.markdown.nodes import (
     MarkdownAggregate,
     MarkdownBoundedContext,
     MarkdownBoundedContextMap,
-    MarkdownEntity,
     MarkdownIntegration,
-    MarkdownInvariantObject,
     looks_like_operation,
 )
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap, Integration
@@ -87,11 +86,25 @@ class _Route:
 
 @dataclass
 class _IntegrationLink:
+    """An arc that crosses from one context to another: the aggregate it leaves, the integration itself, and the
+    context its target is in."""
+
     source_context: str
-    source_aggregate: str
+    aggregate: Aggregate
+    integration: Integration
     target_context: str
-    target_aggregate: str = ""
-    target_entity: str = ""
+
+    @property
+    def source_aggregate(self) -> str:
+        return self.aggregate.name
+
+    @property
+    def target_aggregate(self) -> str:
+        return self.integration.aggregate or self.integration.target_parts[1]
+
+    @property
+    def target_entity(self) -> str:
+        return self.integration.target_parts[2]
 
 
 @dataclass
@@ -105,6 +118,11 @@ class _CellRecord:
 
 
 class DrawIOBoundedContextMap(MarkdownBoundedContextMap):
+    @property
+    def holds_classes_only(self) -> bool:
+        """A drawing is always a map."""
+        return False
+
     def render(self, canonical=None, previous: str | None = None) -> str:
         del previous
         source = canonical if canonical is not None else self
@@ -114,12 +132,22 @@ class DrawIOBoundedContextMap(MarkdownBoundedContextMap):
         return self._write_diagram(source)
 
     def parse(self, text: str) -> "DrawIOBoundedContextMap":
-        model = type(self)()
+        """Read a drawing into this map, and return it: the aggregate view page, or the context map, whose swimlanes
+        are contexts, whose boxes are aggregates, and whose arrows are integrations."""
+        self.contexts = []
         diagram = DrawnDiagram(text)
-        reader = DrawIOAggregateModel() if diagram.page_id == AGGREGATE_VIEW_PAGE else _ContextMapReader()
-        for context in reader.contexts_in(diagram):
-            model.append_context(context)
-        return model
+        if diagram.page_id == AGGREGATE_VIEW_PAGE:
+            for context in DrawIOAggregateModel().contexts_in(diagram):
+                self.append_context(context)
+            return self
+        aggregates: Dict[str, MarkdownAggregate] = {}
+        for swimlane in diagram.boxes_in():
+            context = self._context_drawn(swimlane)
+            for box in diagram.boxes_in(swimlane.cell_id):
+                aggregates[box.cell_id] = self._aggregate_drawn(context, box)
+        for arrow in diagram.arrows:
+            self._integrate(arrow, aggregates)
+        return self
 
     def _write_diagram(self, model: BoundedContextMap) -> str:
         layout = ContextLayout([item for item in model.contexts if isinstance(item, BoundedContext)])
@@ -130,29 +158,14 @@ class DrawIOBoundedContextMap(MarkdownBoundedContextMap):
         writer.draw_integration_edges()
         return writer.finish(title=_TITLE)
 
-
-class _ContextMapReader:
-    """Reads the context map back: each swimlane a context, each box in it an aggregate, each arrow an integration."""
-
-    def contexts_in(self, diagram: DrawnDiagram) -> List[MarkdownBoundedContext]:
-        contexts: Dict[str, MarkdownBoundedContext] = {}
-        aggregates: Dict[str, MarkdownAggregate] = {}
-        for swimlane in diagram.boxes_in():
-            context = self._context(swimlane, len(contexts) + 1)
-            contexts[swimlane.cell_id] = context
-            for box in diagram.boxes_in(swimlane.cell_id):
-                aggregates[box.cell_id] = self._aggregate(context, box)
-        for arrow in diagram.arrows:
-            self._integrate(arrow, aggregates)
-        return list(contexts.values())
-
-    def _context(self, swimlane: DrawnCell, order: int) -> MarkdownBoundedContext:
+    def _context_drawn(self, swimlane: DrawnCell) -> MarkdownBoundedContext:
         texts = swimlane.texts + [""]
-        context = MarkdownBoundedContext(texts[0], order)
+        context = MarkdownBoundedContext(texts[0], len(self.contexts) + 1)
         context.owner = texts[1]
+        self.append_context(context)
         return context
 
-    def _aggregate(self, context: MarkdownBoundedContext, box: DrawnCell) -> MarkdownAggregate:
+    def _aggregate_drawn(self, context: MarkdownBoundedContext, box: DrawnCell) -> MarkdownAggregate:
         title, *members = box.texts
         aggregate = MarkdownAggregate(title, len(context.aggregates) + 1)
         context.append_aggregate(aggregate)
@@ -195,10 +208,7 @@ class ContextLayout:
         target_context = self._target_context(integration)
         if not target_context or target_context == context.name:
             return None
-        _context, aggregate_name, entity_name = integration.target_parts
-        return _IntegrationLink(
-            context.name, aggregate.name, target_context, integration.aggregate or aggregate_name, entity_name
-        )
+        return _IntegrationLink(context.name, aggregate, integration, target_context)
 
     def _target_context(self, integration: Integration) -> str:
         name = integration.context or integration.target_parts[0]
@@ -586,7 +596,7 @@ def _member_labels(aggregate: Aggregate) -> list[str]:
 
 
 def _drawable_members(aggregate: Aggregate) -> list[str]:
-    names = [item.name.split("//", 1)[0].strip() for item in aggregate.root.invariant_objects]
+    names = [item.name.split("//", 1)[0].strip() for item in aggregate.members]
     return [name for name in names if name and not _looks_like_prose(name) and not looks_like_operation(name)]
 
 

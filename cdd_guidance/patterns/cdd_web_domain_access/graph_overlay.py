@@ -11,15 +11,12 @@ from harness.graph.skipped_folders import scanned_files
 
 
 class WebDomainAccessOverlay(GraphOverlay):
-    def guidance(self):
-        from cdd_guidance.patterns.cdd_web_domain_access.cdd_web_domain_access import CddWebDomainAccess
-
-        return CddWebDomainAccess()
-
     def read(self, graph: Graph) -> None:
-        if not graph.folder or "ddd" not in graph.practices:
+        from cdd_guidance.practices.ddd.ddd import Ddd
+
+        ddd = graph.loaded_practice(Ddd)
+        if not graph.folder or ddd is None:
             return
-        ddd = graph.practice("ddd")
         root = Path(graph.folder)
         from cdd_guidance.patterns.cdd_web_domain_access.access_facts import AccessFile
 
@@ -33,5 +30,3 @@ class WebDomainAccessOverlay(GraphOverlay):
             for key, value in facts.items():
                 node.set_fact(key, value)
 
-
-OVERLAY = WebDomainAccessOverlay("cdd_web_domain_access")

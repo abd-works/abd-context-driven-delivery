@@ -65,7 +65,7 @@ with description("a saved graph of a spec and the code it tests"):
         graph = Graph()
         graph.load_files(str(self.folder), ["bdd", "clean_engineering"], ["src"])
         self.clean = graph.practice("clean_engineering")
-        self.saved = Path(graph.write_json(str(self.folder / "graph.json"))).read_text(encoding="utf-8")
+        self.saved = graph.saved().text
 
     with after.all:
         shutil.rmtree(self.folder, ignore_errors=True)

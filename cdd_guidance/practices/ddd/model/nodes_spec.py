@@ -16,31 +16,39 @@ from mamba import before, description, it
 
 from harness.graph.graph import Graph
 
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+from cdd_guidance.practices.ddd.model.markdown.class_cards import ClassCard
 from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, Entity
 from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 
+def _class(name: str, stereotypes: list[str]) -> TacticalClass:
+    oclass = OoadClass(name, 1)
+    oclass.stereotypes = stereotypes
+    return TacticalClass(oclass)
+
+
 with description("a class as DDD reads it"):
     with it("should name the aggregate root its heading marks"):
-        expect(TacticalClass.from_heading("**ShoppingCart** <<Aggregate Root>> <<Entity>>").kind()).to(equal("EntityRoot"))
+        expect(TacticalClass(ClassCard.from_heading("**ShoppingCart** <<Aggregate Root>> <<Entity>>")).kind()).to(equal("EntityRoot"))
 
     with it("should name the value object its heading marks"):
-        expect(TacticalClass.from_heading("**CartItem** <<Value Object>>").kind()).to(equal("ValueObject"))
+        expect(TacticalClass(ClassCard.from_heading("**CartItem** <<Value Object>>")).kind()).to(equal("ValueObject"))
 
     with it("should name the repository its heading marks"):
-        expect(TacticalClass.from_heading("**ShoppingCartRepository** <<Repository>>").kind()).to(equal("Repository"))
+        expect(TacticalClass(ClassCard.from_heading("**ShoppingCartRepository** <<Repository>>")).kind()).to(equal("Repository"))
 
     with it("should read the repository stereotype the graph reads from a @repository decorator"):
-        expect(TacticalClass("CartRepository", ["Repository"]).kind()).to(equal("Repository"))
+        expect(_class("CartRepository", ["Repository"]).kind()).to(equal("Repository"))
 
     with it("should not infer a building block for a screen registry class name"):
-        expect(TacticalClass("OnboardingStepScreen", []).inferred_kind(set())).to(equal(None))
+        expect(_class("OnboardingStepScreen", []).inferred_kind(set())).to(equal(None))
 
     with it("should not make a capitalised class with no stereotype an entity"):
-        expect(TacticalClass("Invoice", []).inferred_kind({"Invoice", "Customer"})).to(equal(None))
+        expect(_class("Invoice", []).inferred_kind({"Invoice", "Customer"})).to(equal(None))
 
     with it("should name an aggregate root by the repository beside it"):
-        expect(TacticalClass("Invoice", []).inferred_kind({"Invoice", "InvoiceRepository"})).to(equal("EntityRoot"))
+        expect(_class("Invoice", []).inferred_kind({"Invoice", "InvoiceRepository"})).to(equal("EntityRoot"))
 
 
 with description("a bounded context on a graph"):
