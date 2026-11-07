@@ -58,7 +58,8 @@ export class ReportClient {
     return this.data.is_out_of_date
   }
 
+  // Graph hits and judged findings together, as Python counts them.
   get violationCount(): number {
-    return this.rules.reduce((total, rule) => total + rule.count, 0)
+    return this.data.violation_count
   }
 }

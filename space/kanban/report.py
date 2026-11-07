@@ -115,6 +115,7 @@ class Report:
         return self._is_out_of_date
 
     @property
+    @data_field
     def violation_count(self) -> int:
         """Graph hits and judged findings together."""
         return sum(rule.count for rule in self._rules)
@@ -124,21 +125,19 @@ class ReportFile:
     """A validation report of one fidelity, saved in a session folder, with the graph the validation checked saved
     beside it. It knows which of its practice's rules it answers for."""
 
-    # The session holds the fidelity's reports and the folder the saved graph names its files from; the repository
-    # names the report's files from its top.
+    # The fidelity is the one its session holds, so it lists its own reports; the session its practice works in names
+    # the folder the saved graph names its files from, and its repository names the report's files from its top.
 
-    def __init__(self, file: Path, fidelity: FidelityGuidance, session: Session, repo: Repo) -> None:
+    def __init__(self, file: Path, fidelity: FidelityGuidance) -> None:
         self._file = file
         self._fidelity = fidelity
-        self._session = session
-        self._repo = repo
 
     @classmethod
-    def from_fidelity(cls, fidelity: FidelityGuidance, session: Session, repo: Repo) -> ReportFile | None:
-        """The latest report of fidelity in session that has its result, else its latest; none when it has none.
-        Validate saves a report before the agent judges it, so a report with no judgment and no saved graph yet does
-        not hide an earlier one that has its result."""
-        own = [cls(path, fidelity, session, repo) for path in fidelity.reports()]
+    def from_fidelity(cls, fidelity: FidelityGuidance) -> ReportFile | None:
+        """The latest report of fidelity in the session its practice works in that has its result, else its latest;
+        none when it has none. Validate saves a report before the agent judges it, so a report with no judgment and no
+        saved graph yet does not hide an earlier one that has its result."""
+        own = [cls(path, fidelity) for path in fidelity.reports()]
         with_result = [report for report in own if report.has_result]
         return (with_result or own or [None])[-1]
 
@@ -183,6 +182,14 @@ class ReportFile:
         return self._fidelity.practice_guidance
 
     @property
+    def _session(self) -> Session:
+        return self._practice.session
+
+    @property
+    def _repo(self) -> Repo:
+        return self._session.repo
+
+    @property
     def _workpath(self) -> Path:
         """The folder the saved graph names its files from: the session's workpath, else the repository's top."""
         return Path(self._session.workpath or self._repo.root).resolve()
@@ -213,7 +220,7 @@ class ReportFile:
 
     def _has_newer_report(self, earlier: FidelityGuidance) -> bool:
         """Whether an earlier fidelity was validated after this report was written, so its own report answers for its rules."""
-        latest = ReportFile.from_fidelity(earlier, self._session, self._repo)
+        latest = ReportFile.from_fidelity(earlier)
         return latest is not None and latest.stamp > self.stamp
 
     def _rule_named(self, name: str) -> Rule:

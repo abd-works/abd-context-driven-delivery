@@ -369,6 +369,10 @@ with description("the board tools") as self:
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
                 expect((report["rules"][0]["rule"]["slug"], report["rules"][0]["count"])).to(equal(("domain-nouns-only", 2)))
 
+            with it("should send how many violations it names in all"):
+                report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
+                expect(report["violation_count"]).to(equal(2))
+
             with it("should leave out the violations of other practices in the saved graph"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
                 expect([rule["rule"]["slug"] for rule in report["rules"]]).to(equal(["domain-nouns-only"]))

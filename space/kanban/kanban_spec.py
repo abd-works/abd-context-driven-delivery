@@ -179,6 +179,20 @@ with description("a board") as self:
         with it("should list every column with its tickets or items"):
             expect([column["name"] for column in data_of(self.board)["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
 
+        with it("should send each column's kind"):
+            expect([column["kind"] for column in data_of(self.board)["columns"]]).to(equal(["backlog", "stage", "stage", "stage", "complete"]))
+
+        with it("should read its tickets once for every column"):
+            expect(self.board.column("Discovery").cards[0]).to(be(self.board.tickets[0]))
+
+        with context("that has opened a ticket since it read them"):
+            with before.each:
+                self.board.tickets
+                self.board.open_ticket("Gift cards", "feature", "", "")
+
+            with it("should read the tickets again"):
+                expect(names(self.board.tickets)).to(contain("gift-cards"))
+
         with it("should send each card's title and last activity, whether a ticket or a backlog item"):
             sent = [data_of(card) for card in self.board.cards]
             expect([(bool(card["title"]), "last_activity" in card) for card in sent]).to(equal([(True, True)] * 4))
