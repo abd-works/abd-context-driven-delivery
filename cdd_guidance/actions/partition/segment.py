@@ -5,6 +5,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cdd_guidance.actions.partition.partition_index import PartitionIndex
 
 _EXPECTED_BLOCK = re.compile(
     r"<!--\s*expected-entries\s*\n(.*?)-->",
@@ -89,6 +93,21 @@ class Segment:
             if expected_names is not None
             else self._names_from_marker(text)
         )
+
+    @classmethod
+    def at(
+        cls,
+        path: Path,
+        index: PartitionIndex | None,
+        *,
+        expected_names: str = "",
+        min_body_chars: int = MIN_ENTRY_BODY_CHARS,
+    ) -> Segment:
+        """The segment kept in the file at path, read from it. It is checked with the completeness settings of the
+        index it belongs to, or, when it belongs to none, with min_body_chars and the defaults."""
+        config = index.completeness if index is not None else SegmentCompletenessConfig(min_body_chars=int(min_body_chars))
+        resolved = path.resolve()
+        return cls.from_text(resolved, resolved.read_text(encoding="utf-8", errors="replace"), config, expected_names=expected_names)
 
     @classmethod
     def from_text(

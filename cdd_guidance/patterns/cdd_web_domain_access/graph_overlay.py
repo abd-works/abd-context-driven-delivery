@@ -21,8 +21,10 @@ class WebDomainAccessOverlay(GraphOverlay):
             return
         ddd = graph.practice("ddd")
         root = Path(graph.folder)
+        from cdd_guidance.patterns.cdd_web_domain_access.access_facts import AccessFile
+
         for file in scanned_files(root):
-            tier = _access_tier(file, file.read_text(encoding="utf-8", errors="replace"))
+            tier = AccessFile.at(file).tier()
             if tier is None:
                 continue
             semantic, facts = tier
@@ -30,20 +32,6 @@ class WebDomainAccessOverlay(GraphOverlay):
             node = graph.add_named(ddd, semantic, f"ddd:{semantic}:{relative}", file.name, Source.whole_file(relative, str(root)))
             for key, value in facts.items():
                 node.set_fact(key, value)
-
-
-def _access_tier(file: Path, text: str) -> tuple[str, dict] | None:
-    from cdd_guidance.patterns.cdd_web_domain_access import access_facts
-
-    if file.name.endswith("-routes.ts"):
-        return "AccessRoute", access_facts.route_facts(text)
-    if access_facts.is_hand_written_adapter(file.name, text):
-        return "AccessHandWrittenAdapter", {}
-    if file.name.endswith("-node.ts"):
-        return "AccessNode", access_facts.node_facts(text)
-    if file.suffix == ".py" and access_facts.is_annotated(text):
-        return "AccessAnnotatedToolset", access_facts.annotated_toolset_facts(text)
-    return None
 
 
 OVERLAY = WebDomainAccessOverlay("cdd_web_domain_access")

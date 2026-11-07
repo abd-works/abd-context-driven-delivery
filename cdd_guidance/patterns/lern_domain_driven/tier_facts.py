@@ -43,70 +43,133 @@ _PATHS_MODULE_SUFFIX = "-paths.ts"
 _TEST_SETUP_GLOBS = ("tests/**/vitest.setup.ts", "tests/**/repositories.ts", "tests/vitest.setup.ts")
 
 
-def node_root_facts(text: str, setup_text: str) -> dict:
-    """What a `-node.ts` file says about its store-reading repositories, posted-body reads, and errors."""
-    store_readers = [
-        (name, code)
-        for name, body in _node_repository_bodies(text)
-        if (code := _store_code(text, body)) is not None
-    ]
-    return {
-        "node_repositories": [
-            {"name": name, "raw_io": SourceText(code).hits(_RAW_FILE_IO), "parses_on_read": bool(_SCHEMA_PARSE.search(code))}
-            for name, code in store_readers
-        ],
-        "unreset_instances": unreset_instances(text, [name for name, _code in store_readers], setup_text),
-        "unparsed_body_reads": [
-            SourceText(text).line_of(match.start()) for match in _ANY_BODY_READ.finditer(text) if not _inside_schema_parse(text, match.start())
-        ],
-        **error_handling_facts(text),
-    }
 
+class TierFile:
+    """One LERN file read once — a tier file, a behavior file, or a story file — with the SourceText that gives each
+    match in it the line it starts on. The facts the LERN rules read about the file are its operations, so its text is
+    wrapped once however many facts are read from it."""
 
-def core_request_reads(root: Path, folder: str) -> list[list]:
-    """[file, line, code] for each request read in the framework-free core `<folder>/<aggregate>.ts`."""
-    core = root / folder / f"{Path(folder).name}.ts"
-    if not core.is_file():
-        return []
-    text = core.read_text(encoding="utf-8")
-    relative = core.relative_to(root).as_posix()
-    return [[relative, SourceText(text).line_of(match.start()), match.group(0)] for match in _ANY_REQUEST_READ.finditer(text)]
+    def __init__(self, text: str, relative: str = "") -> None:
+        self.text = text
+        # The file's path from the working copy's root, which a fact naming a file records.
+        self.relative = relative
+        self._source = SourceText(text)
 
+    @classmethod
+    def at(cls, root: Path, path: Path) -> TierFile:
+        """The file at path, read now, named from root."""
+        return cls(path.read_text(encoding="utf-8"), path.relative_to(root).as_posix())
 
-def route_facts(text: str) -> dict:
-    return {"loose_body_reads": SourceText(text).hits(_LOOSE_BODY_READ), **error_handling_facts(text)}
+    def node_root_facts(self, setup_text: str) -> dict:
+        """What a `-node.ts` file says about its store-reading repositories, posted-body reads, and errors."""
+        text = self.text
+        store_readers = [
+            (name, code)
+            for name, body in _node_repository_bodies(text)
+            if (code := _store_code(text, body)) is not None
+        ]
+        return {
+            "node_repositories": [
+                {"name": name, "raw_io": SourceText(code).hits(_RAW_FILE_IO), "parses_on_read": bool(_SCHEMA_PARSE.search(code))}
+                for name, code in store_readers
+            ],
+            "unreset_instances": self.unreset_instances([name for name, _code in store_readers], setup_text),
+            "unparsed_body_reads": [
+                self._source.line_of(match.start()) for match in _ANY_BODY_READ.finditer(text) if not _inside_schema_parse(text, match.start())
+            ],
+            **self.error_handling_facts(),
+        }
 
+    def route_facts(self) -> dict:
+        return {"loose_body_reads": self._source.hits(_LOOSE_BODY_READ), **self.error_handling_facts()}
 
-def error_handling_facts(text: str) -> dict:
-    return {"ad_hoc_throws": SourceText(text).hits(_AD_HOC_THROW), "error_replies": SourceText(text).hits(_ERROR_STATUS_REPLY)}
+    def error_handling_facts(self) -> dict:
+        return {"ad_hoc_throws": self._source.hits(_AD_HOC_THROW), "error_replies": self._source.hits(_ERROR_STATUS_REPLY)}
 
+    def request_reads(self) -> list[list]:
+        """[file, line, code] for each request read in this file."""
+        return [[self.relative, self._source.line_of(match.start()), match.group(0)] for match in _ANY_REQUEST_READ.finditer(self.text)]
 
-def web_path_literals(root: Path, folder: str) -> list[list]:
-    """[file, line, path] for each browser path written as a literal outside the aggregate's `*-paths.ts`."""
-    found: list[list] = []
-    for file in sorted((root / folder).glob("*.ts*")):
-        if file.name.endswith(_PATHS_MODULE_SUFFIX):
-            continue
-        text = file.read_text(encoding="utf-8")
-        relative = file.relative_to(root).as_posix()
+    def web_path_literals(self) -> list[list]:
+        """[file, line, path] for each browser path this file writes as a literal: not in an import or a comment, and
+        not an API path a route registers."""
+        text = self.text
+        found: list[list] = []
         for match in _WEB_PATH.finditer(text):
             if _in_import(text, match.start()) or _in_comment(text, match.start()) or _ROUTE_REGISTRATION.search(text[max(0, match.start() - _ROUTE_CALL_REACH):match.start()]):
                 continue
-            found.append([relative, SourceText(text).line_of(match.start()), match.group(2)])
-    return found
+            found.append([self.relative, self._source.line_of(match.start()), match.group(2)])
+        return found
+
+    def unreset_instances(self, class_names: list[str], setup_text: str) -> list[list[str]]:
+        """[instance, class] for each exported repository instance of this file the test setup never resets."""
+        missing: list[list[str]] = []
+        for class_name in class_names:
+            instance = _exported_instance(self.text, class_name)
+            if instance is not None and not re.search(rf"\b{re.escape(instance)}\b", setup_text):
+                missing.append([instance, class_name])
+        return missing
+
+    def behavior_facts(self) -> dict:
+        """What a LERN behavior file (shared or one tier) says about the tier it reaches and what it stubs."""
+        return {
+            "tier_reaches": self._source.hits(_TIER_REACH),
+            "runs_shared_behavior": bool(_RUNS_SHARED.search(self.text)),
+            "stubs": self._source.hits(_STUB),
+            "stubbed_requests": self._source.hits(_STUBBED_REQUEST),
+        }
+
+    def story_facts(self) -> dict:
+        """What a LERN story file (shared, server, domain, or playwright) says about its steps and helpers."""
+        text = self.text
+        asserting = []
+        for match in _GIVEN_START.finditer(text):
+            body = _callback_body(text, match.end())
+            if body is not None and _EXPECT.search(body):
+                asserting.append([self._source.line_of(match.start()), match.group(2)])
+        return {
+            "context_casts": [[self._source.line_of(match.start()), match.group(0)] for match in _CTX_CAST.finditer(text)],
+            "asserting_givens": asserting,
+            "domain_wrapping_helpers": self._domain_wrapping_helpers(),
+            "hand_written_entries": [
+                [self._source.line_of(match.start()), match.group("outline"), match.group("entry")]
+                for match in _HAND_WRITTEN_ENTRY.finditer(text)
+            ],
+        }
+
+    def _domain_wrapping_helpers(self) -> list[list]:
+        """[line, helper, repository calls] for each top-level helper that reaches the repositories."""
+        text = self.text
+        found: list[list] = []
+        for match in _TOP_LEVEL_HELPER.finditer(text):
+            end = _TOP_LEVEL_END.search(text, match.end())
+            calls = sorted(set(_DOMAIN_CALL.findall(text[match.end():end.start() if end else len(text)])))
+            if calls:
+                found.append([self._source.line_of(match.start()), match.group(1) or match.group(2), calls])
+        return found
 
 
-def unreset_instances(text: str, class_names: list[str], setup_text: str) -> list[list[str]]:
-    """[instance, class] for each exported repository instance the test setup never resets."""
-    missing: list[list[str]] = []
-    for class_name in class_names:
-        instance = _exported_instance(text, class_name)
-        if instance is not None and not re.search(rf"\b{re.escape(instance)}\b", setup_text):
-            missing.append([instance, class_name])
-    return missing
+class AggregateFolder:
+    """One aggregate's folder in a LERN working copy, such as `src/subscription`: the facts the LERN rules read about the
+    aggregate as a whole come from the files it holds."""
+
+    def __init__(self, root: Path, folder: str) -> None:
+        self.root = root
+        self.folder = folder
+
+    def core_request_reads(self) -> list[list]:
+        """[file, line, code] for each request read in the framework-free core `<folder>/<aggregate>.ts`."""
+        core = self.root / self.folder / f"{Path(self.folder).name}.ts"
+        return TierFile.at(self.root, core).request_reads() if core.is_file() else []
+
+    def web_path_literals(self) -> list[list]:
+        """[file, line, path] for each browser path written as a literal outside the aggregate's `*-paths.ts`."""
+        files = sorted((self.root / self.folder).glob("*.ts*"))
+        return [found for file in files if not file.name.endswith(_PATHS_MODULE_SUFFIX) for found in TierFile.at(self.root, file).web_path_literals()]
 
 
 def test_setup_text(root: Path) -> str:
+    """The text of every test setup file under root, which a reset repository instance is named in."""
     from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
 
     seen: set[Path] = set()
@@ -118,45 +181,6 @@ def test_setup_text(root: Path) -> str:
             seen.add(path)
             parts.append(path.read_text(encoding="utf-8"))
     return "\n".join(parts)
-
-
-def behavior_file_facts(text: str) -> dict:
-    """What a LERN behavior file (shared or one tier) says about the tier it reaches and what it stubs."""
-    return {
-        "tier_reaches": SourceText(text).hits(_TIER_REACH),
-        "runs_shared_behavior": bool(_RUNS_SHARED.search(text)),
-        "stubs": SourceText(text).hits(_STUB),
-        "stubbed_requests": SourceText(text).hits(_STUBBED_REQUEST),
-    }
-
-
-def story_file_facts(text: str) -> dict:
-    """What a LERN story file (shared, server, domain, or playwright) says about its steps and helpers."""
-    asserting = []
-    for match in _GIVEN_START.finditer(text):
-        body = _callback_body(text, match.end())
-        if body is not None and _EXPECT.search(body):
-            asserting.append([SourceText(text).line_of(match.start()), match.group(2)])
-    return {
-        "context_casts": [[SourceText(text).line_of(match.start()), match.group(0)] for match in _CTX_CAST.finditer(text)],
-        "asserting_givens": asserting,
-        "domain_wrapping_helpers": _domain_wrapping_helpers(text),
-        "hand_written_entries": [
-            [SourceText(text).line_of(match.start()), match.group("outline"), match.group("entry")]
-            for match in _HAND_WRITTEN_ENTRY.finditer(text)
-        ],
-    }
-
-
-def _domain_wrapping_helpers(text: str) -> list[list]:
-    """[line, helper, repository calls] for each top-level helper that reaches the repositories."""
-    found: list[list] = []
-    for match in _TOP_LEVEL_HELPER.finditer(text):
-        end = _TOP_LEVEL_END.search(text, match.end())
-        calls = sorted(set(_DOMAIN_CALL.findall(text[match.end():end.start() if end else len(text)])))
-        if calls:
-            found.append([SourceText(text).line_of(match.start()), match.group(1) or match.group(2), calls])
-    return found
 
 
 def _store_code(text: str, class_body: str) -> str | None:
