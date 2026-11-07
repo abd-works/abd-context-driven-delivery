@@ -157,7 +157,7 @@ class MiroStory(DiagramStory):
 
     @property
     def y(self) -> int:
-        return self._layout().story_y
+        return self._story_line_y()
 
     def shapes(self, parent_id: str) -> List[dict]:
         parent = self.parent
@@ -214,7 +214,7 @@ class MiroEpic(DiagramEpic):
     @property
     def y(self) -> int:
         if isinstance(self.parent, Epic):
-            return self._layout().sub_epic_y(self.depth)
+            return self._sub_epic_bar_y(self.depth)
         return self.row_y
 
     @property

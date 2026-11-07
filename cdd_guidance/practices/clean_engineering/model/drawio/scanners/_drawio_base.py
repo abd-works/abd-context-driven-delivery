@@ -130,11 +130,12 @@ class DrawioScanner:
         """A violation on this page, prefixed with the page name and located at the scanned file."""
         return Violation(self.rule, f'[{page.name}] {message}', practice='clean_engineering', location=str(page.file_path))
 
-    def discover(self) -> dict[str, type[DrawioScanner]]:
+    @classmethod
+    def discover(cls) -> dict[str, type[DrawioScanner]]:
         discovered: dict[str, type[DrawioScanner]] = {}
         scanners_dir = Path(__file__).resolve().parent
         for script in sorted(scanners_dir.glob('*_scanner.py')):
-            scanner_class = self._scanner_class_in(script)
+            scanner_class = cls._scanner_class_in(script)
             if scanner_class is None:
                 continue
             slug = getattr(scanner_class, 'RULE', None)
@@ -143,7 +144,8 @@ class DrawioScanner:
             discovered[slug.strip()] = scanner_class
         return discovered
 
-    def _scanner_class_in(self, script: Path) -> type[DrawioScanner] | None:
+    @staticmethod
+    def _scanner_class_in(script: Path) -> type[DrawioScanner] | None:
         module = importlib.import_module(f'{__package__}.{script.stem}')
         for value in vars(module).values():
             if isinstance(value, type) and issubclass(value, DrawioScanner) and value.__module__ == module.__name__:

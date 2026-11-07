@@ -135,7 +135,9 @@ class CodeScenario(Scenario, CodeStoryNode):
             self.backgrounds = [background]
         return "".join(kept)
 
-    def calls_in(self, body: str) -> List[tuple]:
+    @classmethod
+    def calls_in(cls, body: str) -> List[tuple]:
+        """The (keyword, text) of each step call in a body of this language."""
         raise NotImplementedError
 
     @classmethod
@@ -658,7 +660,7 @@ class CodeStoryModel(StoryModel):
         if not stem_slug:
             return False
         epic_name = CodeEpic.epic_name_in(content)
-        leaf_slug = CodeEpic(epic_name).slug() if epic_name else stem_slug
+        leaf_slug = (Name(epic_name).title_slug or "unnamed") if epic_name else stem_slug
         if not leaf_slug:
             return False
         folders = list(parts[:-1])

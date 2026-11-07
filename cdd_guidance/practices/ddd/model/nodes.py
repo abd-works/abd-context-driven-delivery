@@ -360,19 +360,6 @@ class BoundedContext(Module):
         self.aggregates = ModelChildren(self, "aggregates")
         self._map: BoundedContextMap | None = None
         self.context_file_lines = 1
-        if graph is None:
-            return
-        others = [
-            node
-            for node in self._copies_on_graph("BoundedContext")
-            if node.aggregates or node.contexts
-        ]
-        if not others:
-            return
-        for child in others[0].contexts:
-            self.append_context(BoundedContext(child.name, child.sequential_order))
-        for aggregate in others[0].aggregates:
-            self.append_aggregate(aggregate.clone())
 
     def load_context_folder(self, folder: Path) -> None:
         """Read the folder that holds this context in code: its name is the title of `.context/bounded-context.md`,

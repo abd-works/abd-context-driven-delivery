@@ -8,7 +8,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base
 
 
 def _scanner_types() -> dict[str, type]:
-    return DrawioScanner().discover()
+    return DrawioScanner.discover()
 
 
 class _DrawioScannerRule(PracticeGraphRule):

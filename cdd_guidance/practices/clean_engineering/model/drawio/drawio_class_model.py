@@ -46,9 +46,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import 
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     ContainmentForest,
     DiagramCleanEngineeringModel,
-    is_modules_view,
     module_tab_label,
-    path_parent,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, MODULE_CELL_MIN_HEIGHT, MODULE_CELL_WIDTH
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
@@ -99,20 +97,18 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         self.keep_positioning = False
 
     def load_module(self, source: Module) -> DrawIOModule:
-        loaded = DrawIOModule(name=source.name, sequential_order=source.sequential_order)
-        loaded.update_self(source)
-        loaded.classes = list(source.classes)
-        return loaded
+        return DrawIOModule(name=source.name, sequential_order=source.sequential_order)
 
     def load(self, path: str) -> "DrawIOCleanEngineeringModel":
         self.path = path
         return self.parse(Path(path).read_text(encoding="utf-8"))
 
-    def save(self, canonical: CleanEngineeringModel | None = None) -> str:
-        return self.render(canonical if canonical is not None else self)
+    def save(self) -> str:
+        return self.render(self)
 
-    def load_class(self, source: OoadClass) -> DrawIOClass:
-        loaded = DrawIOClass(name=source.name, sequential_order=source.sequential_order)
+    def load_module_cell(self, source: Module) -> DrawIOModule:
+        """A Draw.io cell for a container module the containment forest made, filled from it."""
+        loaded = self.load_module(source)
         loaded.translate_from(source)
         return loaded
 
@@ -126,56 +122,60 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
         return loaded
 
     def parse(self, text: str) -> 'DrawIOCleanEngineeringModel':
+        """Read a modules-view or class-view diagram into this model's own modules, and return it."""
         try:
             root_el = ET.fromstring(text)
         except ET.ParseError as error:
             raise UnreadableSource(f'draw.io diagram is not valid XML: {error}') from error
+        self.modules = []
         mxcells = list(root_el.iter('mxCell'))
         if _looks_like_modules_diagram(mxcells):
-            return _parse_modules(mxcells)
+            self._read_modules(mxcells)
+            return self
         diagrams = list(root_el.findall('diagram'))
         if len(diagrams) > 1:
-            return _ClassDiagramReader().read_pages(diagrams)
-        return _ClassDiagramReader().read_single_page(mxcells)
+            _ClassDiagramReader(self).read_pages(diagrams)
+        else:
+            _ClassDiagramReader(self).read_single_page(mxcells)
+        return self
 
     def render(self, canonical: CleanEngineeringModel) -> str:
-        if is_modules_view(canonical):
-            return _ModulesDiagramWriter(self, canonical).write()
-        return _ClassDiagramWriter(self, canonical).write()
+        """Become the canonical model once, as Draw.io modules and classes, then write this model's own diagram."""
+        if canonical is not self:
+            self.translate_from(canonical)
+        if self.is_modules_view:
+            return _ModulesDiagramWriter(self).write()
+        return _ClassDiagramWriter(self).write()
 
     def kept_previous(self) -> Optional[str]:
         """The previous diagram when this render keeps its positions, else None."""
         return self.previous if self.keep_positioning else None
 
-
-def _parse_modules(mxcells: List[ET.Element]) -> DrawIOCleanEngineeringModel:
-    model = DrawIOCleanEngineeringModel(name='', sequential_order=1)
-    order = 1
-    id_to_module: dict[str, Module] = {}
-    for cell in mxcells:
-        if cell.get('vertex') != '1':
-            continue
-        style = cell.get('style', '')
-        if 'text;' in style or style.startswith('text;'):
-            if cell.get('id') == 'title':
-                title = html.unescape(cell.get('value', ''))
-                m = re.match('^(.+?)\\s*[-\\-]\\s*Modules?', title)
-                if m:
-                    model.name = m.group(1).strip()
-            continue
-        if not _is_module_style(style):
-            continue
-        name, purpose, terms = DrawIOModule(name='', sequential_order=0).parse_html(cell.get('value', ''))
-        if not name:
-            continue
-        cell_id = cell.get('id', '')
-        module = DrawIOModule(name=name, sequential_order=order, description=purpose, seam_terms=terms)
-        id_to_module[cell_id] = module
-        if not cell_id.startswith('nest-'):
-            model.modules.append(module)
-        order += 1
-    _add_module_dependencies(model, mxcells, id_to_module)
-    return model
+    def _read_modules(self, mxcells: List[ET.Element]) -> None:
+        order = 1
+        id_to_module: dict[str, Module] = {}
+        for cell in mxcells:
+            if cell.get('vertex') != '1':
+                continue
+            style = cell.get('style', '')
+            if 'text;' in style or style.startswith('text;'):
+                if cell.get('id') == 'title':
+                    title = html.unescape(cell.get('value', ''))
+                    m = re.match(r'^(.+?)\s*[-\-]\s*Modules?', title)
+                    if m:
+                        self.name = m.group(1).strip()
+                continue
+            if not _is_module_style(style):
+                continue
+            module = DrawIOModule.from_cell(cell.get('value', ''), order)
+            if module is None:
+                continue
+            cell_id = cell.get('id', '')
+            id_to_module[cell_id] = module
+            if not cell_id.startswith('nest-'):
+                self.modules.append(module)
+            order += 1
+        _add_module_dependencies(self, mxcells, id_to_module)
 
 
 def _add_module_dependencies(model: DrawIOCleanEngineeringModel, mxcells: List[ET.Element], id_to_module: dict[str, Module]) -> None:
@@ -199,13 +199,13 @@ def _add_module_dependencies(model: DrawIOCleanEngineeringModel, mxcells: List[E
 class _ClassDiagramReader:
     """Reads class cards and the arrows between them back into a model. One reader serves one parse."""
 
-    def __init__(self) -> None:
-        self.model = DrawIOCleanEngineeringModel(name='', sequential_order=1)
+    def __init__(self, model: DrawIOCleanEngineeringModel) -> None:
+        self.model = model
         self._classes_by_cell: dict[str, OoadClass] = {}
         self._names_by_cell: dict[str, str] = {}
         self._seen_names: set[str] = set()
 
-    def read_single_page(self, mxcells: List[ET.Element]) -> DrawIOCleanEngineeringModel:
+    def read_single_page(self, mxcells: List[ET.Element]) -> None:
         """One page: each card names its module in its style."""
         modules: Dict[str, DrawIOModule] = {}
         for cell, oclass in self._class_cards(mxcells):
@@ -219,9 +219,8 @@ class _ClassDiagramReader:
             self._classes_by_cell[cell.get('id', '')] = oclass
         self.model.modules.extend(modules.values())
         self._read_arrows(mxcells)
-        return self.model
 
-    def read_pages(self, diagrams: List[ET.Element]) -> DrawIOCleanEngineeringModel:
+    def read_pages(self, diagrams: List[ET.Element]) -> None:
         """One Draw.io page → one module; skip dashed «from:» import cards."""
         for diagram in diagrams:
             module = DrawIOModule(name=diagram.get('name') or f'module-{len(self.model.modules) + 1}', sequential_order=len(self.model.modules) + 1)
@@ -230,7 +229,6 @@ class _ClassDiagramReader:
             if module.classes:
                 self.model.modules.append(module)
             self._read_arrows(page_cells)
-        return self.model
 
     def _read_page_cards(self, page_cells: List[ET.Element], module: DrawIOModule) -> None:
         for cell, oclass in self._class_cards(page_cells):
@@ -293,10 +291,14 @@ def _mark_relationship_kind(oclass: OoadClass, target: str, kind: str) -> None:
 class _ModulesDiagramWriter:
     """Writes one modules-view diagram: top-level modules layered by dependency depth, path children nested inside."""
 
-    def __init__(self, channel: DrawIOCleanEngineeringModel, canonical: CleanEngineeringModel) -> None:
+    def __init__(self, channel: DrawIOCleanEngineeringModel) -> None:
         self._channel = channel
-        self._canonical = canonical
-        self._forest = ContainmentForest.build(canonical.modules, synthesize_parents=True)
+        self._forest = ContainmentForest.build(list(channel.modules), synthesize_parents=True)
+        # The cell each module is drawn as: the channel's own module, or a Draw.io copy of a container the forest made.
+        self._cells: Dict[str, DrawIOModule] = {
+            name: module if isinstance(module, DrawIOModule) else channel.load_module_cell(module)
+            for name, module in self._forest.by_name.items()
+        }
         self._bounds: Dict[str, Box] = {}
         self._parent_ids: Dict[str, str] = {}
         self._cell_ids: Dict[str, str] = {}
@@ -323,7 +325,7 @@ class _ModulesDiagramWriter:
         return ET.tostring(mxfile, encoding='unicode', xml_declaration=False)
 
     def _write_titles(self, root_el: ET.Element, page_width: int) -> None:
-        system_name = self._canonical.name or 'System'
+        system_name = self._channel.name or 'System'
         subtitle = (
             'Independent modules with one-way dependencies. Arrows point toward the depended-on module (build before). '
             'Path nesting = containment; shared base terms live on the parent.'
@@ -341,7 +343,7 @@ class _ModulesDiagramWriter:
         x, y, width, height = self._bounds[name]
         if cell_id in previous_positions and parent_id == '1':
             x, y = previous_positions[cell_id]
-        node = self._channel.load_module(self._forest.by_name[name])
+        node = self._cells[name]
         node.cell_id = cell_id
         node.parent_id = parent_id
         node.nested = parent_id != '1'
@@ -350,11 +352,11 @@ class _ModulesDiagramWriter:
 
     def _write_dependencies(self, root_el: ET.Element) -> None:
         edge_number = len(self._forest.by_name) + 20
-        for module in self._canonical.modules:
+        for module in self._channel.modules:
             source_id = self._cell_ids.get(module.name)
             for dependency in module.dependencies:
                 target_id = self._cell_ids.get(dependency)
-                if dependency == path_parent(module.name) or not source_id or not target_id:
+                if dependency == module.path_parent or not source_id or not target_id:
                     continue
                 edge_number += 1
                 cell = ET.SubElement(root_el, 'mxCell', attrib={
@@ -387,7 +389,7 @@ class _ModulesDiagramWriter:
         children = self._forest.children_of.get(name, [])
         if not children:
             return
-        header_height = float(self._channel.load_module(self._forest.by_name[name]).header_height())
+        header_height = float(self._cells[name].header_height())
         sizes = [self._size(child) for child in children]
         columns = min(MODULE_CHILD_COLS, len(children))
         widths, heights = _grid_extents(sizes, columns)
@@ -400,7 +402,7 @@ class _ModulesDiagramWriter:
 
     def _size(self, name: str) -> Tuple[float, float]:
         """Width and height of a module cell, grown to hold its nested children."""
-        header_height = float(self._channel.load_module(self._forest.by_name[name]).header_height())
+        header_height = float(self._cells[name].header_height())
         children = self._forest.children_of.get(name, [])
         if not children:
             return (float(MODULE_CELL_WIDTH), max(float(MODULE_CELL_MIN_HEIGHT), header_height))
@@ -426,13 +428,12 @@ class _ClassDiagramWriter:
 
     Holds what every page needs: a cell id per class, the relationships between those ids, and each class's module."""
 
-    def __init__(self, channel: DrawIOCleanEngineeringModel, canonical: CleanEngineeringModel) -> None:
+    def __init__(self, channel: DrawIOCleanEngineeringModel) -> None:
         self.channel = channel
-        self.canonical = canonical
         self.cell_ids: dict[int, str] = {}
         self.classes_by_cell: dict[str, OoadClass] = {}
         self.module_of: dict[int, Module] = {}
-        self.classes = [oclass for module in canonical.modules for oclass in module.classes]
+        self.classes = [oclass for module in channel.modules for oclass in module.classes]
         self._cell_ids_by_name: dict[str, list[str]] = {}
         self._assign_cell_ids()
         self.arrow_labels: Dict[Tuple[str, str], str] = {}
@@ -440,9 +441,9 @@ class _ClassDiagramWriter:
         self.dependency_labels: Dict[Tuple[str, str], List[str]] = {}
         self.relationships = self._collect_relationships()
         self.module_labels = {
-            self.cell_ids[id(oclass)]: module_tab_label(module.name) for module in canonical.modules for oclass in module.classes
+            self.cell_ids[id(oclass)]: module_tab_label(module.name) for module in channel.modules for oclass in module.classes
         }
-        self.named_modules = [module for module in canonical.modules if module.classes]
+        self.named_modules = [module for module in channel.modules if module.classes]
         self.module_fills = self._module_fill_colors()
 
     def write(self) -> str:
@@ -468,7 +469,7 @@ class _ClassDiagramWriter:
 
     def _assign_cell_ids(self) -> None:
         """One cell id per class. The same name in two modules is two boxes."""
-        for module in self.canonical.modules:
+        for module in self.channel.modules:
             for oclass in module.classes:
                 cell_id = f"{_slug(module.name)}--{_slug(oclass.name)}"
                 if cell_id in self.classes_by_cell:
@@ -668,7 +669,7 @@ class _ClassDiagramPage:
         oclass = writer.classes_by_cell[cell_id]
         if cell_id in self._import_ids:
             return writer.channel.imported_class(oclass, writer.module_labels.get(cell_id, 'other'))
-        node = writer.channel.load_class(oclass)
+        node = oclass
         node.fill_color = writer.module_fills.get(writer.module_labels.get(cell_id, ''), '')
         node.owning_module = writer.module_of[id(oclass)].name.strip() if id(oclass) in writer.module_of else ''
         return node

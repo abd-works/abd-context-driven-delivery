@@ -36,14 +36,25 @@ class Invariant(OoadNode):
         return []
 
 
-def append_invariant(owner: object, text: str) -> None:
-    """Append one // line. Description stays the same lines joined, for channels that still read it."""
-    cleaned = text.strip()
-    if not cleaned:
-        return
-    invariants = getattr(owner, "invariants")
-    invariants.append(Invariant(cleaned, len(invariants) + 1))
-    owner.description = "\n".join(item.text for item in invariants)
+class InvariantHolder:
+    """A member that carries `//` invariant lines: a property or an operation. The description stays the same lines
+    joined, for formats that still read it."""
+
+    invariants: List[Invariant]
+    description: str
+
+    def add_invariant(self, text: str) -> None:
+        """Append one `//` line."""
+        cleaned = text.strip()
+        if not cleaned:
+            return
+        self.invariants.append(Invariant(cleaned, len(self.invariants) + 1))
+        self.description = "\n".join(item.text for item in self.invariants)
+
+    def invariant_lines(self) -> List[str]:
+        if self.invariants:
+            return [item.text for item in self.invariants]
+        return [line.strip() for line in (self.description or "").splitlines() if line.strip()]
 
 
 _CARDINALITY = re.compile(r"^(?:\d+\.\.\*|\d+\.\.\d+|\*|\d+)$")
@@ -51,44 +62,7 @@ _ORIGIN = re.compile(r"^from\s+([A-Z][\w ]*)$")
 _STEREOTYPE_NOTE = re.compile(r"^<<\s*(composition|aggregation|association)\s*>>$", re.I)
 
 
-def take_property_note(prop: "Property", text: str) -> None:
-    """A // line under a field is the stereotype, the cardinality, where it comes from, or an invariant."""
-    cleaned = text.strip()
-    if not cleaned:
-        return
-    stereotype = _STEREOTYPE_NOTE.match(cleaned)
-    if stereotype:
-        prop.stereotype = stereotype.group(1).lower()
-    elif _CARDINALITY.match(cleaned):
-        prop.cardinality = cleaned
-    else:
-        origin = _ORIGIN.match(cleaned)
-        if origin:
-            prop.origin = origin.group(1).strip()
-        else:
-            append_invariant(prop, cleaned)
-    prop.derive_relationship()
-
-
-def property_notes(prop: "Property") -> List[str]:
-    """Notes written back under the field, in file order: origin, cardinality, then invariants."""
-    lines: List[str] = []
-    if getattr(prop, "origin", ""):
-        lines.append(f"from {prop.origin}")
-    if getattr(prop, "cardinality", ""):
-        lines.append(prop.cardinality)
-    lines.extend(invariant_lines(prop))
-    return lines
-
-
-def invariant_lines(owner: object) -> List[str]:
-    invariants = getattr(owner, "invariants", None) or []
-    if invariants:
-        return [item.text for item in invariants]
-    return [line.strip() for line in (getattr(owner, "description", "") or "").splitlines() if line.strip()]
-
-
-class Property(OoadNode):
+class Property(InvariantHolder, OoadNode):
     _semantic_type_name = "Property"
 
     def __init__(
@@ -121,6 +95,44 @@ class Property(OoadNode):
         cloned.invariants = [item.clone() for item in self.invariants]
         cloned.callees = list(self.callees)
         return cloned
+
+    def take_note(self, text: str) -> None:
+        """A `//` line under the field is its stereotype, its cardinality, where it comes from, or an invariant."""
+        cleaned = text.strip()
+        if not cleaned:
+            return
+        stereotype = _STEREOTYPE_NOTE.match(cleaned)
+        if stereotype:
+            self.stereotype = stereotype.group(1).lower()
+        elif _CARDINALITY.match(cleaned):
+            self.cardinality = cleaned
+        else:
+            origin = _ORIGIN.match(cleaned)
+            if origin:
+                self.origin = origin.group(1).strip()
+            else:
+                self.add_invariant(cleaned)
+        self.derive_relationship()
+
+    def take_relationship(self, relationship: Relationship) -> None:
+        """Become the field a relationship drawn to its type stands for: its kind, cardinality, and origin."""
+        if relationship.kind:
+            self.stereotype = relationship.kind
+        if relationship.cardinality:
+            self.cardinality = relationship.cardinality
+        if relationship.description and not self.origin:
+            self.origin = relationship.description
+        self.derive_relationship()
+
+    def notes(self) -> List[str]:
+        """Notes written back under the field, in file order: origin, cardinality, then invariants."""
+        lines: List[str] = []
+        if self.origin:
+            lines.append(f"from {self.origin}")
+        if self.cardinality:
+            lines.append(self.cardinality)
+        lines.extend(self.invariant_lines())
+        return lines
 
     def derive_relationship(self) -> None:
         """A relationship exists only when the field's type names a domain class."""

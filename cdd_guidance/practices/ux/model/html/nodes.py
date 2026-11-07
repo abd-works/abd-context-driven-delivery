@@ -19,9 +19,10 @@ class UxMapNotEmbedded(ValueError):
     comment; any other HTML is a mockup to look at, not a source to parse."""
 
 
-class HtmlUxMap(UxMap):
-    """Render a review shell: mockup on the left, story explorer on the right. Parse reads back the map the shell
-    carries; HTML written any other way is not a parse source."""
+class HtmlUxMap(JsonUxMap):
+    """Render a review shell: mockup on the left, story explorer on the right. The shell carries the map's JSON
+    document, so this is the JSON format inside a page: parse reads back the document the shell carries; HTML
+    written any other way is not a parse source."""
 
     workspace_files = ("{folder}.html", "index.html", "mockup.html", "ux.html", "*.html")
 
@@ -30,7 +31,7 @@ class HtmlUxMap(UxMap):
         end = content.find(_COMMENT_END, start + len(_MODEL_MARKER)) if start >= 0 else -1
         if end < 0:
             raise UxMapNotEmbedded("This HTML has no ux-map-json comment; render the map to HTML to read it back.")
-        return JsonUxMap.create().parse(content[start + len(_MODEL_MARKER):end].strip())
+        return super().parse(content[start + len(_MODEL_MARKER):end].strip())
 
     def render(self, ux_map: UxMap) -> str:
         shell = _SHELL_PATH.read_text(encoding="utf-8")
@@ -56,7 +57,7 @@ class HtmlUxMap(UxMap):
                 for t in ux_map.transitions
             ),
             # ">" is written as its JSON escape, so no value can close the comment the map is carried in.
-            "@@MODEL_JSON@@": JsonUxMap.create().render(ux_map).replace(">", "\\u003e"),
+            "@@MODEL_JSON@@": super().render(ux_map).replace(">", "\\u003e"),
         }
 
     def _ensure_hint(self, ux_map: UxMap) -> str:

@@ -9,6 +9,7 @@ import ast
 from pathlib import Path
 from typing import List, Optional
 
+from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, CodeBody
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
@@ -25,7 +26,6 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import (
     snake_case_decorator,
     stereotype_named,
 )
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
 
@@ -103,7 +103,7 @@ def _sole_calling_class(tree: ast.Module, function_names: set[str]) -> dict[str,
 
 
 class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
-    language = CodeLanguage.named("python")
+    language = PYTHON
 
     def load_module(self, source: Module) -> PythonModule:
         return PythonModule(name=source.name, sequential_order=source.sequential_order)
@@ -118,7 +118,8 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         return self._parse_ast(tree)
 
     def _parse_ast(self, tree: ast.AST) -> "PythonCleanEngineeringModel":
-        model = type(self)(name="", sequential_order=1)
+        model = self
+        model.modules = []
         module = PythonModule(name="", sequential_order=1)
         class_order = 1
         for node in tree.body:
@@ -281,11 +282,11 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
 
 
 
-    def file_header(self, canonical: CleanEngineeringModel, preamble: CodeBody) -> List[str]:
+    def file_header(self, preamble: CodeBody) -> List[str]:
         lines = preamble.lines_in(self.language, "", "") or [_FUTURE_IMPORT]
         if lines[0] != _FUTURE_IMPORT:
             lines = [_FUTURE_IMPORT, ""] + lines
-        if self._needs_abc(canonical) and _ABC_IMPORT not in lines:
+        if self._needs_abc() and _ABC_IMPORT not in lines:
             lines.insert(1, _ABC_IMPORT)
         return lines
 
@@ -344,9 +345,9 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
             return ""
         return "cls" if operation.is_classmethod else "self"
 
-    def _needs_abc(self, canonical: CleanEngineeringModel) -> bool:
-        known = [oclass.name for oclass in canonical.every_class()]
+    def _needs_abc(self) -> bool:
+        known = [oclass.name for oclass in self.every_class()]
         return any(
             is_interface_name(oclass.name) or companion_interface_name(oclass.name, known)
-            for oclass in canonical.every_class()
+            for oclass in self.every_class()
         )

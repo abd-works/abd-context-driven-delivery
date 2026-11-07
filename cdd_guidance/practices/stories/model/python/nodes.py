@@ -5,7 +5,7 @@ import re
 from typing import List
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
-from cdd_guidance.practices.stories.model.story_model import Background, Story
+from cdd_guidance.practices.stories.model.story_model import Background
 
 
 class PythonScenario(CodeScenario):
@@ -13,9 +13,10 @@ class PythonScenario(CodeScenario):
     _SCENARIO = re.compile(r'with scenario\("(?P<name>(?:\\.|[^"\\])*)"\)\s*:')
     _IMPORT = re.compile(r"from\s+\S*examples\S*\s+import\s+(?P<names>.+)")
 
-    def calls_in(self, body: str) -> List[tuple]:
+    @classmethod
+    def calls_in(cls, body: str) -> List[tuple]:
         calls = []
-        for match in self._CALL.finditer(body):
+        for match in cls._CALL.finditer(body):
             keyword = {"and_": "and", "but_": "but"}.get(match.group("kw"), match.group("kw"))
             calls.append((keyword, _unescape(match.group("text"))))
         return calls
@@ -37,7 +38,7 @@ class PythonScenario(CodeScenario):
         start = match.end()
         scenario = cls._SCENARIO.search(content, start)
         body = content[start:scenario.start()] if scenario else content[start:]
-        steps = cls.steps_from(cls(name="").calls_in(body))
+        steps = cls.steps_from(cls.calls_in(body))
         background = Background(match.group(1), 1)
         background.steps = steps
         return [background]
@@ -86,18 +87,6 @@ class PythonStory(CodeStory):
             story.domain_terms = [term.strip() for term in domain_match.group(1).split(",") if term.strip()]
         story.fill(content)
         return story
-
-    @classmethod
-    def create(cls, story: Story, **kwargs) -> str:
-        from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
-
-        return "\n".join([
-            "from __future__ import annotations",
-            "",
-            "from story_test import and_, background, given, scenario, story, then, when",
-            "",
-            PythonStoryModel().story_text(cls(story)),
-        ])
 
 
 class PythonEpic(CodeEpic):

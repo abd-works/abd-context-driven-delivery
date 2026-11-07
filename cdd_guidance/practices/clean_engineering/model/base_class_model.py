@@ -51,6 +51,13 @@ def _readable_text(path: Path) -> str:
         return ""
 
 
+def path_parent(name: str) -> Optional[str]:
+    """The path that holds a nested module path: `powers` for `powers/attack`; None at the top."""
+    if "/" not in name:
+        return None
+    return name.rsplit("/", 1)[0]
+
+
 def is_interface_name(name: str) -> bool:
     """True for I{Class} contract names (e.g. IShoppingCart)."""
     return len(name) > 1 and name[0] == "I" and name[1].isupper()
@@ -377,13 +384,7 @@ class OoadClass(OoadNode):
         for prop in self.properties:
             if relationship.target not in domain_type_names(getattr(prop, "type_hint", "") or ""):
                 continue
-            if relationship.kind:
-                prop.stereotype = relationship.kind
-            if relationship.cardinality:
-                prop.cardinality = relationship.cardinality
-            if relationship.description and not getattr(prop, "origin", ""):
-                prop.origin = relationship.description
-            prop.derive_relationship()
+            prop.take_relationship(relationship)
 
     def depend_on(self, target: str, label: str) -> None:
         """Record that this class acts on target at run time, labelled by the interaction; the same pair and label once."""
@@ -470,6 +471,15 @@ class Module(OoadNode):
             "constraint": self.constraint,
             "classes": [loaded.as_record() for loaded in self.classes],
         }
+
+    @property
+    def path_parent(self) -> Optional[str]:
+        """The module whose path holds this one: `powers` for `powers/attack`; None at the top."""
+        return path_parent(self.name)
+
+    def external_deps(self) -> List[str]:
+        """The modules this one depends on, leaving out the path parent that contains it."""
+        return [dependency for dependency in self.dependencies if dependency != self.path_parent]
 
     def public_terms(self) -> List[str]:
         """Seam bullets for modules fidelity: explicit terms, else thin class names, else seam string."""
@@ -616,8 +626,6 @@ class CleanEngineeringModel(OoadNode):
         super().__init__(name, sequential_order, graph)
         self.path = ""
         self._modules = ModelChildren(self, "participants")
-        if opened:
-            self._copy_modules_on_graph()
 
     @property
     def modules(self) -> List[Module]:
@@ -627,16 +635,22 @@ class CleanEngineeringModel(OoadNode):
     def modules(self, modules: List[Module]) -> None:
         self._refill(self._modules, modules)
 
-    def _copy_modules_on_graph(self) -> None:
-        others = [
-            node
-            for node in self._copies_on_graph("CleanEngineeringModel")
-            if getattr(node, "modules", None)
-        ]
-        if not others:
-            return
-        for module in others[0].modules:
-            self.modules.append(module.clone())
+    @property
+    def is_modules_view(self) -> bool:
+        """True when the model shows modules only: no class carries a member or a drawn relationship."""
+        if not self.modules:
+            return False
+        classes = [oclass for module in self.modules for oclass in module.classes]
+        for oclass in classes:
+            if oclass.properties or oclass.operations:
+                return False
+            if any(relationship.kind for relationship in oclass.relationships):
+                return False
+        if any(module.dependencies or module.seam_terms for module in self.modules):
+            return True
+        if not classes:
+            return True
+        return all(not oclass.properties and not oclass.operations and not oclass.relationships for oclass in classes)
 
     def every_class(self) -> List[OoadClass]:
         """Every class in every module, nested modules included, in module order."""
@@ -663,8 +677,6 @@ class CleanEngineeringModel(OoadNode):
         for module in self.modules:
             cloned.modules.append(module.clone())
         return cloned
-
-    module_type: type = None  # type: ignore[assignment]
 
     def load(self, path: str) -> "CleanEngineeringModel":
         self.path = path

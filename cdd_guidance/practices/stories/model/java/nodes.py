@@ -5,13 +5,14 @@ import re
 from typing import List
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory
-from cdd_guidance.practices.stories.model.story_model import Background, Step, StepType, Story
+from cdd_guidance.practices.stories.model.story_model import Background, Step, StepType
 
 
 class JavaScenario(CodeScenario):
     _SCENARIO = re.compile(r"SCENARIO:\s*(.+)")
 
-    def calls_in(self, body: str) -> List[tuple]:
+    @classmethod
+    def calls_in(cls, body: str) -> List[tuple]:
         calls = []
         for line in body.splitlines():
             match = re.match(r"\s*\*\s*(GIVEN|WHEN|THEN|AND|BUT):\s*(.+)", line, re.IGNORECASE)
@@ -68,18 +69,18 @@ class JavaScenario(CodeScenario):
                     names.append(name)
         return names
 
-    @classmethod
-    def create(cls, scenario) -> List[str]:
-        lines = [f" * SCENARIO: {scenario.name}"]
-        for background in scenario.backgrounds:
+    def lines(self) -> List[str]:
+        """This scenario as the comment lines a Java story test lists it in."""
+        lines = [f" * SCENARIO: {self.name}"]
+        for background in self.backgrounds:
             lines.append(f" * background: {background.name}")
             for step in background.steps:
                 lines.append(f" * background-step: {step.keyword} | {step.text}")
                 for extra in step.ands:
                     lines.append(f" * background-step: {extra.keyword} | {extra.text}")
-        if scenario.examples:
-            lines.append(" * EXAMPLES: " + ", ".join(scenario.examples))
-        for step in scenario.steps:
+        if self.examples:
+            lines.append(" * EXAMPLES: " + ", ".join(self.examples))
+        for step in self.steps:
             lines.append(f" * {step.keyword.upper()}: {step.text}")
             for extra in step.ands:
                 lines.append(f" * {extra.keyword.upper()}: {extra.text}")
@@ -102,12 +103,6 @@ class JavaStory(CodeStory):
         story.read_description(content)
         story.fill(content)
         return story
-
-    @classmethod
-    def create(cls, story: Story, **kwargs) -> str:
-        from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
-
-        return JavaStoryModel().story_text(cls(story))
 
 
 class JavaEpic(CodeEpic):

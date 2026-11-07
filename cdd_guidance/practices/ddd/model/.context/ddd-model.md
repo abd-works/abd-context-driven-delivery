@@ -255,6 +255,7 @@ The `markdown` format.
 + aggregate_type: MarkdownAggregate
 ----
 + parse(text: str): MarkdownBoundedContextMap
+	// fills this map and returns it
 + render(canonical: BoundedContextMap | None = None, previous: str | None = None): str
 + save(): str
 	// contexts, then the event map
@@ -264,7 +265,8 @@ The `markdown` format.
 	// the lines of the file at path
 - has_more_bounded_context(): bool
 - get_next_bounded_context_from_file(): MarkdownBoundedContext
-	// the next `## Context | owner` heading
+	// the next `## Context | owner` heading; the context reads the lines under it
+	-> MarkdownBoundedContext.read_lines
 
 ## MarkdownBoundedContext : BoundedContext, MarkdownDomainNode
 
@@ -277,6 +279,9 @@ The `markdown` format.
 + group_notes: dict[str, list[str]]
 	// the notes under each heading that groups aggregates
 ----
++ read_lines(lines: list[str]): None
+	// its own lines: notes, module, group headings, and each aggregate, which reads its own section
+	-> MarkdownAggregate.load_root
 + lines(): list[str]
 + read_note(line: str, group: str | None): None
 	// to the group it sits under, else the module, else the context

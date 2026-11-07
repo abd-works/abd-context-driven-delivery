@@ -166,26 +166,34 @@ class DrawIOModule(DiagramModule, DrawioVertex):
             return MODULE_CHILD_STYLE
         return MODULE_STYLE
 
-    def parse_html(self, value: str) -> Tuple[Optional[str], str, List[str]]:
+    @classmethod
+    def from_cell(cls, value: str, sequential_order: int) -> Optional['DrawIOModule']:
+        """The module a modules-view cell shows, read from the cell's HTML label; None when the label names none."""
         text = html.unescape(value)
         m = re.search('<b[^>]*>([^<]+)</b>', text, re.IGNORECASE)
         name = m.group(1).strip() if m else None
         if not name:
-            return (None, '', [])
-        purpose = self._purpose_from_html(text)
-        return (name, purpose, self._terms_from_html(text))
+            return None
+        return cls(
+            name=name,
+            sequential_order=sequential_order,
+            description=cls._purpose_from_html(text),
+            seam_terms=cls._terms_from_html(text),
+        )
 
     def _seam_bullets(self) -> str:
         shown = self.shown_seam_terms()
         return '<br>'.join((f'\u2022 {html.escape(t)}' for t in shown))
 
-    def _purpose_from_html(self, text: str) -> str:
+    @staticmethod
+    def _purpose_from_html(text: str) -> str:
         im = re.search('<i[^>]*>([^<]*)</i>', text, re.IGNORECASE)
         if im:
             return im.group(1).strip()
         return ''
 
-    def _terms_from_html(self, text: str) -> List[str]:
+    @staticmethod
+    def _terms_from_html(text: str) -> List[str]:
         terms: List[str] = []
         for bullet in re.findall('[\u2022\\-]\\s*([^<]+)', text):
             term = bullet.strip()

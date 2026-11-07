@@ -192,9 +192,6 @@ class ModelNode(Node):
         if graph is not None:
             graph.sync_schema_edges()
 
-    def _copies_on_graph(self, semantic: str) -> list:
-        return [node for node in self.graph.nodes_of(self.practice, semantic) if node is not self and isinstance(node, ModelNode)]
-
 
 # How many schema_sync_paused blocks are open; rebuilds resume when the outermost one closes.
 _SCHEMA_SYNC_PAUSED = [0]

@@ -40,8 +40,9 @@ class BraceScenario(CodeScenario):
             inner = cls.balanced(body, brace)
             body = body[:match.start()] + body[brace + len(inner) + 2:]
 
-    def calls_in(self, body: str) -> List[tuple]:
-        return [(match.group("kw").lstrip("."), unescape(match.group("text"))) for match in self._CALL.finditer(body)]
+    @classmethod
+    def calls_in(cls, body: str) -> List[tuple]:
+        return [(match.group("kw").lstrip("."), unescape(match.group("text"))) for match in cls._CALL.finditer(body)]
 
     @classmethod
     def scenario_blocks(cls, content: str) -> List[tuple]:
@@ -64,7 +65,7 @@ class BraceScenario(CodeScenario):
             if brace < 0:
                 continue
             body = cls.outside_scenarios(cls.balanced(content, brace))
-            steps = cls.steps_from(cls(name="").calls_in(body))
+            steps = cls.steps_from(cls.calls_in(body))
             if not steps and not match.group("scope"):
                 continue
             background = Background(match.group("scope") or "background", len(found) + 1)

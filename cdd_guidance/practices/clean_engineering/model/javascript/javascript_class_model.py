@@ -7,18 +7,17 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     OoadClass,
     base_type_name_for,
     example_extension_kind,
     is_interface_name,
 )
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.code_class_model import BraceCleanEngineeringModel, CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
-_JAVASCRIPT = CodeLanguage.named("javascript")
 _EXAMPLE_MODES = {
     "Fake": "mode: mock/stub framework + examples - not a generated class",
     "Isolated": "mode: new Type(...ctor-injected mocks...) - not a generated class",
@@ -27,7 +26,7 @@ _EXAMPLE_MODES = {
 
 
 class JavaScriptCleanEngineeringModel(BraceCleanEngineeringModel):
-    language = _JAVASCRIPT
+    language = JAVASCRIPT
 
     def render_class(self, oclass: OoadClass, known_names: List[str], kept: CodeCleanEngineeringModel) -> List[str]:
         kind = example_extension_kind(oclass.name)

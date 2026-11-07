@@ -28,8 +28,8 @@ class Drawio:
 
     def __init__(self) -> None:
         self.source_format = "markdown"
-        self.previous = ""
-        self.keep_positioning = False
+        # The one Draw.io model this toolset writes; its `previous` and `keep_positioning` are the layout policy.
+        self.channel = DrawIOCleanEngineeringModel()
         self.scan_root = None
         self.rule = None
 
@@ -58,11 +58,9 @@ class Drawio:
         """
         model = self._parse_source(content)
         out = Path(path)
-        prev = self._previous_xml(out)
-        channel = DrawIOCleanEngineeringModel()
-        channel.previous = prev or None
-        channel.keep_positioning = self.keep_positioning
-        rendered = channel.render(model)
+        if self.channel.keep_positioning and not self.channel.previous and out.exists():
+            self.channel.previous = out.read_text(encoding="utf-8")
+        rendered = self.channel.render(model)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(rendered, encoding="utf-8")
         return str(out.resolve())
@@ -89,12 +87,6 @@ class Drawio:
                 f"Choose from: {sorted(parsers)}"
             )
         return parsers[self.source_format](name="", sequential_order=1).parse(content)
-
-    def _previous_xml(self, out: Path) -> str:
-        prev = self.previous
-        if self.keep_positioning and not prev and out.exists():
-            return out.read_text(encoding="utf-8")
-        return prev
 
     @agent_tool
     def scan(self, paths: list[str]) -> str:

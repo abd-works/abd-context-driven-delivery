@@ -1,11 +1,9 @@
-"""Shared brace-language parse -> CleanEngineering model (TypeScript / JavaScript / Java)."""
+"""The brace-language reading the TypeScript, JavaScript, and Java class models share."""
 from __future__ import annotations
 
 import re
-from typing import Callable
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
-    CleanEngineeringModel,
     Module,
     OoadClass,
 )
@@ -13,7 +11,7 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import Cla
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
-from cdd_guidance.practices.clean_engineering.model.property import Property, append_invariant, take_property_note
+from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
 
 _CLASS_RE = re.compile(
@@ -49,15 +47,11 @@ _ASSIGN_FIELD_RE = re.compile(
     re.M,
 )
 class CFamilyParse:
-    def __init__(
-        self,
-        model_factory: Callable[[], CleanEngineeringModel],
-        class_factory: Callable[..., OoadClass],
-        language: CodeLanguage,
-    ) -> None:
-        self._model_factory = model_factory
-        self._class_factory = class_factory
-        self._language = language
+    """The reading every brace-language class model shares: TypeScript, JavaScript, and Java. The model it is mixed
+    into holds the language it reads and fills its own modules, classes, and members from the text."""
+
+    language: CodeLanguage
+    modules: list
 
     @staticmethod
     def method_span_in_text(text: str, name: str, fallback_line: int = 1) -> tuple[int, int]:
@@ -79,24 +73,25 @@ class CFamilyParse:
                     return start, text[:index].count("\n") + 1
         return start, start
 
-    def parse(self, text: str) -> CleanEngineeringModel:
+    def parse(self, text: str) -> "CFamilyParse":
+        """Read the text's classes and top-level functions into this model's one module, and return the model."""
         self._text = text
-        model = self._model_factory()
-        module = model.load_module(Module(name="", sequential_order=1))
-        module.preamble = self._preamble()
+        self.modules = []
+        module = Module(name="", sequential_order=1)
+        module.preamble = self._read_preamble()
         self._append_classes(module)
         self._attach_top_level(module)
         if module.classes:
-            model.modules.append(module)
-        return model
+            self.modules.append(module)
+        return self
 
-    def _preamble(self) -> CodeBody:
+    def _read_preamble(self) -> CodeBody:
         """Imports and constants above the first class, as written."""
         first = _CLASS_RE.search(self._text)
         if first is None:
             return CodeBody()
         line_start = self._text.rfind("\n", 0, first.start()) + 1
-        return CodeBody(self._text[:line_start].rstrip(), self._language)
+        return CodeBody(self._text[:line_start].rstrip(), self.language)
 
     def _append_classes(self, module: Module) -> None:
         class_order = 1
@@ -106,7 +101,7 @@ class CFamilyParse:
                 continue
             self._body_start = body_start
             head = ClassHead.above(self._text[: match.start()])
-            oclass = self._class_factory(
+            oclass = OoadClass(
                 name=match.group(1),
                 sequential_order=class_order,
                 intent=head.doc,
@@ -146,7 +141,7 @@ class CFamilyParse:
         top_ops = self._top_level_functions()
         if not top_ops:
             return
-        holder = self._class_factory(name="_module", sequential_order=len(module.classes) + 1)
+        holder = OoadClass(name="_module", sequential_order=len(module.classes) + 1)
         holder.operations = top_ops
         module.classes.append(holder)
 
@@ -246,11 +241,11 @@ class CFamilyParse:
             if line.strip().startswith("//")
         ]
         for note in notes:
-            append_invariant(op, note)
+            op.add_invariant(note)
         op.callees = callees
         op.line_count = max(1, len([line for line in body.splitlines() if line.strip()]))
         op.body_fingerprint = operation_body_fingerprint(body)
-        op.body = CodeBody(body, self._language)
+        op.body = CodeBody(body, self.language)
         op.load_brace_body_facts(body)
         if op.name in {"constructor", "__init__"}:
             op.constructed_types = self._constructed_types(body, op.line or 1)
@@ -329,7 +324,7 @@ class CFamilyParse:
             seen.add(name)
             prop = Property(name=name, sequential_order=len(props) + 1, type_hint=match.group(2).strip())
             for note in self._comments_above(outside[cursor:match.start()]):
-                take_property_note(prop, note)
+                prop.take_note(note)
             props.append(prop)
             cursor = match.end()
         for match in _ASSIGN_FIELD_RE.finditer(outside):

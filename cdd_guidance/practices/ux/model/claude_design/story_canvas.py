@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 import json
 import re
+from functools import cached_property
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 from urllib.parse import quote, urlencode
@@ -172,10 +173,12 @@ class ClaudeDesignStoryModel(DiagramStoryModel):
     # -- canvas ---------------------------------------------------------------------------
 
     def files(self) -> Dict[str, str]:
-        return self.canvas().files()
+        return self.canvas.files()
 
+    @cached_property
     def canvas(self) -> DesignCanvas:
-        """One story-map artboard holds every bar, card and thumbnail: one Play, one live page to draw."""
+        """The canvas this map is drawn on, made once and kept. One story-map artboard holds every bar, card and
+        thumbnail: one Play, one live page to draw."""
         canvas = DesignCanvas(self.name if self.name and self.name != "StoryModel" else "Story Map")
         canvas.add_page(self.story_map_page, "Story map")
         canvas.add_page(self.screens_page, "Story explorer")

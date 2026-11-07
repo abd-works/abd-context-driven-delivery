@@ -44,11 +44,6 @@ with description("a bdd spec on a graph"):
         expect(observations).to(contain(("that has a line", "should show the line")))
         expect(belongs).to(contain(("that has a line", "a cart"), ("should show the line", "that has a line")))
 
-    with it("should open the same spec from the graph"):
-        restored = BddModel(self.graph)
-        expect(restored.descriptions[0].name).to(equal("a cart"))
-        expect(restored.descriptions[0].contexts[0].name).to(equal("that has a line"))
-        expect(restored.descriptions[0].contexts[0].observations[0].name).to(equal("should show the line"))
 
 
 with description("a bdd sketch with realization fences"):

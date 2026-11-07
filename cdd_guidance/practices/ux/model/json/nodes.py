@@ -27,7 +27,89 @@ class JsonUxMap(UxMap):
         return JsonUxMapReader(ux_map, data).read()
 
     def render(self, ux_map: UxMap) -> str:
-        return json.dumps(JsonUxMapWriter().map_record(ux_map), indent=2) + "\n"
+        return json.dumps(self.map_record(ux_map), indent=2) + "\n"
+
+    def map_record(self, ux_map: UxMap) -> dict[str, Any]:
+        """The map as the JSON document JsonUxMapReader reads. A link to a screen is written as that screen's name."""
+        return {
+            "name": ux_map.name,
+            "scope": ux_map.scope,
+            "story_references": ux_map.story_references.as_list(),
+            "object_references": ux_map.object_references.as_list(),
+            "notes": list(ux_map.context.notes),
+            "invariants": list(ux_map.context.invariants),
+            "screens": [self._screen_record(screen) for screen in ux_map.screens],
+            "transitions": [self._transition_record(transition) for transition in ux_map.transitions],
+            "content_types": [
+                {"name": content_type.name, "hierarchy": content_type.hierarchy,
+                 "key_actions": list(content_type.key_actions)}
+                for content_type in ux_map.content_types
+            ],
+            "nav_components": [
+                {"name": nav.name, "ux_type": nav.ux_type,
+                 "destinations": [screen.name for screen in nav.destinations]}
+                for nav in ux_map.nav_components
+            ],
+        }
+
+    def _screen_record(self, screen: Screen) -> dict[str, Any]:
+        return {
+            "name": screen.name,
+            "slug": screen.slug,
+            "layout": screen.layout,
+            "description": screen.description,
+            "chrome_of": _name_of(screen.chrome_of),
+            "inactive_tabs": list(screen.inactive_tabs),
+            "story_names": screen.story_keys,
+            "scenario_names": screen.scenario_keys,
+            "step_names": screen.step_keys,
+            "domain_terms": list(screen.domain_terms),
+            "domain_concepts": list(screen.domain_concepts),
+            "image": screen.image,
+            "prototype": screen.prototype,
+            "regions": [
+                {"name": region.name, "area": region.area,
+                 "controls": [self._control_record(control) for control in region.controls]}
+                for region in screen.regions
+            ],
+        }
+
+    def _control_record(self, control: Control) -> dict[str, Any]:
+        record: dict[str, Any] = {
+            "name": control.name,
+            "control_type": control.control_type,
+            "label": control.label,
+            "bound_field": control.bound_field,
+            "states": list(control.states),
+            "interactions": [
+                {"name": interaction.name, "trigger": interaction.trigger, "effect": interaction.effect,
+                 "destination": _name_of(interaction.destination)}
+                for interaction in control.interactions
+            ],
+        }
+        if isinstance(control, StoryDemoControl):
+            record.update(self._story_demo_record(control))
+        return record
+
+    def _story_demo_record(self, control: StoryDemoControl) -> dict[str, Any]:
+        record: dict[str, Any] = {
+            "kind": "StoryDemoControl",
+            "story_steps": [step.as_dict() for step in control.story_steps],
+            "set_input": control.set_input,
+            "item_story_steps": [step.as_dict() for step in control.item_story_steps],
+            "item_value": control.item_value,
+            "item_label": control.item_label,
+        }
+        return {key: value for key, value in record.items() if value or key in ("kind", "story_steps")}
+
+    def _transition_record(self, transition: Transition) -> dict[str, Any]:
+        return {
+            "name": transition.name,
+            "from_screen": _name_of(transition.from_screen),
+            "to_screen": _name_of(transition.to_screen),
+            "trigger": transition.trigger,
+            "nav_type": transition.nav_type,
+        }
 
 
 class JsonUxMapReader:
@@ -143,91 +225,6 @@ class JsonUxMapReader:
 
     def _screen_named(self, name: str) -> Optional[Screen]:
         return self.ux_map.find_screen(name) if name else None
-
-
-class JsonUxMapWriter:
-    """Writes a map as the JSON document JsonUxMapReader reads. A link to a screen is written as that screen's name."""
-
-    def map_record(self, ux_map: UxMap) -> dict[str, Any]:
-        return {
-            "name": ux_map.name,
-            "scope": ux_map.scope,
-            "story_references": ux_map.story_references.as_list(),
-            "object_references": ux_map.object_references.as_list(),
-            "notes": list(ux_map.context.notes),
-            "invariants": list(ux_map.context.invariants),
-            "screens": [self._screen_record(screen) for screen in ux_map.screens],
-            "transitions": [self._transition_record(transition) for transition in ux_map.transitions],
-            "content_types": [
-                {"name": content_type.name, "hierarchy": content_type.hierarchy,
-                 "key_actions": list(content_type.key_actions)}
-                for content_type in ux_map.content_types
-            ],
-            "nav_components": [
-                {"name": nav.name, "ux_type": nav.ux_type,
-                 "destinations": [screen.name for screen in nav.destinations]}
-                for nav in ux_map.nav_components
-            ],
-        }
-
-    def _screen_record(self, screen: Screen) -> dict[str, Any]:
-        return {
-            "name": screen.name,
-            "slug": screen.slug,
-            "layout": screen.layout,
-            "description": screen.description,
-            "chrome_of": _name_of(screen.chrome_of),
-            "inactive_tabs": list(screen.inactive_tabs),
-            "story_names": screen.story_keys,
-            "scenario_names": screen.scenario_keys,
-            "step_names": screen.step_keys,
-            "domain_terms": list(screen.domain_terms),
-            "domain_concepts": list(screen.domain_concepts),
-            "image": screen.image,
-            "prototype": screen.prototype,
-            "regions": [
-                {"name": region.name, "area": region.area,
-                 "controls": [self._control_record(control) for control in region.controls]}
-                for region in screen.regions
-            ],
-        }
-
-    def _control_record(self, control: Control) -> dict[str, Any]:
-        record: dict[str, Any] = {
-            "name": control.name,
-            "control_type": control.control_type,
-            "label": control.label,
-            "bound_field": control.bound_field,
-            "states": list(control.states),
-            "interactions": [
-                {"name": interaction.name, "trigger": interaction.trigger, "effect": interaction.effect,
-                 "destination": _name_of(interaction.destination)}
-                for interaction in control.interactions
-            ],
-        }
-        if isinstance(control, StoryDemoControl):
-            record.update(self._story_demo_record(control))
-        return record
-
-    def _story_demo_record(self, control: StoryDemoControl) -> dict[str, Any]:
-        record: dict[str, Any] = {
-            "kind": "StoryDemoControl",
-            "story_steps": [step.as_dict() for step in control.story_steps],
-            "set_input": control.set_input,
-            "item_story_steps": [step.as_dict() for step in control.item_story_steps],
-            "item_value": control.item_value,
-            "item_label": control.item_label,
-        }
-        return {key: value for key, value in record.items() if value or key in ("kind", "story_steps")}
-
-    def _transition_record(self, transition: Transition) -> dict[str, Any]:
-        return {
-            "name": transition.name,
-            "from_screen": _name_of(transition.from_screen),
-            "to_screen": _name_of(transition.to_screen),
-            "trigger": transition.trigger,
-            "nav_type": transition.nav_type,
-        }
 
 
 def _name_of(screen: Optional[Screen]) -> str:

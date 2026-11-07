@@ -129,7 +129,9 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             data = json.loads(text)
         except json.JSONDecodeError as exc:
             raise JsonParseError(f"Invalid JSON: {exc}") from exc
-        model = type(self)(name=data.get("name", ""))
+        model = self
+        model.name = data.get("name", "")
+        model.modules = []
         if "modules" in data:
             for index, record in enumerate(data["modules"], 1):
                 model.modules.append(JsonModule.from_record(record, index))
@@ -143,8 +145,8 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             raise JsonParseError("JSON must contain a 'modules' or 'classes' key")
         return model
 
-    def render(self, canonical: Optional[CleanEngineeringModel] = None, previous: Optional[str] = None) -> str:
-        if canonical is not None:
+    def render(self, canonical: Optional[CleanEngineeringModel] = None) -> str:
+        if canonical is not None and canonical is not self:
             self.translate_from(canonical)
         return json.dumps(self.as_record(), indent=2)
 

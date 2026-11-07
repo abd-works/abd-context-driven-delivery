@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 from pathlib import Path
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
+from cdd_guidance.practices.clean_engineering.model.code_body import JAVASCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryModel
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel, CodeStoryModelError, example_names_of
 from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
@@ -20,7 +20,7 @@ class JavaScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = "_story.test.js"
     epic_type = JavaScriptEpic
     story_type = JavaScriptStory
-    language = CodeLanguage.named("javascript")
+    language = JAVASCRIPT
 
     def save(self) -> Dict[str, str]:
         # WHY: a tree read from JavaScript already brings its own story-test helper; only a new tree needs the seed.

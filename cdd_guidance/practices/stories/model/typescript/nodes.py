@@ -6,10 +6,10 @@ from typing import List
 
 from pathlib import Path
 
+from harness.annotations.name import Name
+
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeStory
-from cdd_guidance.practices.stories.model.story_model import Story
-from cdd_guidance.practices.stories.model.typescript.story_file import DEFAULT_STORY_TEST_IMPORT
 
 
 class TypeScriptScenario(BraceScenario):
@@ -54,28 +54,18 @@ class TypeScriptStory(CodeStory):
         story.fill(content)
         return story
 
-    @classmethod
-    def create(cls, story: Story, story_test_import_path: str = DEFAULT_STORY_TEST_IMPORT, **kwargs) -> str:
-        from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
-
-        return "\n".join([
-            f'import {{ scenario, story }} from "{story_test_import_path}";',
-            "",
-            TypeScriptStoryModel().story_text(cls(story)),
-        ])
-
 
 class TypeScriptEpic(CodeEpic):
     def examples_file(self) -> tuple:
         """(file name, text) of the example aggregates a new epic folder starts with."""
         noun = self._aggregate_noun()
-        return f"{CodeEpic(noun).slug()}.examples.ts", self._examples_file(noun)
+        return f"{Name(noun).title_slug or 'unnamed'}.examples.ts", self._examples_file(noun)
 
     def _aggregate_noun(self) -> str:
         """The epic's name without its opening verb: Create Customer names a Customer."""
         words = self.name.split()
         if len(words) > 1 and self.opens_with_verb():
-            return CodeEpic(" ".join(words[1:])).pascal()
+            return Name(" ".join(words[1:])).title_pascal or "Unnamed"
         return self.pascal()
 
     def _examples_file(self, noun: str) -> str:
@@ -110,7 +100,6 @@ class TypeScriptEpic(CodeEpic):
             f"  email: 'suspended-user@example.com',\n"
             f"}};\n"
         )
-
 
 
 def _story_test_text(tests_root: str) -> str:

@@ -14,7 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamil
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marked_intent
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.property import Property, property_notes
+from cdd_guidance.practices.clean_engineering.model.property import Property
 
 _CONSTRUCTOR_NAMES = frozenset({"constructor", "__init__"})
 
@@ -25,10 +25,15 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
     language: CodeLanguage
 
     def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
-        kept = self.parse(previous) if previous else type(self)(name="", sequential_order=1)
-        known_names = [oclass.name for oclass in canonical.every_class()]
-        lines = self.file_header(canonical, self._preamble(canonical, kept))
-        for module in canonical.modules:
+        """Become the canonical model once, then write this model as code, keeping the bodies the previous file had."""
+        kept = type(self)(name="", sequential_order=1)
+        if previous:
+            kept.parse(previous)
+        if canonical is not self:
+            self.translate_from(canonical)
+        known_names = [oclass.name for oclass in self.every_class()]
+        lines = self.file_header(self._preamble(kept))
+        for module in self.modules:
             lines.extend(self._render_module(module, known_names, kept))
         return "\n".join(lines).strip("\n") + "\n"
 
@@ -85,7 +90,7 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
             return body.lines_in(self.language, indent, self.language.unfinished)
         return self._scaffold(operation, body, indent) + body.lines_in(self.language, indent, self.language.unfinished)
 
-    def file_header(self, canonical: CleanEngineeringModel, preamble: CodeBody) -> List[str]:
+    def file_header(self, preamble: CodeBody) -> List[str]:
         return preamble.lines_in(self.language, "", "")
 
     def class_open(self, oclass: OoadClass, known_names: List[str]) -> List[str]:
@@ -164,7 +169,7 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
     def _property_notes(self, prop: Property) -> List[str]:
         """The stereotype the model names, then origin, cardinality, and invariants."""
         notes = [f"<< {prop.stereotype} >>"] if prop.stereotype else []
-        notes.extend(property_notes(prop))
+        notes.extend(prop.notes())
         return [f"{self.language.indent}{self.language.comment(note)}" for note in notes]
 
     def _module_banner(self, module: Module) -> List[str]:
@@ -174,8 +179,8 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         lines.extend(self.language.comment(line) for line in module.description.splitlines())
         return lines
 
-    def _preamble(self, canonical: CleanEngineeringModel, kept: "CodeCleanEngineeringModel") -> CodeBody:
-        for model in (canonical, kept):
+    def _preamble(self, kept: "CodeCleanEngineeringModel") -> CodeBody:
+        for model in (self, kept):
             for module in model.modules:
                 if module.preamble.language is self.language:
                     return module.preamble
@@ -213,12 +218,6 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         return [f"{indent}{line}" for line in notes + calls if line]
 
 
-class BraceCleanEngineeringModel(CodeCleanEngineeringModel):
-    """A class model written in a brace language: TypeScript, JavaScript, or Java. They read through one parse."""
-
-    def parse(self, text: str) -> "BraceCleanEngineeringModel":
-        return CFamilyParse(
-            model_factory=lambda: type(self)(name="", sequential_order=1),
-            class_factory=OoadClass,
-            language=self.language,
-        ).parse(text)
+class BraceCleanEngineeringModel(CFamilyParse, CodeCleanEngineeringModel):
+    """A class model written in a brace language: TypeScript, JavaScript, or Java. Each reads its own text through
+    the brace-language reading it shares."""

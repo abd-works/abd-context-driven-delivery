@@ -36,6 +36,7 @@ from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     PythonFunctionBody,
     SourceText,
 )
+from cdd_guidance.practices.clean_engineering.model.property import InvariantHolder
 from cdd_guidance.practices.clean_engineering.model.translation import ChildCollectionPair
 
 
@@ -78,7 +79,7 @@ class Parameter(OoadNode):
         self.property_setter = operation.is_property and len(operation.parameters) == 1
 
 
-class Operation(OoadNode):
+class Operation(InvariantHolder, OoadNode):
     _semantic_type_name = "Operation"
     graph_facts = (
         "line_count",

@@ -10,7 +10,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Callable, Generic, Mapping, TypeVar
 
 from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
 from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
@@ -276,6 +276,9 @@ class AgentSession:
 
     def __post_init__(self) -> None:
         self._log = HarnessLog("cursor_channel")
+        # The agent command line resumed on this chat: one that opens the agent, one that streams its answer as JSON.
+        self.cli = CursorCli(resume=self.chat_id)
+        self.streaming_cli = CursorCli(resume=self.chat_id, print_mode=True)
 
     @classmethod
     def load(cls, session_file: Path) -> AgentSession | None:
@@ -316,7 +319,7 @@ class AgentSession:
         self._log.write(
             f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)"
         )
-        args = CursorCli(resume=self.chat_id).command(prompt, str(workspace.resolve()))
+        args = self.cli.command(prompt, str(workspace.resolve()))
         started = time.perf_counter()
         completed = self._run_cursor_cli(args, workspace, timeout_seconds)
         elapsed = time.perf_counter() - started
@@ -395,9 +398,8 @@ class AgentSession:
 class ToolsRunYaml:
     """Parse, replay, and fence toolset-run YAML from prompts and shell captures."""
 
-    def __init__(self, workspace: Path | None = None, prefix: str = "") -> None:
+    def __init__(self, workspace: Path | None = None) -> None:
         self._workspace = workspace
-        self._prefix = prefix
         self._fence = YamlFence()
 
     def looks_like_tools_run_output(self, text: str) -> bool:
@@ -461,25 +463,18 @@ class ToolsRunYaml:
             lines.append(line)
         return "\n".join(lines).strip()
 
-    def run_request(self, yaml_body: str, timeout_seconds: float | None = None) -> str:
+    def run_request(self, yaml_body: str, timeout_seconds: float | None = None, prefix: str = "") -> str:
+        """Run the request the YAML body names in this reader's workspace and fence the response; prefix names the
+        step in any failure."""
         if yaml is None:
-            raise AgentHarnessError("PyYAML required to parse run request", prefix=self._prefix)
+            raise AgentHarnessError("PyYAML required to parse run request", prefix=prefix)
         parsed = yaml.safe_load(yaml_body)
         if not isinstance(parsed, dict):
-            raise AgentHarnessError("run request must be a mapping", prefix=self._prefix)
+            raise AgentHarnessError("run request must be a mapping", prefix=prefix)
         if self._workspace is None:
-            raise AgentHarnessError("a run request runs in a workspace; this reader was made with none", prefix=self._prefix)
+            raise AgentHarnessError("a run request runs in a workspace; this reader was made with none", prefix=prefix)
         response = invoke_run_request(parsed, self._workspace, timeout_seconds)
         return self._fence.fenced(self._fence.dump_manifest(response_to_dict(response)))
-
-
-def looks_like_tools_run_output(text: str) -> bool:
-    """True when text looks like a fenced spec invoke response (not arbitrary prose)."""
-    return ToolsRunYaml().looks_like_tools_run_output(text)
-
-
-def yaml_from_prompt(prompt: str) -> str | None:
-    return ToolsRunYaml().yaml_from_prompt(prompt)
 
 
 class ToolsetInvoke:
@@ -495,26 +490,50 @@ class ToolsetInvoke:
 
     @classmethod
     def create(cls, request: dict[str, Any], project: Path) -> ToolsetInvoke:
-        """The run a request names, on the project it names; a request that names none runs on project, the one the
-        spec works in."""
-        from harness.agent_tools.agent_tools import AgentToolSet
-
+        """The run a request read from a YAML prompt or a fixture names, on the project it names; a request that
+        names none runs on project, the one the spec works in. A request that names an action runs the action."""
         toolset_path = request.get("toolset")
         if not toolset_path:
             raise AgentHarnessError("request missing toolset")
+        if not request.get("action") and not request.get("tool"):
+            raise AgentHarnessError("request missing tool or action")
         project = Path(request.get("project") or project)
         context = dict(request.get("context") or {})
         if request.get("session"):
             context["session"] = cls._session_named(str(request["session"]), project)
-        arguments = dict(request.get("arguments") or {})
+        return cls.for_toolset(
+            str(toolset_path),
+            project,
+            tool=None if request.get("action") else str(request["tool"]),
+            action=str(request["action"]) if request.get("action") else None,
+            context=context,
+            arguments=request.get("arguments"),
+        )
+
+    @classmethod
+    def for_toolset(
+        cls,
+        toolset: str,
+        project: Path,
+        *,
+        tool: str | None = None,
+        action: str | None = None,
+        context: Mapping[str, Any] | None = None,
+        arguments: Mapping[str, Any] | None = None,
+    ) -> ToolsetInvoke:
+        """The run of one tool or one action of the toolset its published reference names, on project."""
+        from harness.agent_tools.agent_tools import AgentToolSet
+
+        if (tool is None) == (action is None):
+            raise ValueError("Provide exactly one of tool= or action=")
         try:
-            instance = AgentToolSet.instantiate({"toolset": str(toolset_path), "context": context})
+            instance = AgentToolSet.instantiate({"toolset": toolset, "context": dict(context or {})})
         except TypeError as exc:
             raise AgentHarnessError(str(exc)) from exc
-        invoke = cls(instance, str(toolset_path), project)
-        invoke._arguments = arguments
-        invoke._action_name = str(request["action"]) if request.get("action") else None
-        invoke._tool_name = str(request["tool"]) if request.get("tool") else None
+        invoke = cls(instance, toolset, project)
+        invoke._arguments = dict(arguments or {})
+        invoke._action_name = action
+        invoke._tool_name = tool
         return invoke
 
     @classmethod
@@ -536,9 +555,13 @@ class ToolsetInvoke:
     def response(self) -> RunResponse:
         if self._action_name:
             return self.expanded_action()
-        if not self._tool_name:
-            raise AgentHarnessError("request missing tool or action")
         return self.invoked_tool()
+
+    def run(self, timeout_seconds: float | None = None) -> RunResponse:
+        """The response; with a timeout, fail the spec when the run outlives it."""
+        if timeout_seconds is None:
+            return self.response()
+        return ToolRunDeadline(timeout_seconds).run(self.response, self._toolset_path)
 
     def expanded_action(self) -> RunResponse:
         try:
