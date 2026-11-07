@@ -21,12 +21,9 @@ from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_sto
     TierBoundRepositoryAccessor,
 )
 from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
-    core_request_reads,
-    node_root_facts,
-    route_facts,
-    story_file_facts,
+    AggregateFolder,
     test_setup_text,
-    web_path_literals,
+    TierFile,
 )
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
@@ -50,15 +47,15 @@ def tier_node(name, node_type, facts, file="src/a/a-node.ts"):
 
 
 def node_root(text, setup_text=""):
-    return tier_node("x-node", "NodeRoot", node_root_facts(text, setup_text))
+    return tier_node("x-node", "NodeRoot", TierFile(text).node_root_facts(setup_text))
 
 
 def route(text):
-    return tier_node("x-routes", "Route", route_facts(text))
+    return tier_node("x-routes", "Route", TierFile(text).route_facts())
 
 
 def story_file(text, node_type="StoryShared"):
-    return tier_node("x.story.shared.ts", node_type, story_file_facts(text), file="tests/x/x.story.shared.ts")
+    return tier_node("x.story.shared.ts", node_type, TierFile(text).story_facts(), file="tests/x/x.story.shared.ts")
 
 
 with description("the lern_domain_driven pattern rules"):
@@ -137,7 +134,7 @@ with description("the lern_domain_driven pattern rules"):
             (self.root / "tests").mkdir()
 
         with it("should flag a web path literal outside the paths module and ignore API paths"):
-            facts = {"web_path_literals": web_path_literals(self.root, self.folder)}
+            facts = {"web_path_literals": AggregateFolder(self.root, self.folder).web_path_literals()}
             messages = OneHomeForWebPaths().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)
             expect(messages).to(have_len(1))
             expect(messages[0]).to(contain("/onboarding/done"))
@@ -148,12 +145,12 @@ with description("the lern_domain_driven pattern rules"):
                 "const step = SIGN_UP_PATH; // pml-my redirects to '/sign-up/'\n",
                 encoding="utf-8",
             )
-            expect(web_path_literals(self.root, self.folder)).to(equal([]))
+            expect(AggregateFolder(self.root, self.folder).web_path_literals()).to(equal([]))
 
         with it("should flag the core reading the request"):
             (self.root / self.folder / "subscription.ts").write_text(
                 "export class Sim { static fromRequest(req) { const body = req.body ?? {}; } }\n", encoding="utf-8")
-            facts = {"core_request_reads": core_request_reads(self.root, self.folder)}
+            facts = {"core_request_reads": AggregateFolder(self.root, self.folder).core_request_reads()}
             messages = PostedBodyParsedInNode().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)
             expect(messages).to(have_len(1))
             expect(messages[0]).to(contain("framework-free core"))

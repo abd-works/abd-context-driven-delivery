@@ -10,10 +10,8 @@ from harness.installation.destination import noDeploy
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
 from harness.guidance import Rule
-from harness.guidance.guidance import PracticeGuidance
-from harness.guidance.practice_catalogue import PracticeCatalogue
 
-from cdd_guidance.actions.validate.checked_graph import CheckedGraph, CheckedOutputs
+from cdd_guidance.actions.validate.checked_graph import CheckedGraph
 from cdd_guidance.actions.validate.report_files import ReportFiles
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
@@ -53,15 +51,14 @@ class Validate(GuidanceAction):
         With no paths and no graph, the folders holding the fidelity's written output are checked."""
         self._work_on(guidance)
         sections: list[str] = [_VALIDATE_MARKDOWN]
-        checked = self._checked_outputs()
-        self._graph = CheckedGraph(self.session, checked, self._graph_practices())
-        prefixes = self._graph.prefixes(paths, graph)
-        self._reports = ReportFiles(self.session, self._fidelities())
-        graph_paths = self._graph.paths(graph, prefixes, self._reports)
-        if checked:
-            sections.append(self._judging_instruction(checked, graph_paths))
+        fidelities = self._fidelities()
+        self._graph = CheckedGraph(self.session, fidelities, paths, graph)
+        self._reports = ReportFiles(self.session, fidelities)
+        graph_paths = self._graph.check_beside(self._reports)
+        if fidelities:
+            sections.append(self._judging_instruction())
         if graph_paths:
-            sections.append(self._graph_and_ai_rule_report(graph_paths, prefixes))
+            sections.append(self._graph_and_ai_rule_report())
         elif graph:
             sections.append(
                 "No saved graph found. Run graph.load_working_copy on the session's folder, which saves "
@@ -100,50 +97,27 @@ class Validate(GuidanceAction):
         worked = [(item, self.fidelity_of(item)) for item in items]
         return [fidelity for item, fidelity in worked if fidelity is not None and self._session_practice(item) is not None]
 
-    def _checked_outputs(self) -> CheckedOutputs:
-        """Each listed guidance with the format this call checks and its fidelity outputs, by format. Validate checks
-        one format, the guidance's own: the format the guidance names, else the one its fidelity last used, else the
-        fidelity's default. It is read once, here, so the whole call checks that format. A fidelity's formats mirror
-        each other, so checking every one reports each finding once per format."""
-        return [(item, *self._checked_format_and_outputs(item)) for item in self.listed() if not isinstance(item, str)]
-
-    def _checked_format_and_outputs(self, item) -> tuple[str, dict[str, list[str]]]:
-        """The format this call checks item's fidelity in, and where that fidelity writes each format."""
-        fidelity = self.fidelity_of(item)
-        if fidelity is None or not isinstance(item, PracticeGuidance):
-            return item.format, {}
-        return fidelity.format, self._fidelity_outputs(fidelity)
-
-    def _fidelity_outputs(self, fidelity) -> dict[str, list[str]]:
-        """Where fidelity writes each format in this action's session."""
-        return fidelity.output_paths()
-
-    def _judging_instruction(self, checked: CheckedOutputs, graph_paths: list[Path]) -> str:
+    def _judging_instruction(self) -> str:
         """What the judge judges for each listed guidance: at a model or code fidelity with a graph, the graph validate
-        built; otherwise the checked format's files."""
-        graph_judged = [entry for entry in checked if graph_paths and self._judges_graph(entry[0])]
-        file_judged = [entry for entry in checked if not (graph_paths and self._judges_graph(entry[0]))]
+        built; otherwise the checked format's files. Validate checks one format of each fidelity, the one the guidance
+        names, else the one its fidelity last used, else the fidelity's default: the formats mirror each other, so
+        checking every one reports each finding once per format."""
+        graph_judged = self._graph.judged_files(on_graph=True)
+        file_judged = self._graph.judged_files(on_graph=False)
         sentences = []
         if graph_judged:
             sentences.append(
-                f"Judge the graph validate built from the checked format's files ({self._judged_files(graph_judged)}), "
-                f"saved at {', '.join(str(path) for path in graph_paths)}: its classes, operations, parameters, "
+                f"Judge the graph validate built from the checked format's files ({graph_judged}), "
+                f"saved at {', '.join(str(path) for path in self._graph.files)}: its classes, operations, parameters, "
                 "properties, relationships, and dependencies, against each rule. Read a file only to see what a node "
                 "stands for; whether a model document matches the code is a separate, secondary check."
             )
         if file_judged:
             sentences.append(
-                f"Judge only the checked format's files ({self._judged_files(file_judged)}). The other formats mirror "
+                f"Judge only the checked format's files ({file_judged}). The other formats mirror "
                 "them, so judging those too reports every finding twice."
             )
         return "\n\n".join(sentences)
-
-    def _judged_files(self, checked: CheckedOutputs) -> str:
-        return "; ".join(f"{format}: {', '.join(outputs.get(format, []))}" for _item, format, outputs in checked)
-
-    def _judges_graph(self, item) -> bool:
-        fidelity = self.fidelity_of(item)
-        return fidelity is not None and fidelity.is_judged_on_graph
 
     def _listed_practices(self) -> list:
         """Each listed practice as this action's session holds it, which logs its own validate line; guidance that is no
@@ -151,23 +125,14 @@ class Validate(GuidanceAction):
         found = [self._session_practice(item) for item in self.listed() if not isinstance(item, str)]
         return [practice for practice in found if practice is not None]
 
-    def _graph_practices(self) -> list[str]:
-        """The catalogue key of each listed practice, such as clean_engineering; none for other guidance."""
-        practices = [item for item in self.listed() if isinstance(item, PracticeGuidance)]
-        return [practice.key for practice in practices if PracticeCatalogue.has(practice.key)]
-
-    def _graph_and_ai_rule_report(self, paths: list[Path], prefixes: list[str]) -> str:
+    def _graph_and_ai_rule_report(self) -> str:
         from cdd_guidance.actions.validate.validation_report import ValidationReport
 
-        violations = self._graph.violations(paths, prefixes)
+        violations = self._graph.violations()
         self._log_graph_validation(violations)
         guidance = [item for item in self.listed() if not isinstance(item, str)]
-        return ValidationReport(self.session).of_graph_and_ai_rules(
-            violations,
-            [rule for item in guidance for rule in item.checked_rules()],
-            graph_sources=[str(path.resolve()) for path in paths],
-            rule_bodies={rule.slug: rule.body or "" for item in guidance for rule in item.every_rule()},
-        )
+        sources = [str(path.resolve()) for path in self._graph.files]
+        return ValidationReport(self.session, guidance).of_graph(violations, sources)
 
     def _log_graph_validation(self, violations: list) -> None:
         if self._guidance_text is not None or not violations:
