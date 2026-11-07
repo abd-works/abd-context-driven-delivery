@@ -5,13 +5,13 @@ from xml.etree import ElementTree as ET
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
+from cdd_guidance.practices.clean_engineering.model.drawio.drawio_page import (
     STRAIGHT_TOLERANCE,
     DrawioPage,
-    DrawioScanner,
     Segment,
     style_number,
 )
+from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
 # An anchor fraction this close to 0 or 1 sits on that side of the box.
 SIDE_TOLERANCE = 0.001

@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, List, Optional
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
-from cdd_guidance.practices.clean_engineering.model.translation import ChildCollectionPair
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -31,9 +30,6 @@ class Invariant(OoadNode):
         self.name = source.text
         self.text = source.text
         self.sequential_order = source.sequential_order
-
-    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
-        return []
 
 
 class InvariantHolder:
@@ -84,6 +80,9 @@ class Property(InvariantHolder, OoadNode):
         self.invariants: List[Invariant] = []
         # A derived property can ask collaborators for its value, written under it as `-> Sessions.saved`.
         self.callees: List[str] = []
+        # The line its parser read it from, and whether it is a static field, which the class's instances do not hold.
+        self.line: int | None = None
+        self.is_static = False
 
     def clone(self) -> "Property":
         cloned = type(self)(self.name, self.sequential_order, self.type_hint, self.description)
@@ -183,5 +182,6 @@ class Property(InvariantHolder, OoadNode):
         self.invariants = [item.clone() for item in getattr(source, "invariants", [])]
         self.callees = list(getattr(source, "callees", []))
 
-    def child_collections(self, source: OoadNode) -> List[ChildCollectionPair]:
-        return []
+    def model_member(self, file: str) -> dict:
+        """This property as the graph saves it for the model document at file."""
+        return {"kind": "Property", "interactions": list(self.callees), "model_parameters": [], "model_returns": (self.type_hint or "").strip(), "model_file": file}

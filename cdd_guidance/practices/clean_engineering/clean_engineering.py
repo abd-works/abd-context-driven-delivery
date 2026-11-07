@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio import Drawio
+from pathlib import Path
+
+from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.graph_reading import GraphReading
 from cdd_guidance.practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.json.json_class_model import JsonCleanEngineeringModel
@@ -16,10 +20,10 @@ from harness.guidance.guidance import PracticeGuidance, rules_in
 
 
 @agent_toolset
-class CleanEngineering(PracticeGuidance):
+class CleanEngineering(GraphReading, PracticeGuidance):
     """# Instructions"""
 
-    sketch_titles = ("ce:", "clean engineering:")
+    sketch_titles = SketchCleanEngineeringModel.lens.titles
     SHORT_NAME = "CE"
     COLOUR = "#4FC3F7"
 
@@ -76,18 +80,25 @@ class CleanEngineering(PracticeGuidance):
     def language_checks(self, language: str) -> dict:
         return rules_in(f"{self.package}.model.drawio.rules") if language == "drawio" else {}
 
-    def read_working_copy(self) -> None:
-        """Read each source file with its language's class model, adding the folders, classes, properties, operations,
-        and parameters it parsed as nodes, and keep the members the model documents describe on the practice's root."""
-        from cdd_guidance.practices.clean_engineering.model.graph_reading import read_code_and_models
+    def code_model_for(self, file: Path) -> CodeCleanEngineeringModel:
+        """A new class model of the source file's language: the code format among this practice's formats that reads the
+        file's extension."""
+        suffix = file.suffix.lower()
+        for name in self.formats:
+            adapter = self._format_adapter(name)
+            if suffix in getattr(adapter, "suffixes", ()):
+                return adapter()
+        raise ValueError(f"No Clean Engineering format reads {file.name}")
 
-        read_code_and_models(self)
+    def model_in(self, format: str, content: str):
+        """The class model content describes, read by this practice's adapter for format."""
+        return self._parse_content(format, content)
 
     @property
     def drawio(self) -> Drawio:
         """The Draw.io toolset this practice renders its diagrams with."""
         if self._drawio is None:
-            self._drawio = Drawio()
+            self._drawio = Drawio(self)
             self._drawio.mode = "tool"
         return self._drawio
 

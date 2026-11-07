@@ -19,6 +19,8 @@ from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_l
 
 _NESTING_INDENT = 2
 _SECTION_TITLE = "clean engineering:"
+# The Clean Engineering section of a sketch, opened by either of its headings; the practice declares these titles.
+_LENS = SketchLens(("ce:", _SECTION_TITLE))
 _TOP_MODULE_DEPTH = 3
 _CLASS_DEPTH = 5
 _DEEPEST_HEADING = 6
@@ -84,6 +86,8 @@ class SketchModule(Module):
 
 
 class SketchCleanEngineeringModel(CleanEngineeringModel):
+    lens = _LENS
+
     def load_module(self, source: Module) -> SketchModule:
         return SketchModule(name=source.name, sequential_order=source.sequential_order)
 
@@ -91,7 +95,7 @@ class SketchCleanEngineeringModel(CleanEngineeringModel):
         """Read the sketch's clean engineering section into this model's own modules, and return it."""
         declared = _MODULE.search(text)
         self.name = declared.group(1) if declared else "KnowledgeGraph"
-        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.of("clean_engineering"))
+        body = SketchOutline(text, _NESTING_INDENT).body_for(self.lens)
         self.modules = _modules_in(body, self.name)
         return self
 
@@ -138,7 +142,7 @@ def _with_section_replaced(previous: str, section: List[str]) -> str:
 
 def _section_span(lines: List[str]) -> Optional[tuple]:
     """Where the clean engineering section starts in a sketch and the line where the next peer heading ends it."""
-    lens = SketchLens.of("clean_engineering")
+    lens = _LENS
     first: Optional[int] = None
     depth = 0
     fenced = False
