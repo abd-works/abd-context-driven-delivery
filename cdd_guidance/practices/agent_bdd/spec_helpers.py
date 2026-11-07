@@ -11,7 +11,12 @@ from typing import Any, Mapping, Sequence
 
 from expects import be_true, equal, expect
 
-from cdd_guidance.practices.agent_bdd.agent_bdd_common import TOOL_RUN_TIMEOUT_SECONDS, RunResponse, invoke_run_request
+from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
+    TOOL_RUN_TIMEOUT_SECONDS,
+    RunResponse,
+    ToolsetInvoke,
+    invoke_run_request,
+)
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -120,28 +125,6 @@ def ensure_invoke_staged(repo_root: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def build_run_request(
-    *,
-    toolset: str,
-    tool: str | None = None,
-    action: str | None = None,
-    context: Mapping[str, Any] | None = None,
-    arguments: Mapping[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Build a spec run-request mapping."""
-    if (tool is None) == (action is None):
-        raise ValueError("Provide exactly one of tool= or action=")
-    payload: dict[str, Any] = {"toolset": toolset}
-    if context:
-        payload["context"] = dict(context)
-    if action is not None:
-        payload["action"] = action
-    else:
-        payload["tool"] = tool
-    if arguments:
-        payload["arguments"] = dict(arguments)
-    return payload
-
 
 def invoke_toolset(
     *,
@@ -153,16 +136,9 @@ def invoke_toolset(
     arguments: Mapping[str, Any] | None = None,
 ) -> RunResponse:
     """Invoke one tool or action in-process on project, for specs that run no agent."""
-    return invoke_run_request(
-        build_run_request(
-            toolset=toolset,
-            tool=tool,
-            action=action,
-            context=context,
-            arguments=arguments,
-        ),
-        project,
-    )
+    return ToolsetInvoke.for_toolset(
+        toolset, project, tool=tool, action=action, context=context, arguments=arguments
+    ).response()
 
 
 def command_path(repo_root: Path, command: str | Path) -> Path:

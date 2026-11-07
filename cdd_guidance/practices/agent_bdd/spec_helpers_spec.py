@@ -17,7 +17,7 @@ from space.session.throwaway_project import ThrowawayProject
 from cdd_guidance.practices.agent_bdd.spec_helpers import (
     CAR,
     CAR_START,
-    build_run_request,
+
     ensure_invoke_staged,
     generate_similar_prompt,
     generate_similar_rubric,
@@ -36,32 +36,13 @@ with description("spec_helpers"):
     with after.each:
         ThrowawayProject.close_all()
 
-    with context("build_run_request"):
-        with it("should serialize an action request"):
-            payload = build_run_request(
-                toolset="pkg:Tool",
-                action="generate",
-                context={"format": "python"},
-            )
-            expect(payload["toolset"]).to(equal("pkg:Tool"))
-            expect(payload["action"]).to(equal("generate"))
-            expect(payload["context"]["format"]).to(equal("python"))
-
-        with it("should serialize a tool request with arguments"):
-            payload = build_run_request(
-                toolset="pkg:Tool",
-                tool="scan",
-                arguments={"paths": ["a.py"]},
-            )
-            expect(payload["tool"]).to(equal("scan"))
-            expect(payload["arguments"]["paths"]).to(equal(["a.py"]))
-
+    with context("a toolset run built from its arguments"):
         with it("should reject missing tool and action"):
-            expect(lambda: build_run_request(toolset="pkg:Tool")).to(raise_error(ValueError))
+            expect(lambda: invoke_toolset(project=self.project.root, toolset="pkg:Tool")).to(raise_error(ValueError))
 
         with it("should reject both tool and action"):
             expect(
-                lambda: build_run_request(toolset="pkg:Tool", tool="scan", action="generate")
+                lambda: invoke_toolset(project=self.project.root, toolset="pkg:Tool", tool="scan", action="generate")
             ).to(raise_error(ValueError))
 
     with context("invoke_toolset"):

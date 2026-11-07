@@ -26,9 +26,8 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     JudgeResult,
     RunResponse,
     ToolsRunYaml,
+    ToolsetInvoke,
     _ShellCapture,
-    invoke_run_request,
-    yaml_from_prompt,
 )
 from cdd_guidance.practices.agent_bdd.conf import AgentBddConf
 from cdd_guidance.practices.agent_bdd.yaml_fence import YamlFence
@@ -43,6 +42,8 @@ class AgentBlock:
         self._workspace = workspace.resolve()
         self._session_file = session_file
         self._yaml = YamlFence()
+        # Reads and runs the toolset requests the prompts hold, in this block's workspace.
+        self._tools_run_yaml = ToolsRunYaml(self._workspace)
         self._log = HarnessLog(self.log_name)
         self._log_dir = session_file.parent / "logs" / session_file.stem
         self._instruct_count = 0
@@ -80,13 +81,13 @@ class AgentBlock:
     def instruct_use_tool(self, prompt: str, *, timeout_seconds: int = INSTRUCT_TIMEOUT_SECONDS) -> RunResponse:
         """Run the toolset request the prompt holds in-process, in this block's workspace; fails when it outlives
         timeout_seconds."""
-        request_yaml = yaml_from_prompt(prompt)
+        request_yaml = self._tools_run_yaml.yaml_from_prompt(prompt)
         if not request_yaml:
             raise AgentHarnessError("prompt must contain a toolset: run request block")
         prefix = self._next_instruct_prefix("run")
         self._write_artifact(f"{prefix}-prompt.txt", prompt)
         self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
-        cli_output = ToolsRunYaml(self._workspace, prefix).run_request(request_yaml, timeout_seconds)
+        cli_output = self._tools_run_yaml.run_request(request_yaml, timeout_seconds, prefix)
         return self._recorded_response(prefix, cli_output)
 
     def run_toolset(
@@ -101,10 +102,10 @@ class AgentBlock:
     ) -> RunResponse:
         """Invoke one toolset member in-process, in this block's workspace; fails with ToolRunTimedOut when it outlives
         timeout_seconds."""
-        from cdd_guidance.practices.agent_bdd.spec_helpers import build_run_request
-
-        request = build_run_request(toolset=toolset, tool=tool, action=action, context=context, arguments=arguments)
-        return invoke_run_request(request, self._workspace, timeout_seconds)
+        invoke = ToolsetInvoke.for_toolset(
+            toolset, self._workspace, tool=tool, action=action, context=context, arguments=arguments
+        )
+        return invoke.run(timeout_seconds)
 
     def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = JUDGE_TIMEOUT_SECONDS) -> JudgeResult:
         """Judge output against rubric; raises AssertionError(reason) on FAIL, so it reads like ``expect``."""

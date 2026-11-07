@@ -1,7 +1,7 @@
 # cdd_guidance/practices/agent_bdd
 *Agent BDD* specs are mamba tests that drive a real agent and assert on what it actually did. `with agent(workspace, session_file) as run:` opens an *AgentBlock*: `run.instruct(prompt)` gives the agent a natural-language step and returns an *AgentResult*; `run.instruct_use_tool(prompt)` and `run.run_toolset(...)` run a toolset request in-process, in the block's workspace, and return a parsed *RunResponse* to assert on; `run.ai_judge(output, rubric)` fails the spec when an AI judge finds the prose does not meet the rubric. The block runs either through the agent CLI or in the chat, chosen by the `in_chat` argument or, without it, by `AGENT_BDD_IN_CHAT`.
 
-The spec helpers in `spec_helpers.py` — such as `build_run_request`, `expect_ok_action`, `expect_tools_include`, and `expect_instructions_contain` — hold the request and assertion steps specs repeat; `run.generate_and_judge` holds the judging step. *AgentBdd* is the practice that writes these specs, layering the agent harness rules on BDD's test discipline (`agent-bdd.instructions`).
+The spec helpers in `spec_helpers.py` — such as `invoke_toolset`, `expect_ok_action`, `expect_tools_include`, and `expect_instructions_contain` — hold the request and assertion steps specs repeat; `run.generate_and_judge` holds the judging step. *AgentBdd* is the practice that writes these specs, layering the agent harness rules on BDD's test discipline (`agent-bdd.instructions`).
 
 - **Purpose:** Test agent behaviour end to end against a real agent, so a spec fails when the agent would actually do the wrong thing.
 - **Seam (terms):** AgentBdd, `agent`, AgentBlock, `instruct`, `instruct_use_tool`, `run_toolset`, `ai_judge`, AgentResult, RunResponse, `agent-bdd.instructions`
