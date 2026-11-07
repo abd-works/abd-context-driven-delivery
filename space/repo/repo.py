@@ -1,16 +1,15 @@
-"""Local repository + GitHub domain model — branches, commits, project tickets."""
+"""Local repository domain model: the clone, its branches, worktrees, commits, and work sessions."""
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
 import shutil
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
@@ -40,10 +39,6 @@ _COMMAND_TIMEOUT_SECONDS = 10
 # tree, and stopping one partway leaves a half-switched checkout with a stale index.lock.
 _LONG_COMMAND_TIMEOUT_SECONDS = 180
 _LONG_COMMANDS = frozenset({"push", "fetch", "pull", "checkout", "merge", "worktree"})
-
-
-class GhConnectError(RuntimeError):
-    """Raised when gh cannot be used."""
 
 
 class BranchNameRequiredError(ValueError):
@@ -92,44 +87,6 @@ class DirtyBranchSwitchError(RuntimeError):
             f"the session branch, or create a continuation branch "
             f"(e.g. {wanted}-2)."
         )
-
-
-class ProjectTicketNotFoundError(LookupError):
-    """Raised when a GitHub issue reference does not resolve."""
-
-
-DEFAULT_PROJECT_STATES: tuple[str, ...] = ("Backlog", "In Progress", "Done")
-# Workflow names first; GitHub Projects often uses Todo instead of Backlog.
-GITHUB_STATUS_ALIASES: dict[str, tuple[str, ...]] = {
-    "Backlog": ("Todo",),
-    "Todo": ("Backlog",),
-    "In Progress": ("In progress",),
-    "In progress": ("In Progress",),
-}
-GH_PROJECT_SCOPES_HINT = (
-    "Run: gh auth refresh -h github.com -s read:project,project"
-)
-_ISSUE_NUMBER = re.compile(r"^\d+$")
-
-
-def theme_slug(theme: str) -> str:
-    """Normalized theme slug shared by issue labels and project Theme field."""
-    label = issue_theme_label(theme)
-    if not label.startswith("theme:"):
-        return ""
-    return label.split(":", 1)[1]
-
-
-def issue_theme_label(theme: str) -> str:
-    """GitHub issue label for a theme (`theme:<slug>`)."""
-    text = (theme or "").strip()
-    if text.lower().startswith("theme:"):
-        text = text.split(":", 1)[1].strip()
-    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in text)
-    while "--" in slug:
-        slug = slug.replace("--", "-")
-    slug = slug.strip("-")
-    return f"theme:{slug}" if slug else ""
 
 
 class Commit:
@@ -199,205 +156,6 @@ class Commit:
 
 
 @dataclass
-class ProjectTicketState:
-    name: str
-
-    @classmethod
-    def backlog(cls) -> ProjectTicketState:
-        return cls(DEFAULT_PROJECT_STATES[0])
-
-    @classmethod
-    def in_progress(cls) -> ProjectTicketState:
-        return cls(DEFAULT_PROJECT_STATES[1])
-
-    @classmethod
-    def done(cls) -> ProjectTicketState:
-        return cls(DEFAULT_PROJECT_STATES[2])
-
-
-@dataclass
-class ProjectTicket:
-    number: int
-    title: str
-    body: str
-    url: str = ""
-    state: ProjectTicketState | None = None
-    issue_type: str = ""
-    labels: list[str] = field(default_factory=list)
-    closed: bool = False
-    parent_number: int | None = None
-    sub_issue_numbers: list[int] = field(default_factory=list)
-    comments: list[str] = field(default_factory=list)
-    project_theme: str = ""
-    archived: bool = False
-    _repo: Repo | None = field(default=None, repr=False, compare=False)
-
-    def _require_repo(self, operation: str) -> Repo:
-        if self._repo is None:
-            raise RuntimeError(f"ProjectTicket.{operation} requires a repo")
-        return self._repo
-
-    def close(self) -> None:
-        repo = self._require_repo("close")
-        if repo.in_memory:
-            if not repo.has_ticket(self.number):
-                raise ProjectTicketNotFoundError(f"GitHub issue not found: {self.number}")
-            self.closed = True
-            return
-        repo.run_gh("issue", "close", str(self.number))
-        self.closed = True
-
-    def update(self, *, title: str | None = None, body: str | None = None) -> ProjectTicket:
-        """Update supplied issue fields while leaving omitted fields unchanged."""
-        repo = self._require_repo("update")
-        arguments = ["issue", "edit", str(self.number)]
-        if title is not None:
-            arguments.extend(["--title", title])
-        if body is not None:
-            arguments.extend(["--body-file", "-"])
-        if len(arguments) == 3:
-            return self
-        if not repo.in_memory:
-            repo.run_gh(*arguments, stdin=body)
-        self.title = title if title is not None else self.title
-        self.body = body if body is not None else self.body
-        return self
-
-    def comment(self, body: str) -> ProjectTicket:
-        """Add a comment to this issue."""
-        repo = self._require_repo("comment")
-        if repo.in_memory:
-            self.comments.append(body)
-            return self
-        repo.run_gh("issue", "comment", str(self.number), "--body-file", "-", stdin=body)
-        return self
-
-    def add_child(self, child: ProjectTicket) -> ProjectTicket:
-        """Attach an existing issue as a direct sub-issue of this issue."""
-        repo = self._require_repo("add_child")
-        if child.number not in self.sub_issue_numbers:
-            self.sub_issue_numbers.append(child.number)
-        child.parent_number = self.number
-        if repo.in_memory:
-            return child
-        repo.run_gh(
-            "issue",
-            "edit",
-            str(self.number),
-            "--add-sub-issue",
-            child.url or str(child.number),
-        )
-        return child
-
-    def add_label(self, name: str) -> ProjectTicket:
-        """Put a label on this issue (sidebar chip). Empty name is a no-op."""
-        label = (name or "").strip()
-        if not label:
-            return self
-        repo = self._require_repo("add_label")
-        if label not in self.labels:
-            self.labels.append(label)
-        if repo.in_memory:
-            return self
-        repo.run_gh("label", "create", label, "--force")
-        repo.run_gh("issue", "edit", str(self.number), "--add-label", label)
-        return self
-
-    def remove_label(self, name: str) -> ProjectTicket:
-        """Take a label off this issue. Empty or absent name is a quiet no-op."""
-        label = (name or "").strip()
-        if not label:
-            return self
-        repo = self._require_repo("remove_label")
-        if label in self.labels:
-            self.labels.remove(label)
-        if repo.in_memory:
-            return self
-        repo.run_gh("issue", "edit", str(self.number), "--remove-label", label)
-        return self
-
-    def add_theme(self, theme: str) -> ProjectTicket:
-        """Apply theme on the issue label and the project board Theme field."""
-        self.add_label(issue_theme_label(theme))
-        return self.write_project_theme(theme)
-
-    def write_project_theme(self, theme: str) -> ProjectTicket:
-        """Write the GitHub project board Theme single-select field for this issue."""
-        slug = theme_slug(theme)
-        if not slug:
-            return self
-        repo = self._require_repo("write_project_theme")
-        project = repo.project
-        if project is None:
-            return self
-        if repo.in_memory:
-            self.project_theme = slug
-            return self
-        project.write_theme(self.project_item_id(project), slug)
-        return self
-
-    def project_item_id(self, project: Project) -> str:
-        try:
-            return project.item_id_for(self.number)
-        except ValueError:
-            logger.info("adding missing project item for issue %s", self.number)
-        item_id = project.add_item(self.url)
-        if not item_id:
-            raise GhConnectError("Could not add issue to project.")
-        return item_id
-
-    def write_type(self, name: str) -> ProjectTicket:
-        """Apply a GitHub issue Type name (org type). Mapping lives on WorkTicket."""
-        text = (name or "").strip()
-        if not text:
-            return self
-        self.issue_type = text
-        repo = self._require_repo("write_type")
-        if repo.in_memory:
-            return self
-        repo.run_gh("issue", "edit", str(self.number), "--type", text)
-        return self
-
-    def set_status(self, state_name: str) -> ProjectTicket:
-        repo = self._require_repo("set_status")
-        project = repo.project
-        if project is None:
-            raise RuntimeError("attach_project before setting ticket status")
-        state = project.state_named(state_name)
-        if repo.in_memory:
-            self.state = state
-            return self
-        resolved = project.write_status(self.project_item_id(project), state.name)
-        self.state = project.state_named(resolved)
-        return self
-
-    @classmethod
-    def from_number(cls, ref: str | int) -> int:
-        if isinstance(ref, int):
-            return ref
-        cleaned = str(ref).strip()
-        if not cleaned:
-            raise ValueError(f"not a GitHub issue reference: {ref!r}")
-        if cleaned.startswith("#"):
-            return int(cleaned[1:])
-        if "#" in cleaned:
-            suffix = cleaned.rsplit("#", 1)[-1]
-            if _ISSUE_NUMBER.match(suffix):
-                return int(suffix)
-        if "/issues/" in cleaned:
-            suffix = cleaned.rstrip("/").split("/")[-1]
-            if _ISSUE_NUMBER.match(suffix):
-                return int(suffix)
-        if _ISSUE_NUMBER.match(cleaned):
-            return int(cleaned)
-        raise ValueError(f"not a GitHub issue reference: {ref!r}")
-
-    @classmethod
-    def github_ref(cls, owner: str, repo: str, number: int) -> str:
-        return f"{owner}/{repo}#{number}"
-
-
-@dataclass
 class CliAgents:
     """The doer and judge CLI agents working on a branch. Their status and process ids are kept on the branch's
     ``cli-agent/{branch}`` annotated tag."""
@@ -440,303 +198,15 @@ def _process_id(raw: str | None) -> int:
     return int(text) if text.isdigit() else 0
 
 
-class Project:
-    """GitHub Project board on a repo — owns ticket states."""
-
-    __slots__ = ("_repo", "owner", "number", "states")
-
-    def __init__(self, repo: Repo, owner: str, number: int) -> None:
-        self._repo = repo
-        self.owner = owner
-        self.number = number
-        self.states = [ProjectTicketState(name) for name in DEFAULT_PROJECT_STATES]
-
-    def refresh_states(self) -> list[str]:
-        """Load Status column names from GitHub and replace the in-memory state list."""
-        names = self.status_option_names()
-        if names:
-            self.states = [ProjectTicketState(name) for name in names]
-        return names
-
-    def state_named(self, name: str) -> ProjectTicketState:
-        options = self.status_option_names()
-        resolved = self.github_status_option(name, options)
-        candidates = options or [state.name for state in self.states]
-        for state_name in candidates:
-            if state_name.lower() == resolved.lower():
-                return ProjectTicketState(state_name)
-        raise ValueError(
-            f"unknown project state: {name!r}; board columns: {candidates}"
-        )
-
-    def status_option_names(self) -> list[str]:
-        """Live GitHub Status field option names, or empty when listing fails."""
-        if self._repo.in_memory:
-            return [state.name for state in self.states]
-        try:
-            payload = self._field_list_payload()
-        except GhConnectError as exc:
-            raise self._project_scope_error(exc) from exc
-        return self._option_names_for_field("Status", payload)
-
-    def write_status(self, item_id: str, state_name: str) -> str:
-        """Write the Status column for one item; returns the GitHub option name sent."""
-        field_id, options = self._single_select_field("Status")
-        option_names = [str(option.get("name") or "") for option in options]
-        gh_value = self.github_status_option(state_name, option_names)
-        option_id = self._option_id_for_name(options, gh_value)
-        self._edit_single_select(item_id, (field_id, option_id))
-        return gh_value
-
-    def write_theme(self, item_id: str, theme_slug: str) -> str:
-        """Write the Theme column for one item; returns the GitHub option name sent."""
-        field_id, options = self._single_select_field("Theme")
-        option_names = [str(option.get("name") or "") for option in options]
-        gh_value = self.github_theme_option(theme_slug, option_names)
-        option_id = self._option_id_for_name(options, gh_value)
-        self._edit_single_select(item_id, (field_id, option_id))
-        return gh_value
-
-    @classmethod
-    def github_status_option(
-        cls, state_name: str, option_names: list[str] | tuple[str, ...] | None = None
-    ) -> str:
-        """Pick a Status option: exact match first, then a known synonym."""
-        wanted = (state_name or "").strip()
-        names = [str(item).strip() for item in (option_names or ()) if str(item).strip()]
-        if wanted in names:
-            return wanted
-        aliases = GITHUB_STATUS_ALIASES.get(wanted, ())
-        for alias in aliases:
-            if not names or alias in names:
-                return alias
-        return wanted
-
-    @classmethod
-    def github_theme_option(
-        cls, theme: str, option_names: list[str] | tuple[str, ...] | None = None
-    ) -> str:
-        """Pick a project Theme option matching the slug (case-insensitive)."""
-        wanted = theme_slug(theme)
-        if not wanted:
-            return ""
-        names = [str(item).strip() for item in (option_names or ()) if str(item).strip()]
-        if wanted in names:
-            return wanted
-        lower = wanted.lower()
-        for name in names:
-            if name.lower() == lower:
-                return name
-        return wanted
-
-    def _edit_single_select(self, item_id: str, field_option: tuple[str, str]) -> None:
-        field_id, option_id = field_option
-        self._repo.run_gh(
-            "project",
-            "item-edit",
-            "--id",
-            item_id,
-            "--project-id",
-            self._project_id(),
-            "--field-id",
-            field_id,
-            "--single-select-option-id",
-            option_id,
-        )
-
-    def archive_ticket(self, ticket: ProjectTicket) -> None:
-        """Archive the ticket's project item without deleting the issue."""
-        if self._repo.in_memory:
-            ticket.archived = True
-            return
-        self._repo.run_gh(
-            "project",
-            "item-archive",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--id",
-            self.item_id_for(ticket.number),
-        )
-
-    def _project_id(self) -> str:
-        raw = self._repo.run_gh(
-            "project",
-            "view",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--format",
-            "json",
-        )
-        project_id = str(json.loads(raw or "{}").get("id") or "")
-        if not project_id:
-            raise ValueError(f"project {self.owner}/{self.number} has no id")
-        return project_id
-
-    def _field_rows(self) -> list[dict[str, object]]:
-        raw = self._repo.run_gh(
-            "project",
-            "field-list",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--format",
-            "json",
-        )
-        payload = json.loads(raw or "{}")
-        return [row for row in payload.get("fields") or [] if isinstance(row, dict)]
-
-    def _single_select_field(self, field_name: str) -> tuple[str, list[dict[str, object]]]:
-        for field in self._field_rows():
-            if str(field.get("name") or "") != field_name:
-                continue
-            field_id = str(field.get("id") or "")
-            options = [
-                option
-                for option in (field.get("options") or [])
-                if isinstance(option, dict)
-            ]
-            if not field_id:
-                raise ValueError(f"project field has no id: {field_name}")
-            return field_id, options
-        raise ValueError(f"project field not found: {field_name}")
-
-    def _option_id_for_name(
-        self, field_options: list[dict[str, object]], name: str
-    ) -> str:
-        wanted = (name or "").strip()
-        for option in field_options:
-            label = str(option.get("name") or "").strip()
-            if label == wanted or label.lower() == wanted.lower():
-                option_id = str(option.get("id") or "")
-                if option_id:
-                    return option_id
-        raise ValueError(f"unknown project option: {name!r}")
-
-    def add_item(self, url: str) -> str:
-        item_raw = self._repo.run_gh(
-            "project",
-            "item-add",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--url",
-            url,
-            "--format",
-            "json",
-        )
-        item = json.loads(item_raw or "{}")
-        return str(item.get("id") or "")
-
-    def item_id_for(self, number: int) -> str:
-        raw = self._repo.run_gh(
-            "project",
-            "item-list",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--limit",
-            "1000",
-            "--format",
-            "json",
-        )
-        for item in json.loads(raw or "{}").get("items") or []:
-            content = item.get("content") if isinstance(item, dict) else None
-            if isinstance(content, dict) and content.get("number") == number:
-                return str(item.get("id") or "")
-        raise ValueError(f"ticket {number} is not on the project board")
-
-    def theme_option_names(self) -> list[str]:
-        """Live GitHub Theme field option names, or empty when listing fails."""
-        if self._repo.in_memory:
-            return ["cli-agent", "workspace", "workflow", "tools"]
-        try:
-            payload = self._field_list_payload()
-        except GhConnectError:
-            return []
-        return self._option_names_for_field("Theme", payload)
-
-    def _field_list_payload(self) -> object:
-        raw = self._repo.run_gh(
-            "project",
-            "field-list",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--format",
-            "json",
-        )
-        return json.loads(raw or "{}")
-
-    def _option_names_for_field(self, field_name: str, payload: object) -> list[str]:
-        fields = payload
-        if isinstance(payload, dict):
-            fields = payload.get("fields") or payload.get("items") or []
-        names: list[str] = []
-        for field in fields or []:
-            names.extend(self._labels_from_field(field, field_name))
-        return names
-
-    def _labels_from_field(self, field: object, field_name: str) -> list[str]:
-        if not isinstance(field, dict):
-            return []
-        if str(field.get("name") or "") != field_name:
-            return []
-        names: list[str] = []
-        for option in field.get("options") or []:
-            if isinstance(option, dict):
-                label = str(option.get("name") or "").strip()
-            else:
-                label = str(option).strip()
-            if label:
-                names.append(label)
-        return names
-
-    def _project_scope_error(self, exc: GhConnectError) -> GhConnectError:
-        message = str(exc)
-        if "read:project" in message or "missing required scopes" in message:
-            return GhConnectError(f"{message} {GH_PROJECT_SCOPES_HINT}")
-        return exc
-
-    def link_repository(self) -> None:
-        """Attach this org project to the current GitHub repository."""
-        repo = self._repo
-        owner, name = repo.owner_repo()
-        if repo.in_memory:
-            repo._project_links.append((self.owner, self.number, f"{owner}/{name}"))
-            return
-        repo.run_gh(
-            "project",
-            "link",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--repo",
-            f"{owner}/{name}",
-        )
-
-
 @language_adapter(language="typescript")
 @agent_toolset
 class Repo:
-    """Local git clone with optional GitHub project + tickets."""
+    """Local git clone: its branches, worktrees, commits, and work sessions."""
 
-    def __init__(
-        self,
-        root: str | Path = ".",
-        *,
-        memory: bool = False,
-        owner: str = "",
-        repo_name: str = "",
-    ) -> None:
+    def __init__(self, root: str | Path = ".", *, memory: bool = False) -> None:
         self.root = Path(root).resolve()
         self.default_branch = "main"
         self._memory = memory
-        self._owner = owner
-        self._repo_name = repo_name
-        self._project: Project | None = None
-        self._tickets: dict[int, ProjectTicket] = {}
         if memory:
             self._init_memory_state()
 
@@ -750,9 +220,6 @@ class Repo:
     @property
     def in_memory(self) -> bool:
         return self._memory
-
-    def has_ticket(self, number: int) -> bool:
-        return number in self._tickets
 
     def find_root(self) -> Path | None:
         current = self.root
@@ -781,8 +248,8 @@ class Repo:
         return cls(root)
 
     @classmethod
-    def memory(cls, root: str | Path = ".", *, owner: str = "demo-org", repo_name: str = "demo-repo") -> Repo:
-        return cls(root, memory=True, owner=owner, repo_name=repo_name)
+    def memory(cls, root: str | Path = ".") -> Repo:
+        return cls(root, memory=True)
 
     @classmethod
     def git(cls, root: str | Path, *args: str, env: dict[str, str] | None = None, timeout: float | None = None) -> str:
@@ -858,53 +325,6 @@ class Repo:
             return
         process.kill()
 
-    @classmethod
-    def gh(
-        cls,
-        *args: str,
-        cwd: str | Path | None = None,
-        stdin: str | None = None,
-    ) -> str:
-        found = shutil.which("gh")
-        if not found:
-            for candidate in (
-                Path(r"C:\Program Files\GitHub CLI\gh.exe"),
-                Path.home() / "AppData" / "Local" / "GitHub CLI" / "gh.exe",
-            ):
-                if candidate.is_file():
-                    found = str(candidate)
-                    break
-        if not found:
-            raise GhConnectError("Cannot connect gh: `gh` is not available.")
-        try:
-            completed = subprocess.run(
-                [found, *args],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                check=False,
-                cwd=str(cwd) if cwd is not None else None,
-                input=stdin,
-                timeout=_COMMAND_TIMEOUT_SECONDS,
-            )
-        except subprocess.TimeoutExpired as exc:
-            shown = " ".join(a for a in args if a != stdin)
-            raise GhConnectError(
-                f"Cannot connect gh: gh {shown} exceeded {_COMMAND_TIMEOUT_SECONDS} seconds."
-            ) from exc
-        except OSError as exc:
-            raise GhConnectError(f"Cannot connect gh: {exc}.") from exc
-        if completed.returncode != 0:
-            err = (completed.stderr or completed.stdout or "").strip()
-            shown = " ".join(a for a in args if a != stdin)
-            raise GhConnectError(
-                f"Cannot connect gh: gh {shown} failed: {err}."
-            )
-        return (completed.stdout or "").strip()
-
-    def run_gh(self, *args: str, stdin: str | None = None) -> str:
-        return type(self).gh(*args, cwd=self.root, stdin=stdin)
-
     def _git(self, *args: str) -> str:
         return type(self).git(self.root, *args)
 
@@ -916,23 +336,11 @@ class Repo:
         self._pushes: list[str] = []
         self._deleted: list[str] = []
         self._dirty = False
-        self._project_links: list[tuple[str, int, str]] = []
-        self._org_issue_types: list[dict[str, str]] = []
         self._worktrees: list[Worktree] = [Worktree(self.root, self.branch_named("main"))]
         self._fetches: list[str] = []
         self._pulls: list[str] = []
         self._stash = False
         self._annotated_tags: dict[str, str] = {}
-
-    @property
-    def project(self) -> Project | None:
-        return self._project
-
-    def attach_project(self, owner: str, number: int) -> Project:
-        self._project = Project(self, owner, number)
-        self._project.link_repository()
-        self._project.refresh_states()
-        return self._project
 
     def branch_named(self, name: str) -> Branch:
         return Branch(self, name)
@@ -1116,71 +524,6 @@ class Repo:
         if self._memory:
             return self._commit
         return self._git("rev-parse", "HEAD")
-
-    def list_issue_types(self) -> list[dict[str, str]]:
-        if self._memory:
-            return [dict(item) for item in getattr(self, "_org_issue_types", [])]
-        owner, _ = self.owner_repo()
-        raw = self.run_gh("api", f"orgs/{owner}/issue-types")
-        payload = json.loads(raw or "[]")
-        return [dict(item) for item in payload] if isinstance(payload, list) else []
-
-    def ensure_issue_type(
-        self,
-        name: str,
-        *,
-        description: str = "",
-        color: str = "gray",
-    ) -> str:
-        wanted = (name or "").strip()
-        if not wanted:
-            return ""
-        for item in self.list_issue_types():
-            existing = str(item.get("name") or "").strip()
-            if existing.lower() == wanted.lower():
-                return existing
-        record = {
-            "name": wanted,
-            "description": description,
-            "color": color,
-            "is_enabled": True,
-        }
-        if self._memory:
-            types = getattr(self, "_org_issue_types", None)
-            if types is None:
-                self._org_issue_types = []
-                types = self._org_issue_types
-            types.append(record)
-            return wanted
-        owner, _ = self.owner_repo()
-        self.run_gh(
-            "api",
-            "--method",
-            "POST",
-            f"orgs/{owner}/issue-types",
-            "--input",
-            "-",
-            stdin=json.dumps(
-                {
-                    "name": wanted,
-                    "is_enabled": True,
-                    "description": description or None,
-                    "color": color,
-                }
-            ),
-        )
-        return wanted
-
-    def owner_repo(self) -> tuple[str, str]:
-        if self._memory:
-            return self._owner, self._repo_name
-        raw = self.run_gh("repo", "view", "--json", "nameWithOwner")
-        payload = json.loads(raw or "{}")
-        name = payload.get("nameWithOwner", "")
-        if "/" not in name:
-            raise GhConnectError(f"Cannot resolve owner/repo for {self.root}.")
-        owner, repo = name.split("/", 1)
-        return owner, repo
 
     def is_dirty(
         self, path: str | Path | None = None, *, untracked: bool = True
@@ -1576,95 +919,6 @@ class Repo:
         else:
             merge_git.git(merge_root, "merge", source, "--no-edit")
         return merge_git.git(merge_root, "rev-parse", "HEAD")
-
-    def ticket(self, ref: str) -> ProjectTicket | None:
-        if self.in_memory:
-            return self._tickets.get(ProjectTicket.from_number(ref))
-        return self._github_ticket(ref)
-
-    def _github_ticket(self, ref: str) -> ProjectTicket | None:
-        number = ProjectTicket.from_number(ref)
-        try:
-            raw = self.run_gh(
-                "issue",
-                "view",
-                str(number),
-                "--json",
-                "number,title,body,url,state,parent,subIssues",
-            )
-        except GhConnectError as exc:
-            message = str(exc).lower()
-            if "could not resolve" in message or "not found" in message:
-                return None
-            raise
-        payload = json.loads(raw or "{}")
-        if not payload:
-            return None
-        return self._ticket_from_payload(payload)
-
-    def create_ticket(self, title: str, body: str) -> ProjectTicket:
-        if self.in_memory:
-            number = (max(self._tickets.keys(), default=0) + 1) if self._tickets else 1
-            owner, repo_name = self.owner_repo()
-            ticket = ProjectTicket(
-                number=number,
-                title=title,
-                body=body,
-                url=f"https://github.com/{owner}/{repo_name}/issues/{number}",
-                _repo=self,
-            )
-            self._tickets[number] = ticket
-            return ticket
-        raw = self.run_gh(
-            "issue",
-            "create",
-            "--title",
-            title,
-            "--body-file",
-            "-",
-            stdin=body,
-        )
-        url = (raw or "").strip().splitlines()[-1].strip() if raw else ""
-        if "/issues/" not in url:
-            raise GhConnectError(f"Cannot parse issue URL from gh issue create: {raw!r}.")
-        number = int(url.rstrip("/").rsplit("/", 1)[-1])
-        ticket = self.ticket(str(number))
-        if ticket is None:
-            return self._ticket_from_payload(
-                {"number": number, "title": title, "body": body, "url": url}
-            )
-        ticket.body = body
-        ticket.title = title
-        return ticket
-
-    def _ticket_from_payload(self, payload: dict[str, Any]) -> ProjectTicket:
-        number = int(payload["number"])
-        parent_data = payload.get("parent")
-        parent_number = (
-            int(parent_data["number"])
-            if isinstance(parent_data, dict) and parent_data.get("number")
-            else None
-        )
-        sub_issues_data = payload.get("subIssues") or []
-        if isinstance(sub_issues_data, dict):
-            sub_issues_data = sub_issues_data.get("nodes") or []
-        sub_numbers = [
-            int(item["number"])
-            for item in sub_issues_data
-            if isinstance(item, dict) and item.get("number")
-        ]
-        ticket = ProjectTicket(
-            number=number,
-            title=str(payload.get("title") or ""),
-            body=str(payload.get("body") or ""),
-            url=str(payload.get("url") or ""),
-            closed=str(payload.get("state") or "").upper() == "CLOSED",
-            parent_number=parent_number,
-            sub_issue_numbers=sub_numbers,
-            _repo=self,
-        )
-        self._tickets[number] = ticket
-        return ticket
 
     def _last_commit_message(self) -> str:
         if self._memory:

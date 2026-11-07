@@ -29,29 +29,10 @@ from space.repo.repo import (
     CliAgents,
     Commit,
     DefaultBranchError,
-    GH_PROJECT_SCOPES_HINT,
-    GhConnectError,
     NoOpenWorktreeError,
-    Project,
     Repo,
-    ProjectTicket,
-    ProjectTicketNotFoundError,
-    ProjectTicketState,
-    issue_theme_label,
 )
 from space.work_state import WorkState, working_on
-
-
-with description("a ProjectTicket"):
-    with it("should parse github issue references"):
-        expect(ProjectTicket.from_number("87")).to(equal(87))
-        expect(ProjectTicket.from_number("#87")).to(equal(87))
-        expect(ProjectTicket.from_number("demo-org/demo-repo#87")).to(equal(87))
-
-    with it("should format its github ref"):
-        expect(ProjectTicket.github_ref("demo-org", "demo-repo", 87)).to(
-            equal("demo-org/demo-repo#87")
-        )
 
 
 with description("a Commit"):
@@ -98,26 +79,6 @@ with description("a Repo"):
             expect(loaded.judge).to(equal("judge-chat"))
             expect(loaded.open).to(be_true)
 
-        with it("should attach a project with ticket states"):
-            project = self.repo.attach_project("demo-org", 3)
-            expect(len(project.states)).to(equal(3))
-            expect(project.state_named("Backlog").name).to(equal("Backlog"))
-
-        with it("should link the project to the repository"):
-            self.repo.attach_project("demo-org", 3)
-            expect(self.repo._project_links).to(
-                equal([("demo-org", 3, "demo-org/demo-repo")])
-            )
-
-        with it("should create tickets and track project state"):
-            project = self.repo.attach_project("demo-org", 3)
-            ticket = self.repo.create_ticket("Workflow package", "forward requirements")
-            ticket.set_status("Backlog")
-            expect(ticket.state.name).to(equal("Backlog"))
-            expect(self.repo.ticket(str(ticket.number)).state.name).to(equal("Backlog"))
-            ticket.set_status("In Progress")
-            expect(self.repo.ticket(str(ticket.number)).state.name).to(equal("In Progress"))
-
         # (S) Repo --> Merge Branch
         with it("should merge branches through Branch objects"):
             self.repo.branch_named("session/demo").checkout()
@@ -126,174 +87,6 @@ with description("a Repo"):
             merge = main.merge(self.repo.branch_named("session/demo"), message="finish demo")
             expect(merge.message).to(contain("finish demo"))
             expect(self.repo.current_branch).to(equal("main"))
-
-
-with description("a Repo ticket lifecycle"):
-    with before.each:
-        self.repo = Repo.memory("/tmp/demo-clone")
-        self.project = self.repo.attach_project("demo-org", 3)
-        self.ticket = self.repo.create_ticket("Demo", "body")
-        self.ticket.set_status("Backlog")
-
-    with it("should close tickets"):
-        self.ticket.close()
-        expect(self.ticket.closed).to(be_true)
-
-    with it("should refuse closing unknown tickets"):
-        missing = ProjectTicket(number=999, title="", body="", _repo=self.repo)
-        expect(lambda: missing.close()).to(raise_error(ProjectTicketNotFoundError))
-
-    with it("should put a theme label and project Theme on the ticket"):
-        expect(issue_theme_label("CLI agent")).to(equal("theme:cli-agent"))
-        expect(issue_theme_label("theme:cli-agent")).to(equal("theme:cli-agent"))
-        self.ticket.add_theme("CLI agent")
-        expect(self.ticket.labels).to(equal(["theme:cli-agent"]))
-        expect(self.ticket.project_theme).to(
-            equal("cli-agent")
-        )
-
-    with it("should apply an issue type name on the ticket"):
-        self.ticket.write_type("Defect")
-        expect(self.ticket.issue_type).to(equal("Defect"))
-
-    with it("should create missing organization issue types"):
-        expect(self.repo.list_issue_types()).to(equal([]))
-        self.repo.ensure_issue_type(
-            "Defect", description="An unexpected problem or behavior", color="red"
-        )
-        expect([item["name"] for item in self.repo.list_issue_types()]).to(
-            equal(["Defect"])
-        )
-        self.repo.ensure_issue_type("Defect")
-        expect(len(self.repo.list_issue_types())).to(equal(1))
-
-
-with description("GitHub project status names"):
-    with it("should append the project-scope refresh hint to gh auth errors"):
-        original = GhConnectError(
-            "gh project field-list failed: missing required scopes [read:project]"
-        )
-        project = Repo.memory("/tmp/demo-clone").attach_project("demo-org", 3)
-        expect(str(project._project_scope_error(original))).to(contain(GH_PROJECT_SCOPES_HINT))
-
-    with it("should refresh Project.states from the live Status field"):
-        repo = Repo.memory("/tmp/demo-clone")
-        project = repo.attach_project("demo-org", 3)
-
-        def fake_gh(*args: str, stdin: str | None = None) -> str:
-            if len(args) >= 2 and args[1] == "field-list":
-                return (
-                    '{"fields":[{"name":"Status","options":'
-                    '[{"name":"Todo"},{"name":"In Progress"},{"name":"Review"},{"name":"Done"}]}]}'
-                )
-            return ""
-
-        repo.run_gh = fake_gh  # type: ignore[method-assign]
-        repo._memory = False
-        names = project.refresh_states()
-        expect(names).to(equal(["Todo", "In Progress", "Review", "Done"]))
-        expect([state.name for state in project.states]).to(
-            equal(["Todo", "In Progress", "Review", "Done"])
-        )
-        repo._memory = True
-
-    with it("should map Backlog to Todo when the board has Todo"):
-        expect(
-            Project.github_status_option(
-                "Backlog", ["Todo", "In Progress", "Done"]
-            )
-        ).to(equal("Todo"))
-
-    with it("should keep Backlog when the board has Backlog"):
-        expect(
-            Project.github_status_option(
-                "Backlog", ["Backlog", "In Progress", "Done"]
-            )
-        ).to(equal("Backlog"))
-
-    with it("should map In Progress to In progress when the board uses lowercase"):
-        expect(
-            Project.github_status_option(
-                "In Progress", ["Backlog", "In progress", "Done"]
-            )
-        ).to(equal("In progress"))
-
-    with it("should send Todo to gh for Backlog while memory still records Backlog"):
-        repo = Repo.memory("/tmp/demo-clone")
-        repo.attach_project("demo-org", 3)
-        ticket = repo.create_ticket("Demo", "body")
-        calls: list[tuple[str, ...]] = []
-
-        def fake_gh(*args: str, stdin: str | None = None) -> str:
-            calls.append(args)
-            if len(args) >= 2 and args[1] == "field-list":
-                return (
-                    '{"fields":[{"name":"Status","id":"FIELD_STATUS","options":'
-                    '[{"id":"OPT_TODO","name":"Todo"},'
-                    '{"id":"OPT_IP","name":"In Progress"},'
-                    '{"id":"OPT_DONE","name":"Done"}]}]}'
-                )
-            if len(args) >= 2 and args[1] == "view":
-                return '{"id":"PROJ_3"}'
-            if len(args) >= 2 and args[1] == "item-add":
-                return '{"id":"PVTI_1"}'
-            return ""
-
-        repo.run_gh = fake_gh  # type: ignore[method-assign]
-        repo._memory = False
-        ticket.set_status("Backlog")
-        option_ids = []
-        for call in calls:
-            if "--single-select-option-id" in call:
-                option_ids.append(call[call.index("--single-select-option-id") + 1])
-        expect(option_ids).to(equal(["OPT_TODO"]))
-        repo._memory = True
-        ticket.set_status("Backlog")
-        expect(repo.ticket(str(ticket.number)).state.name).to(equal("Backlog"))
-        expect(ticket.state.name).to(equal("Backlog"))
-
-
-with description("GitHub project theme names"):
-    with it("should match Theme options case-insensitively"):
-        expect(
-            Project.github_theme_option(
-                "CLI agent", ["cli-agent", "workspace"]
-            )
-        ).to(equal("cli-agent"))
-
-    with it("should send cli-agent to gh while memory still records the slug"):
-        repo = Repo.memory("/tmp/demo-clone")
-        repo.attach_project("demo-org", 3)
-        ticket = repo.create_ticket("Demo", "body")
-        calls: list[tuple[str, ...]] = []
-
-        def fake_gh(*args: str, stdin: str | None = None) -> str:
-            calls.append(args)
-            if len(args) >= 2 and args[1] == "field-list":
-                return (
-                    '{"fields":[{"name":"Theme","id":"FIELD_THEME","options":'
-                    '[{"id":"OPT_CLI","name":"cli-agent"},'
-                    '{"id":"OPT_WS","name":"workspace"}]}]}'
-                )
-            if len(args) >= 2 and args[1] == "view":
-                return '{"id":"PROJ_3"}'
-            if len(args) >= 2 and args[1] == "item-add":
-                return '{"id":"PVTI_1"}'
-            return ""
-
-        repo.run_gh = fake_gh  # type: ignore[method-assign]
-        repo._memory = False
-        ticket.add_theme("CLI agent")
-        theme_option_ids = []
-        for call in calls:
-            if "--single-select-option-id" in call:
-                theme_option_ids.append(
-                    call[call.index("--single-select-option-id") + 1]
-                )
-        expect(theme_option_ids).to(equal(["OPT_CLI"]))
-        repo._memory = True
-        ticket.add_theme("CLI agent")
-        expect(ticket.project_theme).to(equal("cli-agent"))
 
 
 # (E) Open Work Session
