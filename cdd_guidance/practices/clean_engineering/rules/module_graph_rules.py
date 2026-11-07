@@ -43,7 +43,7 @@ def _python_class_folder(node: "Node", context: "RuleCheckContext") -> "Node | N
     """The folder node a Python class sits in; module-context rules only cover Python sources."""
     if not (node.source.file or "").endswith(".py"):
         return None
-    return context.node(node.get_fact("folder", ""))
+    return next(iter(context.targets(node, "belongsTo")), None)
 
 
 class MissingModuleContext(PracticeGraphRule):

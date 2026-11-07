@@ -44,6 +44,12 @@ def python_type(hint: str) -> str:
 Function = ast.FunctionDef | ast.AsyncFunctionDef
 
 
+def python_type(hint: str) -> str:
+    """A type written the way Python writes generics: `Collection<Root>` from another language is `Collection[Root]`,
+    so the file reads back as Python."""
+    return (hint or "").replace("<", "[").replace(">", "]")
+
+
 class PythonProperty(CodeProperty):
     language = PYTHON
 

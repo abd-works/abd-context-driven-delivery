@@ -35,6 +35,8 @@ A placed node written as one Draw.io vertex cell: its HTML label, its style, and
 The rounded modules-view cell.
 
 ------
++ dependency_labels: dict[str, str]
+	// the words written on the arrow to each dependency, by its name; parse reads them back from the edge
 ----
 + html(): str
 	// the name, the purpose line, then the shown seam terms as bullets

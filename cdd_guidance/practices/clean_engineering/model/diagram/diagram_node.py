@@ -83,6 +83,9 @@ class ImportedClass(DiagramClass):
 class DiagramModule(Module, DiagramNode):
     """Module on a page: purpose, seam, nesting, height. Channel fills the label."""
 
+    # How many seam terms the card lists before it ends the list with `...`.
+    seam_bullets = MODULE_MAX_SEAM_BULLETS
+
     def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
         Module.__init__(self, name, sequential_order, **kwargs)
         DiagramNode.__init__(self)
@@ -96,8 +99,8 @@ class DiagramModule(Module, DiagramNode):
         terms = self.public_terms()
         if not terms:
             return MODULE_HEADER_HEIGHT + MODULE_LINE_HEIGHT
-        n = min(MODULE_MAX_SEAM_BULLETS, len(terms))
-        if len(terms) > MODULE_MAX_SEAM_BULLETS:
+        n = min(self.seam_bullets, len(terms))
+        if len(terms) > self.seam_bullets:
             n += 1
         return max(MODULE_CELL_MIN_HEIGHT, MODULE_HEADER_HEIGHT + n * MODULE_LINE_HEIGHT + 24)
 
@@ -110,8 +113,8 @@ class DiagramModule(Module, DiagramNode):
 
     def shown_seam_terms(self) -> List[str]:
         terms = self.public_terms()
-        shown = terms[:MODULE_MAX_SEAM_BULLETS]
-        if len(terms) > MODULE_MAX_SEAM_BULLETS:
+        shown = terms[:self.seam_bullets]
+        if len(terms) > self.seam_bullets:
             return shown + ['...']
         return shown
 

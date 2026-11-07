@@ -289,6 +289,11 @@ class BoundedContext(Module):
         return found
 
     @property
+    def every_context(self) -> list["BoundedContext"]:
+        """This context, then every context nested in it."""
+        return [self] + [found for child in self.contexts for found in child.every_context]
+
+    @property
     def enclosing_contexts(self) -> list["BoundedContext"]:
         """The contexts this one is nested in, outermost first, ending with this context."""
         parent = self.parent
@@ -383,7 +388,31 @@ class BoundedContextMap:
         return [aggregate for context in self.contexts for aggregate in context.every_aggregate]
 
     @property
+    def every_context(self) -> list[BoundedContext]:
+        """Every context on the map, each before the contexts nested in it."""
+        return [found for context in self.contexts for found in context.every_context]
+
+    def aggregate_reached_by(self, integration: Integration) -> Aggregate | None:
+        """The aggregate an integration's target names: in the context it names, its entity or its aggregate; with no
+        context the map holds, the aggregate called by the name it gives."""
+        context_name, aggregate_name, entity_name = integration.target_parts
+        if integration.context or integration.aggregate:
+            context_name, aggregate_name = integration.context, integration.aggregate
+        in_context = [item for item in self.every_aggregate if _same_name(item.parent.name, context_name)]
+        if not in_context:
+            return next((item for item in self.every_aggregate if _same_name(item.name, aggregate_name or entity_name)), None)
+        for name in (entity_name, aggregate_name):
+            found = next((item for item in in_context if name and _same_name(item.name, name)), None)
+            if found is not None:
+                return found
+        return None
+
+    @property
     def holds_classes_only(self) -> bool:
         """Whether the text this map read is a plain class model rather than a map: never, for a map of its own
         notation; a markdown map says so when its text names no aggregate."""
         return False
+
+
+def _same_name(left: str, right: str) -> bool:
+    return bool(right) and left.strip().lower() == right.strip().lower()

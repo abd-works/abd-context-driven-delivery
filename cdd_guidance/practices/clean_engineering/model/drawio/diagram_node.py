@@ -5,7 +5,7 @@ import html
 import math
 import re
 import xml.etree.ElementTree as ET
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
@@ -144,6 +144,11 @@ class DrawIOImportedClass(ImportedClass, DrawIOClass):
 class DrawIOModule(DiagramModule, DrawioVertex):
     """Draw.io rounded modules-view cell."""
 
+    def __init__(self, name: str = '', sequential_order: int = 1, **kwargs) -> None:
+        super().__init__(name, sequential_order, **kwargs)
+        # The words written on the arrow to each dependency, by the dependency's name; most arrows carry none.
+        self.dependency_labels: Dict[str, str] = {}
+
     def load_class(self, source: OoadClass) -> DrawIOClass:
         loaded = DrawIOClass(name=source.name, sequential_order=source.sequential_order)
         loaded.translate_from(source)
@@ -195,7 +200,8 @@ class DrawIOModule(DiagramModule, DrawioVertex):
     @staticmethod
     def _terms_from_html(text: str) -> List[str]:
         terms: List[str] = []
-        for bullet in re.findall('[\u2022\\-]\\s*([^<]+)', text):
+        # A bullet starts the label or follows a tag, so the dash in a style such as `font-size` is not one.
+        for bullet in re.findall('(?:^|>)\\s*[\u2022\\-]\\s*([^<]+)', text):
             term = bullet.strip()
             if term and (not term.startswith('{')):
                 terms.append(term)

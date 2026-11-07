@@ -227,8 +227,13 @@ def _sole_forward(operation: "Node") -> str:
     return callee if forwards else ""
 
 
+def _folder_id(node: "Node", context: "RuleCheckContext") -> str:
+    """The id of the folder the class belongs to, through its belongsTo edge."""
+    return next((folder.node_id for folder in context.targets(node, "belongsTo")), "")
+
+
 def _pass_through_folders(context: "RuleCheckContext", classes: ClassGraph, targets: dict[str, str]) -> list[tuple[str, str]]:
-    folder_of = {node.node_id: node.get_fact("folder", "") for node in context.nodes("OoadClass")}
+    folder_of = {node.node_id: _folder_id(node, context) for node in context.nodes("OoadClass")}
     members: dict[str, list[str]] = {}
     for node in classes.classes:
         members.setdefault(folder_of[node.node_id], []).append(node.node_id)
