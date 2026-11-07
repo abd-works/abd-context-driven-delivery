@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.markdown.format import Format
@@ -41,15 +43,15 @@ class Stories(PracticeGuidance):
             default_workspace_folder="tests",
             formats={
                 "sketch": ("cdd_guidance.practices.stories.model.sketch.sketch_story_model", "SketchStoryModel"),
-                "markdown": ("stories.model.markdown.nodes", "MarkdownStoryModel"),
-                "json": ("stories.model.json.nodes", "JsonStoryModel"),
-                "drawio": ("stories.model.drawio.nodes", "DrawIOStoryModel"),
-                "miro": ("stories.model.miro.nodes", "MiroStoryModel"),
-                "claude_design": ("stories.model.claude_design.nodes", "ClaudeDesignStoryModel"),
-                "python": ("stories.model.python.python_story_model", "PythonStoryModel"),
-                "typescript": ("stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
-                "java": ("stories.model.java.java_story_model", "JavaStoryModel"),
-                "javascript": ("stories.model.javascript.javascript_story_model", "JavaScriptStoryModel"),
+                "markdown": ("cdd_guidance.practices.stories.model.markdown.nodes", "MarkdownStoryModel"),
+                "json": ("cdd_guidance.practices.stories.model.json.nodes", "JsonStoryModel"),
+                "drawio": ("cdd_guidance.practices.stories.model.drawio.nodes", "DrawIOStoryModel"),
+                "miro": ("cdd_guidance.practices.stories.model.miro.nodes", "MiroStoryModel"),
+                "claude_design": ("cdd_guidance.practices.stories.model.claude_design.nodes", "ClaudeDesignStoryModel"),
+                "python": ("cdd_guidance.practices.stories.model.python.python_story_model", "PythonStoryModel"),
+                "typescript": ("cdd_guidance.practices.stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
+                "java": ("cdd_guidance.practices.stories.model.java.java_story_model", "JavaStoryModel"),
+                "javascript": ("cdd_guidance.practices.stories.model.javascript.javascript_story_model", "JavaScriptStoryModel"),
             },
         )
         if stage is not None:
@@ -57,16 +59,25 @@ class Stories(PracticeGuidance):
 
     def read_paths(self, paths: list[str] | str, source: str | None = None):
         """Story tests in code carry their epic and sub-epic only in their folders, under the story map that names them,
-        so they are read as files beside that map, not as one run of text."""
+        so they are read as files beside that map, not as one run of text. Paths and node paths are named from the
+        project, as every path in a session is."""
         if not Format(source or self.format).is_code:
             return super().read_paths(paths, source)
-        from pathlib import Path
-
         from cdd_guidance.practices.stories.model.story_model import StoryModel
 
-        entries = [paths] if isinstance(paths, str) else list(paths)
-        files = [found for entry in map(Path, entries) for found in (sorted(entry.rglob("*")) if entry.is_dir() else [entry])]
-        return StoryModel.load_files([path for path in files if path.is_file()], Path.cwd())
+        project = self.project_folder
+        entries = [project / entry for entry in ([paths] if isinstance(paths, str) else paths)]
+        files = [found for entry in entries for found in (sorted(entry.rglob("*")) if entry.is_dir() else [entry])]
+        return StoryModel.load_files([path for path in files if path.is_file()], project)
+
+    @property
+    def project_folder(self) -> Path:
+        """The project the session this practice works in names its paths from: the session's repository, else the
+        checkout the running call works on. The MCP host serves every project from its own folder, so its current
+        folder is never the project."""
+        from space.work_state import project_checkout
+
+        return Path(getattr(self.workspace, "repo_path", None) or project_checkout())
 
     def _live_adapter(self, format_name: str):
         if self.story_test_folder is None or Format(format_name).name != "typescript":

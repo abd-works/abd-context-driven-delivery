@@ -117,6 +117,39 @@ with description("Stories"):
             with it("should give its scenarios to the Story of the same name on the map in the root's .context"):
                 expect([len(story.scenarios) for story in self.model.every_story()]).to(equal([1]))
 
+        # The MCP host serves every project from its own folder, so the paths a call names are read from the project
+        # that call works on, and each node names its file from there.
+        with context("that reads a story map named from a project the host does not run in"):
+            with before.each:
+                import tempfile
+
+                from space.work_state import working_on
+
+                self.root = Path(tempfile.mkdtemp(prefix="cdd-story-project-"))
+                story_map = self.root / "tests" / "story-map.md"
+                story_map.parent.mkdir(parents=True)
+                story_map.write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
+                with working_on(self.root):
+                    self.model = self.stories.read_paths("tests", "python")
+
+            with after.each:
+                import shutil
+
+                shutil.rmtree(self.root, ignore_errors=True)
+
+            with it("should read the stories on that project's map"):
+                expect([story.name for story in self.model.every_story()]).to(equal(["Open Board"]))
+
+            with it("should name each story's file from that project's root"):
+                expect([str(story.source.file) for story in self.model.every_story()]).to(equal(["tests/story-map.md"]))
+
+    # A module imported under two names loads twice, and an object made by one copy fails isinstance against the other.
+    with context("that renders through a format adapter"):
+        with it("should use the same adapter class the story model package defines"):
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+
+            expect(Stories()._format_adapter("markdown")).to(equal(MarkdownStoryModel))
+
     with context("that is constructed with fidelity acceptance_tests"):
         with it("should default format to python"):
             expect(Stories(fidelity="acceptance_tests").format).to(equal("python"))

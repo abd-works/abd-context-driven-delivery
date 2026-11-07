@@ -13,7 +13,7 @@ from expects import contain, equal, expect
 from mamba import context, description, it
 
 from cdd_guidance.practices.stories.model.story_model import Scenario, Story
-from cdd_guidance.practices.stories.rules.story_map import FourToNineChildren, StoryScenariosOneToFour
+from cdd_guidance.practices.stories.rules.story_map import FourToNineChildren, StoryScenariosAtMostSeven
 from harness.graph.graph import Node, PracticeGraph, Source
 from harness.graph.schema_rules import slugs_for_type
 
@@ -57,16 +57,16 @@ with description("story scenario count"):
 
     with context("story-scenarios-one-to-four"):
         with it("should accept one to seven scenarios"):
-            rule = StoryScenariosOneToFour()
+            rule = StoryScenariosAtMostSeven()
             for count in (1, 4, 7):
                 expect(rule.check(_story_node("Enter Validation Code", count), None)).to(equal([]))
 
         with it("should call a story with more than seven scenarios huge"):
-            hits = StoryScenariosOneToFour().check(_story_node("Pick Number", 8), None)
+            hits = StoryScenariosAtMostSeven().check(_story_node("Pick Number", 8), None)
             expect(hits).to(equal(["story 'Pick Number': 8 scenarios — story is huge (target 1-7)"]))
 
         with it("should accept a story with no scenarios, whose scenarios are not written yet"):
-            expect(StoryScenariosOneToFour().check(_story_node("Enter Validation Code", 0), None)).to(equal([]))
+            expect(StoryScenariosAtMostSeven().check(_story_node("Enter Validation Code", 0), None)).to(equal([]))
 
     with context("a story that records its scenario count"):
         with it("should not mark two scenarios as a 4-9 child-band error"):
