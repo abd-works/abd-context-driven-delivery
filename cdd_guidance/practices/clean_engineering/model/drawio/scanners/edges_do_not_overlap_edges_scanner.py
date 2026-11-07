@@ -7,6 +7,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base
     DrawioPage,
     DrawioScanner,
     Segment,
+    share_inheritance_trunk,
 )
 
 # Pixels a segment may lean and still count as horizontal or vertical.
@@ -21,10 +22,13 @@ class EdgesDoNotOverlapEdgesScanner(DrawioScanner):
     RULE = "edges-do-not-overlap-edges"
 
     def scan_page(self, page: DrawioPage) -> list[Violation]:
-        routes = [(page.describe(edge), page.segments(edge)[0]) for edge in page.edges]
+        """Each pair of edges that run on top of each other, except subclasses joined into one shared line to their base."""
+        routes = [(edge, page.describe(edge), page.segments(edge)[0]) for edge in page.edges]
         violations = []
-        for index, (first_name, first_segments) in enumerate(routes):
-            for second_name, second_segments in routes[index + 1:]:
+        for index, (first_edge, first_name, first_segments) in enumerate(routes):
+            for second_edge, second_name, second_segments in routes[index + 1:]:
+                if share_inheritance_trunk(first_edge, second_edge):
+                    continue
                 detail = _first_overlap(first_segments, second_segments)
                 if detail:
                     violations.append(self.violation(page, f"{first_name} overlaps {second_name}: {detail}"))

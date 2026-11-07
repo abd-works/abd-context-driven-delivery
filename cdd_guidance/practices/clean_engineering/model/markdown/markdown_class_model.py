@@ -27,7 +27,7 @@ Relationships:
   - Operation return types and PascalCase parameter types also become edges
     (default association). An optional stereotype on the op line applies to
     the return type (e.g. ``+ << composition >> continueToForm(): PortabilityForm``).
-  - A line ``---<<stops>>--> RunningProcess`` after the operations is a dependency: what the class does to
+  - A line ``---<<runs>>--> Git`` after the operations of ``Repo`` is a dependency: what the class does to
     another class at run time, labelled by that interaction.
 """
 from __future__ import annotations

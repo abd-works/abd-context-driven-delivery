@@ -216,7 +216,7 @@ class OoadClass(OoadNode):
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
         self.collaborators: List[str] = collaborators if collaborators is not None else []
-        # What this class does to another class at run time, each named by its interaction: `---<<stops>>--> RunningProcess`.
+        # What this class does to another class at run time, each named by its interaction: `Repo ---<<runs>>--> Git`.
         self.dependencies: List[Relationship] = []
         self._properties = ModelChildren(self, "participants")
         self._operations = ModelChildren(self, "participants")
