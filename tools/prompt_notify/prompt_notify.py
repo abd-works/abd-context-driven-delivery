@@ -9,6 +9,8 @@ Off when the class is annotated ``@Hooks(disabled=True)``.
 
 from __future__ import annotations
 
+import importlib
+import inspect
 import json
 import os
 import re
@@ -20,8 +22,7 @@ from pathlib import Path
 from typing import ClassVar
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_ACTIONS_FOLDER = _REPO_ROOT / "cdd_guidance" / "actions"
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.agent_tools.name import Name
@@ -39,28 +40,10 @@ echo = Echo
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
 IDE_TOAST_EXTENSION = "cdd.prompt-notify-0.0.1"
-_FALLBACK_ACTIONS = (
-    "create-rule",
-    "createRule",
-    "document",
-    "generate",
-    "grill",
-    "iterate",
-    "partition",
-    "render",
-    "repair",
-    "satisfy",
-    "scan",
-    "sketch",
-    "validate",
-)
 _YAML_ACTION = re.compile(r"\baction:\s*([A-Za-z0-9_-]+)", re.I)
 _SKIP_BEGIN_FALLBACK = frozenset({"open_workspace", "end", "begin"})
 _ARROW = " \u2192 "
 _SAME_BURST_SECONDS = 2
-_FLAT_ACTION_PREFIX = "actions-"
-_FLAT_PRACTICE_PREFIX = "practices-"
-_RULE_SUFFIXES = frozenset({".mdc", ".md"})
 _SKILL_DIRS = ("/.cursor/skills/", "/.claude/skills/")
 _RULE_DIRS = ("/.cursor/rules/", "/.claude/rules/")
 
@@ -78,33 +61,49 @@ class PromptNotify:
         self.toast_roots: list | None = None
         self.echo = ""
         self.toast_stamp = ""
-        self.tool_name = ""
-        self.echo_kind = ""
-        self.echo_label = ""
-        self.skill_kind = ""
-        self.skill_found: dict[str, str] = {}
         self._begin_tools: dict = {}
         self._begin_toolset = None
         self._toast_dest: Path | None = None
 
     @property
     def catalog(self) -> list[tuple[str, str]]:
-        if type(self)._catalog is not None:
-            return type(self)._catalog
-        found: dict[str, str] = {}
-        skills = _REPO_ROOT / ".cursor" / "skills"
-        self.skill_found = found
-        self.skill_kind = "action"
-        self._walk_skill_tree(skills / "actions")
-        self.skill_kind = "practice"
-        self._walk_skill_tree(skills / "practices")
-        self._walk_flat_skill_tree(_REPO_ROOT / ".claude" / "skills")
-        for ide in (".cursor", ".claude"):
-            self._walk_rule_tree(_REPO_ROOT / ide / "rules" / "practices", found)
-        for name in _FALLBACK_ACTIONS:
-            found.setdefault(name.replace("_", "-"), "action")
-        type(self)._catalog = sorted(found.items(), key=lambda item: len(item[0]), reverse=True)
+        """Every name a tool call can mention, longest first, with its kind: each practice and fidelity CDD has, each
+        practice rule file, and each operation an action publishes as a skill. Read from the practice catalogue and the
+        action folders once per process, so a toast names only what exists."""
+        if type(self)._catalog is None:
+            found = {**self._practice_names(), **self._action_names()}
+            type(self)._catalog = sorted(found.items(), key=lambda item: len(item[0]), reverse=True)
         return type(self)._catalog
+
+    def _practice_names(self) -> dict[str, str]:
+        """Each practice's slug, each fidelity's slug, and each practice rule file's name, which joins the two
+        (``bdd-bdd-behavior``)."""
+        from harness.guidance.practice_catalogue import PracticeCatalogue
+
+        names: dict[str, str] = {}
+        for practice in PracticeCatalogue.practices():
+            names[practice.slug] = "practice"
+            for fidelity in practice.fidelities:
+                names[fidelity.slug] = "fidelity"
+                names[f"{practice.slug}-{fidelity.slug}"] = "guideline"
+        return names
+
+    def _action_names(self) -> dict[str, str]:
+        """Each operation an action folder under cdd_guidance/actions publishes as a skill, such as generate, grill, and
+        create-rule."""
+        folders = [folder for folder in sorted(_ACTIONS_FOLDER.iterdir()) if folder.is_dir() and folder.name[0] not in "_."]
+        return {self._compact(operation): "action" for folder in folders for operation in self._skills_in(folder)}
+
+    def _skills_in(self, folder: Path) -> list[str]:
+        from harness.guidance_actions import GuidanceAction
+        from harness.installation.files import Skill
+
+        module = importlib.import_module(f"cdd_guidance.actions.{folder.name}.{folder.name}")
+        actions = [
+            member for member in vars(module).values()
+            if inspect.isclass(member) and issubclass(member, GuidanceAction) and member.__module__ == module.__name__
+        ]
+        return [name for action in actions for name, member in vars(action).items() if Skill.marks(member)]
 
     @Hook("preToolUse")
     def on_pre_tool_use(self, hook_payload: dict) -> dict:
@@ -123,10 +122,7 @@ class PromptNotify:
         if not detected:
             return {"permission": "allow"}
         kind, label = detected
-        self.tool_name = str(tool_name)
-        self.echo_kind = kind
-        self.echo_label = label
-        self._log_echo()
+        self._log_echo(str(tool_name), kind, label)
         return {"permission": "allow", "user_message": f"{kind.title()}{_ARROW}{label}"}
 
     def detect_echo(
@@ -135,10 +131,10 @@ class PromptNotify:
         invoked = self._mcp_tool_name(hook_payload)
         if not invoked:
             return None
-        hosts = self._walk_toolsets(
+        searched = self._walk_toolsets(
             toolsets if toolsets is not None else self.echo_toolsets()
         )
-        for toolset in hosts:
+        for toolset in searched:
             found = self._echo_on_toolset(invoked, toolset)
             if found is not None:
                 return found
@@ -208,7 +204,7 @@ class PromptNotify:
         try:
             con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
             try:
-                row = con.execute(
+                stored = con.execute(
                     "SELECT value FROM cursorDiskKV WHERE key = ?",
                     (f"composerData:{conversation_id}",),
                 ).fetchone()
@@ -216,9 +212,9 @@ class PromptNotify:
                 con.close()
         except (OSError, sqlite3.Error):
             return ""
-        if not row or row[0] is None:
+        if not stored or stored[0] is None:
             return ""
-        raw = row[0]
+        raw = stored[0]
         if isinstance(raw, bytes):
             raw = raw.decode("utf-8", "replace")
         try:
@@ -281,11 +277,9 @@ class PromptNotify:
                 return marked
         return self.detect(hook_payload)
 
-    def _log_echo(self) -> None:
+    def _log_echo(self, tool_name: str, kind: str, label: str) -> None:
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        sys.stderr.write(
-            f"{stamp} [prompt-notify] tool={self.tool_name} {self.echo_kind}={self.echo_label}\n"
-        )
+        sys.stderr.write(f"{stamp} [prompt-notify] tool={tool_name} {kind}={label}\n")
 
     def _catalog_match(
         self, haystacks: list[str], action_names: set[str]
@@ -399,65 +393,6 @@ class PromptNotify:
 
     def _compact(self, text: str) -> str:
         return Name(text).kebab
-
-    def _walk_skill_tree(self, root: Path) -> None:
-        if not root.is_dir():
-            return
-        found = self.skill_found
-        top_kind = self.skill_kind
-        for child in root.iterdir():
-            if not child.is_dir():
-                continue
-            token = child.name.replace("_", "-")
-            found.setdefault(token, top_kind)
-            if top_kind != "practice":
-                continue
-            self._walk_practice_leaves(child)
-
-    def _walk_practice_leaves(self, child: Path) -> None:
-        found = self.skill_found
-        for leaf in child.iterdir():
-            if leaf.is_dir():
-                found.setdefault(leaf.name.replace("_", "-"), "fidelity")
-
-    def _walk_flat_skill_tree(self, root: Path) -> None:
-        """Claude joins nested skill folders into one name: ``actions-sketch``,
-        ``practices-bdd``, ``practices-bdd-bdd-behavior``."""
-        if not root.is_dir():
-            return
-        names = [child.name for child in root.iterdir() if child.is_dir()]
-        for name in names:
-            if name.startswith(_FLAT_ACTION_PREFIX):
-                self.skill_found.setdefault(name[len(_FLAT_ACTION_PREFIX):], "action")
-        practice_names = [
-            name[len(_FLAT_PRACTICE_PREFIX):] for name in names if name.startswith(_FLAT_PRACTICE_PREFIX)
-        ]
-        for name in practice_names:
-            self._add_flat_practice_skill(name, practice_names)
-
-    def _add_flat_practice_skill(self, name: str, practice_names: list[str]) -> None:
-        owners = [other for other in practice_names if name.startswith(f"{other}-")]
-        if not owners:
-            self.skill_found.setdefault(name, "practice")
-            return
-        owner = max(owners, key=len)
-        self.skill_found.setdefault(name[len(owner) + 1:], "fidelity")
-
-    def _walk_rule_tree(self, root: Path, found: dict[str, str]) -> None:
-        if not root.is_dir():
-            return
-        for child in root.iterdir():
-            if child.suffix in _RULE_SUFFIXES:
-                found.setdefault(child.stem.replace("_", "-"), "guideline")
-                continue
-            if not child.is_dir():
-                continue
-            found.setdefault(child.name.replace("_", "-"), "guideline")
-            for leaf in (path for path in child.iterdir() if path.suffix in _RULE_SUFFIXES):
-                found.setdefault(
-                    f"{child.name}-{leaf.stem}".replace("_", "-"),
-                    "guideline",
-                )
 
     def _mcp_tool_name(self, hook_payload: dict) -> str:
         name = str(hook_payload.get("tool_name") or "")

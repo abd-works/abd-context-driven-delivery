@@ -1,4 +1,4 @@
-"""Partition kit — index, segment, completeness."""
+"""Partition action: index a corpus, cut it into verbatim segments, and check each segment's named entries."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import inspect
 from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
-from partition.partition_index import PartitionIndex
-from partition.segment import Segment, SegmentCompletenessConfig
+from cdd_guidance.actions.partition.partition_index import PartitionIndex
+from cdd_guidance.actions.partition.segment import MIN_ENTRY_BODY_CHARS, Segment, SegmentCompletenessConfig
 from harness.agent_tools import agent_instructions, agent_toolset
 from harness.markdown import markdown
 from harness.agent_tools.agent_tools import agent_tool
@@ -18,9 +18,7 @@ from harness.mcp.mcp_server import Mcp
 class Partition(GuidanceAction):
     """Corpus partition: index, segment, completeness.
 
-    Real toolset (not a mixin). Slash ``/partition`` runs this kit with
-    ``arguments.guidance``. Workspace open and the hanging session turn come from
-    ``GuidanceAction.begin`` / ``end``.
+    Slash ``/partition`` runs this action once for each listed guidance, in the session the call works in.
     """
 
     @property
@@ -33,7 +31,7 @@ class Partition(GuidanceAction):
         self,
         segment_path: str,
         expected_names: str = "",
-        min_body_chars: int = 120,
+        min_body_chars: int = MIN_ENTRY_BODY_CHARS,
         index_path: str = "",
     ) -> str:
         """Run named-entry completeness on a ``*-segment.md`` chunk."""
@@ -66,14 +64,14 @@ class Partition(GuidanceAction):
     @markdown
     def partition_guidance(self) -> str: ...
 
-    @property
-    def _guidance_to_index_by(self) -> str:
-        """partition_guidance.md once for each listed practice, naming that practice's own file and the Scaffold
-        subsection of the fidelity it works at, which says what the index lists."""
-        return "\n\n".join(
-            self.partition_guidance.replace("{{slug}}", item.context_index_key).replace("{{scaffold}}", item.fidelities.current.scaffold)
-            for item in self.listed()
-            if not isinstance(item, str) and getattr(item.fidelities, "current", None) is not None
+    def _guidance_to_index_by(self, item) -> str:
+        """partition_guidance.md for one listed practice, naming that practice's own file and the Scaffold subsection
+        of the fidelity it works at, which says what the index lists. Text guidance, and a practice with no current
+        fidelity, have none."""
+        if isinstance(item, str) or getattr(item.fidelities, "current", None) is None:
+            return ""
+        return self.partition_guidance.replace("{{slug}}", item.context_index_key).replace(
+            "{{scaffold}}", item.fidelities.current.scaffold
         )
 
     def _folder(self, out_root: str | None) -> Path:
@@ -103,7 +101,7 @@ class Partition(GuidanceAction):
         out_root: str | None = None,
         paths: list[str] | str | None = None,
     ) -> str:
-        """Write the partition index for this corpus under the session .context folder. Name every expected segment so completeness can be checked later.
+        """Write the partition index for this corpus in the .context folder under out_root, or under the session's root when out_root is omitted. Name every expected segment so completeness can be checked later.
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
         context: in-process text. Leave this empty on an MCP call."""
         source = source_label(context, paths)
@@ -112,24 +110,26 @@ class Partition(GuidanceAction):
     @Mcp
     @agent_tool
     def segment(self, out_root: str | None = None) -> str:
-        """Write verbatim source chunks from the index into segment files under the session path. Completeness must use named entries, not length alone."""
+        """Write verbatim source chunks from the index into segment files under out_root, or under the session's root when out_root is omitted. Completeness must use named entries, not length alone."""
         return (
             f"Verbatim source chunks written under {self._folder(out_root).as_posix()}/{{artifact}}/.context/ "
             "from {subject}-index.md. "
             "Named-entry completeness verified (length-only is a false PASS)."
         )
-      
+
     @agent_instructions
     def partition_corpus(self,
         context: str = "",
         mode: str = "one_go",
         paths: list[str] | str | None = None,
+        out_root: str | None = None,
     ) -> str:
         """Build the index and segment files for one corpus. Fail if any new chunk misses a named entry the index required.
-        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context."""
+        paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the corpus in context.
+        out_root: folder for the index and segments. Omit it to use the session's root."""
         source = source_label(context, paths)
-        self.index()
-        self.segment()
+        self.index(context, out_root, paths)
+        self.segment(out_root)
         self.verify_segment_completeness(
             segment_path="{artifact}-segment.md", index_path="{subject}-index.md"
         )
@@ -138,6 +138,12 @@ class Partition(GuidanceAction):
             "Read those files locally. "
             "Hard fail if any new chunk fails named-entry completeness."
         )
+
+    def _corpus_steps(self, item, context: str, out_root: str | None, paths: list[str] | str | None) -> str:
+        """What partitioning the corpus asks for one listed guidance: what its index lists, then the index and the
+        segments, both in the folder the call names."""
+        steps = (self._guidance_to_index_by(item), self.index(context, out_root, paths), self.segment(out_root))
+        return "\n\n".join(step for step in steps if step)
 
     @Mcp
     @Skill
@@ -156,10 +162,9 @@ class Partition(GuidanceAction):
         out_root: folder for the index and segments. Omit it to use the session path."""
         self._bind_guidance(guidance)
         source = source_label(context, paths)
-        self._guidance_to_index_by
 
-        def on(item) -> None:
-            self.partition_corpus(source, mode)
+        def on(item) -> str:
+            return self._corpus_steps(item, context, out_root, paths)
 
         self.run(on, action="partition")
         return (

@@ -1,5 +1,6 @@
 """BDD development specs for the prompt_log audit hook."""
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -15,8 +16,9 @@ if _tools not in sys.path:
 from expects import contain, equal, expect, have_key
 from mamba import after, before, context, description, it
 from harness.installation.installer import Installer
+from space.session.throwaway_project import ThrowawayProject
 
-import prompt_log.prompt_log as pl  # noqa: E402
+import tools.prompt_log.prompt_log as pl  # noqa: E402
 
 _CURSOR = _REPO_ROOT / ".cursor"
 _RULE = _CURSOR / "rules" / "character-driven-development.mdc"
@@ -62,7 +64,7 @@ with description("a prompt log hook"):
                         {"type": "file", "file_path": str(_SKILL)},
                     ],
                 }
-                out = pl.handle(payload, target=log_file)
+                out = pl.PromptLog(log_file).before_submit_prompt(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"continue": True}))
                 expect(text).to(contain("beforeSubmitPrompt"))
@@ -87,7 +89,7 @@ with description("a prompt log hook"):
                         {"type": "rule", "file_path": str(_BEHAVIOR_RULE)},
                     ],
                 }
-                out = pl.handle(payload, target=log_file)
+                out = pl.PromptLog(log_file).before_read_file(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"permission": "allow"}))
                 expect(text).to(contain("beforeReadFile"))
@@ -107,7 +109,7 @@ with description("a prompt log hook"):
                     "tool_name": "Read",
                     "tool_input": {"path": str(_SKILL)},
                 }
-                out = pl.handle(payload, target=log_file)
+                out = pl.PromptLog(log_file).pre_tool_use(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"permission": "allow"}))
                 expect(text).to(contain("preToolUse:Read"))
@@ -130,7 +132,7 @@ with description("a prompt log hook"):
                         "subagent_type": "explore",
                     },
                 }
-                out = pl.handle(payload, target=log_file)
+                out = pl.PromptLog(log_file).pre_tool_use(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"permission": "allow"}))
                 expect(text).to(contain("preToolUse:Task"))
@@ -149,7 +151,7 @@ with description("a prompt log hook"):
                     "subagent_model": "composer-2.5",
                     "task": "Review prompt_log.py for clean engineering",
                 }
-                out = pl.handle(payload, target=log_file)
+                out = pl.PromptLog(log_file).subagent_start(payload)
                 text = log_file.read_text(encoding="utf-8")
                 expect(out).to(equal({"permission": "allow"}))
                 expect(text).to(contain("subagentStart"))
@@ -169,9 +171,24 @@ with description("a prompt log hook"):
                         {"type": "rule", "file_path": str(_AGENT)},
                     ],
                 }
-                out = pl.handle(payload, target=log_file)
+                out = pl.PromptLog(log_file).before_submit_prompt(payload)
                 expect(out).to(equal({"continue": True}))
                 expect(log_file.read_text(encoding="utf-8")).to(contain("engineer.md"))
+
+    with context("that was made with no log in a project being worked on"):
+        with before.each:
+            self.saved_override = os.environ.pop("PROMPT_LOG_PATH", None)
+            self.project = ThrowawayProject()
+            pl.PromptLog().subagent_start({"hook_event_name": "subagentStart", "task": "Audit the project log"})
+
+        with after.each:
+            ThrowawayProject.close_all()
+            if self.saved_override is not None:
+                os.environ["PROMPT_LOG_PATH"] = self.saved_override
+
+        with it("should write the entry into the log of the session open in that project"):
+            log = self.project.root / ".sessions" / "main" / "logs" / "prompt-log.txt"
+            expect(log.read_text(encoding="utf-8")).to(contain("Audit the project log"))
 
     with context("that has been installed to Cursor") as self:
         with before.each:

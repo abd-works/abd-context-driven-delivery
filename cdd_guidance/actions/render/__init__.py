@@ -1,2 +1,1 @@
-"""Catalog-folder import: `from render import ...`."""
-from .render import *  # noqa: F403
+"""The Render action. Import its classes from their modules, such as cdd_guidance.actions.render.render."""

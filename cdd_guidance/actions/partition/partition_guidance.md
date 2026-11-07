@@ -1,6 +1,6 @@
 {{scaffold}}
 
-Each primary artifact must represent a mechanically distinct concept — not a chapter, heading, or TOC row from source.
+Each primary artifact must represent a mechanically distinct concept — not a chapter, heading, or table-of-contents entry from source.
 
 ## Must follow (read before indexing)
 1. Read all **source context** in full.
@@ -15,7 +15,7 @@ Each primary artifact must represent a mechanically distinct concept — not a c
 1. Skim corpus for the primary artifact described in the scaffold above.
 2. Name them per the naming rules in the scaffold. Source chapters/files **contribute to** artifacts (many→one or one→many).
 3. Under each, list thin secondary artifacts (TODOs OK).
-4. Write `.context/{subject}-index.md` with the primary artifact as the primary rows; later segment creates chunks and the index points at them.
+4. Write `.context/{subject}-index.md` listing each primary artifact as a top-level entry; later segment creates chunks and the index points at them.
 
 **Additive pass:** see partition_pipeline.md § Multi-pass / what a later pass does — open existing index, add columns per the scaffold hierarchy, do not delete prior columns.
 

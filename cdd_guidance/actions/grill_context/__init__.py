@@ -1,4 +1,1 @@
-"""grill_context — GrillContext toolset."""
-from grill_context.grill_context import GrillContext
-
-__all__ = ["GrillContext"]
+"""The GrillContext action. Import its classes from their modules, such as cdd_guidance.actions.grill_context.grill_context."""

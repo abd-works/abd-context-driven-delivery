@@ -1,4 +1,4 @@
-"""BDD spec for Partition - kit prose on PracticeGuidance."""
+"""BDD spec for the Partition action, its index, and its segments."""
 
 import re
 import sys
@@ -17,16 +17,15 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 from expects import be_false, be_none, be_true, equal, expect, start_with
 from mamba import after, before, context, description, it
 
-from partition.partition_index import PartitionIndex
-from partition.partition import Partition
-from partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
+from cdd_guidance.actions.partition.partition_index import PartitionIndex
+from cdd_guidance.actions.partition.partition import Partition
+from cdd_guidance.actions.partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.markdown import Markdown
 from space.session.throwaway_project import ThrowawayProject
 from harness.agent_tools.agent_tools import AgentToolSet
 
-_KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
     "cdd_guidance.builders.create_context_tool._examples.car_chronicle.car_chronicle:CarChronicle"
 )
@@ -38,7 +37,7 @@ def _section(name: str) -> str:
     return Markdown.from_label(Partition(), name).extract()
 
 
-with description("Partition kit prose"):
+with description("the partition action's guidance"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
         ThrowawayProject()
@@ -53,7 +52,7 @@ with description("Partition kit prose"):
         expect("# Step 2 \u2014 Segment" in content).to(be_true)
 
 
-with description("Partition kit on hosts"):
+with description("a practice guidance beside the partition action"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
         ThrowawayProject()
@@ -115,6 +114,28 @@ with description("a partition action"):
             folder = Path(tempfile.mkdtemp())
             reply = Partition().index(paths="README.md", out_root=str(folder))
             expect(f"under {folder.resolve().as_posix()}/.context/" in reply).to(be_true)
+
+    with context("that an agent calls on a fidelity with an out_root"):
+        with before.each:
+            self.folder = Path(tempfile.mkdtemp()).resolve().as_posix()
+            operation = Partition()._discover_instruction_members()["partition"]
+            arguments = {"guidance": "stories-story-map", "paths": "README.md", "context": "", "mode": "one_go", "out_root": self.folder}
+            self.reply = operation.invoke(arguments)
+
+        with it("should index the named corpus under that folder"):
+            expect(f"Index the corpus at README.md under {self.folder}/.context/" in self.reply).to(be_true)
+
+        with it("should write the segments under that folder"):
+            expect(f"Verbatim source chunks written under {self.folder}/" in self.reply).to(be_true)
+
+    with context("that an agent calls on two practices"):
+        with before.each:
+            operation = Partition()._discover_instruction_members()["partition"]
+            arguments = {"guidance": "stories-story-map ddd-bounded-context", "paths": "README.md", "context": "", "mode": "one_go", "out_root": None}
+            self.reply = operation.invoke(arguments)
+
+        with it("should name what each practice's index lists from its own file"):
+            expect(("`stories.md` cited" in self.reply, "`ddd.md` cited" in self.reply)).to(equal((True, True)))
 
 
 # ---------------------------------------------------------------------------
@@ -387,17 +408,14 @@ with description("a PartitionIndex"):
             )
 
         with it("should parse min_body_chars from the config block"):
-            expect(self.index.min_body_chars).to(equal(80))
+            expect(self.index.completeness.min_body_chars).to(equal(80))
 
         with it("should parse non_entry_headers from the config block"):
-            expect("NAME" in self.index.non_entry_headers).to(be_true)
-            expect("COST" in self.index.non_entry_headers).to(be_true)
+            expect("NAME" in self.index.completeness.non_entry_headers).to(be_true)
+            expect("COST" in self.index.completeness.non_entry_headers).to(be_true)
 
         with it("should parse short_body_pattern from the config block"):
-            expect(self.index.short_body_pattern).not_to(be_none)
-
-        with it("should expose the completeness config"):
-            expect(self.index.completeness.min_body_chars).to(equal(80))
+            expect(self.index.completeness.short_body_pattern).not_to(be_none)
 
         with it("should expose the path"):
             expect(self.index.path).to(equal(Path("/fake/index.md")))
@@ -412,7 +430,7 @@ with description("a PartitionIndex"):
             )
 
         with it("should use the default min_body_chars of 120"):
-            expect(self.index.min_body_chars).to(equal(120))
+            expect(self.index.completeness.min_body_chars).to(equal(120))
 
     with context("with resolve_near called"):
         with context("that finds an index in a parent .context directory"):

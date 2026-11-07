@@ -14,7 +14,7 @@ from expects import contain, expect
 from mamba import after, before, description, it
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
-from satisfy.satisfy import Satisfy
+from cdd_guidance.actions.satisfy.satisfy import Satisfy
 from space.session.throwaway_project import ThrowawayProject
 
 

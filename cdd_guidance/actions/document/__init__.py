@@ -1,2 +1,1 @@
-"""Catalog-folder import: `from document import ...`."""
-from .document import *  # noqa: F403
+"""The Document action. Import its classes from their modules, such as cdd_guidance.actions.document.document."""

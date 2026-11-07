@@ -2,7 +2,7 @@
 
 Markdown channel for *Echo* and *PromptNotify*. Same types as `prompt-notify-model.py`.
 
-**Out of scope:** putting `@echo` on every kit method now.
+**Out of scope:** putting `@echo` on every action's operations now.
 
 ---
 
@@ -10,12 +10,12 @@ Markdown channel for *Echo* and *PromptNotify*. Same types as `prompt-notify-mod
 
 *Echo* is a *Destination* mark. It sets `_echo` on the callable. *AgentOperation* and *AgentInstructions* both accept it — `begin` and `instructions` are *AgentInstructions*.
 
-*PromptNotify* is the `preToolUse` *Hook*. It toasts the invoked member when that callable has `_echo`. If not, and the toolset inherits `begin` with `_echo`, it toasts **Action →** the kit name. *catalog* names action, practice, fidelity, and guideline tokens for path and MCP matching when no Echo mark hits.
+*PromptNotify* is the `preToolUse` *Hook*. It toasts the invoked member when that callable has `_echo`. If not, and the toolset inherits `begin` with `_echo`, it toasts **Action →** the action's name. *catalog* names action, practice, fidelity, and guideline tokens for path and MCP matching when no Echo mark hits; it reads them from `PracticeCatalogue` and the operations each action folder publishes as a skill.
 
 ### echo
 
 - `@echo` on a member — that invoke toasts.
-- `@echo` on `GuidanceAction.begin` — every kit invoke toasts as Action, because every kit runs `begin`.
+- `@echo` on `GuidanceAction.begin` — every action call toasts as Action, because every action runs `begin`.
 - **Invariant:** `run` always calls `begin`. *Sketch* and *GrillContext* call `begin` without `run`.
 
 ### prompt echo
@@ -81,7 +81,7 @@ install_ide_toast_extension(): Path
 ---
 
 # harness/guidance_actions
-- **Purpose:** One *Echo* on `begin` covers every action kit.
+- **Purpose:** One *Echo* on `begin` covers every action.
 - **Seam (terms):** GuidanceAction.begin
 - **Dependencies (one-way):** tools/prompt_notify (Echo, inject_rules_toast, show_ide_toast)
 

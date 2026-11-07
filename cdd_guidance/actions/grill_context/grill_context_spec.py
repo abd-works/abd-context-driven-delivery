@@ -17,7 +17,7 @@ from expects import be_true, contain, equal, expect
 from mamba import before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
-from grill_context.grill_context import GrillContext
+from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session import Session
 
@@ -110,6 +110,16 @@ with description("GrillContext toolset"):
                 priv_dir = Path(self.root) / "_private"
                 priv_dir.mkdir()
                 (priv_dir / "context.md").write_text("# private\n", encoding="utf-8")
+
+                result = json.loads(self.gc.explore_context_files(folder=self.root))
+
+                expect(result).to(equal([]))
+
+        with context("that scans a root with a virtual environment, a git folder, and installed node packages"):
+            with it("should exclude files inside those folders"):
+                for name in (".venv", ".git", "node_modules"):
+                    (Path(self.root) / name / ".context").mkdir(parents=True)
+                    (Path(self.root) / name / ".context" / "module-context.md").write_text("# kept out\n", encoding="utf-8")
 
                 result = json.loads(self.gc.explore_context_files(folder=self.root))
 

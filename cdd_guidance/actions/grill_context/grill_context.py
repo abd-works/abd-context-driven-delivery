@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction, source_label
-from harness.agent_tools import agent_instructions, agent_toolset
+from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.installation.files import Skill
 from harness.mcp.mcp_server import Mcp
+
+_NEVER_WALKED = frozenset({".git", ".venv", "node_modules"})
 
 @agent_toolset
 class GrillContext(GuidanceAction):
@@ -48,17 +51,22 @@ class GrillContext(GuidanceAction):
         root_path = Path(folder) if folder else self.session.root
         if not root_path.exists():
             return json.dumps([])
-        for candidate in sorted(root_path.rglob("*")):
-            if not candidate.is_file():
-                continue
+        for candidate in self._files_under(root_path):
             parts = candidate.relative_to(root_path).parts
-            if any(part.startswith("__") or part.startswith("_") for part in parts[:-1]):
-                continue
             if "context" in candidate.name.lower():
                 results.append({"path": str(candidate), "kind": "context-named"})
             elif ".context" in parts:
                 results.append({"path": str(candidate), "kind": "context-folder"})
         return json.dumps(results, indent=2)
+
+    def _files_under(self, root: Path) -> list[Path]:
+        """Every file under root, in path order, outside private (_) folders and the folders no context lives in
+        (.git, .venv, node_modules), which are never walked: a project's are large enough to stall the call."""
+        found: list[Path] = []
+        for folder, subfolders, files in os.walk(root):
+            subfolders[:] = [name for name in subfolders if not name.startswith("_") and name not in _NEVER_WALKED]
+            found.extend(Path(folder) / name for name in files)
+        return sorted(found)
 
     @Mcp
     @agent_tool
@@ -91,13 +99,19 @@ class GrillContext(GuidanceAction):
         """Interview the plan against codebase context until questions are grounded in files you have read, then generate each listed guidance. Ask one framed question at a time and write each resolved insight to grill-answers.md."""
         self.begin(guidance)
         self.grill_with_context()
-        self.each(lambda item: self._generate().generate(item if isinstance(item, str) else [item]))
+        self.generate_each()
         return "Grill complete; generate instructions applied."
 
-    def _generate(self):
-        from generate.generate import Generate
+    def generate_each(self) -> list:
+        """Generate each guidance this action lists, or its text guidance once, in this action's session: the step a
+        grill ends with, and the one sketch and iterate end with after their own grill."""
+        return self.each(self._generate)
 
-        return Generate(self.session)
+    def _generate(self, item) -> str:
+        from cdd_guidance.actions.generate.generate import Generate
+
+        worked_on = item if isinstance(item, str) else [item]
+        return self._inside(Generate, worked_on).generate(worked_on)
 
     @agent_instructions
     def grill_with_context(self, plan: str = "", paths: list[str] | str | None = None) -> str:
@@ -107,15 +121,15 @@ class GrillContext(GuidanceAction):
         """Step 0 - The session's root is where context is explored and where grill-answers.md is written ({session root}/.context/grill-answers.md); the tools read it from the session, so pass no root."""
         """Step 1 - Context discovery: call explore_context_files() for the session's root, and explore_context_files(folder=...) for each folder referenced in the plan. Prefer-read any active *-sketch.md for this plan so later questions can validate the sketch's thinking."""
         self.explore_context_files()
-        """Step 2 - MUST prove-read before asking. Upward context is more general; downward is more specific. Read every relevant context file referenced or implied by the decision - owning `*-segment.md`, module-context, grill-answers, sketches, peer story-context, build-order, and any path the plan or prior answers cite. A consumed handoff is gone — do not hunt archives for current state. Index/overlay mid-epic stubs are never enough for inventory. Call read_context_file to confirm each path, then Read that file locally. Do not paste the file body into an MCP call. Grep, titles, memory, or primer-only reads do not count."""
-        self.read_context_file()
+        """Step 2 - MUST read before asking. Upward context is more general; downward is more specific. Read every relevant context file referenced or implied by the decision - owning `*-segment.md`, module-context, grill-answers, sketches, peer story-context, build-order, and any path the plan or prior answers cite. A consumed handoff is gone — do not hunt archives for current state. Index/overlay mid-epic stubs are never enough for inventory. Call read_context_file to confirm each path, then Read that file locally. Do not paste the file body into an MCP call. Grep, titles, memory, or primer-only reads do not count."""
+        tools(self.read_context_file)
         """Step 2a - Proof gate: do not proceed to Step 3 until this turn can name the path(s) read and cite concrete terms from them. Missing a referenced file means read it - do not ask yet. Asking from a skim is a defect."""
         """Step 2b - Sketch-validation gate (when a sketch file is in play): ground the next question in what the sketch asserted — ask whether a claimed shape, seam, or rationale is correct, surprising, or missing. Named mistakes from prior sketch review must still constrain options. Do not interview as if the sketch did not exist or as if those mistakes never happened."""
         """Step 3 - Only after Step 2a: ask ONE focused question using the AskQuestion Cursor tool (or structured multiple-choice in chat if that tool is unavailable). Prefer thinking/context questions (why this seam, what to port as-is vs change, ownership) over syntax or naming trivia. Never present bare options: the user must have enough concept context to decide."""
-        """Step 3a - Frame the decision first (2-5 sentences): name the branch of the design tree, name the source file(s) just read (and the sketch claim under review when Step 2b applies), and ground the choice in concepts from those files and the active practice material for this session (whatever domain or generator is in play - do not assume a particular practice). Do not invent trade-offs untethered from that evidence. Prove-read grill-answers.md, but do not paste or restate prior grill-answer bodies into the AskQuestion text — cite grill-answers.md by path or heading only if the user needs a pointer. Do not accumulate the interview into the next question."""
+        """Step 3a - Frame the decision first (2-5 sentences): name the branch of the design tree, name the source file(s) just read (and the sketch claim under review when Step 2b applies), and ground the choice in concepts from those files and the active practice material for this session (whatever domain or generator is in play - do not assume a particular practice). Do not invent trade-offs untethered from that evidence. Read grill-answers.md, but do not paste or restate prior grill-answer bodies into the AskQuestion text — cite grill-answers.md by path or heading only if the user needs a pointer. Do not accumulate the interview into the next question."""
         """Step 3b - Present 3-5 options. Put the recommended answer first (label it "(Recommended)"). For each option, give one short rationale tied to those concepts - what choosing it implies for the design under discussion. Always include an "Other / I'll specify" option last. Wait for the answer before proceeding."""
         """Step 3c - Batch similar questions: when several peers share the same frame (e.g. port existing functionality as-is versus change it), ask once with allow_multiple or grouped options instead of a long serial loop. Exhausting one-near-identical-question-at-a-time interviews are a defect."""
         """Step 4 - If a question can be answered by exploring the codebase, explore first instead of asking."""
         """Step 5 - After each resolved insight, call write_grill_answer(heading=..., body=...) immediately. Do not batch writes. Keep entries concise; reference code paths rather than repeating logic."""
-        self.write_grill_answer()
+        tools(self.write_grill_answer)
         return f"Grilling session for: {source_label(plan, paths)}"

@@ -75,7 +75,7 @@ class PromptNotify:
 
 # FILE: guidance_actions.py
 class GuidanceAction:
-    """Shared action prelude. begin is the one Echo for every kit."""
+    """Shared action prelude. begin is the one Echo for every action."""
 
     def run(self, guidance, operation, *, action: str = "") -> list:
         # always calls begin
@@ -94,7 +94,7 @@ class GuidanceAction:
 
 
 class Generate(GuidanceAction):
-    """Kit that runs through GuidanceAction.run."""
+    """An action that runs through GuidanceAction.run."""
 
     def generate(self, guidance) -> str:
         # -> run
@@ -102,7 +102,7 @@ class Generate(GuidanceAction):
 
 
 class Sketch(GuidanceAction):
-    """Kit that calls GuidanceAction.begin directly."""
+    """An action that calls GuidanceAction.begin directly."""
 
     def sketch(self, guidance) -> str:
         # -> begin

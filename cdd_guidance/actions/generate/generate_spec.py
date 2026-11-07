@@ -16,7 +16,7 @@ import tempfile
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
-from generate.generate import Generate
+from cdd_guidance.actions.generate.generate import Generate
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
@@ -102,6 +102,28 @@ with description("a generate action on practice guidance") as self:
             prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
             expect(prose).to(contain(f"{self.project.resolve().as_posix()}/.context/story-map.md"))
 
+        with context("that generates a fidelity in a format its earlier fidelity has no file in, but another format it has"):
+            with before.each:
+                (self.project / ".context").mkdir(exist_ok=True)
+                (self.project / ".context" / "story-map.drawio").write_text("<mxfile/>\n", encoding="utf-8")
+                self.prose = _expanded_generate(self.action, {"guidance": "stories-scenarios format=markdown"}).instructions
+
+            with it("should render the earlier fidelity into that format first"):
+                expect(self.prose).to(contain("render the earlier fidelity stories-story-map into markdown"))
+
+            with it("should render it from the earlier fidelity's file in the format it has"):
+                expect(self.prose).to(contain("source drawio, and paths .context/story-map.drawio"))
+
+        with context("that generates a fidelity in a format its earlier fidelity already has a file in"):
+            with before.each:
+                (self.project / ".context").mkdir(exist_ok=True)
+                (self.project / ".context" / "story-map.drawio").write_text("<mxfile/>\n", encoding="utf-8")
+                (self.project / ".context" / "story-map.md").write_text("# Story map\n", encoding="utf-8")
+                self.prose = _expanded_generate(self.action, {"guidance": "stories-scenarios format=markdown"}).instructions
+
+            with it("should render nothing first"):
+                expect(self.prose).not_to(contain("render the earlier fidelity"))
+
         with context("that an MCP call names a guidance slug"):
             with before.each:
                 self.action.generate(guidance="stories-story-map")
@@ -120,7 +142,7 @@ with description("a generate action on practice guidance") as self:
         with context("that an agent runs it as an MCP command"):
             with before.each:
                 server = McpServer(project=self.project)
-                server.start(("generate.generate:Generate",))
+                server.start(("cdd_guidance.actions.generate.generate:Generate",))
                 self.reply = server.invoke_prompt("generate.generate", {"guidance": "stories-story-map"})
 
             with it("should name the session's session.json"):
@@ -141,7 +163,7 @@ with description("a generate action on practice guidance") as self:
                 other.mkdir(parents=True)
                 (other / "session.json").write_text('{"name": "beta", "workpath": "' + (self.project / "src").as_posix() + '"}', encoding="utf-8")
                 server = McpServer(project=self.project)
-                server.start(("generate.generate:Generate",))
+                server.start(("cdd_guidance.actions.generate.generate:Generate",))
                 self.reply = server.invoke_prompt("generate.generate", {"guidance": "stories-story-map session=.sessions/beta/session.json"})
 
             with it("should describe that session, not the one open"):
@@ -157,7 +179,7 @@ with description("a generate action on practice guidance") as self:
         with context("that the same cdd server has already generated once"):
             with before.each:
                 server = McpServer(project=self.project)
-                server.start(("generate.generate:Generate",))
+                server.start(("cdd_guidance.actions.generate.generate:Generate",))
                 server.invoke_prompt("generate.generate", {"guidance": "stories-story-map"})
                 server.invoke_prompt("generate.generate", {"guidance": "stories-scenarios"})
 

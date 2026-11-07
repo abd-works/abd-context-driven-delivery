@@ -12,11 +12,12 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from expects import contain, equal, expect
-from mamba import context, description, it
+from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
 from harness.agent_tools.agent_tools import AgentToolSet
 from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE, marked_as_sub_agent
+from space.session.throwaway_project import ThrowawayProject
 
 
 def diagnose_tool():
@@ -85,3 +86,21 @@ with description("Diagnose toolset"):
             # Assert
             expect(instructions).to(contain("Phase 6"))
             expect(instructions).to(contain("post-mortem"))
+
+
+with description("a diagnose action in a project being worked on"):
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        ThrowawayProject.close_all()
+
+    with context("that names a practice fidelity"):
+        with before.each:
+            self.rules = Diagnose().diagnose("stories-story-map")
+
+        with it("should give the practice's shared rules"):
+            expect(self.rules).to(contain("`do-not-invent-requirements`"))
+
+        with it("should give that fidelity's own rules"):
+            expect(self.rules).to(contain("`verb-noun-format`"))

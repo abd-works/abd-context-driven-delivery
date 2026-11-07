@@ -18,7 +18,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from space.session.throwaway_project import ThrowawayProject
-from sketch import Sketch
+from cdd_guidance.actions.sketch.sketch import Sketch
 from harness.agent_tools.agent_tools import AgentToolSet
 
 

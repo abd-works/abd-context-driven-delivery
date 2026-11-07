@@ -1,37 +1,24 @@
 """
 Read-only prompt audit hook — logs what crosses the wire to the model.
 
-Appends to ``.context/sessions/{name}/logs/prompt-log.txt`` on:
+Appends to ``.sessions/{name}/logs/prompt-log.txt`` in the project being worked on, for the session open there, on:
 - beforeSubmitPrompt — user prompt + rule/file attachments
 - beforeReadFile — file content Cursor sends to the model
 - preToolUse — tool calls (Task prompts, Read paths, shell, etc.)
 - subagentStart — subagent task descriptions
+- afterAgentResponse — the agent's reply text
 """
 
 import json
 import os
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.hooks.hooks import Hook, Hooks
 _PREVIEW_LINES = 8
 _PREVIEW_CHARS = 600
-
-
-def log_path() -> Path:
-    """Logs always live under the active session folder."""
-    override = os.environ.get("PROMPT_LOG_PATH")
-    if override:
-        return Path(override)
-    from harness.hooks.session_logs import SessionLogs
-
-    return SessionLogs(_REPO_ROOT).session_log_path("prompt-log.txt")
+_LOG_NAME = "prompt-log.txt"
 
 
 def _norm_path(path: str) -> str:
@@ -92,15 +79,6 @@ def _header(event: str, data: dict) -> str:
         f"{ts}  {event}  conv={conv}  gen={gen}  model={model}\n"
         f"{'-' * 78}\n"
     )
-
-
-def append_log(block: str, target: Path | None = None) -> None:
-    path = target or log_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(block)
-        if not block.endswith("\n"):
-            f.write("\n")
 
 
 def format_before_submit(data: dict) -> str:
@@ -179,46 +157,54 @@ def format_after_agent_response(data: dict) -> str:
 @Hooks(disabled=True)
 @agent_toolset
 class PromptLog:
-    """Audit what Cursor sends the model — one ``@Hook`` per event."""
+    """Audit what Cursor sends the model — one ``@Hook`` per event, each writing that event's entry to the log.
+
+    The log is the file the toolset was made with; made with none, ``PROMPT_LOG_PATH`` when set, else
+    ``prompt-log.txt`` in the logs folder of the session open in the project being worked on, read for each event so
+    the log follows a session switch."""
+
+    def __init__(self, log: Path | None = None) -> None:
+        self._log = log
+
+    @property
+    def log(self) -> Path:
+        if self._log is not None:
+            return self._log
+        override = os.environ.get("PROMPT_LOG_PATH")
+        if override:
+            return Path(override)
+        from space.repo.repo import Repo
+        from space.work_state import project_checkout
+
+        return Repo(project_checkout()).current_session.hook_log(_LOG_NAME)
+
+    def _append(self, entry: str) -> None:
+        path = self.log
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as log:
+            log.write(entry if entry.endswith("\n") else f"{entry}\n")
 
     @Hook("beforeSubmitPrompt")
     def before_submit_prompt(self, payload: dict) -> dict:
-        return handle(payload)
+        self._append(format_before_submit(payload))
+        return {"continue": True}
 
     @Hook("beforeReadFile")
     def before_read_file(self, payload: dict) -> dict:
-        return handle(payload)
+        self._append(format_before_read_file(payload))
+        return {"permission": "allow"}
 
     @Hook("preToolUse")
     def pre_tool_use(self, payload: dict) -> dict:
-        return handle(payload)
+        self._append(format_pre_tool_use(payload))
+        return {"permission": "allow"}
 
     @Hook("subagentStart")
     def subagent_start(self, payload: dict) -> dict:
-        return handle(payload)
+        self._append(format_subagent_start(payload))
+        return {"permission": "allow"}
 
     @Hook("afterAgentResponse")
     def after_agent_response(self, payload: dict) -> dict:
-        return handle(payload)
-
-
-def handle(data: dict, *, target: Path | None = None) -> dict:
-    event = data.get("hook_event_name", "preToolUse")
-
-    if event == "beforeSubmitPrompt":
-        append_log(format_before_submit(data), target)
-        return {"continue": True}
-    if event == "beforeReadFile":
-        append_log(format_before_read_file(data), target)
-        return {"permission": "allow"}
-    if event == "subagentStart":
-        append_log(format_subagent_start(data), target)
-        return {"permission": "allow"}
-    if event == "afterAgentResponse":
-        append_log(format_after_agent_response(data), target)
+        self._append(format_after_agent_response(payload))
         return {}
-    if event == "preToolUse":
-        append_log(format_pre_tool_use(data), target)
-        return {"permission": "allow"}
-
-    return {"permission": "allow"}

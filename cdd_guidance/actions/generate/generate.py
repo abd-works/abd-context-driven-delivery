@@ -6,8 +6,9 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import Skill
+from harness.markdown.format import Format
 from harness.mcp.mcp_server import Mcp
-from validate.validate import Validate
+from cdd_guidance.actions.validate.validate import Validate
 
 @agent_toolset
 class Generate(GuidanceAction):
@@ -22,6 +23,8 @@ class Generate(GuidanceAction):
         rules = self._rules()
         instructions(rules)
         tools(self._render().render)
+        earlier = self._earlier_renders()
+        instructions(earlier)
         self.run(self._generate_item, action="generate")
         places = self._where_outputs_go()
         instructions(places)
@@ -42,9 +45,42 @@ class Generate(GuidanceAction):
 
     def _render(self):
         """Render action, available while generating code from another format."""
-        from render.render import Render
+        from cdd_guidance.actions.render.render import Render
 
         return self._inside(Render)
+
+    def _earlier_renders(self) -> str:
+        """What to render before generating: a listed fidelity reads the fidelity before it, so when that earlier
+        fidelity declares the format this one is generated in and has no file in it yet, but has a file in another
+        format, it is rendered into this format first, from a format it has a file in."""
+        renders = [self._earlier_render(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        return "\n\n".join(render for render in renders if render)
+
+    def _earlier_render(self, practice: PracticeGuidance) -> str:
+        current = practice.fidelities.current
+        wanted = Format(practice.format).name
+        earlier = self._fidelity_before(practice, current) if current is not None else None
+        if earlier is None or not wanted or wanted not in {Format(label).name for label in earlier.outputs}:
+            return ""
+        made = {Format(label).name: paths for label, paths in self._existing_files(earlier).items() if paths}
+        if not made or wanted in made:
+            return ""
+        source = sorted(made)[0]
+        return (
+            f"Before generating {current.slug}, render the earlier fidelity {earlier.slug} into {wanted}, because it has "
+            f"no {wanted} file to read yet: call render with guidance {earlier.slug}, format {wanted}, source {source}, "
+            f"and paths {', '.join(made[source])}. Then follow place_rendered, so {earlier.slug} has its {wanted} file."
+        )
+
+    def _fidelity_before(self, practice: PracticeGuidance, current):
+        """The practice's fidelity in the stage before current's; none for its first fidelity."""
+        fidelities = list(practice.fidelities.entries.values())
+        position = next((index for index, fidelity in enumerate(fidelities) if fidelity is current), 0)
+        return fidelities[position - 1] if position > 0 else None
+
+    def _existing_files(self, fidelity) -> dict[str, list[str]]:
+        """The files fidelity has in this session, by the format it declares them in, each a path from the project."""
+        return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.files().items()}
 
     def _generate_item(self, item) -> None:
         if isinstance(item, str):

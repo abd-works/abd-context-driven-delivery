@@ -1,2 +1,1 @@
-"""Catalog-folder import: `from satisfy import ...`."""
-from .satisfy import *  # noqa: F403
+"""The Satisfy action. Import its classes from their modules, such as cdd_guidance.actions.satisfy.satisfy."""

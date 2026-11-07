@@ -21,9 +21,9 @@ class Satisfy(GuidanceAction):
     @agent_instructions
     def satisfy(self, guidance: GuidanceArg) -> str:
         """Run validate for each listed guidance against the content; apply generate_fixes_from_validate, then validate again when done."""
-        from generate.generate import Generate
+        from cdd_guidance.actions.generate.generate import Generate
         from harness.agent_tools.agent_tools import AgentInstructions
-        from validate.validate import Validate
+        from cdd_guidance.actions.validate.validate import Validate
 
         self._bind_guidance(guidance)
         sections: list[str] = [_SATISFY_MARKDOWN.strip()]

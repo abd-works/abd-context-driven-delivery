@@ -5,7 +5,7 @@
 
 - **Purpose:** Make the guidance an agent is following visible to the person while it runs.
 - **Seam (terms):** PromptNotify, the mark `@echo`
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/installation` (*Destination*, *Installer*), `harness/hooks` (*Hook*). `harness/guidance_actions` imports `@echo` and *PromptNotify*, and `harness/guidance` imports *PromptNotify* to toast injected rules, both through `sys.path` as `prompt_notify`; both of those modules are reached again from `harness/agent_tools`, which this module imports, so the framework reaches up into `tools` in a cycle tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/installation` (*Destination*, *Installer*, *Skill*), `harness/hooks` (*Hook*), and, read when the catalogue is first built, `harness/guidance` (*PracticeCatalogue*), `harness/guidance_actions` (*GuidanceAction*), and the action folders under `cdd_guidance/actions`, whose skill operations are the action names it toasts. `harness/guidance_actions` imports `@echo` and *PromptNotify*, and `harness/guidance` imports *PromptNotify* to toast injected rules, both through `sys.path` as `prompt_notify`; both of those modules are reached again from `harness/agent_tools`, which this module imports, so the framework reaches up into `tools` in a cycle tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
 
 ## Constraint
 

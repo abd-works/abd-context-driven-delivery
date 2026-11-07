@@ -5,8 +5,8 @@ from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.sub_agent.mark import subAgent
 from harness.guidance_actions import GuidanceAction, GuidanceArg
 from harness.installation.destination import noCatalog
-from harness.installation.files import skill
-from harness.mcp.mcp_server import mcp
+from harness.installation.files import Skill
+from harness.mcp.mcp_server import Mcp
 
 @noCatalog
 @agent_toolset
@@ -18,8 +18,8 @@ class Diagnose(GuidanceAction):
     """
 
     @subAgent
-    @mcp
-    @skill
+    @Mcp
+    @Skill
     @agent_tool
     def diagnose(self, guidance: GuidanceArg | None = None) -> str:
         """A discipline for hard bugs. Skip phases only when explicitly justified.
@@ -130,35 +130,8 @@ class Diagnose(GuidanceAction):
         return "\n\n".join(parts)
 
     def _guidance_rules(self, item) -> str:
-        """Practice rules that govern the fix and the regression test."""
-        if isinstance(item, str):
-            return item
-        sections: list[str] = []
-        for collection in (getattr(item, "rules", None), *self._fidelity_rules(item)):
-            text = self._rules_text(collection)
-            if text and text not in sections:
-                sections.append(text)
-        return "\n\n".join(sections)
+        """The rules that govern the fix and the regression test: the shared and current-fidelity rules Validate lists
+        for item, or item itself when it is text."""
+        from cdd_guidance.actions.validate.validate import Validate
 
-    def _fidelity_rules(self, item) -> list:
-        fidelities = getattr(item, "fidelities", None)
-        if fidelities is None:
-            return []
-        current = getattr(fidelities, "current", None)
-        if current is None:
-            return []
-        rules = getattr(current, "rules", None)
-        return [rules] if rules is not None else []
-
-    def _rules_text(self, collection) -> str:
-        if collection is None:
-            return ""
-        for accessor in ("markdown_block", "markdown"):
-            text = getattr(collection, accessor, None)
-            if text is None:
-                continue
-            if callable(text):
-                text = text()
-            if isinstance(text, str) and text.strip():
-                return text.strip()
-        return ""
+        return self._inside(Validate, item if isinstance(item, str) else [item]).listed_rules()

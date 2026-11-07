@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from grill_context.grill_context import GrillContext
+from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.guidance_actions import GuidanceArg, GuidanceAction, load_document
 from harness.agent_tools import agent_instructions, agent_toolset, instructions
 from harness.agent_tools.agent_tools import agent_tool
@@ -40,13 +40,8 @@ class Sketch(GuidanceAction):
         return self.find_template(agent_dir=self._agent_dir)
 
     def _grill_context(self) -> GrillContext:
-        """GrillContext toolset for in-method composition (not a tool)."""
-        return GrillContext(self.session)
-
-    def _generate(self):
-        from generate.generate import Generate
-
-        return Generate(self.session)
+        """The grill this sketch runs: made for this sketch's session and working on what it lists."""
+        return self._inside(GrillContext)
 
     @Mcp
     @agent_tool
@@ -56,14 +51,9 @@ class Sketch(GuidanceAction):
         2. Convention - {agent_dir}/templates/*-sketch.* inside the wrapped agent's templates folder.
         3. Default - sketch/templates/sketch-template.md (this toolset's canonical heading-and-indent notation).
         Returns the resolved template contents as a string."""
-        if agent_dir:
-            root = Path(agent_dir)
-            if root.is_dir():
-                templates_dir = root / "templates"
-                if templates_dir.is_dir():
-                    for path in sorted(templates_dir.glob("*-sketch.*")):
-                        return path.read_text(encoding="utf-8")
-        return _DEFAULT_TEMPLATE.read_text(encoding="utf-8")
+        templates_dir = Path(agent_dir) / "templates" if agent_dir else None
+        found = sorted(templates_dir.glob("*-sketch.*")) if templates_dir is not None and templates_dir.is_dir() else []
+        return (found[0] if found else _DEFAULT_TEMPLATE).read_text(encoding="utf-8")
 
     @Mcp
     @agent_tool
@@ -125,5 +115,5 @@ class Sketch(GuidanceAction):
         self.find_template()
         self.save_sketch()
         self.review_sketch()
-        self.each(lambda item: self._generate().generate(item if isinstance(item, str) else [item]))
+        self._grill_context().generate_each()
         return "Sketch complete; generate instructions applied."

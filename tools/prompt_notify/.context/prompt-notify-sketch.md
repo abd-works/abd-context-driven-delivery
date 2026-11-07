@@ -8,7 +8,7 @@ theme: where the marks go
 ce:
 GuidanceAction
   begin guidance action
-       // @echo here — one mark; every kit runs this
+       // @echo here — one mark; every action runs this
   run guidance operation
        -> begin
   open_workspace
@@ -46,4 +46,4 @@ PromptNotify
             -> show_ide_toast
   handle payload
        // invoked member _echo → toast that member
-       // else toolset begin _echo → Action → kit name
+       // else toolset begin _echo → Action → action name

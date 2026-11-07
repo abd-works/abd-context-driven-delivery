@@ -16,7 +16,7 @@ from mamba import context, description, it
 from harness.installation.installer import Installer  # noqa: F401 — load Destination before hooks
 from tempfile import TemporaryDirectory
 
-from prompt_notify.prompt_notify import PromptNotify, echo
+from tools.prompt_notify.prompt_notify import PromptNotify, echo
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 
 _prompt_notify = PromptNotify()
@@ -45,6 +45,14 @@ with description("prompt echo detection"):
         with it("should name create-rule from validate.createRule"):
             kind, label = _prompt_notify.detect({"tool_name": "validate.createRule", "tool_input": {}})
             expect(label).to(equal("create-rule"))
+
+        with it("should name repair from the operation the improvement action publishes"):
+            kind, label = _prompt_notify.detect({"tool_name": "improvement.repair", "tool_input": {}})
+            expect(label).to(equal("repair"))
+
+    with context("that receives the name of an action no action folder publishes"):
+        with it("should name no action"):
+            expect(_prompt_notify.detect({"tool_name": "scan.scan", "tool_input": {}})).to(equal(None))
 
     with context("that receives a CallMcpTool wrapper"):
         with it("should read the nested MCP tool name"):
@@ -154,8 +162,8 @@ with description("prompt echo detection"):
                 ).get("user_message")
             ).to(equal(None))
 
-    with context("that receives a scan kit source file Read or edit"):
-        with it("should not toast the scan action"):
+    with context("that receives a guidance source file Read or edit"):
+        with it("should not toast an action"):
             path = str(_REPO_ROOT / "harness" / "guidance" / "rule.py")
             expect(
                 _prompt_notify.handle({"tool_name": "Read", "tool_input": {"path": path}}).get(
@@ -174,22 +182,22 @@ with description("prompt echo detection"):
     with context("that echoes a detected MCP action"):
         with it("should include the kind and label in the user message"):
             expect(
-                _spec._echo({"tool_name": "scan.scan", "tool_input": {"paths": ["src"]}})
-            ).to(contain("Action \u2192 scan"))
+                _spec._echo({"tool_name": "validate.validate", "tool_input": {"paths": ["src"]}})
+            ).to(contain("Action \u2192 validate"))
 
         with it("should put that echo in the IDE toast notice"):
             expect(
-                _prompt_notify.toast_notice(_spec._echo({"tool_name": "scan.scan", "tool_input": {}}))["message"]
-            ).to(contain("Action \u2192 scan"))
+                _prompt_notify.toast_notice(_spec._echo({"tool_name": "validate.validate", "tool_input": {}}))["message"]
+            ).to(contain("Action \u2192 validate"))
 
         with it("should write that echo to the workspace toast notice"):
             with TemporaryDirectory() as tmp:
                 _prompt_notify.repo = Path(tmp)
                 dest = _prompt_notify.show_ide_toast(
-                    _spec._echo({"tool_name": "scan.scan", "tool_input": {}}),
+                    _spec._echo({"tool_name": "validate.validate", "tool_input": {}}),
                 )
                 expect(json.loads(dest.read_text(encoding="utf-8"))["message"]).to(
-                    contain("Action \u2192 scan")
+                    contain("Action \u2192 validate")
                 )
 
         with it("should write the toast notice into every workspace root"):
@@ -328,8 +336,8 @@ with description("prompt echo detection"):
 
 
 @agent_toolset
-class EchoKit:
-    """Kit used to pin @echo on begin and on a method."""
+class EchoAction:
+    """An action that pins @echo on begin and on a method."""
 
     @echo
     @agent_instructions
@@ -369,27 +377,27 @@ class EchoPracticeChild(EchoPractice):
 
 with description("prompt echo @echo mark"):
     with context("that inherits @echo on begin"):
-        with it("should toast the kit as an action when a recipe runs"):
+        with it("should toast the action by its name when a recipe runs"):
             kind, label = _prompt_notify.detect_echo(
-                {"tool_name": "echo-kit.enact", "tool_input": {}},
-                toolsets=[EchoKit()],
+                {"tool_name": "echo-action.enact", "tool_input": {}},
+                toolsets=[EchoAction()],
             )
             expect(kind).to(equal("action"))
-            expect(label).to(equal("echo-kit"))
+            expect(label).to(equal("echo-action"))
 
         with it("should not toast open_workspace from the begin mark"):
             expect(
                 _prompt_notify.detect_echo(
-                    {"tool_name": "echo-kit.open_workspace", "tool_input": {}},
-                    toolsets=[EchoKit()],
+                    {"tool_name": "echo-action.open_workspace", "tool_input": {}},
+                    toolsets=[EchoAction()],
                 )
             ).to(equal(None))
 
     with context("that marks a specific recipe"):
         with it("should toast that member when it is invoked"):
             kind, label = _prompt_notify.detect_echo(
-                {"tool_name": "echo-kit.spotlight", "tool_input": {}},
-                toolsets=[EchoKit()],
+                {"tool_name": "echo-action.spotlight", "tool_input": {}},
+                toolsets=[EchoAction()],
             )
             expect(kind).to(equal("action"))
             expect(label).to(equal("spotlight"))

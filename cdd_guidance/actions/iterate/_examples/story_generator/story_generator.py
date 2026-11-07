@@ -1,7 +1,7 @@
 """story_generator — shows Iterate driving one grilled story-map slice toward a goal."""
 from __future__ import annotations
 
-from iterate.iterate import Iterate
+from cdd_guidance.actions.iterate.iterate import Iterate
 
 
 class StoryGenerator:
@@ -11,8 +11,8 @@ class StoryGenerator:
         """Produce one validated output slice toward *goal* under *path*.
 
         Instantiates Iterate rooted at the session path, then calls
-        iterate_session so the framework grills the plan, marks a tick,
-        generates only the unlocked slice, and validates it — one tick only.
+        iterate_session so the framework grills the plan, marks the cycle due,
+        generates only the unlocked slice, and validates it — one cycle only.
         """
         iterator = Iterate(path=path)
         return iterator.iterate_session(plan=goal)

@@ -14,7 +14,7 @@ from typing import Annotated
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import SourceFile, data_field, language_adapter
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_server import Mcp
 
 
 # Installed packages and caches hold no one's work. Hidden folders hold tools and caches too, but a module's .context
@@ -156,7 +156,7 @@ class FileManager:
     def roots(self) -> tuple[Path, ...]:
         return self._roots
 
-    @mcp
+    @Mcp
     @agent_tool
     @noSessionLog
     def list(self, folder: str = "") -> Folder:
@@ -167,7 +167,7 @@ class FileManager:
         entries = sorted(target.iterdir(), key=lambda entry: (not entry.is_dir(), entry.name.lower()))
         return Folder(self._relative(target), [self._entry(entry) for entry in entries])
 
-    @mcp
+    @Mcp
     @agent_tool
     @noSessionLog
     def read(self, path: str) -> FileText:

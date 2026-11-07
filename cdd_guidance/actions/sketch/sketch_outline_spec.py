@@ -15,7 +15,7 @@ sys.modules.pop("sketch", None)
 from expects import equal, expect
 from mamba import before, description, it
 
-from sketch.sketch_outline import SketchLens, SketchOutline
+from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
 
 _HEADED = """# Single Client View — sketch
 
