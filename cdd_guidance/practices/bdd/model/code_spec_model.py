@@ -26,18 +26,30 @@ BehaviorBlock = Union[Description, Context, Observation]
 ParentBlock = Optional[Union[Description, Context]]
 
 
+class UnreadableSpec(ValueError):
+    """A spec file that is not valid code. Read as an empty spec, a render over it would replace every test body."""
+
+    def __init__(self, language: str, error: SyntaxError) -> None:
+        super().__init__(f"the {language} spec does not parse (line {error.lineno}: {error.msg}); fix it before reading or rendering over it")
+        self.line = error.lineno
+
+
 class CodeBddModel(BddModel):
     """A spec written as code. Python and TypeScript only spell the lines."""
 
     language: CodeLanguage
 
     def parse(self, text: str) -> "CodeBddModel":
+        self.check_readable(text)
         return self.parse_code(text)
+
+    def check_readable(self, text: str) -> None:
+        """Raise UnreadableSpec when text is not valid code in this language. A language with no syntax check accepts any text."""
 
     def render(self, canonical: BddModel, previous: Optional[str] = None) -> str:
         # The previous file is read once per render and consulted for any block the canonical spec
         # did not read in this language.
-        self._kept = type(self)().parse_code(previous) if previous else type(self)()
+        self._kept = type(self)().parse(previous) if previous else type(self)()
         written = self._written(canonical, ())
         preamble = canonical.preamble.in_language_of(self._kept.preamble, self.language)
         # WHY: imports from another language name nothing this file can load, so only this language's are kept.
@@ -185,7 +197,15 @@ class PythonBddModel(CodeBddModel):
 
     language = CodeLanguage.named("python")
 
+    def check_readable(self, text: str) -> None:
+        try:
+            ast.parse(text)
+        except SyntaxError as error:
+            raise UnreadableSpec(self.language.name, error) from error
+
     def parse_code(self, text: str) -> "PythonBddModel":
+        """The describe tree of a mamba spec. The graph scan reads every spec file this way and still records the source
+        facts of one that does not parse, so such a file reads as a spec with no describe tree; `parse` refuses it."""
         try:
             tree = ast.parse(text)
         except SyntaxError:

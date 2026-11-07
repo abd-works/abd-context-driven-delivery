@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 from cdd_guidance.practices.bdd.bdd import Bdd
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset  # noqa: F401
 from harness.guidance.guidance import PracticeGuidance

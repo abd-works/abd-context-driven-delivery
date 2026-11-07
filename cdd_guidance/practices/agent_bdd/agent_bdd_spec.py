@@ -1,14 +1,19 @@
-"""BDD spec for agent_bdd manifest and runbook extraction."""
+"""BDD spec for agent_bdd manifests, run requests, and in-process toolset runs."""
 
+import os
+import subprocess
+import sys
+import time
+from contextvars import ContextVar
 from pathlib import Path
 
-from expects import be_true, equal, expect
+from expects import be_true, equal, expect, raise_error
 from mamba import context, description, it
 
 from agent_bdd import agent
 from agent_bdd.agent_bdd_common import (
-    build_runbook,
-    cli_output_matches_prompt,
+    ToolRunDeadline,
+    ToolRunTimedOut,
     looks_like_tools_run_output,
     read_manifest,
     yaml_from_prompt,
@@ -16,6 +21,38 @@ from agent_bdd.agent_bdd_common import (
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _TOOLS_SPEC = _REPO_ROOT / "retired" / "harness" / "agent_tools" / "agent_tools_agent_spec.py"
+_CALLING_PROJECT: ContextVar[str] = ContextVar("calling_project", default="")
+
+
+def _secret_loaded_after(statement: str) -> str:
+    """Run statement in a fresh python without the secret, and say whether the secret is then in its environment."""
+    environment = {key: value for key, value in os.environ.items() if key != "CURSOR_API_KEY"}
+    script = f"import os\n{statement}\nprint('CURSOR_API_KEY' in os.environ)"
+    done = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, env=environment, cwd=_REPO_ROOT, timeout=120)
+    return done.stdout.strip().splitlines()[-1] if done.stdout.strip() else done.stderr
+
+
+def _slow_run() -> str:
+    time.sleep(2)
+    return "finished"
+
+
+def _failing_run() -> str:
+    raise KeyError("unknown tool")
+
+
+with description("the agent bdd practice"):
+    with context("that is imported, as the MCP host does"):
+        with it("should leave the agent's secrets out of the importing process"):
+            expect(_secret_loaded_after("import agent_bdd.agent_bdd")).to(equal("False"))
+
+    with context("that runs an agent for a spec"):
+        with it("should load the agent's secrets"):
+            statement = (
+                "from pathlib import Path\nfrom agent_bdd import agent\n"
+                "with agent(Path('.'), Path('.agent_bdd_sessions/conf-spec.json'), in_chat=True):\n    pass"
+            )
+            expect(_secret_loaded_after(statement)).to(equal("True"))
 
 
 with description("an agent spec file"):
@@ -27,32 +64,6 @@ with description("an agent spec file"):
             expect("agent-spec" in manifest.command or "run in chat" in (manifest.chat_instruction or "")).to(
                 be_true
             )
-
-        with it("should build a runbook with instruct steps from tools_agent_spec"):
-            runbook = build_runbook(_TOOLS_SPEC)
-            expect(len(runbook.scenarios) > 0).to(be_true)
-            kinds = [step.kind for step in runbook.scenarios[0].setup]
-            expect(len(kinds) >= 0).to(be_true)
-
-        with it("should extract instruct prompts from actions_agent_spec"):
-            runbook = build_runbook(_TOOLS_SPEC)
-            expect(len(runbook.scenarios) > 0).to(be_true)
-
-        with it("should build a generator runbook from create_practice_guidance_agent_spec"):
-            agent_spec = (
-                _REPO_ROOT
-                / "retired"
-                / "cdd_guidance"
-                / "builders"
-                / "create_practice_guidance"
-                / "create_practice_guidance_agent_spec.py"
-            )
-            manifest = read_manifest(agent_spec)
-            expect(manifest.session is not None).to(be_true)
-            runbook = build_runbook(agent_spec)
-            setup = [step for scenario in runbook.scenarios for step in scenario.setup]
-            prompts = " ".join(step.prompt or "" for step in setup)
-            expect(len(runbook.scenarios) > 0).to(be_true)
 
     with context("with agent context manager"):
         with it("should enter and exit via __enter__ for in-chat harness"):
@@ -75,23 +86,24 @@ with description("an agent spec file"):
             body = yaml_from_prompt(prompt)
             expect(body).to(equal("toolset: cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
 
-        with it("should reject captured CLI output when action does not match prompt YAML"):
-            prompt = (
-                "Pipe this YAML on stdin:\n"
-                "toolset: cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle\n"
-                "action: repair\n"
-            )
-            wrong = "```yaml\nok: true\naction: generate\ninstructions: test\n```"
-            expect(cli_output_matches_prompt(wrong, prompt)).to(equal(False))
-            right = "```yaml\nok: true\naction: repair\ninstructions: test\n```"
-            expect(cli_output_matches_prompt(right, prompt)).to(be_true)
-
-        with it("should reject non-YAML shell captures without raising"):
-            prompt = (
-                "Pipe this YAML on stdin:\n"
-                "toolset: cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering\n"
-                "action: generate\n"
-            )
+        with it("should not mistake python source for run output"):
             garbage = "lines = [f\"toolset: {invoke['toolset']}\", f\"action: {invoke['action']}\"]"
-            expect(cli_output_matches_prompt(garbage, prompt)).to(equal(False))
             expect(looks_like_tools_run_output(garbage)).to(equal(False))
+
+
+with description("an in-process toolset run with a timeout"):
+    with context("that finishes in time"):
+        with it("should return what the run returned"):
+            expect(ToolRunDeadline(5).run(lambda: "finished", "car")).to(equal("finished"))
+
+        with it("should see the calling spec's context"):
+            _CALLING_PROJECT.set("shop")
+            expect(ToolRunDeadline(5).run(_CALLING_PROJECT.get, "car")).to(equal("shop"))
+
+    with context("that fails"):
+        with it("should raise the run's own error"):
+            expect(lambda: ToolRunDeadline(5).run(_failing_run, "car")).to(raise_error(KeyError))
+
+    with context("that outlives its timeout"):
+        with it("should fail naming the timeout"):
+            expect(lambda: ToolRunDeadline(0.1).run(_slow_run, "car")).to(raise_error(ToolRunTimedOut))

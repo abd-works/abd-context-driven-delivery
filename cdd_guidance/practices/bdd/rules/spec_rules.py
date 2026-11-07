@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from harness.graph.practice_rule import PracticeGraphRule
 
 from cdd_guidance.practices.bdd.rules.layer_isolation import LayerIsolation
@@ -14,12 +16,16 @@ from cdd_guidance.practices.bdd.rules.tree_rules import (
     StateNotWhen,
 )
 
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
+    from harness.graph.rule_context import RuleCheckContext
+
 
 class PlainEnglishOnly(PracticeGraphRule):
     slug = "describe-is-plain-english"
     node_types = ("Spec",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         return [
             f"Line {line}: describe/it text looks like code, not plain English."
             for line in node.get_fact("code_like_describe_lines", [])
@@ -30,7 +36,7 @@ class SignatureMarkers(PracticeGraphRule):
     slug = "framework-syntax"
     node_types = ("Spec",)
 
-    def check(self, node, context) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
         if node.get_fact("signature_marker", True):
             return []
         return ["Spec file is missing a BDD: SIGNATURE marker."]

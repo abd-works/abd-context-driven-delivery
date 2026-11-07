@@ -15,7 +15,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from validate.graph_json_reader import (
+from cdd_guidance.actions.validate.graph_json_reader import (
     refresh_stale_limit_operation_parameter_messages,
     save_checked_graph,
     violations_from_graph_json_files,

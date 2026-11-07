@@ -9,4 +9,4 @@ The spec helpers — such as `run_toolset`, `expect_ok_action`, `expect_tools_in
 
 ## Constraint
 
-Call `instruct`, `instruct_use_tool`, and `ai_judge` only inside `with agent(...)`; outside it they raise `RuntimeError`. Never mock the harness or the agent's output. Import the harness from `agent_bdd`, never the CLI or chat implementation directly. Use the spec helpers instead of copying request and assertion code into each spec.
+Call `instruct`, `instruct_use_tool`, and `ai_judge` only inside `with agent(...)`; outside it they raise `RuntimeError`. Load the agent's secrets and import paths when `agent(...)` opens, never on import, so the MCP host that imports the practice keeps its own environment. Never mock the harness or the agent's output. Import the harness from `agent_bdd`, never the CLI or chat implementation directly. Use the spec helpers instead of copying request and assertion code into each spec.

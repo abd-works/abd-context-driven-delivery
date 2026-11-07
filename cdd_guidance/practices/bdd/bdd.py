@@ -8,11 +8,7 @@ from harness.guidance.guidance import PracticeGuidance
 
 @agent_toolset
 class Bdd(PracticeGuidance):
-    """# Instructions
-
-    Depends on CleanEngineering (lazy import to avoid circular imports at
-    module load time).
-    """
+    """# Instructions"""
 
     sketch_titles = ("bdd:", "behavior driven development:")
     SHORT_NAME = "BDD"

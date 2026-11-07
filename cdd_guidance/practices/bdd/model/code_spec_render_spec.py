@@ -4,7 +4,7 @@ import ast
 import sys
 from pathlib import Path
 
-from expects import be_true, contain, equal, expect
+from expects import be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -13,7 +13,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.bdd.bdd import Bdd
-from cdd_guidance.practices.bdd.model.code_spec_model import TypeScriptBddModel
+from cdd_guidance.practices.bdd.model.code_spec_model import TypeScriptBddModel, UnreadableSpec
 
 _CART_PYTHON = '''\
 from expects import equal, expect
@@ -127,6 +127,8 @@ test.describe('a receipt', () => {
 """
 
 _PYTHON_ASSERT = "expect(self.cart.items).to(equal([]))"
+# The cart spec with one bracket left open, as a spec looks while someone is still typing it.
+_UNFINISHED_PYTHON = _CART_PYTHON.replace(_PYTHON_ASSERT, "expect(self.cart.items).to(equal([])")
 
 
 def _render(target: str, content: str, source: str, previous: str = "") -> str:
@@ -214,3 +216,13 @@ with description("a spec rendered to code"):
                 expect(self.rendered).to(
                     contain('        with it("should count one item"):\n            pass  # BDD: SIGNATURE')
                 )
+
+        with context("that is rendered to python over a previous python spec that does not parse"):
+            with it("should refuse, so no hand-written test body is replaced"):
+                expect(lambda: _render("python", _CART_SKETCH, "markdown", previous=_UNFINISHED_PYTHON)).to(
+                    raise_error(UnreadableSpec)
+                )
+
+    with context("that was read from a python spec that does not parse"):
+        with it("should refuse to read it as an empty spec"):
+            expect(lambda: _render("markdown", _UNFINISHED_PYTHON, "python")).to(raise_error(UnreadableSpec))

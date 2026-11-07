@@ -10,10 +10,8 @@ class SketchBddModel(BddModel):
 
     def parse(self, text: str) -> BddModel:
         from cdd_guidance.actions.sketch.sketch_outline import SketchLens, SketchOutline
-        from cdd_guidance.practices.bdd.model.bdd_model import _parse_sketch
 
         outline = SketchOutline(text)
         if outline.holds(SketchLens.of("bdd")):
             text = outline.body_for(SketchLens.of("bdd"))
-        self.descriptions = _parse_sketch(text)
-        return self
+        return super().parse(text)

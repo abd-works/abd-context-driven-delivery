@@ -12,7 +12,7 @@ if str(_REPO) not in sys.path:
 
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.bdd.model.bdd_model import BddModel, _parse_sketch
+from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraphEntry
 
@@ -62,7 +62,7 @@ cart.checkout()
 it should complete payment
 ```
 """
-        descriptions = _parse_sketch(sketch)
+        descriptions = BddModel().parse(sketch).descriptions
         observation = descriptions[0].contexts[0].observations[0]
         expect(observation.name).to(equal("should complete payment"))
         expect(observation.call_graph[0].text).to(equal("cart.checkout()"))
@@ -78,7 +78,7 @@ it should complete payment
         with_items.observations.append(Observation("should count them"))
         cart.contexts.append(with_items)
         spec.descriptions.append(cart)
-        restored = _parse_sketch(spec.render(spec))
+        restored = BddModel().parse(spec.render(spec)).descriptions
         expect([observation.name for observation in restored[0].observations]).to(equal(["should start empty"]))
         expect([entry.text for entry in restored[0].observations[0].call_graph]).to(equal(["Cart.items"]))
         expect([observation.name for observation in restored[0].contexts[0].observations]).to(equal(["should count them"]))
@@ -108,7 +108,7 @@ it should return keep_log to the agent
 
 ```
 -> session.select(name)
-it should bind the existing session from the environment
+it should reuse the existing session from the environment
   -> expect(session.name).to equal name
 ```
 """
@@ -130,5 +130,5 @@ with description("a sketch that carries behavior under headings"):
         expect(selected.name).to(equal("that is selected"))
         named = selected.contexts[0]
         expect(named.name).to(equal("with only a name"))
-        expect(named.observations[0].name).to(equal("should bind the existing session from the environment"))
+        expect(named.observations[0].name).to(equal("should reuse the existing session from the environment"))
         expect(named.observations[0].surface_lines[0]).to(equal("session.select(name)"))

@@ -8,8 +8,8 @@ from typing import Any
 
 from harness.guidance.rule import Rule
 
-from validate.graph_json_reader import violations_by_rule
-from validate.validation_report_formatter import ValidationReportFormatter
+from cdd_guidance.actions.validate.graph_json_reader import violations_by_rule
+from cdd_guidance.actions.validate.validation_report_formatter import ValidationReportFormatter
 
 
 class ValidationReport:

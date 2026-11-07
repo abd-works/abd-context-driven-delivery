@@ -21,7 +21,6 @@ for _p in [
         sys.path.insert(0, _p)
 
 from harness.agent_tools.agent_tools import AgentToolSet
-import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import cdd_guidance.practices  # noqa: F401
 from harness.markdown import Markdown
 from harness.agent_tools import AgentToolSet

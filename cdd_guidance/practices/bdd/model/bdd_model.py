@@ -10,7 +10,6 @@ from harness.graph.graph import Graph
 from cdd_guidance.practices.clean_engineering.model.call_graph import (
     CallGraphEntry,
     parse_arrow_line,
-    parse_call_graph_block,
     render_call_graph_block,
 )
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
@@ -47,7 +46,7 @@ class BddModel(BoundNode):
             self.descriptions.append(description.clone())
 
     def parse(self, text: str) -> "BddModel":
-        self.descriptions = _parse_sketch(text)
+        self.descriptions = _SketchReader().read(text)
         return self
 
     def parse_code(self, text: str) -> "BddModel":
@@ -144,116 +143,119 @@ class MarkdownBddModel(BddModel):
     pass
 
 
-def _parse_sketch(text: str) -> list[Description]:
-    descriptions: list[Description] = []
-    description: Description | None = None
-    stack: list[tuple[int, Context]] = []
-    fence_lines: list[str] = []
-    in_fence = False
-    pending_surface: list[str] = []
-    for raw in text.splitlines():
+class _SketchReader:
+    """Reads one sketch's indented describe tree. It keeps what a read tracks from line to line: the contexts still
+    open, the fenced realization being collected, and surface lines waiting for the observation below them."""
+
+    def __init__(self) -> None:
+        self.descriptions: list[Description] = []
+        self._description: Description | None = None
+        self._open: list[tuple[int, Context]] = []
+        self._fence: list[str] | None = None
+        self._pending_surface: list[str] = []
+
+    def read(self, text: str) -> list[Description]:
+        for raw in text.splitlines():
+            self._read_line(raw)
+        return self.descriptions
+
+    def _read_line(self, raw: str) -> None:
         stripped = raw.strip()
         if stripped.startswith("```"):
-            if in_fence:
-                _apply_fence_block(fence_lines, _owner(stack, description))
-                fence_lines = []
-                in_fence = False
-            else:
-                # An indented fence belongs to the node one level above it, so a fence one level under the description holds
-                # the description's own observations. A fence at the margin belongs to the innermost open context.
-                fence_level = (len(raw) - len(raw.lstrip(" "))) // 2
-                while fence_level and stack and stack[-1][0] >= fence_level:
-                    stack.pop()
-                in_fence = True
-            continue
-        if in_fence:
-            fence_lines.append(raw)
-            continue
-        if not stripped or stripped.startswith(("//", "#", "Fidelity:")):
-            continue
-        if stripped.startswith("->"):
-            if _current_observation(_owner(stack, description)) is None:
-                pending_surface.append(stripped[2:].strip())
-            else:
-                _append_surface_line(stripped, _owner(stack, description))
-            continue
-        indent = len(raw) - len(raw.lstrip(" "))
-        level = indent // 2
-        if stripped.startswith("it "):
-            # An `it` one level under a context belongs to it; one level under the description belongs to the description.
-            while stack and stack[-1][0] >= level:
-                stack.pop()
-            owner = _owner(stack, description)
-            if owner is None:
+            self._toggle_fence(raw)
+        elif self._fence is not None:
+            self._fence.append(raw)
+        elif not stripped or stripped.startswith(("//", "#", "Fidelity:")):
+            return
+        elif stripped.startswith("->"):
+            self._read_surface(stripped)
+        elif stripped.startswith("it "):
+            self._read_observation(stripped[3:].strip(), self._level(raw))
+        else:
+            self._pending_surface = []
+            self._read_block(stripped, self._level(raw))
+
+    def _toggle_fence(self, raw: str) -> None:
+        if self._fence is not None:
+            self._close_fence()
+            return
+        # An indented fence belongs to the node one level above it, so a fence one level under the description holds
+        # the description's own observations. A fence at the margin belongs to the innermost open context.
+        fence_level = self._level(raw)
+        if fence_level:
+            self._close_to(fence_level)
+        self._fence = []
+
+    def _close_fence(self) -> None:
+        """Each `it` in the fence takes the call-graph lines above it as its realization."""
+        owner, lines, self._fence = self._owner(), self._fence or [], None
+        if owner is None:
+            return
+        call_graph: list[CallGraphEntry] = []
+        for raw in lines:
+            stripped = raw.strip()
+            if not stripped or stripped.startswith("//"):
                 continue
-            observation = Observation(stripped[3:].strip(), len(owner.observations) + 1)
-            if pending_surface:
-                observation.surface_lines = list(pending_surface)
-                pending_surface = []
-            owner.observations.append(observation)
-            continue
-        pending_surface = []
-        if level == 0:
-            description = Description(stripped, len(descriptions) + 1)
-            descriptions.append(description)
-            stack = []
-            continue
-        if description is None:
-            continue
-        while stack and stack[-1][0] >= level:
-            stack.pop()
-        parent = stack[-1][1].contexts if stack else description.contexts
-        context = Context(stripped, len(parent) + 1)
-        parent.append(context)
-        stack.append((level, context))
-    return descriptions
+            if stripped.startswith("it "):
+                observation = Observation(stripped[3:].strip(), len(owner.observations) + 1)
+                observation.call_graph, call_graph = call_graph, []
+                owner.observations.append(observation)
+                continue
+            call_graph.append(self._call_graph_entry(raw, stripped))
 
+    def _call_graph_entry(self, raw: str, stripped: str) -> CallGraphEntry:
+        """An arrow line keeps its direction; any other line is a call."""
+        kind, payload = parse_arrow_line(stripped) or ("call", stripped)
+        return CallGraphEntry(depth=self._level(raw), kind=kind, text=payload)
 
-def _owner(stack: list[tuple[int, Context]], description: Description | None) -> Context | Description | None:
-    """The node the next observation belongs to: the innermost open context, else the description itself."""
-    return stack[-1][1] if stack else description
-
-
-def _current_observation(owner: Context | Description | None) -> Observation | None:
-    if owner is None:
-        return None
-    observations = owner.observations
-    return observations[-1] if observations else None
-
-
-def _append_surface_line(stripped: str, owner: Context | Description | None) -> None:
-    observation = _current_observation(owner)
-    if observation is None:
-        return
-    arrow = parse_arrow_line(stripped)
-    payload = arrow[1] if arrow else stripped
-    observation.surface_lines.append(payload)
-
-
-def _apply_fence_block(lines: list[str], owner: Context | Description | None) -> None:
-    if owner is None:
-        return
-    pending_surface: list[str] = []
-    pending_graph: list[CallGraphEntry] = []
-    for raw in lines:
-        stripped = raw.strip()
-        if not stripped or stripped.startswith("//"):
-            continue
-        if stripped.startswith("it "):
-            observation = Observation(stripped[3:].strip(), len(owner.observations) + 1)
-            if pending_surface:
-                observation.surface_lines = list(pending_surface)
-                pending_surface = []
-            if pending_graph:
-                observation.call_graph = list(pending_graph)
-                pending_graph = []
-            owner.observations.append(observation)
-            continue
+    def _read_surface(self, stripped: str) -> None:
+        """A surface line belongs to the observation above it; before any observation it waits for the next one."""
+        observation = self._current_observation()
+        if observation is None:
+            self._pending_surface.append(stripped[2:].strip())
+            return
         arrow = parse_arrow_line(stripped)
-        if arrow is not None:
-            kind, payload = arrow
-            depth = (len(raw) - len(raw.lstrip(" "))) // 2
-            pending_graph.append(CallGraphEntry(depth=depth, kind=kind, text=payload))
-            continue
-        depth = (len(raw) - len(raw.lstrip(" "))) // 2
-        pending_graph.append(CallGraphEntry(depth=depth, kind="call", text=stripped))
+        observation.surface_lines.append(arrow[1] if arrow else stripped)
+
+    def _read_observation(self, name: str, level: int) -> None:
+        # An `it` one level under a context belongs to it; one level under the description belongs to the description.
+        self._close_to(level)
+        owner = self._owner()
+        if owner is None:
+            return
+        observation = Observation(name, len(owner.observations) + 1)
+        observation.surface_lines, self._pending_surface = self._pending_surface, []
+        owner.observations.append(observation)
+
+    def _read_block(self, name: str, level: int) -> None:
+        """A line at the margin opens a description; an indented line opens a context inside the nearest open block."""
+        if level == 0:
+            self._description = Description(name, len(self.descriptions) + 1)
+            self.descriptions.append(self._description)
+            self._open = []
+            return
+        if self._description is None:
+            return
+        self._close_to(level)
+        siblings = self._open[-1][1].contexts if self._open else self._description.contexts
+        context = Context(name, len(siblings) + 1)
+        siblings.append(context)
+        self._open.append((level, context))
+
+    def _close_to(self, level: int) -> None:
+        while self._open and self._open[-1][0] >= level:
+            self._open.pop()
+
+    def _owner(self) -> Context | Description | None:
+        """The node the next observation belongs to: the innermost open context, else the description itself."""
+        return self._open[-1][1] if self._open else self._description
+
+    def _current_observation(self) -> Observation | None:
+        owner = self._owner()
+        if owner is None or not owner.observations:
+            return None
+        return owner.observations[-1]
+
+    def _level(self, raw: str) -> int:
+        """Two spaces of indent per level."""
+        return (len(raw) - len(raw.lstrip(" "))) // 2

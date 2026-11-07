@@ -7,8 +7,6 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-import agent_bdd.conf  # noqa: F401 - secrets + import paths
-
 from agent_bdd.agent_bdd_common import (
     AgentHarnessError,
     AgentJudgeError,
@@ -66,21 +64,15 @@ class _ChatAgentBlock:
         prompt: str,
         *,
         timeout_seconds: int = 300,
-        require_agent_shell: bool = False,
     ) -> RunResponse:
-        _ = timeout_seconds, require_agent_shell
         request_yaml = yaml_from_prompt(prompt)
         if not request_yaml:
             raise AgentHarnessError("prompt must contain a toolset: run request block")
         prefix = self._next_instruct_prefix("run")
         self._write_artifact(f"{prefix}-prompt.txt", prompt)
         self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
-        cli_output = ToolsRunYaml(self._workspace, prefix).run_request(request_yaml)
+        cli_output = ToolsRunYaml(self._workspace, prefix).run_request(request_yaml, timeout_seconds)
         return self._finalize_run_response(prefix, cli_output)
-
-    def instruct_run(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
-        """Back-compat alias for ``instruct_use_tool``."""
-        return self.instruct_use_tool(prompt, timeout_seconds=timeout_seconds)
 
     def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = 180) -> JudgeResult:
         self._log.write("judge rubric:")

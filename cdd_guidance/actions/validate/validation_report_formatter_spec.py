@@ -16,8 +16,8 @@ from expects import contain, equal, expect
 from mamba import before, context, description, it
 
 from space.session import Session
-from validate.validation_report import ValidationReport
-from validate.verify_report_links import verify_report
+from cdd_guidance.actions.validate.validation_report import ValidationReport
+from cdd_guidance.actions.validate.verify_report_links import verify_report
 
 
 with description("validation report formatter links"):

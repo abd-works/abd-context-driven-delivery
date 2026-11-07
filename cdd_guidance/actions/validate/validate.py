@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 
 from harness.guidance_actions import GuidanceArg, GuidanceAction
@@ -14,6 +15,11 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
 
 _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding="utf-8")
+
+# At these fidelities the rules are about the object model the code holds: one object model, classes with one job,
+# state held on the object, typed relationships, one-way dependencies. Validate builds that model as a graph, so the
+# judge checks the graph; whether a model document matches the code is a separate check.
+_GRAPH_JUDGED_FIDELITIES = frozenset({"model", "code"})
 
 
 class PathsNotFoundError(FileNotFoundError):
@@ -28,8 +34,25 @@ class PathsNotFoundError(FileNotFoundError):
 class Validate(GuidanceAction):
     """Validate artifacts for provided context tools."""
 
-    # The declared files of the formats a validate does not check; their graph hits are left out of its report.
-    _unchecked_files: frozenset[str] | set[str] = frozenset()
+    # One action serves every MCP call at once, so what a call works on is kept per call, the way the base keeps the
+    # guidance it bound.
+    @property
+    def _unchecked_files(self) -> set[str]:
+        """The declared files of the formats this call does not check; their graph hits are left out of its report."""
+        return getattr(self._running, "unchecked_files", set())
+
+    @_unchecked_files.setter
+    def _unchecked_files(self, files: set[str]) -> None:
+        self._running.unchecked_files = files
+
+    @property
+    def _reports(self) -> list[Path]:
+        """The report files this call claimed, one for each listed guidance's fidelity."""
+        return getattr(self._running, "reports", [])
+
+    @_reports.setter
+    def _reports(self, reports: list[Path]) -> None:
+        self._running.reports = reports
 
     @Mcp
     @Skill
@@ -53,11 +76,12 @@ class Validate(GuidanceAction):
         sections: list[str] = [_VALIDATE_MARKDOWN]
         checked = self._checked_outputs()
         self._unchecked_files = self._other_format_files(checked)
-        if checked:
-            sections.append(self._one_format_instruction(checked))
         named = [path for path in self._workspace_relative(paths) if path not in self._unchecked_files]
         prefixes = named or self._workspace_relative(self._written_outputs(checked) if graph is None else [])
+        self._reports = self._new_reports()
         graph_paths = self._resolve_graph_json_paths(graph, prefixes)
+        if checked:
+            sections.append(self._judging_instruction(checked, graph_paths))
         if graph_paths:
             sections.append(
                 self._graph_and_ai_rule_report(graph_paths, path_prefixes=prefixes)
@@ -80,8 +104,8 @@ class Validate(GuidanceAction):
         parts = [part for part in self.run(on, action="validate") if part]
         sections.extend(parts)
         report = "\n\n".join(sections)
-        saved = self._save_reports(report, graph_paths)
-        where = ", ".join(str(path) for path in saved) if saved else str(self._session_path())
+        self._save_reports(report, graph_paths)
+        where = ", ".join(str(path) for path in self._reports) if self._reports else str(self._session_path())
         return f"{report}\n\nValidation report for these artifacts: {where}"
 
     def listed_rules(self) -> str:
@@ -93,22 +117,43 @@ class Validate(GuidanceAction):
     def _rules_text_of(self, item) -> str:
         return item if isinstance(item, str) else self._rules_for(item)
 
-    def _save_reports(self, report: str, checked_graphs: list[Path]) -> list[Path]:
-        """Save the report in the session for each listed guidance, so the board can link to it.
+    def _new_reports(self) -> list[Path]:
+        """A new report file in the session for each listed guidance's fidelity, claimed before the graph is built so
+        the graph this call checks can be written beside its report."""
+        items = [item for item in self.listed() if not isinstance(item, str)]
+        fidelities = [fidelity for fidelity in (self._fidelity_of(item) for item in items) if fidelity is not None]
+        return [self._claimed(fidelity.new_report_path()) for fidelity in fidelities]
+
+    def _claimed(self, dated: Path) -> Path:
+        """Create the report file under a name no other call holds. A report's name is dated to the second, so a call
+        in the same second as another takes the next number (``…T034343_2.md``); the date stays where the board reads
+        it, and the names still sort by time."""
+        path, number = dated, 1
+        while not self._created(path):
+            number += 1
+            path = dated.with_name(f"{dated.stem}_{number}{dated.suffix}")
+        return path
+
+    def _created(self, path: Path) -> bool:
+        """Create path as an empty file; false when another call already holds that name."""
+        try:
+            path.touch(exist_ok=False)
+        except FileExistsError:
+            return False
+        return True
+
+    def _save_reports(self, report: str, checked_graphs: list[Path]) -> None:
+        """Save the report into each file this call claimed, so the board can link to it.
 
         The graph it checked goes beside each report under the same name, so a report's violations stay on
         their nodes for as long as the report is kept."""
-        from validate.graph_json_reader import save_checked_graph
+        from cdd_guidance.actions.validate.graph_json_reader import save_checked_graph
 
-        items = [item for item in self.listed() if not isinstance(item, str)]
-        if not items:
-            return []
-        fidelities = [fidelity for fidelity in (self._fidelity_of(item) for item in items) if fidelity is not None]
-        paths = [fidelity.new_report_path() for fidelity in fidelities]
-        for path in paths:
+        for path in self._reports:
             path.write_text(report, encoding="utf-8")
-            save_checked_graph(checked_graphs, path.with_suffix(".json"))
-        return paths
+            beside = path.with_suffix(".json")
+            if beside not in checked_graphs:
+                save_checked_graph(checked_graphs, beside)
 
     def _fidelity_of(self, item):
         """The fidelity a guidance item is validated at. A listed practice is the one this action's session holds, so
@@ -120,7 +165,7 @@ class Validate(GuidanceAction):
     def _resolve_graph_json_paths(
         self, graph: bool | str | list[str] | None, edited: list[str]
     ) -> list[Path]:
-        from validate.graph_json_reader import load_graph_json_paths
+        from cdd_guidance.actions.validate.graph_json_reader import load_graph_json_paths
 
         if edited and graph in (None, True) and self._graph_practices():
             return [self._edited_graph_json(edited)]
@@ -135,16 +180,26 @@ class Validate(GuidanceAction):
         return paths
 
     def _edited_graph_json(self, edited: list[str]) -> Path:
-        """Build the graph from just the edited files and write it beside the session; the saved graph stays as it is.
+        """Build the graph from just the edited files and write it beside this call's report; the saved graph stays as
+        it is. Each call writes its own file, so calls running at once never read each other's graph.
 
         Every graph practice loads, because one builds on another (DDD building blocks come from the
         clean engineering classes); the report keeps only the listed guidance's practice.
         """
         from harness.graph.graph import Graph
 
+        destination = self._reports[0].with_suffix(".json") if self._reports else self._new_session_graph_file()
         graph = Graph()
         graph.load_files(str(self.session.root), list(PracticeCatalogue.keys()), edited)
-        return Path(graph.write_json(str(self._session_path() / "edited-graph.json")))
+        graph.write_json(str(destination))
+        return destination
+
+    def _new_session_graph_file(self) -> Path:
+        """A graph file of this call's own in the session, for a validate that saves no report."""
+        folder = self._session_path()
+        folder.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=folder, prefix="edited-graph-", suffix=".json", delete=False) as file:
+            return Path(file.name)
 
     def _workspace_relative(self, paths: list[str] | None) -> list[str]:
         """Each named path as graph node files record it, relative to the session's root.
@@ -160,30 +215,53 @@ class Validate(GuidanceAction):
             raise PathsNotFoundError(unreadable, project, workspace)
         return [path.relative_to(workspace).as_posix() for _, path in named]
 
-    def _checked_outputs(self) -> list[tuple[str, dict[str, list[str]]]]:
-        """Each listed guidance's fidelity outputs, by format, and the one format validate checks: the format the
-        guidance names, else the one the latest generate wrote, else the fidelity's default. A fidelity's formats mirror
-        each other, so checking every one reports each finding once per format."""
-        return [(item.format, self._fidelity_outputs(item)) for item in self.listed() if not isinstance(item, str)]
+    def _checked_outputs(self) -> list[tuple[object, dict[str, list[str]]]]:
+        """Each listed guidance with its fidelity outputs, by format. Validate checks one format, the guidance's own:
+        the format the guidance names, else the one the latest generate wrote, else the fidelity's default. A
+        fidelity's formats mirror each other, so checking every one reports each finding once per format."""
+        return [(item, self._fidelity_outputs(item)) for item in self.listed() if not isinstance(item, str)]
 
-    def _other_format_files(self, checked: list[tuple[str, dict[str, list[str]]]]) -> set[str]:
+    def _other_format_files(self, checked: list[tuple[object, dict[str, list[str]]]]) -> set[str]:
         """The declared files of every format validate does not check, as graph node files record them."""
         workspace = self.session.root
-        others = [(self.session.repo_from_session() / path).resolve() for chosen, outputs in checked for format, paths in outputs.items() if format != chosen for path in paths if "{" not in path]
+        others = [(self.session.repo_from_session() / path).resolve() for item, outputs in checked for format, paths in outputs.items() if format != item.format for path in paths if "{" not in path]
         return {path.relative_to(workspace).as_posix() for path in others if workspace in path.parents}
 
-    def _one_format_instruction(self, checked: list[tuple[str, dict[str, list[str]]]]) -> str:
-        judged = "; ".join(f"{chosen}: {', '.join(outputs.get(chosen, []))}" for chosen, outputs in checked)
-        return f"Judge only the checked format's files ({judged}). The other formats mirror them, so judging those too reports every finding twice."
+    def _judging_instruction(self, checked: list[tuple[object, dict[str, list[str]]]], graph_paths: list[Path]) -> str:
+        """What the judge judges for each listed guidance: at a model or code fidelity with a graph, the graph validate
+        built; otherwise the checked format's files."""
+        graph_judged = [(item, outputs) for item, outputs in checked if graph_paths and self._judges_graph(item)]
+        file_judged = [(item, outputs) for item, outputs in checked if not (graph_paths and self._judges_graph(item))]
+        sentences = []
+        if graph_judged:
+            sentences.append(
+                f"Judge the graph validate built from the checked format's files ({self._judged_files(graph_judged)}), "
+                f"saved at {', '.join(str(path) for path in graph_paths)}: its classes, operations, parameters, "
+                "properties, relationships, and dependencies, against each rule. Read a file only to see what a node "
+                "stands for; whether a model document matches the code is a separate, secondary check."
+            )
+        if file_judged:
+            sentences.append(
+                f"Judge only the checked format's files ({self._judged_files(file_judged)}). The other formats mirror "
+                "them, so judging those too reports every finding twice."
+            )
+        return "\n\n".join(sentences)
 
-    def _written_outputs(self, checked: list[tuple[str, dict[str, list[str]]]]) -> list[str]:
+    def _judged_files(self, checked: list[tuple[object, dict[str, list[str]]]]) -> str:
+        return "; ".join(f"{item.format}: {', '.join(outputs.get(item.format, []))}" for item, outputs in checked)
+
+    def _judges_graph(self, item) -> bool:
+        current = getattr(getattr(item, "fidelities", None), "current", None)
+        return getattr(current, "name", None) in _GRAPH_JUDGED_FIDELITIES
+
+    def _written_outputs(self, checked: list[tuple[object, dict[str, list[str]]]]) -> list[str]:
         """The folders holding what each listed graph-backed guidance's fidelity declares in its checked format and has
         already written: what a validate that names no paths checks, so its graph is built and saved beside the report.
         The folder, not the file, because a story map's stories keep their scenarios in files beside it."""
         if not self._graph_practices():
             return []
         workspace = self.session.root
-        declared = [path for chosen, outputs in checked for path in outputs.get(chosen, [])]
+        declared = [path for item, outputs in checked for path in outputs.get(item.format, [])]
         found = [(self.session.repo_from_session() / path).resolve() for path in declared if "{" not in path]
         folders = {path.parent if path.is_file() else path for path in found if path.exists()}
         return sorted(str(folder) for folder in folders if folder == workspace or workspace in folder.parents)
@@ -211,12 +289,12 @@ class Validate(GuidanceAction):
         *,
         path_prefixes: list[str] | None = None,
     ) -> str:
-        from validate.graph_json_reader import (
+        from cdd_guidance.actions.validate.graph_json_reader import (
             filter_violations_by_path_prefix,
             refresh_stale_limit_operation_parameter_messages,
             violations_from_graph_json_files,
         )
-        from validate.validation_report import ValidationReport
+        from cdd_guidance.actions.validate.validation_report import ValidationReport
 
         violations = violations_from_graph_json_files(paths, self._graph_practices() or None)
         violations = refresh_stale_limit_operation_parameter_messages(violations, self.session.root)

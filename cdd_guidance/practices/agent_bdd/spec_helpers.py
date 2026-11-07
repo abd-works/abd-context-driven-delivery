@@ -184,10 +184,8 @@ def run_skill(
     context: Mapping[str, Any] | None = None,
     arguments: Mapping[str, Any] | None = None,
     timeout_seconds: int = 180,
-    require_agent_shell: bool = False,
 ) -> RunResponse:
     """Invoke a deployed skill path using its fixture run-request mapping."""
-    _ = timeout_seconds, require_agent_shell
     request = invoke_request_for_path(command, repo_root=repo_root)
     merged = dict(request)
     if context:
@@ -196,7 +194,7 @@ def run_skill(
         merged["context"] = merged_context
     if arguments:
         merged["arguments"] = dict(arguments)
-    return invoke_run_request(merged)
+    return invoke_run_request(merged, timeout_seconds)
 
 
 def run_toolset(
@@ -207,17 +205,10 @@ def run_toolset(
     context: Mapping[str, Any] | None = None,
     arguments: Mapping[str, Any] | None = None,
     timeout_seconds: int = 180,
-    require_agent_shell: bool = False,
 ) -> RunResponse:
-    """Invoke one toolset member in-process."""
-    _ = timeout_seconds, require_agent_shell
-    return invoke_toolset(
-        toolset=toolset,
-        tool=tool,
-        action=action,
-        context=context,
-        arguments=arguments,
-    )
+    """Invoke one toolset member in-process; fails with ToolRunTimedOut when it outlives timeout_seconds."""
+    request = build_run_request(toolset=toolset, tool=tool, action=action, context=context, arguments=arguments)
+    return invoke_run_request(request, timeout_seconds)
 
 
 def read_workspace(path: str, *, timeout_seconds: int = 120) -> Any:

@@ -20,7 +20,6 @@ def attach_rules(practice) -> None:
         return
     root = Path(practice.source_root) if practice.source_root else None
     context = RuleCheckContext(practice, root)
-    rows_by_slug: dict[str, list[list[str]]] = {}
 
     def schema_slugs_for(node) -> frozenset[str]:
         if hasattr(node, "_rules") and node._rules is not None:
@@ -37,7 +36,6 @@ def attach_rules(practice) -> None:
         if not hasattr(node, "_rules") or node._rules is None:
             attach_node_rules(node)
         node._rules.record_violation(slug, message)
-        rows_by_slug.setdefault(slug, []).append([slug, node_id, message])
 
     checks = list(registry.values())
     for index, check in enumerate(checks, start=1):
@@ -64,9 +62,6 @@ def attach_rules(practice) -> None:
             )
             for message in check.check(node, context):
                 record(check.slug, node.node_id, message)
-
-    for slug, rows in rows_by_slug.items():
-        practice.apply_rules(slug, rows)
 
 
 def _clean_engineering_slugs() -> frozenset[str]:

@@ -5,7 +5,7 @@ The hierarchy is written as a sketch, markdown, Python, or TypeScript, and `rend
 
 - **Purpose:** Turn domain vocabulary into passing tests, locking what is observed before how it is built.
 - **Seam (terms):** Bdd, `bdd.instructions`, `bdd-behavior`, `bdd-realization`, `bdd-development`, `render`
-- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering` (class model, for the code a test drives), `cdd_guidance/practices/stories` (story model). `harness/graph` imports Bdd back — a cycle tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
+- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering` (class model, for the code a test drives). `harness/graph` imports Bdd back — a cycle tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
 
 ## Constraint
 

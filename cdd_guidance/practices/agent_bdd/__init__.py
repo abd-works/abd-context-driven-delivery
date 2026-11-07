@@ -1,8 +1,6 @@
 """Agent BDD harness selection - cli (cursor-agent) or in-chat (inbox subagents)."""
 from __future__ import annotations
 
-import agent_bdd.conf  # noqa: F401 - secrets + import paths
-
 import os
 import threading
 from contextlib import contextmanager
@@ -13,12 +11,11 @@ from agent_bdd.agent_bdd_common import (  # noqa: F401
     AgentResult,
     AgentSession,
     AgentSpecManifest,
-    AgentSpecRunbook,
     JudgeResult,
     RunResponse,
-    build_runbook,
     read_manifest,
 )
+from agent_bdd.conf import AgentBddConf
 
 # Spec helpers (expects/mamba) are lazy — importing agent_bdd must not require test deps.
 _SPEC_HELPER_EXPORTS = frozenset(
@@ -51,8 +48,6 @@ __all__ = [
     "AgentResult",
     "AgentSession",
     "AgentSpecManifest",
-    "AgentSpecRunbook",
-    "build_runbook",
     "read_manifest",
     *_SPEC_HELPER_EXPORTS,
 ]
@@ -95,7 +90,9 @@ def agent(
     *,
     in_chat: bool | None = None,
 ) -> Iterator[object]:
-    """Route to cli or chat harness; pushes block onto thread-local so free functions work."""
+    """Route to cli or chat harness; pushes block onto thread-local so free functions work. The agent's secrets and
+    import paths load here, when a spec runs an agent, so importing the practice leaves the MCP host's environment alone."""
+    AgentBddConf().configure()
     if in_chat is None:
         in_chat = _in_chat_from_env()
     if in_chat:
@@ -125,14 +122,9 @@ def instruct_use_tool(
     prompt: str,
     *,
     timeout_seconds: int = 300,
-    require_agent_shell: bool = False,
 ) -> RunResponse:
-    """Parse a toolset run request from the prompt and invoke it in-process."""
-    return _agent_blocks.current().instruct_use_tool(
-        prompt,
-        timeout_seconds=timeout_seconds,
-        require_agent_shell=require_agent_shell,
-    )
+    """Parse a toolset run request from the prompt and invoke it in-process; fails when it outlives timeout_seconds."""
+    return _agent_blocks.current().instruct_use_tool(prompt, timeout_seconds=timeout_seconds)
 
 
 def ai_judge(output: str, rubric: str, *, timeout_seconds: int = 180) -> None:
