@@ -1,4 +1,4 @@
-# Clean Engineering cross-file validation rules
+# Codebase-wide checker: Clean Engineering cross-file rules
 
 Validate judges one folder at a time, so the problems that only show across files slip through unless an agent runs a separate cross-file pass by hand. Make these checks part of Clean Engineering's validation, as graph rules where the graph can answer them and as AI-judge rules where it cannot.
 
