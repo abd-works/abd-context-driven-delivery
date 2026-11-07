@@ -1,17 +1,18 @@
-"""Read graph_return_nodes JSON into validation violation records."""
+"""Read the violations a checked graph holds: a saved graph (``.context/graph.json``), or the nodes
+``graph.return_nodes`` answered with. Every violation is the graph's own Violation."""
 
 from __future__ import annotations
 
 import json
-import shutil
 from pathlib import Path
 from typing import Any
 
+from harness.graph.violation import Violation
+from harness.installation.destination import data_of
+
 
 def load_graph_json_paths(graph: bool | str | list[str] | None) -> list[Path]:
-    if not graph:
-        return []
-    if graph is True:
+    if not graph or graph is True:
         return []
     if isinstance(graph, str):
         text = graph.strip()
@@ -19,229 +20,69 @@ def load_graph_json_paths(graph: bool | str | list[str] | None) -> list[Path]:
     return [Path(item) for item in graph if str(item).strip()]
 
 
-def violations_from_graph_json_file(path: Path, practices: list[str] | None = None) -> list[dict[str, Any]]:
-    """Violations in graph_return_nodes JSON (a node list) or a saved graph document (``.context/graph.json``).
-
-    With ``practices``, only nodes of those graph practices count.
-    """
+def violations_from_graph_json_file(path: Path, practices: list[str] | None = None) -> list[Violation]:
+    """The violations in a saved graph document or in a ``graph.return_nodes`` node list; with practices, only those
+    found by those practices."""
     raw = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(raw, dict) and isinstance(raw.get("practices"), dict):
         return _violations_from_saved_graph(raw["practices"], practices)
     if not isinstance(raw, list):
         raise ValueError(f"graph JSON must be a list of nodes or a saved graph document: {path}")
-    violations: list[dict[str, Any]] = []
-    for node in raw:
-        if practices and node.get("practice") and node.get("practice") not in practices:
-            continue
-        violations.extend(_violations_from_node(node))
-    return violations
+    return [violation for node in raw if not practices or node.get("practice") in practices for violation in _violations_from_node(node)]
 
 
-def violations_from_graph_json_files(
-    paths: list[Path], practices: list[str] | None = None
-) -> list[dict[str, Any]]:
-    merged: list[dict[str, Any]] = []
-    for path in paths:
-        merged.extend(violations_from_graph_json_file(path, practices))
-    return merged
+def violations_from_graph_json_files(paths: list[Path], practices: list[str] | None = None) -> list[Violation]:
+    return [violation for path in paths for violation in violations_from_graph_json_file(path, practices)]
 
 
 def save_checked_graph(paths: list[Path], destination: Path) -> None:
-    """Keep the graph a validation checked at ``destination``. Several graphs merge into one node list of their hits."""
+    """Keep the graph a validation checked at destination. Several graphs merge into one node list holding each one's
+    violations."""
     if not paths:
         return
     if len(paths) == 1:
-        shutil.copyfile(paths[0], destination)
+        destination.write_bytes(paths[0].read_bytes())
         return
-    destination.write_text(json.dumps([_hit_node(item) for item in violations_from_graph_json_files(paths)]), encoding="utf-8")
+    nodes = [_violating_node(violation) for violation in violations_from_graph_json_files(paths)]
+    destination.write_text(json.dumps(nodes), encoding="utf-8")
 
 
-def _hit_node(violation: dict[str, Any]) -> dict[str, Any]:
-    """One violation as a summary node; its message already names the node, so the node stays unnamed."""
-    hit = {"message": violation["violation_message"], "file": violation["location"], "start": violation["line_number"], "end": violation["end_line"]}
-    return {"type": "", "name": "", "practice": violation["practice"], "violations": [{"rule": violation["rule_slug"], "messages": [hit]}]}
+def _violating_node(violation: Violation) -> dict[str, Any]:
+    """One violation as the node it was found on, in the shape ``graph.return_nodes`` answers with."""
+    rule = {"name": violation.rule, "status": "violating", "violations": [data_of(violation)]}
+    return {"practice": violation.practice, "node_id": violation.node_id, "rules": [rule]}
 
 
-def _violations_from_saved_graph(
-    documents: dict[str, Any], practices: list[str] | None
-) -> list[dict[str, Any]]:
-    """A saved practice keeps node rows ``[id, name, type, practice, file, start, end, ...]`` and
-    rule hits ``[slug, node_id, message]``; each hit sits at its node's source."""
-    violations: list[dict[str, Any]] = []
+def _violations_from_saved_graph(documents: dict[str, Any], practices: list[str] | None) -> list[Violation]:
+    """A saved practice keeps its node rows and its violations; a violation saved before it kept its own place sits at
+    its node's."""
+    violations: list[Violation] = []
     for name, document in documents.items():
         if practices and name not in practices:
             continue
         rows = {row[0]: row for row in (document or {}).get("nodes") or [] if row}
-        for slug, node_id, message in (document or {}).get("rules") or []:
-            row = rows.get(node_id) or [node_id, "", "", name, "", None, None]
-            node = {"practice": name, "type": row[2], "name": row[1]}
-            hit = {"message": str(message), "file": row[4], "start": row[5], "end": row[6]}
-            violations.append(_record(node, row[2], row[1], str(slug), hit))
+        violations.extend(Violation.from_saved(name, saved, rows) for saved in (document or {}).get("rules") or [])
     return violations
 
 
-def refresh_stale_limit_operation_parameter_messages(
-    violations: list[dict[str, Any]],
-    workspace_directory: Path,
-) -> list[dict[str, Any]]:
-    """Re-run limit-operation-parameters when graph JSON still has the legacy message."""
-    if not any(_needs_limit_parameter_refresh(item) for item in violations):
-        return violations
-    from harness.graph.ce_rule_eval_harness import ce_rule_by_slug, practice_from_source
-    from harness.graph.rule_context import RuleCheckContext
-
-    rule = ce_rule_by_slug("limit-operation-parameters")
-    workspace = workspace_directory.resolve()
-    by_file: dict[str, list[dict[str, Any]]] = {}
-    for item in violations:
-        if not _needs_limit_parameter_refresh(item):
-            continue
-        location = str(item.get("location", "")).replace("\\", "/")
-        if location:
-            by_file.setdefault(location, []).append(item)
-
-    refreshed: dict[tuple[str, str], str] = {}
-    for rel_path, _items in by_file.items():
-        source_path = workspace / rel_path
-        if not source_path.is_file():
-            continue
-        lang = _source_language(source_path)
-        if lang is None:
-            continue
-        practice, root = practice_from_source(
-            source_path.read_text(encoding="utf-8"),
-            lang=lang,
-            filename=source_path.name,
-        )
-        context = RuleCheckContext(practice, root)
-        for node in practice.nodes.get("Operation", []):
-            hits = rule.check(node, context)
-            if hits:
-                refreshed[(rel_path, node.name)] = hits[0]
-
-    if not refreshed:
-        return violations
-
-    updated: list[dict[str, Any]] = []
-    for item in violations:
-        if not _needs_limit_parameter_refresh(item):
-            updated.append(item)
-            continue
-        rel_path = str(item.get("location", "")).replace("\\", "/")
-        op_name = str(item.get("node_name", ""))
-        message = refreshed.get((rel_path, op_name))
-        if not message:
-            updated.append(item)
-            continue
-        ntype = str(item.get("node_type", "Operation"))
-        nname = str(item.get("node_name", ""))
-        prefix = f"{ntype} `{nname}`: " if nname else ""
-        updated.append({**item, "violation_message": f"{prefix}{message}".strip()})
-    return updated
-
-
-def _needs_limit_parameter_refresh(item: dict[str, Any]) -> bool:
-    if item.get("rule_slug") != "limit-operation-parameters":
-        return False
-    text = str(item.get("violation_message", ""))
-    return "takes more than two parameters" in text or "(maximum 2)" in text
-
-
-def _source_language(path: Path) -> str | None:
-    suffix = path.suffix.lower()
-    if suffix in {".ts", ".tsx"}:
-        return "typescript"
-    if suffix == ".js":
-        return "javascript"
-    if suffix == ".py":
-        return "python"
-    return None
-
-
-def _violations_from_node(node: dict[str, Any]) -> list[dict[str, Any]]:
-    if "violations" in node and isinstance(node.get("violations"), list):
-        return _from_summary_node(node)
-    return _from_full_node(node)
-
-
-def _from_summary_node(node: dict[str, Any]) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    ntype = node.get("type", "")
-    nname = node.get("name", "")
-    for block in node.get("violations") or []:
-        rule = str(block.get("rule", ""))
-        for hit in block.get("messages") or []:
-            out.append(_record(node, ntype, nname, rule, hit))
-    return out
-
-
-def _from_full_node(node: dict[str, Any]) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    ntype = node.get("type", "")
-    nname = node.get("name", "")
+def _violations_from_node(node: dict[str, Any]) -> list[Violation]:
+    """The violations of each violating rule on one node ``graph.return_nodes`` answered with."""
+    found: list[Violation] = []
     for rule in node.get("rules") or []:
-        if rule.get("status") != "violating":
-            continue
-        rule_name = str(rule.get("name", ""))
-        for hit in rule.get("violations") or []:
-            out.append(_record(node, ntype, nname, rule_name, hit))
-    return out
+        if rule.get("status") == "violating":
+            found.extend(Violation.from_data({"practice": node.get("practice", ""), **hit}) for hit in rule.get("violations") or [])
+    return found
 
 
-def _record(
-    node: dict[str, Any],
-    ntype: str,
-    nname: str,
-    rule: str,
-    hit: dict[str, Any] | str,
-) -> dict[str, Any]:
-    if isinstance(hit, str):
-        message = hit
-        file = ""
-        start = None
-        end = None
-    else:
-        message = str(hit.get("message", ""))
-        file = str(hit.get("file", "") or "")
-        start = hit.get("start")
-        end = hit.get("end")
-    line_number = int(start) if start else None
-    location = file or "unknown"
-    prefix = f"{ntype} `{nname}`: " if nname else ""
-    return {
-        "location": location,
-        "line_number": line_number,
-        "violation_message": f"{prefix}{message}".strip(),
-        "severity": "error",
-        "graph_rule": True,
-        "rule_slug": rule,
-        "practice": node.get("practice", ""),
-        "node_type": ntype,
-        "node_name": nname,
-        "end_line": int(end) if end else line_number,
-    }
-
-
-def filter_violations_by_path_prefix(
-    violations: list[dict[str, Any]],
-    prefixes: list[str] | None,
-) -> list[dict[str, Any]]:
-    if not prefixes:
+def filter_violations_by_path_prefix(violations: list[Violation], prefixes: list[str] | None) -> list[Violation]:
+    """The violations in files under one of the path prefixes; every violation when there are none."""
+    if not prefixes or not any(str(prefix).strip() for prefix in prefixes):
         return violations
-    normalized = [p.replace("\\", "/").strip("/") for p in prefixes if str(p).strip()]
-    if not normalized:
-        return violations
-    kept: list[dict[str, Any]] = []
-    for item in violations:
-        loc = str(item.get("location", "")).replace("\\", "/")
-        if any(loc == prefix or loc.startswith(f"{prefix}/") for prefix in normalized):
-            kept.append(item)
-    return kept
+    return [violation for violation in violations if violation.is_under(prefixes)]
 
 
-def violations_by_rule(violations: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
-    grouped: dict[str, list[dict[str, Any]]] = {}
-    for item in violations:
-        key = str(item.get("rule_slug") or "unknown")
-        grouped.setdefault(key, []).append(item)
+def violations_by_rule(violations: list[Violation]) -> dict[str, list[Violation]]:
+    grouped: dict[str, list[Violation]] = {}
+    for violation in violations:
+        grouped.setdefault(violation.rule or "unknown", []).append(violation)
     return grouped

@@ -18,7 +18,7 @@ from cdd_guidance.practices.stories.rules.scenarios import (  # noqa: E402
     GivenNamesComplexStateRootFirst,
     OutlineRequiresManyPermutations,
 )
-from harness.graph.graph import Graph, Node, Source  # noqa: E402
+from harness.graph.graph import Edge, Graph, Node, Source  # noqa: E402
 from harness.graph.rule_context import RuleCheckContext  # noqa: E402
 
 
@@ -50,11 +50,18 @@ def _loaded(scenario: Scenario, graph: Graph | None = None) -> RuleCheckContext:
 
 
 def _read_back(context: RuleCheckContext) -> RuleCheckContext:
-    """The same graph as graph.json gives it back: each node keeps its facts and loses the object it was read from."""
-    for nodes in context.practice.nodes.values():
-        for node in nodes:
-            node.data = node.facts
-            node.model = None
+    """The same graph as graph.json gives it back: each node a plain node holding the facts the object it was read
+    from saved."""
+    practice = context.practice
+    for type_name, nodes in practice.nodes.items():
+        for index, node in enumerate(nodes):
+            plain = Node(practice, node.type, node.node_id, node.name, node.source)
+            plain.data = node.facts
+            nodes[index] = plain
+            practice.by_id[node.node_id] = plain
+    for edges in practice.edges.values():
+        for position, edge in enumerate(edges):
+            edges[position] = Edge(edge.kind, edge.order, edge.display, practice.by_id.get(edge.parent.node_id, edge.parent), practice.by_id.get(edge.child.node_id, edge.child))
     return context
 
 

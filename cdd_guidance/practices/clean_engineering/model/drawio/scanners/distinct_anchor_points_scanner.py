@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
+from harness.graph.violation import Violation
+
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     DrawioPage,
     DrawioScanner,
-    DrawioViolation,
     style_number,
 )
 
@@ -17,7 +18,7 @@ ANCHOR_PRECISION = 2
 class DistinctAnchorPointsScanner(DrawioScanner):
     RULE = "distinct-anchor-points"
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         """Edges that leave or enter the same class at exactly the same anchor; no anchor in the style means the centre."""
         users: dict[tuple[str, str, tuple], list[str]] = {}
         for edge in page.edges:

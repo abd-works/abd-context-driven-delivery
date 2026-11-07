@@ -1,10 +1,11 @@
 """Scanner: edges-do-not-cross-classes - edge routes must not cut through unrelated class boxes."""
 from __future__ import annotations
 
+from harness.graph.violation import Violation
+
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     DrawioPage,
     DrawioScanner,
-    DrawioViolation,
     segment_hits_box,
 )
 
@@ -15,7 +16,7 @@ BOX_MARGIN = 3
 class EdgesDoNotCrossClassesScanner(DrawioScanner):
     RULE = "edges-do-not-cross-classes"
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         """Only routes the file states exactly; Draw.io's router may find a better way for an edge with no waypoints."""
         violations = []
         for edge in page.edges:

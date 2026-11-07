@@ -22,19 +22,10 @@ from harness.agent_tools.progress import report_progress
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
-from harness.graph.explorer import (
-    ExplorerEntry,
-    FilteredNode,
-    GraphLoaded,
-    GraphSaved,
-    Member,
-    NodeSource,
-    Overlay,
-    RuleCategory,
-    RuleEntry,
-    RuleHit,
-)
+from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, Member, NodeSource, Overlay
+from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.skipped_folders import SKIPPED_FOLDERS, scanned_files, skips_folder
+from harness.graph.violation import Violation
 
 Display = str
 Tuple = list[str]
@@ -232,6 +223,14 @@ class Source:
         self.root = root
         self.calls: list[Call] = []
         self._text: str | None = None
+
+    @classmethod
+    def whole_file(cls, relative: str, root: str) -> Source:
+        """Every line of the file at relative under root; one line when it is empty or not there."""
+        path = Path(root, relative) if root else None
+        text = path.read_text(encoding="utf-8") if path is not None and path.is_file() else ""
+        end = text.count("\n") + (0 if not text or text.endswith("\n") else 1)
+        return cls(relative, 1, max(1, end), root)
 
     @property
     def startLine(self) -> int:
@@ -650,9 +649,10 @@ def _listed(request: dict, many: str, one: str) -> list[str]:
 class Node:
     """children is the list populate writes on this node. Direct edges are the children. Grouped and relationship edges sit under one child named for the kind.
 
-    A loader that parsed the code or document behind a node hands the node that parsed object as ``model``: rules read
-    its measurements straight from it. ``data`` holds only what the parsed object does not know, such as the facts a
-    model document adds. A graph reloaded from ``graph.json`` has no ``model``; its saved facts are in ``data``.
+    A practice's parsed objects (a class, an operation, a scenario, a step) are nodes themselves: a practice reader adds
+    the object it parsed to its practice graph, and rules read measurements straight from it. ``data`` holds only the
+    facts the reader knows and the object does not, such as which folder a class sits in. A graph reloaded from
+    ``graph.json`` holds plain nodes, whose saved facts are all in ``data``.
     """
 
     graph_facts: tuple[str, ...] = ()
@@ -666,7 +666,6 @@ class Node:
         self.source = source
         self.stage = ""
         self.data: dict = {}
-        self.model: Node | None = None
         self.children: list[Node] = []
         self.parent: Node | None = None
         self._rules = None
@@ -680,8 +679,8 @@ class Node:
         """This node's fact, else the nearest ancestor's: a fact a whole file owns lives once, on the file's top node."""
         node, visited = self, set()
         while node is not None and id(node) not in visited:
-            if node._model_has(key):
-                return getattr(node.model, key)
+            if node._holds_attribute(key):
+                return getattr(node, key)
             if key in node.data:
                 return node.data[key]
             visited.add(id(node))
@@ -690,18 +689,17 @@ class Node:
 
     def has_fact(self, key: str) -> bool:
         """True when this node itself records the fact."""
-        return self._model_has(key) or key in self.data
+        return self._holds_attribute(key) or key in self.data
 
     @property
     def facts(self) -> dict:
-        """Every fact this node records: its parsed object's saved attributes, then ``data``. This is what ``graph.json`` keeps."""
-        model = self.model
-        found = {} if model is None else {name: getattr(model, name) for name in model.graph_facts if hasattr(model, name)}
+        """Every fact this node records: its saved attributes, then ``data``. This is what ``graph.json`` keeps."""
+        found = {name: getattr(self, name) for name in self.graph_facts if hasattr(self, name)}
         found.update(self.data)
         return found
 
-    def _model_has(self, key: str) -> bool:
-        return self.model is not None and key in self.model.graph_facts and hasattr(self.model, key)
+    def _holds_attribute(self, key: str) -> bool:
+        return key in self.graph_facts and hasattr(self, key)
 
     @property
     def fidelity(self) -> str:
@@ -770,13 +768,30 @@ class Node:
         )
         node.stage = str(row.get("stage") or "")
         node.data = dict(row.get("data") or {})
-        if row["semantic_type"] in {"Step", "Given", "When", "Then"}:
-            node.source.align_to_label(row["name"])
-        elif row["semantic_type"] in {"Scenario", "Story", "Background"}:
-            node.source.widen_to_call_close()
-        elif row["semantic_type"] == "Example":
-            node.source.align_to_example_export(practice.source_root, row["name"])
+        node.place(row["file"], row["line"], row["end_line"])
         return node
+
+    def release(self) -> None:
+        """Leave the practice this node is registered in, so another practice can take it."""
+        practice = getattr(self, "practice", None)
+        if practice is None or practice.by_id.get(self.node_id) is not self:
+            return
+        del practice.by_id[self.node_id]
+        bucket = practice.nodes.get(self.type, [])
+        if self in bucket:
+            bucket.remove(self)
+
+    def place(self, file: str, start_line: int, end_line: int) -> None:
+        """Put this node at its lines in file, under its practice's source root. A step, scenario, or example a reader
+        found by a nearby line moves onto the lines that declare it."""
+        root = self.practice.source_root
+        self.source = Source(file, start_line, end_line, root)
+        if self.type in {"Step", "Given", "When", "Then"}:
+            self.source.align_to_label(self.name)
+        elif self.type in {"Scenario", "Story", "Background"}:
+            self.source.widen_to_call_close()
+        elif self.type == "Example":
+            self.source.align_to_example_export(root, self.name)
 
     @staticmethod
     def _stage_cell(row: Tuple) -> str:
@@ -857,40 +872,11 @@ class Node:
                 written.append(category)
         return ExplorerEntry(self, written)
 
-    def rule_category(self) -> ExplorerEntry | None:
-        """Applicable rules as one child category. A violation filter keeps the rules that failed."""
+    def rule_category(self) -> GraphRulesCollection | None:
+        """The rules that apply to this node, as one child of it in the explorer tree; none when the filter shows none."""
         if self.type == self.name or self.type == "Practice":
             return None
-        rows = self.rule_rows()
-        if not rows:
-            return None
-        return RuleCategory(self, rows)
-
-    def rule_rows(self, violations_only: bool | None = None, selected: list[str] | None = None) -> list[RuleEntry]:
-        """One rule child: status violating, passing, or prompt, and every stored hit.
-
-        Only violating rows (of the selected rules) come back when ``violations_only`` is set;
-        left out, both follow the graph filter.
-        """
-        graph = self.practice.graph
-        if violations_only is None:
-            violations_only = bool(graph and graph.filter.violations)
-        if selected is None:
-            selected = list(graph.filter.rules) if graph else []
-        rows: list[RuleEntry] = []
-        for slug in self.rules.slugs:
-            entry = self.rules.entries.get(slug)
-            hits = [RuleHit.from_stored(hit) for hit in getattr(entry, "hits", []) or []]
-            if hits:
-                status = "violating"
-            elif not getattr(entry, "executable", True):
-                status = "prompt"
-            else:
-                status = "passing"
-            if violations_only and (status != "violating" or (selected and slug not in selected)):
-                continue
-            rows.append(RuleEntry(self, slug, status, hits))
-        return rows
+        return self.rules if self.rules.shown else None
 
     def _new_kind_node(self, kind: str) -> Node:
         return Node(self.practice, kind, f"{self.practice.name}:{kind}:{self.node_id}", kind, self.source)
@@ -906,7 +892,6 @@ class PracticeGraph:
         self.node_types: set[str] = set()
         self.edge_types: dict[str, EdgeType] = {}
         self.by_id: dict[str, Node] = {}
-        self.rules_run: list[str] = []
         self.applicable: dict[str, list[str]] = {}
         self.loaded: list[str] = []
         self.source_root = ""
@@ -965,23 +950,64 @@ class PracticeGraph:
         """The explorer tree, from this practice's root."""
         return self.root_node.serialize()
 
-    def apply_nodes(self, tuples: list[Tuple], models: dict[str, Node] | None = None) -> None:
-        """Register a node for each record. ``models`` gives, by node id, the parsed object a loader read the node from."""
+    def add(self, node: Node, node_id: str, file: str, start_line: int, end_line: int) -> Node:
+        """Make node one of this practice's nodes, called node_id, at its lines in file; the node already called
+        node_id when there is one. A parsed object leaves the throwaway graph its parser built it in. It keeps the
+        parent its parser gave it only when that parent is a node of this practice too, such as an operation's class;
+        the tree itself is built from this practice's edges."""
+        existing = self.by_id.get(node_id)
+        if existing is not None:
+            return existing
+        node.release()
+        node.practice = self
+        node.node_id = node_id
+        if not self._holds(node.parent):
+            node.parent = None
+        node.place(file, start_line, end_line)
+        return self._register(node)
+
+    def _holds(self, node: Node | None) -> bool:
+        return node is not None and self.by_id.get(getattr(node, "node_id", "")) is node
+
+    def add_named(self, type: str, node_id: str, name: str, source: Source) -> Node:
+        """A node with no parsed object behind it, such as a story's example or a pattern's file, made and added."""
+        node = Node(self, type, node_id, name, source)
+        return self.add(node, node_id, source.file, source.start_line, source.end_line)
+
+    def _register(self, node: Node) -> Node:
         from harness.graph.node_rules import attach_node_rules
         from harness.graph.schema_rules import bind_practice_rules
 
         bind_practice_rules(self)
-        models = models or {}
-        for row in tuples:
+        self.node_types.add(node.type)
+        attach_node_rules(node)
+        self.nodes.setdefault(node.type, []).append(node)
+        self.by_id[node.node_id] = node
+        return node
+
+    def restore(self, saved: dict) -> None:
+        """Read back the nodes a saved graph kept for this practice, as plain nodes holding their saved facts."""
+        for row in saved.get("nodes") or []:
             fact = Node.fact(row)
-            if fact is None or fact["node_id"] in self.by_id:
-                continue
-            self.node_types.add(fact["semantic_type"])
-            node = Node.from_fact(self, fact)
-            node.model = models.get(fact["node_id"])
-            attach_node_rules(node)
-            self.nodes.setdefault(fact["semantic_type"], []).append(node)
-            self.by_id[fact["node_id"]] = node
+            if fact is not None and fact["node_id"] not in self.by_id:
+                self._register(Node.from_fact(self, fact))
+
+    def restore_links(self, saved: dict) -> None:
+        """Read back the edges and violations a saved graph kept for this practice, once every practice's nodes are back."""
+        for row in saved.get("edges") or []:
+            fact = Edge.fact(row)
+            parent = self.registered(fact["parent_id"]) if fact else None
+            child = self.registered(fact["child_id"]) if fact else None
+            if parent is not None and child is not None:
+                parent.practice.record(fact, parent, child)
+                if parent.practice is not child.practice:
+                    child.practice.record(fact, child, parent)
+        rows = {row[0]: row for row in saved.get("nodes") or [] if row}
+        for saved_violation in saved.get("rules") or []:
+            violation = Violation.from_saved(self.name, saved_violation, rows)
+            node = self.registered(violation.node_id)
+            if node is not None:
+                node.rules.restore(violation)
 
     def registered(self, node_id: str) -> Node | None:
         local = self.by_id.get(node_id)
@@ -995,18 +1021,9 @@ class PracticeGraph:
                 return node
         return None
 
-    def apply_edges(self, tuples: list[Tuple]) -> None:
-        for row in tuples:
-            fact = Edge.fact(row)
-            if fact is None:
-                continue
-            parent = self.registered(fact["parent_id"])
-            child = self.registered(fact["child_id"])
-            if parent is None or child is None:
-                continue
-            parent.practice.record(fact, parent, child)
-            if parent.practice is not child.practice:
-                child.practice.record(fact, child, parent)
+    def link(self, kind: str, parent: Node, child: Node, display: Display = "direct") -> None:
+        """Record an edge of kind from parent to child on this practice, in the place its kind takes in the tree."""
+        self.record({"kind": kind, "order": edge_order(kind, display), "display": display}, parent, child)
 
     def record(self, fact: dict, parent: Node, child: Node) -> None:
         kind = fact["kind"]
@@ -1063,28 +1080,6 @@ class PracticeGraph:
             node.parent = None
             node._populated = False
         self.root_node.populate()
-
-    def apply_rules(self, rule: str, tuples: list[Tuple]) -> None:
-        self.rules_run.append(rule)
-        for row in tuples:
-            slug, node_id, violation = (row + [""] * 3)[:3]
-            if not slug or not node_id or not violation:
-                continue
-            node = self.registered(node_id)
-            if node is None:
-                continue
-            existing = [message for s, message in node.rules.violations if s == slug]
-            if violation in existing:
-                continue
-            node.rules.record_violation(slug, violation)
-
-    def nodes_for_rule(self, rule: str) -> list[Node]:
-        found = []
-        for nodes in self.nodes.values():
-            for node in nodes:
-                if rule in node.failed_rules:
-                    found.append(node)
-        return found
 
 
 
@@ -1243,6 +1238,13 @@ class Graph:
         self._build_working_copy()
         return GraphLoaded(f"Loaded {len(self._scope)} edited files.")
 
+    def source_files(self, root: Path, suffixes: set[str]) -> list[Path]:
+        """The files with these suffixes under root; only the edited ones when the graph loads a file scope."""
+        edited = self.edited_files()
+        if edited is None:
+            return scanned_files(root, suffixes)
+        return [path for path in edited if path.suffix.lower() in suffixes]
+
     def edited_files(self) -> list[Path] | None:
         """The files a ``load_files`` reads; ``None`` when the whole folder loads."""
         return None if self._scope is None else list(self._scope)
@@ -1301,6 +1303,8 @@ class Graph:
         return GraphSaved(str(path))
 
     def _build_working_copy(self) -> None:
+        # A working copy's edges are the ones its practices read; its parsed objects never add schema edges of their own.
+        self._defer_schema_sync = True
         self.practices = {}
         for name, source in self._practice_roots.items():
             practice = self.practice(name)
@@ -1310,7 +1314,7 @@ class Graph:
 
         fill_working_copy(self)
         for practice in self.practices.values():
-            practice.root_node.populate()
+            practice.rebuild_tree()
 
     def _graph_json_path(self) -> Path:
         folder = self._folder or Path()
@@ -1343,7 +1347,7 @@ class Graph:
             "root_facts": encode_node_data(practice.root_node.facts),
             "nodes": [self._node_row(node) for node in nodes],
             "edges": [self._edge_row(edge) for edge in edges],
-            "rules": [[slug, node.node_id, message] for node in nodes for slug, message in node.rules.violations],
+            "rules": [violation.saved for node in nodes for violation in node.rules.violations],
         }
 
     def _node_row(self, node: Node) -> list:
@@ -1413,7 +1417,7 @@ class Graph:
             "schema_rules.py",
             "node_rules.py",
             "practice_rule.py",
-            "practice_rules_registry.py",
+            "graph_practice.py",
             "rule_context.py",
             "graph_rules_collection.py",
         )
@@ -1489,22 +1493,12 @@ class Graph:
         practice = self.practice(name)
         practice.source_root = str(saved.get("source_root") or self._practice_roots[name])
         practice.by_id[practice.root_node.node_id] = practice.root_node
-        practice.apply_nodes(list(saved.get("nodes") or []))
+        practice.restore(saved)
 
     def _restore_practice_links(self, name: str, saved: dict) -> None:
         practice = self.practice(name)
-        practice.apply_edges(list(saved.get("edges") or []))
-        self._restore_rule_hits(practice, list(saved.get("rules") or []))
+        practice.restore_links(saved)
         practice.loaded = ["nodes", "edges", "rules"]
-
-    def _restore_rule_hits(self, practice: PracticeGraph, rows: list) -> None:
-        grouped: dict[str, list] = {}
-        for row in rows:
-            if len(row) < 3:
-                continue
-            grouped.setdefault(str(row[0]), []).append(row)
-        for slug, hits in grouped.items():
-            practice.apply_rules(slug, hits)
 
     @mcp
     @agent_tool
@@ -1587,7 +1581,7 @@ class Graph:
         seen.add(id(node))
         chain = [*ancestors, node.name]
         if wanted.matches(node):
-            rules = node.rule_rows(wanted.violations or None, list(wanted.rules) or None)
+            rules = node.rules.chosen(wanted.violations, list(wanted.rules))
             found.append(FilteredNode(node, ancestors, rules))
         for child in node.children:
             self._collect_nodes(child, chain, wanted, found, seen)

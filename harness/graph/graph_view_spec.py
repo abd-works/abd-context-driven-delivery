@@ -94,16 +94,20 @@ with description("a graph"):
         with before.all:
             self.practice = PracticeGraph("clean_engineering")
             self.practice.by_id[self.practice.root_node.node_id] = self.practice.root_node
-            self.practice.apply_nodes([
-                ["clean_engineering:Module:src/domain:domain", "domain", "Module", "clean_engineering", "src/domain", "1", "1", "discovery"],
-                ["clean_engineering:Package:src/domain/customer:customer", "customer", "Package", "clean_engineering", "src/domain/customer", "1", "1", "discovery"],
-                ["clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer", "Customer", "OoadClass", "clean_engineering", "src/domain/customer/Customer.ts", "1", "3", "implementation"],
-            ])
-            self.practice.apply_edges([
-                [self.practice.root_node.node_id, "clean_engineering:Module:src/domain:domain", "owns", "1", "direct"],
-                ["clean_engineering:Module:src/domain:domain", "clean_engineering:Package:src/domain/customer:customer", "owns", "2", "direct"],
-                ["clean_engineering:Package:src/domain/customer:customer", "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer", "owns", "2", "direct"],
-            ])
+            saved = {
+                "nodes": [
+                    ["clean_engineering:Module:src/domain:domain", "domain", "Module", "clean_engineering", "src/domain", "1", "1", "discovery"],
+                    ["clean_engineering:Package:src/domain/customer:customer", "customer", "Package", "clean_engineering", "src/domain/customer", "1", "1", "discovery"],
+                    ["clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer", "Customer", "OoadClass", "clean_engineering", "src/domain/customer/Customer.ts", "1", "3", "implementation"],
+                ],
+                "edges": [
+                    [self.practice.root_node.node_id, "clean_engineering:Module:src/domain:domain", "owns", "1", "direct"],
+                    ["clean_engineering:Module:src/domain:domain", "clean_engineering:Package:src/domain/customer:customer", "owns", "2", "direct"],
+                    ["clean_engineering:Package:src/domain/customer:customer", "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer", "owns", "2", "direct"],
+                ],
+            }
+            self.practice.restore(saved)
+            self.practice.restore_links(saved)
             self.practice.root_node.populate()
             self.tree = data_of(self.practice.root_node.serialize())
 

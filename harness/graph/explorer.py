@@ -1,6 +1,7 @@
-"""What the graph's tools answer with besides the graph's own objects: the explorer tree, a node's source, and the
-nodes a filter matches. Each holds the node it describes and reads its data from it, so an application outside Python
-reads the same objects the agent does."""
+"""What the graph's tools answer with besides the graph's own objects: a node's place in the explorer tree, a node's
+source, and the nodes a filter matches. Each holds the node it describes and reads its data from it, so an application
+outside Python reads the same objects the agent does. A node's rules are its own GraphRulesCollection, and each rule's
+violations are Violations, so neither has a copy here."""
 
 from __future__ import annotations
 
@@ -10,6 +11,7 @@ from harness.installation.destination import SourceFile, data_field
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
+    from harness.graph.graph_rules_collection import GraphRule
 
 
 class GraphLoaded:
@@ -36,45 +38,12 @@ class GraphSaved:
         return self._path
 
 
-class RuleHit:
-    """One violation a rule recorded on a node, at the node's file and lines; a hit with no source has neither."""
-
-    def __init__(self, message: str, file: str, start: int, end: int) -> None:
-        self._message = message
-        self._file = file
-        self._start = start
-        self._end = end
-
-    @classmethod
-    def from_stored(cls, hit: dict) -> RuleHit:
-        return cls(hit["message"], hit.get("file", ""), hit.get("start", 0), hit.get("end", 0))
-
-    @property
-    @data_field
-    def message(self) -> str:
-        return self._message
-
-    @property
-    @data_field
-    def file(self) -> Annotated[str, SourceFile]:
-        return self._file
-
-    @property
-    @data_field
-    def start(self) -> int:
-        return self._start
-
-    @property
-    @data_field
-    def end(self) -> int:
-        return self._end
-
-
 class ExplorerEntry:
-    """One node at one place in the explorer tree, with the entries written below it there. A node already written
-    under its home parent, or already on the path to this place, has none."""
+    """One node at one place in the explorer tree, with the entries written below it there. A node sits at many places
+    (under its home parent and under every relationship that names it) but only its home place lists its children, and
+    a node already on the path to this place lists none, so the place is not the node."""
 
-    def __init__(self, node: Node, children: list[ExplorerEntry] | None = None) -> None:
+    def __init__(self, node: Node, children: list | None = None) -> None:
         self._node = node
         self._children = list(children or [])
 
@@ -95,56 +64,9 @@ class ExplorerEntry:
 
     @property
     @data_field
-    def children(self) -> list[ExplorerEntry]:
+    def children(self) -> list:
+        """The entries below this one, and last the node's rules when it has any to show."""
         return list(self._children)
-
-
-class RuleCategory(ExplorerEntry):
-    """The rules entry under a node: one entry for each rule that applies to it."""
-
-    @property
-    def type(self) -> str:
-        return "rules"
-
-    @property
-    def name(self) -> str:
-        return "rules"
-
-    @property
-    def node_id(self) -> str:
-        return f"{self._node.node_id}:rules"
-
-
-class RuleEntry(ExplorerEntry):
-    """One rule under a node: whether it is violating, passing, or a prompt, and every hit it recorded there."""
-
-    def __init__(self, node: Node, slug: str, status: str, violations: list[RuleHit]) -> None:
-        super().__init__(node)
-        self._slug = slug
-        self._status = status
-        self._violations = list(violations)
-
-    @property
-    def type(self) -> str:
-        return "Rule"
-
-    @property
-    def name(self) -> str:
-        return self._slug
-
-    @property
-    def node_id(self) -> str:
-        return f"{self._node.node_id}:rules:{self._slug}"
-
-    @property
-    @data_field
-    def status(self) -> str:
-        return self._status
-
-    @property
-    @data_field
-    def violations(self) -> list[RuleHit]:
-        return list(self._violations)
 
 
 class Overlay:
@@ -162,7 +84,7 @@ class Overlay:
 class FilteredNode:
     """One node a filter matches, with the names above and below it and its rules."""
 
-    def __init__(self, node: Node, ancestors: list[str], rules: list[RuleEntry]) -> None:
+    def __init__(self, node: Node, ancestors: list[str], rules: list[GraphRule]) -> None:
         self._node = node
         self._ancestors = list(ancestors)
         self._rules = list(rules)
@@ -199,7 +121,7 @@ class FilteredNode:
 
     @property
     @data_field
-    def rules(self) -> list[RuleEntry]:
+    def rules(self) -> list[GraphRule]:
         return list(self._rules)
 
 

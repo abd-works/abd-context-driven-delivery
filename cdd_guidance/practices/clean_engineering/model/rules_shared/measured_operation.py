@@ -30,17 +30,13 @@ class MeasuredOperation:
 
     @classmethod
     def from_node(cls, node: "Node") -> "MeasuredOperation":
-        """Graph facts come from the node; a measurement the graph does not save comes from the parsed operation, and
-        is absent from a graph read back from graph.json, which keeps no parsed objects."""
+        """Graph facts come from the node; a measurement the graph does not save comes from the parsed operation the
+        node is, and is absent from a graph read back from graph.json, whose nodes are no parsed objects."""
 
         def fact(key: str, default: object = None) -> object:
             if node.has_fact(key):
                 return node.get_fact(key, default)
-            if node.model is None:
-                return default
-            if key == "parameters":
-                return _parameter_pairs(node.model)
-            return getattr(node.model, key, default)
+            return getattr(node, key, default)
 
         span = node.source.end_line - node.source.start_line + 1
         return cls(node.name, f"Operation '{node.name}'", fact, span if span > 1 else 0)
@@ -82,7 +78,7 @@ class OperationMeasureRule(PracticeGraphRule):
 
 
 def _unrecorded_operations(node: "Node", context: "RuleCheckContext") -> list["Operation"]:
-    operations = getattr(node.model, "operations", None) or []
+    operations = getattr(node, "operations", None) or []
     file = node.source.file
     return [
         operation

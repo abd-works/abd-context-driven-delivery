@@ -1,6 +1,7 @@
 """Shared context for graph rule checks: the practice being checked and graph helpers.
 
-Rules read what the loader parsed through each node: ``node.model`` is the parsed object, ``node.get_fact`` its saved facts.
+A node is the object its practice parsed, so rules read its measurements from it; ``node.get_fact`` reads its saved facts,
+which is all a node read back from graph.json holds.
 """
 
 from __future__ import annotations

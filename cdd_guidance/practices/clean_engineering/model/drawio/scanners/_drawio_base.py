@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
+from harness.graph.violation import Violation
+from harness.installation.destination import data_of
+
 DRAWIO_EXTENSIONS = frozenset({'.drawio', '.xml'})
 SKIP_DIR_NAMES = frozenset({'node_modules', '.git', 'dist', 'build', 'coverage', '__pycache__', '.venv', 'venv', 'examples'})
 _REPAIR_FIXTURE_NAMES = frozenset({'faultyasset', 'repairedasset'})
@@ -21,19 +24,6 @@ STRAIGHT_TOLERANCE = 1
 Point = tuple[float, float]
 Segment = tuple[Point, Point]
 Box = tuple[float, float, float, float]
-
-
-class DrawioViolation:
-
-    def __init__(self, rule: str, message: str, *, location: str='', line: int | None=None, severity: str='error') -> None:
-        self.rule = rule
-        self.message = message
-        self.location = location
-        self.line = line
-        self.severity = severity
-
-    def to_dict(self) -> dict[str, Any]:
-        return {'rule': self.rule, 'violation_message': self.message, 'severity': self.severity, 'line_number': self.line, 'location': self.location}
 
 
 class DrawioPage:
@@ -104,9 +94,9 @@ class DrawioScanner:
     def filter_scan_files(self, files: list[Path]) -> list[Path]:
         return [path for path in files if not self.is_skipped_path(path)]
 
-    def scan(self, root: Path, files: list[Path]) -> list[DrawioViolation]:
+    def scan(self, root: Path, files: list[Path]) -> list[Violation]:
         root = root.resolve()
-        violations: list[DrawioViolation] = []
+        violations: list[Violation] = []
         for file_path in self.filter_scan_files(files):
             path = file_path if file_path.is_absolute() else root / file_path
             if not path.is_file():
@@ -116,14 +106,14 @@ class DrawioScanner:
             violations.extend(self.scan_file(root, path))
         return violations
 
-    def scan_file(self, root: Path, file_path: Path) -> list[DrawioViolation]:
+    def scan_file(self, root: Path, file_path: Path) -> list[Violation]:
         del root
         if file_path.suffix.lower() not in DRAWIO_EXTENSIONS:
             return []
         try:
             mxfile = ET.parse(str(file_path)).getroot()
         except (OSError, ET.ParseError) as exc:
-            return [DrawioViolation(self.rule, f'Could not load drawio file: {exc}', location=str(file_path))]
+            return [Violation(self.rule, f'Could not load drawio file: {exc}', practice='clean_engineering', location=str(file_path))]
         violations = []
         for diagram in mxfile.findall('diagram'):
             page_root = diagram.find('mxGraphModel/root')
@@ -132,12 +122,12 @@ class DrawioScanner:
             violations.extend(self.scan_page(DrawioPage(file_path, diagram.get('name') or '(unnamed)', page_root)))
         return violations
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         return []
 
-    def violation(self, page: DrawioPage, message: str) -> DrawioViolation:
+    def violation(self, page: DrawioPage, message: str) -> Violation:
         """A violation on this page, prefixed with the page name and located at the scanned file."""
-        return DrawioViolation(self.rule, f'[{page.name}] {message}', location=str(page.file_path))
+        return Violation(self.rule, f'[{page.name}] {message}', practice='clean_engineering', location=str(page.file_path))
 
     def discover(self) -> dict[str, type[DrawioScanner]]:
         discovered: dict[str, type[DrawioScanner]] = {}
@@ -163,12 +153,12 @@ class DrawioScanner:
         scan_root = Path(self.workspace_root) if self.workspace_root is not None else Path.cwd()
         files = [Path(path) for path in paths]
         discovered = self.discover()
-        violations: list[DrawioViolation] = []
+        violations: list[Violation] = []
         for slug, scanner_class in discovered.items():
             violations.extend(scanner_class(slug, explicit_paths=files).scan(scan_root, files))
         if self.rule:
             violations = [item for item in violations if item.rule == self.rule]
-        return {'ok': not violations, 'rules': sorted(discovered), 'violations': [item.to_dict() for item in violations]}
+        return {'ok': not violations, 'rules': sorted(discovered), 'violations': data_of(violations)}
 
     def run_main(self, argv: list[str] | None=None) -> int:
         parser = argparse.ArgumentParser(description='Run one Draw.io scanner')
@@ -177,7 +167,7 @@ class DrawioScanner:
         workspace = args.workspace.resolve()
         violations = self.scan(workspace, self.collect_drawio_files(workspace))
         for violation in violations:
-            print(violation.to_dict(), file=sys.stderr)
+            print(data_of(violation), file=sys.stderr)
         return 1 if violations else 0
 
     def collect_drawio_files(self, root: Path) -> list[Path]:

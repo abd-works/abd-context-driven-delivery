@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
+from harness.graph.violation import Violation
+
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     STRAIGHT_TOLERANCE,
     DrawioPage,
     DrawioScanner,
-    DrawioViolation,
     Segment,
     style_number,
 )
@@ -22,7 +23,7 @@ _ENTERING_HEADING = {"left": "right", "right": "left", "top": "down", "bottom": 
 class EdgesApproachPerpendicularScanner(DrawioScanner):
     RULE = "edges-approach-perpendicular"
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         violations = []
         for edge in page.edges:
             if edge.get("source", "") not in page.boxes or edge.get("target", "") not in page.boxes:

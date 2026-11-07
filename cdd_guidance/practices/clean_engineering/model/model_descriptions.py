@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
@@ -15,10 +15,9 @@ class ModelDescriptions:
     """Every member the model documents describe, by ``Class.member``, with the document that describes it.
 
     A realization follows an interaction into a class the load left out, so the members that have no code are kept
-    too. A later document's description of the same member replaces an earlier one.
+    too. A later document's description of the same member replaces an earlier one. The graph keeps them as the
+    Clean Engineering practice root's ``model_members`` fact.
     """
-
-    graph_facts = ("model_members",)
 
     def __init__(self) -> None:
         self._members: Dict[str, Member] = {}
@@ -36,10 +35,6 @@ class ModelDescriptions:
     @property
     def is_empty(self) -> bool:
         return not self._members
-
-    def describing(self, owner: str, name: str) -> Optional[Member]:
-        """The member a document describes as ``owner.name``; None when no document does."""
-        return self._members.get(f"{owner}.{name}")
 
     @property
     def model_members(self) -> Dict[str, dict]:

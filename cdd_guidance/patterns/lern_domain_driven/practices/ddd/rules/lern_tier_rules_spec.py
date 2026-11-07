@@ -31,7 +31,7 @@ from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import prototype_swap_in_text
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
 from harness.graph.graph import Node, PracticeGraph, Source
-from harness.graph.practice_rules_registry import checks_for_practice
+from harness.graph.graph_practice import GraphPractices
 
 
 def tier_node(name, node_type, facts, file="src/a/a-node.ts"):
@@ -56,10 +56,10 @@ def story_file(text, node_type="StoryShared"):
 
 with description("the lern_domain_driven pattern rules"):
     with it("should load into the ddd and stories practices only when the overlay is active"):
-        expect(list(checks_for_practice("ddd", ("lern_domain_driven",)))).to(contain("node-repository-parses-on-read"))
-        expect(list(checks_for_practice("stories", ("lern_domain_driven",)))).to(contain("no-expect-in-given"))
-        expect(list(checks_for_practice("stories", ("lern_domain_driven",)))).to(contain("domain-operations-inline-in-steps"))
-        expect("node-repository-parses-on-read" in checks_for_practice("ddd")).to(equal(False))
+        expect(list(GraphPractices.named("ddd").checks(("lern_domain_driven",)))).to(contain("node-repository-parses-on-read"))
+        expect(list(GraphPractices.named("stories").checks(("lern_domain_driven",)))).to(contain("no-expect-in-given"))
+        expect(list(GraphPractices.named("stories").checks(("lern_domain_driven",)))).to(contain("domain-operations-inline-in-steps"))
+        expect("node-repository-parses-on-read" in GraphPractices.named("ddd").checks()).to(equal(False))
         expect(sorted(BY_SLUG)).to(have_len(5))
 
     with description("node-repository-parses-on-read"):

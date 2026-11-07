@@ -37,8 +37,7 @@ _OWNED_PART_TYPES = ("Entity", "ValueObject")
 
 def story_of(node: Node, context: RuleCheckContext):
     """The story that owns the scenario node; its Background state applies to the scenario too."""
-    parent = context.practice.direct_parent(node)
-    return parent.model if parent is not None else None
+    return context.practice.direct_parent(node)
 
 
 def example_count(scenario) -> int:
@@ -131,8 +130,8 @@ class ExamplesTraceDomainModel(PracticeGraphRule):
     node_types = ("Scenario",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        scenario = node.model
-        if scenario is None:
+        scenario = node
+        if not hasattr(scenario, "steps"):
             return []
         concepts = scenario_domain_concepts(scenario.steps)
         if not concepts:

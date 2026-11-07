@@ -84,7 +84,7 @@ class _ClockAtOneSecond(datetime):
 
 def _expanded_validate(action, arguments):
     return AgentInstructions.for_callable(Validate.validate, action).expand(
-        {}, arguments
+        arguments
     ).instructions
 
 
@@ -230,7 +230,7 @@ with description("a validate action on practice guidance") as self:
         # The session board lists the agent's judgment beside the graph's hits only when it is written in this shape.
         with it("should tell the agent to write its judgment under the judged file, one heading per failed rule"):
             report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
-            expect(report).to(contain("## Judgment — `harness/kanban/.context/story-map.md`\n\n   ### `rule-slug` — Fail\n   - story-map.md:86"))
+            expect(report).to(contain("## Judgment — `space/kanban/.context/story-map.md`\n\n   ### `rule-slug` — Fail\n   - story-map.md:86"))
 
         # The board opens a finding's file in this project, so a path anywhere else cannot be opened.
         with it("should tell the agent to name the judged file by its path from the project's root"):
@@ -303,7 +303,7 @@ with description("a validate action on practice guidance") as self:
                         from harness.guidance_actions import GuidanceAction
 
                         action = GuidanceAction()
-                        action._bind_guidance("stories-story-map format=drawio")
+                        action._work_on("stories-story-map format=drawio")
                         action.run(lambda item: None, action="generate")
 
                     with it("should judge only the drawio"):
@@ -437,7 +437,7 @@ with description("a validate action on practice guidance") as self:
         with it("should keep the rule hits on the nodes of the saved graph"):
             self.action.validate(guidance=["ddd-tactics"], paths=[_ENTITY_ROOT_FILE])
             saved = next((self.session / "validation-reports").glob("ddd-tactics-*.json"))
-            slugs = [item["rule_slug"] for item in violations_from_graph_json_files([saved], ["ddd"])]
+            slugs = [violation.rule for violation in violations_from_graph_json_files([saved], ["ddd"])]
             expect(slugs).to(contain("private-method-naming"))
 
         with it("should leave an earlier report's saved graph as it was"):

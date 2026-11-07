@@ -55,7 +55,7 @@ with description("story scenario count"):
                 equal(["epic 'Onboard A Customer': 1 children (target 4-9)"])
             )
 
-    with context("story-scenarios-one-to-four"):
+    with context("story-scenarios-at-most-seven"):
         with it("should accept one to seven scenarios"):
             rule = StoryScenariosAtMostSeven()
             for count in (1, 4, 7):
@@ -78,7 +78,7 @@ with description("story scenario count"):
 
     with context("schema"):
         with it("should size story scenarios with the at-most-seven rule"):
-            expect(slugs_for_type("stories", "Story")).to(contain("story-scenarios-one-to-four"))
+            expect(slugs_for_type("stories", "Story")).to(contain("story-scenarios-at-most-seven"))
             expect("four-to-nine-children" in slugs_for_type("stories", "Story")).to(equal(False))
 
         with it("should keep four-to-nine on an epic"):

@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import re
 
+from harness.graph.violation import Violation
+
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     Box,
     DrawioPage,
     DrawioScanner,
-    DrawioViolation,
 )
 
 Y_TOLERANCE = 30
@@ -19,7 +20,7 @@ WIDE_ROW_SPAN = 600
 class LeafNodesNotInHorizontalRowScanner(DrawioScanner):
     RULE = "leaf-nodes-not-in-horizontal-row"
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         boxes = _sized_vertex_boxes(page)
         neighbours: dict[str, set[str]] = {}
         for edge in page.edges:

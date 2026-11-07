@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
+from harness.graph.violation import Violation
+
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     DrawioPage,
     DrawioScanner,
-    DrawioViolation,
     Point,
     Segment,
 )
@@ -24,7 +25,7 @@ Route = tuple[ET.Element, list[Segment]]
 class EdgesDoNotCrossOtherEdgesScanner(DrawioScanner):
     RULE = "edges-do-not-cross-other-edges"
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         """Each pair of edges that cross at a right angle, away from a card they share, once a page has too many."""
         routes = [(edge, page.segments(edge)[0]) for edge in page.edges]
         crossings = []

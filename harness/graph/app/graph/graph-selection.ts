@@ -1,4 +1,4 @@
-import type { ExplorerEntryData, RuleHitData } from '@cdd/harness/graph/graph';
+import type { ExplorerEntryData, ViolationData } from '@cdd/harness/graph/graph';
 import type { ViolationFocus } from '../source/violation-prompt';
 
 export type GraphSelection = {
@@ -7,12 +7,12 @@ export type GraphSelection = {
   violation?: ViolationFocus;
 };
 
-export function ruleHits(node: { violation?: string; violations?: RuleHitData[] }): RuleHitData[] {
+export function ruleHits(node: { violation?: string; violations?: ViolationData[] }): ViolationData[] {
   if (node.violations?.length) {
     return node.violations;
   }
   if (node.violation) {
-    return [{ message: node.violation, file: '', start: 0, end: 0 }];
+    return [{ rule: '', practice: '', node_id: '', subject: '', location: '', line: 0, end_line: 0, message: node.violation, severity: 'error', source: [] }];
   }
   return [];
 }
@@ -28,8 +28,8 @@ export function selectionForRule(ownerId: string, node: ExplorerEntryData): Grap
       ? {
           rule: node.name,
           message: hits.map((hit) => hit.message).filter(Boolean).join('\n'),
-          startLine: first?.start,
-          endLine: first?.end,
+          startLine: first?.line ?? undefined,
+          endLine: first?.end_line ?? undefined,
         }
       : undefined,
   };

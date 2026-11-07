@@ -47,8 +47,7 @@ def practice_from_class_text(name: str, text: str, relative: str) -> tuple[Pract
     oclass = OoadClass(name=name, sequential_order=1, line=1)
     oclass.load_source_facts(text)
     practice, root = practice_from_files({relative: text})
-    row = [f"clean_engineering:OoadClass:{relative}:{name}", name, "OoadClass", "clean_engineering", relative, 1, text.count("\n") + 1]
-    practice.apply_nodes([row], {row[0]: oclass})
+    practice.add(oclass, f"clean_engineering:OoadClass:{relative}:{name}", relative, 1, text.count("\n") + 1)
     return practice, root
 
 

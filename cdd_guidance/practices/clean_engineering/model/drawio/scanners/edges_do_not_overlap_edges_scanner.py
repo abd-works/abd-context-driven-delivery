@@ -1,10 +1,11 @@
 """Scanner: edges-do-not-overlap-edges - orthogonal edges must not share a long collinear span."""
 from __future__ import annotations
 
+from harness.graph.violation import Violation
+
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     DrawioPage,
     DrawioScanner,
-    DrawioViolation,
     Segment,
 )
 
@@ -19,7 +20,7 @@ SHARED_SPAN = 12
 class EdgesDoNotOverlapEdgesScanner(DrawioScanner):
     RULE = "edges-do-not-overlap-edges"
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         routes = [(page.describe(edge), page.segments(edge)[0]) for edge in page.edges]
         violations = []
         for index, (first_name, first_segments) in enumerate(routes):

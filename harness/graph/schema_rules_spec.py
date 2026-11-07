@@ -42,7 +42,7 @@ with description("schema rules on a node"):
     with it("should record violations on the collection and the rule"):
         self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
         expect(self.operation.failed_rules).to(equal(["limit-operation-parameters"]))
-        expect(self.operation.rules["limit-operation-parameters"].violations).to(
+        expect([violation.message for violation in self.operation.rules["limit-operation-parameters"].violations]).to(
             contain("too many parameters")
         )
 
@@ -52,13 +52,14 @@ with description("schema rules on a node"):
 
     with it("should place a recorded violation at the node's source"):
         self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
-        hit = self.operation.rules["limit-operation-parameters"].hits[0]
+        hit = self.operation.rules["limit-operation-parameters"].violations[0]
         source = self.operation.source
-        expect((hit["file"], hit["start"], hit["end"])).to(equal((source.file, source.start_line, source.end_line)))
+        expect((hit.location, hit.line, hit.end_line)).to(equal((source.file, source.start_line, source.end_line)))
 
     with it("should list a recorded violation with its rule"):
         self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
-        expect(self.operation.rules.violations).to(contain(("limit-operation-parameters", "too many parameters")))
+        listed = [(violation.rule, violation.message) for violation in self.operation.rules.violations]
+        expect(listed).to(contain(("limit-operation-parameters", "too many parameters")))
 
     with it("should hang slug, prose body, and executable flag on each node rule"):
         rule = self.operation.rules["limit-operation-parameters"]

@@ -56,6 +56,8 @@ class BoundNode(Node):
     _graph_practice: str = "stories"
     _semantic_type_name: str = "Node"
     _belongs: set[tuple[str, str]] = set()
+    _schema_edge_fields: frozenset[str] = frozenset({"source", "collaborators", "dependencies", "type_hint", "return_type", "callees"})
+    """Attributes whose new value can add or remove a schema edge; assigning one rebuilds the graph's schema edges."""
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -203,7 +205,7 @@ class BoundNode(Node):
 
     def __setattr__(self, name: str, value) -> None:
         object.__setattr__(self, name, value)
-        if name in {"source", "story_names", "scenario_names", "step_names", "collaborators", "dependencies", "type_hint", "return_type", "callees"} and getattr(self, "_ready", False):
+        if name in type(self)._schema_edge_fields and getattr(self, "_ready", False):
             self._sync_schema_edges()
 
     @contextmanager

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+
+from harness.graph.violation import Violation
 
 
 class ValidationReportFormatter:
@@ -18,12 +19,13 @@ class ValidationReportFormatter:
             link_from_directory.resolve() if link_from_directory is not None else None
         )
 
-    def format_violation_line(self, violation: dict[str, Any]) -> list[str]:
-        location = violation.get("location", "unknown")
-        message = violation.get("violation_message", "No message")
-        severity = violation.get("severity", "error")
-        line_number = violation.get("line_number")
-        graph_tag = " **[graph rule]**" if violation.get("graph_rule") else ""
+    def format_violation_line(self, violation: Violation) -> list[str]:
+        """One graph rule's violation as a report line, linked to its file and line."""
+        location = violation.location
+        message = violation.described or "No message"
+        severity = violation.severity
+        line_number = violation.line
+        graph_tag = " **[graph rule]**"
         icon = "[X]" if severity == "error" else "[!]" if severity == "warning" else "[i]"
         location_link = self.create_file_link(str(location), line_number)
         formatted_message = self.format_violation_message(str(message))

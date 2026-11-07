@@ -1,11 +1,12 @@
 """Scanner: prefer-short-routes — keep related classes close; few waypoints."""
 from __future__ import annotations
 
+from harness.graph.violation import Violation
+
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     Box,
     DrawioPage,
     DrawioScanner,
-    DrawioViolation,
     cell_box,
 )
 
@@ -16,7 +17,7 @@ SHORT_ROUTE_MAX_BOX_GAP = 320
 class PreferShortRoutesScanner(DrawioScanner):
     RULE = "prefer-short-routes"
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         """Edges that dog-leg across a short gap, and related boxes placed too far apart."""
         boxes = _vertex_boxes(page)
         violations = []

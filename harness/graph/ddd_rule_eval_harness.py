@@ -1,7 +1,7 @@
 """Evaluate DDD tactical rules against python/_examples fixtures.
 
 The fixture goes through the clean engineering working-copy build; the DDD building block
-for the chosen kind then loads its own tactical facts, exactly as ``_record_ddd`` does.
+for the chosen kind then loads its own tactical facts, exactly as the DDD practice's graph reader does.
 """
 
 from __future__ import annotations
@@ -34,19 +34,18 @@ def _node_type_for_class(source: str, class_name: str) -> str:
 
 
 def _ddd_node(source: str, class_name: str, kind: str, lang: str, filename: str | None):
-    from harness.graph.working_copy import _fact_row, _tactical_block
+    from cdd_guidance.practices.ddd.graph_practice import _tactical_block
 
     clean, root = practice_from_source(source, lang=lang, filename=filename)
     class_node = next((node for node in clean.nodes.get("OoadClass", []) if node.name == class_name), None)
     if class_node is None:
         raise ValueError(f"class {class_name!r} not found in parsed source")
     text = (root / class_node.source.file).read_text(encoding="utf-8")
-    member = {"kind": kind, "name": class_name, "model": class_node.model, "text": text}
-    node_id = f"ddd:{kind}:{class_node.source.file}:{class_name}"
-    row = [node_id, class_name, kind, "ddd", class_node.source.file, class_node.source.start_line, class_node.source.end_line]
+    source = class_node.source
     ddd = clean.graph.practice("ddd")
-    ddd.apply_nodes([_fact_row(row, class_node.data)], {node_id: _tactical_block(member)})
-    return ddd.by_id[node_id], ddd, root
+    node = ddd.add(_tactical_block(class_node, kind, text), f"ddd:{kind}:{source.file}:{class_name}", source.file, source.start_line, source.end_line)
+    node.set_fact("folder", class_node.get_fact("folder"))
+    return node, ddd, root
 
 
 def violations_for_ddd_rule(

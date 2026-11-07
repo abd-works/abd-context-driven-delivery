@@ -47,7 +47,7 @@ class StoryScenariosAtMostSeven(PracticeGraphRule):
     """Code scenarios on a story: at most 7. More than seven and the story is huge. A story with none
     has not had its scenarios written yet, which is ordinary while the map is ahead of the scenarios."""
 
-    slug = "story-scenarios-one-to-four"
+    slug = "story-scenarios-at-most-seven"
     node_types = ("Story",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:

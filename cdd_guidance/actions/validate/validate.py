@@ -72,7 +72,7 @@ class Validate(GuidanceAction):
         For graph-backed guidance, the graph is built from just these files as they are now and its rules run on them;
         the saved graph is not read or rebuilt. A path that is not there, or not under the session's root, is refused.
         With no paths and no graph, the folders holding the fidelity's written output are checked."""
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
         sections: list[str] = [_VALIDATE_MARKDOWN]
         checked = self._checked_outputs()
         self._unchecked_files = self._other_format_files(checked)
@@ -291,15 +291,13 @@ class Validate(GuidanceAction):
     ) -> str:
         from cdd_guidance.actions.validate.graph_json_reader import (
             filter_violations_by_path_prefix,
-            refresh_stale_limit_operation_parameter_messages,
             violations_from_graph_json_files,
         )
         from cdd_guidance.actions.validate.validation_report import ValidationReport
 
         violations = violations_from_graph_json_files(paths, self._graph_practices() or None)
-        violations = refresh_stale_limit_operation_parameter_messages(violations, self.session.root)
         violations = filter_violations_by_path_prefix(violations, path_prefixes)
-        violations = [violation for violation in violations if violation.get("location") not in self._unchecked_files]
+        violations = [violation for violation in violations if violation.location not in self._unchecked_files]
         self._log_graph_validation(violations)
         rules: list = []
         rule_bodies: dict[str, str] = {}
@@ -356,8 +354,8 @@ class Validate(GuidanceAction):
         if self._guidance_text is not None or not violations:
             return
         synopsis = [
-            f"graph-rule {item.get('rule_slug', '')} {item.get('location', '')}:{item.get('line_number', '')}"
-            for item in violations[:40]
+            f"graph-rule {violation.rule} {violation.location}:{violation.line or ''}"
+            for violation in violations[:40]
         ]
         if len(violations) > 40:
             synopsis.append(f"graph-rule … and {len(violations) - 40} more")
@@ -427,7 +425,7 @@ class Validate(GuidanceAction):
         """Add a named rule to each listed guidance from a failed example and the wanted behavior. Then validate the asset with that rule so the same mistake is detected.
         failed: path to the example that broke. Pass the file. Do not paste its body.
         wanted: path to the behavior the rule must require. Pass the file. Do not paste its body."""
-        self._bind_guidance(guidance)
+        self._work_on(guidance)
 
         def on(item) -> None:
             if isinstance(item, str):

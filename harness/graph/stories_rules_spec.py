@@ -27,17 +27,12 @@ def _scenario(practice, name: str = "Display Create Account") -> Node:
 
 
 def _step(practice, semantic: str, text: str, line: int) -> Node:
-    """A step node holding the Step its story model read: ``When`` with ``the User proceeds``."""
+    """The Step its story model read, as its own node: ``When`` with ``the User proceeds``."""
     label = f"{semantic.lower()} {text}"
-    node = Node(
-        practice,
-        semantic,
-        f"stories:{semantic}:story.ts:{line}:{hash(label) & 0xFFFFFF}",
-        label,
-        Source("story.ts", line, line),
-    )
-    node.model = Step(text, StepType(semantic.lower()), line, keyword=semantic)
-    return node
+    step = Step(text, StepType(semantic.lower()), line, keyword=semantic)
+    step.name = label
+    step.type = semantic
+    return practice.add(step, f"stories:{semantic}:story.ts:{line}:{hash(label) & 0xFFFFFF}", "story.ts", line, line)
 
 
 def _record_steps(practice, scenario: Node, steps: list[Node]) -> None:

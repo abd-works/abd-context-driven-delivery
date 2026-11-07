@@ -4,11 +4,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-_PATTERN_GUIDANCE = {
-    "lern_domain_driven": ("cdd_guidance.patterns.lern_domain_driven.lern_domain_driven", "LernDomainDriven"),
-    "cdd_claude_mod": ("cdd_guidance.patterns.cdd_claude_mod.cdd_claude_mod", "CddClaudeMod"),
-    "cdd_web_domain_access": ("cdd_guidance.patterns.cdd_web_domain_access.cdd_web_domain_access", "CddWebDomainAccess"),
-}
+from harness.graph.graph_practice import GraphPractices
 
 
 def _collect_rules(collection) -> dict[str, str]:
@@ -23,16 +19,6 @@ def _collect_rules(collection) -> dict[str, str]:
             if slug and (slug not in found or len(body) > len(found[slug])):
                 found[slug] = body
     return found
-
-
-def _pattern_prose(module_path: str, class_name: str) -> dict[str, str]:
-    try:
-        import importlib
-
-        guidance = getattr(importlib.import_module(module_path), class_name)()
-    except Exception:
-        return {}
-    return _guidance_prose(guidance)
 
 
 def _guidance_prose(guidance) -> dict[str, str]:
@@ -50,8 +36,7 @@ def prose_by_slug(practice: str, active_patterns: tuple[str, ...] = ()) -> dict[
 
     merged = _guidance_prose(PracticeCatalogue.practice(practice)) if PracticeCatalogue.has(practice) else {}
     for pattern in active_patterns:
-        pattern_spec = _PATTERN_GUIDANCE.get(pattern)
-        if pattern_spec is None:
-            continue
-        merged.update(_pattern_prose(*pattern_spec))
+        guidance = GraphPractices.overlay(pattern).guidance()
+        if guidance is not None:
+            merged.update(_guidance_prose(guidance))
     return merged

@@ -55,7 +55,7 @@ class ClassGraph:
     def fields(self, node: "Node") -> dict[str, str]:
         """Field name to type hint: declared properties, then the fields its constructor assigns."""
         found = {name: "" for name in node.get_fact("property_names", []) or []}
-        model = node.model
+        model = node
         for prop in getattr(model, "properties", None) or []:
             found[prop.name] = getattr(prop, "type_hint", "") or found.get(prop.name, "")
         for operation in getattr(model, "operations", None) or []:

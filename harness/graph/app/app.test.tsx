@@ -173,10 +173,11 @@ const engineeringTree = {
                       status: 'violating',
                       violations: [
                         {
+                          rule: 'limit-operation-parameters',
                           message: "Operation 'failure' takes 4 parameters (maximum 2).",
-                          file: 'register.ts',
-                          start: 1,
-                          end: 2,
+                          location: 'register.ts',
+                          line: 1,
+                          end_line: 2,
                         },
                       ],
                       children: [],

@@ -15,6 +15,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
+from harness.graph.violation import Violation
 from space.session import Session
 from cdd_guidance.actions.validate.validation_report import ValidationReport
 from cdd_guidance.actions.validate.verify_report_links import verify_report
@@ -31,14 +32,13 @@ with description("validation report formatter links"):
             source.parent.mkdir(parents=True)
             source.write_text("\n" * 286 + "export function credentialsFailure() {}\n", encoding="utf-8")
             self.violations = [
-                {
-                    "rule_slug": "limit-operation-parameters",
-                    "location": "src/customer/account/account.ts",
-                    "line_number": 287,
-                    "violation_message": "Operation `credentialsFailure`: takes 4 parameters.",
-                    "severity": "error",
-                    "graph_rule": True,
-                }
+                Violation(
+                    "limit-operation-parameters",
+                    "takes 4 parameters.",
+                    subject="Operation `credentialsFailure`",
+                    location="src/customer/account/account.ts",
+                    line=287,
+                )
             ]
 
         with it("should emit absolute path #L links that verify_report_links accepts"):

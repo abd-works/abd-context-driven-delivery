@@ -10,7 +10,7 @@ Take the persona of a **critical judge** — do not edit the artifact.
 6. Append the judgment to the end of the saved report in exactly this shape. The session board parses it, lists each finding beside the graph's hits, opens the finding's file at its line, and sends a Fix back, so a finding in any other shape is lost:
 
    ```markdown
-   ## Judgment — `harness/kanban/.context/story-map.md`
+   ## Judgment — `space/kanban/.context/story-map.md`
 
    ### `rule-slug` — Fail
    - story-map.md:86 `Archive Ticket`: what breaks the rule, and why.

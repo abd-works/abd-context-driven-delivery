@@ -145,7 +145,7 @@ def nodes_in(graph: Graph, practice: str, scope: list[str]) -> set[str]:
 
 
 def violations_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str]]:
-    return {(slug, node.node_id) for node in _practice_nodes(graph, practice, scope) for slug, _ in node.rules.violations}
+    return {(slug, node.node_id) for node in _practice_nodes(graph, practice, scope) for slug in node.rules.failed_slugs}
 
 
 def edges_in(graph: Graph, practice: str, scope: list[str]) -> set[tuple[str, str, str]]:
@@ -478,7 +478,7 @@ with description("a graph"):
                             "story-name-captures-system-mechanic",
                             "right-size-story-nodes",
                             "behaviours-not-one-time-tasks",
-                            "story-scenarios-one-to-four",
+                            "story-scenarios-at-most-seven",
                         }
                         <= set(_rule_names(self.handle_request))
                     ).to(equal(True))
@@ -492,11 +492,11 @@ with description("a graph"):
 
                 with it("should store the verb-noun span on Handle Request"):
                     hit = rule_on(self.handle_request, "verb-noun-format")["violations"][0]
-                    expect(hit["file"]).to(
+                    expect(hit["location"]).to(
                         equal("tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts")
                     )
-                    expect(hit["start"]).to(equal(444))
-                    expect(hit["end"]).to(equal(_HANDLE_REQUEST_END))
+                    expect(hit["line"]).to(equal(444))
+                    expect(hit["end_line"]).to(equal(_HANDLE_REQUEST_END))
 
                 with it("should violate the system mechanic on Handle Request"):
                     hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")
@@ -509,8 +509,8 @@ with description("a graph"):
 
                 with it("should store the system-mechanic span on Handle Request"):
                     hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")["violations"][0]
-                    expect(hit["start"]).to(equal(444))
-                    expect(hit["end"]).to(equal(_HANDLE_REQUEST_END))
+                    expect(hit["line"]).to(equal(444))
+                    expect(hit["end_line"]).to(equal(_HANDLE_REQUEST_END))
 
                 with it("should leave verb-noun format passing on Submit Order"):
                     expect(rule_on(self.submit_order, "verb-noun-format")["status"]).to(equal("passing"))
@@ -524,12 +524,12 @@ with description("a graph"):
 
                 with it("should store the epic child-count hit on the line that names the epic"):
                     hit = rule_on(self.onboard, "four-to-nine-children")["violations"][0]
-                    expect({"file": hit["file"], "start": hit["start"], "end": hit["end"]}).to(
+                    expect({"location": hit["location"], "line": hit["line"], "end_line": hit["end_line"]}).to(
                         equal(
                             {
-                                "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
-                                "start": 1,
-                                "end": 1,
+                                "location": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
+                                "line": 1,
+                                "end_line": 1,
                             }
                         )
                     )
@@ -549,12 +549,12 @@ with description("a graph"):
 
                     with it("should store that similarity hit on the story line"):
                         hit = rule_on(self.submit_order, "right-size-story-nodes")["violations"][0]
-                        expect({"file": hit["file"], "start": hit["start"], "end": hit["end"]}).to(
+                        expect({"location": hit["location"], "line": hit["line"], "end_line": hit["end_line"]}).to(
                             equal(
                                 {
-                                    "file": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
-                                    "start": 429,
-                                    "end": 435,
+                                    "location": "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts",
+                                    "line": 429,
+                                    "end_line": 435,
                                 }
                             )
                         )

@@ -6,7 +6,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from graph import Node, PracticeGraph, Source
+from graph import Node, PracticeGraph
 from harness.graph.rule_context import RuleCheckContext
 
 
@@ -46,12 +46,9 @@ def _story_nodes_from_ts(
     names = re.findall(r"""story\s*\(\s*['"]([^'"]+)['"]""", source)
     nodes: list[Node] = _record_stories(practice, names, relative)
     for index, name in enumerate(re.findall(r"""given\s*\(\s*['"]([^'"]+)['"]""", source)):
-        node_id = f"stories:Step:map.given.{index}"
-        node = Node(practice, "Given", node_id, name, Source(relative, 1, 1))
-        node.model = Step(name, StepType.GIVEN, index + 1, keyword="Given")
-        practice.by_id[node_id] = node
-        practice.nodes.setdefault("Step", []).append(node)
-        nodes.append(node)
+        step = Step(name, StepType.GIVEN, index + 1, keyword="Given")
+        step.type = "Given"
+        nodes.append(practice.add(step, f"stories:Step:map.given.{index}", relative, 1, 1))
     return nodes
 
 

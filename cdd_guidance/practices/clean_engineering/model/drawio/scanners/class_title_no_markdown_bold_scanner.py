@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import re
 
+from harness.graph.violation import Violation
+
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     DrawioPage,
     DrawioScanner,
-    DrawioViolation,
     class_title_in,
 )
 
@@ -14,7 +15,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base
 class ClassTitleNoMarkdownBoldScanner(DrawioScanner):
     RULE = "class-title-no-markdown-bold"
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         violations = []
         for cell in page.root.iter("mxCell"):
             title = class_title_in(cell.get("value") or "") if cell.get("vertex") == "1" else None

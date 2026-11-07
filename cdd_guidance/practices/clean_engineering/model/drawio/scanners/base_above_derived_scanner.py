@@ -1,10 +1,11 @@
 """Scanner: base-above-derived - inheritance parents sit above children (lower y)."""
 from __future__ import annotations
 
+from harness.graph.violation import Violation
+
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import (
     DrawioPage,
     DrawioScanner,
-    DrawioViolation,
     edge_kind,
 )
 
@@ -12,7 +13,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base
 class BaseAboveDerivedScanner(DrawioScanner):
     RULE = "base-above-derived"
 
-    def scan_page(self, page: DrawioPage) -> list[DrawioViolation]:
+    def scan_page(self, page: DrawioPage) -> list[Violation]:
         violations = []
         for edge in page.edges:
             if edge_kind(edge.get("style", "")) not in ("inheritance", "inheritance-orthogonal"):

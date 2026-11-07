@@ -106,7 +106,7 @@ def _one_rule_section(
         lines.append("")
         for violation in sorted(
             graph_hits,
-            key=lambda v: (str(v.get("location")), v.get("line_number") or 0),
+            key=lambda violation: (violation.location, violation.line or 0),
         ):
             lines.extend(formatter.format_violation_line(violation))
         lines.append("")

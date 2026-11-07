@@ -1,0 +1,22 @@
+# space/kanban
+*Board* shows every work session in a repository as a *Ticket* on a kanban, so a person can see at a glance what each session has done and what it needs next. Its *Columns* are the *Backlog*, three *Stages* (Discovery, Specification, Implementation), and *Complete*. A *Stage* splits into In progress and Done and carries a WIP limit, set with `stage.set_wip_limit`. `board.show` returns the whole board, `board.folders` lists the folders a person can choose as a workpath, and `board.help(slug)` returns a *Help*: the overview, guidance, and rules of the practice or fidelity that slug names.
+
+A *Ticket* is one session. `ticket.create` opens one. It is placed by its *FidelityProgress*: which of Generate, Validate, and Review are done on each fidelity its stage requires. A person moves it on with `ticket.move_next`, back with `ticket.move_previous`, straight into a stage's In progress or Done with `ticket.move_to`, and off the stages with `ticket.close` or `ticket.archive`. `ticket.activate` makes it the session the agent works in, after committing, pushing, or merging the ticket being left and creating the branch or worktree the person asks for; `ticket.workspace` returns a *Workspace* that says which of those already exist, and `ticket.open_worktree` opens the ticket's own worktree. `ticket.violations` returns a *Report* of the rules broken on the ticket's stage. The Session Board app writes every action command itself, naming the ticket's session.json, and the Generate action renders an earlier fidelity into a new format before it generates.
+
+`fidelity-progress.report`, `fidelity-progress.files`, and `fidelity-progress.finish_review` read one fidelity's validation report and files, and record that a person reviewed it.
+
+A *BacklogItem* is an idea that is not a session yet. `backlog-item.create` writes one, and `backlog-item.start` opens it as a ticket in Discovery and moves the item's file into the ticket's session folder, where the idea stays until it becomes lasting context.
+
+- **Purpose:** See every session's progress through the delivery stages, and move sessions through them, from an agent's tools or from the Session Board app.
+- **Seam (terms):** Board, Column, Stage, Ticket, FidelityProgress, BacklogItem, Help, Workspace, Report; the MCP operations `board.*`, `stage.*`, `ticket.*`, `fidelity-progress.*`, and `backlog-item.*`; `@language_adapter(language="typescript")` on `Board`, `Stage`, `Ticket`, `FidelityProgress`, and `BacklogItem`, so the Session Board app and the chat bar reach the same tools as typed objects
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp, harness/guidance (*PracticeGuidance*, *PracticeCatalogue*), harness/graph (the rule checks a report lists), cdd_guidance/practices (the stage names in `stages.py`), cdd_guidance/actions/validate (the saved graph reader, imported through `sys.path` as `validate`), space/session, space/repo, space/work_state, tools/file_manager (*FileEntry*). No Python module imports the board, so it is an application at the top of the stack: it may depend on the framework, space, tools, and the practices, and none of them may depend on it.
+
+## Constraint
+
+Read a board from a repository; every column and ticket is read again from `.sessions/` each time it is asked for. Move a ticket only through `ticket.move_next`, `ticket.move_previous`, `ticket.move_to`, `ticket.close`, and `ticket.archive`, so every move is a line in the session log or a folder move that the ticket reads back.
+
+Store only what cannot be read from the work: a ticket's title, scope, parent, workpath, turned-off practices, and each practice root, in its `session.json`, and the WIP limits in `.sessions/_board.json`. Never store a ticket's progress or column; they come from the session log, so a move made by the agent and one made on the board give the same answer.
+
+Progress counts only actions recorded in the session log. A fidelity's files existing is shown on the files list, but it does not mark Generate done. Validate and Review are allowed once any action on a fidelity is recorded or a file it declares is already there, as often as a person wants to check the same output again. The board and the chat bar read `allowed_actions` and add no rule of their own.
+
+Never delete a backlog item's file: it is the only copy of the idea, so starting the item moves it instead.
