@@ -81,9 +81,6 @@ class Description(BehaviorNode):
             cloned.observations.append(observation.clone())
         return cloned
 
-    def load_context(self, source: "Context") -> "Context":
-        return source.clone()
-
 
 class Context(BehaviorNode):
     _semantic_type_name = "Context"
@@ -102,12 +99,6 @@ class Context(BehaviorNode):
         for context in self.contexts:
             cloned.contexts.append(context.clone())
         return cloned
-
-    def load_observation(self, source: "Observation") -> "Observation":
-        return source.clone()
-
-    def load_context(self, source: "Context") -> "Context":
-        return source.clone()
 
 
 class Observation(BehaviorNode):

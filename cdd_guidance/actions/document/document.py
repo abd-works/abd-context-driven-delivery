@@ -25,9 +25,6 @@ class Document(GuidanceAction):
             if isinstance(item, str):
                 return
             item.templates
-            scanner = getattr(item, "scanner", None)
-            if scanner is not None:
-                scanner.scan(paths)
             item.generate_output()
 
         self.run(on, action="document")

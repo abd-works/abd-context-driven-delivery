@@ -1,4 +1,4 @@
-"""BDD spec for agent_bdd manifests, run requests, and in-process toolset runs."""
+"""BDD spec for agent_bdd run requests and in-process toolset runs."""
 
 import os
 import subprocess
@@ -17,14 +17,12 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     ToolsetInvoke,
     ToolRunTimedOut,
     looks_like_tools_run_output,
-    read_manifest,
     yaml_from_prompt,
 )
 from space.session.sessions import Sessions
 from space.session.throwaway_project import ThrowawayProject
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_TOOLS_SPEC = _REPO_ROOT / "retired" / "harness" / "agent_tools" / "agent_tools_agent_spec.py"
 _CALLING_PROJECT: ContextVar[str] = ContextVar("calling_project", default="")
 
 
@@ -60,15 +58,6 @@ with description("the agent bdd practice"):
 
 
 with description("an agent spec file"):
-    with context("with @agent-spec-manifest header"):
-        with it("should declare in_chat harness and session path"):
-            manifest = read_manifest(_TOOLS_SPEC)
-            expect(manifest.harness in {"cli", "in_chat"}).to(be_true)
-            expect(manifest.session is not None).to(be_true)
-            expect("agent-spec" in manifest.command or "run in chat" in (manifest.chat_instruction or "")).to(
-                be_true
-            )
-
     with context("with agent context manager"):
         with it("should enter and exit via __enter__ for in-chat harness"):
             session_file = _REPO_ROOT / "cdd_guidance" / "practices" / "agent_bdd" / ".agent_bdd_sessions" / "context-manager-spec.json"

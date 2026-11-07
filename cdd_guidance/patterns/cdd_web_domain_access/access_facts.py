@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 import re
 
-from cdd_guidance.patterns.source_text import SourceText
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 
 _TOOL_CALL = re.compile(r"\.call(?:<[^>]*>)?\(")
 _ADAPTER_IMPORT = re.compile(r"""from\s+['"]@cdd/""")

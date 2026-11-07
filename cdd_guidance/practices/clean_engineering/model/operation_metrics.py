@@ -221,6 +221,15 @@ class SourceText:
                 invariants.append(line_number)
         return {"bold_interaction_lines": interactions, "bold_invariant_lines": invariants}
 
+    def line_of(self, index: int) -> int:
+        """The line, counted from 1, holding the character at index. Rules report a finding by its line, so a fact
+        records the line its match starts on."""
+        return self._text.count("\n", 0, index) + 1
+
+    def hits(self, pattern: re.Pattern[str]) -> list[list]:
+        """[line, matched code] for each match of pattern."""
+        return [[self.line_of(match.start()), match.group(0).strip()] for match in pattern.finditer(self._text)]
+
     def _brace_body(self, open_index: int) -> str | None:
         text = self._text
         if open_index >= len(text) or text[open_index] != "{":

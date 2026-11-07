@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, List, Optional
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadNode
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
-from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair
+from cdd_guidance.practices.clean_engineering.model.translation import ChildCollectionPair
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph

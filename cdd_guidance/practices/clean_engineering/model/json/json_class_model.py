@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
@@ -149,14 +148,3 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             self.translate_from(canonical)
         return json.dumps(self.as_record(), indent=2)
 
-    @classmethod
-    def from_workspace(cls, root: Path) -> Optional["JsonCleanEngineeringModel"]:
-        candidates = list(root.glob("**/CleanEngineering-model.json")) + list(
-            root.glob("**/*.CleanEngineering.json")
-        )
-        for path in sorted(candidates):
-            try:
-                return cls().parse(path.read_text(encoding="utf-8"))
-            except (JsonParseError, KeyError):
-                continue
-        return None

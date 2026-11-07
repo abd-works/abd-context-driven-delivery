@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from cdd_guidance.patterns.source_text import SourceText
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
 
 _RAW_FILE_IO = re.compile(r"\b(?:readFileSync|writeFileSync)\s*\(")
 _STORE_READ = re.compile(r"\b(?:readLowDb|readFileSync|JSONFilePreset|JSONFileSyncPreset)\s*\(")

@@ -30,11 +30,8 @@ class Relationship:
             "label": self.label,
         }
 
-    def translate_from(self, source: "Relationship"):
-        from cdd_guidance.practices.clean_engineering.model.update_report import UpdateReport
-
+    def translate_from(self, source: "Relationship") -> None:
         self.update_self(source)
-        return UpdateReport()
 
     def update_self(self, source: "Relationship") -> None:
         self.target = source.target

@@ -40,7 +40,6 @@ Read `annotation_kinds` as the one private registry of annotation kinds in harne
 - `HookInstallation.write` `-> Hook (channel HOOK)` adds the event to `hooks.json` and the operation to `hook-handlers.json` · harness/hooks/hooks.py:227
 - `LanguageAdapterInstallation.record` `-> LanguageAdapter (class annotation, no channel)` generates TypeScript for the toolset · harness/installation/language_adapter.py:825
 - `PromptNotify._has_toast` `-> Toast (no channel)` nothing is installed; the notifier toasts the call · tools/prompt_notify/prompt_notify.py:264
-- `RepositoryToolsets` `-> Agent, AgentGuidance (no channel)` only counted as signs that a class is a toolset; no installation writes them · harness/installation/repository_toolsets.py:58
 
 ## A chat's tool call: McpHost to ToolCall to the toolset's operation
 
@@ -391,8 +390,6 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> AgentToolSet.HOSTED_ONLY_CLASS_NAMES` reads constants of · harness/installation/repository_toolsets.py:130
 - `RepositoryToolsets._class_is_installable`
   - `-> Name()` creates · harness/installation/repository_toolsets.py:167
-- `RepositoryToolsets` `-> Agent` recognizes toolsets by · harness/installation/repository_toolsets.py:58
-- `RepositoryToolsets` `-> AgentGuidance` recognizes toolsets by · harness/installation/repository_toolsets.py:58
 
 ## DataClass
 
@@ -1743,9 +1740,6 @@ No class of this module acts on another class of the model at run time.
 - `MarkdownCleanEngineeringModel.load_module`
   - `-> Module.name` reads name of · cdd_guidance/practices/clean_engineering/model/markdown/markdown_class_model.py:286
   - `-> Module.sequential_order` reads sequential order of · cdd_guidance/practices/clean_engineering/model/markdown/markdown_class_model.py:286
-- `MarkdownCleanEngineeringModel.load_class`
-  - `-> OoadClass.name` reads name of · cdd_guidance/practices/clean_engineering/model/markdown/markdown_class_model.py:291
-  - `-> OoadClass.sequential_order` reads sequential order of · cdd_guidance/practices/clean_engineering/model/markdown/markdown_class_model.py:291
 - `MarkdownCleanEngineeringModel.render`
   - `-> CleanEngineeringModel._render_cards` renders cards · cdd_guidance/practices/clean_engineering/model/markdown/markdown_class_model.py:497
 - `MarkdownCleanEngineeringModel._apply_module_section`
@@ -1998,10 +1992,7 @@ No class of this module acts on another class of the model at run time.
 
 # cdd_guidance/patterns
 
-## DomainDrivenStack
-
-- `DomainDrivenStack._stories`
-  - `-> Stories()` creates · cdd_guidance/patterns/domain_driven_stack.py:29
+No class of this module acts on another class of the model at run time.
 
 # cdd_guidance/builders
 
@@ -2012,10 +2003,6 @@ No class of this module acts on another class of the model at run time.
 ## ContextSetup
 
 - `ContextSetup.__init__`
-  - `-> Stories()` creates · cdd_guidance/context_setup/context_setup.py:72
-  - `-> CleanEngineering()` creates · cdd_guidance/context_setup/context_setup.py:73
-  - `-> Ddd()` creates · cdd_guidance/context_setup/context_setup.py:74
-  - `-> Ux()` creates · cdd_guidance/context_setup/context_setup.py:75
   - `-> Partition()` creates · cdd_guidance/context_setup/context_setup.py:76
   - `-> ContextIndex()` creates · cdd_guidance/context_setup/context_setup.py:77
 - `ContextSetup.for_call`

@@ -36,7 +36,7 @@ from cdd_guidance.practices.clean_engineering.model.operation_metrics import (
     PythonFunctionBody,
     SourceText,
 )
-from cdd_guidance.practices.clean_engineering.model.update_report import ChildCollectionPair
+from cdd_guidance.practices.clean_engineering.model.translation import ChildCollectionPair
 
 
 class Parameter(OoadNode):
