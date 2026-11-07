@@ -23,6 +23,7 @@ from cdd_guidance.practices.stories.model.story_model import (
     StoryModel,
     StoryType,
 )
+from cdd_guidance.practices.stories.stories import Stories
 
 _NESTING_INDENT = 4
 _STORY = re.compile(r"^(?:\(S(?::(?P<kind>\w+))?\)\s+)?(?P<actor>.*?)\s*-->\s+(?P<name>.+)$")
@@ -77,12 +78,14 @@ class SketchEpic(Epic):
 class SketchStoryModel(StoryModel):
     epic_type = SketchEpic
     story_type = SketchStory
+    lens = SketchLens(Stories.sketch_titles)
+    """The section of a sketch Stories writes, opened by the headings the Stories practice declares."""
 
     def parse(self, text: str) -> "SketchStoryModel":
         """Read the sketch's stories section into this map, and return it."""
         self.epics = []
         self.increments = []
-        body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.of("stories"))
+        body = SketchOutline(text, _NESTING_INDENT).body_for(self.lens)
         _SketchReader(self).read(body)
         return self
 

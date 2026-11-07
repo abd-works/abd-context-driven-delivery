@@ -114,7 +114,6 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
 
 
 class OoadNode(ModelNode):
-    _practice_key = "clean_engineering"
     _semantic_type_name: str = "OoadNode"
     _belongs = {
         ("OoadClass", "Module"),
@@ -127,6 +126,12 @@ class OoadNode(ModelNode):
         ("Invariant", "Operation"),
         ("Invariant", "Property"),
     }
+
+    @classmethod
+    def practice_kind(cls) -> type:
+        from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+
+        return CleanEngineering
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -207,7 +212,7 @@ class OoadClass(OoadNode):
 
     @properties.setter
     def properties(self, properties: List["Property"]) -> None:
-        self._refill(self._properties, properties)
+        self._properties.refill(properties)
 
     @property
     def operations(self) -> List["Operation"]:
@@ -215,7 +220,7 @@ class OoadClass(OoadNode):
 
     @operations.setter
     def operations(self, operations: List["Operation"]) -> None:
-        self._refill(self._operations, operations)
+        self._operations.refill(operations)
 
     @property
     def composes_peers(self) -> bool:
@@ -440,7 +445,7 @@ class Module(OoadNode):
 
     @modules.setter
     def modules(self, modules: List["Module"]) -> None:
-        self._refill(self._modules, modules)
+        self._modules.refill(modules)
 
     @property
     def classes(self) -> List[OoadClass]:
@@ -448,7 +453,7 @@ class Module(OoadNode):
 
     @classes.setter
     def classes(self, classes: List[OoadClass]) -> None:
-        self._refill(self._classes, classes)
+        self._classes.refill(classes)
 
     def as_record(self) -> dict:
         return {
@@ -630,7 +635,7 @@ class CleanEngineeringModel(OoadNode):
 
     @modules.setter
     def modules(self, modules: List[Module]) -> None:
-        self._refill(self._modules, modules)
+        self._modules.refill(modules)
 
     @property
     def is_modules_view(self) -> bool:

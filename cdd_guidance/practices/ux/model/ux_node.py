@@ -11,7 +11,6 @@ from harness.graph.graph import Graph
 class UxNode(ModelNode):
     """Subclasses declare `_semantic_type_name`, the node type the graph records, and each child belongs to its owner."""
 
-    _practice_key = "ux"
     _semantic_type_name: str = "UxNode"
     _belongs = {
         ("Screen", "UxMap"),
@@ -25,6 +24,12 @@ class UxNode(ModelNode):
         ("Interaction", "Control"),
         ("Interaction", "StoryDemoControl"),
     }
+
+    @classmethod
+    def practice_kind(cls) -> type:
+        from cdd_guidance.practices.ux.ux import Ux
+
+        return Ux
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)

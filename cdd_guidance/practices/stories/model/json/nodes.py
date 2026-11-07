@@ -141,13 +141,14 @@ class JsonIncrement(Increment):
         return payload
 
     @classmethod
-    def from_record(cls, record: Dict[str, Any]) -> "JsonIncrement":
-        """The increment a record lists, with a story for each name it gives."""
+    def from_record(cls, record: Dict[str, Any], stories: Dict[str, Story]) -> "JsonIncrement":
+        """The increment a record lists, delivering the map's own story for each name it gives; stories holds the
+        map's stories by name."""
         named = [item.get("name") if isinstance(item, dict) else str(item) for item in record.get("stories", [])]
         increment = cls(
             name=record["name"],
             sequential_order=int(record.get("sequentialOrder", 0)),
-            stories=[Story(name, index) for index, name in enumerate(named, start=1)],
+            stories=[stories[name] for name in named if name in stories],
         )
         increment.outcome = str(record.get("outcome", "") or "")
         increment.decision_prompt = str(record.get("decisionPrompt", "") or "")
@@ -292,7 +293,8 @@ class JsonStoryModel(StoryModel):
         self._guard_schema(payload)
         self.epics = [JsonEpic.from_record(record) for record in payload.get("epics", [])]
         _take_examples(self.examples, payload)
-        self.increments = [JsonIncrement.from_record(record) for record in payload.get("increments", [])]
+        stories = {story.name: story for story in self.every_story()}
+        self.increments = [JsonIncrement.from_record(record, stories) for record in payload.get("increments", [])]
         return self
 
     def attach_source_locations(self, file_name: str) -> None:
@@ -309,10 +311,12 @@ class JsonStoryModel(StoryModel):
         json_path = Path(root).resolve() / "story-graph.json"
         if not json_path.exists():
             return None
+        text = json_path.read_text(encoding="utf-8")
         try:
-            story_map = cls().parse(json_path.read_text(encoding="utf-8"))
+            story_map = cls().parse(text)
         except JsonParseError as err:
             raise JsonParseError(f"{json_path}: {err}") from err
+        story_map.source_texts[json_path.name] = text
         story_map.attach_source_locations(json_path.name)
         story_map.source = SourceLocation(json_path.name, 1)
         return story_map

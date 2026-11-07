@@ -1,4 +1,4 @@
-"""GraphStoryModel supplies rule-ready step and scenario fields."""
+"""A story map recorded on a graph supplies rule-ready step and scenario fields."""
 
 import sys
 import tempfile
@@ -12,12 +12,11 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from harness.graph.graph import Graph  # noqa: E402
-from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel  # noqa: E402
 from cdd_guidance.practices.stories.model.source_location import SourceLocation  # noqa: E402
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
 
 
-with description("GraphStoryModel rule data"):
+with description("a story map recorded on a graph"):
     with before.each:
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
@@ -47,7 +46,7 @@ with description("GraphStoryModel rule data"):
         graph = Graph()
         graph.open(Path(str(self.root)))
         practice = graph.practice("stories")
-        GraphStoryModel(model).record(practice)
+        model.record(practice)
         self.practice = practice
 
     with it("should emit Given, When, and Then node types"):
@@ -71,18 +70,17 @@ with description("GraphStoryModel rule data"):
 
 def _imports_of(root: Path, file: str, text: str) -> dict:
     """The imported modules the Story node records for a story read from file, a story test holding text."""
-    (root / file).parent.mkdir(parents=True, exist_ok=True)
-    (root / file).write_text(text, encoding="utf-8")
     story = Story("Onboard Customer")
     story.source = SourceLocation(file, 1, 1)
     epic = Epic("Onboard", 1)
     epic.append_story(story)
     model = StoryModel()
     model.append_epic(epic)
+    model.source_texts[file] = text
     graph = Graph()
     graph.open(Path(str(root)))
     practice = graph.practice("stories")
-    GraphStoryModel(model).record(practice)
+    model.record(practice)
     return practice.graph.nodes_of(practice, "Story")[0].get_fact("imported_modules")
 
 

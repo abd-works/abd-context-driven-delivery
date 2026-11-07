@@ -198,8 +198,8 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 
 Extends `Node`. A model object that is its own node in the graph it was made on (`model_node.py`). Appending a child to one of its `ModelChildren` lists records the edge.
 
-+ _practice_key: str
-	// required; a model class that names no practice raises ModelWithoutPractice
++ practice_kind(): type
+	// class operation: the practice class its node belongs to; the graph holds that practice (Graph.practice_of). A model class that names none raises ModelWithoutPractice
 + _semantic_type_name: str
 + _belongs: set[tuple[str, str]]
 	// (child type, parent type) pairs that also record a belongsTo edge back
@@ -214,7 +214,14 @@ Extends `Node`. A model object that is its own node in the graph it was made on 
 
 ## ModelChildren
 
-Extends `list`. `append`, `extend`, `insert`, `pop`, and slice assignment record or remove the owner's edge.
+Extends `list`. `append`, `extend`, `insert`, `pop`, and slice assignment record or remove the owner's edge. Appending a
+part makes the owner its parent.
+
+## ModelReferences
+
+Extends `list`. The objects an owner refers to without owning them, such as the stories an increment delivers. Appending
+records a relationship edge and leaves the object under its own parent; an owner that moves to another graph records
+its references there.
 
 + owner: ModelNode
 + kind: str
@@ -537,7 +544,7 @@ associates  relationship  EntityRoot -> EntityRoot it names with a `// foreign N
 
 # Stories
 
-*Stories*, with its readers in `cdd_guidance/practices/stories/model/graph_reading.py`. It reads the TypeScript and JavaScript story tests into a story model (`TypeScriptStoryModel`), or the story maps (`StoryModel`) when there are none, and `GraphStoryModel.record` adds its objects to the practice graph.
+*Stories*, with its readers in `cdd_guidance/practices/stories/model/graph_reading.py`. It reads the TypeScript and JavaScript story tests into a story model (`TypeScriptStoryModel`), or the story maps (`StoryModel`) when there are none, and `StoryModel.record` has each object add itself to the practice graph.
 
 ## Nodes
 

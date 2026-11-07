@@ -9,7 +9,7 @@ from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
 
 from .collections import ContentTypes, NavComponents, Transitions
-from .nodes import Screen, UxContext
+from .nodes import ContentType, Control, Interaction, NavComponent, Region, Screen, StoryDemoControl, Transition, UxContext
 from .reference_paths import ReferencePaths
 from .ux_node import UxNode
 
@@ -46,6 +46,13 @@ class ScreenNotOnMap(KeyError):
 class UxMap(UxNode):
     _semantic_type_name = "UxMap"
 
+    screen_type: type[Screen] = Screen
+    region_type: type[Region] = Region
+    control_type: type[Control] = Control
+    story_demo_control_type: type[StoryDemoControl] = StoryDemoControl
+    """The node types this format's map is made of; a format that writes a node its own way names its subclass here,
+    and every reader and copy of the map makes its nodes through them."""
+
     workspace_files: tuple[str, ...] = ()
     """Where this format's map sits in a workspace folder, as glob patterns tried in order; ``{folder}`` is the
     folder's own name. The first pattern that matches a file wins."""
@@ -68,6 +75,79 @@ class UxMap(UxNode):
         if not isinstance(name, Graph):
             return cls(name, sequential_order, graph)
         return cls("UxMap", sequential_order, name)
+
+    @classmethod
+    def copy_of(cls, source: "UxMap") -> "UxMap":
+        """source as a map of this format, on a graph of its own, made of this format's node types: its screens with
+        their regions, controls, and the stories they show, its transitions, content types and nav components, and its
+        context."""
+        copy = cls.create(source.name)
+        with copy.batch_schema_sync():
+            copy._take_fields(source)
+            screens = {id(screen): copy._screen_copy(screen) for screen in source.screens}
+            for screen in source.screens:
+                copy.append_screen(screens[id(screen)])
+            for screen in source.screens:
+                copy._take_screen_parts(screen, screens)
+            copy._take_components(source, screens)
+        return copy
+
+    def _take_fields(self, source: "UxMap") -> None:
+        self.scope = source.scope
+        self.story_references = source.story_references.as_list()
+        self.object_references = source.object_references.as_list()
+        self.context.notes = list(source.context.notes)
+        self.context.invariants = list(source.context.invariants)
+
+    def _screen_copy(self, screen: Screen) -> Screen:
+        copy = self.screen_type(screen.name, screen.sequential_order, screen.slug, screen.layout, screen.description, graph=self.graph)
+        copy.inactive_tabs = list(screen.inactive_tabs)
+        copy.domain_terms = list(screen.domain_terms)
+        copy.domain_concepts = list(screen.domain_concepts)
+        copy.image = screen.image
+        copy.prototype = screen.prototype
+        copy.show_what(screen)
+        return copy
+
+    def _take_screen_parts(self, screen: Screen, screens: dict) -> None:
+        copy = screens[id(screen)]
+        copy.chrome_of = screens.get(id(screen.chrome_of)) if screen.chrome_of is not None else None
+        for region in screen.regions:
+            region_copy = self.region_type(region.name, region.sequential_order, region.area, self.graph)
+            for control in region.controls:
+                region_copy.append_control(self._control_copy(control, screens))
+            copy.append_region(region_copy)
+
+    def _control_copy(self, control: Control, screens: dict) -> Control:
+        common = (control.name, control.sequential_order, control.control_type, control.label, control.bound_field)
+        if isinstance(control, StoryDemoControl):
+            copy: Control = self.story_demo_control_type(
+                *common, control.story_steps, control.set_input, control.item_story_steps, control.item_value,
+                control.item_label, graph=self.graph,
+            )
+        else:
+            copy = self.control_type(*common, graph=self.graph)
+        copy.states = list(control.states)
+        for interaction in control.interactions:
+            destination = screens.get(id(interaction.destination)) if interaction.destination is not None else None
+            copy.append_interaction(Interaction(interaction.name, interaction.sequential_order, interaction.trigger,
+                                                interaction.effect, destination, self.graph))
+        return copy
+
+    def _take_components(self, source: "UxMap", screens: dict) -> None:
+        for transition in source.transitions:
+            self.transitions.append(Transition(
+                transition.name, transition.sequential_order, screens.get(id(transition.from_screen)),
+                screens.get(id(transition.to_screen)), transition.trigger, transition.nav_type, self.graph,
+            ))
+        for content_type in source.content_types:
+            copy = ContentType(content_type.name, content_type.sequential_order, content_type.hierarchy, self.graph)
+            copy.key_actions = list(content_type.key_actions)
+            self.content_types.append(copy)
+        for nav in source.nav_components:
+            copy = NavComponent(nav.name, nav.sequential_order, nav.ux_type, self.graph)
+            copy.destinations = [screens[id(screen)] for screen in nav.destinations if id(screen) in screens]
+            self.nav_components.append(copy)
 
     @classmethod
     def from_workspace(cls, root: Path) -> Optional["UxMap"]:

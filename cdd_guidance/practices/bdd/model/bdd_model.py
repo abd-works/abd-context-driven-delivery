@@ -8,19 +8,24 @@ from harness.graph.model_node import ModelChildren, ModelNode
 from harness.graph.graph import Graph
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import (
+    CallGraph,
     CallGraphEntry,
     parse_arrow_line,
-    render_call_graph_block,
 )
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
 
 
 class BddModel(ModelNode):
-    _practice_key = "bdd"
     _semantic_type_name = "Spec"
     graph_facts = ("patches_infrastructure", "signature_marker", "top_level_describes", "code_like_describe_lines", "private_probe")
     _belongs = {("Description", "Spec")}
+
+    @classmethod
+    def practice_kind(cls) -> type:
+        from cdd_guidance.practices.bdd.bdd import Bdd
+
+        return Bdd
 
     def __init__(self, graph: Graph | None = None) -> None:
         super().__init__("spec", 0, graph)
@@ -34,7 +39,7 @@ class BddModel(ModelNode):
 
     @descriptions.setter
     def descriptions(self, descriptions: list[Description]) -> None:
-        self._refill(self._descriptions, descriptions)
+        self._descriptions.refill(descriptions)
 
 
     def parse(self, text: str) -> "BddModel":
@@ -93,7 +98,7 @@ class BddModel(ModelNode):
                 for surface in observation.surface_lines:
                     lines.append(f"{pad}  -> {surface}")
                 if observation.call_graph:
-                    for graph_line in render_call_graph_block(observation.call_graph).splitlines():
+                    for graph_line in observation.call_graph.block().splitlines():
                         lines.append(f"{pad}  {graph_line}")
                 lines.append(f"{pad}  it {observation.name}")
                 lines.append(f"{pad}  ```")
@@ -183,14 +188,14 @@ class _SketchReader:
         owner, lines, self._fence = self._owner(), self._fence or [], None
         if owner is None:
             return
-        call_graph: list[CallGraphEntry] = []
+        call_graph = CallGraph()
         for raw in lines:
             stripped = raw.strip()
             if not stripped or stripped.startswith("//"):
                 continue
             if stripped.startswith("it "):
                 observation = Observation(stripped[3:].strip(), len(owner.observations) + 1)
-                observation.call_graph, call_graph = call_graph, []
+                observation.call_graph, call_graph = call_graph, CallGraph()
                 owner.observations.append(observation)
                 continue
             call_graph.append(self._call_graph_entry(raw, stripped))

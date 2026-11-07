@@ -23,9 +23,9 @@ def stories_rule_by_slug(slug: str):
     return rule
 
 
-def _record_stories(practice: PracticeGuidance, names: list[str], relative: str) -> list[Node]:
-    """Record the stories through the story model, so each Story node carries the facts a live build loads."""
-    from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
+def _record_stories(practice: PracticeGuidance, names: list[str], relative: str, source: str) -> list[Node]:
+    """Record the stories through the story model, read from source at relative, so each Story node carries the facts
+    a live build loads."""
     from cdd_guidance.practices.stories.model.source_location import SourceLocation
     from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel
 
@@ -38,7 +38,8 @@ def _record_stories(practice: PracticeGuidance, names: list[str], relative: str)
         story.source = SourceLocation(relative, 1, 1)
         epic.append_story(story)
     model.append_epic(epic)
-    GraphStoryModel(model).record(practice)
+    model.source_texts[relative] = source
+    model.record(practice)
     return practice.graph.nodes_of(practice, "Story")
 
 
@@ -48,7 +49,7 @@ def _story_nodes_from_ts(
     from cdd_guidance.practices.stories.model.story_model import Step, StepType
 
     names = re.findall(r"""story\s*\(\s*['"]([^'"]+)['"]""", source)
-    nodes: list[Node] = _record_stories(practice, names, relative)
+    nodes: list[Node] = _record_stories(practice, names, relative, source)
     for index, name in enumerate(re.findall(r"""given\s*\(\s*['"]([^'"]+)['"]""", source)):
         step = Step(name, StepType.GIVEN, index + 1, keyword="Given")
         step.type = "Given"
@@ -140,10 +141,10 @@ def _practice_from_folder(folder: Path, *, relative_file: str) -> tuple[Practice
 
 def _load_file_facts(node: Node, root: Path, relative: str) -> None:
     """The facts the story model loads for a story file, set on the fixture node as a live build sets them."""
-    from cdd_guidance.practices.stories.model.graph_story_model import GraphStoryModel
-    from cdd_guidance.practices.stories.model.story_model import StoryModel
+    from cdd_guidance.practices.stories.model.story_recording import story_file_facts
 
-    for name, value in GraphStoryModel(StoryModel())._file_facts(str(root), relative).items():
+    path = root / relative
+    for name, value in story_file_facts(path.read_text(encoding="utf-8") if path.is_file() else "").items():
         node.set_fact(name, value)
 
 

@@ -12,6 +12,7 @@ from cdd_guidance.practices.ux.model.claude_design.story_canvas import (
 )
 from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel
 from cdd_guidance.practices.ux.model.nodes import Screen
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 
 
 def _story_map() -> StoryModel:
@@ -39,9 +40,16 @@ def _catalog_screen() -> Screen:
     return screen
 
 
+def _ux_map(*screens: Screen) -> UxMap:
+    ux_map = UxMap.create()
+    for screen in screens:
+        ux_map.append_screen(screen)
+    return ux_map
+
+
 with description("a Claude Design story map") as self:
     with before.each:
-        self.files = json.loads(ClaudeDesignStoryModel().render(_story_map(), screens=[_catalog_screen()]))
+        self.files = json.loads(ClaudeDesignStoryModel().render(_story_map(), ux_map=_ux_map(_catalog_screen())))
         self.canvas = json.loads(self.files["project/canvas.json"])
 
     with context("rendered from a story map whose step is shown on a screen"):
@@ -112,7 +120,7 @@ with description("a Claude Design story map") as self:
             shot = Screen("an account exists", 4)
             shot.image = "shots/email-already-registered.png"
             shot.show_step("Create Credentials › Email already registered › an account exists")
-            files = json.loads(ClaudeDesignStoryModel().render(story_map, screens=[_catalog_screen(), select_plan, credentials, shot]))
+            files = json.loads(ClaudeDesignStoryModel().render(story_map, ux_map=_ux_map(_catalog_screen(), select_plan, credentials, shot)))
             self.explorer = files["project/screens/explorer.dc.html"]
 
         with it("shows a scenario whose steps show no screen on its own shownOn screen"):
@@ -128,7 +136,7 @@ with description("a Claude Design story map") as self:
         with before.each:
             sources = {"Choose Plan": "tests/select_plan.story.shared.ts:69",
                        "Choose Plan \u203a See the plan catalog": "tests/select_plan.story.shared.ts:73"}
-            files = json.loads(ClaudeDesignStoryModel().render(_story_map(), screens=[_catalog_screen()], sources=sources))
+            files = json.loads(ClaudeDesignStoryModel().render(_story_map(), ux_map=_ux_map(_catalog_screen()), sources=sources))
             self.explorer = files["project/screens/explorer.dc.html"]
 
         with it("gives the explorer each story's and scenario's location, for the copy-to-open request"):
@@ -138,7 +146,7 @@ with description("a Claude Design story map") as self:
     with context("rendered from a canvas the caller already holds"):
         with before.each:
             self.held = ClaudeDesignStoryModel(_story_map())
-            self.held.render(screens=[_catalog_screen()], sources={"Choose Plan": "tests/select_plan.story.shared.ts:69"})
+            self.held.render(ux_map=_ux_map(_catalog_screen()), sources={"Choose Plan": "tests/select_plan.story.shared.ts:69"})
 
         with it("leaves the caller's canvas without the screens of that render"):
             expect(self.held.screens).to(equal([]))
@@ -153,7 +161,7 @@ with description("a Claude Design story map") as self:
         with before.each:
             screen = _catalog_screen()
             screen.show_story("Choose Plan")
-            files = json.loads(ClaudeDesignStoryModel().render(_story_map(), screens=[screen]))
+            files = json.loads(ClaudeDesignStoryModel().render(_story_map(), ux_map=_ux_map(screen)))
             self.canvas = json.loads(files["project/canvas.json"])
             self.panel = files["project/context/plan-catalog.dc.html"]
 

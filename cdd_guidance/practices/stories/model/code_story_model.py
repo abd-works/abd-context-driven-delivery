@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import re
 import textwrap
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import render_call_graph_block
 from harness.annotations.name import Name
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage, WrittenBlock, WrittenKey
 from cdd_guidance.practices.stories.model.story_model import (
@@ -337,6 +337,14 @@ class CodeStoryModel(StoryModel):
     epic_type = CodeEpic
     story_type = CodeStory
     increment_type = CodeIncrement
+    story_test_suffix = ""
+    """How a story test file in this language ends, such as ``_story.test.py``; empty for a language whose story
+    tests are not read beside a story map."""
+
+    @classmethod
+    def reads_story_test(cls, path: Path) -> bool:
+        """True when the file at path is a story test in this language, which this model's story type reads."""
+        return bool(cls.story_test_suffix) and Path(path).name.endswith(cls.story_test_suffix)
 
     def __init__(self, source: "StoryModel | str | None" = None, tests_root: str | None = None):
         if isinstance(source, str):
@@ -457,7 +465,7 @@ class CodeStoryModel(StoryModel):
         """The step's body; an empty one carries the realization call graph as comments above the placeholder."""
         scaffold: List[str] = []
         if step.body.is_empty and step.call_graph:
-            graph = textwrap.dedent(render_call_graph_block(step.call_graph)).splitlines()
+            graph = textwrap.dedent(step.call_graph.block()).splitlines()
             scaffold = [f"{indent}{self.language.comment(line)}" for line in graph]
         return scaffold + step.body.lines_in(self.language, indent, self.step_placeholder())
 

@@ -24,12 +24,9 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.call_graph import (
+    CallGraph,
     CallGraphEntry,
-    callees_to_call_graph,
-    call_graph_to_callees,
     parse_arrow_line,
-    parse_call_graph_block,
-    render_call_graph_block,
 )
 
 
@@ -406,13 +403,13 @@ with description("call graph lines"):
 
     with it("should round-trip an indented graph"):
         text = "cart.checkout()\n  -> payment.charge()\n  <- receipt\n"
-        entries = parse_call_graph_block(text)
+        entries = CallGraph.parse(text)
         expect(entries[0].kind).to(equal("call"))
-        expect(call_graph_to_callees(entries)).to(equal(["payment.charge()"]))
-        expect(render_call_graph_block(entries)).to(equal(text.strip()))
+        expect(entries.callees()).to(equal(["payment.charge()"]))
+        expect(entries.block()).to(equal(text.strip()))
 
     with it("should lift flat callees into graph entries"):
-        entries = callees_to_call_graph(["a.fetch()", "b.save()"])
+        entries = CallGraph.of_callees(["a.fetch()", "b.save()"])
         expect(entries).to(equal([
             CallGraphEntry(depth=1, kind="out", text="a.fetch()"),
             CallGraphEntry(depth=2, kind="out", text="b.save()"),

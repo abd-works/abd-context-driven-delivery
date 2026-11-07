@@ -165,7 +165,7 @@ class Operation(InvariantHolder, OoadNode):
 
     @parameters.setter
     def parameters(self, parameters: List[Parameter]) -> None:
-        self._refill(self._parameters, parameters)
+        self._parameters.refill(parameters)
 
     def _take_parameters(self, parameters: list) -> None:
         from cdd_guidance.practices.clean_engineering.model.type_refs import parse_parameter

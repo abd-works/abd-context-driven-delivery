@@ -15,11 +15,10 @@ from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptEpic
 _SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
 
 
-_STORY_TEST_SUFFIX = "_story.test.ts"
-
 
 class TypeScriptStoryModel(BraceStoryModel):
     LEAF_EXTENSION = ".ts"
+    story_test_suffix = "_story.test.ts"
     epic_type = TypeScriptEpic
     story_type = TypeScriptStory
     language = TYPESCRIPT
@@ -62,6 +61,11 @@ class TypeScriptStoryModel(BraceStoryModel):
         seed = {} if self.read_from_code() else {seed_path: _story_test_text(self.tests_root)}
         return self.write_epics(seed)
 
+    def parse(self, external: Dict[str, str], *, on_file=None) -> "TypeScriptStoryModel":
+        """A new map read from the story tests in external, path to text, with this model's folders; on_file hears
+        each file as it is read."""
+        return type(self)(tests_root=self.tests_root, story_test_folder=self._story_test_folder).load(external, on_file=on_file)
+
     def _copy_of(self, canonical: StoryModel) -> "TypeScriptStoryModel":
         return type(self)(canonical, tests_root=self.tests_root, story_test_folder=self._story_test_folder)
 
@@ -100,13 +104,13 @@ class TypeScriptStoryModel(BraceStoryModel):
         if "/examples/" in path.replace("\\", "/"):
             return False
         return (
-            name.endswith(_STORY_TEST_SUFFIX)
+            name.endswith(self.story_test_suffix)
             or name.endswith("_story.spec.ts")
             or name.endswith(".story.shared.ts")
         )
 
     def _story_slug_from_filename(self, name: str) -> str | None:
-        suffix = _STORY_TEST_SUFFIX if name.endswith(_STORY_TEST_SUFFIX) else "_story.spec.ts"
+        suffix = self.story_test_suffix if name.endswith(self.story_test_suffix) else "_story.spec.ts"
         if not name.endswith(suffix):
             return None
         return Name(name[: -len(suffix)]).title_slug
@@ -115,6 +119,7 @@ class TypeScriptStoryModel(BraceStoryModel):
         if not isinstance(external, dict):
             raise CodeStoryModelError("TypeScript story map parse expects a path->content dict")
         self.epics.clear()
+        self.source_texts = dict(external)
         seen: set[tuple[str, ...]] = set()
         ordered = self._ordered_paths(external)
         leaves = [path for path in ordered if self.is_story_file(path)]

@@ -15,7 +15,7 @@ A **story map** describes what a system does for the people and systems that use
 
 ## Where a story map lives
 
-- `story-map.md` is the map as a markdown outline. Scenario markdown sits beside it (`scenarios/*.md`, `*_story.test.md`, and similar), and increments are in `thin-slicing.md` (or `thin-slice.md`, `thin-slices.md`, `increments.md`). `StoryModel.load(folder)` reads all three, and `story-graph.json` instead when no `story-map.md` sits in the folder or above it.
+- `story-map.md` is the map as a markdown outline. Scenario markdown sits beside it (`scenarios/*.md`, `*_story.test.md`, and similar), and increments are in `thin-slicing.md` (or `thin-slice.md`, `thin-slices.md`, `increments.md`). `Stories.read_folder(folder)` reads all three, and `story-graph.json` instead when no `story-map.md` sits in the folder or above it.
 - Story tests are the map written as code: one folder per epic, one story file per sub-epic that has no sub-epics of its own (`{sub_epic}_story.test.ts`, `.test.js`, `.test.py`, or `{SubEpic}Story.java`), each story a `story(...)` block holding its `scenario(...)` blocks; Java writes each story as a doc comment. Shared examples sit in an `examples/` folder at the lowest folder that shares them.
 - Draw.io and Miro diagrams show the map down to stories, with increments as thin-slice lanes (draw.io) or a table (Miro).
 
