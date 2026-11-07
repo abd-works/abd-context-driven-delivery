@@ -16,10 +16,20 @@ class DiagramStoryNode:
             node = node.parent
         return node
 
-    def _layout(self) -> "DiagramStoryModel":
-        """The diagram map this node is drawn on; an empty one when the node sits on no map yet."""
+    def _story_line_y(self) -> int:
+        """Top of the story line on the diagram map this node is drawn on; on no map yet, the line of a map with no
+        sub-epics."""
         story_map = self._owning_map()
-        return story_map if isinstance(story_map, DiagramStoryModel) else DiagramStoryModel()
+        if isinstance(story_map, DiagramStoryModel):
+            return story_map.story_y
+        return DiagramStoryModel.line_y(DiagramStory.row_y, DiagramEpic.nested_row_y, 0)
+
+    def _sub_epic_bar_y(self, depth: int) -> int:
+        """Top of this node's sub-epic bar at *depth* on the map it is drawn on."""
+        story_map = self._owning_map()
+        if isinstance(story_map, DiagramStoryModel):
+            return story_map.sub_epic_y(depth)
+        return DiagramStoryModel.bar_y(DiagramEpic.nested_row_y, depth)
 
     @property
     def width(self) -> int:
@@ -176,12 +186,20 @@ class DiagramStoryModel(StoryModel):
 
     def sub_epic_y(self, depth: int) -> int:
         """Top of a sub-epic bar at *depth*: each nested level stacks one bar lower."""
-        return self.sub_epic_top + depth * (DiagramEpic.bar_height + DiagramEpic.depth_gap)
+        return self.bar_y(self.sub_epic_top, depth)
 
     @property
     def story_y(self) -> int:
+        return self.line_y(self.story_floor, self.sub_epic_top, self.max_sub_epic_depth)
+
+    @staticmethod
+    def bar_y(top: int, depth: int) -> int:
+        return top + depth * (DiagramEpic.bar_height + DiagramEpic.depth_gap)
+
+    @classmethod
+    def line_y(cls, floor: int, top: int, max_sub_epic_depth: int) -> int:
         """Top of the story line: below the deepest sub-epic bar, leaving room for the actor drawn above each story,
         so a story at any depth keeps its actor and never sits on a bar."""
-        story = self.story_type
-        deepest_bottom = self.sub_epic_y(self.max_sub_epic_depth) + DiagramEpic.bar_height
-        return max(self.story_floor, deepest_bottom + story.actor_height + story.actor_gap + story.pad_below_sub_epic)
+        story = cls.story_type
+        deepest_bottom = cls.bar_y(top, max_sub_epic_depth) + DiagramEpic.bar_height
+        return max(floor, deepest_bottom + story.actor_height + story.actor_gap + story.pad_below_sub_epic)

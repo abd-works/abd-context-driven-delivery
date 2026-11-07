@@ -11,7 +11,8 @@ from cdd_guidance.practices.stories.model.story_model import Background, Step, S
 class JavaScenario(CodeScenario):
     _SCENARIO = re.compile(r"SCENARIO:\s*(.+)")
 
-    def calls_in(self, body: str) -> List[tuple]:
+    @classmethod
+    def calls_in(cls, body: str) -> List[tuple]:
         calls = []
         for line in body.splitlines():
             match = re.match(r"\s*\*\s*(GIVEN|WHEN|THEN|AND|BUT):\s*(.+)", line, re.IGNORECASE)

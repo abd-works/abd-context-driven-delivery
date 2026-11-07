@@ -98,7 +98,7 @@ class DrawIOStory(DiagramStory):
 
     @property
     def y(self) -> int:
-        return self._layout().story_y
+        return self._story_line_y()
 
     def cells(self, parent_id: str) -> List["DrawIOStoryModel.Vertex"]:
         actor = self.actors[0].strip() if self.actors else ""
@@ -158,7 +158,7 @@ class DrawIOEpic(DiagramEpic):
     def y(self) -> int:
         if not isinstance(self.parent, Epic):
             return self.row_y
-        return self._layout().sub_epic_y(self.depth)
+        return self._sub_epic_bar_y(self.depth)
 
     @property
     def x(self) -> int:
@@ -220,7 +220,7 @@ class DrawIOEpic(DiagramEpic):
             else:
                 estimate_x = self.x + self.tighten
             drawn.append(DrawIOStoryModel.Vertex.make(
-                f"{self.cell_id}/estimate", label, estimate_x, self._layout().story_y,
+                f"{self.cell_id}/estimate", label, estimate_x, self._story_line_y(),
                 max(self.bar_width - (estimate_x - self.x) - self.tighten, 80),
                 DiagramStory.size, self.estimate_style,
             ))

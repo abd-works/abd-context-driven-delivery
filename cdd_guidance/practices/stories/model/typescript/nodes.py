@@ -6,6 +6,8 @@ from typing import List
 
 from pathlib import Path
 
+from harness.name.name import Name
+
 from cdd_guidance.practices.stories.model.brace_story import BraceScenario
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeStory
 from cdd_guidance.practices.stories.model.story_model import Story
@@ -69,13 +71,13 @@ class TypeScriptEpic(CodeEpic):
     def examples_file(self) -> tuple:
         """(file name, text) of the example aggregates a new epic folder starts with."""
         noun = self._aggregate_noun()
-        return f"{CodeEpic(noun).slug()}.examples.ts", self._examples_file(noun)
+        return f"{Name(noun).title_slug or 'unnamed'}.examples.ts", self._examples_file(noun)
 
     def _aggregate_noun(self) -> str:
         """The epic's name without its opening verb: Create Customer names a Customer."""
         words = self.name.split()
         if len(words) > 1 and self.opens_with_verb():
-            return CodeEpic(" ".join(words[1:])).pascal()
+            return Name(" ".join(words[1:])).title_pascal or "Unnamed"
         return self.pascal()
 
     def _examples_file(self, noun: str) -> str:
