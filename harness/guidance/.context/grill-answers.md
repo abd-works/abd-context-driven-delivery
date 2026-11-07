@@ -10,7 +10,7 @@ Each `FidelityGuidance` (owned by its `PracticeGuidance`) holds an optional Clea
 
 ### Who owns render
 
-Callers use the **Render action** (`actions/render`: for each Guidance, `host.render(format, content)`). Practices must present one seam so that action can pick transformers — not a second orchestrator on BDD/DDD/Stories.
+Callers use the **Render action** (`actions/render`: for each Guidance, `item.render(format, content)`, or `item.render_files(format, paths)` when the call names paths). Practices must present one seam so that action can pick transformers — not a second orchestrator on BDD/DDD/Stories.
 
 Each practice that has its own artifact keeps **`model/`** for the canonical types, and **one folder per format underneath `model/`** named after the format (`model/drawio/`, `model/miro/`, `model/markdown/`, `model/python/`, `model/html/`, …). Not siblings of `model/`. Drop the `document/` / `diagram/` / `code/` / `web/` grouping. Reorganization of existing parse/render types — not new conversion behavior.
 
@@ -20,11 +20,11 @@ BDD and DDD keep no format folders; their fidelities’ Clean Engineering compan
 
 ### Fidelities is an annotated GuidanceCollection
 
-PracticeGuidance.fidelities is @markdownCollection("fidelities") -> GuidanceCollection. MarkdownCollection.coerce locates the Fidelities section (harness/markdown/markdown.py AssetLocator / fidelity_blocks) and GuidanceCollection.from_markdown builds FidelityGuidance children. The collection binds itself to the practice (`bind`) so later reads are that same bag; attach_fidelities is gone.
+PracticeGuidance.fidelities is @markdownCollection("fidelities") -> GuidanceCollection. MarkdownCollection.coerce locates the Fidelities section (harness/markdown/markdown.py AssetLocator / fidelity_blocks) and GuidanceCollection.from_markdown builds FidelityGuidance children. The collection attaches itself to the practice (`MarkdownCollection.attach`) so later reads return that same collection; attach_fidelities is gone.
 
 ### Selected lives on the collection
 
-GuidanceCollection already has current (and stage). Collection `instructions` is the enrolled tool; `fidelities[name].instructions` is one child. The collection is the nested toolset — PracticeGuidance.nested_toolsets is that same object.
+GuidanceCollection already has current (and stage). Collection `instructions` is the enrolled tool; `fidelities[name].instructions` is one child. The collection is the nested toolset — `PracticeGuidance.child_toolsets()` walks that same object.
 
 ### Practice instructions vs fidelities.markdown
 

@@ -209,25 +209,29 @@ Arrange Board And Details
 Set Stage WIP Limit
   ```
   -> BoardPage.board
-  -> BoardClient.submitWipLimit(stage: string, text: string)
+  -> BoardClient.stageNamed(name: string)
+  -> ColumnClient.submitWipLimit(text: string)
   -> ColumnClient.name
   it should save a whole number
   ```
   ```
   -> BoardPage.board
-  -> BoardClient.submitWipLimit(stage: string, text: string)
+  -> BoardClient.stageNamed(name: string)
+  -> ColumnClient.submitWipLimit(text: string)
   -> BoardClient.stageNamed(name: string)
   -> ColumnClient.wipLimit
   it should read the board again
   ```
   ```
   -> BoardPage.board
-  -> BoardClient.submitWipLimit(stage: string, text: string)
+  -> BoardClient.stageNamed(name: string)
+  -> ColumnClient.submitWipLimit(text: string)
   it should change nothing for a limit that is not a number
   ```
   ```
   -> BoardPage.board
-  -> BoardClient.submitWipLimit(stage: string, text: string)
+  -> BoardClient.stageNamed(name: string)
+  -> ColumnClient.submitWipLimit(text: string)
   it should send the header the server asks of a page on this machine
   ```
 
@@ -413,32 +417,32 @@ Open Validation Report
 Fix Report Violations
   with Fix pressed on one violation
     ```
-    -> BoardPage.fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData)
+    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     it should send one message to the chat
     ```
     ```
-    -> BoardPage.fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData)
+    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     -> ReportClient.text
     it should name the rule and what it requires
     ```
     ```
-    -> BoardPage.fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData)
+    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     -> ReportClient.text
     it should give the error at its file and line
     ```
     ```
-    -> BoardPage.fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData)
+    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     -> ReportClient.text
     it should quote the content that failed
     ```
     ```
-    -> BoardPage.fixViolation(ticket: string, rule: ReportRuleData, violation: ViolationData)
+    -> TicketClient.fixViolation(rule: ReportRuleData, violation: ViolationData)
     -> ReportClient.text
     it should name the ticket's session
     ```
   with Fix all pressed on a rule
     ```
-    -> BoardPage.fixRule(ticket: string, rule: ReportRuleData)
+    -> TicketClient.fixRule(report: ReportClient, rule: ReportRuleData)
     -> ReportClient.text
     it should send every violation of the rule in one message
     ```
@@ -447,14 +451,14 @@ Fix Report Violations
     -> SidePanelClient.openReport(ticket: string, fidelity: string)
     -> SidePanelClient.reportPanel
     -> _module.reportPanel
-    -> BoardPage.fixReport(ticket: string, rules: ReportRuleData[])
+    -> TicketClient.fixReport(report: ReportClient)
     it should send one message to the chat
     ```
     ```
     -> SidePanelClient.openReport(ticket: string, fidelity: string)
     -> SidePanelClient.reportPanel
     -> _module.reportPanel
-    -> BoardPage.fixReport(ticket: string, rules: ReportRuleData[])
+    -> TicketClient.fixReport(report: ReportClient)
     -> ReportClient.text
     it should name every rule the report breaks
     ```
@@ -462,7 +466,7 @@ Fix Report Violations
     -> SidePanelClient.openReport(ticket: string, fidelity: string)
     -> SidePanelClient.reportPanel
     -> _module.reportPanel
-    -> BoardPage.fixReport(ticket: string, rules: ReportRuleData[])
+    -> TicketClient.fixReport(report: ReportClient)
     -> ReportClient.text
     it should give every violation of every rule
     ```
@@ -1781,9 +1785,8 @@ a board
     -> BoardData.project
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
-    -> Board.repo_root
-    <- Path
+    -> Board.repo
+    <- Repo
     it should show the board of the whole checkout, where sessions keep their folders
     ```
   with no session saved as open
@@ -1798,7 +1801,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should show every work session as a ticket
     ```
@@ -1808,7 +1811,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should leave main off the board
     ```
@@ -1818,7 +1821,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should show each backlog item in the Backlog column
     ```
@@ -1828,7 +1831,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should leave archived sessions off the board
     ```
@@ -1838,7 +1841,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should show closed sessions in Complete
     ```
@@ -1848,7 +1851,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should name the ticket of the current session as active
     ```
@@ -1858,7 +1861,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should show tickets and backlog items alike as the board's cards
     ```
@@ -1868,7 +1871,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should count both a ticket and a backlog item as a card
     ```
@@ -1878,7 +1881,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should give each card one column
     ```
@@ -1888,7 +1891,7 @@ a board
     -> SessionSeed.folder
     -> Board.load(project)
     <- Board
-    -> BoardTools.current()
+    -> SessionsFolder.current(name: str)
     -> BoardData.project
     it should list every column with its tickets or items
     ```
@@ -1919,9 +1922,9 @@ a backlog item
       -> Board.backlog_items
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
-        -> Ticket.new(title: str, scope: str, parent: str, path: str)
+        -> Ticket.create(title: str, scope: str, parent: str, path: str)
           -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-          <- str
+          <- Session
         <- Ticket
       <- Ticket
       -> BacklogItemHandle.start(scope: str, path: str)
@@ -1931,9 +1934,9 @@ a backlog item
       -> Board.backlog_items
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
-        -> Ticket.new(title: str, scope: str, parent: str, path: str)
+        -> Ticket.create(title: str, scope: str, parent: str, path: str)
           -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-          <- str
+          <- Session
         <- Ticket
       <- Ticket
       -> BacklogItemHandle.start(scope: str, path: str)
@@ -1945,9 +1948,9 @@ a backlog item
       -> Board.backlog_items
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
-        -> Ticket.new(title: str, scope: str, parent: str, path: str)
+        -> Ticket.create(title: str, scope: str, parent: str, path: str)
           -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-          <- str
+          <- Session
         <- Ticket
       <- Ticket
       -> BacklogItemHandle.start(scope: str, path: str)
@@ -1973,9 +1976,9 @@ a backlog item
       -> Board.backlog_items
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
-        -> Ticket.new(title: str, scope: str, parent: str, path: str)
+        -> Ticket.create(title: str, scope: str, parent: str, path: str)
           -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-          <- str
+          <- Session
         <- Ticket
       <- Ticket
       -> BacklogItemHandle.start(scope: str, path: str)
@@ -1985,9 +1988,9 @@ a backlog item
       -> Board.backlog_items
       <- list[BacklogItem]
       -> BacklogItem.start(scope: str, path: str)
-        -> Ticket.new(title: str, scope: str, parent: str, path: str)
+        -> Ticket.create(title: str, scope: str, parent: str, path: str)
           -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-          <- str
+          <- Session
         <- Ticket
       <- Ticket
       -> BacklogItemHandle.start(scope: str, path: str)
@@ -2001,7 +2004,7 @@ a backlog item
     -> Board.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
-      -> BacklogItem.holding(ticket: Ticket, board: Board)
+      -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
     -> Board.backlog_items
@@ -2015,7 +2018,7 @@ a backlog item
     -> Board.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
-      -> BacklogItem.holding(ticket: Ticket, board: Board)
+      -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
     it should keep the ticket's whole folder, its history included
@@ -2027,7 +2030,7 @@ a backlog item
     -> Board.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
-      -> BacklogItem.holding(ticket: Ticket, board: Board)
+      -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
     -> Board.backlog_items
@@ -2041,7 +2044,7 @@ a backlog item
     -> Board.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
-      -> BacklogItem.holding(ticket: Ticket, board: Board)
+      -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
     it should be off the stages
@@ -2051,28 +2054,30 @@ a backlog item
 a ticket
   that has just been started
     ```
-    -> TicketTools.new(title: str, scope: str, parent: str, path: str)
-    -> Ticket.new(title: str, scope: str, parent: str, path: str)
+    -> TicketTools.create(title: str, scope: str, parent: str, path: str)
+    -> Ticket.create(title: str, scope: str, parent: str, path: str)
       -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-      <- str
+      <- Session
     <- Ticket
     it should be in Discovery, in progress
     ```
     ```
-    -> TicketTools.new(title: str, scope: str, parent: str, path: str)
-    -> Ticket.new(title: str, scope: str, parent: str, path: str)
+    -> TicketTools.create(title: str, scope: str, parent: str, path: str)
+    -> Ticket.create(title: str, scope: str, parent: str, path: str)
       -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-      <- str
+      <- Session
     <- Ticket
-    -> Ticket.lineage
-    <- Ticket
+    -> Ticket.session
+    <- Session
+    -> Session.parent
+    <- str
     it should keep its title, scope, and lineage
     ```
     ```
-    -> TicketTools.new(title: str, scope: str, parent: str, path: str)
-    -> Ticket.new(title: str, scope: str, parent: str, path: str)
+    -> TicketTools.create(title: str, scope: str, parent: str, path: str)
+    -> Ticket.create(title: str, scope: str, parent: str, path: str)
       -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-      <- str
+      <- Session
     <- Ticket
     -> FidelityProgress.remaining_actions
     <- list[str]
@@ -2171,7 +2176,7 @@ a ticket
   that a person has moved on with an earlier stage's fidelity still to review
     ```
     -> Ticket.move_to(stage: str, done: bool)
-      -> BacklogItem.holding(ticket: Ticket, board: Board)
+      -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
     it should name Review on that fidelity as next
@@ -2179,7 +2184,7 @@ a ticket
   that a person has dragged into a later stage's done part
     ```
     -> Ticket.move_to(stage: str, done: bool)
-      -> BacklogItem.holding(ticket: Ticket, board: Board)
+      -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
     it should be done in that stage
@@ -2189,7 +2194,7 @@ a ticket
     -> Board.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
-      -> BacklogItem.holding(ticket: Ticket, board: Board)
+      -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
     it should be in progress in that stage
@@ -2199,17 +2204,17 @@ a ticket
     -> Board.ticket(name: str)
     <- Ticket
     -> Ticket.move_to(stage: str, done: bool)
-      -> BacklogItem.holding(ticket: Ticket, board: Board)
+      -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
     it should be open again, in progress in that stage
     ```
   with every practice but Stories turned off
     ```
-    -> Ticket.enable_practice(practice: str, is_enabled: bool)
+    -> PracticeSessionOutput.enable(is_enabled: bool)
       -> PracticeSessionOutput.enabled
       <- bool
-    <- Ticket
+    <- PracticeSessionOutput
     it should be done with the one practice it works on
     ```
   that has been closed
@@ -2229,7 +2234,7 @@ a ticket
     <- Ticket
     -> Ticket.archive()
       -> Session.close()
-      -> Session.move_to(parent: Path)
+      -> Session.move_to_archive()
       <- Session
     <- Ticket
     it should be off the board
@@ -2239,7 +2244,7 @@ a ticket
     <- Ticket
     -> Ticket.archive()
       -> Session.close()
-      -> Session.move_to(parent: Path)
+      -> Session.move_to_archive()
       <- Session
     <- Ticket
     it should have its folder in the archive
@@ -2326,81 +2331,82 @@ the board tools
       ```
       that a person has chosen as a ticket's root
         ```
-        -> Ticket.choose_root(path: str)
-          -> Session.change_workpath(workpath: Path)
-        <- Ticket
+        -> Session.choose_workpath(path: str)
+          -> PracticeSessionOutput.keep_root(root: Path)
+        <- Session
         it should show the folder as the ticket's root
         ```
         ```
-        -> Ticket.choose_root(path: str)
-          -> Session.change_workpath(workpath: Path)
-        <- Ticket
+        -> Session.choose_workpath(path: str)
+          -> PracticeSessionOutput.keep_root(root: Path)
+        <- Session
         it should keep the folder as the session's work folder
         ```
       that a person has chosen as one practice's root
         ```
-        -> Ticket.choose_practice_root(practice: str, path: str)
-          -> Session.choose_output_root(practice: str, root: Path)
-        <- Ticket
+        -> PracticeSessionOutput.choose_root(path: str)
+          -> PracticeSessionOutput.keep_root(root: Path)
+        <- PracticeSessionOutput
         it should show the folder as that practice's root, chosen by a person
         ```
         ```
-        -> Ticket.choose_practice_root(practice: str, path: str)
-          -> Session.choose_output_root(practice: str, root: Path)
-        <- Ticket
-        -> Ticket.files(fidelities: list[str])
-          -> FidelityGuidance.output_paths()
-            -> FidelityGuidance.outputs
+        -> PracticeSessionOutput.choose_root(path: str)
+          -> PracticeSessionOutput.keep_root(root: Path)
+        <- PracticeSessionOutput
+        -> FidelityProgress.files()
+          -> FidelityGuidance.files()
+            -> FidelitySessionOutput.output_paths()
+              -> FidelityGuidance.outputs
+              <- dict
             <- dict
+            -> Branch.changed_files()
+            <- list[str]
           <- dict
-          -> Branch.changed_files()
-          <- list[str]
-        <- dict
+        <- dict[str, list[FileEntry]]
         it should write that practice's files there
         ```
         ```
-        -> Ticket.choose_practice_root(practice: str, path: str)
-          -> Session.choose_output_root(practice: str, root: Path)
-        <- Ticket
+        -> PracticeSessionOutput.choose_root(path: str)
+          -> PracticeSessionOutput.keep_root(root: Path)
+        <- PracticeSessionOutput
         it should leave every other practice on its default root
         ```
         and then a new root for the ticket
           ```
-          -> Ticket.choose_root(path: str)
-            -> Session.change_workpath(workpath: Path)
-          <- Ticket
+          -> Session.choose_workpath(path: str)
+            -> PracticeSessionOutput.keep_root(root: Path)
+          <- Session
           it should keep that practice writing to the folder chosen for it
           ```
         and then back to its default
           ```
-          -> Ticket.use_default_practice_root(practice: str)
-            -> Session.forget_output_root(practice: str)
-          <- Ticket
+          -> PracticeSessionOutput.use_default_root()
+          <- PracticeSessionOutput
           it should show the practice on its default root again
           ```
       that a person has chosen as the ticket's root, with no practice root chosen
         ```
-        -> Ticket.choose_root(path: str)
-          -> Session.change_workpath(workpath: Path)
-        <- Ticket
+        -> Session.choose_workpath(path: str)
+          -> PracticeSessionOutput.keep_root(root: Path)
+        <- Session
         it should put each practice's default root under the ticket's root
         ```
       that a person has started a backlog item in a folder
         ```
         -> BacklogItem.start(scope: str, path: str)
-          -> Ticket.new(title: str, scope: str, parent: str, path: str)
+          -> Ticket.create(title: str, scope: str, parent: str, path: str)
             -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-            <- str
+            <- Session
           <- Ticket
         <- Ticket
         it should open its ticket with that folder as its root
         ```
     that sets a stage's limit below the tickets it holds
       ```
-      -> Board.set_wip_limit(stage: str, limit: int)
-      <- Board
+      -> Stage.set_wip_limit(limit: int)
+      <- Stage
       -> TicketData.next
-      -> Ticket.next
+      -> Ticket.next_fidelity
       <- FidelityProgress
       it should show the stage over its limit
       ```
@@ -2419,187 +2425,187 @@ the board tools
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should list each rule the report names with its violations
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should give a violation the line it failed on
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should show no source for a file that is not in the repository
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should return exactly the fields ViolationData names
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should return exactly the fields ReportRuleData names
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should count the violations of each rule
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should leave out the violations of other practices in the saved graph
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should say the report has its saved graph
       ```
       with the file a violation names in the repository
         ```
         -> Board.ticket(name: str)
         <- Ticket
-        -> Ticket.report(fidelity: str)
-          -> Graph.write_json(path: str)
-          <- str
-        <- dict
+        -> FidelityProgress.report()
+          -> ReportFile.report()
+          <- Report
+        <- Report
         it should show the source lines around a violation
         ```
       with a session whose root is a folder of the project
         ```
         -> Board.ticket(name: str)
         <- Ticket
-        -> Ticket.report(fidelity: str)
-          -> Graph.write_json(path: str)
-          <- str
-        <- dict
+        -> FidelityProgress.report()
+          -> ReportFile.report()
+          <- Report
+        <- Report
         it should name the violation's file from the project's root
         ```
         ```
         -> Board.ticket(name: str)
         <- Ticket
-        -> Ticket.report(fidelity: str)
-          -> Graph.write_json(path: str)
-          <- str
-        <- dict
+        -> FidelityProgress.report()
+          -> ReportFile.report()
+          <- Report
+        <- Report
         it should show the source lines of the file in the session's root
         ```
     with a validation report saved without its graph
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should say a report has no saved graph
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should still return the report's text
       ```
     with a validation report on a rule the practice describes
       ```
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should show the text of each rule under its name
       ```
       with the judgment of the agent that validated it
         ```
-        -> Ticket.report(fidelity: str)
-          -> Graph.write_json(path: str)
-          <- str
-        <- dict
+        -> FidelityProgress.report()
+          -> ReportFile.report()
+          <- Report
+        <- Report
         it should list each rule the judgment fails after the graph's rules, once each
         ```
         ```
-        -> Ticket.report(fidelity: str)
-          -> Graph.write_json(path: str)
-          <- str
-        <- dict
+        -> FidelityProgress.report()
+          -> ReportFile.report()
+          <- Report
+        <- Report
         it should count each finding of a judged rule
         ```
         ```
-        -> Ticket.report(fidelity: str)
-          -> Graph.write_json(path: str)
-          <- str
-        <- dict
+        -> FidelityProgress.report()
+          -> ReportFile.report()
+          <- Report
+        <- Report
         it should give a judged finding the judged file and its line
         ```
         ```
-        -> Ticket.report(fidelity: str)
-          -> Graph.write_json(path: str)
-          <- str
-        <- dict
+        -> FidelityProgress.report()
+          -> ReportFile.report()
+          <- Report
+        <- Report
         it should show the source lines around a judged finding
         ```
         ```
-        -> Ticket.report(fidelity: str)
-          -> Graph.write_json(path: str)
-          <- str
-        <- dict
+        -> FidelityProgress.report()
+          -> ReportFile.report()
+          <- Report
+        <- Report
         it should list a rule an older report warns on as failing, since a warning is a Fail
         ```
     with a validation report on a rule no scanner checks any more
       ```
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should leave that rule's hits out of the report
       ```
     that opens a new ticket
       ```
-      -> Ticket.new(title: str, scope: str, parent: str, path: str)
+      -> Ticket.create(title: str, scope: str, parent: str, path: str)
         -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-        <- str
+        <- Session
       <- Ticket
       it should return the new ticket in Discovery
       ```
       ```
-      -> Ticket.new(title: str, scope: str, parent: str, path: str)
+      -> Ticket.create(title: str, scope: str, parent: str, path: str)
         -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-        <- str
+        <- Session
       <- Ticket
       -> Board.show()
       <- Board
@@ -2607,54 +2613,54 @@ the board tools
       ```
     that opens a ticket on a folder in the repository
       ```
-      -> Ticket.new(title: str, scope: str, parent: str, path: str)
+      -> Ticket.create(title: str, scope: str, parent: str, path: str)
         -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-        <- str
+        <- Session
       <- Ticket
       it should save that folder as the session's workpath
       ```
     that opens a ticket with no folder
       ```
-      -> Ticket.new(title: str, scope: str, parent: str, path: str)
+      -> Ticket.create(title: str, scope: str, parent: str, path: str)
         -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-        <- str
+        <- Session
       <- Ticket
       it should leave the session working on the repository
       ```
     that opens a ticket split from another
       ```
-      -> Ticket.new(title: str, scope: str, parent: str, path: str)
+      -> Ticket.create(title: str, scope: str, parent: str, path: str)
         -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-        <- str
+        <- Session
       <- Ticket
       it should name the ticket it was split from
       ```
     that adds a backlog item
       ```
-      -> BacklogItem.add(title: str, text: str)
+      -> BacklogItem.create(title: str, text: str)
       <- BacklogItem
       it should show the item in the Backlog with its text
       ```
       ```
-      -> BacklogItem.add(title: str, text: str)
+      -> BacklogItem.create(title: str, text: str)
       <- BacklogItem
       it should write the title and text to one markdown file
       ```
     that starts a backlog item
       ```
       -> BacklogItem.start(scope: str, path: str)
-        -> Ticket.new(title: str, scope: str, parent: str, path: str)
+        -> Ticket.create(title: str, scope: str, parent: str, path: str)
           -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-          <- str
+          <- Session
         <- Ticket
       <- Ticket
       it should return the new ticket in Discovery
       ```
       ```
       -> BacklogItem.start(scope: str, path: str)
-        -> Ticket.new(title: str, scope: str, parent: str, path: str)
+        -> Ticket.create(title: str, scope: str, parent: str, path: str)
           -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-          <- str
+          <- Session
         <- Ticket
       <- Ticket
       it should take the item off the Backlog
@@ -2663,7 +2669,7 @@ the board tools
       ```
       -> Ticket.close(leaving: list[str])
         -> Session.close()
-        -> Session.move_to(parent: Path)
+        -> Session.move_to_closed()
         <- Session
       <- Ticket
       it should show the ticket in Complete
@@ -2672,7 +2678,7 @@ the board tools
       ```
       -> Ticket.close(leaving: list[str])
         -> Session.close()
-        -> Session.move_to(parent: Path)
+        -> Session.move_to_closed()
         <- Session
       <- Ticket
       -> Board.show()
@@ -2683,7 +2689,7 @@ the board tools
       ```
       -> Ticket.archive()
         -> Session.close()
-        -> Session.move_to(parent: Path)
+        -> Session.move_to_archive()
         <- Session
       <- Ticket
       -> Board.show()
@@ -2693,7 +2699,7 @@ the board tools
     that drags a ticket into a later stage's Done
       ```
       -> Ticket.move_to(stage: str, done: bool)
-        -> BacklogItem.holding(ticket: Ticket, board: Board)
+        -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
         <- BacklogItem
       <- Ticket | BacklogItem
       it should show the ticket in that stage's Done
@@ -2752,17 +2758,17 @@ the board tools
         ```
     that turns a practice off for a ticket
       ```
-      -> Ticket.enable_practice(practice: str, is_enabled: bool)
+      -> PracticeSessionOutput.enable(is_enabled: bool)
         -> PracticeSessionOutput.enabled
         <- bool
-      <- Ticket
+      <- PracticeSessionOutput
       it should show the practice off for that ticket
       ```
       ```
-      -> Ticket.enable_practice(practice: str, is_enabled: bool)
+      -> PracticeSessionOutput.enable(is_enabled: bool)
         -> PracticeSessionOutput.enabled
         <- bool
-      <- Ticket
+      <- PracticeSessionOutput
       it should save the choice to the ticket's session.json
       ```
     that opens help on a fidelity
@@ -2796,54 +2802,62 @@ the board tools
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.files(fidelities: list[str])
-        -> FidelityGuidance.output_paths()
-          -> FidelityGuidance.outputs
+      -> FidelityProgress.files()
+        -> FidelityGuidance.files()
+          -> FidelitySessionOutput.output_paths()
+            -> FidelityGuidance.outputs
+            <- dict
           <- dict
+          -> Branch.changed_files()
+          <- list[str]
         <- dict
-        -> Branch.changed_files()
-        <- list[str]
-      <- dict
+      <- dict[str, list[FileEntry]]
       it should list the files a pattern finds there
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.files(fidelities: list[str])
-        -> FidelityGuidance.output_paths()
-          -> FidelityGuidance.outputs
+      -> FidelityProgress.files()
+        -> FidelityGuidance.files()
+          -> FidelitySessionOutput.output_paths()
+            -> FidelityGuidance.outputs
+            <- dict
           <- dict
+          -> Branch.changed_files()
+          <- list[str]
         <- dict
-        -> Branch.changed_files()
-        <- list[str]
-      <- dict
+      <- dict[str, list[FileEntry]]
       it should list the files a named part of the path finds there, in folders at any depth
       ```
     with a fidelity's markdown generated
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.files(fidelities: list[str])
-        -> FidelityGuidance.output_paths()
-          -> FidelityGuidance.outputs
+      -> FidelityProgress.files()
+        -> FidelityGuidance.files()
+          -> FidelitySessionOutput.output_paths()
+            -> FidelityGuidance.outputs
+            <- dict
           <- dict
+          -> Branch.changed_files()
+          <- list[str]
         <- dict
-        -> Branch.changed_files()
-        <- list[str]
-      <- dict
+      <- dict[str, list[FileEntry]]
       it should list the file with whether it exists
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.files(fidelities: list[str])
-        -> FidelityGuidance.output_paths()
-          -> FidelityGuidance.outputs
+      -> FidelityProgress.files()
+        -> FidelityGuidance.files()
+          -> FidelitySessionOutput.output_paths()
+            -> FidelityGuidance.outputs
+            <- dict
           <- dict
+          -> Branch.changed_files()
+          <- list[str]
         <- dict
-        -> Branch.changed_files()
-        <- list[str]
-      <- dict
+      <- dict[str, list[FileEntry]]
       it should list only the fidelities asked for
       ```
       ```
@@ -2854,7 +2868,7 @@ the board tools
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.read_file(path: str)
+      -> Session.read_file(path: str)
       <- dict
       it should return the file's text
       ```
@@ -2862,14 +2876,14 @@ the board tools
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.session_files()
+      -> Session.folder_files()
       <- list[dict]
       it should list every file in the session folder
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.session_files()
+      -> Session.folder_files()
       <- list[dict]
       it should list the files from the project
       ```
@@ -2903,9 +2917,9 @@ the board tools
       that starts the item again
         ```
         -> BacklogItem.start(scope: str, path: str)
-          -> Ticket.new(title: str, scope: str, parent: str, path: str)
+          -> Ticket.create(title: str, scope: str, parent: str, path: str)
             -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-            <- str
+            <- Session
           <- Ticket
         <- Ticket
         it should bring the ticket back with its work
@@ -2918,46 +2932,46 @@ the board tools
     ```
     with a report whose judgment fails rules the graph passed
       ```
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should name satisfy as the next action
       ```
       ```
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should count each finding of the judgment
       ```
     that a person has finished reviewing
       ```
-      -> Ticket.finish_review(fidelities: list[str])
-        -> Ticket.record(entry: str)
-      <- Ticket
+      -> FidelityProgress.finish_review()
+        -> SessionLog.record(line: str)
+      <- FidelityProgress
       it should show the fidelity's review done
       ```
       ```
-      -> Ticket.finish_review(fidelities: list[str])
-        -> Ticket.record(entry: str)
-      <- Ticket
+      -> FidelityProgress.finish_review()
+        -> SessionLog.record(line: str)
+      <- FidelityProgress
       it should write the review to the session log
       ```
     that a person names a fidelity the ticket does not have
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.finish_review(fidelities: list[str])
-        -> Ticket.record(entry: str)
-      <- Ticket
+      -> FidelityProgress.finish_review()
+        -> SessionLog.record(line: str)
+      <- FidelityProgress
       it should refuse it, naming the fidelity
       ```
       among fidelities it does have
         ```
-        -> Ticket.finish_review(fidelities: list[str])
-          -> Ticket.record(entry: str)
-        <- Ticket
+        -> FidelityProgress.finish_review()
+          -> SessionLog.record(line: str)
+        <- FidelityProgress
         it should write no review for the others named with it
         ```
   with a ticket whose next fidelity has violations
@@ -2973,28 +2987,28 @@ the board tools
     ```
     with that fidelity's report saved with its graph
       ```
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should count the violations of the fidelity on its ticket
       ```
     with that fidelity's report saved without its graph
       ```
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should leave a fidelity with no saved graph uncounted
       ```
   with violations left on two fidelities
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    -> Ticket.report(fidelity: str)
-      -> Graph.write_json(path: str)
-      <- str
-    <- dict
+    -> FidelityProgress.report()
+      -> ReportFile.report()
+      <- Report
+    <- Report
     -> Ticket.violations()
     <- dict
     it should list the rules of every fidelity with violations
@@ -3002,19 +3016,19 @@ the board tools
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    -> Ticket.report(fidelity: str)
-      -> Graph.write_json(path: str)
-      <- str
-    <- dict
+    -> FidelityProgress.report()
+      -> ReportFile.report()
+      <- Report
+    <- Report
     it should name the fidelity a rule was broken on
     ```
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    -> Ticket.report(fidelity: str)
-      -> Graph.write_json(path: str)
-      <- str
-    <- dict
+    -> FidelityProgress.report()
+      -> ReportFile.report()
+      <- Report
+    <- Report
     -> Ticket.violations()
     <- dict
     it should give the folder of the reports for every fidelity
@@ -3023,10 +3037,10 @@ the board tools
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    -> Ticket.report(fidelity: str)
-      -> Graph.write_json(path: str)
-      <- str
-    <- dict
+    -> FidelityProgress.report()
+      -> ReportFile.report()
+      <- Report
+    <- Report
     -> Ticket.violations()
     <- dict
     it should list only the rules of the fidelities in the ticket's stage
@@ -3035,10 +3049,10 @@ the board tools
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    -> Ticket.report(fidelity: str)
-      -> Graph.write_json(path: str)
-      <- str
-    <- dict
+    -> FidelityProgress.report()
+      -> ReportFile.report()
+      <- Report
+    <- Report
     -> Ticket.violations()
     <- dict
     it should list a rule two fidelities share once
@@ -3047,38 +3061,38 @@ the board tools
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    -> Ticket.report(fidelity: str)
-      -> Graph.write_json(path: str)
-      <- str
-    <- dict
+    -> FidelityProgress.report()
+      -> ReportFile.report()
+      <- Report
+    <- Report
     it should list the scenarios rules and the story map rules
     ```
     ```
     -> Board.ticket(name: str)
     <- Ticket
-    -> Ticket.report(fidelity: str)
-      -> Graph.write_json(path: str)
-      <- str
-    <- dict
+    -> FidelityProgress.report()
+      -> ReportFile.report()
+      <- Report
+    <- Report
     it should count the same rules on the ticket
     ```
     with a story map report newer than the scenarios report
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should leave the story map rules to the story map report
       ```
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.report(fidelity: str)
-        -> Graph.write_json(path: str)
-        <- str
-      <- dict
+      -> FidelityProgress.report()
+        -> ReportFile.report()
+        <- Report
+      <- Report
       it should count only the rules the scenarios report answers for
       ```
   with a git repository and two tickets
@@ -3140,7 +3154,7 @@ the board tools
       <- Ticket
       -> Ticket.close(leaving: list[str])
         -> Session.close()
-        -> Session.move_to(parent: Path)
+        -> Session.move_to_closed()
         <- Session
       <- Ticket
       it should leave the branch checked out as it was
@@ -3169,14 +3183,16 @@ the board tools
       ```
       -> Board.ticket(name: str)
       <- Ticket
-      -> Ticket.files(fidelities: list[str])
-        -> FidelityGuidance.output_paths()
-          -> FidelityGuidance.outputs
+      -> FidelityProgress.files()
+        -> FidelityGuidance.files()
+          -> FidelitySessionOutput.output_paths()
+            -> FidelityGuidance.outputs
+            <- dict
           <- dict
+          -> Branch.changed_files()
+          <- list[str]
         <- dict
-        -> Branch.changed_files()
-        <- list[str]
-      <- dict
+      <- dict[str, list[FileEntry]]
       it should list only the files the ticket's branch changed
       ```
     with the active ticket's branch not checked out
@@ -3196,10 +3212,10 @@ the board tools
     ```
     -> Board.show()
     <- Board
-    -> TicketTools.new(title: str, scope: str, parent: str, path: str)
-    -> Ticket.new(title: str, scope: str, parent: str, path: str)
+    -> TicketTools.create(title: str, scope: str, parent: str, path: str)
+    -> Ticket.create(title: str, scope: str, parent: str, path: str)
       -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-      <- str
+      <- Session
     <- Ticket
     it should leave the board read out of the session log
     ```

@@ -10,6 +10,8 @@ Every chat used to start its own stdio cdd server from whichever worktree last r
 
 ## Consequences
 
+The first two consequences below are superseded by `0002-the-project-travels-on-the-tool-call.md`: the project and the session now travel on each call's *ToolCall*, and `space.work_state.working_on` is deleted.
+
 - The server keeps one set of toolset objects and one current session per project, because toolsets hold state between calls.
 - A call outside the server (a script or a spec) names its project with `space.work_state.working_on`, or falls back to `CDD_PROJECT`, then the current folder.
 - Installing from a worktree no longer changes the serving code. `install.py --pin-runtime` and `install.py --serve-from-checkout` are the only ways to change it.

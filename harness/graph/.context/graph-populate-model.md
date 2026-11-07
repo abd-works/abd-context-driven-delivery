@@ -1,51 +1,197 @@
-# CodeQLGraph
+# Graph
 
-CodeQL holds the nodes, the edges, and the rules. `CodeQLGraph` runs those queries and renders the rows. It does not decide which nodes exist or which pairs connect.
+`Graph` reads a working copy into one `PracticeGraph` per practice. The graph names no practice: each practice registers a `GraphPractice` from its own `graph_practice.py`, and each pattern a `GraphOverlay` from its `graph_overlay.py`. `GraphPractices` imports that module the first time the graph asks for the practice or pattern, so the practices depend on the graph and never the other way round.
 
-A practice pack is `practices/<practice>/model/<language>/codeql/`. `query_files` reads every `*.ql` in `nodes/`, then `edges/`, then `rules/`. Adding a query file is how a language or a stack extends the graph. The app in `harness/codeQl_graph/app` draws `return_nodes`.
+A practice reader parses its files with the practice's own model and adds each parsed object (a class, an operation, a story, a spec's observation) to its practice graph as the node itself, so a rule reads its measurements from the same object the explorer shows. A node with no parsed object behind it, such as a story's example or a LERN tier file, is a plain `Node` made with `PracticeGraph.add_named`. Edges are recorded with `PracticeGraph.link`; an edge's place under its parent in the explorer tree comes from `EDGE_ORDER`.
 
-A node query names a `semantic_type` as a string in the `select`. An edge query names `kind`, `order`, and `display` as literals. Both catalogs grow as the queries run. `display` is `direct`, `grouped`, or `relationship`.
+A load runs in this order (`fill_working_copy` in `working_copy.py`): each practice `read`s, in the order its `reads_after` needs; then each practice `link`s its nodes to other practices' nodes; then each applied overlay `read`s; then `attach_rules` runs every practice's checks and records each finding as a `Violation` on its node; then each practice `rebuild_tree`s. `save_json` writes the result to `{folder}/.context/graph.json`, and a later `load_working_copy` reads that file back instead of parsing when it is still current.
 
-`reload_working_copy` runs every node query, registers a `CodeQLNode` per row, runs every edge query, then `populate` walks those edges from each practice root. An edge row is kept when both ids are already registered. A cross-practice edge is stored on the parent's practice. The reverse, child to parent with the same kind, is stored on the child's practice.
-
-`node_id` = `{practice}:{semantic_type}:{file}:{name}` (add class or operation when the name is not unique). Shared id helpers live in the pack library (`ce.qll`, `stories.qll`, `ddd.qll`, `graph_rule.qll`). Edge queries call those helpers. They do not invent a second id.
+A node's id is `{practice}:{type}:{file or folder}:{name}`, with the owning class or operation added when the name alone is not unique. The practice sections below give each one.
 
 ---
 
-## CodeQLGraph
+## Graph
 
-+ CodeQLPracticeGraph: dict
-	// practice name → CodeQLPracticeGraph
+The toolset the graph tools run on. Each project's cdd runtime holds one, so one chat's loads and filters never reach another project's graph. Marked `@language_adapter(language="typescript")`, so the explorer app calls the same operations through the generated `GraphClientGenerated`.
+
++ practices: dict[str, PracticeGraph]
++ filter: Filter
++ overlays: list[str]
+	// pattern overlay roots, each a folder holding practices/
++ folder: str
+	// the loaded folder; graph.json lives in its .context
+- _practice_roots: dict[str, Path]
+- _scope: list[Path] | None
+	// the edited files a load_files reads; None when the whole folder loads
 ----
-+ reload_working_copy(): str
-	// for each practice: query_files(nodes), query_files(edges), query_files(rules) under practices/<practice>/model/<language>/codeql
-	// apply node rows, apply edge rows, root.populate(), apply rule rows
++ of_practice(folder, name, source_root): Graph
+	// a source root over _LOAD_FILE_BUDGET source files opens without reading them, so an action's log line on a large repository is immediate
++ load_working_copy(folder, practices, database=None, overlays=None, force=False): GraphLoaded
+	// @mcp. reuse the saved graph when it holds every requested practice on the same roots and overlays, and neither the roots nor any rule file is newer
+	// else -> _build_working_copy, -> save_json
++ load_files(folder, practices, files, overlays=None): GraphLoaded
+	// @mcp, /load-files. build from only the edited files; never reads or writes the saved graph
++ save_json(): GraphSaved
+	// @mcp. merge into .context/graph.json; practices already saved and not loaded now stay
++ write_json(path): str
+	// this graph alone, without merging
++ set_overlays(overlays): AppliedOverlays
+	// @mcp. reload the open folder with these overlays
++ overlay_of(folder): Overlay
+	// @mcp. raises GraphFailure when the folder and its parents hold no practices/
++ practice_names(): list[str]
+	// @mcp. every practice PracticeCatalogue names
++ inventory(): Inventory
+	// @mcp
++ filter_choices(practices, node_types): Filter
+	// @mcp. a new Filter; clears the graph's own
++ source(node_id): NodeSource | None
+	// @mcp
++ return_nodes(filter=None): list[FilteredNode]
+	// @mcp, read-graph skill. keys: practice(s), type(s), name, rules, relationships, violations, path(s)
+	// -> filter.narrowed_by(filter), walks each practice's root_node
++ practice(name): PracticeGraph
++ source_files(root, suffixes): list[Path]
+	// the edited files during a load_files, else every scanned file
++ edited_files(): list[Path] | None
++ scoped(found): list[Path]
++ scope_folders(): list[Path] | None
++ report_progress(message): None
+	// -> harness.agent_tools.progress.report_progress
 
-## CodeQLPracticeGraph
+## Inventory
+
++ practices: dict[str, PracticeGraph]
++ overlays: list[str]
++ available_overlays: list[str]
+	// each folder under cdd_guidance/patterns that holds practices/
+
+## AppliedOverlays
+
+Extends `Inventory`.
+
++ message: str
+
+## PracticeGraph
+
+One practice's nodes and edges. An edge is recorded only once for a parent and child of one kind.
 
 + name: str
-+ nodes: dict
-	// by node type → list[CodeQLNode]. filled from node queries
-+ edges: dict
-	// by edge type → list[Edge]. filled from edge queries. node ↔ node
-+ node_types: set of all node types
-	// semantic_type as queries run
-+ edge_types: set of all edge types
-	// EdgeType as queries run, keyed by order
-+ rootNode: CodeQLNode
++ graph: Graph
++ source_root: str
++ root_node: Node
+	// type Practice, id {practice}:Practice:.:{practice}. Facts about the practice as a whole live here
++ nodes: dict[str, list[Node]]
+	// by node type
++ by_id: dict[str, Node]
++ edges: dict[str, list[Edge]]
+	// by kind
++ node_types: set[str]
++ edge_types: dict[str, EdgeType]
++ applicable: dict[str, list[str]]
+	// rule slug -> node types its schema lists it on
++ loaded: list[str]
++ node_counts: dict[str, int]
++ edge_count: int
++ node_type_names: list[str]
++ edge_type_kinds: list[str]
+	// in EDGE_ORDER
++ rule_labels: list[str]
+	// practice.NodeType.slug, with the owning pattern in front
++ tree: ExplorerEntry
+	// -> root_node.serialize()
 ----
-- load_nodes(queries): None
-	// for query in node_queries
-	//   node_types.add(row.semantic_type)
-	//   nodes[row.semantic_type].append(CodeQLNode.from_fact(row))
-- load_edges(queries): None
-	// for query in edge_queries
-	//   edge_types.add(EdgeType(kind, order, display))
-	//   edges[kind].append(Edge(parent, child, kind, order, display))
++ add(node, node_id, file, start_line, end_line): Node
+	// the node already called node_id when there is one; else release it from the throwaway graph its parser built it in, place it, register it
++ add_named(type, node_id, name, source): Node
++ link(kind, parent, child, display="direct"): None
+	// -> record with edge_order(kind, display)
++ record(fact, parent, child): None
++ registered(node_id): Node | None
+	// this practice first, then every practice of the graph
++ edges_from(kind, parent): list[Edge]
++ direct_parent(child): Node | None
++ node_count(type): int
++ restore(saved): None
+	// the saved nodes back as plain Nodes
++ restore_links(saved): None
+	// saved edges and violations, once every practice's nodes are back
++ apply_rule(rule, types): None
++ rules_for(node_type): list[str]
++ rebuild_tree(): None
+	// clear every node's children, then root_node.populate()
+
+## Node
+
+A parsed object a practice reader added, or a plain node read back from `graph.json`. Model objects that build their own edges extend `BoundNode`.
+
++ practice: PracticeGraph
++ type: str
++ node_id: str
++ name: str
++ source: Source
++ stage: str
+	// one of STAGES.names (harness/guidance/stages.py), or empty
++ data: dict
+	// facts only the reader knows, such as a class's folder; a reloaded node holds every saved fact here
++ graph_facts: tuple[str, ...]
+	// class attribute: the parsed object's attributes that save with the graph
++ children: list[Node]
++ parent: Node | None
++ facts: dict
+	// graph_facts attributes, then data; what graph.json keeps
++ rules: GraphRulesCollection
+	// -> attach_node_rules on first read
++ failed_rules: list[str]
++ passing_rules: list[str]
++ fidelity: str
++ fidelities: list[str]
+	// from the practice's schema.yaml
+----
++ get_fact(key, default=None): object
+	// this node's fact, else the nearest ancestor's: a fact a whole file owns is kept once, on the file's top node
++ set_fact(key, value): None
++ has_fact(key): bool
++ place(file, start_line, end_line): None
+	// a step, scenario, or example moves onto the lines that declare it
++ populate(parent=None): None
+	// for each edge kind by order, for each edge leaving this node:
+	//   direct: edge.child.populate(this)
+	//   grouped | relationship: edge.child.populate(holder), holder being this node's child named for the kind
+	// stories, scenarios, backgrounds, and steps follow their source lines
++ serialize(seen, via, stack): ExplorerEntry
+	// the full child list only at the node's home parent; a relationship copy is empty; a node already on the path is a stub
++ rule_category(): GraphRulesCollection | None
++ release(): None
++ fact(row): dict | None
+	// static. a saved node; None when its practice is not in PracticeCatalogue
++ from_fact(practice, row): Node
+
+## BoundNode
+
+Extends `Node`. A model object that is its own node in the graph it was made on (`bound_node.py`). Appending a child to one of its `BoundChildren` lists records the edge.
+
++ _graph_practice: str
++ _semantic_type_name: str
++ _belongs: set[tuple[str, str]]
+	// (child type, parent type) pairs that also record a belongsTo edge back
++ sequential_order: int
++ has_source_file: bool
++ graph: Graph
+----
++ batch_schema_sync(): contextmanager
+	// holds schema-edge rebuilds until a batch of links is done
+- _link(child, kind): None
+	// -> practice.record(kind, direct), belongsTo when the pair is listed, -> sync_schema_edges(graph)
+
+## BoundChildren
+
+Extends `list`. `append`, `extend`, `insert`, `pop`, and slice assignment record or remove the owner's edge.
+
++ owner: BoundNode
++ kind: str
 
 ## EdgeType
-
-Taken from an edge query as rows arrive.
 
 + kind: str
 + order: int
@@ -57,1183 +203,375 @@ Taken from an edge query as rows arrive.
 + kind: str
 + order: int
 + display: str
-+ parent: CodeQLNode
-+ child: CodeQLNode
++ parent: Node
++ child: Node
++ stage: str
+	// the child's
+----
++ fact(row): dict | None
+	// static. a saved edge
+
+## EDGE_ORDER
+
+Where each kind's group sits under a node in the explorer tree, lowest first. `edge_order(kind, display)` reads it; a kind only an overlay schema names sits at 2 when direct, 7 otherwise.
+
+```
+1  decomposedInto relative root descriptions participants screens
+2  owns background contexts parameters aggregates given
+3  scenarios properties observations
+4  steps demonstrates shownOn specifiedBy specifies
+5  examples belongsTo
+6  hasParameter increments accesses
+7  hasType returnType stories associates
+8  observes demonstratedThrough
+9  ands uses invokedBy
+10 returns
+11 retrievedUsing
+12 invokes
+13 dependsOn
+14 usedBy
+```
 
 ## Source
 
-+ path: str
-+ line_start: int
-	// from the node query
-+ line_end: int
-	// from the node query
-+ call_folds: list[CallFold]
-	// nested call markers inside contents. nesting_level is fold depth
-----
-+ contents: str
-	// get: read path, slice line_start..line_end, insert call fold markers by nesting_level
+The text the explorer's source view shows.
 
-## CallFold
++ file: str
++ start_line: int
++ end_line: int
++ root: str
++ calls: list[Call]
++ language: str
++ text: str
+	// the lines start..end with /* call:name */ after each call; folds and inlining are built in app/source/call-expansion.ts
+----
++ whole_file(relative, root): Source
++ align_to_label(label): None
++ widen_to_call_close(): None
++ align_to_example_export(root, name): None
+
+## Call
 
 + line: int
-	// line in the source slice
-+ nesting_level: int
-	// 0 is the outer call. inner calls increment
-+ callee: str
++ order: int
++ operation: str
 
-## CodeQLNode
+## Filter
 
-One class for every semantic_type. Lives in `practice.nodes[type]`. The query string is the type.
-
-+ practice: Practice
-+ type: str
-	// semantic_type
-+ node_id: str
++ practices: list[str]
++ node_types: list[str]
++ relationships: list[str]
++ rules: list[str]
++ violations: bool
 + name: str
-+ source: Source
-+ children: list[CodeQLNode]
++ paths: list[str]
 ----
-+ from_fact(row): CodeQLNode
-	// this type. source from file, line, end_line
-+ populate(parent=None): None
-	// if parent: parent.children.add(this)
-	// for edge_type in practice.edge_types sorted by order
-	//   for edge in practice.edges[edge_type.kind] where edge.parent is this
-	//     display=grouped:
-	//       group = existing child named edge.kind, or a new group CodeQLNode
-	//       children.add(group)
-	//       edge.child.populate(group)
-	//     display=direct:
-	//       edge.child.populate(this)
-	//     display=relationship:
-	//       rel = existing child named edge.kind, or a new relationship CodeQLNode
-	//       children.add(rel)
-	//       edge.child.populate(rel)
++ select_practices(practices): None
+	// offers the node types, relationships, and rules those practices hold
++ select_node_types(node_types): None
++ select_relationships(relationships): None
++ select_rules(rules): None
++ select_violations(): None
++ clear(): None
++ narrowed_by(request): Filter
++ matches(node): bool
 
-## CodeQLNode fact
+## GraphPractice
 
-Every node query `select`s this, then practice columns.
+What one practice gives the graph (`graph_practice.py`). The base reads nothing and checks the rules in `{package}.rules`, so a practice that only checks rules needs no subclass.
+
++ name: str
++ package: str
+	// the practice's Python package, from PracticeCatalogue
++ reads_after: tuple[str, ...]
++ node_types: tuple[str, ...]
+	// offered by the explorer before any node of them is read
+----
++ read(practice: PracticeGraph): None
++ link(graph: Graph): None
++ rules(): dict[str, PracticeGraphRule]
++ own_rules(): dict[str, PracticeGraphRule]
+	// -> rules_in(f"{package}.rules"): the module's BY_SLUG, else its RULES
++ language_rules(language): dict[str, PracticeGraphRule]
++ checks(patterns=()): dict[str, PracticeGraphRule]
+	// own rules plus each active overlay's rules_for(name)
++ checks_for(node, patterns): dict[str, PracticeGraphRule]
+	// those whose node_types hold the node's type, or the Clean Engineering type a pattern's schema anchors it to
+
+## GraphOverlay
+
+What one pattern gives the graph on top of the practices.
+
++ pattern: str
+----
++ read(graph: Graph): None
++ guidance(): Guidance | None
+	// gives each overlay rule its prose
++ rules_for(practice): dict[str, PracticeGraphRule]
+	// -> rules_in(f"cdd_guidance.patterns.{pattern}.practices.{practice}.rules")
+
+## GraphPractices
+
+Every registered practice and overlay.
+
+----
++ register(practice: GraphPractice): None
++ register_overlay(overlay: GraphOverlay): None
++ named(name): GraphPractice
+	// imports {PracticeCatalogue.module_of(name)}.graph_practice the first time; a practice that registers nothing gets the base GraphPractice
++ overlay(pattern): GraphOverlay
+	// imports cdd_guidance.patterns.{pattern}.graph_overlay the first time
++ in_reading_order(names): list[GraphPractice]
+
+## PracticeGraphRule
+
+One rule a practice checks on loaded nodes (`practice_rule.py`). A practice writes each rule as a subclass in its `rules` package.
+
++ slug: str
++ node_types: tuple[str, ...]
+----
++ check(node, context: RuleCheckContext): list[str]
+	// one message per violation on node
++ check_practice(context: RuleCheckContext): list[tuple[str, str]]
+	// (node_id, message) pairs from one pass over the whole practice
++ applies_to(node_type): bool
+
+## RuleCheckContext
+
++ practice: PracticeGraph
++ source_root: Path | None
+----
++ child_count(node, edge_kinds): int
++ children(node, edge_kind): list[Node]
++ node_data(node): dict
++ scenario_outline(node): bool
++ scenario_evidence(node): list[str]
+
+## GraphRulesCollection
+
+Extends `RulesCollection` (harness/guidance). The rules that apply to one node, built by `attach_node_rules` from the slugs the practice's `model/schema.yaml` lists on the node's type (plus each active overlay's `schema.yaml` and `rules.yaml`). In the explorer tree it is the node's `rules` child.
+
++ node: Node
++ slugs: list[str]
++ shown: list[GraphRule]
+	// every rule, or only the failing chosen ones when the graph's filter asks for violations
++ violations: list[Violation]
++ failed_slugs: list[str]
++ passing_slugs: list[str]
+----
++ chosen(violations_only, selected): list[GraphRule]
++ record_violation(slug, message): None
+	// a slug the node has no rule for records nothing
++ restore(violation): None
++ clear_violations(): None
+
+## GraphRule
+
+Extends `PracticeGraphRule` and `Rule`. One schema rule on one node.
+
++ node: Node
++ slug: str
++ body: str
+	// the rule's prose from the practice's or pattern's guidance (prose_by_slug)
++ executable: bool
+	// a check with this slug exists
++ status: str
+	// violating | passing | prompt (no check runs it)
++ violations: list[Violation]
+----
++ record(message): None
+	// -> Violation.on_node; the same message is kept once
++ restore(violation): None
+
+## Violation
+
+One place a rule is broken (`violation.py`). The saved graph keeps it, the explorer shows it under the node's rule, and the Validate action's report and the board read it back.
+
++ rule: str
++ practice: str
++ node_id: str
++ subject: str
+	// what the node is, such as Operation `checkout`
++ location: str
+	// the file, or unknown
++ line: int | None
++ end_line: int | None
++ message: str
++ severity: str
++ source: list[SourceLine]
++ saved: list
+	// [rule, node_id, message, file, line, end_line, severity]
++ described: str
+----
++ on_node(rule, message, node): Violation
++ from_saved(practice, saved, saved_nodes): Violation
++ from_data(data): Violation
++ is_under(prefixes): bool
++ in_file(location, file, lines_before, lines_after): Violation
+
+## Explorer answers
+
+`explorer.py`. Each holds the node it describes and reads its data from it.
+
+- `ExplorerEntry` — one node at one place in the explorer tree, with the entries below it there.
+- `FilteredNode` — a node `return_nodes` matched: practice, type, name, node_id, ancestors, children, rules.
+- `NodeSource` — a node's file, text, and lines, with every `Member` (class, operation, property) the loaded graph holds, so a call in it can be opened.
+- `GraphLoaded`, `GraphSaved`, `Overlay` — the message, path, or overlay root a tool answers with.
+
+## graph.json
 
 ```
-node_id, name, semantic_type, practice, file, line, end_line, …practice columns, stage
+{ overlays: [..],
+  practices: { <practice>: { source_root, root_facts, nodes, edges, rules } } }
+node:      [node_id, name, type, practice, file, line, end_line, stage, facts-json]
+edge:      [parent_id, child_id, kind, order, display]
+violation: [rule, node_id, message, file, line, end_line, severity]
 ```
 
-`stage` is optional. When a later cell is `discovery`, `specification`, or `implementation`, that cell is the node's stage. Practice columns sit between `end_line` and `stage`.
+`root_facts` holds the practice root's facts, such as Clean Engineering's `model_members`.
 
-## GraphEdge fact
-
-Every edge query `select`s this. `kind`, `order`, and `display` are hardcoded in that query.
-
-```
-parent_id, child_id, kind, order, display
-```
-
-## Rule fact
-
-Every practice has a `rules` folder beside `nodes` and `edges`. A rule query names one rule. It binds node facts and edge facts already loaded. It does not select classes, calls, or files on its own.
-
-A rule may name more than one node kind. Each kind it names is a subject it checks.
-
-A rule that passes selects no row. A rule that fails selects a violation:
-
-```
-rule, node_id, violation
-```
-
-`violation` is `{rule} violation suspected at {node_id} {violation details}`.
-
-When the check is a relationship, the same row also carries the edge already loaded:
-
-```
-rule, node_id, parent_id, child_id, kind, violation
-```
-
-`node_id` is the subject. The same slug is one query file in each language pack that already has that rule. A slug that exists only for TypeScript stays in the TypeScript pack. A rule binds the node kinds named by the id helpers in that file (`classId`, `operationId`, `nodeId("practice", "Kind", …)`).
-
-The LERN stack nodes, edges, and rules are in `patterns/lern_domain_driven/.context/codeql-stack.md`.
+---
 
 # Clean Engineering
 
-Practice: `clean_engineering`. A class is an OoadClass. DDD stereotypes are the DDD queries.
+`CleanEngineeringGraph` in `cdd_guidance/practices/clean_engineering/graph_practice.py`. It reads each source file with its language's class model, then the model documents `{folder}/.context/*-model.md` of the folders in scope.
 
+## Nodes
 
-## CodeQLNode queries
-
-**modules.ql**
-```
-node_id, name, semantic_type=Module, practice=clean_engineering, file, line, end_line, stage=discovery
-```
-
-**packages.ql**
-```
-node_id, name, semantic_type=Package, practice=clean_engineering, file, line, end_line, stage=discovery
-```
-A package is the folder under a module that holds classes (`src/<module>/<package>`).
-
-**classes.ql**
-```
-node_id, name, semantic_type=OoadClass, practice=clean_engineering, file, line, end_line,
-module
-```
-
-**operations.ql**
-```
-node_id, name, semantic_type=Operation, practice=clean_engineering, file, line, end_line,
-class_name, return_type
-```
-Class methods.
-
-**functions.ql**
-```
-node_id, name, semantic_type=Operation, practice=clean_engineering, file, line, end_line,
-module
-```
-File-level functions. They are operations with no class. The module owns them so a bare function stays visible.
-
-**properties.ql**
-```
-node_id, name, semantic_type=Property, practice=clean_engineering, file, line, end_line,
-class_name, type_hint, stereotype, cardinality, origin
-```
-
-**parameters.ql**
-```
-node_id, name, semantic_type=Parameter, practice=clean_engineering, file, line, end_line,
-class_name, operation
-```
-
-## Edge queries
-
-**class-relative-properties.ql**
-```
-parent_id, child_id, kind=relative, order=1, display=direct
-```
-OoadClass→Property when type_hint names another loaded class.
-
-**repo-owns-modules.ql**, **module-owns-packages.ql**, **package-owns-classes.ql**, **module-owns-classes.ql**, **module-owns-operations.ql**, **class-owns-operations.ql**
-```
-parent_id, child_id, kind=owns, order=2, display=direct
-```
-Repo→Module, Module→Package, Package→OoadClass, Module→OoadClass, Module→file-level Operation, OoadClass→Operation.
-
-TypeScript does not emit `operation-owns-parameters`. The parameter stays under `hasParameter`. The Python pack still has `operation-owns-parameters.ql` (`owns`, order 2, direct) for Operation→Parameter.
-
-**class-properties-properties.ql**
-```
-parent_id, child_id, kind=properties, order=3, display=grouped
-```
-OoadClass→leftover Property. Heading = properties.
-
-**class-belongs-to-module.ql**
-```
-parent_id, child_id, kind=belongsTo, order=4, display=relationship
-```
-
-**operation-has-parameter-parameters.ql**
-```
-parent_id, child_id, kind=hasParameter, order=5, display=relationship
-```
-Operation→Parameter.
-
-**property-has-type-class.ql**
-```
-parent_id, child_id, kind=hasType, order=6, display=relationship
-```
-Property→OoadClass named by type_hint.
-
-**operation-returns-class.ql**
-```
-parent_id, child_id, kind=returns, order=7, display=relationship
-```
-Operation→OoadClass named by return_type.
-
-**operation-invokes-operations.ql**
-```
-parent_id, child_id, kind=invokes, order=8, display=relationship
-```
-Operation→Operation.
-
-**class-depends-on-classes.ql**
-```
-parent_id, child_id, kind=dependsOn, order=9, display=relationship
-```
-OoadClass→OoadClass when an invokes row leaves the owner.
-
-**class-associates-classes.ql**
-```
-parent_id, child_id, kind=associates, order=10, display=relationship
-```
-OoadClass→OoadClass.
-
-**class-composition-classes.ql**
-```
-parent_id, child_id, kind=composition, order=11, display=relationship
-```
-OoadClass→OoadClass.
-
-**class-aggregation-classes.ql**
-```
-parent_id, child_id, kind=aggregation, order=12, display=relationship
-```
-OoadClass→OoadClass.
-
-## Rule queries
-
-**keep-operations-small-focused.ql** — Operation. Source of that operation is longer than 20 statements.
-
-**limit-operation-parameters.ql** — Operation, Parameter. `hasParameter` / `owns`. More than two parameters.
-
-**avoid-vague-parameter-names.ql** — Operation, Parameter. `hasParameter`. Parameter name is data, options, or info.
-
-**simplify-control-flow.ql** — Operation. Source nests control flow more than three levels.
-
-**never-swallow-exceptions.ql** — Operation. Source catches and ignores.
-
-**use-exceptions-properly.ql** — Operation. Source has a bare except.
-
-**use-explicit-dependencies.ql** — OoadClass, Operation. `owns`. Constructor operation constructs another class.
-
-**use-property-not-accessor.ql** — OoadClass, Operation. `owns`. Operation is an accessor for a property.
-
-**prefer-class-operations.ql** — Module, Operation. `owns`. Operation is owned by the module.
-
-**prefer-instance-operations.ql** — Operation. Operation is static.
-
-**hide-inner-details.ql** — Operation, Property. Operation source reads a private property.
-
-**low-coupling.ql** — Operation, Property. Operation source reaches a property past the owning class.
-
-**shape-classes-around-resources.ql** — OoadClass. `associates`, `dependsOn`. One class acts on another class that only holds properties.
-
-**put-logic-on-the-owning-resource.ql** — Operation, Parameter. `hasParameter`. Operation works through a parameter instead of the parameter's class.
-
-**use-typed-signatures.ql** — Operation, Parameter. `hasParameter`. Parameter has no type.
-
-**provide-meaningful-context.ql** — Operation, Parameter. `hasParameter`. Parameter name is numbered.
-
-**deep-module.ql** — Module, OoadClass. `owns`. Public class count against class count.
-
-**one-way-deps.ql** — Module. `dependsOn`. Two modules depend on each other.
-
-**extensions-live-with-the-domain.ql** — OoadClass, Module. `belongsTo`. An extending class sits in a different module from the class it extends.
-
-**layer-separation.ql** — Operation. `invokes`. Operation has one invoke and no other work.
-
-**keep-classes-single-responsibility.ql** — OoadClass, Operation. `owns`. Owned operations split into more than one concern.
-
-**do-not-invent-parallel-object-models.ql** — OoadClass, Operation. `owns`, `associates`, `dependsOn`, `composition`, `aggregation`.
-
-A collection is one OoadClass plus every OoadClass reached from it by those edges. Its class count is the size of that set. Its nouns are those class names with a leading `Graph`, `CodeQL`, or `Ooad` removed. Its verbs are the names of the Operations those classes `owns`. Its method count is the number of those operations.
-
-Two collections mirror each other when they share a noun and share a verb, and both the class counts and the method counts differ. The violation is on each class in the collection with the smaller method count. Details name the other collection's class count and method count.
-
-A single class also fails when it links two classes that have no path between them through those edges once that class is left out. That class is joining two shapes the rest of the graph keeps apart.
-
-**missing-module-context.ql**, **language-modules-one-section.ql**, **public-seam-only.ql**, **modules-not-model-blocks.ql** — Module, OoadClass. `owns`, `belongsTo`. Class file and module do not match the module layout.
-
-**eliminate-duplication.ql** — Operation. Two operations share portions of one body.
-
-**limit-comments.ql** — Operation. Source comment narrates the operation.
-
-**named-seam-and-constraint.ql** — Module. Module source does not name a seam and a constraint.
-
-**constants-not-magic-strings.ql** — Operation, Property. Source string is not a named constant on the class.
-
-**no-screen-map-banner-comments.ql** — Module. Module file opens with a screen or story banner comment.
-
-**prefix-own-class-member.ql** — OoadClass, Property, Operation. `owns`, `invokes`. Member is used only by its owning class.
-
-**use-consistent-naming.ql** — Module, Operation. `owns`. Operations in one module mix snake_case and camelCase.
-
-**use-intention-revealing-names.ql** — Operation. Operation or a name in its source hides the intent.
-
----
-
-# Stories
-
-Practice: `stories`. Story edges may name a Clean Engineering node_id already registered.
-
-## CodeQLNode queries
-
-**epics.ql**
-```
-node_id, name, semantic_type=Epic, practice=stories, file, line, end_line
-```
-
-**stories.ql**
-```
-node_id, name, semantic_type=Story, practice=stories, file, line, end_line,
-epic
-```
-
-**scenarios.ql**
-```
-node_id, name, semantic_type=Scenario, practice=stories, file, line, end_line,
-story
-```
-
-**backgrounds.ql**
-```
-node_id, name, semantic_type=Background, practice=stories, file, line, end_line,
-story, scenario
-```
-
-**steps.ql**
-```
-node_id, name, semantic_type=Step, practice=stories, file, line, end_line,
-keyword, story, scenario, background
 ```
-keyword = given | when | then | and | but.
-
-**examples.ql**
-```
-node_id, name, semantic_type=Example, practice=stories, file, line, end_line,
-class_name
-```
-class_name = domain class the factory constructs, or empty.
-
-## Edge queries
-
-**repo-owns-epics.ql**, **epic-owns-stories.ql**, **story-owns-scenarios.ql**, **story-owns-backgrounds.ql**, **scenario-owns-steps.ql**, **story-owns-steps.ql**
-```
-parent_id, child_id, kind=owns, order=1, display=direct
-```
-Repo→Epic, Epic→Story, Story→Scenario, Story→Background, Scenario→Step, Story→Step.
-
-**step-scopes-examples.ql**
-```
-parent_id, child_id, kind=scopes, order=2, display=grouped
-```
-Step→Example. Heading = examples.
-
-**example-demonstrates-class.ql**
-```
-parent_id, child_id, kind=demonstrates, order=3, display=grouped
-```
-Example→OoadClass. Heading = examples on the class.
-
-**story-belongs-to-epic.ql**
-```
-parent_id, child_id, kind=belongsTo, order=4, display=relationship
-```
-
-**step-invokes-operations.ql**
-```
-parent_id, child_id, kind=invokes, order=5, display=relationship
-```
-Step→Operation on a when.
-
-**class-demonstrated-through-examples.ql**
-```
-parent_id, child_id, kind=demonstratedThrough, order=6, display=relationship
+Module      clean_engineering:Module:{folder}                 a folder that owns .context/module-context.md
+Package     clean_engineering:Package:{folder}                any other folder with source
+OoadClass   clean_engineering:OoadClass:{file}:{class}        facts: folder, plus the class's graph_facts
+Property    clean_engineering:Property:{file}:{name}:{class}  facts: owner; a getter's measurements
+Operation   clean_engineering:Operation:{file}:{name}:{class} facts: parameters, owner, line_count, callees, ...
+Parameter   clean_engineering:Parameter:{file}:{name}:{class}.{operation}
 ```
-OoadClass→Example.
 
-**example-retrieved-using-operations.ql**, **example-retrieved-using-properties.ql**
-```
-parent_id, child_id, kind=retrievedUsing, order=7, display=relationship
-```
-Example→Operation, Example→Property.
+A file's top-level functions are operations of the `_module` class its language model gives that file. The root holds `model_members`: every member the model documents describe, by `Class.member`.
 
-**step-observes-examples.ql**
-```
-parent_id, child_id, kind=observes, order=8, display=relationship
-```
-then Step→Example.
+## Edges
 
-**epic-uses-modules.ql**
 ```
-parent_id, child_id, kind=uses, order=9, display=relationship
+owns         direct        Practice|Module -> Module|Package, Module|Package -> OoadClass, OoadClass -> Operation
+belongsTo    relationship  Package -> enclosing folder, OoadClass -> its folder
+properties   grouped       OoadClass -> Property
+relative     direct        OoadClass -> Property whose type names another loaded class
+hasType      relationship  Property -> OoadClass its type names
+dependsOn    relationship  OoadClass -> OoadClass a property's type names
+hasParameter relationship  Operation -> Parameter
+returns      relationship  Operation -> OoadClass its return type names
 ```
-Epic→Module.
-
-## Rule queries
-
-**verb-noun-format.ql** — Story. Story name.
-
-**story-name-captures-system-mechanic.ql** — Story. Story name.
-
-**vocabulary-traces-to-domain-source.ql** — Story, OoadClass. Story name against class names already loaded.
-
-**plain-english-gwt-steps.ql** — Step. Step name is a code identifier.
-
-**gwt-steps-trace-to-domain-operations.ql** — Step, OoadClass. `invokes`. Step name against a class, or the step's invoke.
-
-**domain-operation-in-the-step.ql** — Step, Operation. `invokes`. Step body is one domain operation call.
-
-**kebab-case-paths.ql** — Epic, Story, Scenario, Step, Example. Node file path.
-
-**four-to-nine-children.ql** — Epic, SubEpic. `owns`. Direct children of an epic or sub-epic, not the scenarios under a story.
-
-**story-scenarios-at-most-seven.ql** — Story. `scenarios`. A story holds at most 7 code scenarios. More than 7 and the story is huge. None means the scenarios are not written yet, which passes.
-
-**right-size-story-nodes.ql** — Story, Epic. `owns`. Sibling story names under one epic.
-
-**domain-fixture-example-files.ql** — Example. Example file name.
-
-**example-role-names.ql** — Example. Example name says entered, stored, or expected.
 
-**initialize-from-fixture-then-seed.ql** — Example, OoadClass. Story source constructs a class instead of an example.
+`invokes`, `invokedBy`, `usedBy`, `demonstrates`, `demonstratedThrough`, and `retrievedUsing` are recorded here by Stories and BDD when they link.
 
-**originating-sub-epic-examples.ql** — Example, Epic, Story. `owns`. Example file sits on the epic instead of the story that owns it.
+## Rules
 
----
+`cdd_guidance.practices.clean_engineering.rules`, plus `model.drawio.rules` for nodes read from a `.drawio` file.
 
 # DDD
 
-Practice: `ddd`. Clean Engineering already registered the class as OoadClass. A DDD node fact is the stereotyped type for the same source span. `class_node_id` is that OoadClass. Load does not promote. DDD `nodes` are only DDD stereotypes: BoundedContext, Aggregate, Entity, EntityRoot, ValueObject, Repository, DomainService, DomainEvent, Specification, Factory. An OoadClass, Operation, Property, Parameter, Exception, CodeQLNode, or Client does not appear on the DDD graph.
+`DddGraph` in `cdd_guidance/practices/ddd/graph_practice.py`. `reads_after = ("clean_engineering",)`: its building blocks are the classes Clean Engineering read, seen through the stereotype their declaration or name gives them (`inferred_tactical_kind`). A building block is a new plain `Node` holding the class's facts plus `tactical_facts`; the class stays Clean Engineering's node.
 
+## Nodes
 
-## CodeQLNode queries
-
-**bounded-contexts.ql**
 ```
-node_id, name, semantic_type=BoundedContext, practice=ddd, file, line, end_line
-```
-
-**aggregates.ql**
-```
-node_id, name, semantic_type=Aggregate, practice=ddd, file, line, end_line,
-context
+BoundedContext  ddd:BoundedContext:{folder}:{name}   a folder holding .context/bounded-context.md; the whole folder when none does
+Aggregate       ddd:Aggregate:{folder}               a folder outside tests/ and test-utils/ holding building blocks
+EntityRoot | Entity | ValueObject | Repository
+                ddd:{kind}:{file}:{class}            facts: folder, the class's facts, tactical facts
 ```
 
-**entities.ql**
-```
-node_id, name, semantic_type=Entity, practice=ddd, file, line, end_line,
-class_node_id, is_root=false
-```
+## Edges
 
-**entity-roots.ql**
 ```
-node_id, name, semantic_type=EntityRoot, practice=ddd, file, line, end_line,
-class_node_id, is_root=true
+owns        direct        Practice|BoundedContext -> BoundedContext, BoundedContext -> Aggregate, Aggregate -> member
+root        direct        Aggregate -> EntityRoot
+belongsTo   relationship  BoundedContext -> outer context, Aggregate -> BoundedContext, member -> Aggregate
+accesses    relationship  {Root}Repository -> {Root}
+associates  relationship  EntityRoot -> EntityRoot it names with a `// foreign Name` comment
 ```
 
-**value-objects.ql**
-```
-node_id, name, semantic_type=ValueObject, practice=ddd, file, line, end_line,
-class_node_id
-```
+## Rules
 
-**repositories.ql**
-```
-node_id, name, semantic_type=Repository, practice=ddd, file, line, end_line,
-class_node_id
-```
+`cdd_guidance.practices.ddd.rules` together with every Clean Engineering rule.
 
-**domain-services.ql**
-```
-node_id, name, semantic_type=DomainService, practice=ddd, file, line, end_line,
-class_node_id
-```
+# Stories
 
-**domain-events.ql**
+`StoriesGraph` in `cdd_guidance/practices/stories/graph_practice.py`. It reads the TypeScript and JavaScript story tests into a story model (`TypeScriptStoryModel`), or the story maps (`StoryModel`) when there are none, and `GraphStoryModel.record` adds its objects to the practice graph.
+
+## Nodes
+
 ```
-node_id, name, semantic_type=DomainEvent, practice=ddd, file, line, end_line,
-class_node_id
+Epic | SubEpic       stories:{Epic|SubEpic}:{folder}:{name}
+Story                stories:Story:{file}:{name}
+Background           stories:Background:{file}:{label}
+Scenario             stories:Scenario:{file}:{name}
+Given | When | Then | Step
+                     stories:{type}:{file}:{line}:{label hash}   facts: keyword, text, phase, callees, ...
+Example              stories:Example:{file}:{name}               a plain node
 ```
 
-**specifications.ql**
-```
-node_id, name, semantic_type=Specification, practice=ddd, file, line, end_line,
-class_node_id
-```
+## Edges
 
-**factories.ql**
 ```
-node_id, name, semantic_type=Factory, practice=ddd, file, line, end_line,
-class_node_id
-```
-
-## Edge queries
-
-**aggregate-root-entity-root.ql**
-```
-parent_id, child_id, kind=root, order=1, display=direct
-```
-Aggregate→EntityRoot.
-
-**repo-owns-bounded-contexts.ql**, **bounded-context-owns-aggregates.ql**, **aggregate-owns-entities.ql**, **aggregate-owns-value-objects.ql**, **aggregate-owns-repositories.ql**, **aggregate-owns-domain-services.ql**, **aggregate-owns-domain-events.ql**, **aggregate-owns-specifications.ql**, **aggregate-owns-factories.ql**
-```
-parent_id, child_id, kind=owns, order=2, display=direct
-```
-Repo→BoundedContext, BoundedContext→Aggregate, Aggregate→Entity | ValueObject | Repository | DomainService | DomainEvent | Specification | Factory.
-
-**entity-has-identity-property.ql**, **entity-root-has-identity-property.ql**
-```
-parent_id, child_id, kind=hasIdentity, order=3, display=direct
-```
-Entity→Property, EntityRoot→Property.
-
-**aggregate-belongs-to-bounded-context.ql**, **entity-belongs-to-aggregate.ql**, **entity-root-belongs-to-aggregate.ql**, **value-object-belongs-to-aggregate.ql**, **repository-belongs-to-aggregate.ql**, **domain-service-belongs-to-aggregate.ql**, **domain-event-belongs-to-aggregate.ql**, **specification-belongs-to-aggregate.ql**, **factory-belongs-to-aggregate.ql**
-```
-parent_id, child_id, kind=belongsTo, order=4, display=relationship
+decomposedInto  direct        Practice|Epic -> Epic|SubEpic|Story
+background      direct        Story -> Background
+scenarios       direct        Story -> Scenario
+steps           direct        Scenario|Background -> step
+ands            direct        step -> its continuation
+examples        direct        Scenario -> Example
 ```
 
-**repository-accesses-entity-root.ql**
-```
-parent_id, child_id, kind=accesses, order=5, display=relationship
-```
-Repository→EntityRoot.
+`link` (when Clean Engineering is loaded):
 
-**entity-associates-entities.ql**, **entity-root-associates-entities.ql**
 ```
-parent_id, child_id, kind=associates, order=6, display=relationship
-```
-
-**type-composition-types.ql**
-```
-parent_id, child_id, kind=composition, order=7, display=relationship
+invokes         relationship  step -> Operation it calls          (and Operation -> step, invokedBy, on Clean Engineering)
+uses            relationship  Epic -> Module of those operations  (usedBy back on Clean Engineering)
+observes        relationship  phased step -> Example its body names
+demonstrates    grouped       Example -> OoadClass it names       (demonstrates, demonstratedThrough back on Clean Engineering)
+retrievedUsing  relationship  Example -> Property it reads        (and back on Clean Engineering)
 ```
 
-**type-aggregation-types.ql**
-```
-parent_id, child_id, kind=aggregation, order=8, display=relationship
-```
+## Rules
 
-## Rule queries
-
-**every-class-carries-ddd-stereotype.ql** — OoadClass. No DDD stereotype node for that class.
-
-**domain-concepts-not-technical-names.ql** — Aggregate, Entity, EntityRoot, ValueObject, Repository, DomainService. Node name.
-
-**screen-interface-not-a-domain-object.ql** — Entity, EntityRoot, ValueObject, Aggregate, DomainService. Node name is a screen driver.
-
-**flaccid-data-object-no-behavior.ql** — Entity, EntityRoot, ValueObject. `owns`. No owned operation.
-
-**no-orphaned-objects.ql** — Entity, EntityRoot, ValueObject. `associates`, `composition`, `aggregation`, `belongsTo`. No relationship edge.
-
-**repository-is-collection-lifecycle.ql** — Repository, Operation. `owns`. Repository name without lifecycle operations.
-
-**aggregate-owns-operation-repo-is-crud.ql** — Repository, Operation. `owns`. Owned operation is not create, read, update, or delete.
-
-**repository-stores-related-aggregate-by-id.ql** — Repository, Property, Aggregate. `properties`, `hasType`. Property holds another aggregate instead of its id.
-
-**service-is-homeless.ql** — DomainService, Operation. `owns`. Operations belong on an entity or aggregate.
-
-**load-with-identity-in-hand.ql** — Repository, Operation, Parameter. `hasParameter`. Operation named load has no parameter.
-
-**domain-objects-own-their-attributes.ql** — Aggregate, Entity, Property. `owns`, `properties`. Property describes another aggregate.
-
-**aggregate-lives-in-its-own-folder.ql** — Aggregate, EntityRoot. `belongsTo`. File path of the root.
-
-**fluent-operation-returns-next-aggregate.ql** — Operation, Aggregate. `returns`. Return is the next aggregate.
-
-**operation-verb-matches-scenario.ql** — Operation, Step. `invokes`. Step name and operation name.
-
-**private-cross-aggregate-step.ql** — Operation, Aggregate. `invokes`. Operation on one aggregate is only called from another aggregate.
-
-**private-method-naming.ql** — Operation. `invokes`. Private operation is invoked from outside its class.
-
-**caller-orchestrates-cross-aggregate-flow.ql** — Operation, Repository, Aggregate. `invokes`, `accesses`. Caller operation reaches another aggregate's repository.
-
-**construct-repository-at-the-caller.ql** — Module, Repository, Operation. `owns`. Repository is constructed on the module.
-
-**throw-typed-exception-with-message.ql** — Operation. Source throws a plain object.
-
-**arrange-with-empty-and-seed.ql** — Example, Repository, Operation. `invokes`. Example seeds through a repository operation.
-
----
+`cdd_guidance.practices.stories.rules`, plus `model.typescript.rules` and `model.javascript.rules`.
 
 # BDD
 
-Practice: `bdd`.
+`BddGraph` in `cdd_guidance/practices/bdd/graph_practice.py`. Each spec file's language model (`PythonBddModel`, `TypeScriptBddModel`) parses its describe tree, whose objects are added as they are.
 
-## CodeQLNode queries
+## Nodes
 
-**specs.ql**
 ```
-node_id, name, semantic_type=Spec, practice=bdd, file, line, end_line
-```
-
-**descriptions.ql**
-```
-node_id, name, semantic_type=Description, practice=bdd, file, line, end_line,
-parent_name
-```
-name = describe() subject.
-
-**contexts.ql**
-```
-node_id, name, semantic_type=Context, practice=bdd, file, line, end_line,
-parent_name, setup
-```
-name = that() / with() text. setup = before block, or empty.
-
-**observations.ql**
-```
-node_id, name, semantic_type=Observation, practice=bdd, file, line, end_line,
-parent_name
-```
-name = it() text.
-
-## Edge queries
-
-**repo-owns-specs.ql**, **spec-owns-descriptions.ql**, **description-owns-descriptions.ql**, **description-owns-contexts.ql**, **context-owns-contexts.ql**, **context-owns-observations.ql**
-```
-parent_id, child_id, kind=owns, order=1, display=direct
-```
-Repo→Spec, Spec→Description, Description→Description, Description→Context, Context→Context, Context→Observation.
-
-**description-belongs-to-spec.ql**, **description-belongs-to-description.ql**, **context-belongs-to-description.ql**, **context-belongs-to-context.ql**, **observation-belongs-to-context.ql**
-```
-parent_id, child_id, kind=belongsTo, order=2, display=relationship
+Spec          bdd:Spec:{file}
+Description | Context | Observation
+              bdd:{type}:{file}:{line}:{name}
 ```
 
-## Rule queries
+## Edges
 
-**describe-is-subject-not-internal.ql** — Description. Description name is an internal type.
+```
+owns          direct        Practice -> Spec
+descriptions  direct        -> Description
+contexts      direct        -> Context
+observations  direct        -> Observation
+invokes       relationship  Observation -> Operation|Property it drives   (link; invokedBy back on Clean Engineering)
+```
 
-**state-not-when.ql** — Context. Context name starts with when.
+## Rules
 
-**observable-behavior.ql** — Observation. Observation source reads a private attribute.
-
-**one-assertion-per-test.ql** — Observation. Observation source has more than one assertion.
-
-**layer-isolation.ql** — Observation. Observation source mocks an internal module.
-
----
+`cdd_guidance.practices.bdd.rules`.
 
 # UX
 
-Practice: `ux`.
+`UxGraph` in `cdd_guidance/practices/ux/graph_practice.py`. A working-copy load reads no UX files. It offers the node types `UxMap`, `Screen`, `Region`, `Control`, `StoryDemoControl`, `Interaction`, `Transition`, `ContentType`, `NavComponent`, `UxContext`, and checks `cdd_guidance.practices.ux.rules` on UX maps put on a graph.
 
-## CodeQLNode queries
+# Pattern overlays
 
-**maps.ql**
-```
-node_id, name, semantic_type=UxMap, practice=ux, file, line, end_line
-```
+Each adds nodes and rules when `overlays` names it. Its rules live in `cdd_guidance/patterns/{pattern}/practices/{practice}/rules`, and its node types and rule slugs in that folder's `model/schema.yaml` and `model/rules.yaml`.
 
-**screens.ql**
-```
-node_id, name, semantic_type=Screen, practice=ux, file, line, end_line
-```
+- `lern_domain_driven` (`LernOverlay`) — on DDD: each aggregate's tier files (`NodeRoot`, `ClientRoot`, `Route`, `JsonStore`, `View`), the behavior test files (`BehaviorShared`, `BehaviorDomain`, `BehaviorServer`, `BehaviorPlaywright`, `BehaviorE2e`), and `ContextMapping`s from a bounded context's arrows; on Stories: the story test files (`StoryShared`, `ServerSpec`, `DomainSpec`, `PlaywrightSpec`). Edge kinds come from the pattern schema (`owns`, `views`, `nodeRoot`, `interacts`, `calls`, `writes`, `nodeRepository`, `view`, `clientRoot`, `mappedTo`, ...).
+- `cdd_web_domain_access` (`WebDomainAccessOverlay`) — on DDD: `AccessRoute`, `AccessNode`, `AccessHandWrittenAdapter`, and `AccessMarkedToolset`, one per file, with the facts its rules read.
+- `cdd_claude_mod` (`ClaudeModOverlay`) — adds no nodes; its guidance gives its rules their prose.
 
-**regions.ql**
-```
-node_id, name, semantic_type=Region, practice=ux, file, line, end_line,
-screen
-```
-
-**controls.ql**
-```
-node_id, name, semantic_type=Control, practice=ux, file, line, end_line,
-screen, region
-```
-
-**interactions.ql**
-```
-node_id, name, semantic_type=Interaction, practice=ux, file, line, end_line,
-control
-```
-
-**transitions.ql**
-```
-node_id, name, semantic_type=Transition, practice=ux, file, line, end_line,
-from_screen, to_screen
-```
-
-**content-types.ql**
-```
-node_id, name, semantic_type=ContentType, practice=ux, file, line, end_line
-```
-
-**nav-components.ql**
-```
-node_id, name, semantic_type=NavComponent, practice=ux, file, line, end_line
-```
-
-**contexts.ql**
-```
-node_id, name, semantic_type=UxContext, practice=ux, file, line, end_line
-```
-
-## Edge queries
-
-**repo-owns-maps.ql**, **map-owns-screens.ql**, **screen-owns-regions.ql**, **region-owns-controls.ql**, **control-owns-interactions.ql**, **map-owns-transitions.ql**, **map-owns-content-types.ql**, **map-owns-nav-components.ql**, **map-owns-contexts.ql**
-```
-parent_id, child_id, kind=owns, order=1, display=direct
-```
-Repo→UxMap, UxMap→Screen, Screen→Region, Region→Control, Control→Interaction, UxMap→Transition, UxMap→ContentType, UxMap→NavComponent, UxMap→UxContext.
-
-**screen-belongs-to-map.ql**, **region-belongs-to-screen.ql**, **control-belongs-to-region.ql**, **interaction-belongs-to-control.ql**, **transition-belongs-to-map.ql**, **content-type-belongs-to-map.ql**, **nav-component-belongs-to-map.ql**, **context-belongs-to-map.ql**
-```
-parent_id, child_id, kind=belongsTo, order=2, display=relationship
-```
-
-**transition-names-state-screens.ql**
-```
-parent_id, child_id, kind=namesState, order=3, display=relationship
-```
-Transition→Screen from_screen and to_screen.
-
-## Rule queries
-
-**screen-names-use-domain-terms.ql** — Screen, OoadClass. Screen name against a class name already loaded.
-
-**key-interactions-wired.ql** — Screen, Interaction. `owns` through Region and Control. Screen has no interaction.
-
-**story-domain-js-imported.ql** — Screen, Module. `dependsOn`. Screen module depends on a stub instead of a story or domain module.
-
----
-
-# Behavior
-
-Fidelity: behavior
-
-Each practice is its own sketch. Path: `harness/codeQl_graph/_examples`.
-
-Two steps. First `that has run the queries` — node counts, node types, edge types. Those have to pass. Then `that has been populated` — walk `children`. Each child is named as what it is: module, class, relative, property, operation, parameter, grouped heading, or relationship. Direct kinds (relative, owns) share one list, ordered by edge type: relatives first, then owned members. Grouped and relationship insert an extra node named for the kind; members sit under that extra node.
-
-a clean_engineering practice
-  that has run the queries on harness/codeQl_graph/_examples
-    with the Account Credentials codebase below
-      it should have 3 Module nodes
-      it should have 14 OoadClass nodes
-      it should have node types Module, OoadClass, Operation, Property, Parameter
-      it should have 136 edges across 8 types
-      it should have edge types relative, owns, properties, belongsTo, hasParameter, hasType, invokes, dependsOn
-      that has been populated
-        it should have children module account-credentials, module customer, module onboarding
-        with module account-credentials
-          it should have children class ValidationCode, class ValidationCodeMessage, class AccountToken, class AccountCredentials, class AccountCredentialsException, class ValidationCodeResendWaitException, class AccountCredentialsRepository, class AccountCredentialsNode, class AccountCredentialsClient
-          with class ValidationCode
-            it should have children grouped properties, relationship belongsTo
-            with grouped properties
-              it should have children property code, property sentAt
-            with relationship belongsTo
-              it should have children module account-credentials
-          with class ValidationCodeMessage
-            it should have children grouped properties, relationship belongsTo
-            with grouped properties
-              it should have children property sentAt, property email, property code, property executed
-            with relationship belongsTo
-              it should have children module account-credentials
-          with class AccountToken
-            it should have children grouped properties, relationship belongsTo
-            with grouped properties
-              it should have children property email, property customerId, property jwt
-            with relationship belongsTo
-              it should have children module account-credentials
-          with class AccountCredentials
-            it should have children relative token, relative customer, operation register, operation verify, operation authenticateAccount, operation resendValidationCode, operation signOut, operation storeCustomerId, operation emailValidationCode, operation issueSessionToken, operation missingRequirements, grouped properties, relationship belongsTo, relationship dependsOn
-            with relative token
-              it should have children relationship hasType
-              with relationship hasType
-                it should have children class AccountToken
-            with relative customer
-              it should have children relationship hasType
-              with relationship hasType
-                it should have children class Customer
-            with operation register
-              it should have children relationship invokes
-              with relationship invokes
-                it should have children operation AccountCredentialsRepository.load, operation AccountCredentialsRepository.create
-            with operation verify
-              it should have children parameter validationCode, relationship hasParameter, relationship invokes
-              with parameter validationCode
-                it should have children relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter validationCode
-              with relationship invokes
-                it should have children operation AccountCredentialsRepository.update
-            with operation authenticateAccount
-              it should have children relationship invokes
-              with relationship invokes
-                it should have children operation AccountCredentialsRepository.load, operation AccountCredentialsRepository.update
-            with operation resendValidationCode
-              it should have children relationship invokes
-              with relationship invokes
-                it should have children operation AccountCredentialsRepository.update
-            with operation storeCustomerId
-              it should have children parameter customerId, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter customerId
-            with grouped properties
-              it should have children property email, property password, property confirmPassword, property validationCode, property verified, property customerId, property requirements
-            with relationship belongsTo
-              it should have children module account-credentials
-            with relationship dependsOn
-              it should have children class AccountCredentialsRepository, class Customer
-          with class AccountCredentialsException
-            it should have children relative accountCredentials, grouped properties, relationship belongsTo
-            with relative accountCredentials
-              it should have children relationship hasType
-              with relationship hasType
-                it should have children class AccountCredentials
-            with grouped properties
-              it should have children property operation, property cause
-            with relationship belongsTo
-              it should have children module account-credentials
-          with class ValidationCodeResendWaitException
-            it should have children grouped properties, relationship belongsTo
-            with grouped properties
-              it should have children property availableAt
-            with relationship belongsTo
-              it should have children module account-credentials
-          with class AccountCredentialsRepository
-            it should have children relative customerRepository, operation new, operation create, operation load, operation find, operation update, relationship belongsTo
-            with relative customerRepository
-              it should have children relationship hasType
-              with relationship hasType
-                it should have children class CustomerRepository
-            with operation create
-              it should have children parameter accountCredentials, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter accountCredentials
-            with operation load
-              it should have children parameter email, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter email
-            with operation find
-              it should have children parameter email, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter email
-            with operation update
-              it should have children parameter accountCredentials, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter accountCredentials
-            with relationship belongsTo
-              it should have children module account-credentials
-          with class AccountCredentialsNode
-            it should have children operation destination, operation authDestination, relationship belongsTo
-            with relationship belongsTo
-              it should have children module account-credentials
-          with class AccountCredentialsClient
-            it should have children operation enterEmail, operation enterPassword, operation enterConfirmPassword, operation snapshot, relationship belongsTo
-            with operation enterEmail
-              it should have children parameter email, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter email
-            with operation enterPassword
-              it should have children parameter password, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter password
-            with operation enterConfirmPassword
-              it should have children parameter confirmPassword, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter confirmPassword
-            with relationship belongsTo
-              it should have children module account-credentials
-        with module customer
-          it should have children class Identity, class Address, class Customer, class CustomerException, class CustomerRepository
-          with class Identity
-            it should have children grouped properties, relationship belongsTo
-            with grouped properties
-              it should have children property email, property name, property lastName, property fullName
-            with relationship belongsTo
-              it should have children module customer
-          with class Address
-            it should have children grouped properties, relationship belongsTo
-            with grouped properties
-              it should have children property street, property city, property parish, property postalCode, property country
-            with relationship belongsTo
-              it should have children module customer
-          with class Customer
-            it should have children relative accountCredentials, relative identity, relative address, operation terminated, grouped properties, relationship belongsTo
-            with relative accountCredentials
-              it should have children relationship hasType
-              with relationship hasType
-                it should have children class AccountCredentials
-            with relative identity
-              it should have children relationship hasType
-              with relationship hasType
-                it should have children class Identity
-            with relative address
-              it should have children relationship hasType
-              with relationship hasType
-                it should have children class Address
-            with grouped properties
-              it should have children property id, property verified, property done
-            with relationship belongsTo
-              it should have children module customer
-          with class CustomerException
-            it should have children relative accountCredentials, grouped properties, relationship belongsTo
-            with relative accountCredentials
-              it should have children relationship hasType
-              with relationship hasType
-                it should have children class AccountCredentials
-            with grouped properties
-              it should have children property operation, property cause
-            with relationship belongsTo
-              it should have children module customer
-          with class CustomerRepository
-            it should have children operation new, operation create, operation load, operation save, relationship belongsTo
-            with operation new
-              it should have children parameter customer, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter customer
-            with operation create
-              it should have children parameter accountCredentials, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter accountCredentials
-            with operation load
-              it should have children parameter accountCredentials, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter accountCredentials
-            with operation save
-              it should have children parameter customer, relationship hasParameter
-              with relationship hasParameter
-                it should have children parameter customer
-            with relationship belongsTo
-              it should have children module customer
-        with module onboarding
-          it should have no children
-
-a stories practice
-  that has run the queries on harness/codeQl_graph/_examples
-    with the Account Credentials codebase below
-      it should have 1 Epic node
-      it should have 3 Story nodes
-      it should have 14 Scenario nodes
-      it should have 1 Background node
-      it should have 7 Example nodes
-      it should have node types Epic, Story, Scenario, Background, Step, Example
-      it should have 86 edges across 5 types
-      it should have edge types owns, scopes, demonstrates, belongsTo, invokes
-      that has been populated
-        it should have children epic Onboard A Customer
-        with epic Onboard A Customer
-          it should have children story Create Account, story Enter Validation Code, story Sign In With Existing Account, relationship belongsTo
-          with story Create Account
-            it should have children scenario Display Create Account, scenario Enter Valid account credentials, scenario Log out and log back in, scenario Enter Invalid account credentials: missing email, scenario Email already registered, scenario Create account, relationship belongsTo
-            with scenario Display Create Account
-              it should have children step when the User proceeds to create an account from the Paradise Mobile website, step then the User can enter account credentials
-              with step then the User can enter account credentials
-                it should have children step and the email and password rules are unmet, step and the customer cannot save the customer account
-            with scenario Enter Valid account credentials
-              it should have children step when the User enters valid account credentials, step then account credentials are validated continuously
-              with step then account credentials are validated continuously
-                it should have children step and the customer can save the customer account
-            with scenario Log out and log back in
-              it should have children step given the User has entered valid account credentials, step when the User logs out of the site, step then the account has no browser session, step when the User enters the username and password, step then the account is logged in
-            with scenario Enter Invalid account credentials: missing email
-              it should have children step when the User registers missing email, step then the account cannot be registered
-              with step then the account cannot be registered
-                it should have children step and the emailRequired requirement is unmet
-            with scenario Email already registered
-              it should have children step given already-registered account credentials are already registered, step when the User registers already-registered account credentials, step then the email is already registered
-            with scenario Create account
-              it should have children step when the User creates their account, step then the account is unconfirmed and a validation code is emailed
-              with step when the User creates their account
-                it should have children grouped examples, relationship invokes
-                with grouped examples
-                  it should have children example unverifiedAccountCredentials
-                  with example unverifiedAccountCredentials
-                    it should have children grouped examples
-                    with grouped examples
-                      it should have children class AccountCredentials
-                with relationship invokes
-                  it should have children operation AccountCredentials.register
-            with relationship belongsTo
-              it should have children epic Onboard A Customer
-          with story Enter Validation Code
-            it should have children background, scenario Enter validation code, scenario Activate with unusable validation code: mismatch validation code, scenario Resend validation code, relationship belongsTo
-            with background
-              it should have children step given the User has submitted valid account credentials
-              with step given the User has submitted valid account credentials
-                it should have children step and an unconfirmed account exists, step and a validation code has been sent to the User
-            with scenario Enter validation code
-              it should have children step when the User verifies the account with the emailed validation code, step then the account is verified
-              with step when the User verifies the account with the emailed validation code
-                it should have children grouped examples, relationship invokes
-                with grouped examples
-                  it should have children example unverifiedAccountCredentials
-                with relationship invokes
-                  it should have children operation AccountCredentials.verify
-              with step then the account is verified
-                it should have children step and the account has a token for the browser session
-            with scenario Activate with unusable validation code: mismatch validation code
-              it should have children step when the User verifies with mismatch validation code, step then the validation code is rejected
-            with scenario Resend validation code
-              it should have children step when more than 60 seconds has passed, step and the User resends the validation code
-              with step and the User resends the validation code
-                it should have children relationship invokes
-                with relationship invokes
-                  it should have children operation AccountCredentials.resendValidationCode
-            with relationship belongsTo
-              it should have children epic Onboard A Customer
-          with story Sign In With Existing Account
-            it should have children scenario Sign in with already-registered account credentials, scenario Email format is unmet, scenario Authenticate with incorrect account credentials: wrong password, scenario Authenticate with incorrect account credentials: unknown email, scenario Authenticate with unconfirmed account, relationship belongsTo
-            with scenario Sign in with already-registered account credentials
-              it should have children step given an already-registered account exists, step when the Customer authenticates already-registered account credentials, step then the account has a token for the browser session
-              with step given an already-registered account exists
-                it should have children step and the Customer is not signed in, step and the Customer has already-registered account credentials
-              with step when the Customer authenticates already-registered account credentials
-                it should have children relationship invokes
-                with relationship invokes
-                  it should have children operation AccountCredentials.authenticateAccount
-              with step then the account has a token for the browser session
-                it should have children step and the account holds the customer id
-            with scenario Email format is unmet
-              it should have children step given the Customer has invalid email format account credentials, step when the Customer authenticates invalid email format, step then the authentication is rejected
-              with step then the authentication is rejected
-                it should have children step and the account has no token
-            with scenario Authenticate with incorrect account credentials: wrong password
-              it should have children step given an already-registered account exists, step when the Customer authenticates wrong password, step then the authentication is rejected
-            with scenario Authenticate with incorrect account credentials: unknown email
-              it should have children step given an already-registered account exists, step when the Customer authenticates unknown email, step then the authentication is rejected
-            with scenario Authenticate with unconfirmed account
-              it should have children step given an unconfirmed account exists, step when the Customer authenticates unconfirmed sign-in, step then the account has a token for the browser session
-              with step then the account has a token for the browser session
-                it should have children step and the account has no customer, step and the Customer can enter the validation code, step and the Customer is on the Verify Account step
-            with relationship belongsTo
-              it should have children epic Onboard A Customer
-
-a ddd practice
-  that has run the queries on harness/codeQl_graph/_examples
-    with the Account Credentials codebase below
-      it should have 1 BoundedContext node
-      it should have 2 Aggregate nodes
-      it should have 0 Entity nodes
-      it should have 2 EntityRoot nodes
-      it should have 5 ValueObject nodes
-      it should have 2 Repository nodes
-      it should have 26 edges across 5 types
-      it should have edge types root, owns, belongsTo, accesses, associates
-      it should have node types BoundedContext, Aggregate, EntityRoot, ValueObject, Repository
-      it should have no OoadClass
-      it should have no Property
-      it should have no Operation
-      it should have no Parameter
-      it should have no Module
-      it should have no AccountCredentialsException
-      it should have no ValidationCodeResendWaitException
-      it should have no AccountCredentialsNode
-      it should have no AccountCredentialsClient
-      it should have no CustomerException
-      that has been populated
-        it should have children bounded context
-        with bounded context
-          it should have children aggregate account-credentials, aggregate customer
-          with aggregate account-credentials
-            it should have children EntityRoot AccountCredentials, ValueObject ValidationCode, ValueObject ValidationCodeMessage, ValueObject AccountToken, Repository AccountCredentialsRepository
-            with EntityRoot AccountCredentials
-              it should have children relationship belongsTo, relationship associates
-              with relationship belongsTo
-                it should have children aggregate account-credentials
-              with relationship associates
-                it should have children EntityRoot Customer
-            with ValueObject ValidationCode
-              it should have children relationship belongsTo
-              with relationship belongsTo
-                it should have children aggregate account-credentials
-            with ValueObject ValidationCodeMessage
-              it should have children relationship belongsTo
-              with relationship belongsTo
-                it should have children aggregate account-credentials
-            with ValueObject AccountToken
-              it should have children relationship belongsTo
-              with relationship belongsTo
-                it should have children aggregate account-credentials
-            with Repository AccountCredentialsRepository
-              it should have children relationship belongsTo, relationship accesses
-              with relationship belongsTo
-                it should have children aggregate account-credentials
-              with relationship accesses
-                it should have children EntityRoot AccountCredentials
-            with relationship belongsTo
-              it should have children bounded context
-          with aggregate customer
-            it should have children EntityRoot Customer, ValueObject Identity, ValueObject Address, Repository CustomerRepository
-            with EntityRoot Customer
-              it should have children relationship belongsTo, relationship associates
-              with relationship belongsTo
-                it should have children aggregate customer
-              with relationship associates
-                it should have children EntityRoot AccountCredentials
-            with ValueObject Identity
-              it should have children relationship belongsTo
-              with relationship belongsTo
-                it should have children aggregate customer
-            with ValueObject Address
-              it should have children relationship belongsTo
-              with relationship belongsTo
-                it should have children aggregate customer
-            with Repository CustomerRepository
-              it should have children relationship belongsTo, relationship accesses
-              with relationship belongsTo
-                it should have children aggregate customer
-              with relationship accesses
-                it should have children EntityRoot Customer
-            with relationship belongsTo
-              it should have children bounded context
-
-a bdd practice
-  that has run the queries on harness/codeQl_graph/_examples
-    with the Account Credentials codebase below
-      it should have 0 Spec nodes
-      it should have 0 Description nodes
-      it should have 0 Context nodes
-      it should have 0 Observation nodes
-      it should have 0 edges across 0 types
-      it should have node types Spec, Description, Context, Observation
-      that has been populated
-        it should have no children
-
-a ux practice
-  that has run the queries on harness/codeQl_graph/_examples
-    with the Account Credentials codebase below
-      it should have 0 UxMap nodes
-      it should have 0 Screen nodes
-      it should have 0 Region nodes
-      it should have 0 Control nodes
-      it should have 0 Transition nodes
-      it should have 0 edges across 0 types
-      it should have node types UxMap, Screen, Region, Control, Interaction, Transition, ContentType, NavComponent, UxContext
-      that has been populated
-        it should have no children
-
-
-## Given — Account Credentials codebase
-
-Modules
-- account-credentials — src/account-credentials
-- customer — src/customer
-- onboarding — src/onboarding
-
-Classes in account-credentials
-- ValidationCode — code
-- ValidationCodeMessage — sentAt, email, code, executed
-- AccountToken — email, customerId, jwt
-- AccountCredentials — token (relative AccountToken), customer (relative Customer), customerId, email, password, confirmPassword, validationCode, verified, requirements, register, verify, authenticateAccount, resendValidationCode, signOut, storeCustomerId, emailValidationCode, issueSessionToken, missingRequirements
-- AccountCredentialsException — operation, accountCredentials, cause
-- ValidationCodeResendWaitException — availableAt
-- AccountCredentialsRepository — customerRepository (relative CustomerRepository), new, create, load, find, update
-- AccountCredentialsNode — destination, authDestination
-- AccountCredentialsClient — enterEmail, enterPassword, enterConfirmPassword, snapshot
-
-Classes in customer
-- Identity — email, name, lastName, fullName
-- Address — street, city, parish, postalCode, country
-- Customer — accountCredentials (relative AccountCredentials), identity (relative Identity), address (relative Address), id, verified, done, terminated
-- CustomerException
-- CustomerRepository — new, create, load, save
-
-Stories
-- Epic: Onboard A Customer — tests/onboard-a-customer
-- Sub-epic folder: Authenticate User — tests/onboard-a-customer/authenticate-user
-- Story Create Account — scenarios Display Create Account, Enter Valid account credentials, Log out and log back in, Enter Invalid account credentials: missing email, Email already registered, Create account
-- Story Enter Validation Code — scenarios Enter validation code, Activate with unusable validation code: mismatch validation code, Resend validation code
-- Story Sign In With Existing Account — scenarios Sign in with already-registered account credentials, Email format is unmet, Authenticate with incorrect account credentials: wrong password, Authenticate with incorrect account credentials: unknown email, Authenticate with unconfirmed account
-
-Examples
-- unverifiedAccountCredentials
-- verifiedAccountCredentials
-- alreadyRegisteredAccountCredentials
-- missingEmailAccountCredentials
-- invalidEmailFormatAccountCredentials
-- wrongPasswordAccountCredentials
-- unknownEmailAccountCredentials
-
-DDD
-- DDD graph is only DDD stereotypes: BoundedContext, Aggregate, EntityRoot, ValueObject, Repository
-- implicit bounded context over the examples path
-- aggregate account-credentials — EntityRoot AccountCredentials, ValueObjects ValidationCode, ValidationCodeMessage, AccountToken, Repository AccountCredentialsRepository; associates EntityRoot Customer
-- aggregate customer — EntityRoot Customer, ValueObjects Identity, Address, Repository CustomerRepository; associates EntityRoot AccountCredentials
-- no Exception, CodeQLNode, Client, Property, Operation, or unstereotyped OoadClass on the DDD graph
-- no inner Entity that is not a root, no DomainService, DomainEvent, Specification, Factory in this slice
-
-BDD, UX
-- this slice has no describe/it spec, no UX map
+The behaviour of a load on `harness/graph/_examples/input` is specified in `harness/graph/graph_spec.py`.

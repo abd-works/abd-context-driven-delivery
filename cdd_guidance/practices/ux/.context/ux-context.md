@@ -1,6 +1,6 @@
 # UX context — Story Demo shell (Manage Character Sheet)
 
-Optional notes not shown on screens. Locked from grill + `connected-contexts`.
+Optional notes not shown on screens. Locked from the grill (`grill-answers.md`).
 Primary sketch: `story-runner-sketch.md` (themes; ce → bdd → ux).
 
 ## Invariants (by concern)
@@ -9,7 +9,7 @@ Primary sketch: `story-runner-sketch.md` (themes; ce → bdd → ux).
 - `StoryDemoFrame` LEFT + `ExplorerFrame` RIGHT (epic → story → scenario → steps).
 - Two modes of the same shell: **Play** and **Interactive** (separate screens in the sketch).
 - UX Story Demo submodule: `StoryDemoPage` / `StoryDemoFrame` / `ExplorerFrame` / `StoryDemoControl`.
-  Vanilla `Page` / `Control` stay product UX (no `bound_field` / `story_steps`).
+  Plain `Screen` / `Control` stay product UX: a `Control` may carry `bound_field`, but only a `StoryDemoControl` has `story_steps`.
 - `PlayDualRunner` lives under UX `story-demo/play-dual-runner/`.
 
 **Play**
@@ -24,7 +24,7 @@ Primary sketch: `story-runner-sketch.md` (themes; ce → bdd → ux).
 - `ThenFeedback` → Explorer mark/message + `StoryDemoFrame.tintFailed` — peer to paint.
 - Emphasize: explorer owns step list; `StoryDemoFrame` matches `story_steps` to current step kind+label.
 
-**StoryDemoControl bindings**
+**StoryDemoControl fields**
 - `bound_field` — what to display from expose.
 - `story_steps` — which GWT steps this control participates in (emphasize in Play; which When `fn` to run in Interactive).
 - `interactions[]` — trigger (click/hover/drag/…) + effect — not click-only; product controls do not call `playNext`.
@@ -41,10 +41,10 @@ Primary sketch: `story-runner-sketch.md` (themes; ce → bdd → ux).
 
 - Fidelity: **mockup** — greybox; Play, emphasize, Then fail message/tint visible; no brand.
 - Demo subject: Manage Character Sheet — Create Character · Update Ability Rank.
-- Product IA for the sandbox epic: `sandbox/play-core-mechanics/.context/` (separate).
-- Implemented: UX `story-demo/` (shell + `play-dual-runner/`); `ux_model.StoryDemoControl` + HTML emit; JS hydrate. Engagement shell under sandbox.
+- Product IA for the sandbox epic: `sandbox/play-core-mechanics/.context/` (a local sandbox, not in this repository).
+- Implemented: UX `story-demo/` (shell + `play-dual-runner/`); `StoryDemoControl` in `practices/ux/model` + its HTML data attributes; the JS builds each control back from those attributes (`StoryDemoControl.fromElement` in `story-demo/control.js`). Engagement shell under sandbox.
 
 ## Same folder
 
 - `story-runner-sketch.md` — **primary** Story Demo sketch (integrated)
-- `ux-model-sketch.md` — vanilla Control + StoryDemoControl.bound_field / story_steps
+- `ux-model-sketch.md` — plain Control + StoryDemoControl.story_steps

@@ -9,5 +9,5 @@
 
 ## Artifacts to read
 
-- `tools\catalog_generator\.context\module-context.md`
-- `C:\dev\abd-context-driven-delivery\.context\context-index.md`
+- `harness/catalog_generator/.context/module-context.md` (the module moved from `tools/catalog_generator`)
+- `.context/module-context.md` (the root module map; the `context-index.md` this handoff first named no longer exists)

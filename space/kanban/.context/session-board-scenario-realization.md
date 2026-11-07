@@ -113,8 +113,8 @@ it should keep the newer board when an older read answers late
       -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
       <- BacklogItem
     <- Ticket | BacklogItem
--> TicketClient.isDone()
-  -> cdd ticket.is_done
+-> TicketClient.isDone
+  -> cdd board.show
     -> Ticket.is_done
     <- bool
 ```
@@ -197,7 +197,8 @@ it should bring the other back on a second press
 
 ```
 it should save a whole number
--> Board.submitWipLimit('Discovery', '4')
+-> BoardClient.stageNamed('Discovery')
+-> ColumnClient.submitWipLimit('4')
 -> ActivationClient.show()
   -> BoardStore.change()
     -> board-store.saveLayout()
@@ -206,19 +207,22 @@ it should save a whole number
 
 ```
 it should read the board again
--> Board.submitWipLimit('Discovery', '4')
+-> BoardClient.stageNamed('Discovery')
+-> ColumnClient.submitWipLimit('4')
 -> BoardClient.stageNamed('Discovery')
 -> ColumnClient.wipLimit
 ```
 
 ```
 it should change nothing for a limit that is not a number
--> Board.submitWipLimit('Discovery', 'many')
+-> BoardClient.stageNamed('Discovery')
+-> ColumnClient.submitWipLimit('many')
 ```
 
 ```
 it should send the header the server asks of a page on this machine
--> Board.submitWipLimit('Discovery', '4')
+-> BoardClient.stageNamed('Discovery')
+-> ColumnClient.submitWipLimit('4')
 ```
 
 ### Display Ticket Details
@@ -427,7 +431,7 @@ it should let a ticket in any column be dropped on the Backlog
       <- Ticket
 -> BoardPage.board
 -> BoardClient.backlogItems()
-  -> cdd board.backlog_items
+  -> cdd board.show
     -> Board.backlog_items
     <- list[BacklogItem]
 ```
@@ -501,11 +505,11 @@ it should let go of the tile of a practice turned off
   -> board-store.saveLayout()
   -> BoardStore.dismissToast()
 -> TicketClient.enablePractice('ddd', false)
-  -> cdd ticket.enable_practice
-    -> Ticket.enable_practice(practice: str, is_enabled: bool)
+  -> cdd practice-session-output.enable
+    -> PracticeSessionOutput.enable(is_enabled: bool)
       -> PracticeSessionOutput.enabled
       <- bool
-    <- Ticket
+    <- PracticeSessionOutput
 -> BoardPage.tiles
 ```
 
@@ -515,11 +519,11 @@ it should say so and where it was saved
   -> board-store.saveLayout()
   -> BoardStore.dismissToast()
 -> TicketClient.enablePractice('ddd', false)
-  -> cdd ticket.enable_practice
-    -> Ticket.enable_practice(practice: str, is_enabled: bool)
+  -> cdd practice-session-output.enable
+    -> PracticeSessionOutput.enable(is_enabled: bool)
       -> PracticeSessionOutput.enabled
       <- bool
-    <- Ticket
+    <- PracticeSessionOutput
 ```
 
 ### Write Ticket Handoff
@@ -539,8 +543,8 @@ it should send the close session command to the chat
 ```
 it should leave the ticket in its column
 -> TicketClient.closeSession()
--> TicketClient.column()
-  -> cdd ticket.column
+-> TicketClient.column
+  -> cdd board.show
     -> Ticket.column
     <- Column
 ```
@@ -719,7 +723,7 @@ it should link to the report of the fidelity left with violations
 it should send the generate command for the picked formats
 -> BoardPage.tiles
 -> TileActionsClient.run(barAt)
--> ChatClient.checkIn()
+-> TestChat.checkIn()
 ```
 
 ```
@@ -738,7 +742,7 @@ it should turn existing output into the chosen format
 -> TileActionsClient.toggleFormat(barAt)
   -> TileActionsClient.save()
 -> TileActionsClient.run(barAt)
--> ChatClient.checkIn()
+-> TestChat.checkIn()
 ```
 
 ### Send Tile Action To Chat
@@ -749,7 +753,7 @@ it should turn existing output into the chosen format
 it should send the fidelity to validate
 -> BoardPage.tiles
 -> TileActionsClient.validate(barAt)
--> ChatClient.checkIn()
+-> TestChat.checkIn()
 ```
 
 ```
@@ -783,62 +787,47 @@ it should name every fidelity of the stage in one command
 -> TileActionsClient.chooseAction(barAt)
   -> TileActionsClient.save()
 -> TileActionsClient.run(barAt)
--> ChatClient.checkIn()
+-> TestChat.checkIn()
 ```
 
 ### Open Practice Tile
 
 ```
 it should open a tile after a short hover
--> PageFailureView.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
--> PageFailureView.useRealTimers()
 -> TileClient.hoverIn(spot)
--> PageFailureView.advanceTimersByTimeAsync(HOVER_MILLISECONDS)
 ```
 
 ```
 it should show the bar before its files are read
--> PageFailureView.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
--> PageFailureView.useRealTimers()
 -> BoardPage.tiles
 ```
 
 ```
 it should pick formats from the files once they are read
--> PageFailureView.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
--> PageFailureView.useRealTimers()
 -> BoardPage.tiles
 ```
 
 ```
 it should close it on leaving
--> PageFailureView.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
--> PageFailureView.useRealTimers()
 -> TileClient.hoverOut(TICKET, PLACE)
   -> TileClient.close()
     -> BoardStore.change()
       -> board-store.saveLayout()
       -> BoardStore.dismissToast()
--> PageFailureView.advanceTimersByTimeAsync(LEAVE_MILLISECONDS)
 ```
 
 ```
 it should keep a tile a person pressed open after the pointer leaves
--> PageFailureView.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
--> PageFailureView.useRealTimers()
 -> TileClient.toggle(ticket, spot)
 -> TileClient.hoverOut(TICKET, PLACE)
   -> TileClient.close()
     -> BoardStore.change()
       -> board-store.saveLayout()
       -> BoardStore.dismissToast()
--> PageFailureView.advanceTimersByTimeAsync(LEAVE_MILLISECONDS)
 ```
 
 ```
 it should close on a second press
--> PageFailureView.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
--> PageFailureView.useRealTimers()
 -> TileClient.toggle(ticket, spot)
 ```
 
@@ -868,21 +857,18 @@ it should change only that bar's action
 it should open the hovered bar beside the pressed one
 -> TileClient.toggle(ticket, spot)
 -> TileClient.hoverIn(spot)
--> PageFailureView.advanceTimersByTimeAsync(HOVER_MILLISECONDS)
 ```
 
 ```
 it should replace the hovered bar with the next one a hover opens, and keep the pressed one
 -> TileClient.toggle(ticket, spot)
 -> TileClient.hoverIn(spot)
--> PageFailureView.advanceTimersByTimeAsync(HOVER_MILLISECONDS)
 ```
 
 ```
 it should close the hovered bar on leaving, and keep the pressed one
 -> TileClient.toggle(ticket, spot)
 -> TileClient.hoverIn(spot)
--> PageFailureView.advanceTimersByTimeAsync(HOVER_MILLISECONDS)
 -> TileClient.hoverOut(TICKET, OTHER_PLACE)
   -> TileClient.close()
     -> BoardStore.change()
@@ -894,8 +880,6 @@ it should close the hovered bar on leaving, and keep the pressed one
 
 ```
 it should keep both stage bars open
--> PageFailureView.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
--> PageFailureView.useRealTimers()
 -> BoardPage.board
 -> BoardClient.stageNamed('Specification')
 -> TileClient.toggle(ticket, spot)
@@ -906,31 +890,31 @@ it should keep both stage bars open
 
 ```
 it should open with its tiles only, each opening its own action bar
--> Card.toggle(ticket)
+-> OpenCardClient.toggle(ticket)
 -> BoardPage.tiles
 ```
 
 ```
 it should expand only one card at a time
--> Card.toggle(ticket)
+-> OpenCardClient.toggle(ticket)
 ```
 
 #### with a segment pressed
 
 ```
 it should open the card
--> Card.openSegment(ticket, STAGE, SLUG)
+-> OpenCardClient.openSegment(ticket, STAGE, SLUG)
 ```
 
 ```
 it should open the tile of that fidelity
--> Card.openSegment(ticket, STAGE, SLUG)
+-> OpenCardClient.openSegment(ticket, STAGE, SLUG)
 ```
 
 ```
 it should move an open bar to the tile the ticket works on next when it moves
 -> BoardPage.tiles
--> Card.follow(ticket)
+-> OpenCardClient.follow(ticket)
 ```
 
 ### Refresh Board After Tool Calls
@@ -1088,34 +1072,34 @@ it should show every fidelity's violations with no fidelity named
 
 ```
 it should send one message to the chat
--> BoardPage.fixViolation(TICKET, rule, violation)
+-> TicketClient.fixViolation(rule, violation)
 ```
 
 ```
 it should name the rule and what it requires
--> BoardPage.fixViolation(TICKET, rule, violation)
+-> TicketClient.fixViolation(rule, violation)
 ```
 
 ```
 it should give the error at its file and line
--> BoardPage.fixViolation(TICKET, rule, violation)
+-> TicketClient.fixViolation(rule, violation)
 ```
 
 ```
 it should quote the content that failed
--> BoardPage.fixViolation(TICKET, rule, violation)
+-> TicketClient.fixViolation(rule, violation)
 ```
 
 ```
 it should name the ticket's session
--> BoardPage.fixViolation(TICKET, rule, violation)
+-> TicketClient.fixViolation(rule, violation)
 ```
 
 #### with Fix all pressed on a rule
 
 ```
 it should send every violation of the rule in one message
--> BoardPage.fixRule(TICKET, rule)
+-> TicketClient.fixRule(report, rule)
 ```
 
 #### with Fix all pressed on the whole report
@@ -1124,7 +1108,7 @@ it should send every violation of the rule in one message
 it should send one message to the chat
 -> SidePanelClient.openReport(TICKET, '')
 -> SidePanelClient.reportPanel(page)
--> BoardPage.fixReport(TICKET, rules)
+-> TicketClient.fixReport(report)
   -> report-client.fixReportPrompt()
 ```
 
@@ -1132,7 +1116,7 @@ it should send one message to the chat
 it should name every rule the report breaks
 -> SidePanelClient.openReport(TICKET, '')
 -> SidePanelClient.reportPanel(page)
--> BoardPage.fixReport(TICKET, rules)
+-> TicketClient.fixReport(report)
   -> report-client.fixReportPrompt()
 ```
 
@@ -1140,7 +1124,7 @@ it should name every rule the report breaks
 it should give every violation of every rule
 -> SidePanelClient.openReport(TICKET, '')
 -> SidePanelClient.reportPanel(page)
--> BoardPage.fixReport(TICKET, rules)
+-> TicketClient.fixReport(report)
   -> report-client.fixReportPrompt()
 ```
 
@@ -1449,7 +1433,7 @@ it should close the form
 it should open a ticket and select it, with the title safe in the path
 -> BoardPage.board
 -> BoardClient.backlogItems()
-  -> cdd board.backlog_items
+  -> cdd board.show
     -> Board.backlog_items
     <- list[BacklogItem]
 ```
@@ -1458,7 +1442,7 @@ it should open a ticket and select it, with the title safe in the path
 it should say so in a toast
 -> BoardPage.board
 -> BoardClient.backlogItems()
-  -> cdd board.backlog_items
+  -> cdd board.show
     -> Board.backlog_items
     <- list[BacklogItem]
 ```
@@ -1556,14 +1540,14 @@ it should show the practice on its default root
       -> BoardStore.dismissToast()
 -> RootChoiceClient.use()
 -> RootChoiceClient.useDefault('stories')
--> TicketClient.practiceRoots()
-  -> cdd ticket.practice_roots
-    -> Ticket.practice_roots
-      -> PracticeSessionOutput.folder
-      <- Path
-      -> Session.has_chosen_output_root(practice: str)
-      <- bool
-    <- dict[str, PracticeRoot]
+-> TicketClient.session
+  -> cdd board.show
+    -> Ticket.session
+    <- Session
+-> Session.practices
+<- dict[str, PracticeSessionOutput]
+-> PracticeSessionOutput.is_root_chosen
+<- bool
 ```
 
 #### with a backlog item a person has asked to start
@@ -1573,7 +1557,7 @@ it should browse the top of the repository for its root before it starts
 -> RootChoiceClient.openToStart(page.board.backlogItems.find)
 -> BoardPage.board
 -> BoardClient.backlogItems()
-  -> cdd board.backlog_items
+  -> cdd board.show
     -> Board.backlog_items
     <- list[BacklogItem]
 -> board-store.browsing(await asked)
@@ -1584,7 +1568,7 @@ it should not start it yet
 -> RootChoiceClient.openToStart(page.board.backlogItems.find)
 -> BoardPage.board
 -> BoardClient.backlogItems()
-  -> cdd board.backlog_items
+  -> cdd board.show
     -> Board.backlog_items
     <- list[BacklogItem]
 ```
@@ -1853,8 +1837,8 @@ it should leave a stage holding fewer tickets than its limit within it
 
 ```
 it should show the stage over its limit
--> Board.set_wip_limit('Specification', 1)
-<- Board
+-> Stage.set_wip_limit(stage='Specification', limit=1)
+<- Stage
 ```
 
 <!-- spec: space/kanban/app/tests/kanban/move-ticket/move_ticket.spec.shared.ts -->
@@ -2025,7 +2009,7 @@ it should return the new ticket in Discovery
 -> BacklogItem.start('Search the catalog')
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -2035,7 +2019,7 @@ it should take the item off the Backlog
 -> BacklogItem.start('Search the catalog')
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -2047,7 +2031,7 @@ it should bring the ticket back with its work
 -> BacklogItem.start('Back to backlog')
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -2060,19 +2044,21 @@ it should bring the ticket back with its work
 
 ```
 it should list the file with whether it exists
--> Ticket.files(TICKET, FIDELITY)
-  -> FidelityGuidance.output_paths()
-    -> FidelityGuidance.outputs
+-> FidelityProgress.files(ticket=TICKET, fidelity=FIDELITY)
+  -> FidelityGuidance.files()
+    -> FidelitySessionOutput.output_paths()
+      -> FidelityGuidance.outputs
+      <- dict
     <- dict
+    -> Branch.changed_files()
+    <- list[str]
   <- dict
-  -> Branch.changed_files()
-  <- list[str]
-<- dict
+<- dict[str, list[FileEntry]]
 ```
 
 ```
 it should return the file's text
--> Ticket.read_file(TICKET, FIDELITY, STORY_MAP)
+-> Session.read_file(path=STORY_MAP)
 <- dict
 ```
 
@@ -2080,26 +2066,26 @@ it should return the file's text
 
 ```
 it should show that fidelity's latest report
--> Ticket.report(TICKET, FIDELITY)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket=TICKET, fidelity=FIDELITY)
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
 it should list each rule the report names with its violations
--> Ticket.report(TICKET, FIDELITY)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket=TICKET, fidelity=FIDELITY)
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
 it should give a violation the line it failed on
--> Ticket.report(TICKET, FIDELITY)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket=TICKET, fidelity=FIDELITY)
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 <!-- spec: space/kanban/kanban_spec.py -->
@@ -2166,8 +2152,8 @@ it should share its practices with every other board loaded in the process, sinc
 it should show the board of the whole checkout, where sessions keep their folders
 -> Board.load(project)
 <- Board
--> Board.repo_root
-<- Path
+-> Board.repo
+<- Repo
 ```
 
 #### with no session saved as open
@@ -2356,7 +2342,7 @@ it should keep the item's file, text and all, in the new ticket's session folder
 -> BacklogItem.start("feature")
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -2368,7 +2354,7 @@ it should open a ticket in Discovery
 -> BacklogItem.start("feature")
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 -> Board.ticket("returns-and-refunds")
@@ -2384,7 +2370,7 @@ it should name the item's file in the new ticket's session log
 -> BacklogItem.start("feature")
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -2412,7 +2398,7 @@ it should bring its ticket back with the history in its session log
 -> BacklogItem.start("feature")
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -2424,7 +2410,7 @@ it should keep its file in the ticket's session folder
 -> BacklogItem.start("feature")
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -2477,7 +2463,7 @@ it should be off the stages
 it should be in Discovery, in progress
 -> Ticket.create("PawPlace", "initiative")
   -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-  <- str
+  <- Session
 <- Ticket
 -> Ticket.column
 <- Column
@@ -2489,19 +2475,19 @@ it should be in Discovery, in progress
 it should keep its title, scope, and parent
 -> Ticket.create("PawPlace", "initiative")
   -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-  <- str
+  <- Session
 <- Ticket
--> Ticket.scope
+-> Session.scope
 <- str
--> Ticket.parent
-<- Ticket
+-> Session.parent
+<- str
 ```
 
 ```
 it should name Generate on story_map as next
 -> Ticket.create("PawPlace", "initiative")
   -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-  <- str
+  <- Session
 <- Ticket
 ```
 
@@ -2627,7 +2613,7 @@ it should name Review on that fidelity as next
   -> BacklogItem.from_ticket(ticket: Ticket, board: Board)
   <- BacklogItem
 <- Ticket | BacklogItem
--> Ticket.next_action
+-> FidelityProgress.next_action
 <- str
 ```
 
@@ -2673,10 +2659,12 @@ it should be open again, in progress in that stage
 
 ```
 it should be done with the one practice it works on
--> Ticket.enable_practice("ddd", False)
+-> Session.practice("ddd")
+<- PracticeSessionOutput
+-> PracticeSessionOutput.enable(False)
   -> PracticeSessionOutput.enabled
   <- bool
-<- Ticket
+<- PracticeSessionOutput
 -> Ticket.is_done
 <- bool
 ```
@@ -2703,7 +2691,7 @@ it should be off the board
 <- Ticket
 -> Ticket.archive()
   -> Session.close()
-  -> Session.move_to(parent: Path)
+  -> Session.move_to_archive()
   <- Session
 <- Ticket
 -> Board.tickets
@@ -2716,7 +2704,7 @@ it should have its folder in the archive
 <- Ticket
 -> Ticket.archive()
   -> Session.close()
-  -> Session.move_to(parent: Path)
+  -> Session.move_to_archive()
   <- Session
 <- Ticket
 ```
@@ -2807,74 +2795,75 @@ it should list the folders inside one, as paths from the project
 
 ```
 it should show the folder as the ticket's root
--> Ticket.choose_root(ticket="pet-visits", path="src/visits")
-  -> Session.choose_workpath(workpath: Path)
-<- Ticket
+-> Session.choose_workpath(session=_session_file("pet-visits"), path="src/visits")
+  -> PracticeSessionOutput.keep_root(root: Path)
+<- Session
 ```
 
 ```
 it should keep the folder as the session's work folder
--> Ticket.choose_root(ticket="pet-visits", path="src/visits")
-  -> Session.choose_workpath(workpath: Path)
-<- Ticket
+-> Session.choose_workpath(session=_session_file("pet-visits"), path="src/visits")
+  -> PracticeSessionOutput.keep_root(root: Path)
+<- Session
 ```
 
 ###### that a person has chosen as one practice's root
 
 ```
 it should show the folder as that practice's root, chosen by a person
--> Ticket.choose_practice_root(ticket="pet-visits", practice="stories", path="src/visits")
-  -> Session.choose_output_root(practice: str, root: Path)
-<- Ticket
+-> PracticeSessionOutput.choose_root(session=_session_file("pet-visits"), practice="stories", path="src/visits")
+  -> PracticeSessionOutput.keep_root(root: Path)
+<- PracticeSessionOutput
 ```
 
 ```
 it should write that practice's files there
--> Ticket.choose_practice_root(ticket="pet-visits", practice="stories", path="src/visits")
-  -> Session.choose_output_root(practice: str, root: Path)
-<- Ticket
--> Ticket.files(ticket="pet-visits", fidelities=["stories-story-map"])
-  -> FidelityGuidance.output_paths()
-    -> FidelityGuidance.outputs
+-> PracticeSessionOutput.choose_root(session=_session_file("pet-visits"), practice="stories", path="src/visits")
+  -> PracticeSessionOutput.keep_root(root: Path)
+<- PracticeSessionOutput
+-> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
+  -> FidelityGuidance.files()
+    -> FidelitySessionOutput.output_paths()
+      -> FidelityGuidance.outputs
+      <- dict
     <- dict
+    -> Branch.changed_files()
+    <- list[str]
   <- dict
-  -> Branch.changed_files()
-  <- list[str]
-<- dict
+<- dict[str, list[FileEntry]]
 ```
 
 ```
 it should leave every other practice on its default root
--> Ticket.choose_practice_root(ticket="pet-visits", practice="stories", path="src/visits")
-  -> Session.choose_output_root(practice: str, root: Path)
-<- Ticket
+-> PracticeSessionOutput.choose_root(session=_session_file("pet-visits"), practice="stories", path="src/visits")
+  -> PracticeSessionOutput.keep_root(root: Path)
+<- PracticeSessionOutput
 ```
 
 ###### that a person has chosen as one practice's root · and then a new root for the ticket
 
 ```
 it should keep that practice writing to the folder chosen for it
--> Ticket.choose_root(ticket="pet-visits", path="src")
-  -> Session.choose_workpath(workpath: Path)
-<- Ticket
+-> Session.choose_workpath(session=_session_file("pet-visits"), path="src")
+  -> PracticeSessionOutput.keep_root(root: Path)
+<- Session
 ```
 
 ###### that a person has chosen as one practice's root · and then back to its default
 
 ```
 it should show the practice on its default root again
--> Ticket.use_default_practice_root(ticket="pet-visits", practice="stories")
-  -> Session.forget_output_root(practice: str)
-<- Ticket
+-> PracticeSessionOutput.use_default_root(session=_session_file("pet-visits"), practice="stories")
+<- PracticeSessionOutput
 ```
 
 ###### that a person has chosen as the ticket's root, with no practice root chosen
 
 ```
 it should put each practice's default root under the ticket's root
--> Ticket.choose_root(ticket="pet-visits", path="src/visits")
-  -> Session.choose_workpath(workpath: Path)
-<- Ticket
+-> Session.choose_workpath(session=_session_file("pet-visits"), path="src/visits")
+  -> PracticeSessionOutput.keep_root(root: Path)
+<- Session
 ```
 
 ###### that a person has started a backlog item in a folder
@@ -2884,7 +2873,7 @@ it should open its ticket with that folder as its root
 -> BacklogItem.start(backlog_item="Returns and refunds", path="src/billing")
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -2901,8 +2890,8 @@ it should give every stage a limit of 3 tickets until a person sets one
 
 ```
 it should show the stage over its limit
--> Board.set_wip_limit(stage="Discovery", limit=0)
-<- Board
+-> Stage.set_wip_limit(stage="Discovery", limit=0)
+<- Stage
 ```
 
 ```
@@ -2947,10 +2936,10 @@ it should list each rule the report names with its violations
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
@@ -2959,10 +2948,10 @@ it should give a violation the line it failed on
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
@@ -2971,10 +2960,10 @@ it should show no source for a file that is not in the repository
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ###### with the file a violation names in the repository
@@ -2985,10 +2974,10 @@ it should show the source lines around a violation
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ###### with a session whose root is a folder of the project
@@ -2999,10 +2988,10 @@ it should name the violation's file from the project's root
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
@@ -3011,10 +3000,10 @@ it should show the source lines of the file in the session's root
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
@@ -3023,10 +3012,10 @@ it should return exactly the fields ViolationData names
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
@@ -3035,10 +3024,10 @@ it should return exactly the fields ReportRuleData names
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
@@ -3047,10 +3036,10 @@ it should count the violations of each rule
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
@@ -3059,10 +3048,10 @@ it should leave out the violations of other practices in the saved graph
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
@@ -3071,10 +3060,10 @@ it should say the report has its saved graph
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ##### with a validation report saved without its graph
@@ -3085,10 +3074,10 @@ it should say a report has no saved graph
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ```
@@ -3097,72 +3086,51 @@ it should still return the report's text
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.report(ticket="pet-visits", fidelity="clean-engineering-modules")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> FidelityProgress.report(ticket="pet-visits", fidelity="clean-engineering-modules")
+  -> ReportFile.report()
+  <- Report
+<- Report
 ```
 
 ##### with a validation report on a rule the practice describes
 
 ```
 it should show the text of each rule under its name
--> Ticket.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 ```
 
 ###### with the judgment of the agent that validated it
 
 ```
 it should list each rule the judgment fails after the graph's rules, once each
--> Ticket.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 ```
 
 ```
 it should count each finding of a judged rule
--> Ticket.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 ```
 
 ```
 it should give a judged finding the judged file and its line
--> Ticket.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 ```
 
 ```
 it should show the source lines around a judged finding
--> Ticket.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 ```
 
 ```
 it should list a rule an older report warns on as failing, since a warning is a Fail
--> Ticket.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("pet-visits", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 ```
 
 ##### with a validation report on a rule no scanner checks any more
 
 ```
 it should leave that rule's hits out of the report
--> Ticket.report("pet-visits", "stories-story-map-20261031T041200", deleted)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("pet-visits", "stories-story-map-20261031T041200", deleted)
 ```
 
 ##### that opens a new ticket
@@ -3171,7 +3139,7 @@ it should leave that rule's hits out of the report
 it should return the new ticket in Discovery
 -> Ticket.create(title="Loyalty points", scope="feature")
   -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-  <- str
+  <- Session
 <- Ticket
 ```
 
@@ -3179,7 +3147,7 @@ it should return the new ticket in Discovery
 it should leave the current session as it is
 -> Ticket.create(title="Loyalty points", scope="feature")
   -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-  <- str
+  <- Session
 <- Ticket
 -> Board.show()
 <- Board
@@ -3191,7 +3159,7 @@ it should leave the current session as it is
 it should save that folder as the session's workpath
 -> Ticket.create(title="Pet records", scope="feature", path="harness/pets")
   -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-  <- str
+  <- Session
 <- Ticket
 ```
 
@@ -3201,7 +3169,7 @@ it should save that folder as the session's workpath
 it should leave the session working on the repository
 -> Ticket.create(title="Pet records", scope="feature")
   -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-  <- str
+  <- Session
 <- Ticket
 ```
 
@@ -3211,7 +3179,7 @@ it should leave the session working on the repository
 it should name the ticket it was split from
 -> Ticket.create(title="Book a visit", scope="story", parent="pet-visits")
   -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-  <- str
+  <- Session
 <- Ticket
 ```
 
@@ -3236,7 +3204,7 @@ it should return the new ticket in Discovery
 -> BacklogItem.start(backlog_item="Returns and refunds", scope="feature")
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -3246,7 +3214,7 @@ it should take the item off the Backlog
 -> BacklogItem.start(backlog_item="Returns and refunds", scope="feature")
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -3257,7 +3225,7 @@ it should take the item off the Backlog
 it should show the ticket in Complete
 -> Ticket.close(ticket="pet-visits")
   -> Session.close()
-  -> Session.move_to(parent: Path)
+  -> Session.move_to_closed()
   <- Session
 <- Ticket
 ```
@@ -3268,7 +3236,7 @@ it should show the ticket in Complete
 it should leave no ticket active
 -> Ticket.close(ticket="pet-visits")
   -> Session.close()
-  -> Session.move_to(parent: Path)
+  -> Session.move_to_closed()
   <- Session
 <- Ticket
 -> Board.show()
@@ -3281,7 +3249,7 @@ it should leave no ticket active
 it should leave the ticket off the board
 -> Ticket.archive(ticket="pet-visits")
   -> Session.close()
-  -> Session.move_to(parent: Path)
+  -> Session.move_to_archive()
   <- Session
 <- Ticket
 -> Board.show()
@@ -3370,18 +3338,18 @@ it should show the ticket in Discovery's Done
 
 ```
 it should show the practice off for that ticket
--> Ticket.enable_practice(ticket="pet-visits", practice="ux", is_enabled=False)
+-> PracticeSessionOutput.enable(session=_session_file("pet-visits"), practice="ux", is_enabled=False)
   -> PracticeSessionOutput.enabled
   <- bool
-<- Ticket
+<- PracticeSessionOutput
 ```
 
 ```
 it should save the choice to the ticket's session.json
--> Ticket.enable_practice(ticket="pet-visits", practice="ux", is_enabled=False)
+-> PracticeSessionOutput.enable(session=_session_file("pet-visits"), practice="ux", is_enabled=False)
   -> PracticeSessionOutput.enabled
   <- bool
-<- Ticket
+<- PracticeSessionOutput
 ```
 
 ```
@@ -3442,14 +3410,16 @@ it should list the files a pattern finds there
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.files(ticket="pet-visits", fidelities=["bdd-behavior"])
-  -> FidelityGuidance.output_paths()
-    -> FidelityGuidance.outputs
+-> FidelityProgress.files(ticket="pet-visits", fidelity="bdd-behavior")
+  -> FidelityGuidance.files()
+    -> FidelitySessionOutput.output_paths()
+      -> FidelityGuidance.outputs
+      <- dict
     <- dict
+    -> Branch.changed_files()
+    <- list[str]
   <- dict
-  -> Branch.changed_files()
-  <- list[str]
-<- dict
+<- dict[str, list[FileEntry]]
 ```
 
 ```
@@ -3458,14 +3428,16 @@ it should list the files a named part of the path finds there, in folders at any
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.files(ticket="pet-visits", fidelities=["clean-engineering-model"])
-  -> FidelityGuidance.output_paths()
-    -> FidelityGuidance.outputs
+-> FidelityProgress.files(ticket="pet-visits", fidelity="clean-engineering-model")
+  -> FidelityGuidance.files()
+    -> FidelitySessionOutput.output_paths()
+      -> FidelityGuidance.outputs
+      <- dict
     <- dict
+    -> Branch.changed_files()
+    <- list[str]
   <- dict
-  -> Branch.changed_files()
-  <- list[str]
-<- dict
+<- dict[str, list[FileEntry]]
 ```
 
 ##### with a fidelity's markdown generated
@@ -3476,14 +3448,16 @@ it should list the file with whether it exists
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.files(ticket="pet-visits", fidelities=["stories-story-map"])
-  -> FidelityGuidance.output_paths()
-    -> FidelityGuidance.outputs
+-> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
+  -> FidelityGuidance.files()
+    -> FidelitySessionOutput.output_paths()
+      -> FidelityGuidance.outputs
+      <- dict
     <- dict
+    -> Branch.changed_files()
+    <- list[str]
   <- dict
-  -> Branch.changed_files()
-  <- list[str]
-<- dict
+<- dict[str, list[FileEntry]]
 ```
 
 ```
@@ -3492,14 +3466,16 @@ it should list only the fidelities asked for
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.files(ticket="pet-visits", fidelities=["stories-story-map"])
-  -> FidelityGuidance.output_paths()
-    -> FidelityGuidance.outputs
+-> FidelityProgress.files(ticket="pet-visits", fidelity="stories-story-map")
+  -> FidelityGuidance.files()
+    -> FidelitySessionOutput.output_paths()
+      -> FidelityGuidance.outputs
+      <- dict
     <- dict
+    -> Branch.changed_files()
+    <- list[str]
   <- dict
-  -> Branch.changed_files()
-  <- list[str]
-<- dict
+<- dict[str, list[FileEntry]]
 ```
 
 ```
@@ -3516,7 +3492,7 @@ it should return the file's text
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.read_file(ticket="pet-visits", path="docs/.context/story-map.md")
+-> Session.read_file(session=_session_file("pet-visits"), path="docs/.context/story-map.md")
 <- dict
 ```
 
@@ -3528,7 +3504,7 @@ it should list every file in the session folder
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.session_files(ticket="pet-visits")
+-> Session.folder_files(session=_session_file("pet-visits"))
 <- list[dict]
 ```
 
@@ -3538,7 +3514,7 @@ it should list the files from the project
 <- Ticket
 -> Board.backlog_item("returns.md", "Returns and refunds")
 <- BacklogItem
--> Ticket.session_files(ticket="pet-visits")
+-> Session.folder_files(session=_session_file("pet-visits"))
 <- list[dict]
 ```
 
@@ -3571,7 +3547,7 @@ it should bring the ticket back with its work
 -> BacklogItem.start(backlog_item="Sign up")
   -> Ticket.create(title: str, scope: str, parent: str, path: str)
     -> Sessions.create(name: str, workpath: Path, title: str, scope: str, parent: str)
-    <- str
+    <- Session
   <- Ticket
 <- Ticket
 ```
@@ -3601,34 +3577,28 @@ it should name review as the next action
 
 ```
 it should name satisfy as the next action
--> Ticket.report("sign-up", "stories-story-map-20261031T041200")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-story-map-20261031T041200")
 ```
 
 ```
 it should count each finding of the judgment
--> Ticket.report("sign-up", "stories-story-map-20261031T041200")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-story-map-20261031T041200")
 ```
 
 ##### that a person has finished reviewing
 
 ```
 it should show the fidelity's review done
--> Ticket.finish_review(ticket="sign-up", fidelities=["stories-story-map"])
-  -> Ticket.record(entry: str)
-<- Ticket
+-> FidelityProgress.finish_review(ticket="sign-up", fidelity="stories-story-map")
+  -> SessionLog.record(line: str)
+<- FidelityProgress
 ```
 
 ```
 it should write the review to the session log
--> Ticket.finish_review(ticket="sign-up", fidelities=["stories-story-map"])
-  -> Ticket.record(entry: str)
-<- Ticket
+-> FidelityProgress.finish_review(ticket="sign-up", fidelity="stories-story-map")
+  -> SessionLog.record(line: str)
+<- FidelityProgress
 ```
 
 ##### that a person names a fidelity the ticket does not have
@@ -3638,18 +3608,18 @@ it should refuse it, naming the fidelity
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:00Z generate /work)
 <- Ticket
--> Ticket.finish_review(ticket="sign-up", fidelities=["stories-nothing"])
-  -> Ticket.record(entry: str)
-<- Ticket
+-> FidelityProgress.finish_review(ticket="sign-up", fidelity="stories-nothing")
+  -> SessionLog.record(line: str)
+<- FidelityProgress
 ```
 
 ###### among fidelities it does have
 
 ```
 it should write no review for the others named with it
--> Ticket.finish_review(ticket="sign-up", fidelities=["stories-story-map", "stories-nothing"])
-  -> Ticket.record(entry: str)
-<- Ticket
+-> FidelityProgress.finish_review(ticket="sign-up", fidelity="stories-nothing")
+  -> SessionLog.record(line: str)
+<- FidelityProgress
 ```
 
 #### with a ticket whose next fidelity has violations
@@ -3672,20 +3642,14 @@ it should allow Validate and Review again on the same output
 
 ```
 it should count the violations of the fidelity on its ticket
--> Ticket.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 ```
 
 ##### with that fidelity's report saved without its graph
 
 ```
 it should leave a fidelity with no saved graph uncounted
--> Ticket.report("sign-up", "stories-story-map-20261031T041200")
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-story-map-20261031T041200")
 ```
 
 #### with violations left on two fidelities
@@ -3695,10 +3659,7 @@ it should list the rules of every fidelity with violations
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:00Z validate Stori)
 <- Ticket
--> Ticket.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 -> Ticket.violations(ticket="sign-up")
 <- dict
 ```
@@ -3708,10 +3669,7 @@ it should name the fidelity a rule was broken on
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:00Z validate Stori)
 <- Ticket
--> Ticket.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 ```
 
 ```
@@ -3719,10 +3677,7 @@ it should give the folder of the reports for every fidelity
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:00Z validate Stori)
 <- Ticket
--> Ticket.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 -> Ticket.violations(ticket="sign-up")
 <- dict
 ```
@@ -3734,10 +3689,7 @@ it should list only the rules of the fidelities in the ticket's stage
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:00Z validate Stori)
 <- Ticket
--> Ticket.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 -> Ticket.violations(ticket="sign-up")
 <- dict
 ```
@@ -3749,10 +3701,7 @@ it should list a rule two fidelities share once
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:00Z validate Stori)
 <- Ticket
--> Ticket.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-story-map-20261031T041200", STORY_MAP_GRAPH)
 -> Ticket.violations(ticket="sign-up")
 <- dict
 ```
@@ -3764,10 +3713,7 @@ it should list the scenarios rules and the story map rules
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:01Z validate Stori)
 <- Ticket
--> Ticket.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
 ```
 
 ```
@@ -3775,10 +3721,7 @@ it should count the same rules on the ticket
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:01Z validate Stori)
 <- Ticket
--> Ticket.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
 ```
 
 ##### with a story map report newer than the scenarios report
@@ -3788,10 +3731,7 @@ it should leave the story map rules to the story map report
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:01Z validate Stori)
 <- Ticket
--> Ticket.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
 ```
 
 ```
@@ -3799,10 +3739,7 @@ it should count only the rules the scenarios report answers for
 -> Board.ticket("sign-up",
                 "2026-10-31T01:00:01Z validate Stori)
 <- Ticket
--> Ticket.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
-  -> Graph.write_json(path: str)
-  <- str
-<- dict
+-> ProjectTools.report("sign-up", "stories-scenarios-20261031T041200", WHOLE_STORIES_GRAPH)
 ```
 
 #### with a git repository and two tickets
@@ -3882,7 +3819,7 @@ it should leave the branch checked out as it was
 <- Ticket
 -> Ticket.close(ticket="pet-visits", leaving=["commit", "merge"])
   -> Session.close()
-  -> Session.move_to(parent: Path)
+  -> Session.move_to_closed()
   <- Session
 <- Ticket
 ```
@@ -3916,14 +3853,16 @@ it should commit the branch the ticket being left is on
 it should list only the files the ticket's branch changed
 -> GuidanceAction.run(["git", "add", "src"], cwd=self.project.root, check=True)
   -> SessionLog.guidance_action(action: str)
--> Ticket.files(ticket="pet-visits", fidelities=["bdd-behavior"])
-  -> FidelityGuidance.output_paths()
-    -> FidelityGuidance.outputs
+-> FidelityProgress.files(ticket="pet-visits", fidelity="bdd-behavior")
+  -> FidelityGuidance.files()
+    -> FidelitySessionOutput.output_paths()
+      -> FidelityGuidance.outputs
+      <- dict
     <- dict
+    -> Branch.changed_files()
+    <- list[str]
   <- dict
-  -> Branch.changed_files()
-  <- list[str]
-<- dict
+<- dict[str, list[FileEntry]]
 ```
 
 ##### with the active ticket's branch not checked out

@@ -6,11 +6,13 @@ format: md
 
 # Session
 
-**Sources / context:** `space/session/session-context.md`
+**Sources / context:** `space/session/.context/session-context.md` (the request this module was built from), `space/session/.context/module-context.md` (its seam and dependencies)
 
 **Module:** `space/session`
 
-Session owns session logging for the host. The host keeps one Session and sets it whenever a session is opened or created. `new` and `select` are instructions: the code section binds the session, and the instructions section returns `keep_log` to the agent. `new` requires the name, the work path, and the repo path, and places logging at `repo_path/sessions/{name}`. `select` opens a session that already exists. There `name` is enough, and any one of the paths fills in the other two from that session or from the environment.
+A session is one named piece of work in a project, kept in `.sessions/{name}/`. `Sessions` knows every session of one checkout and which one is open; `Session` holds where one session works, the practices it uses, and its title. Its log, its files, its handoffs, and its decision records are objects of their own, each reached through the session, so each has one reason to change.
+
+Every tool on a session acts on the session whose `session.json` its `session` argument names. No session is kept in memory between calls: a `ToolCall` (`harness/agent_tools/tool_call.py`) opens the session each call works in, through `CallSessions`, and the open session's name is read from `.sessions/session.json` each time it is asked for, so a switch or a close made by another chat or by the hook server is seen at once.
 
 `patterns` in the source stops at the word pattern. That concept stays unresolved.
 
@@ -18,145 +20,372 @@ Session owns session logging for the host. The host keeps one Session and sets i
 
 ## clean engineering:
 
-Session and its loops
+Sessions, a session, and its log
 
-A Session binds the paths, the repo, and the active guidelines. Each entry pairs one practice guideline with that practice's graph. The graph root points at the parent folders where that practice's tree lives. A Loop is one discrete span of context, generation, and evaluation inside that session, so a later pass can take that span of the log and evaluate it on its own.
+### **Sessions**
+
++ Sessions(project: Path)
+------
++ project: Path
+	// the project the call names
++ root: Path
+	// the checkout folder holding project
+	-> Repo.checkout_folder
++ folder: Path
+	// `.sessions` under root
++ backlog_folder: Path
+	// `.sessions/_backlog`, where sessions wait before work starts
++ open_name: str
+	// the session saved as open in `.sessions/session.json`; main when none is
++ saved: Session
+	// the session saved as open, read from its folder each time
+----
++ of_project(project: Path): Sessions
+	// the `@tool_subject` of the `sessions.*` tools, handed the call's project
++ all(): list[Session]
+	// the work sessions, open ones first then closed; not main and not the folders the sessions share
++ named(name: str): Session | None
+	// only that session's folder is read
++ folder_of(name: str): Path
+	// a ticket's session lives in the main checkout's `.sessions`, so a chat in the ticket's linked worktree logs there too
+	-> Repo.primary_root
++ load(folder: Path): Session
+	-> Session.load
++ create(name: str, workpath: Path, title: str, scope: str, parent: str): Session
+	// saves the session's fields and writes `--- 1` as the first log line; does not open it
+	-> Session.save
+	-> SessionLog.seed_first_loop
++ open(session: Session, workpath: Path | None): Session
+	// saves the session and saves its name as the open session; main is saved as no name
++ current(): Session
+	// MCP `sessions.current`, slash `/current-session`
++ switch(name: str, workpath: Path | None): str
+	// MCP `sessions.switch`, slash `/switch-session`: opens the session called name, creating it when missing; the name defaults to the saved session, then to the saved branch
+	// returns how to keep the log
+	-> SessionLog.instructions
++ close(session: Session): None
+	// when session is the open one, main becomes the open one
+
+**Invariants**
+
+- The open session is never held in memory; every read goes to `.sessions/session.json`.
+- main works on the whole repository and is never a work session: `all` and `named` leave it out.
+- A name is always a slug (`name_of`), since a git branch refuses a space.
+- switch with no name and nothing saved refuses with `SessionNameRequiredError`.
+
+### **CallSessions**
+
+----
++ open_in(call: ToolCall): Session
+	// the session open in the call's project, with the call's chat
+	-> Sessions.saved
++ named_in(session_file: str, call: ToolCall): Session
+	// the session a board command names by its session.json, with the call's chat
+	-> Session.from_file
+
+**Interactions**
+
+- Registered with `ToolCall.open_sessions_with` when the module is imported, so the framework opens a call's session without importing space.
 
 ### **Session**
 
-+ new(name: str, workpath: Path, repo_path: Path): str
-	Instructions
-	-> keep_log()
-	// returned to the agent when this session opens
-	Code
-	// binds this session; the host keeps it
-	// name, workpath, and repo_path are required
-	// session_path is repo_path / "sessions" / name
-	// reads repo_path / ".context" / "practices.json" when that file exists
-	// does not open a practice; practice(name) opens that practice the first time it is asked for
++ Session(repo_root: Path)
 ------
-+ workpath: Path
-	// folder where work is generated and read
-+ repo_path: Path
-	// repo being worked in
 + name: str
-	// session-name
-+ session_path: Path
-	// logging and other session artifacts that are not permanent; repo_path / "sessions" / name
+	// data field; the slug of the session
++ workpath: Path | None
+	// the folder chosen for the session's work; none means the whole repository
++ repo_path: Path
++ session_path: Path | None
+	// `.sessions/{name}/`; none before the session has a folder
++ chat: ChatPointer | None
+	// the chat of the tool call the session was opened for
++ << composition >> log: SessionLog
++ << composition >> session_files: SessionFiles
 + repo: Repo
-	// << association >> Repo opened on repo_path
-+ practices: list[Practice]
-	// empty until a practice is asked for
-	// one entry per practice that has been asked for, and only in memory
-+ practice(name: str): Practice
-	// creates that practice's guideline and that practice's graph together on the first ask
-	// a later ask for the same name returns that same entry
-	// the graph root points at the parent folders where that practice's tree lives
-	// one practice can name more than one set of peer folders
-	// the default set is the folders the practice already declares
-	// a set that is not that default is stored in repo_path / ".context" / "practices.json"
-	// PracticeGuidance does not load the graph; this operation builds both
-+ loops: list[Loop]
-	// << composition >> a loop has no session outside this one
+	// << association >> the repository that holds `.sessions`
++ root: Path
+	// workpath, or the whole repository
++ session_file: Path
+	// `session.json` in the session's folder: title, workpath, practice roots, practices
++ session_file_from_project: str
+	// data field `session_file`: the name every board command gives this session
++ workpath_from_project: str
+	// data field `workpath`
++ title: str
+	// data field
++ scope: str
+	// data field: feature, story, or slice
++ parent: str
+	// data field: the session this one was split from
++ is_closed: bool
++ reports_folder: Path
+	// `validation-reports/` in the session's folder
++ << composition >> practices: dict[str, PracticeSessionOutput]
+	// data field; every practice CDD has, opened or not
+	-> PracticeCatalogue.keys
++ active_practices: list[PracticeSessionOutput]
+	// the practices not turned off
++ opened_practices: list[PracticeSessionOutput]
+	// the practices this session asked for, which its log lines name
++ handoffs: Handoffs
++ latest_handoff: str
+	// data field `handoff`
++ decision_records: DecisionRecords
+	// under the workpath's `.context/cdr/`
 ----
-+ select(name: str, workpath: Path | None, repo_path: Path | None, session_path: Path | None): str
-	Instructions
-	-> keep_log()
-	// returned to the agent when this session is selected
-	Code
-	-> resolve(name, workpath, repo_path, session_path)
-	// opens the session that already has this name
-	// name is required; the paths are optional because that session already holds them
-	// reads repo_path / ".context" / "practices.json" when that file exists
-	// does not open a practice; practice(name) opens that practice the first time it is asked for
-- resolve(name: str, workpath: Path | None, repo_path: Path | None, session_path: Path | None): Session
-	-> Repo.find_root
-	// a given session_path: open that session; workpath is the path stored on it; repo_path is the git root of that folder
-	// a given repo_path: session_path is repo_path / ".sessions" / name; open that session and read workpath from it
-	// a given workpath: repo_path is Repo.find_root(workpath); session_path is repo_path / ".sessions" / name
-	// none given: repo_path is CDD_REPO, or Repo.find_root of the current directory; workpath is CDD_PROJECT, or the current directory; session_path is repo_path / ".sessions" / name; a workpath already stored on that session replaces the environment workpath
-	// a path that was passed is kept; the other two are filled from it
-+ loop(): Loop
-	// increments the loop number and appends a `--- {number}` line to session.log
-+ log_action(action: str, paths: list[Path]): None
-	-> Loop.entries
-	// one timestamped line on session_path / "session.log" for this action
-+ note_injected_rules(rules: RulesCollection, matched_path: str): None
-	// notes the rules an inject_rules hook gave the agent for the edited file, so the next log_action line names each rule with the practice and fidelity its collection belongs to
-+ log_guidance_action(action: str): None
-	// collects the workpath and the folders of each practice this session has opened, then calls log_action
-	// the line names the files and folders in paths, the active guidelines, fidelity, format, and action
-	// the line names the highest graph node per practice when the graph has one
-	// the line always points at the chat id, transcript file, and line numbers; it does not copy the transcript
-	// the host supplies CDD_CONVERSATION_ID and CDD_TRANSCRIPT_PATH (or the MCP call names its chat, or note_chat(ChatPointer)) before logging; without them the action still logs and points at a no-chat line on session.err
-	// when a practice guideline's rules were injected, the line lists those rule names only, sorted, separated by that practice and fidelity, and the file that matched the glob
-+ PracticeSessionOutput.log_validation(violations: list[str]): None
-	// one timestamped line on session_path / "session.log"
-	// the line names the practice, the fidelity, and the rules that were run
-	// each violation names the exact rule, a synopsis of the code, and the reported correction
-+ log_error(failure: BaseException): None
-	// writes the full trace to session_path / "session.err"
-	// appends a session.log line that points at that session.err line
-	// the failure still propagates
-+ append_chat(action: str, chat: ChatPointer): None
-	// adds that chat's id, file name, and line numbers onto the log line for that action
-	// a validation correction is one use; any logged action can receive a later chat the same way
-+ keep_log(): str
-	Instructions
-	// the shared instructions new and select both return
-	// log_action, log_validation, and log_error already run: an action logs itself, validate logs the run, an error logs the trace
-	// reuse those operations, and append_chat, when a log line misses the chat or a detail that belongs to it
-	// keep the log current with the relevant chat and with changes in the details
-	Code
-	// returns this instructions text
++ load(session_path: Path, repo_path: Path): Session
+	// read without opening it
++ from_file(session: str, project: Path): Session
+	// the `@tool_subject` of the `session.*` tools; refuses a missing session.json with `SessionNotFoundError`
+	-> Repo.checkout_folder
++ practice(name: str): PracticeSessionOutput
+	// opens the practice, so the log lines name it; refuses a practice CDD does not have with `UnknownPracticeError`
+	-> PracticeCatalogue.has
++ reset(): None
+	// forget the opened practices
++ save(): None
+	// name, workpath, and repo path into session.json, keeping the fields others store there
++ save_fields(values: dict): None
++ hook_log(filename: str): Path
+	// a hook's own log in the session's `logs/` folder
++ keep_file(file: Path): Path
+	// moves a person's file, such as a started backlog item's idea, into the session's folder
++ move_to_closed(): Session
++ move_to_archive(): Session
++ move_to_backlog(): Session
++ reopen(): Session
++ close(): None
+	// MCP `session.close`, slash `/close-session`
+	-> Sessions.close
++ choose_workpath(path: str): Session
+	// MCP `session.choose_workpath`; a practice root a person chose is saved again against the new workpath
+	-> PracticeSessionOutput.keep_root
++ files(): dict
+	// MCP `session.files`
+	-> SessionFiles.declared
++ folder_files(): list[FileEntry]
+	// MCP `session.folder_files`
+	-> SessionFiles.in_folder
++ read_file(path: str): FileText
+	// MCP `session.read_file`
+	-> SessionFiles.read
++ mark_loop(conversation_id: str, transcript_path: str, transcript_lines: str): str
+	// MCP `session.mark_loop`, slash `/mark-loop`
+	-> SessionLog.note_chat_given
+	-> SessionLog.mark_loop
++ read_loop(number: int | None): str
+	// MCP `session.read_loop`, slash `/read-loop`
+	-> SessionLog.read_loop
++ append_log(note: str, loop: int | None, paths: list[str], conversation_id: str, transcript_path: str, transcript_lines: str): str
+	// MCP `session.append_log`, slash `/append-log`
+	-> SessionLog.append_note
++ write_handoff(content: str, paths: list[str]): str
+	// MCP `session.write_handoff`
+	-> Handoffs.write
++ handoff_session(next_focus: str, session: str): str
+	// instructions: draft the handoff, then call write_handoff with its file
++ read_cdr_format(): str
++ list_cdrs(): str
+	-> DecisionRecords.paths
++ write_cdr(slug: str, content: str, paths: list[str]): str
+	-> DecisionRecords.write
++ record_decisions_session(session: str): str
+	// instructions: offer a CDR when a decision is hard to reverse, surprising, and a real trade-off
 
 **Invariants**
 
-- new keeps the name, workpath, and repo_path it was given, and sets session_path to repo_path / ".sessions" / name.
-- A path passed to select is kept. The other two paths are filled from the session that already exists, or from the environment when none were passed.
-- A log line is written only after workpath, repo_path, and session_path are set.
-- session.log and session.err stay under session_path.
-- log_error records the trace and still raises the same failure.
-- practices hold only practices asked for on this session, and only in memory. Each entry is that practice's guideline and that practice's graph, created together.
-- A practice graph root uses the practice's default folders unless practices.json names other parent folders for that practice.
-- practices.json stores only the practices whose parent folders are not the default.
-- A log line that mentions rules names those rules only, sorted, and separated by the practice guideline and fidelity whose glob matched the edit.
+- Every tool acts on the session its `session` argument names, never on whichever session happens to be open.
+- A session without a folder writes nothing: its log has no path and its fields are empty.
+- save keeps every field others stored in session.json, such as a board ticket's title, scope, and parent.
+- A practice root a person chose still names the same folder after the workpath moves.
 
-**Interactions**
+### **SessionLog**
 
-- select asks resolve for the paths. resolve asks Repo.find_root for the git root, and reads a stored workpath from the session at session_path. new does not resolve.
-- repo is the Repo for repo_path.
-- practice(name) builds that practice's guideline and that practice's graph together. The graph root points at that practice's parent folders. The default folders come from the practice. new and select read repo_path / ".context" / "practices.json" and practice(name) uses a saved set when that practice is listed there.
-- A practice guideline's rules carry a glob. inject_rules runs for content that has been edited. The edit matches the glob and those rules are injected. An edit that misses the glob injects nothing from that guideline.
-- log_action records the injected rule names for that practice guideline and fidelity.
-- Validate.validate calls each listed practice's log_validation. Generate and Satisfy call Validate.validate, so those runs are the same line. Iterate tells the agent to validate and does not call Validate. Sketch does not call Validate.
-- GuidanceAction.run calls log_guidance_action for the action it is running when session.new or session.switch has bound session_path.
-- RulesCollection.inject_rules calls note_injected_rules on the current session for each collection it injects.
-- new and select each run a code section and return keep_log. keep_log is the one instruction set both of them return.
-- keep_log tells the agent that log_action, log_validation, and log_error already run, and that append_chat may attach a later chat when those miss the chat or a detail.
-- append_chat points at the transcript file. The transcript stays the chat record; the session log is the trail.
++ SessionLog(session: Session)
+------
++ path: Path | None
+	// `session.log`; none before the session has a folder
++ error_path: Path | None
+	// `session.err`, which keeps the full trace of each failure
++ entries: list[LogEntry]
++ last_loop_number: int
++ latest_loop_with_entries: int
+----
++ record(line: str): None
+	// appends line stamped with the time
++ line(line: str): None
+	// appends line with the chat it points at
++ action(action: str, paths: list[Path]): None
+	// names the paths and what the opened practices were working at, with the injected rules
++ guidance_action(action: str): None
+	// GuidanceAction.run logs each action this way, with the workpath and each opened practice's folders as its paths
++ tool(tool_name: str, tool_input: dict): None
+	// the MCP host logs each tool call this way
++ note(message: str, paths: list[Path]): None
++ failure(failure: BaseException, tool: str): None
+	// full trace to session.err, a line pointing at it to session.log; the failure still propagates from the caller
++ note_chat(chat: ChatPointer): None
+	// the next line points at chat, once
++ note_chat_given(conversation_id: str, transcript_path: str, transcript_lines: str): None
++ note_injected_rules(rules: RulesCollection, matched_path: str): None
+	// RulesCollection.inject_rules notes the rules a hook gave the agent, so the next line names them
++ append_chat(action: str, chat: ChatPointer): None
+	// points action's earlier lines at chat
++ seed_first_loop(): None
++ next_loop(): Loop
++ loop_at(number: int): Loop
++ mark_loop(): int
++ read_loop(number: int | None): str
+	// the loop with each line's transcript lines put under it
++ append_note(note: str, loop: int | None, paths: list[str]): str
++ instructions(): str
+	// how an agent keeps this log; sessions.switch returns it
+
+**Invariants**
+
+- Every line carries a timestamp and points at a chat: one noted for it, else the chat of the call the session was opened for, else the chat the environment names, else `no-chat`.
+- A noted chat is used for one line only.
+- A line that names rules lists only the injected rule names, sorted, by practice and fidelity, with the file that matched.
+- Loop numbers are read from session.log, so numbering resumes after a switch.
 
 ### **Loop**
 
-+ Loop(number: int)
++ Loop(number: int, log: SessionLog, entries: list[str])
 ------
 + number: int
-	// the loop marker written as `--- {number}`
+	// the marker `--- {number}`
 + entries: list[str]
-	// the session.log content from lines that belong to this loop
+	// the log lines from this marker to the next
 ----
-+ inject(chat_file: Path): None
-	// places the chat and the response under the entries they belong to
-	// each of those lines records the chat id, the file name, and the line numbers
++ text(): str
++ expanded_text(): str
+	// each line followed by the transcript lines its chat covers; a range shown earlier is named, not repeated
++ inject(chat_file: Path, action: str | None): None
+	-> SessionLog.append_chat
 
-**Invariants**
+### **LogEntry**
 
-- number increases by one from the previous loop on this session.
-- entries are only the log lines between this loop's marker and the next marker.
++ LogEntry(line: str)
+------
++ time: str
++ verb: str
++ words: list[str]
++ stage: str
+	// the stage a `move <stage>` line names
++ loop_number: int | None
+----
++ names(fidelity: FidelityGuidance): bool
+
+### **SessionFiles**
+
++ SessionFiles(session: Session)
+------
++ file_manager: FileManager
+	// reads under the session's roots; a new one when those roots change
+----
++ declared(): dict
+	// the files every practice the session works on declares, by practice, fidelity, and format
++ in_folder(): list[FileEntry]
+	// its log, handoffs, kept notes, and reports
++ read(path: str): FileText
++ worked_on(): set[Path] | None
+	// every file when the session has a folder of its own; on the whole repository, only the files its branch changed
+
+### **Handoffs**
+
++ Handoffs(folder: Path)
+------
++ latest: Path | None
+----
++ write(document: str): Path
+	// `handoff-{timestamp}.md`
+
+### **DecisionRecords**
+
++ DecisionRecords(folder: Path)
+------
++ paths: list[Path]
+----
++ write(slug: str, document: str): Path
+	// `{NNNN}-{slug}.md`, numbered after the last record
+
+### **PracticeSessionOutput**
+
++ PracticeSessionOutput(name: str, session: Session)
+------
++ name: str
+	// data field
++ session: Session
++ session_file: str
+	// data field
++ guideline: PracticeGuidance
+	// loads on first use
++ fidelities: GuidanceCollection
++ folders: list[Path]
+	// the sets of peer folders the practice reads, remembered for the repository in `.context/practices.json`, else its default folder
++ graph: Graph
+	// built once from its first folder
+	-> Graph.of_practice
++ root_node_name: str
++ enabled: bool
+	// data field
++ working_fidelity: str
++ working_format: str
++ folder: Path
++ output_root: Path
++ root: str
+	// data field
++ is_root_chosen: bool
+	// data field
+----
++ load(session: str, practice: str, project: Path): PracticeSessionOutput
+	// the `@tool_subject` of the `practice-session-output.*` tools
+	-> Session.from_file
+	-> Session.practice
++ enable(is_enabled: bool): PracticeSessionOutput
+	// MCP `practice-session-output.enable`
++ choose_root(path: str): PracticeSessionOutput
+	// MCP `practice-session-output.choose_root`; refuses a `.context` folder with `PracticeRootInContextError`
++ use_default_root(): PracticeSessionOutput
+	// MCP `practice-session-output.use_default_root`
++ keep_root(root: Path): None
++ remember_folders(folders: list[list[Path]]): None
+	-> RememberedFolders.remember
++ keep_format(): None
++ use_kept_format(): None
++ log_validation(violations: list[str]): None
+	// Validate logs each run this way
+	-> SessionLog.line
++ output_overrides(fidelity: str): dict
+
+### **FidelitySessionOutput**
+
++ FidelitySessionOutput(practice: PracticeSessionOutput, fidelity: FidelityGuidance)
+------
++ reports_folder: Path
+----
++ output_paths(): dict[str, list[str]]
+	// declared paths under the fidelity's own root when session.json names one, else under the practice's output root
++ files(): dict[str, list[FileEntry]]
+	-> SessionFiles.worked_on
++ has_output(): bool
+
+### **RememberedFolders**
+
++ RememberedFolders(repo_root: Path)
+----
++ of(practice: str): list[list[str]]
++ remember(practice: str, folders: list[list[str]]): None
+	// folders that are the default are not kept
 
 **Interactions**
 
-- inject reads the transcript at chat_file and asks append_chat to point at that file. The transcript is not copied into session.log.
+- A `ToolCall` asks `CallSessions` for the session of each call; the session's log lines point at that call's chat.
+- `GuidanceAction.run` logs through `SessionLog.guidance_action`, and a failure through `SessionLog.failure`; the MCP host logs each tool through `SessionLog.tool` and each failure through `SessionLog.failure`.
+- `Validate.validate` calls `log_validation` on each practice it checked. Generate and Satisfy call Validate, so their runs log the same line.
+- `RulesCollection.inject_rules` notes the rules it injected on the call's session through `SessionLog.note_injected_rules`.
+- The board reads a ticket's work through its session: `Session.practices`, `PracticeSessionOutput.fidelities`, and `FidelitySessionOutput.files`.
 
 ---
 
@@ -176,14 +405,12 @@ A Session binds the paths, the repo, and the active guidelines. Each entry pairs
 
 ## Plan
 
-The session writes its own handoffs and decision records; Sketch and GrillContext take their paths from the Session. None of them opens a workspace of its own.
+The session writes its own handoffs and decision records; Sketch and GrillContext take their paths from the session. None of them opens a folder of its own.
 
-- `Session.write_handoff` writes `handoff-{timestamp}.md` in the session's folder (`{CDD_PROJECT}/.sessions/{session}/`, or `.sessions/main/` for the main session).
+- `Session.write_handoff` writes `handoff-{timestamp}.md` in the session's folder (`.sessions/{session}/`, or `.sessions/main/` for the main session).
 - `Session.write_cdr` writes `{NNNN}-{slug}.md` under `session.root / .context / cdr`.
-- Sketch writes `{slug}-sketch.md` under the session work path, in that path's `.context` folder.
+- Sketch writes `{slug}-sketch.md` under the session's root, in that folder's `.context` folder.
 - GrillContext writes `grill-answers.md` in that same `.context` folder.
-
-`tools/workflow/workflow.py` and `tools/plan/plan.py` are retired at `retired/` and stay out of package discovery, toolset collection, and the graph walk.
 
 ---
 
@@ -191,137 +418,111 @@ The session writes its own handoffs and decision records; Sketch and GrillContex
 
 Fidelity: behavior
 
-### a session
+The specs are `space/session/session_spec.py`, `session_log_spec.py`, `current_session_spec.py`, `handoff_spec.py`, and `decision_records_spec.py`. The outline below follows them.
 
-```
--> instructions = new Session(name, workpath, repo_path)
-// session is the session that code bound; the host keeps it
-// instructions are keep_log
-```
+### a session
 
 #### that is new
 
 ```
-it should return keep_log to the agent
-  -> expect(instructions).to contain "log_action"
-  -> expect(instructions).to contain "log_validation"
-  -> expect(instructions).to contain "log_error"
-  -> expect(instructions).to contain "append_chat"
-it should keep the name, the workpath, and the repo path the code section set
+-> instructions = Sessions(project).switch(name, workpath)
+-> session = Sessions(project).saved
+it should return how to keep its log to the agent
+  -> expect(instructions).to contain "append_log"
+it should keep the name, the workpath, and the repo path
   -> expect(session.name).to equal name
-  -> expect(session.workpath).to equal workpath
-  -> expect(session.repo_path).to equal repo_path
-it should keep logging under that repo at sessions and the name
-  -> expect(session.session_path).to equal repo_path / "sessions" / name
+  -> expect(session.root).to equal workpath
+it should write --- 1 as the first line of a new session.log
+  -> expect(session.log.path).to start with "--- 1"
 it should leave practices empty until a practice is asked for
-  -> expect(session.practices).to equal []
+  -> expect(session.opened_practices).to equal []
+it should record the name in repo sessions session.json
+  -> expect(Sessions(project).open_name).to equal name
+```
+
+#### that is closed
+
+```
+-> session.close()
+it should go back to the main session
+  -> expect(Sessions(project).open_name).to equal "main"
 ```
 
 #### that is selected
 
-```
--> instructions = session.select(name)
-it should return the logger instructions to the agent
-  -> expect(instructions).to contain "log_action"
-  -> expect(instructions).to contain "log_validation"
-  -> expect(instructions).to contain "log_error"
-  -> expect(instructions).to contain "append_chat"
-it should leave practices empty until a practice is asked for
-  -> expect(session.practices).to equal []
-```
-
 ##### with only a name
 
 ```
--> session.select(name)
-it should bind the existing session from the environment
-  -> expect(session.name).to equal name
-  -> expect(session.repo_path).to equal the repo root
-  -> expect(session.session_path).to equal session.repo_path / "sessions" / name
+-> Sessions(project).switch(name)
 it should use the workpath stored on that session
-  -> expect(session.workpath).to equal the workpath stored on the session
+  -> expect(Sessions(project).saved.root).to equal the stored workpath
 ```
 
-##### with a repo path
+##### with a name that has spaces and capitals
 
 ```
--> session.select(name, repo_path=repo_path)
-it should keep logging under that repo at sessions and the name
-  -> expect(session.session_path).to equal repo_path / "sessions" / name
-it should read the workpath from that session
-  -> expect(session.workpath).to equal the workpath stored on the session
+-> Sessions(project).switch("Pet visits")
+it should name the session by its slug
+  -> expect(Sessions(project).saved.name).to equal "pet-visits"
 ```
 
-##### with a session path
+##### from a linked worktree of the checkout whose board holds it
 
 ```
--> session.select(name, session_path=session_path)
-it should read the repo path and the workpath from that session
-  -> expect(session.repo_path).to equal the git root of session_path
-  -> expect(session.workpath).to equal the workpath stored on the session
+it should log into the ticket's folder on the board
+  -> expect(session.session_path).to equal the main checkout's .sessions / name
 ```
 
-##### with a workpath
+#### that a tool call reads
 
 ```
--> session.select(name, workpath=workpath)
-it should keep the given workpath
-  -> expect(session.workpath).to equal workpath
-it should take the repo root from that workpath
-  -> expect(session.repo_path).to equal the git root of workpath
-  -> expect(session.session_path).to equal session.repo_path / "sessions" / name
+-> session = ToolCall(project).session
+it should be the main session until another is open on the repo
+  -> expect(session.name).to equal "main"
+it should give each call its own copy, so one call's practices never reach another
+  -> expect(ToolCall(project).session).not_to be session
 ```
 
 #### that logs an action
 
-##### with paths passed in
-
 ```
--> session.log_action(action, paths)
-it should append a timestamped line to session.log
-  -> expect(session.session_path / "session.log").to contain the timestamp
-  -> expect(session.session_path / "session.log").to contain paths
-it should name the guideline, fidelity, format, and action on that line
-  -> expect(session.session_path / "session.log").to contain action
+-> session.log.action(action, paths)
+it should append a timestamped line that names the action and the path
+  -> expect(session.log.path).to contain action and paths
 ```
 
-##### with a graph node known for the practice
+##### with no chat known
 
 ```
--> session.log_action(action, paths)
-it should name the highest graph node for that practice
-  -> expect(session.session_path / "session.log").to contain the node name
+it should log the action as from no chat
+  -> expect(session.log.path).to contain "no-chat"
 ```
 
 ##### with rules injected from a inject rules hook
 
 ```
-it should log the matching rule names only, sorted, under that practice and fidelity
-  -> expect(session.session_path / "session.log").to contain the matching practice
-  -> expect(session.session_path / "session.log").to contain the matching fidelity
-  -> expect(session.session_path / "session.log").to contain the matching rule name
-it should omit the other practice guideline
-  -> expect(session.session_path / "session.log").not_to contain the other rule name
-```
-
-##### with a chat transcript
-
-```
--> session.log_action(action, paths)
-it should point at the chat id, the transcript file, and the line numbers
-  -> expect(session.session_path / "session.log").to contain the chat file
+it should log that practice, fidelity, rule, and matched file
+  -> expect(session.log.path).to contain the matching rule name
+it should omit a rule that was not injected
+  -> expect(session.log.path).not_to contain the other rule name
 ```
 
 #### that logs an error
 
 ```
--> session.log_error(failure)
-it should write the full trace to session.err
-  -> expect(session.session_path / "session.err").to contain the trace
-it should point the session.log line at that session.err line
-  -> expect(session.session_path / "session.log").to contain the session.err line
-it should still raise the failure
-  -> expect(session.log_error(failure)).to raise failure
+-> session.log.failure(failure)
+it should write the trace to session.err
+  -> expect(session.log.error_path).to contain the trace
+it should point the session.log line at that session.err file
+  -> expect(session.log.path).to contain "session.err"
+```
+
+#### that records a loop correction note
+
+```
+-> session.append_log(note, loop, paths, conversation_id, transcript_path, transcript_lines)
+it should append a note line with message paths and chat pointer
+  -> expect(session.log.path).to contain note, paths, and the chat
 ```
 
 ### a loop
@@ -329,17 +530,17 @@ it should still raise the failure
 #### that is opened
 
 ```
--> loop = session.loop()
+-> loop = session.log.next_loop()
 it should take the next loop number
   -> expect(loop.number).to equal the previous number plus one
 it should append the loop marker to session.log
-  -> expect(session.session_path / "session.log").to contain "--- " + loop.number
+  -> expect(session.log.path).to contain "--- " + loop.number
 ```
 
 #### that has log entries
 
 ```
--> entries = session.loops[number].entries
+-> entries = session.log.loop_at(number).entries
 it should return the log lines for that loop number
   -> expect(entries).to equal the lines under that marker
 ```
@@ -347,67 +548,28 @@ it should return the log lines for that loop number
 ##### with a chat to place under the lines
 
 ```
--> session.loops[number].inject(chat_file)
+-> session.log.loop_at(number).inject(chat_file)
 it should show the chat and the response under the lines they belong to
-  -> expect(session.loops[number].entries).to contain the chat
-  -> expect(session.loops[number].entries).to contain the response
+  -> expect(session.log.loop_at(number).text()).to contain the chat and the response
 ```
 
 ### an action
 
 #### that calls validate
 
-##### with a practice and a fidelity
-
 ```
 -> session.practice(name).log_validation(violations)
-it should log that practice, that fidelity, and the rules that were run
-  -> expect(session.session_path / "session.log").to contain the practice
-  -> expect(session.session_path / "session.log").to contain the fidelity
-  -> expect(session.session_path / "session.log").to contain the rule names
-```
-
-##### with a violation
-
-```
--> session.practice(name).log_validation(violations)
-it should log the exact rule, a synopsis of the code, and the reported correction
-  -> expect(session.session_path / "session.log").to contain the rule
-  -> expect(session.session_path / "session.log").to contain the synopsis
-  -> expect(session.session_path / "session.log").to contain the correction
-```
-
-#### that appends a chat to a logged action
-
-```
--> session.append_chat(action, chat)
-it should add that chat's id, file, and line numbers onto that action's log line
-  -> expect(session.session_path / "session.log").to contain the chat
-```
-
-##### with a validation line
-
-```
--> session.append_chat(action, chat)
-it should add that chat onto the validation line
-  -> expect(session.session_path / "session.log").to contain the chat
-  -> expect(session.session_path / "session.log").to contain the correction
-```
-
-#### that names an action
-
-```
--> action.run(guidance, action)
-it should log that action and the paths it was given
-  -> expect(session.session_path / "session.log").to contain the action
+it should log that practice and that fidelity
+  -> expect(session.log.path).to contain the practice and the fidelity
+it should log the rule, the synopsis, and the correction
+  -> expect(session.log.path).to contain each violation
 ```
 
 #### that names no action
 
 ```
--> action.run(guidance)
 it should leave session.log unchanged
-  -> expect(session.session_path / "session.log").to equal the log from before the run
+  -> expect(session.log.path).to equal the log from before the run
 ```
 
 ### a practice
@@ -416,59 +578,49 @@ it should leave session.log unchanged
 
 ```
 -> session.practice(name)
-it should hold that practice's guideline and graph in memory
+it should hold that practice's guideline and graph
   -> expect(session.practice(name).guideline).to be that practice guideline
   -> expect(session.practice(name).graph).to be that practice graph
 it should return that same practice on the next ask
   -> expect(session.practice(name)).to be the entry from the first ask
-it should leave the other practices unopened
-  -> expect(session.practices).to contain only that practice
+it should list every practice CDD has, opened or not
+  -> expect(session.practices.keys()).to equal PracticeCatalogue.keys()
 ```
 
-##### with the practice default folders
+##### with a practice turned off
 
 ```
-it should point that practice's graph root at the folders the practice declares
-  -> expect(the practice graph root folders).to equal the practice default folders
-it should leave that practice out of practices.json
-  -> expect(repo_path / ".context" / "practices.json").not_to contain the practice
+-> session.practice(name).enable(False)
+it should leave that practice out of the active practices
+  -> expect(session.active_practices).not_to contain that practice
+```
+
+##### that a person chooses a folder as the practice's root
+
+```
+-> session.practice(name).choose_root(folder)
+it should write the practice's files under that folder
+  -> expect(the fidelity's output paths).to start with folder
+it should refuse a .context folder
+  -> expect(choose_root(".context")).to raise PracticeRootInContextError
 ```
 
 ##### with parent folders that are not the default
 
 ```
+-> session.practice(name).remember_folders(folders)
 it should point that practice's graph root at those parent folders
-  -> expect(the practice graph root folders).to equal the saved parent folders
+  -> expect(session.practice(name).folders).to equal folders
 it should save those folders in practices.json
   -> expect(repo_path / ".context" / "practices.json").to contain the practice
-  -> expect(repo_path / ".context" / "practices.json").to contain the saved parent folders
 ```
 
-##### with more than one set of peer folders
+### a session's handoff
 
 ```
-it should keep each set of peer folders on that practice's graph root
-  -> expect(the practice graph root folders).to equal those sets of peer folders
-it should save each set that is not the default
-  -> expect(repo_path / ".context" / "practices.json").to contain each non-default set
-```
-
-#### with harness/guidance as the tree for clean engineering, stories, and bdd
-
-```
--> session.practice("clean_engineering")
--> session.practice("stories")
--> session.practice("bdd")
-it should load the clean engineering, stories, and bdd graphs from harness/guidance
-  -> expect(each asked practice graph root).to equal harness/guidance
-it should finish that load within 5 seconds
-  -> expect(the load).to take at most 5 seconds
-```
-
-#### that a practice has not been invoked
-
-```
--> session.practices
-it should omit that practice's entry
-  -> expect(session.practices).to equal []
+-> session.write_handoff(paths=[draft])
+it should write a file named handoff-{timestamp}.md in that session's folder
+  -> expect(session.handoffs.latest).to exist
+it should show the handoff as its latest handoff
+  -> expect(session.latest_handoff).to equal that file from the project
 ```

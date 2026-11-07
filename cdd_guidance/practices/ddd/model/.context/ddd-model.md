@@ -4,7 +4,7 @@
 
 The graph (`DddGraph` in `practices/ddd/graph_practice.py`) reads a bounded context from each folder holding `.context/bounded-context.md`, through `BoundedContext.load_context_folder`, and a building block from each class Clean Engineering read whose stereotypes or name give it a DDD kind. The building block's node holds the class's own facts and the tactical facts `tactical_facts(parsed, kind)` reads from the parsed class; the class itself stays Clean Engineering's node.
 
-Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, drawio) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back. The python and typescript formats are Clean Engineering's class models: `Ddd` converts the map with `to_clean_engineering` and back with `from_clean_engineering`. A card's stereotypes are the class's `stereotypes`, which the code channels write as decorators (`@aggregate_root`, `@AggregateRoot()`) and read back; where the class lives rides in its intent's first line (`Customer · Customer Profile`).
+Callers use the base nodes. The practice's formats (`Ddd(...).formats`: sketch, markdown, drawio) each name the map class that reads and writes that format; `parse` reads text into a `BoundedContextMap` and `render` writes one back. The python and typescript formats are Clean Engineering's class models: `Ddd` converts the map with `to_clean_engineering` and back with `from_clean_engineering`. A card's stereotypes are the class's `stereotypes`, which the code channels write as decorators (`@aggregate_root`, `@AggregateRoot()`) and read back: a decorator with no arguments, or a `<<Mark>>` on the first line of the doc comment, is a stereotype, so Clean Engineering keeps no list of DDD's words. `tactical_stereotypes` keeps DDD's own words from that list — aggregate root, entity, value object, repository, domain service or service, domain event, specification, factory, and system — and `building_block_type` reads a card's class from them. Where the class lives rides in its intent's first line (`Customer · Customer Profile`).
 
 ```
 bounded_context_map = MarkdownBoundedContextMap().parse(text)
@@ -68,6 +68,8 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 	// this context's aggregates, then those of every context nested in it
 + enclosing_contexts: list[BoundedContext]
 	// outermost first, ending with this context
++ context_file_lines: int
+	// the lines in .context/bounded-context.md, so the graph node spans that file
 ----
 + append_context(context: BoundedContext): None
 + append_aggregate(aggregate: Aggregate): None

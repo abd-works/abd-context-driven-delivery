@@ -557,13 +557,38 @@ One rule the judgment in a validation report fails, in one judged file.
 
 # Collaborators
 
-The classes below belong to other modules and are modelled in those modules' own documents. The board names them and calls only what is listed here.
+The classes below belong to other modules and are modelled in those modules' own documents. Each heading names the class so links and diagrams can point at it; the line under it says where it lives and what the board calls on it.
 
-- `Repo` and `Branch` (`space/repo/repo.py`), `Worktree` (`space/repo/worktree.py`): the board reads `Repo.root`, `is_clone`, `checkout_folder`, `primary_root()`, `worktrees`, `file_manager`, `path_from_top(path)`, and `branch_named(name)`; a ticket calls `switch_branch`, `switch_worktree`, `push_commit`, and `close_branch`. `Branch.name`, `exists`, and `is_checked_out` are data fields, which `ticket.branch` sends, and `Branch.open_in_worktree()` opens a ticket's worktree. The board reads `Worktree.path` and `Worktree.branch`.
-- `Sessions` (`space/session/sessions.py`): `all()`, `named(name)`, `load(folder)`, `open_name`, `create(name, workpath, title, scope, parent)`, `switch(name)`, `folder`, and `backlog_folder`; the board's own `_board.json` sits in its `folder`.
-- `Session` (`space/session/session.py`): `name`, `title`, `is_closed`, `workpath`, `practices`, `log`, `close()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, `from_project(path)`, and `reports_folder`; sent whole as a ticket's `session` data field. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a review.
-- `PracticeGuidance` and `FidelityGuidance` (`harness/guidance/guidance.py`), `PracticeCatalogue` (`harness/guidance/practice_catalogue.py`), `Rule` (`harness/guidance/rule.py`): a practice's `key`, `slug`, `short_name`, `colour`, and its fidelities' slugs are data fields, and the board reads its `fidelities`, `rules`, `overview`, and `guidance`. A fidelity's `slug`, `name`, `outputs`, and `default_format` are data fields, which a stage's `work_required`, a progress's `fidelity`, and help send; the board reads its `stage`, `practice_guidance`, `rules`, `files()`, `reports()`, and `has_declared_output()`. A rule's `slug` and `body` are data fields, which help sends.
-- `ApproachStage`, `StageScope`, and `STAGES` (`harness/guidance/stages.py`): the three stages in order, each with its `name`, `title`, `scope`, `steps`, `actions`, and `producing_actions`.
-- `Violation` (`harness/graph/violation.py`): one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file, lines_before, lines_after)` has read them) are data fields. A judged finding is `Violation(rule, message, location=..., line=...)`.
-- `GraphPractices` (`harness/graph/graph_practice.py`): `named(practice).checks(patterns)`, the rules a scanner checks now. `violations_from_graph_json_files` and `violations_by_rule` (`cdd_guidance/actions/validate/graph_json_reader.py`) read a saved graph's hits.
-- `FileManager` and `FileEntry` (`tools/file_manager/file_manager.py`): `list(folder).folders` for `board.folders`, and the entries `fidelity-progress.files` sends.
+## Repo
+
+`space/repo/repo.py`. The board reads `root`, `is_clone`, `checkout_folder`, `primary_root()`, `worktrees` (the `Worktrees` of `space/repo/worktree.py`, each `Worktree` with its `path` and `branch`), `file_manager`, `path_from_top(path)`, and `branch_named(name)`; a ticket calls `switch_branch`, `switch_worktree`, `push_commit`, and `close_branch`.
+
+## Branch
+
+`space/repo/repo.py`. `name`, `exists`, and `is_checked_out` are data fields, which `ticket.branch` sends; `open_in_worktree()` opens a ticket's worktree.
+
+## Sessions
+
+`space/session/sessions.py`. The board calls `all()`, `named(name)`, `load(folder)`, `open_name`, `create(name, workpath, title, scope, parent)`, `switch(name)`, `folder`, and `backlog_folder`; the board's own `_board.json` sits in its `folder`.
+
+## Session
+
+`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, and `from_project(path)`. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a review.
+
+## PracticeGuidance
+
+`harness/guidance/guidance.py`, chosen through `PracticeCatalogue.practices()` (`harness/guidance/practice_catalogue.py`). `key`, `slug`, `short_name`, `colour`, and its fidelities' slugs are data fields; the board reads `fidelities`, `rules`, `overview`, and `guidance`.
+
+## FidelityGuidance
+
+`harness/guidance/guidance.py`. `slug`, `name`, `outputs`, and `default_format` are data fields, which a stage's `work_required`, a progress's `fidelity`, and help send; the board reads `stage`, `practice_guidance`, `rules`, `files()`, `reports()`, and `has_declared_output()`. Each fidelity's stage is one `ApproachStage` of `STAGES` (`harness/guidance/stages.py`), with its `name`, `title`, `scope` (a `StageScope`), `steps`, `actions`, and `producing_actions`.
+
+## Rule
+
+`harness/guidance/rule.py`. `slug` and `body` are data fields, which help sends.
+
+## Violation
+
+`harness/graph/violation.py`: one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file, lines_before, lines_after)` has read them) are data fields. A judged finding is `Violation(rule, message, location=..., line=...)`. A report reads a saved graph's hits through `violations_from_graph_json_files` and `violations_by_rule` (`cdd_guidance/actions/validate/graph_json_reader.py`), and the rules a scanner checks now through `GraphPractices.named(practice).checks(patterns)` (`harness/graph/graph_practice.py`).
+
+`FileManager` and `FileEntry` (`tools/file_manager/file_manager.py`) list folders for `board.folders` and are the entries `fidelity-progress.files` sends.

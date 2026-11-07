@@ -1,14 +1,15 @@
 fidelity: model
 scope: PracticeGuidance.fidelities as @markdownCollection -> GuidanceCollection
 status: grill cycle — review before more questions
+// built differently in places: fidelities is @toolset_collection @markdownCollection, loaded by MarkdownCollection.from_markdown; no fidelityInstructions operation was added. Current classes: practice-guidance-model.md
 
 =========
-theme: bind the bag; selected stays on it; load is from_markdown
+theme: the practice holds the collection; selected stays on it; load is from_markdown
 ---------
 ce:
 PracticeGuidance : Guidance
   @markdownCollection("fidelities") fidelities : GuidanceCollection
-       // first-class nested toolset — nested_toolsets is this object
+       // first-class nested toolset — child_toolsets() walks this object
   instructions
        -> super.instructions
        -> fidelities.markdown
@@ -17,7 +18,7 @@ PracticeGuidance : Guidance
        -> fidelities[name].instructions
        // MCP by name; not the same as selected
   ----
- GuidanceCollection : ToolSetCollection, Guidance
+ GuidanceCollection : MarkdownCollection, Guidance
   parent
   entries
   current

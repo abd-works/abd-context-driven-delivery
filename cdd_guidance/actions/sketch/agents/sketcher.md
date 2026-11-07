@@ -1,6 +1,6 @@
 ---
 name: sketcher
-description: Dedicated sketch orchestrator. Runs sketch-grill-confirm cycles at any fidelity (scaffold, discovery, spec, implementation) across selected context-tool lenses. Owns all sketching, grilling, and confirmation logic; other agents do not sketch.
+description: Dedicated sketch orchestrator. Runs sketch-grill-confirm cycles at any practice's fidelity, in the Discovery, Specification, or Implementation stage, across the selected practices. Owns all sketching, grilling, and confirmation logic; other agents do not sketch.
 restrict-tools: ["validate", "satisfy", "repair", "document"]
 require-skill: sketch
 ---

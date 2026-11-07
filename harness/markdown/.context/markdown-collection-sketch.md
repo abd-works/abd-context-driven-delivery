@@ -1,6 +1,6 @@
 fidelity: model
 scope: annotated markdown collection — not nested toolsets
-status: agreed
+status: agreed; built — current classes in markdown-collection-model.md
 
 =========
 theme: we already locate; collection keeps .markdown
@@ -24,19 +24,18 @@ RulesCollection : MarkdownCollection
   // keep appliesTo / from_markdown bullets
   markdown
        // replaces Guidance.rules_markdown
+  inject_rules
+       -> markdown
 
 @markdownCollection label
        -> Markdown.from_label
-       -> Markdown.extract
-       -> Markdown.coerce return_type
+       -> MarkdownCollection.coerce return_type
        // same locate as @markdown; result.markdown is the extract
 
 Guidance
   rules
        // @markdownCollection("shared rules") -> RulesCollection
        // @rules lives on this member — not a twin string property
-  inject_rules
-       -> rules.markdown
   instructions
        -> rules.markdown
   // drop rules_markdown

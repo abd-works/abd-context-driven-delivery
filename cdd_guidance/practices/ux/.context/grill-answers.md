@@ -1,7 +1,7 @@
 # UX migration — grill decisions (2026-07-17)
 
 ## Fidelities
-- `ia → mockup → specification → code`.
+- `ia → mockup → specification → code` (since renamed: the fidelities are ia, mockup, and front_end_code).
 - Drop impact-map from this generator (sketch covers shaping).
 - **code** (added 2026-07-20): real frontend wired to real backend — not Story Demo / greybox alone. A vertical is not at code while CE is Fake/demo-only or UX is still mockup/spec.
 
@@ -9,18 +9,18 @@
 - **Agreed:** wire at **mockup**. Mockup produces a runnable native web artifact (semantic HTML + stub interactions, greybox / no brand).
 - **Specification** deepens: brand tokens, richer stubs, AC demo paths.
 - **Code** replaces stubs with production UI + real service calls (CE **code** / Production collaborators).
-- Host UI stacks (React/Vue/…) are optional peer channels via `transform` — not required to get the mid-fi loop; typical at **code**.
+- Host UI stacks (React/Vue/…) are optional peer channels via `render` — not required to get the mid-fi loop; typical at **code**.
 
 ## Canonical model
 - **Agreed:** `UxMap` → `Screen` → `Region` → `Control` (plus transitions, content types, story/domain traces as model fields).
 - Markdown / drawio / html (and later host stacks) are peer channels that parse/render the model.
-- Scanners read model fields only — never file syntax.
+- Rules read model fields only — never file syntax.
 - **No ARIA pipeline** — drop `aria.yaml` as a deliverable and as an intermediate fidelity layer. Structure lives on the typed model; html/drawio render from controls/regions directly.
 
 ## Formats
-- Same **model ↔ channel conversion architecture** as Clean Engineering / Stories: canonical `UxMap` model; peer channels parse/render; `transform` moves sideways at the same fidelity.
+- Same **model ↔ channel conversion architecture** as Clean Engineering / Stories: canonical `UxMap` model; peer channels parse/render; `render` moves sideways at the same fidelity.
 - Defaults:
-  - **ia → drawio** (diagram stays primary). HTML optional via transform / channel.
+  - **ia → drawio** (diagram stays primary). HTML optional via render / channel.
   - **mockup → html+js** (default). Keep diagramming as peer drawio channel.
   - **specification → html+js+css**.
   - **code → production frontend** (host stack and/or html channel with real API wiring).
@@ -29,20 +29,20 @@
 
 ## Regeneratable / write-once
 - Mockup/specification stay regeneratable from the model. **Code** may live in the host app stack; still no “don’t regen” trap on the UX model — production FE is the deepen, not a freeze of greybox HTML.
-- Regeneration / `transform` is for **converting** between peer formats from the canonical model.
+- Regeneration / `render` is for **converting** between peer formats from the canonical model.
 
 ## Object model (language sketch)
 - Saved: `practices/ux/.context/ux-model-sketch.md` (Clean Engineering sketch notation).
 - Spine: `UxMap` → `Screen` → `Region` → `Control`.
 - `Transition` / `ContentType` / `NavComponent` are **`UxComponent` subtypes**.
 - Collections **`Transitions` / `ContentTypes` / `NavComponents`** (`UxComponentCollection`) own `append` / `remove` / `find` — not flat append ops on `UxMap`.
-- **`story_references` / `object_references`** are properties on `UxMap` — each stores **paths** to JS artifacts (not module bodies). Bind/dedupe behind the property. Object = CE object-model JS; domain language not built yet.
-- Conversion: `UxChannel.parse` / `render`; `Ux.transform` wires source→canonical→target.
+- **`story_references` / `object_references`** are properties on `UxMap` — each stores **paths** to JS artifacts (not module bodies). Store and de-duplicate behind the property. Object = CE object-model JS; domain language not built yet.
+- Conversion: each format class (`DrawioUxMap`, `HtmlUxMap`, `JsonUxMap`, `MarkdownUxMap`, `ClaudeDesignUxMap`) is a `UxMap` with `parse` / `render`; `Ux.render` wires source→canonical→target.
 - Interactions live on `Control` (trigger / effect / destination) — deepened at mockup with JS.
 
 ## Web channel
 - **One `html` channel** — deepens by fidelity (mockup: html+js greybox; specification: css/brand; code: real frontend / host stack). Not two transform targets.
-- Update sketch: collapse `HtmlJsUxChannel` / `HtmlJsCssUxChannel` → `HtmlUxChannel`.
+- Update sketch: collapse `HtmlJsUxChannel` / `HtmlJsCssUxChannel` into one HTML format (now `HtmlUxMap`).
 
 ## Stories + domain in the HTML surface
 - **Not names-only.** When object models and stories exist, bring them into **JS** so screens can connect to domain models for enter/display.
@@ -51,7 +51,7 @@
 - Domain JS + story JS are part of the wired mockup/spec loop — not just annotation strings on `Screen`.
 - **JS production (agreed):** reuse Stories / Clean Engineering channels — **do not** invent a UX adapter shape.
   1. Check whether JS format already exists for the in-scope stories / domain model.
-  2. If missing, run that generator’s existing **`transform`** (Stories and CE both already have `javascript` channels).
+  2. If missing, run that practice’s existing **`render`** (Stories and CE both already have `javascript` channels).
   3. HTML surface imports those JS modules.
 
 ## Artifact layout (mirror Stories — colocated)
@@ -77,10 +77,10 @@ sandbox/<epic>/
 - Keep optional MD only for info **not easily accessible on screens** — same idea as story-context / module-context: thinking, interactions to capture, invariants, notes. Not a full IA/mockup document.
 
 ## Scaffold
-- **Agreed to scaffold** (2026-07-17): `practices/ux/` package like stories — `ux.py`, `ux.md`, sketch-template, `ux_model/`, channels (drawio/html/md/json), scanners, templates.
+- **Agreed to scaffold** (2026-07-17): `practices/ux/` package like stories — `ux.py`, `ux.md`, sketch-template, `ux_model/`, channels (drawio/html/md/json), scanners, templates. (Now `model/` with one folder per format, and `rules/`.)
 - Leave `abd-skills/practices/user-experience-design` in place (do not delete).
 - Cursor skill: `.cursor/skills/practices/ux/SKILL.md`.
-- Drawio channel: vendored **drawio-ux CLI** (`practices/ux/diagram/drawio/drawio_ux.mjs`) — same engine as abd-skills IA. `render` writes Detailed IA + Site Map (not stuffed blue boxes).
+- Drawio channel: vendored **drawio-ux CLI** (`practices/ux/model/drawio/drawio_ux.mjs`) — same engine as abd-skills IA. `render` writes Detailed IA + Site Map (not stuffed blue boxes).
 - Next: richer html DOM parse; more abd-skills rules as scanners.
 
 ## Sketch annotations
@@ -116,7 +116,7 @@ Interactive mode: same HTML/UX shell. Prefer the same helpers/functions used by 
 
 How a Play step reaches the mockup: A ? story owns domain only.
 
-Story given/when/then mutate domain via helpers/factories (same as tests). A small paint/reflect layer reads domain state and updates the mockup DOM. Play does not rely on steps returning view DTOs, and does not use a per-step paint map as the primary binding.
+Story given/when/then mutate domain via helpers/factories (same as tests). A small paint/reflect layer reads domain state and updates the mockup DOM. Play does not rely on steps returning view DTOs, and does not use a per-step paint map as the primary link.
 
 Interactive mode benefits: same domain objects; clicks can keep mutating via the same helpers after Given has loaded the world.
 
@@ -162,11 +162,11 @@ Interactive: on{WhenStatement} + PaintReflect only ? no ThenFeedback.
 
 ### Story demo ? Play does not invoke product controls
 
-Clarified from grill: Play next is explorer chrome only. Product mockup controls are not invoked during Play ? step.fn() runs the GWT body; bind uses bound_field from expose(); emphasize uses story_steps match. Interactive is where Control.Interaction (any trigger) runs the When path. story_steps is a binding (not a mere annotation). Control model sketch gains story_steps alongside bound_field.
+Clarified from grill: Play next is explorer chrome only. Product mockup controls are not invoked during Play ? step.fn() runs the GWT body; bind uses bound_field from expose(); emphasize uses story_steps match. Interactive is where Control.Interaction (any trigger) runs the When path. story_steps is a link the shell acts on (not a mere annotation). Control model sketch gains story_steps alongside bound_field.
 
 ### Story demo UX submodule naming
 
-Locked: UX Story Demo owns shell + PlayDualRunner (`story-demo/play-dual-runner/`). StoryDemoPage, StoryDemoFrame, ExplorerFrame, StoryDemoControl : Control. Vanilla Page/Control keep no bound_field / story_steps. pass #story-demo-ux-submodule-naming
+Locked: UX Story Demo owns shell + PlayDualRunner (`story-demo/play-dual-runner/`). StoryDemoPage, StoryDemoFrame, ExplorerFrame, StoryDemoControl : Control. Vanilla Page/Control keep no bound_field / story_steps (now a plain `Control` carries `bound_field`; only `StoryDemoControl` has `story_steps`). pass #story-demo-ux-submodule-naming
 
 ### Story demo module homes
 
@@ -174,7 +174,7 @@ PlayDualRunner + story-test-* live under `practices/ux/story-demo/play-dual-runn
 
 ### ux_model + story-demo integration
 
-One model: `ux_model.Control` base; `StoryDemoControl` subtype adds `story_steps` (keeps `bound_field`). JSON round-trips `kind` + `story_steps`. HTML emit writes `data-bound-field` / `data-story-steps`. JS runtime hydrates via `StoryDemoControl.fromElement` — not a second object model.
+One model: `Control` base (`practices/ux/model`); `StoryDemoControl` subtype adds `story_steps` (keeps `bound_field`). JSON round-trips `kind` + `story_steps`. HTML emit writes `data-bound-field` / `data-story-steps`. The JS builds each control back from those attributes via `StoryDemoControl.fromElement` — not a second object model.
 
 ### AI-generated screens use Story Demo shell
 

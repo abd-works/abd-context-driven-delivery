@@ -1,10 +1,10 @@
 # CDD Workflow
 
-Browse the [catalog](index.html) for the full map of tools, actions, fidelities, and tools.
+Browse the [catalog](index.html) for the full map of practices, actions, fidelities, and utilities.
 
 ## What the pieces are
 
-**Context tools** are lenses on the work. Each one owns a perspective.
+**Practices** are lenses on the work. Each one owns a perspective.
 
 - [/stories](context-tools/stories.html) — who does what, in what sequence.
 - [/clean-engineering](context-tools/clean_engineering.html) — module boundaries and OO design.
@@ -12,7 +12,7 @@ Browse the [catalog](index.html) for the full map of tools, actions, fidelities,
 - [/bdd](context-tools/bdd.html) — observable behavior and tests.
 - [/ddd](context-tools/ddd.html) — bounded contexts, the aggregate model, and tactics.
 
-**Actions** are what you do with a context tool. Every tool shares the same lifecycle verbs.
+**Actions** are what you do with a practice. Every practice shares the same verbs.
 
 - [/partition](actions/partition.html) — index source material and extract chunks.
 - [/document](actions/document.html) — describe existing code, tests, or docs.
@@ -20,29 +20,29 @@ Browse the [catalog](index.html) for the full map of tools, actions, fidelities,
 - [/grill](actions/grill.html) — context-grounded Q&A.
 - [/sketch](actions/sketch.html) — grill plus create a rough draft.
 - [/iterate](actions/iterate.html) — generate one small slice at a time.
+- [/render](actions/render.html) — convert an artifact already generated into another format, such as markdown to drawio.
 - [/validate](actions/validate.html) — scan and report pass/fail.
 - [/satisfy](actions/satisfy.html) — validate, fix, validate again until clean.
-- [/repair](actions/repair.html) — root-cause and fix why the tool produced a violation.
-- [/improve](actions/improve.html) — log mistake, repair, capture regression.
+- [/repair](actions/repair.html) — root-cause and fix why the practice produced a violation.
+- [/verify_fix](actions/verify_fix.html) — re-run the regression check for a repair.
+- [/createRule](actions/createRule.html) — add a named rule from a failed example, then validate with it.
 
-**Fidelities** control how deep you go. Each context tool maps three stages to its own concrete names.
+**Fidelities** control how deep you go. Each practice has one fidelity in each of the three stages.
 
-- [/discovery](cdd-approach.html) — wide and shallow (Stories: `story_map`, CE: `modules`, UX: `ia`, DDD: `bounded_context`).
-- [/specification](cdd-approach.html) — narrower and deeper (Stories: `scenarios`, CE: `model`, UX: `mockup`, BDD: `behavior`, DDD: `model`).
-- [/engineering](cdd-approach.html) — narrowest and deep (Stories: `acceptance_tests`, CE: `code`, UX: `front_end_code`, BDD: `development`, DDD: `tactics`).
+- [Discovery](cdd-approach.html) — wide and shallow (Stories: `story_map`, CE: `modules`, UX: `ia`, BDD: `behavior`, DDD: `bounded_context`).
+- [Specification](cdd-approach.html) — narrower and deeper (Stories: `scenarios`, CE: `model`, UX: `mockup`, BDD: `realization`, DDD: `model`).
+- [Implementation](cdd-approach.html) — narrowest and deep (Stories: `acceptance_tests`, CE: `code`, UX: `front_end_code`, BDD: `development`, DDD: `tactics`).
 
 **Utilities** are session helpers, not lenses.
 
-- [/handoff](tools/handoff.html) — compact the session for a fresh agent.
-- [/diagnose](tools/diagnose.html) — stuck RED / bug-fix loop.
+- [/session](tools/session.html) — `handoff_session` compacts the session for a fresh agent; `record_decisions_session` records the decisions it made.
+- /diagnose — hand a stuck RED or bug-fix loop to a background sub-agent.
 
 ## How to use them
 
-Compose a command as **`/{context tool} /{action} /{fidelity}`**.
+Compose a command as **`/{action} {practice}-{fidelity}`**, naming the fidelity by its slug.
 
-Example: [/stories /sketch /discovery](actions/sketch.html) — sketch the Stories tool at discovery (resolves to `story_map`).
-
-You can also pass the tool's concrete fidelity directly: [/stories /sketch story_map](actions/sketch.html).
+Example: [/sketch stories-story-map](actions/sketch.html) — sketch the Stories practice at its discovery fidelity, `story_map`.
 
 ---
 
@@ -52,9 +52,9 @@ Use when you have a handbook, spec, wiki, or any prose you want the system to re
 
 - **[Partition](actions/partition.html) the docs through your first lens.**
   Pick the lens that matters most right now and run [partition](actions/partition.html) to index the source and extract verbatim chunks.
-  [/clean-engineering /partition modules](actions/partition.html) — indexes by module boundaries.
-  [/stories /partition story_map](actions/partition.html) — indexes by epics and user interactions.
-  [/ux /partition ia](actions/partition.html) — indexes by screens and navigation.
+  [/partition clean-engineering-modules](actions/partition.html) — indexes by module boundaries.
+  [/partition stories-story-map](actions/partition.html) — indexes by epics and user interactions.
+  [/partition ux-ia](actions/partition.html) — indexes by screens and navigation.
 
 - **Add more lenses to the same index.**
   Each subsequent [partition](actions/partition.html) adds its own columns and chunks to the existing index. Nothing is wiped.
@@ -62,23 +62,23 @@ Use when you have a handbook, spec, wiki, or any prose you want the system to re
 
 - **[Sketch](actions/sketch.html) the design from those chunks.**
   Once partitioned, draft a rough shape interactively before committing to formal output.
-  [/clean-engineering /sketch modules](actions/sketch.html)
-  [/stories /sketch story_map](actions/sketch.html)
-  [/ux /sketch ia](actions/sketch.html)
+  [/sketch clean-engineering-modules](actions/sketch.html)
+  [/sketch stories-story-map](actions/sketch.html)
+  [/sketch ux-ia](actions/sketch.html)
 
 - **[Generate](actions/generate.html) the formal artifact.**
   Produce the real deliverable at the chosen fidelity.
-  [/clean-engineering /generate modules](actions/generate.html)
+  [/generate clean-engineering-modules](actions/generate.html)
 
 - **Close the gaps with [satisfy](actions/satisfy.html).**
   [Validate](actions/validate.html) the artifact, fix every reported violation, and validate again until it passes.
-  [/clean-engineering /satisfy modules](actions/satisfy.html)
+  [/satisfy clean-engineering-modules](actions/satisfy.html)
 
 - **Deepen fidelity and repeat the loop.**
   When [discovery](cdd-approach.html) is solid, move to the next stage and [sketch](actions/sketch.html) → [generate](actions/generate.html) → [satisfy](actions/satisfy.html) again — same steps, tighter scope.
-  [/stories /sketch scenarios](actions/sketch.html) → [/stories /generate scenarios](actions/generate.html)
-  [/clean-engineering-model](actions/sketch.html) → [/clean-engineering-model](actions/generate.html)
-  Or set the stage with [/specification](cdd-approach.html) or [/engineering](cdd-approach.html) on the tool already in scope.
+  [/sketch stories-scenarios](actions/sketch.html) → [/generate stories-scenarios](actions/generate.html)
+  [/sketch clean-engineering-model](actions/sketch.html) → [/generate clean-engineering-model](actions/generate.html)
+  At implementation, the same loop runs on `stories-acceptance-tests`, `clean-engineering-code`, and the other implementation fidelities.
 
 ---
 
@@ -88,16 +88,16 @@ Use when the system already exists and you want to add structured context files 
 
 - **Observe and describe what is there with [document](actions/document.html).**
   Document reads the code and produces a neutral description. Scanner violations are flagged but not fixed.
-  [/clean-engineering /document code](actions/document.html)
-  [/bdd /document development](actions/document.html)
+  [/document clean-engineering-code](actions/document.html)
+  [/document bdd-development](actions/document.html)
 
 - **Add context files based on what you observed.**
   Create or update `.context/module-context.md` files using the document output as your source of truth.
 
 - **[Generate](actions/generate.html) or [satisfy](actions/satisfy.html) against those context files.**
   Now that context exists, generate formal artifacts or run satisfy to close gaps.
-  [/clean-engineering /generate modules](actions/generate.html)
-  [/bdd /satisfy development](actions/satisfy.html)
+  [/generate clean-engineering-modules](actions/generate.html)
+  [/satisfy bdd-development](actions/satisfy.html)
 
 ---
 
@@ -107,17 +107,17 @@ Use when nothing exists yet and you need to shape the solution before building i
 
 - **[Sketch](actions/sketch.html) the shape.**
   [Grill](actions/grill.html) open decisions and create a rough draft. The sketch is saved to disk after each refinement — never left only in chat.
-  [/stories /sketch story_map](actions/sketch.html)
+  [/sketch stories-story-map](actions/sketch.html)
 
 - **[Generate](actions/generate.html) the formal artifact.**
   Produce the deliverable from the sketch and context.
-  [/stories /generate story_map](actions/generate.html)
+  [/generate stories-story-map](actions/generate.html)
 
 - **[Iterate](actions/iterate.html) one slice at a time.**
   For large artifacts, iterate generates one small validated slice per round instead of dumping everything at once.
-  [/stories /iterate scenarios](actions/iterate.html)
+  [/iterate stories-scenarios](actions/iterate.html)
 
-- **Run several context tools at one stage by listing them.**
+- **Run several practices at one stage by listing them.**
   Actions take a list of guidance, so every lens can work at the same depth in one call.
   [/sketch stories-story-map clean-engineering-modules ux-ia ddd-bounded-context](actions/sketch.html) — sketches Stories + Clean Engineering + UX + DDD at discovery.
   [/generate stories-scenarios clean-engineering-model ux-mockup ddd-model](actions/generate.html) — generates the same lenses at specification.
@@ -130,50 +130,56 @@ Use when artifacts already exist but have violations or need refinement.
 
 - **[Validate](actions/validate.html) without editing.**
   Scan and report pass/fail per rule. Nothing is changed.
-  [/clean-engineering /validate modules](actions/validate.html)
+  [/validate clean-engineering-modules](actions/validate.html)
 
 - **[Satisfy](actions/satisfy.html) all violations.**
   Fix the **artifact** — validate, close every gap, validate again until it passes.
-  [/clean-engineering /satisfy modules](actions/satisfy.html)
+  [/satisfy clean-engineering-modules](actions/satisfy.html)
 
 - **[Repair](actions/repair.html) the root cause.**
-  Fix **why the context tool produced the violation** (context, example, template, or scanner) — not the asset in isolation. Requires a scan/validate signal; drafts a surgical change and waits for approval.
-  [/clean-engineering /repair modules](actions/repair.html)
+  Fix **why the practice produced the violation** (context, example, template, or scanner) — not the asset in isolation. Requires a scan/validate signal; drafts a surgical change and waits for approval.
+  [/repair clean-engineering-modules](actions/repair.html)
 
-- **[Improve](actions/improve.html) when the mistake should stick.**
-  Log the mistake, log the correction, then launch repair and capture a regression fixture so the same failure does not recur.
-  [/clean-engineering /improve modules](actions/improve.html)
+- **[Verify the fix](actions/verify_fix.html) so it sticks.**
+  Re-run the regression check for the repair's theme, so the same failure does not recur.
+  [/verify_fix clean-engineering-modules](actions/verify_fix.html)
+
+- **[Create a rule](actions/createRule.html) when validate missed the mistake.**
+  Give it the failed example and the wanted behavior; it adds a named rule and validates the asset with it.
+  [/createRule clean-engineering-modules](actions/createRule.html)
 
 ---
 
-## Quick reference — context tools and fidelities
+## Quick reference — practices and fidelities
 
-| Tool | Discovery | Spec | Engineer |
+| Practice | Discovery | Specification | Implementation |
 |---|---|---|---|
 | [/stories](context-tools/stories.html) — who does what, in what sequence | [story_map](fidelities/stories-story_map.html) | [scenarios](fidelities/stories-scenarios.html) | [acceptance_tests](fidelities/stories-acceptance_tests.html) |
 | [/clean-engineering](context-tools/clean_engineering.html) — module boundaries and OO design | [modules](fidelities/clean_engineering-modules.html) | [model](fidelities/clean_engineering-model.html) | [code](fidelities/clean_engineering-code.html) |
 | [/ux](context-tools/ux.html) — navigation, screens, front end | [ia](fidelities/ux-ia.html) | [mockup](fidelities/ux-mockup.html) | [front_end_code](fidelities/ux-front_end_code.html) |
-| [/bdd](context-tools/bdd.html) — observable behavior and tests | — | [behavior](fidelities/bdd-behavior.html) | [development](fidelities/bdd-development.html) |
+| [/bdd](context-tools/bdd.html) — observable behavior and tests | [behavior](fidelities/bdd-behavior.html) | [realization](fidelities/bdd-realization.html) | [development](fidelities/bdd-development.html) |
 | [/ddd](context-tools/ddd.html) — bounded contexts, the aggregate model, and tactics | [bounded_context](fidelities/ddd-bounded_context.html) | [model](fidelities/ddd-model.html) | [tactics](fidelities/ddd-tactics.html) |
 
 ## Quick reference — actions
 
 | Action | What it does |
 |---|---|
-| [/partition](actions/partition.html) | Index source material and extract verbatim chunks. Re-run with another tool to add a lens. |
+| [/partition](actions/partition.html) | Index source material and extract verbatim chunks. Re-run with another practice to add a lens. |
 | [/document](actions/document.html) | Describe existing code, tests, or docs. Flags violations without correcting them. |
 | [/generate](actions/generate.html) | Produce the full formal artifact in one shot. |
 | [/grill](actions/grill.html) | Context-grounded Q&A. Writes `grill-answers.md`. Does not produce the artifact. |
 | [/sketch](actions/sketch.html) | Grill plus create a rough draft. Shape only — not the formal artifact. |
 | [/iterate](actions/iterate.html) | Grill, generate one small slice, validate, fix. Repeat per slice. |
+| [/render](actions/render.html) | Convert an artifact already generated into another format. |
 | [/validate](actions/validate.html) | Judge only. Scan and report pass/fail. Do not edit. |
 | [/satisfy](actions/satisfy.html) | Validate, fix every gap in the artifact, validate again until it passes. |
-| [/repair](actions/repair.html) | Root-cause why the context tool produced the violation; fix the tool (context / example / template / scanner), not the asset alone. |
-| [/improve](actions/improve.html) | Log mistake → log correction → launch repair → capture regression so it sticks. |
+| [/repair](actions/repair.html) | Root-cause why the practice produced the violation; fix the practice (context / example / template / rule), not the asset alone. |
+| [/verify_fix](actions/verify_fix.html) | Re-run the regression check for a themed repair. |
+| [/createRule](actions/createRule.html) | Add a named rule from a failed example and the wanted behavior, then validate with it. |
 
 ## Quick reference — session helpers
 
 | Utility | What it does |
 |---|---|
-| [/handoff](tools/handoff.html) | Compact the session for a fresh agent. |
-| [/diagnose](tools/diagnose.html) | Stuck RED / bug-fix loop. |
+| [/session](tools/session.html) | `handoff_session` compacts the session for a fresh agent; `record_decisions_session` records its decisions. |
+| /diagnose | Hand a stuck RED or bug-fix loop to a background sub-agent. |

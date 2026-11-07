@@ -59,7 +59,7 @@ Observed. With Active session only on, every ticket that is not the active sessi
 
 ### (S) Person --> [Open Ticket Session](move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-session/open_ticket_session_story.test.md)
 
-Observed: `Ticket.new` calls `Sessions.create`; `board-page.ts` `openNewTicket`.
+Observed: `Ticket.create` calls `Sessions.create`; `board-page.ts` `openNewTicket`.
 
 ### (S) Person --> [Close Active Session](move-work-forward-on-session-board/steer-ticket-sessions/close-active-session/close_active_session_story.test.md)
 
@@ -79,13 +79,13 @@ Observed: the Handoff button fills the prompt with `/space-session-handoff-sessi
 
 ### (S) Board App --> [Display Latest Handoff](move-work-forward-on-session-board/steer-ticket-sessions/display-latest-handoff/display_latest_handoff_story.test.md)
 
-Observed: `Ticket.latest_handoff`.
+Observed: `Session.latest_handoff`, sent as the `handoff` of a ticket's session.
 
 ## (E) Maintain Tickets
 
 ### (S) Person --> [Add Backlog Item](move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.md)
 
-Observed: the + on the Backlog heading opens a form with a title and text, and `BacklogItem.add` writes them to one markdown file in `.sessions/_backlog/`.
+Observed: the + on the Backlog heading opens a form with a title and text, and `BacklogItem.create` writes them to one markdown file in `.sessions/_backlog/`.
 
 ### (S) Person --> Edit Ticket Text
 
@@ -107,7 +107,7 @@ Intended (`.sessions/session-board/ticket-enhancements.md`): Delete on a card re
 
 ### (S) Person --> [Split Ticket Into Child Tickets](move-work-forward-on-session-board/steer-ticket-sessions/split-ticket-into-child-tickets/split_ticket_into_child_tickets_story.test.md)
 
-Observed: `Ticket.new` records the parent (kanban_tools_spec 'that opens a ticket split from another'). Inferred: Split on a card fills the prompt through `fillSplit` in `ticket-client.tsx`; no spec presses Split. Intended (`.sessions/session-board/ticket-enhancements.md`): a split goes to the AI, which slices the ticket thinly into the child tickets it proposes.
+Observed: `Ticket.create` records the parent (kanban_tools_spec 'that opens a ticket split from another'). Inferred: Split on a card fills the prompt through `fillSplit` in `ticket-client.tsx`; no spec presses Split. Intended (`.sessions/session-board/ticket-enhancements.md`): a split goes to the AI, which slices the ticket thinly into the child tickets it proposes.
 
 ### (S) Person --> Add Child Ticket
 
@@ -145,7 +145,7 @@ Observed: a tile opens after a short hover, closes on leaving, and a press keeps
 
 ### (S) Person --> [Choose Ticket Practices](move-work-forward-on-session-board/guide-work-through-practices/choose-ticket-practices/choose_ticket_practices_story.test.md)
 
-Observed: `Ticket.enable_practice` saves the choice to the ticket's `session.json`.
+Observed: `PracticeSessionOutput.enable` saves the choice to the ticket's `session.json`.
 
 ### (S) Person --> [Send Action To Stage Practices](move-work-forward-on-session-board/guide-work-through-practices/send-action-to-stage-practices/send_action_to_stage_practices_story.test.md)
 
@@ -201,11 +201,11 @@ Observed: `Validate` saves `.sessions/<session>/validation-reports/<practice>-<f
 
 ### (S) Person --> [Open Validation Report](move-work-forward-on-session-board/validate-fidelity-outputs/open-validation-report/open_validation_report_story.test.md)
 
-Observed: `Ticket.report` opens the latest report in a side panel from the details or a tile.
+Observed: `FidelityProgress.report` opens the latest report in a side panel from the details or a tile.
 
 ### (S) Person --> [Fix Report Violations](move-work-forward-on-session-board/validate-fidelity-outputs/fix-report-violations/fix_report_violations_story.test.md)
 
-Observed: `Ticket.report` builds the rules from the graph saved beside the report, and a report with no saved graph says so. Fix sends the chat one message with the rule, the error at its file and line, and the content that failed; Fix all sends every violation of the rule in one such message; Fix all violations sends every violation of every rule in the report in one message; and an open report is read again after a cdd tool call.
+Observed: `FidelityProgress.report` builds the rules from the graph saved beside the report, and a report with no saved graph says so. Fix sends the chat one message with the rule, the error at its file and line, and the content that failed; Fix all sends every violation of the rule in one such message; Fix all violations sends every violation of every rule in the report in one message; and an open report is read again after a cdd tool call.
 
 ### (S) Board App --> [Display Violations Band](move-work-forward-on-session-board/validate-fidelity-outputs/display-violations-band/display_violations_band_story.test.md)
 
@@ -215,7 +215,7 @@ Observed.
 
 ### (S) Person --> [List Ticket Files](move-work-forward-on-session-board/review-fidelity-outputs/list-ticket-files/list_ticket_files_story.test.md)
 
-Observed: `Ticket.files`, the files mode of the files panel (`FILE_VIEWS` in `file-views-view.tsx`), for the tile's or ticket's fidelities and no others; pressing a file opens it. On a ticket whose work is in the whole repository, a pattern lists only what its branch changed. A list that cannot be read says so in a toast.
+Observed: `FidelityProgress.files`, the files mode of the files panel (`FILE_VIEWS` in `file-views-view.tsx`), for the tile's or ticket's fidelities and no others; pressing a file opens it. On a ticket whose work is in the whole repository, a pattern lists only what its branch changed. A list that cannot be read says so in a toast.
 
 ### (S) Person --> [Browse Ticket Folder](move-work-forward-on-session-board/review-fidelity-outputs/browse-ticket-folder/browse_ticket_folder_story.test.md)
 
@@ -223,7 +223,7 @@ Observed: the folder mode of the files panel groups the files under their folder
 
 ### (S) Person --> [View Fidelity Files](move-work-forward-on-session-board/review-fidelity-outputs/view-fidelity-files/view_fidelity_files_story.test.md)
 
-Observed: `Ticket.read_file` and `file-views-view.tsx`; one tab per format the fidelity offers, generated or not, and × closes one.
+Observed: `Session.read_file` and `file-views-view.tsx`; one tab per format the fidelity offers, generated or not, and × closes one.
 
 ### (S) Person --> [Review Fidelity](move-work-forward-on-session-board/review-fidelity-outputs/review-fidelity/review_fidelity_story.test.md)
 

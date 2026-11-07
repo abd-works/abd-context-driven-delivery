@@ -4,41 +4,30 @@ Narrative for maintainers of the sketch module itself. AI reading this file: thi
 
 ## What lives here
 
-- `sketch.py` — the `Sketcher` toolset with three tools (`find_template`, `save_sketch`, `list_sketches`) and one standalone action (`sketch_session`).
-- `_decorator.py` — the `@sketch` decorator (module-level function).
-- `sketch.md` — the canonical philosophy / behavior contract read by AI at runtime.
-- `sketch-template.md` — the default terse-indent template used when tiered discovery finds nothing else.
-- `__init__.py` — public exports (`sketch`, `Sketcher`).
+- `sketch.py` — the `Sketch` action, a `GuidanceAction` made for one session. Its tools are `find_template`, `save_sketch`, `list_sketches`, and `review_sketch`; its instructions are `sketch(guidance)`, published as the `actions-sketch` skill and the `sketch.sketch` MCP operation.
+- `sketch_outline.py` — `SketchOutline` and `SketchLens`: a sketch holds one section per practice, opened by the headings that practice declares, and `SketchOutline.body_for(lens)` hands one practice its section, flattened to indentation, so the practice's sketch format can read it.
+- `sketch.md` — the behavior contract and rules an agent reads at runtime.
+- `templates/sketch-template.md` — the default heading-and-indent notation used when the practice has no sketch template of its own.
+- `agents/sketcher.md` — the Sketcher sub-agent that runs sketch-grill-confirm cycles.
+- `__init__.py` — public exports.
 
 ## Design authority
 
-The design record for sketching lives at `ooad/.context/rethinking-fidelity-and-process.md`. That file is the source of truth for:
+`sketch.md` is the source of truth for how a sketch runs:
 
-- Why sketch is an activity, not a fidelity tier.
-- Why the primitive is chainable actions via decorators (`@sketch`, `@grill_context`, `@action`).
-- Why decorators fire in declaration order top-down.
-- Why template discovery is tiered (session → convention → default).
-- Why `@sketch` annotates the action, not the class.
+- Sketch is an action, not a fidelity: each fidelity's **Scaffold** section sets how much detail the first shell holds, and each practice's sketch template sets its notation.
+- One sketch file per session, `{session root}/.context/{session name}-sketch.md`, with one section per practice, so every practice in play is sketched side by side.
+- Sketch runs the grill (`GrillContext`) made for the same session, and `review_sketch` is a hard gate after every save, so each grill question is asked against a sketch the person has confirmed.
 
-Do not re-derive that reasoning here — read the design record.
+## How it runs
 
-## v1 status
+1. `sketch(guidance)` begins the action on the listed guidance, adds each listed fidelity's rules and sketch template to the instructions, and runs `GrillContext.grill_with_context`.
+2. The agent writes the shell and calls `save_sketch` in the same turn; `review_sketch` asks the person whether it is correct before the next question.
+3. After three or four grill answers, the agent sketches that theme into the same file, saves it, and reviews it again.
+4. `GrillContext.generate_each` follows, so the agreed sketch can become the formal artifact.
 
-| Component | Status |
-|---|---|
-| `Sketcher` toolset (tools + action) | Implemented. Callable standalone via `python -m harness manifest sketch.sketch:Sketcher`. |
-| `@sketch` decorator markers (`_sketch_wrapped`, `_sketch_preamble`) | Implemented. |
-| `@sketch` auto-integration with `ActionExpander` (prepend preamble to expanded prose) | **Deferred slice** — see design record. Requires a small extension to `actions/action.py`. |
-| BDD specs for `Sketcher` and `@sketch` | **Deferred slice** — follow the `ooad/ooad_spec.py` pattern once the decorator integration lands. |
-
-## How to consume today
-
-Two paths:
-
-1. **Explicit invocation of Sketcher** — any agent or human can invoke `Sketcher.sketch_session(slug, fidelity, agent_dir)` before running the formal generator. This works today with zero framework changes.
-
-2. **Decorator marker for future auto-composition** — apply `@sketch` on top of `@action` on a generator method. The marker is set today; framework composition will pick it up in the deferred slice.
+Template discovery is tiered: a template the caller passes in the session, then `{agent_dir}/templates/*-sketch.*`, then `templates/sketch-template.md`.
 
 ## When to change the default template
 
-Change `sketch-template.md` only when the heading-and-indent notation itself is being revised. Domain-specific templates should live at `{agent_dir}/sketch-template.*` (per the convention tier of discovery) — do not modify the default to cater to one domain.
+Change `templates/sketch-template.md` only when the heading-and-indent notation itself is being revised. A practice keeps its own notation in its `templates/{practice}-sketch.md`, so do not change the default to suit one practice.

@@ -1,8 +1,8 @@
-# markdown collection — delta on live `markdown.py`
+# markdown collection — class model on `markdown.py`
 
-Not a second Markdown. Collection shape lives on *MarkdownCollection*. *Markdown.coerce* stays HTML / str / dict / `from_markdown` — it does not test list.
+Not a second Markdown. Collection shape lives on *MarkdownCollection*. *Markdown.coerce* stays HTML / str / dict / `from_markdown` — it does not test list. *YamlFields* and *MarkdownText* are in the same file; *RulesCollection* and *Guidance* belong to `harness/guidance` and appear here only as callers.
 
-**Out of scope:** nested toolsets, *GuidanceCollection*, fidelities, *ToolSetCollection*.
+**Out of scope:** nested toolsets, *GuidanceCollection* (a *MarkdownCollection* subclass in `harness/guidance`), fidelities, *ToolSetCollection*.
 
 ---
 
@@ -12,44 +12,60 @@ Not a second Markdown. Collection shape lives on *MarkdownCollection*. *Markdown
 
 *MarkdownCollection* owns list vs map. A **list** return type iterates section bullets or files in the folder. A **map** return type keys each entry by the bullet label or the file stem. A return type with *from_markdown* (including *RulesCollection*) is that builder, then **markdown** is stamped.
 
-*Guidance.rules* is that collection. *inject_rules* and *instructions* read **rules.markdown**. There is no *rules_markdown*.
+*Guidance.rules* is that collection. *RulesCollection.inject_rules* and *Guidance.instructions* read **rules.markdown**. There is no *rules_markdown*.
 
 ---
 
-## New
+## MarkdownCollection
 
-MarkdownCollection()
+MarkdownCollection(entries: dict | list | None = None, parent: Any = None)
 ------
+entries: dict[str, Any] | list[Any]
+	# each entry's parent is set to this collection
+parent: Any
 markdown: str
 	# must be the original extract; never a formatted() rebuild
 	# one file → that file
-yaml: dict
+yaml: dict[str, str]
 	# leftover yaml keys as string values
 ----
-coerce(markdown: Markdown, return_type) -> Any
+child(name: str, body: str) -> Any
+	# none here; a subclass such as GuidanceCollection makes one entry per section block
+from_markdown(text: str, parent: Any = None) -> MarkdownCollection
+	# one entry per section child block, keyed by its name
+	-> MarkdownText.section_child_blocks
+	-> child
+	-> YamlFields.assign_yaml
+coerce(markdown: Markdown, return_type, parent: Any = None) -> Any
 	# list → from_list
-	# return_type.from_markdown → keep_extract
+	# return_type.from_markdown → that builder, then keep_extract
 	# else from_markdown
 from_list(markdown: Markdown) -> MarkdownCollection
 	# EXTEND: one entry per section bullet or folder file
-from_markdown(text: str) -> MarkdownCollection
-	# EXTEND: map → key = bullet label or file stem
-keep_extract(result, text)
-
-markdown_collection(label: str | None)
-	# -> Markdown.from_label
-	# -> MarkdownCollection.coerce
+keep_extract(result) -> None
+	# stamps this collection's markdown onto result
+attach(instance: Any, name: str | None = None) -> None
+	# the owner keeps this same collection, so later reads return it
+markdown_collection(fn | label: str | None) -> property
+	# exported as markdownCollection
+	# getter -> Markdown.from_label
+	# getter -> YamlFields.assign_yaml on the owner and the result
+	# getter -> MarkdownCollection.coerce
+	# getter -> result.attach(owner, name)
 	# never Markdown.coerce
 
-## Guidance (caller delta)
+## Guidance (caller)
 
 rules: RulesCollection
 	# @markdownCollection("shared rules")
 	# @rules lives on this member
 	# glob and matches live on RulesCollection — not MarkdownCollection
-inject_rules
-	# -> rules.matches
-	# -> rules.markdown
 instructions
 	# -> rules.markdown
 	# never rules_markdown
+
+## RulesCollection (caller)
+
+inject_rules(payload: HookPayload)
+	# -> matches
+	# -> markdown

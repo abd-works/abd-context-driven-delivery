@@ -1,12 +1,12 @@
 # status
-fidelity: explore
+fidelity: mockup
 scope: Story Demo shell — Play dual runner + Interactive (Manage Character Sheet)
 primary: this file — sole Story Demo sketch (ce → bdd → ux under each theme)
 
 flow:
   status: in-progress
   recommend: proceed
-  next: explore
+  next: mockup
   note: browser-safe create{Story}Story exports (story-test-core + soft-assert); mount loads them for Play.
   open: []
   done:
@@ -26,7 +26,7 @@ flow:
 // Locks: Play = dual runner + expose paint; Interactive = whenStep.fn via story_steps (not helper.given*);
 //   story owns domain; Stories mode as is (create{Story}Story(mode))
 // Modules: PlayDualRunner + StoryDemo* ⊂ UX story-demo/ (runner in play-dual-runner/)
-//   (vanilla Page / Control stay product UX — no story_steps / bound_field)
+//   (plain Screen / Control stay product UX — a Control may carry bound_field; only StoryDemoControl has story_steps)
 
 =========
 # theme: Story demo HTML surface  (module)
@@ -90,7 +90,7 @@ StoryDemoPage                         // one HTML document (mockup+spec channel)
   show(value)
   emphasize() / clearEmphasis()
   tint()
-  // vanilla Control has no bound_field / story_steps / emphasize / tint
+  // plain Control has no story_steps / emphasize / tint
 ---
 ## bdd:
 a story returned from collect
@@ -186,7 +186,7 @@ I{Type}
 
   ----
  Story
-  // create{Story}Story(mode) — same as Stories exploration/engineering
+  // create{Story}Story(mode) — same as the Stories scenarios and acceptance_tests fidelities
   name
   declare(mode)
     -> scenario(...) { given / when / then / expose }
@@ -414,10 +414,9 @@ Play next (explorer) always advances `steps[index]` — not “the bound control
 
 ## Where examples live
 
-Product types and concrete factories: `sandbox/play-core-mechanics` / `sandbox/character`.
+Product types and concrete factories: `sandbox/play-core-mechanics` / `sandbox/character` (a local sandbox, not in this repository).
 Domain / example outcomes stay in Create Character (etc.) story tests — page behaviors assert “shows snapshot,” not handbook ranks.
 HTML page imports `story-test-core` only (not `node:test`).
-Locks / connected notes: `cdd_guidance/practices/cdd/.context/connected-practices.md`
 Invariants (prose): `ux-context.md` · Control model: `ux-model-sketch.md`
 
 ## log
