@@ -8,7 +8,7 @@ Not a second Markdown. Collection shape lives on *MarkdownCollection*. *Markdown
 
 ## Language companion
 
-*`@markdownCollection`* locates through *Markdown.from_label*, then *MarkdownCollection.coerce*. The collection keeps **markdown** as the original extract. One file is that file. Never rebuild from `formatted()`.
+*`@markdownCollection`* locates through *Markdown.from_label*, then *MarkdownCollection.from_section*. The collection keeps **markdown** as the original extract. One file is that file. Never rebuild from `formatted()`.
 
 *MarkdownCollection* owns list vs map. A **list** return type iterates section bullets or files in the folder. A **map** return type keys each entry by the bullet label or the file stem. A return type with *from_markdown* (including *RulesCollection*) is that builder, then **markdown** is stamped.
 
@@ -36,21 +36,16 @@ from_markdown(text: str, parent: Any = None) -> MarkdownCollection
 	-> MarkdownText.section_child_blocks
 	-> child
 	-> YamlFields.assign_yaml
-coerce(markdown: Markdown, return_type, parent: Any = None) -> Any
-	# list → from_list
-	# return_type.from_markdown → that builder, then keep_extract
+from_section(markdown: Markdown, return_type, parent: Any = None) -> Any
+	# list → from_markdown of the extracted section
+	# return_type.from_markdown → that builder (Markdown.built_by), keeping the section's text on the result
 	# else from_markdown
-from_list(markdown: Markdown) -> MarkdownCollection
-	# EXTEND: one entry per section bullet or folder file
-keep_extract(result) -> None
-	# stamps this collection's markdown onto result
 attach(instance: Any, name: str | None = None) -> None
 	# the owner keeps this same collection, so later reads return it
 markdown_collection(fn | label: str | None) -> property
 	# exported as markdownCollection
 	# getter -> Markdown.from_label
-	# getter -> YamlFields.assign_yaml on the owner and the result
-	# getter -> MarkdownCollection.coerce
+	# getter -> Markdown.read_into(return_type, MarkdownCollection.from_section)
 	# getter -> result.attach(owner, name)
 	# never Markdown.coerce
 

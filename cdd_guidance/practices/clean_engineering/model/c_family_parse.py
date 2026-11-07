@@ -20,7 +20,8 @@ from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_l
 _CLASS_RE = re.compile(
     r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?class\s+(\w+)",
 )
-_EXTENDS_RE = re.compile(r"\bextends\s+([\w.]+)")
+# A class's heritage clause: `extends Basket implements Auditable, ICart`.
+_HERITAGE_RE = re.compile(r"\b(?:extends|implements)\s+(.+?)(?=\s+implements\b|$)", re.S)
 _METHOD_RE = re.compile(
     r"(?:public|private|protected|static|async|override)?\s*"
     r"(?:public|private|protected|static|async|override)?\s*"
@@ -114,13 +115,23 @@ class CFamilyParse:
             )
             oclass.stereotypes = head.stereotypes
             oclass.end_line = self._line_at(self._text, body_start + len(body))
-            oclass.bases = _EXTENDS_RE.findall(self._text[match.end() : body_start])
+            oclass.bases = self._bases(self._text[match.end() : body_start]) + head.implemented
             oclass.operations = self._methods_from_body(body, match.group(1))
             self._prepend_constructors(oclass, body)
             oclass.properties = self._fields_from_body(oclass, body)
             self._derive_member_relationships(oclass)
             module.classes.append(oclass)
             class_order += 1
+
+    def _bases(self, heritage: str) -> list[str]:
+        """Every class the heritage clause between the name and the body extends or implements."""
+        clause = heritage.strip().rstrip("{").strip()
+        return [
+            base.strip()
+            for names in _HERITAGE_RE.findall(clause)
+            for base in split_top_level(names)
+            if base.strip()
+        ]
 
     def _prepend_constructors(self, oclass: OoadClass, body: str) -> None:
         for ctor in _CTOR_RE.finditer(body):

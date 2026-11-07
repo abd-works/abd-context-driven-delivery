@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from contextlib import contextmanager
+from itertools import islice
 from pathlib import Path
 from typing import Iterator
 
@@ -28,16 +29,6 @@ _FILE_LANGUAGES = (((".ts", ".tsx"), "typescript"), ((".js", ".jsx", ".mjs"), "j
 _LOAD_FILE_BUDGET = 40
 _BUDGETED_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx"}
 
-def _under_any(file: str | None, prefixes: list[str]) -> bool:
-    """True when ``file`` is one of the prefixes or sits under one."""
-    location = (file or "").replace("\\", "/").strip("/")
-    for prefix in prefixes:
-        folder = str(prefix).replace("\\", "/").strip("/")
-        if folder and (location == folder or location.startswith(folder + "/")):
-            return True
-    return False
-
-
 class GraphFailure(Exception):
     def __init__(self, query: str, detail: str) -> None:
         super().__init__(f"{query}\n{detail}")
@@ -46,7 +37,7 @@ class GraphFailure(Exception):
 
 
 # Where each edge kind's group sits under a node in the explorer tree, lowest first. A practice orders its groups
-# by these numbers, and graph.json saves them on each edge, so every loader and model reads them from here.
+# by these numbers, and graph.json saves them on each edge, so every loader and model reads them through EdgeType.
 EDGE_ORDER: dict[str, int] = {
     "decomposedInto": 1,
     "relative": 1,
@@ -93,18 +84,20 @@ _DIRECT_KIND_ORDER = 2
 _RELATIONSHIP_KIND_ORDER = 7
 
 
-def edge_order(kind: str, display: Display = "direct") -> int:
-    """Where this kind's group sits under a node in the explorer tree."""
-    if kind in EDGE_ORDER:
-        return EDGE_ORDER[kind]
-    return _DIRECT_KIND_ORDER if display == "direct" else _RELATIONSHIP_KIND_ORDER
-
-
 class EdgeType:
+    """One kind of edge: its name, where its group sits under a node in the explorer tree, and whether its nodes are
+    shown as children (``direct``) or under a child named for the kind (``grouped``, ``relationship``)."""
+
     def __init__(self, kind: str, order: int, display: Display) -> None:
         self.kind = kind
         self.order = order
         self.display = display
+
+    @classmethod
+    def from_kind(cls, kind: str, display: Display = "direct") -> EdgeType:
+        """The edge type of kind, at the place ``EDGE_ORDER`` gives it, or after its display's other kinds."""
+        default = _DIRECT_KIND_ORDER if display == "direct" else _RELATIONSHIP_KIND_ORDER
+        return cls(kind, EDGE_ORDER.get(kind, default), display)
 
 
 class Edge:
@@ -128,6 +121,46 @@ class Call:
         self.line = line
         self.order = order
         self.operation = operation
+
+
+class _BracketDepth:
+    """How deep a run of source lines is inside parentheses, braces, and brackets, and the string it is inside, if any,
+    read one line after another; brackets inside a string do not count."""
+
+    _QUOTES = "\"'`"
+    _OPENING = {"(": ("parens", 1), ")": ("parens", -1), "{": ("braces", 1), "}": ("braces", -1)}
+
+    def __init__(self) -> None:
+        self.parens = 0
+        self.braces = 0
+        self.brackets = 0
+        self.quote = ""
+        self.opened_call = False
+
+    @property
+    def closed(self) -> bool:
+        return self.parens <= 0 and self.braces <= 0
+
+    def read(self, line: str) -> None:
+        self.brackets += line.count("[") - line.count("]")
+        index = 0
+        while index < len(line):
+            index += self._read_character(line, index)
+
+    def _read_character(self, line: str, index: int) -> int:
+        """Read the character at index and answer how many characters it took: two for an escape inside a string."""
+        char = line[index]
+        if self.quote:
+            if char == "\\":
+                return 2
+            self.quote = "" if char == self.quote else self.quote
+        elif char in self._QUOTES:
+            self.quote = char
+        elif char in self._OPENING:
+            name, step = self._OPENING[char]
+            setattr(self, name, getattr(self, name) + step)
+            self.opened_call = self.opened_call or char == "("
+        return 1
 
 
 class Source:
@@ -225,34 +258,27 @@ class Source:
         for path in sorted(root_path.rglob("*.ts")):
             if any(part in {"node_modules", "dist", "build"} for part in path.parts):
                 continue
-            text = path.read_text(encoding="utf-8")
-            lines = text.splitlines()
-            for index, line in enumerate(lines, start=1):
-                if function.search(line):
-                    end = self._call_end(lines, index - 1)
-                elif constant.search(line):
-                    end = self._declaration_end(lines, index - 1)
-                else:
-                    continue
-                self.file = path.relative_to(root_path).as_posix()
-                self.root = root
-                self.start_line = index
-                self.end_line = end
-                self._text = None
-                return
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for index, line in enumerate(lines):
+                if function.search(line) or constant.search(line):
+                    end = self._call_end(lines, index) if function.search(line) else self._declaration_end(lines, index)
+                    self._point_at(path.relative_to(root_path).as_posix(), root, index + 1, end)
+                    return
+
+    def _point_at(self, file: str, root: str, start_line: int, end_line: int) -> None:
+        self.file = file
+        self.root = root
+        self.start_line = start_line
+        self.end_line = end_line
+        self._text = None
 
     def _declaration_end(self, lines: list[str], start: int) -> int:
         """The line a declaration ends on: the first from start where its braces, brackets and parentheses are all
         closed, so a multi-line object or list is read whole."""
-        paren = 0
-        brace = 0
-        bracket = 0
-        quote = ""
+        depth = _BracketDepth()
         for index in range(start, len(lines)):
-            line = lines[index]
-            paren, brace, quote, _ = self._scan_call(line, paren, brace, quote)
-            bracket += line.count("[") - line.count("]")
-            if paren <= 0 and brace <= 0 and bracket <= 0 and not quote:
+            depth.read(lines[index])
+            if depth.closed and depth.brackets <= 0 and not depth.quote:
                 return index + 1
         return len(lines)
 
@@ -281,41 +307,14 @@ class Source:
         return full if full.exists() else None
 
     def _call_end(self, lines: list[str], start: int) -> int:
-        paren = 0
-        brace = 0
-        quote = ""
-        opened = False
+        """The line the call or block that opens at start closes on: the first where its parentheses and braces are
+        all closed again after one has opened."""
+        depth = _BracketDepth()
         for index in range(start, len(lines)):
-            paren, brace, quote, saw_paren = self._scan_call(lines[index], paren, brace, quote)
-            opened = opened or saw_paren
-            if opened and paren <= 0 and brace <= 0:
+            depth.read(lines[index])
+            if depth.opened_call and depth.closed:
                 return index + 1
         return max(self.end_line, start + 1)
-
-    def _scan_call(self, line: str, paren: int, brace: int, quote: str) -> tuple[int, int, str, bool]:
-        saw_paren = False
-        index = 0
-        while index < len(line):
-            char = line[index]
-            if quote:
-                if char == "\\":
-                    index += 2
-                    continue
-                if char == quote:
-                    quote = ""
-            elif char in "\"'`":
-                quote = char
-            elif char == "(":
-                paren += 1
-                saw_paren = True
-            elif char == ")":
-                paren -= 1
-            elif char == "{":
-                brace += 1
-            elif char == "}":
-                brace -= 1
-            index += 1
-        return paren, brace, quote, saw_paren
 
     def _read(self) -> str:
         lines = self._file_lines()
@@ -467,10 +466,12 @@ class Filter:
         path(s). The practices and node types chosen here hold where the request names none; chosen violations and
         relationships hold over the request's."""
         narrowed = Filter(self.graph)
-        narrowed.practices = _listed(request, "practices", "practice") if _names(request, "practices", "practice") else (self._scope() if self.practices else [])
-        narrowed.node_types = _listed(request, "types", "type") if _names(request, "types", "type") else list(self.node_types)
+        practices = self._listed(request, "practices", "practice")
+        narrowed.practices = practices if practices is not None else (self._scope() if self.practices else [])
+        types = self._listed(request, "types", "type")
+        narrowed.node_types = types if types is not None else list(self.node_types)
         narrowed.name = request.get("name") or ""
-        narrowed.paths = _listed(request, "paths", "path")
+        narrowed.paths = self._listed(request, "paths", "path") or []
         narrowed.violations = self.violations or bool(request.get("violations"))
         narrowed.rules = list(self.rules) if self.violations else list(request.get("rules") or [])
         narrowed.relationships = list(self.relationships) if self.relationships_selected else list(request.get("relationships") or [])
@@ -492,7 +493,19 @@ class Filter:
             return False
         if self.relationships and not self._on_relationship(node):
             return False
-        return not self.paths or _under_any(node.source.file, self.paths)
+        return not self.paths or self._under_paths(node.source.file)
+
+    def _listed(self, request: dict, many: str, one: str) -> list[str] | None:
+        """A request key that takes a list or a single value, such as ``types`` or ``type``; none when it names neither."""
+        if many not in request and one not in request:
+            return None
+        return list(request.get(many) or ([request[one]] if request.get(one) else []))
+
+    def _under_paths(self, file: str | None) -> bool:
+        """True when ``file`` is one of the chosen paths or sits under one."""
+        location = (file or "").replace("\\", "/").strip("/")
+        folders = [str(prefix).replace("\\", "/").strip("/") for prefix in self.paths]
+        return any(folder and (location == folder or location.startswith(folder + "/")) for folder in folders)
 
     def _fails_selected_rule(self, node: Node) -> bool:
         hits = node.failed_rules
@@ -519,29 +532,6 @@ class Filter:
                 if edge.parent is node or edge.child is node:
                     return True
         return False
-
-
-def _within_load_budget(folder: Path) -> bool:
-    """Whether folder holds no more source files than the load budget; a folder not yet there holds none."""
-    if not folder.is_dir():
-        return True
-    count = 0
-    for item in folder.rglob("*"):
-        if item.suffix.lower() not in _BUDGETED_SUFFIXES:
-            continue
-        count += 1
-        if count > _LOAD_FILE_BUDGET:
-            return False
-    return True
-
-
-def _names(request: dict, many: str, one: str) -> bool:
-    return many in request or one in request
-
-
-def _listed(request: dict, many: str, one: str) -> list[str]:
-    """A request key that takes a list or a single value, such as ``types`` or ``type``."""
-    return list(request.get(many) or ([request[one]] if request.get(one) else []))
 
 
 class Node:
@@ -874,9 +864,10 @@ class PracticeGraph:
             parent = self.registered(kept.parent)
             child = self.registered(kept.child)
             if parent is not None and child is not None:
-                parent.practice.record(kept.fact, parent, child)
+                edge_type = EdgeType(kept.kind, kept.order, kept.display)
+                parent.practice.record(edge_type, parent, child)
                 if parent.practice is not child.practice:
-                    child.practice.record(kept.fact, child, parent)
+                    child.practice.record(edge_type, child, parent)
         for violation in saved.violations:
             node = self.registered(violation.node_id)
             if node is not None:
@@ -896,17 +887,17 @@ class PracticeGraph:
 
     def link(self, kind: str, parent: Node, child: Node, display: Display = "direct") -> None:
         """Record an edge of kind from parent to child on this practice, in the place its kind takes in the tree."""
-        self.record({"kind": kind, "order": edge_order(kind, display), "display": display}, parent, child)
+        self.record(EdgeType.from_kind(kind, display), parent, child)
 
-    def record(self, fact: dict, parent: Node, child: Node) -> None:
-        kind = fact["kind"]
+    def record(self, edge_type: EdgeType, parent: Node, child: Node) -> None:
+        """Record an edge of edge_type from parent to child, once; the first edge of a kind sets where its kind sits."""
+        kind = edge_type.kind
         list_ = self.edges.setdefault(kind, [])
         pairs = self._pairs_of(kind, list_)
         if (id(parent), id(child)) in pairs:
             return
-        if kind not in self.edge_types:
-            self.edge_types[kind] = EdgeType(kind, fact["order"], fact["display"])
-        list_.append(Edge(kind, fact["order"], fact["display"], parent, child))
+        self.edge_types.setdefault(kind, edge_type)
+        list_.append(Edge(kind, edge_type.order, edge_type.display, parent, child))
         pairs.add((id(parent), id(child)))
         self._edge_pairs[kind] = ((id(list_), len(list_)), pairs)
 
@@ -1018,11 +1009,18 @@ class Graph:
         once."""
         graph = cls()
         root = Path(source_root)
-        if _within_load_budget(root):
+        if graph._within_load_budget(root):
             graph.load_working_copy(str(folder), {name: str(root)})
         else:
             graph._open_unread(Path(folder), name, root)
         return graph
+
+    def _within_load_budget(self, folder: Path) -> bool:
+        """Whether folder holds no more source files than the load budget; a folder not yet there holds none."""
+        if not folder.is_dir():
+            return True
+        found = (item for item in folder.rglob("*") if item.suffix.lower() in _BUDGETED_SUFFIXES)
+        return len(list(islice(found, _LOAD_FILE_BUDGET + 1))) <= _LOAD_FILE_BUDGET
 
     def _open_unread(self, folder: Path, name: str, source_root: Path) -> None:
         self._folder = folder
@@ -1289,12 +1287,12 @@ class Graph:
         node = self._node(node_id)
         if node is None:
             return None
-        return NodeSource(node, members=self._members())
+        return NodeSource(node, members=self._source_members())
 
     def _node(self, node_id: str) -> Node | None:
         return next((practice.by_id[node_id] for practice in self.practices.values() if node_id in practice.by_id), None)
 
-    def _members(self) -> list[NodeSource]:
+    def _source_members(self) -> list[NodeSource]:
         """Every class, operation, and property the loaded practices hold, each with the class it belongs to."""
         declared = [GraphPractices.named(name) for name in self.practices]
         classes = {node_type for practice in declared for node_type in practice.class_types}

@@ -38,7 +38,7 @@ function accountRepositoryFor(credentials: AccountCredentials) {
   return credentials._repository;
 }
 """
-        model = TypeScriptCleanEngineeringModel.parse(source)
+        model = TypeScriptCleanEngineeringModel().parse(source)
         validation = _class(model, "ValidationCode")
         module_holder = _class(model, "_module")
         expect([op.name for op in validation.operations]).to(equal(["constructor"]))
@@ -56,7 +56,7 @@ export const ticketOn = (page: BoardPage, name: string): TicketClient => {
 
 const slugsOf = (tile: Tile): string => tile.slugs.join(' ')
 """
-        module_holder = _class(TypeScriptCleanEngineeringModel.parse(source), "_module")
+        module_holder = _class(TypeScriptCleanEngineeringModel().parse(source), "_module")
         expect([(op.name, op.return_type) for op in module_holder.operations]).to(equal([("ticketOn", "TicketClient"), ("slugsOf", "string")]))
 
 
@@ -72,7 +72,7 @@ export class BoardReader {
   }
 }
 """
-        reader = _class(TypeScriptCleanEngineeringModel.parse(source), "BoardReader")
+        reader = _class(TypeScriptCleanEngineeringModel().parse(source), "BoardReader")
         expect([op.name for op in reader.operations]).to(equal(["constructor", "refresh"]))
 
     with it("should keep the method after one whose body holds a loop"):
@@ -87,5 +87,5 @@ export class BoardReader {
   }
 }
 """
-        reader = _class(TypeScriptCleanEngineeringModel.parse(source), "BoardReader")
+        reader = _class(TypeScriptCleanEngineeringModel().parse(source), "BoardReader")
         expect([op.name for op in reader.operations]).to(equal(["apply", "refreshPressed"]))

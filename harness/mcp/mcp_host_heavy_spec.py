@@ -1,4 +1,4 @@
-"""BDD spec for MCP host JSON Schema binding of Python parameter types."""
+"""BDD spec for MCP host JSON Schema of Python parameter types."""
 import json
 import os
 import re

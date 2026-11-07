@@ -31,14 +31,11 @@ class McpSanity:
             )
         working: list[dict[str, str]] = []
         broken: list[dict[str, str]] = []
-        failed = {item.tool for item in host._runtime.exceptions}
-        for item in host._runtime.exceptions:
-            broken.append({"tool": item.tool, "error": item.reason})
-        names = [
-            "cdd.ping",
-            *sorted(host._runtime.tools),
-            *sorted(host._runtime.prompts),
-        ]
+        server = host.checkout_server
+        failed = {item["tool"] for item in server.skipped}
+        for item in server.skipped:
+            broken.append({"tool": item["tool"], "error": item["reason"]})
+        names = ["cdd.ping", *sorted(server.tools), *sorted(server.prompts)]
         for name in names:
             if name in failed:
                 continue

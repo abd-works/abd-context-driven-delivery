@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from harness.graph.saved_graph import SavedGraph
 from harness.graph.violation import Violation
 from harness.installation.destination import data_of
 
@@ -22,10 +23,10 @@ def load_graph_json_paths(graph: bool | str | list[str] | None) -> list[Path]:
 
 def violations_from_graph_json_file(path: Path, practices: list[str] | None = None) -> list[Violation]:
     """The violations in a saved graph document or in a ``graph.return_nodes`` node list; with practices, only those
-    found by those practices."""
+    found by those practices. A saved graph in a shape this code no longer writes raises SavedGraphOutdated."""
     raw = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(raw, dict) and isinstance(raw.get("practices"), dict):
-        return _violations_from_saved_graph(raw["practices"], practices)
+        return SavedGraph.from_document(raw, str(path)).violations(practices)
     if not isinstance(raw, list):
         raise ValueError(f"graph JSON must be a list of nodes or a saved graph document: {path}")
     return [violation for node in raw if not practices or node.get("practice") in practices for violation in _violations_from_node(node)]
@@ -51,18 +52,6 @@ def _violating_node(violation: Violation) -> dict[str, Any]:
     """One violation as the node it was found on, in the shape ``graph.return_nodes`` answers with."""
     rule = {"name": violation.rule, "status": "violating", "violations": [data_of(violation)]}
     return {"practice": violation.practice, "node_id": violation.node_id, "rules": [rule]}
-
-
-def _violations_from_saved_graph(documents: dict[str, Any], practices: list[str] | None) -> list[Violation]:
-    """A saved practice keeps its nodes and its violations; a violation saved before it kept its own place sits at
-    its node's."""
-    violations: list[Violation] = []
-    for name, document in documents.items():
-        if practices and name not in practices:
-            continue
-        nodes = {node[0]: node for node in (document or {}).get("nodes") or [] if node}
-        violations.extend(Violation.from_saved(name, saved, nodes) for saved in (document or {}).get("rules") or [])
-    return violations
 
 
 def _violations_from_node(node: dict[str, Any]) -> list[Violation]:

@@ -34,7 +34,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass
+from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import (
     GROUP_FILL_COLORS,
     SMALLEST_PORT_SPACING,
@@ -44,7 +45,6 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import 
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     ContainmentForest,
-    DiagramClass,
     DiagramCleanEngineeringModel,
     is_modules_view,
     module_tab_label,
@@ -126,8 +126,8 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
     def parse(self, text: str) -> 'DrawIOCleanEngineeringModel':
         try:
             root_el = ET.fromstring(text)
-        except ET.ParseError:
-            return DrawIOCleanEngineeringModel(name='', sequential_order=1)
+        except ET.ParseError as error:
+            raise UnreadableSource(f'draw.io diagram is not valid XML: {error}') from error
         mxcells = list(root_el.iter('mxCell'))
         if _looks_like_modules_diagram(mxcells):
             return _parse_modules(mxcells)
@@ -206,13 +206,13 @@ class _ClassDiagramReader:
     def read_single_page(self, mxcells: List[ET.Element]) -> DrawIOCleanEngineeringModel:
         """One page: each card names its module in its style."""
         modules: Dict[str, DrawIOModule] = {}
-        for cell, name, props, ops in self._class_cards(mxcells):
-            self._names_by_cell[cell.get('id', '')] = _plain_class_name(name) or name
+        for cell, oclass in self._class_cards(mxcells):
+            self._names_by_cell[cell.get('id', '')] = oclass.name
             if 'dashed=1' in cell.get('style', ''):
                 continue
             module_name = _style_module(cell.get('style', ''))
             module = modules.setdefault(module_name, DrawIOModule(name=module_name, sequential_order=len(modules) + 1))
-            oclass = DrawIOClass(name=name, sequential_order=len(self._classes_by_cell) + 1, properties=props, operations=ops)
+            oclass.sequential_order = len(self._classes_by_cell) + 1
             module.classes.append(oclass)
             self._classes_by_cell[cell.get('id', '')] = oclass
         self.model.modules.extend(modules.values())
@@ -231,24 +231,27 @@ class _ClassDiagramReader:
         return self.model
 
     def _read_page_cards(self, page_cells: List[ET.Element], module: DrawIOModule) -> None:
-        for cell, name, props, ops in self._class_cards(page_cells):
-            self._names_by_cell[cell.get('id', '')] = name
-            plain = _plain_class_name(name)
-            if 'dashed=1' in cell.get('style', '') or plain in self._seen_names:
+        for cell, oclass in self._class_cards(page_cells):
+            self._names_by_cell[cell.get('id', '')] = oclass.name
+            if 'dashed=1' in cell.get('style', '') or oclass.name in self._seen_names:
                 continue
-            self._seen_names.add(plain)
-            oclass = DrawIOClass(name=name, sequential_order=len(module.classes) + 1, properties=props, operations=ops)
+            self._seen_names.add(oclass.name)
+            oclass.sequential_order = len(module.classes) + 1
             module.classes.append(oclass)
             self._classes_by_cell[cell.get('id', '')] = oclass
 
-    def _class_cards(self, cells: List[ET.Element]) -> List[Tuple[ET.Element, str, List[Property], List[Operation]]]:
+    def _class_cards(self, cells: List[ET.Element]) -> List[Tuple[ET.Element, DrawIOClass]]:
+        """Each class card on the page, with the class it shows; the caller numbers the classes it keeps."""
         cards = []
         for cell in cells:
             if cell.get('vertex') != '1':
                 continue
-            name, props, ops = _class_card_members(cell.get('value', ''))
-            if name:
-                cards.append((cell, name, props, ops))
+            name, stereotypes, props, ops = _class_card_members(cell.get('value', ''))
+            if not name:
+                continue
+            oclass = DrawIOClass(name=_plain_class_name(name), sequential_order=1, properties=props, operations=ops)
+            oclass.stereotypes = stereotypes + [item for item in marks_in(name) if item not in stereotypes]
+            cards.append((cell, oclass))
         return cards
 
     def _read_arrows(self, cells: List[ET.Element]) -> None:
@@ -260,7 +263,10 @@ class _ClassDiagramReader:
             target_id = cell.get('target', '')
             target = self._classes_by_cell.get(target_id)
             target_name = target.name if target is not None else self._names_by_cell.get(target_id, target_id)
-            _mark_relationship_kind(source, target_name, _classify_edge(cell.get('style', '')))
+            kind = _classify_edge(cell.get('style', ''))
+            if kind == 'inheritance' and target_name not in source.bases:
+                source.bases.append(target_name)
+            _mark_relationship_kind(source, target_name, kind)
         for oclass in self._classes_by_cell.values():
             for prop in oclass.properties:
                 prop.derive_relationship()
@@ -501,8 +507,7 @@ class _ClassDiagramWriter:
         self.arrow_labels[(source, target)] = f'{named}, {prop.name}' if named else prop.name
 
     def _base_names(self, oclass: OoadClass) -> List[str]:
-        named = DiagramClass(name=oclass.name, sequential_order=1).extends_base_name()
-        return [named] if named else list(oclass.bases)
+        return list(oclass.bases)
 
     def _write_single_page(self, mxfile: ET.Element) -> None:
         graph = _add_diagram_page(mxfile, 'CleanEngineering Model', 'CleanEngineering-model')
@@ -750,7 +755,7 @@ def _vertex_diagram_kind(cell: ET.Element) -> Optional[str]:
         return None
     if _is_module_style(style):
         return 'module'
-    name, props, ops = _class_card_members(value)
+    name, _stereotypes, props, ops = _class_card_members(value)
     if name and (props or ops or 'hr size=' in value.lower()):
         return 'class'
     if name and ('\u2022' in html.unescape(value) or '-' in html.unescape(value)):
@@ -763,7 +768,8 @@ def _slug(name: str) -> str:
 
 
 def _plain_class_name(name: str) -> str:
-    return DiagramClass(name=name, sequential_order=1).display_name()
+    """A card's name without bold marks or `<<Mark>>`s, as diagrams drawn by hand sometimes write it."""
+    return without_marks(name.replace('*', ''))
 
 
 def _is_module_style(style: str) -> bool:
@@ -814,22 +820,24 @@ def _edge_waypoints(edge: ET.Element) -> List[Tuple[int, int]]:
     return [(int(float(point.get('x', 0))), int(float(point.get('y', 0)))) for point in edge.iter('mxPoint')]
 
 
-def _class_card_members(value: str) -> Tuple[Optional[str], List[Property], List[Operation]]:
-    """The class name, properties, and operations a UML class card shows; no name for a cell that is not a class card."""
+def _class_card_members(value: str) -> Tuple[Optional[str], List[str], List[Property], List[Operation]]:
+    """The class name, stereotypes, properties, and operations a UML class card shows; no name for a cell that is not
+    a class card."""
     text = html.unescape(value)
     if ('\u2022' in text or '-' in text) and 'hr size="1"' not in text.lower() and ('<hr size=' not in text.lower()):
         if re.search('<i[^>]*>', text, re.IGNORECASE):
-            return (None, [], [])
+            return (None, [], [], [])
     m = re.search('<b[^>]*>([^<]+)</b>', text)
     name = m.group(1).strip() if m else None
     if not name:
-        return (None, [], [])
+        return (None, [], [], [])
     sections = re.split('<hr\\s+size="1"\\s*/?>', text, flags=re.IGNORECASE)
+    stereotypes = marks_in(sections[0])
     if len(sections) < 3:
-        return (name, [], [])
+        return (name, stereotypes, [], [])
     props = [_card_property(line) for line in _card_lines(sections[1])]
     ops = [operation for operation in (_card_operation(line) for line in _card_lines(sections[2])) if operation is not None]
-    return (name, props, ops)
+    return (name, stereotypes, props, ops)
 
 
 def _card_lines(section: str) -> List[str]:

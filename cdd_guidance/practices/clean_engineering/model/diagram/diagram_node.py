@@ -1,7 +1,6 @@
 """Placed-node contract: geometry, height, keep-or-place, ordering. Channel-agnostic."""
 from __future__ import annotations
 
-import re
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
@@ -52,22 +51,6 @@ class DiagramClass(OoadClass, DiagramNode):
     def height(self) -> int:
         n_content = len(self.properties) + len(self.operations)
         return max(CELL_MIN_HEIGHT, 30 + n_content * LINE_HEIGHT + 2 * SECTION_PAD)
-
-    def display_name(self) -> str:
-        n = re.sub('\\*+', '', self.name)
-        n = re.sub('<<[^>]+>>', '', n)
-        n = re.sub('\\s+extends\\s+.+$', '', n, flags=re.IGNORECASE)
-        return n.strip()
-
-    def tactical_stereotypes(self) -> list[str]:
-        n = re.sub('\\*+', '', self.name)
-        return [s.strip() for s in re.findall('<<[^>]+>>', n)]
-
-    def extends_base_name(self) -> Optional[str]:
-        n = re.sub('\\*+', '', self.name)
-        n = re.sub('<<[^>]+>>', '', n)
-        m = re.search('\\bextends\\s+([A-Z]\\w*)', n, flags=re.IGNORECASE)
-        return m.group(1) if m else None
 
 
 class ImportedClass(DiagramClass):

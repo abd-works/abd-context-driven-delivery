@@ -49,6 +49,8 @@ class _CodeReading:
         self.graph: Graph = practice.graph
         self.root = Path(practice.source_root)
         self.class_names: set[str] = set()
+        # Each source file its language could not read, with the reason; the source-parses rule reports them.
+        self.unreadable: dict[Path, str] = {}
 
     def read(self) -> None:
         self.graph.report_progress("clean_engineering · folders")
@@ -65,7 +67,15 @@ class _CodeReading:
                 folders[owner].dependencies.extend(module.dependencies)
             for cls in module.classes:
                 self._class(text, relative, folders.get(owner) or self.practice.root_node, cls)
+        self._record_unreadable(roles, folders)
         self._link_folders(roles, folders)
+
+    def _record_unreadable(self, roles: dict[str, str], folders: dict) -> None:
+        """Each file that did not parse, on the folder that holds it, so validate reports it instead of skipping it."""
+        for file, reason in self.unreadable.items():
+            relative = file.relative_to(self.root).as_posix()
+            owner = folders.get(_nearest(str(Path(relative).parent).replace("\\", "/"), roles)) or self.practice.root_node
+            owner.set_fact("unreadable_sources", (owner.get_fact("unreadable_sources") or []) + [f"{relative}: {reason}"])
 
     def _folder_node(self, rel: str, kind: str):
         from cdd_guidance.practices.clean_engineering.model.base_class_model import Module
@@ -86,13 +96,16 @@ class _CodeReading:
                 self.practice.link("belongsTo", folder, parent, "relationship")
 
     def _parsed_modules(self, files: list[Path]) -> dict[Path, tuple]:
-        """Each source file's parsed module and text, for the files that parse."""
+        """Each source file's parsed module and text. A file that does not parse is kept in ``unreadable``."""
+        from cdd_guidance.practices.clean_engineering.model.base_class_model import UnreadableSource
+
         modules: dict[Path, tuple] = {}
         for index, file in enumerate(files, start=1):
             self.graph.report_progress(f"clean_engineering · classes · {index}/{len(files)} · {file.relative_to(self.root).as_posix()}")
-            module, text = _parsed_module(file, self.root)
-            if module is not None:
-                modules[file] = (module, text)
+            try:
+                modules[file] = _parsed_module(file, self.root)
+            except UnreadableSource as unreadable:
+                self.unreadable[file] = str(unreadable)
         return modules
 
     def _unparsed_declaring_files(self, files: list[Path]) -> list[Path]:
@@ -235,14 +248,15 @@ class _ModelReading:
 
 def _parsed_module(file: Path, root: Path):
     """The language model's module for one source file, with its source facts loaded, and the file text. A file
-    without classes still gets its language's module so its imports are recorded."""
-    from cdd_guidance.practices.clean_engineering.model.base_class_model import Module
+    without classes still gets its language's module so its imports are recorded. A file that cannot be read or
+    parsed raises UnreadableSource."""
+    from cdd_guidance.practices.clean_engineering.model.base_class_model import Module, UnreadableSource
 
     try:
         text = file.read_text(encoding="utf-8")
-        model = _language_model(file).parse(text)
-    except (OSError, UnicodeDecodeError, SyntaxError, ValueError):
-        return None, ""
+    except (OSError, UnicodeDecodeError) as error:
+        raise UnreadableSource(f"cannot be read: {error}") from error
+    model = _language_model(file).parse(text)
     module = model.modules[0] if model.modules else model.load_module(Module(name="", sequential_order=1))
     module.load_source_facts(text, file, root)
     return module, text
@@ -258,7 +272,7 @@ def _language_model(file: Path):
         return PythonCleanEngineeringModel()
     if suffix in {".js", ".jsx"}:
         return JavaScriptCleanEngineeringModel()
-    return TypeScriptCleanEngineeringModel
+    return TypeScriptCleanEngineeringModel()
 
 
 def _code_folders(root: Path, scope: list[Path] | None = None) -> dict[str, str]:

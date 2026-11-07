@@ -11,7 +11,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from harness.installer.claude_plugins import ClaudePlugins
-from harness.installer.installer import Installer
+from harness.installer.installer import Installer, ToolsetInstallFailed
 
 
 class _ScriptedClaude(ClaudePlugins):
@@ -616,7 +616,7 @@ with description("an agent toolset") as self:
                                 ["no.such.module:Nope"]
                             )
 
-                        expect(run).to(raise_error(RuntimeError, "install failed for no.such.module:Nope"))
+                        expect(run).to(raise_error(ToolsetInstallFailed))
                     finally:
                         shutil.rmtree(tree, ignore_errors=True)
 
@@ -885,7 +885,7 @@ with description("a practice guidance class") as self:
 
                 writer = FileInstallation("Cursor", self.tree, "skill", mcp_mode=True)
                 tool = type("Tool", (), {"docstring": "overview"})()
-                expect(writer._body_for("skill", tool, None)).to(equal(""))
+                expect(writer._body_for(tool)).to(equal(""))
 
         with it("should not append a YAML CLI invoke fence to the skill body"):
             skill = InstalledTree(self.tree).skill_path("sample-tool").read_text(encoding="utf-8")
@@ -909,9 +909,7 @@ with description("a practice guidance class") as self:
                     {"install_folder": Path("cdd_guidance/practices/sample_tool"), "tools": tools},
                 )()
                 expect(
-                    writer.relative_path(
-                        "skill", toolset, tools["instructions"].callable, "instructions"
-                    ).as_posix()
+                    writer.relative_path(toolset, "instructions").as_posix()
                 ).to(equal("skills/practices/sample-tool/SKILL.md"))
 
     # (S) Installer --> Deploy Practice guidance rules
@@ -1038,22 +1036,6 @@ with description("a practice guidance class") as self:
             expect(InstalledTree(self.tree).command_path("sample-tool-sketch")).to(equal(None))
             expect(InstalledTree(self.tree).rule_path("sample-tool-spec.mdc").is_file()).to(equal(True))
 
-        with context("with a leftover underscored practice skill folder beside the installed tree"):
-            with before.each:
-                kebab_dir = InstalledTree(self.tree).skill_path("sample-tool").parent
-                self.leftover = kebab_dir.parent / "sample_tool"
-                self.leftover.mkdir(parents=True, exist_ok=True)
-                (self.leftover / "SKILL.md").write_text("stale\n", encoding="utf-8")
-                Installer(ide="Cursor", path=self.tree, repo=_REPO_ROOT).install(
-                    [SamplePracticeWithFidelities(format="markdown")]
-                )
-
-            with it("should remove the leftover underscored folder"):
-                expect(self.leftover.exists()).to(equal(False))
-
-            with it("should keep the kebab-case practice skill"):
-                expect(InstalledTree(self.tree).skill_path("sample-tool").is_file()).to(equal(True))
-
         with context("with an underscored module path and fidelity folders under it"):
             with it("should keep the practice folder and name the leaf practice-fidelity"):
                 from harness.installation.files import FileInstallation
@@ -1072,9 +1054,7 @@ with description("a practice guidance class") as self:
                     },
                 )()
                 expect(
-                    writer.relative_path(
-                        "skill", toolset, tools["instructions"].callable, "instructions"
-                    ).as_posix()
+                    writer.relative_path(toolset, "instructions").as_posix()
                 ).to(equal("skills/practices/sample-tool/sample-tool-sketch/SKILL.md"))
 
             with it("should kebab-case the practice parent so it matches the fidelity leaf"):
@@ -1094,9 +1074,7 @@ with description("a practice guidance class") as self:
                     },
                 )()
                 expect(
-                    writer.relative_path(
-                        "skill", toolset, tools["instructions"].callable, "instructions"
-                    ).as_posix()
+                    writer.relative_path(toolset, "instructions").as_posix()
                 ).to(equal("skills/practices/sample-tool/sample-tool-spec/SKILL.md"))
 
         # (S) Installer --> Deploy Practice guidance fidelity instructions

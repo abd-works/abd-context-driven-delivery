@@ -16,11 +16,12 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.installation.destination import DataField, data_of  # noqa: E402
+from harness.installation.destination import DataClass, data_of  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import Stage  # noqa: E402
 from harness.graph.violation import Violation  # noqa: E402
 from space.kanban.report import ReportRule  # noqa: E402
+from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Branch  # noqa: E402
@@ -74,26 +75,11 @@ DISCOVERY_DONE = [
         f"2026-10-31T01:00:02Z review /work {practice} {fidelity} markdown {practice} no-chat",
     )
 ]
-CHECKED_GRAPH = {
-    "practices": {
-        "clean_engineering": {
-            "nodes": [["node-1", "", "Story", "clean_engineering", "docs/map.md", 12, 12]],
-            "rules": [["domain-nouns-only", "node-1", "Name the story with a verb"], ["domain-nouns-only", "node-1", "Name the epic with a verb"]],
-        },
-        "stories": {
-            "nodes": [["node-2", "", "Story", "stories", "docs/other.md", 3, 3]],
-            "rules": [["actor-named-in-step", "node-2", "Name the actor"]],
-        },
-    },
-}
-STORY_MAP_GRAPH = {
-    "practices": {
-        "stories": {
-            "nodes": [["node-1", "", "Story", "stories", "docs/map.md", 12, 12]],
-            "rules": [["verb-noun-format", "node-1", "Name the story with a verb"], ["verb-noun-format", "node-1", "Name the epic with a verb"]],
-        },
-    },
-}
+CHECKED_GRAPH = saved_graph(
+    saved_practice("clean_engineering", "node-1", "docs/map.md", 12, ("domain-nouns-only", "Name the story with a verb"), ("domain-nouns-only", "Name the epic with a verb")),
+    saved_practice("stories", "node-2", "docs/other.md", 3, ("actor-named-in-step", "Name the actor")),
+)
+STORY_MAP_GRAPH = saved_graph(saved_practice("stories", "node-1", "docs/map.md", 12, ("verb-noun-format", "Name the story with a verb"), ("verb-noun-format", "Name the epic with a verb")))
 # A report as validate saves it, with the judgment the validating agent added: a rule the graph already hit, a failed rule
 # with two findings in the map and one in its drawio, and a rule with one finding followed by a list of passing rules.
 JUDGED_REPORT = """# Graph rule validation
@@ -127,17 +113,7 @@ Everything else.
 """
 
 # One hit each on a story map rule and a scenarios rule.
-WHOLE_STORIES_GRAPH = {
-    "practices": {
-        "stories": {
-            "nodes": [["node-1", "", "Story", "stories", "docs/map.md", 12, 12]],
-            "rules": [
-                ["verb-noun-format", "node-1", "Name the story with a verb"],
-                ["plain-english-gwt-steps", "node-1", "Write the step in plain English"],
-            ],
-        },
-    },
-}
+WHOLE_STORIES_GRAPH = saved_graph(saved_practice("stories", "node-1", "docs/map.md", 12, ("verb-noun-format", "Name the story with a verb"), ("plain-english-gwt-steps", "Write the step in plain English")))
 
 
 class ProjectTools:
@@ -380,11 +356,11 @@ with description("the board tools") as self:
 
             with it("should return exactly the fields a Violation marks as its data"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
-                expect(set(report["rules"][0]["violations"][0])).to(equal(set(DataField.fields_of(Violation))))
+                expect(set(report["rules"][0]["violations"][0])).to(equal(set(DataClass(Violation).fields)))
 
             with it("should return exactly the fields a ReportRule marks as its data"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
-                expect(set(report["rules"][0])).to(equal(set(DataField.fields_of(ReportRule))))
+                expect(set(report["rules"][0])).to(equal(set(DataClass(ReportRule).fields)))
 
             with it("should count the violations of each rule"):
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="clean-engineering-modules")
@@ -475,7 +451,7 @@ with description("the board tools") as self:
         # A saved graph keeps the hits of a scanner deleted after it was saved.
         with context("with a validation report on a rule no scanner checks any more"):
             with before.each:
-                deleted = {"practices": {"stories": {"nodes": [], "rules": [["evidence-distinguishes-observed-inferred-and-intended", "node-1", "Label the evidence"]]}}}
+                deleted = saved_graph(saved_practice("stories", "node-1", "docs/map.md", 12, ("evidence-distinguishes-observed-inferred-and-intended", "Label the evidence")))
                 self.project.report("pet-visits", "stories-story-map-20261031T041200", deleted)
 
             with it("should leave that rule's hits out of the report"):
@@ -1167,7 +1143,7 @@ with description("the board tools") as self:
             self.project.backlog_item("returns.md", "Returns and refunds")
 
         with it("should return exactly the fields a Ticket marks as its data"):
-            expect(set(self.project.ticket_json("pet-visits"))).to(equal(set(DataField.fields_of(Ticket))))
+            expect(set(self.project.ticket_json("pet-visits"))).to(equal(set(DataClass(Ticket).fields)))
 
         with it("should send a Ticket's progress as one FidelityProgress per fidelity, each naming its fidelity"):
             expect([progress["slug"] for progress in self.project.ticket_json("pet-visits")["progress"]][:2]).to(equal(["stories-story-map", "ddd-bounded-context"]))
@@ -1189,13 +1165,13 @@ with description("the board tools") as self:
         with it("should return exactly the fields a Branch marks as its data"):
             subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
             branch = self.project.call("ticket.branch", ticket="pet-visits")
-            expect(set(branch)).to(equal(set(DataField.fields_of(Branch))))
+            expect(set(branch)).to(equal(set(DataClass(Branch).fields)))
 
         with it("should return exactly the fields a BacklogItem marks as its data"):
-            expect(set(self.project.column("Backlog")["items"][0])).to(equal(set(DataField.fields_of(BacklogItem))))
+            expect(set(self.project.column("Backlog")["items"][0])).to(equal(set(DataClass(BacklogItem).fields)))
 
         with it("should return exactly the fields a Stage marks as its data"):
-            expect(set(self.project.column("Discovery"))).to(equal(set(DataField.fields_of(Stage))))
+            expect(set(self.project.column("Discovery"))).to(equal(set(DataClass(Stage).fields)))
 
     with context("whose signatures are compared with the board app's shared behaviors"):
         with it("should state every shared behavior here under the same sentence"):

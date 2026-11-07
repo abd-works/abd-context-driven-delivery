@@ -106,16 +106,16 @@ with description("a MernDomainDriven generator"):
             expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
 
         with it("should scope inject globs to packages feature layout"):
-            expect("packages/" in self.rules.glob).to(equal(True))
-            expect("src/" in self.rules.glob).to(equal(False))
+            expect("packages/" in self.rules.applies_to.globs).to(equal(True))
+            expect("src/" in self.rules.applies_to.globs).to(equal(False))
 
         with it("should match domain-module server files under packages"):
-            expect(self.rules.matches("packages/onboard-a-customer/carts/cart-server.ts")).to(
+            expect(self.rules.applies_to.matches("packages/onboard-a-customer/carts/cart-server.ts")).to(
                 equal(True)
             )
 
         with it("should not match legacy flat src server files"):
-            expect(self.rules.matches("src/customer/customer-server.ts")).to(equal(False))
+            expect(self.rules.applies_to.matches("src/customer/customer-server.ts")).to(equal(False))
 
         with it("should inject rules markdown when a matching package file is written"):
             result = self.rules.inject_rules(self.payload)

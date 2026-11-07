@@ -213,6 +213,16 @@ class HookInstallation(Installation):
     def manifest(self) -> HooksManifest:
         return HooksManifest(self.path / HooksManifest.NAME)
 
+    @property
+    def registered_events(self) -> list[str]:
+        """The events the IDE folder's ``hooks.json`` names a command for."""
+        return self.manifest.registered_events
+
+    @property
+    def registered_operations(self) -> list[str]:
+        """The hook operations the IDE folder's ``hook-handlers.json`` lists."""
+        return self.handlers_file.operation_names
+
     def write(self, tool: AgentTool) -> None:
         if not tool.install_to_hook or not tool.hook_event:
             return

@@ -24,7 +24,7 @@ def main() -> int:
     from harness.diagnostics.guidance_probe import GuidanceProbe
     from harness.installer.installer import Installer
 
-    probe = GuidanceProbe.filtered_by(Installer(repo=_REPO), args.guidance)
+    probe = GuidanceProbe.from_filter(Installer(repo=_REPO), args.guidance)
     report = "\n\n".join((probe.instructions(), probe.actions()))
     print(report)
     if any(line.lstrip("!").startswith("red") for line in report.splitlines()[:4]):

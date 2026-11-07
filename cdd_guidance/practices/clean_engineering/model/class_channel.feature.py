@@ -160,7 +160,7 @@ def _read_channel(folder: Path, channel: str, module_names: list, model_name: st
     """The class model in folder's files: one markdown file, or one file per module named after it."""
     if channel == "markdown":
         return MarkdownCleanEngineeringModel().parse((folder / "class-model.md").read_text(encoding="utf-8"))
-    path_of, parse = (_drawio_path, DrawIOCleanEngineeringModel().parse) if channel == "drawio" else (_code_path, TypeScriptCleanEngineeringModel.parse)
+    path_of, parse = (_drawio_path, DrawIOCleanEngineeringModel().parse) if channel == "drawio" else (_code_path, TypeScriptCleanEngineeringModel().parse)
     model = CleanEngineeringModel(name=model_name, sequential_order=1)
     for module_name in module_names:
         for module in parse((folder / path_of(module_name)).read_text(encoding="utf-8")).modules:

@@ -12,6 +12,7 @@ from harness.name.name import Name
 from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.rule import RulesCollection
+from harness.guidance.schema import Schema
 from harness.agent_tools.agent_tools import (
     collect,
     agent_instructions,
@@ -23,9 +24,9 @@ from harness.agent_tools.agent_tools import (
 )
 from harness.installation.files import rules, skill
 from harness.installation.destination import data_field
+from harness.hooks.hooks import Hook
 from harness.mcp.mcp_server import mcp
 from harness.markdown import (
-    AssetLocator,
     Markdown,
     MarkdownCollection,
     MarkdownText,
@@ -75,7 +76,7 @@ class Guidance:
 
     @property
     def install_folder(self) -> Path:
-        return AssetLocator(self, "").class_file_directory()
+        return self.module_dir
 
     @property
     def module_dir(self) -> Path:
@@ -90,17 +91,11 @@ class Guidance:
     def rules(self) -> RulesCollection:
         """Shared rules as a collection."""
 
-    def __init__(
-        self,
-        format: str | None = None,
-        path: str | None = None,
-        session: str | None = None,
-        workspace: Any = None,
-    ) -> None:
+    session: Any = None
+    """The Session this guidance works in, which its work_in gives it; none until a session works on it."""
+
+    def __init__(self, format: str | None = None) -> None:
         self.format = format if format is not None else self.default_format
-        self.path = path
-        self.session = session
-        self.workspace = workspace
 
     @markdown
     def overview(self) -> str:
@@ -135,6 +130,15 @@ class Guidance:
         practice = getattr(self, "practice_guidance", None)
         owner = practice if practice is not None else self
         return Path(inspect.getfile(type(owner))).resolve().parent / "templates"
+
+    def rules_after_edit(self, payload: Any) -> str:
+        """The rules an action hands the agent after the edit payload's hook names: the rules that apply to the edited
+        file, else all of them; none while this guidance's rules hook is turned off."""
+        rules = self.rules
+        if rules is None or Hook.disabled_on(rules.inject_rules):
+            return ""
+        applied = (rules.inject_rules(payload).get("additional_context") or "").strip()
+        return applied or (rules.markdown or "").strip()
 
     @property
     @skill
@@ -209,7 +213,6 @@ class PracticeGuidance(Guidance):
         super().__init__(format=format)
         self.default_workspace_folder = default_workspace_folder
         self._formats = dict(formats or {})
-        self._attach_workspace()
         self._activate(fidelity=fidelity)
 
     @markdownCollection("shared rules")
@@ -262,7 +265,7 @@ class PracticeGuidance(Guidance):
 
     @property
     def context_index_key(self) -> str:
-        return AssetLocator(self, "").class_file_directory().name
+        return self.module_dir.name
 
     def project_rules(self) -> list:
         """The custom rules the project keeps for this practice in `.context/rules/{practice}/rules.md`, and for a
@@ -292,19 +295,8 @@ class PracticeGuidance(Guidance):
         ]
 
     def _working_folder(self) -> Path | None:
-        workspace = getattr(self, "workspace", None)
-        candidates = (
-            getattr(workspace, "path", None) if workspace is not None else None,
-            getattr(self, "path", None),
-        )
-        for candidate in candidates:
-            if candidate is None:
-                continue
-            text = str(candidate).strip()
-            if not text or text == ".":
-                continue
-            return Path(text)
-        return None
+        """The folder the session this practice works in works in; none while it works in no session."""
+        return self.session.root if self.session is not None else None
 
     @property
     def supported_formats(self) -> frozenset:
@@ -329,48 +321,38 @@ class PracticeGuidance(Guidance):
             child = self.fidelities.child_for_stage(stage)
             fidelity = getattr(child, "name", None) or fidelity
         if fidelity is not None:
-            names = sorted(self.fidelities.entries)
-            if names and fidelity not in self.fidelities.entries:
-                raise ValueError(f"Unsupported fidelity {fidelity!r}. Choose from: {names}")
-            if not self.format and fidelity in self.fidelities.entries:
-                child_format = self.fidelities[fidelity].default_format
-                if child_format:
-                    self.format = child_format
-            if fidelity in self.fidelities.entries:
-                self.fidelities.current = self.fidelities[fidelity]
+            self._make_current(fidelity)
         if self.format:
             self.format = Format(self.format).name
+        self._check_format()
+
+    def _make_current(self, fidelity: str) -> None:
+        """Make fidelity current; the practice takes its default format when it works in none yet."""
+        entries = self.fidelities.entries
+        if entries and fidelity not in entries:
+            raise ValueError(f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(entries)}")
+        if fidelity not in entries:
+            return
+        if not self.format and entries[fidelity].default_format:
+            self.format = entries[fidelity].default_format
+        self.fidelities.current = entries[fidelity]
+
+    def _check_format(self) -> None:
+        """Raise ValueError for a format the practice does not write: one its adapters do not read, or, for a practice
+        with no adapters, one no fidelity names as its default."""
         supported = self.supported_formats
         if not supported and not getattr(self, "_formats", None) and self.format:
-            allowed = {
-                Format(child.default_format).name
-                for child in self.fidelities.entries.values()
-                if getattr(child, "default_format", None)
-            }
-            supported = frozenset(allowed)
-        if supported and self.format and self.format not in supported:
-            raise ValueError(
-                f"Unsupported format {self.format!r}. Choose from: {sorted(supported)}"
+            supported = frozenset(
+                Format(child.default_format).name for child in self.fidelities.entries.values() if getattr(child, "default_format", None)
             )
-
-    def _attach_workspace(
-        self,
-        path: str | None = None,
-        session: str | None = None,
-        workspace: Any = None,
-    ) -> None:
-        if path is not None:
-            self.path = path
-        if session is not None:
-            self.session = session
-        if workspace is not None:
-            self.workspace = workspace
+        if supported and self.format and self.format not in supported:
+            raise ValueError(f"Unsupported format {self.format!r}. Choose from: {sorted(supported)}")
 
     def work_in(self, session_output: Any) -> None:
         """Work in the session that session_output, this practice's PracticeSessionOutput, belongs to: the practice
         knows that session, and each of its fidelities is given what it has there, so it answers its outputs and files
         itself."""
-        self.workspace = session_output.session
+        self.session = session_output.session
         for fidelity in self.fidelities:
             fidelity.work_in(session_output.of_fidelity(fidelity))
 
@@ -432,7 +414,7 @@ class PracticeGuidance(Guidance):
     @property
     def schema(self) -> str:
         """The practice schema at ``{practice}/model/schema.yaml``."""
-        path = AssetLocator(self, "").class_file_directory() / "model" / "schema.yaml"
+        path = self.module_dir / "model" / "schema.yaml"
         if not path.is_file():
             return ""
         return path.read_text(encoding="utf-8").strip()
@@ -447,11 +429,24 @@ class PracticeGuidance(Guidance):
             f"{body}"
         )
 
-    def schema_node_fidelities(self) -> dict[str, str]:
-        """Each schema node type mapped to a fidelity name from ``model/schema.yaml``."""
-        from harness.guidance.schema_map import node_fidelities
+    def schema_node_fidelities(self) -> dict[str, list[str]]:
+        """Each node type of the practice schema with the fidelity that creates it and every higher fidelity: a node a
+        low fidelity creates also belongs to the higher ones, which build it out rather than replace it."""
+        order = [fidelity.name for fidelity in self.fidelities]
+        created = Schema(self.schema).fidelities()
+        return {node: order[order.index(fidelity):] for node, fidelity in created.items() if fidelity in order}
 
-        return node_fidelities(self.schema)
+    def schema_fidelity_errors(self) -> list[str]:
+        """What is wrong between the practice schema and the practice's fidelities: a schema with no node fidelity, or a
+        node fidelity that is not one of the practice's. Empty when they agree."""
+        created = Schema(self.schema).fidelities()
+        if not created:
+            return ["schema defines no node fidelity entries"]
+        declared = sorted(fidelity.name for fidelity in self.fidelities)
+        return [
+            f"{node} maps to fidelity {fidelity!r}, which is not under ## Fidelities (have {declared!r})"
+            for node, fidelity in sorted(created.items()) if fidelity not in declared
+        ]
 
 
     @toolset_collection
@@ -460,7 +455,7 @@ class PracticeGuidance(Guidance):
         """Fidelity children from the Fidelities section."""
 
     def domain_markdown_path(self) -> Path:
-        class_dir = AssetLocator(self, "").class_file_directory()
+        class_dir = self.module_dir
         return class_dir / f"{class_dir.name}.md"
 
     @markdown
@@ -563,9 +558,9 @@ class PracticeGuidance(Guidance):
         return self._parse_content(source_format, "")
 
     def _context_root(self, tool: Any) -> Path:
-        workspace = getattr(tool, "workspace", None)
-        path = getattr(workspace, "path", None) or getattr(tool, "path", None) or "."
-        return Path(path)
+        """The folder tool's code is read from: the root of the session it works in."""
+        session = getattr(tool, "session", None)
+        return session.root if session is not None else Path(".")
 
     def _code_tree(self, root: Path, adapter: Any) -> dict[str, str]:
         extension = getattr(adapter, "LEAF_EXTENSION", "") or ""
@@ -754,7 +749,7 @@ class FidelityGuidance(Guidance):
         practice = self.practice_guidance
         if practice is not None:
             return practice.context_index_key
-        return AssetLocator(self, "").class_file_directory().name
+        return self.module_dir.name
 
     @property
     def format(self) -> str | None:
@@ -820,7 +815,7 @@ class FidelityGuidance(Guidance):
     @property
     def install_folder(self) -> Path:
         practice = self.practice_guidance
-        base = practice.install_folder if practice is not None else AssetLocator(self, "").class_file_directory()
+        base = practice.install_folder if practice is not None else self.module_dir
         leaf = (self.name or "").replace(" ", "-")
         return base / leaf if leaf else base
 

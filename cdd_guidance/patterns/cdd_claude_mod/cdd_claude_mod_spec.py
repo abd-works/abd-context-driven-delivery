@@ -80,10 +80,10 @@ with description("a Claude Code mod pattern"):
             expect(len(list(self.rules))).to(equal(len(_RULE_SLUGS)))
 
         with it("should match a mod's hooks"):
-            expect(self.rules.matches("harness/report/pane/hooks/register.tsx")).to(be_true)
+            expect(self.rules.applies_to.matches("harness/report/pane/hooks/register.tsx")).to(be_true)
 
         with it("should not match Python outside a mod"):
-            expect(self.rules.matches("space/kanban/board.py")).to(equal(False))
+            expect(self.rules.applies_to.matches("space/kanban/board.py")).to(equal(False))
 
     with context("whose graph overlay has been read"):
         with before.each:

@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.code_class_model import BraceCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
@@ -21,27 +21,14 @@ def _pascal(name: str) -> str:
     return "".join(part.title() for part in re.split(r"_+", name))
 
 
-class JavaCleanEngineeringModel(CodeCleanEngineeringModel):
+class JavaCleanEngineeringModel(BraceCleanEngineeringModel):
     language = _JAVA
-
-    @classmethod
-    def parse(cls, text: str) -> "JavaCleanEngineeringModel":
-        from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
-
-        return CFamilyParse(
-            model_factory=lambda: cls(name="", sequential_order=1),
-            class_factory=OoadClass,
-            language=_JAVA,
-        ).parse(text)
 
     def interface_declaration(self, oclass: OoadClass) -> List[str]:
         return [f"public interface {oclass.name} {{"]
 
-    def implementing_declaration(self, oclass: OoadClass, interface: str) -> List[str]:
-        return [f"public class {oclass.name} implements {interface} {{"]
-
-    def class_declaration(self, oclass: OoadClass) -> List[str]:
-        return [f"public {line}" for line in super().class_declaration(oclass)]
+    def class_modifiers(self, implemented: List[str]) -> str:
+        return "public "
 
     def property_line(self, prop: Property, contract: bool) -> List[str]:
         type_name = self._type(prop.type_hint)

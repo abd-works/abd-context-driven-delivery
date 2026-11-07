@@ -16,6 +16,7 @@ _MARK = re.compile(r"<<\s*([^>]+?)\s*>>")
 # A decorator with no arguments is a stereotype; one with arguments configures the class.
 _BARE_DECORATOR = re.compile(r"^@([A-Za-z_]\w*)(?:\(\s*\))?$")
 _ANY_DECORATOR = re.compile(r"^@[\w.]+")
+_IMPLEMENTS_COMMENT = re.compile(r"^//\s*implements\s+(.+)$")
 _WORDS = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+")
 
 
@@ -72,6 +73,8 @@ class ClassHead:
 
     doc: str = ""
     stereotypes: List[str] = field(default_factory=list)
+    # The bases a `// implements A, B` comment names, for a language with no `implements` of its own.
+    implemented: List[str] = field(default_factory=list)
 
     @classmethod
     def above(cls, text_before_class: str) -> "ClassHead":
@@ -104,5 +107,7 @@ class ClassHead:
         bare = _BARE_DECORATOR.match(line)
         if bare:
             self.stereotypes.insert(0, stereotype_named(bare.group(1)))
+        elif _IMPLEMENTS_COMMENT.match(line):
+            self.implemented[:0] = [name.strip() for name in _IMPLEMENTS_COMMENT.match(line).group(1).split(",") if name.strip()]
         elif not line.startswith("@"):
             self.stereotypes[:0] = marks_in(line)

@@ -6,7 +6,7 @@ dependencies need, links them once all are read, adds the applied overlays' node
 
 from __future__ import annotations
 
-from harness.graph.graph import EdgeType, Graph, edge_order
+from harness.graph.graph import EdgeType, Graph
 from harness.graph.graph_practice import GraphPractices
 from harness.graph.rules import PracticeChecks
 from harness.graph.schema_rules import PracticeSchema
@@ -51,4 +51,4 @@ class WorkingCopy:
             for kind in schema.overlay_relationship_kinds - set(practice.edge_types):
                 display = "direct" if any(overlay.display_of(kind) == "direct" for overlay in overlays) else "relationship"
                 # A kind no edge was recorded under is listed after the ones the tree shows.
-                practice.edge_types[kind] = EdgeType(kind, edge_order(kind, "relationship"), display)
+                practice.edge_types[kind] = EdgeType(kind, EdgeType.from_kind(kind, "relationship").order, display)

@@ -88,7 +88,7 @@ class CheckedGraph(PathsFromProject):
         named = [(item, self._from_project(item)) for item in paths or []]
         unreadable = [item for item, path in named if not path.exists() or not self._under_root(path)]
         if unreadable:
-            raise PathsNotFoundError(unreadable, self.session.repo_from_session(), root)
+            raise PathsNotFoundError(unreadable, self.session.repo_path, root)
         return [path.relative_to(root).as_posix() for _, path in named]
 
     def _other_format_files(self) -> set[str]:

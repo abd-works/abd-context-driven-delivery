@@ -1,4 +1,4 @@
-"""Typed parameters for MCP JSON Schema binding specs."""
+"""Typed parameters for specs of the JSON Schema MCP advertises."""
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence

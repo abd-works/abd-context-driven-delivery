@@ -15,22 +15,42 @@ from harness.agent_tools.agent_tools import (
 from harness.name.name import Name
 from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import data_field
-from harness.markdown.markdown import MarkdownCollection
+from harness.markdown.markdown import MarkdownCollection, MarkdownText
 from harness.hooks.hooks import Hook
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
 
 class AppliesTo:
-    """Cursor attach data for a rules section — owned in the practice markdown fence."""
+    """Which edited files a rules section applies to, as the YAML fence in the practice markdown says: every file
+    (``alwaysApply``), or the files a comma-separated list of glob patterns matches."""
 
     def __init__(self, always_apply: bool | None = None, globs: str = "") -> None:
         self.always_apply = always_apply
         self.globs = globs
 
     @property
-    def alwaysApply(self) -> bool | None:
-        return self.always_apply
+    def patterns(self) -> list[str]:
+        """Each glob pattern, without the quotes a fence may write around it."""
+        return [pattern for part in str(self.globs or "").split(",") if (pattern := part.strip().strip("\"'"))]
+
+    def matches(self, path: str) -> bool:
+        """True when the rules apply to the edited file at path: every file for rules that always apply and name no
+        pattern, else a file one of the patterns matches."""
+        if not path:
+            return False
+        if self.always_apply and not self.patterns:
+            return True
+        posix = Path(path).as_posix()
+        return any(self._pattern_matches(posix, Path(path).name, pattern) for pattern in self.patterns)
+
+    def _pattern_matches(self, posix: str, name: str, pattern: str) -> bool:
+        if Path(posix).match(pattern) or fnmatch.fnmatch(posix, pattern):
+            return True
+        # Path-scoped patterns must match the full path — not the filename alone.
+        if "/" in pattern or pattern in {"*", "**"}:
+            return False
+        return fnmatch.fnmatch(name, pattern)
 
     @classmethod
     def from_value(cls, value: Any) -> AppliesTo:
@@ -51,15 +71,7 @@ class AppliesTo:
 
     @classmethod
     def from_markdown(cls, text: str) -> AppliesTo:
-        from harness.markdown.markdown import YamlFields
-
-        return cls.from_value(YamlFields().yaml_fields(text))
-
-    @classmethod
-    def strip_fence(cls, text: str) -> str:
-        from harness.markdown.markdown import strip_yaml_fences
-
-        return strip_yaml_fences(text)
+        return cls.from_value(MarkdownText(text).yaml_fields)
 
 
 class Rule:
@@ -132,35 +144,27 @@ class RulesCollection(MarkdownCollection):
         parent: Any = None,
     ) -> None:
         super().__init__(dict(entries or {}), parent=parent)
-        applies = applies_to if applies_to is not None else AppliesTo()
-        self.always_apply = applies.always_apply
-        self.glob = applies.globs
+        self._applies_to = applies_to if applies_to is not None else AppliesTo()
 
     @property
-    def appliesTo(self) -> AppliesTo:
-        return AppliesTo(always_apply=self.always_apply, globs=self.glob)
+    def applies_to(self) -> AppliesTo:
+        """Which edited files these rules apply to."""
+        return self._applies_to
 
-   
     @Hook("postToolUse", disabled=True)
     def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
-        hook_payload = payload
-        if self._just_edited(hook_payload):
-            path = hook_payload.edited_path()
-            bags = self._bags_for_path(path) if path else []
-            if bags:
-                self._note_session_injected_rules(hook_payload, path, bags)
-        if Hook.disabled_on(type(self).inject_rules):
-            return {}
-        if not self._just_edited(hook_payload):
-            return {}
-        path = hook_payload.edited_path()
+        """The rules that apply to the file the agent just edited, as context for its next step. The session notes
+        them even while the hook is turned off, so its log still names the rules each edit was checked against."""
+        path = payload.edited_path() if self._just_edited(payload) else ""
         bags = self._bags_for_path(path) if path else []
-        parts, _labels = self._bodies(bags)
-        if not parts:
+        if bags:
+            self._note_session_injected_rules(payload, path, bags)
+        parts = self._bodies(bags)
+        if Hook.disabled_on(type(self).inject_rules) or not parts:
             return {}
-        body = self._inject_context(path, bags, parts, hook_payload)
+        body = self._inject_context(path, bags, parts, payload)
         notice = self._read_only_notice(bags)
-        if notice and (hook_payload.get("conversation_id") or hook_payload.get("workspace_roots")):
+        if notice and (payload.get("conversation_id") or payload.get("workspace_roots")):
             return {"additional_context": body, "toast": notice}
         return {"additional_context": body}
 
@@ -225,7 +229,7 @@ class RulesCollection(MarkdownCollection):
 
     def _bags_for_path(self, path: str) -> list[RulesCollection]:
         bags = self._rule_bags()
-        matched = [bag for bag in bags if bag.matches(path)]
+        matched = [bag for bag in bags if bag.applies_to.matches(path)]
         if not matched:
             return []
         return self._unique_bags(self._matched_and_shared(bags, matched) + self._upstream_of(matched))
@@ -233,7 +237,7 @@ class RulesCollection(MarkdownCollection):
     def _matched_and_shared(
         self, bags: list[RulesCollection], matched: list[RulesCollection]
     ) -> list[RulesCollection]:
-        return [bag for bag in bags if bag in matched or not str(bag.glob or "").strip()]
+        return [bag for bag in bags if bag in matched or not bag.applies_to.patterns]
 
     def _unique_bags(self, bags: list[RulesCollection]) -> list[RulesCollection]:
         included: list[RulesCollection] = []
@@ -262,31 +266,11 @@ class RulesCollection(MarkdownCollection):
         last = max(indexes)
         return [fidelities[name].rules for name in names[:last]]
 
-    def _bodies(self, bags: list[RulesCollection]) -> tuple[list[str], list[str]]:
-        parts: list[str] = []
-        labels: list[str] = []
-        for bag in bags:
-            body = (bag.markdown or "").strip()
-            if not body:
-                continue
-            parts.append(body)
-            parent = bag.parent
-            if parent is None:
-                labels.append(type(bag).__name__)
-            else:
-                labels.append(getattr(parent, "name", None) or type(parent).__name__)
-        return parts, labels
+    def _bodies(self, bags: list[RulesCollection]) -> list[str]:
+        return [body for bag in bags if (body := (bag.markdown or "").strip())]
 
     def _matched_globs(self, bags: list[RulesCollection]) -> list[str]:
-        patterns: list[str] = []
-        seen: set[str] = set()
-        for bag in bags:
-            for pattern in (part.strip().strip("\"'") for part in str(bag.glob or "").split(",")):
-                if not pattern or pattern in seen:
-                    continue
-                seen.add(pattern)
-                patterns.append(pattern)
-        return patterns
+        return list(dict.fromkeys(pattern for bag in bags for pattern in bag.applies_to.patterns))
 
     def _inject_echo_instruction(
         self, path: str, bags: list[RulesCollection], hook_payload: dict[str, Any] | None = None
@@ -347,33 +331,6 @@ class RulesCollection(MarkdownCollection):
             return f"{preamble}\n\n{rules}"
         return preamble or rules
 
-    def matches(self, path: str) -> bool:
-        if not path:
-            return False
-        if self.always_apply and not str(self.glob or "").strip():
-            return True
-        if not self.glob:
-            return False
-        posix = Path(path).as_posix()
-        name = Path(path).name
-        for pattern in (part.strip().strip("\"'") for part in self.glob.split(",")):
-            if self._pattern_matches(posix, name, pattern):
-                return True
-        return False
-
-    def _pattern_matches(self, posix: str, name: str, pattern: str) -> bool:
-        if not pattern:
-            return False
-        if Path(posix).match(pattern) or fnmatch.fnmatch(posix, pattern):
-            return True
-        # Path-scoped patterns must match the full path — not the filename alone.
-        if "/" in pattern:
-            return False
-        leaf = pattern
-        if leaf in {"", "*", "**"}:
-            return False
-        return fnmatch.fnmatch(name, leaf)
-
     @classmethod
     def from_markdown(
         cls,
@@ -383,7 +340,7 @@ class RulesCollection(MarkdownCollection):
     ) -> RulesCollection:
         applies_to = AppliesTo.from_markdown(text)
         entries: dict[str, Rule | RulesCollection] = {}
-        for raw in AppliesTo.strip_fence(text).splitlines():
+        for raw in MarkdownText(text).without_yaml.splitlines():
             stripped = raw.strip()
             if not re.match(r"^[-*]\s+", stripped):
                 continue

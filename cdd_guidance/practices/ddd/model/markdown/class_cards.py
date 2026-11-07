@@ -8,7 +8,8 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Ooad
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.ddd.model.nodes import DomainEvent, InvariantObject, building_block_type
-from cdd_guidance.practices.ddd.model.stereotypes import plain_class_name, stereotypes_in
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
+from cdd_guidance.practices.ddd.model.stereotypes import plain_class_name
 
 _CARD = "#### "
 _PROPERTIES = "------"
@@ -35,7 +36,7 @@ class ClassCard:
     @classmethod
     def from_heading(cls, heading: str) -> "ClassCard":
         """An empty card for `Name <<Stereotype>> …`."""
-        return cls.from_name(plain_class_name(heading), stereotypes_in(heading))
+        return cls.from_name(plain_class_name(heading), marks_in(heading))
 
     @classmethod
     def from_name(cls, name: str, stereotypes: list[str]) -> "ClassCard":
@@ -276,7 +277,7 @@ def _without_note(raw: str) -> str:
 
 
 def _read_sketch_member(line: str, node: OoadClass, arrows: list[str]) -> None:
-    marks = stereotypes_in(line)
+    marks = marks_in(line)
     tokens = plain_class_name(line).replace("()", " ").split()
     if not tokens:
         return

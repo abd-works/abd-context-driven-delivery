@@ -1,5 +1,7 @@
 // === Cart ===
 
+@AggregateRoot()
+@Entity()
 class Cart {
   // << association >>
   customer: Customer;
@@ -172,12 +174,14 @@ class Cart {
  * OnboardingStep.Checkout
  * OnboardingStep.Done
  */
+@Type()
 class OnboardingStep {
 }
 
 /**
  * Snapshot of a `# Plans` *Plan* at pick time. Part of the Cart aggregate. PortalGateway cart read maps the Mavenir bundle cartItem onto `Cart.bundle` (`id`, `name`, `description`, `price`, `fees`, `totalPrice`, `features`). `id` is *Plan.id*. Catalog *Plan* changes do not rewrite a cart that already has a bundle.
  */
+@Entity()
 class Bundle {
   // Plan.id
   id: string;
@@ -209,6 +213,7 @@ class Bundle {
 /**
  * Flags Cart consults. Get Sim: `DISABLE_ESIM` / `DISABLE_PSIM`. `Cart.checkout` / `Payment.enter` read `PAY_UP_FRONT` and `PAYMENT_ATTEMPTS` from this type (Payment does not own GrowthBook). `Cart.createOrder` reads `PAY_UP_FRONT` and `ROAMING_PLAN_TICKET`. No Paradise types. No repository.
  */
+@System()
 class GrowthBook {
   // disable-esim
   DISABLEESIM: string;
@@ -255,6 +260,7 @@ class GrowthBook {
 /**
  * Owns `Collection<Cart>`. Associates to `PortalGateway` to read and create ++MavenirShoppingCart++. Cart itself has no shopping-cart edge. The Customer already holds AccountCredentials.
  */
+@Repository()
 class CartRepository {
   // << aggregation >>
   carts: Collection<Cart>;
@@ -289,6 +295,7 @@ class CartRepository {
   }
 }
 
+@Exception()
 class CartException {
   // << association >>
   operation: CartOperation;
@@ -308,6 +315,8 @@ class CartException {
 /**
  * Wrap target. Vouchera ++Voucher++. No Paradise types. Cart wraps the selected code until cook.
  */
+@System()
+@Entity()
 class Voucher {
   code: string;
   campaign: string;
@@ -325,6 +334,8 @@ class Voucher {
 /**
  * Vouchera builds the ++Voucher++. Vouchera GET /vouchers/{code}. `read` is catalog `Voucher.apply` through `VoucherRepository.get`. `redeem` is Subscription cook and returns `# Subscription` *VoucherRedemption*.
  */
+@Service()
+@System()
 class Vouchera {
   constructor() {
   }
@@ -350,6 +361,8 @@ class Vouchera {
 /**
  * Wrap target. Empty at create (no cart items). Mavenir shoppingCart create: MavenirCustomer id, lineCount 1, empty cartItem, serviceProviderId, ON-BOARDING channel. *Get Plan On Cart* writes the bundle cartItem. *Get Data Freedom Upgrade* replaces that bundle. *Get Review Plan* replaces that bundle. Patch writes the MSISDN *ProductCharacteristic* and, on bring, ++portability++ characteristics. *Get Esim* writes the `SIM_TYPE` *ProductCharacteristic* (`'eSIM'`). *Get Paradise Sim Card* writes `SIM_TYPE` (`'pSIM'`); no ICCID characteristic. *Get Existing Iccid* writes `SIM_TYPE` (`'pSIM'`) and `ICCID` on the existing bundle cartItem. *Activate Sim From Almost There* PATCH shoppingCart billing then POST productOrderFromCart; SIM_TYPE `'pSIM'` and ICCID already on bundle. The wrap does not know Cart.
  */
+@AggregateRoot()
+@Entity()
 class MavenirShoppingCart {
   id: string;
   customerId: string;
@@ -380,6 +393,8 @@ class MavenirShoppingCart {
 /**
  * Mavenir `portalGateway` shopping cart.
  */
+@Service()
+@System()
 class PortalGateway {
   constructor() {
   }

@@ -33,6 +33,11 @@ _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECAS
 _PEER_COMPOSING_STEREOTYPES = frozenset({"entity", "aggregate root"})
 
 
+class UnreadableSource(ValueError):
+    """A source file its language cannot read, such as Python that does not parse. Reading it as an empty or partial
+    model would drop its classes from every check without saying so."""
+
+
 def _internal_design_in(paths: List[Path]) -> str:
     """'heading' for an `## Internal` section, 'mixed' for internal notes inline, else ''."""
     text = "\n".join(_readable_text(path) for path in sorted(paths))
@@ -257,11 +262,20 @@ class OoadClass(OoadNode):
         self.bold_interaction_lines = bullets.get("bold_interaction_lines", [])
         self.bold_invariant_lines = bullets.get("bold_invariant_lines", [])
 
+    def declared_bases(self, known_names: Iterable[str]) -> List[str]:
+        """The bases its declaration names: its own, then the I{Class} contract it implements when one is known."""
+        bases = list(self.bases)
+        contract = companion_interface_name(self.name, known_names)
+        if contract and contract not in bases:
+            bases.append(contract)
+        return bases
+
     def update_self(self, source: "OoadNode") -> None:
         """Copy what the class itself says; its properties and operations are reconciled as children."""
         assert isinstance(source, OoadClass)
         self.intent = source.intent
         self.stereotypes = list(source.stereotypes)
+        self.bases = list(source.bases)
         self.collaborators = list(source.collaborators)
 
     def clone(self) -> "OoadClass":
@@ -273,6 +287,7 @@ class OoadClass(OoadNode):
             line=self.line,
         )
         cloned.stereotypes = list(self.stereotypes)
+        cloned.bases = list(self.bases)
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
         return cloned
@@ -283,6 +298,7 @@ class OoadClass(OoadNode):
             "sequentialOrder": self.sequential_order,
             "intent": self.intent,
             "stereotypes": list(self.stereotypes),
+            "bases": list(self.bases),
             "properties": [item.as_record() for item in self.properties],
             "operations": [item.as_record() for item in self.operations],
             "relationships": [item.as_record() for item in self.relationships],
@@ -712,49 +728,3 @@ class CleanEngineeringModel(OoadNode):
                 load=self.load_module,
             )
         ]
-
-
-class CleanEngineeringModelFactory:
-    """Pick the channel model from a file or a folder and return a CleanEngineeringModel."""
-
-    @staticmethod
-    def load(path: str) -> CleanEngineeringModel:
-        from pathlib import Path
-
-        target = Path(path)
-        if target.is_dir() or target.suffix.lower() == ".py":
-            from cdd_guidance.practices.clean_engineering.model.python.python_class_model import (
-                PythonCleanEngineeringModel,
-            )
-
-            model = PythonCleanEngineeringModel()
-            if target.is_file():
-                return model.parse(target.read_text(encoding="utf-8"))
-            return model.load(str(target))
-        text = target.read_text(encoding="utf-8")
-        suffix = target.suffix.lower()
-        if suffix == ".drawio":
-            from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import (
-                DrawIOCleanEngineeringModel,
-            )
-
-            return DrawIOCleanEngineeringModel().load(str(target))
-        if suffix == ".json":
-            from cdd_guidance.practices.clean_engineering.model.json.json_class_model import (
-                JsonCleanEngineeringModel,
-            )
-
-            return JsonCleanEngineeringModel().parse(text)
-        if suffix in {".svg", ".html"}:
-            from cdd_guidance.practices.clean_engineering.model.miro.miro_class_model import (
-                MiroCleanEngineeringModel,
-            )
-
-            return MiroCleanEngineeringModel().load(str(target))
-        from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
-            MarkdownCleanEngineeringModel,
-        )
-
-        loaded = MarkdownCleanEngineeringModel()
-        loaded.path = str(target)
-        return loaded.load(str(target))

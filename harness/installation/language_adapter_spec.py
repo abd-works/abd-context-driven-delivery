@@ -15,10 +15,8 @@ RepositoryToolsets(_REPO).ensure_import_path()
 
 from harness.agent_tools.agent_tools import AgentToolSet  # noqa: E402
 from harness.installation.destination import (  # noqa: E402
-    DataField,
-    Edits,
+    DataClass,
     Identity,
-    LanguageAdapter,
     ReferenceWithoutIdentityError,
     data_field,
     data_of,
@@ -29,8 +27,7 @@ from harness.installation.destination import (  # noqa: E402
 from harness.installation.language_adapter import (  # noqa: E402
     LanguageAdapterInstallation,
     MissingIdentityError,
-    argument_schema,
-    schema_type,
+    PublishedSchema,
 )
 
 _KANBAN = (
@@ -63,14 +60,14 @@ with description("a language adapter"):
             class Marked:
                 pass
 
-            expect(LanguageAdapter.languages_of(Marked)).to(equal(("typescript",)))
+            expect(DataClass(Marked).languages).to(equal(("typescript",)))
 
         with it("should name the field of its data that holds an object's name"):
             @identity("name")
             class Named:
                 pass
 
-            expect(Identity.fields_of(Named)).to(equal(("name",)))
+            expect(DataClass(Named).identity).to(equal(("name",)))
 
         with it("should name a subclass as its base is named"):
             @identity("name")
@@ -80,21 +77,21 @@ with description("a language adapter"):
             class Kind(Named):
                 pass
 
-            expect(Identity.fields_of(Kind)).to(equal(("name",)))
+            expect(DataClass(Kind).identity).to(equal(("name",)))
 
         with it("should name the fields an operation changes when its arguments are named differently"):
             @edits("title")
             def rename(new_title):
                 return new_title
 
-            expect(Edits.fields_of(rename)).to(equal(("title",)))
+            expect(DataClass(type(None)).edited_by(rename)).to(equal(("title",)))
 
         with context("that no mark names"):
             with it("should name no language"):
                 class Unmarked:
                     pass
 
-                expect(LanguageAdapter.languages_of(Unmarked)).to(equal(()))
+                expect(DataClass(Unmarked).languages).to(equal(()))
 
     with description("the data of a domain object"):
         with before.all:
@@ -162,10 +159,10 @@ with description("a language adapter"):
             self.card = PinnedCard("Visits", [Place(Path("notes"))])
 
         with it("should be the properties marked as its data, under their names"):
-            expect(list(DataField.fields_of(self.card_class))).to(equal(["title", "column", "places"]))
+            expect(list(DataClass(self.card_class).fields)).to(equal(["title", "column", "places"]))
 
         with it("should keep the data a base class marks, ahead of its own"):
-            expect(list(DataField.fields_of(self.pinned_class))).to(equal(["title", "column", "places", "is_pinned"]))
+            expect(list(DataClass(self.pinned_class).fields)).to(equal(["title", "column", "places", "is_pinned"]))
 
         with it("should be written as a plain value, each object it holds written as its own data"):
             expect(data_of(self.card)).to(equal({"title": "Pinned: Visits", "column": {"name": "Discovery"}, "places": [{"folder": "notes"}], "is_pinned": True}))
@@ -513,14 +510,14 @@ with description("a language adapter"):
 
     with description("a published schema"):
         with it("should keep only what checking a sent value needs"):
-            expect(argument_schema({"type": "string", "title": "Stage", "default": ""})).to(equal({"type": "string"}))
+            expect(PublishedSchema({"type": "string", "title": "Stage", "default": ""}).argument_check).to(equal({"type": "string"}))
 
         with it("should become a TypeScript array"):
-            expect(schema_type({"type": "array", "items": {"type": "string"}})).to(equal("string[]"))
+            expect(PublishedSchema({"type": "array", "items": {"type": "string"}}).typescript_type).to(equal("string[]"))
 
         with context("with a union"):
             with it("should keep every option"):
-                expect(schema_type({"anyOf": [{"type": "integer"}, {"type": "null"}]})).to(equal("number | null"))
+                expect(PublishedSchema({"anyOf": [{"type": "integer"}, {"type": "null"}]}).typescript_type).to(equal("number | null"))
 
     with description("the installer"):
         with it("should deploy this channel beside the others"):

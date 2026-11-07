@@ -117,13 +117,8 @@ class SavedEdge:
         return cls(str(record["parent"]), str(record["child"]), str(record["kind"]), int(record.get("order") or 0), str(record.get("display") or "direct"))
 
     @property
-    def fact(self) -> dict:
-        """The edge's kind, order, and display, as ``PracticeGraph.record`` takes them."""
-        return {"kind": self.kind, "order": self.order, "display": self.display}
-
-    @property
     def record(self) -> dict:
-        return {"parent": self.parent, "child": self.child, **self.fact}
+        return {"parent": self.parent, "child": self.child, "kind": self.kind, "order": self.order, "display": self.display}
 
 
 class SavedPractice:

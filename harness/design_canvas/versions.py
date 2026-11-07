@@ -94,7 +94,8 @@ class CanvasVersions:
         return self.latest
 
     def title(self, number: int, name: str) -> str:
-        return f"{name} — version-{number}"
+        """The title the version is published under: the canvas's *name* and the version's folder."""
+        return f"{name} — {self.folder(number).name}"
 
     def links(self) -> Dict[str, str]:
         """Each published version's canvas link, by version folder name."""

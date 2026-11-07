@@ -8,7 +8,7 @@ from expects import contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import before, context, description, it
 
-from harness.graph.graph import Graph, Node, PracticeGraph, Source
+from harness.graph.graph import EdgeType, Graph, Node, PracticeGraph, Source
 from harness.graph.saved_graph import SavedPractice
 
 
@@ -62,11 +62,7 @@ with description("a graph"):
             self.class_node.stage = "implementation"
             root = self.practice.root_node
             root.children.extend([self.module, self.class_node, self.other])
-            self.practice.record(
-                {"kind": "owns", "order": 2, "display": "direct"},
-                self.module,
-                self.class_node,
-            )
+            self.practice.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
             self.graph.filter.select_relationships(["owns"])
 
         with it("should keep the stage from the query on the node"):

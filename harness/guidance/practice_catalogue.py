@@ -9,13 +9,23 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
 
 
+class UnknownPractice(KeyError):
+    """A practice key the catalogue does not hold, such as a misspelt ``clean-engineering`` for ``clean_engineering``."""
+
+    def __init__(self, key: str, keys: tuple[str, ...]) -> None:
+        super().__init__(f"no practice {key!r}; the practices are {', '.join(keys)}")
+        self.key = key
+
+
 class PracticeCatalogue:
     """Every practice CDD ships, in the order the approach walks them: Stories, DDD, UX, Clean Engineering, BDD.
 
     Callers that only need the practice keys read ``keys()``, which imports no practice code, so the graph and schema
     modules the practices themselves import can use it. Callers that need a practice's fidelities, rules, folder, or
-    schema read the shared instance from ``practices()`` or ``practice(key)``; a caller that changes a practice's
-    current fidelity or format makes its own with ``create(key)``, so it does not change what other callers see.
+    schema read the catalogue's own instance from ``practices()`` or ``practice(key)``; a caller that changes a
+    practice's current fidelity or format makes its own with ``create(key)``, so it does not change what other callers
+    see. The catalogue keeps its instances because a practice's fidelities and rules are read from its markdown, which
+    does not change while the process runs, and every hook and tool call reads them; nothing that reads one sets it.
     """
 
     _REFS = {
@@ -57,7 +67,7 @@ class PracticeCatalogue:
     def practice_class(cls, key: str) -> type[PracticeGuidance]:
         ref = cls._REFS.get(key)
         if ref is None:
-            raise KeyError(f"no practice {key!r}; the practices are {', '.join(cls._REFS)}")
+            raise UnknownPractice(key, cls.keys())
         module, name = ref.split(":")
         return getattr(importlib.import_module(module), name)
 

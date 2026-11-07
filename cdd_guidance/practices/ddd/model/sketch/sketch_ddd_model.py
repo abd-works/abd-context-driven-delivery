@@ -9,7 +9,8 @@ from cdd_guidance.practices.ddd.model.markdown.nodes import (
     MarkdownBoundedContext,
     MarkdownBoundedContextMap,
 )
-from cdd_guidance.practices.ddd.model.stereotypes import plain_class_name, stereotypes_in, without_stereotypes
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
+from cdd_guidance.practices.ddd.model.stereotypes import plain_class_name
 
 _NESTING_INDENT = 2
 _SECTION = "## domain driven design:"
@@ -162,11 +163,11 @@ class _SketchReader:
             self.context.module_name = stripped.rstrip(":").strip().rstrip("/").strip()
             self.context.module_notes = []
         else:
-            self.group = without_stereotypes(stripped.rstrip(":"))
+            self.group = without_marks(stripped.rstrip(":"))
             self.context.group_notes.setdefault(self.group, [])
 
     def _open_entity(self, name: str) -> None:
-        marks = [item.lower() for item in stereotypes_in(name)]
+        marks = [item.lower() for item in marks_in(name)]
         fences = self.fences.get(id(self.aggregate), []) if self.aggregate is not None else []
         if marks and "aggregate root" not in marks and fences:
             # A member card at model fidelity joins the aggregate its root opened.

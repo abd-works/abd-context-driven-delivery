@@ -106,7 +106,7 @@ def tactical_facts(parsed: OoadClass, kind: str) -> dict:
     """The facts DDD's tactical rules read about a class its language parser read, seen as a building block of kind:
     which operations reach into other objects, which helpers are public, which only delegate, which loads find their
     identity in ambient state, and whether the class says which building block it is."""
-    from cdd_guidance.practices.ddd.model.stereotypes import declares_tactical_stereotype
+    from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
     operations = list(parsed.operations)
     public = [op for op in operations if op.name and not op.name.startswith("_")]
@@ -119,7 +119,7 @@ def tactical_facts(parsed: OoadClass, kind: str) -> dict:
             for op in operations
             if op.name.lower() in _LOAD_NAMES and not op.parameters and _AMBIENT_STATE.search(op.body.text)
         ],
-        "tactical_stereotype": declares_tactical_stereotype(parsed.name, parsed.stereotypes, kind, set(parsed.peer_names)),
+        "tactical_stereotype": TacticalClass(parsed.name, parsed.stereotypes).declares_stereotype(kind, parsed.peer_names),
     }
 
 

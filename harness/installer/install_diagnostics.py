@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from harness.hooks.hooks import HookHandlersFile
+from harness.hooks.hooks import HookInstallation
 from harness.installation.ide_layout import IdeLayout
 
 _COLORS = ("green", "yellow", "red")
@@ -34,7 +34,7 @@ class InstallDiagnostics:
             "command": sorted({path.stem for path in [*self._files("commands", "*.md"), *self._files("prompts", "*.md")]}),
             "rules": sorted(path.stem for path in self._files("rules", f"*{self._layout.rule_suffix}")),
             "mcp": sorted(mcp_names),
-            "hook": HookHandlersFile(self.folder / HookHandlersFile.NAME).operation_names,
+            "hook": HookInstallation(self._layout.ide, self.folder).registered_operations,
             "agent": sorted({path.stem for path in self._files("agents", "*.md")}),
             "language-adapter": sorted(
                 path.relative_to(self.folder / "language-adapters").as_posix() for path in self._files("language-adapters", "*.ts")

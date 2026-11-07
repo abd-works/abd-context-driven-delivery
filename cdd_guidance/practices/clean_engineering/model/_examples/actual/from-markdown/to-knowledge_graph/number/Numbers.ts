@@ -3,6 +3,7 @@
 /**
  * Paradise collection of ++AvailableNumber++. Mavenir builds the wrap target. List locks five resources when picking a new number (category always `standard`), or one when bringing a number; listing premium inventory category is always `premium`. Reserve moves locked to reserved and may release a previous reserved id. Premium selected id uses the same locked-to-reserved hop; `portin` is false (same as `pickNumber`). Category is on list. When `portin`, Mavenir marks the reserved resource `kv_tempNumber`.
  */
+@Repository()
 class MsisdnInventoryRepository {
   // << aggregation >>
   availableNumbers: Collection<AvailableNumber>;
@@ -46,6 +47,7 @@ class MsisdnInventoryRepository {
 /**
  * Paradise collection of ++AvailableSim++. Mavenir builds the wrap target. Available only. Empty or not-available is miss. No reserve this epic.
  */
+@Repository()
 class IccidInventoryRepository {
   // << aggregation >>
   availableSims: Collection<AvailableSim>;
@@ -105,6 +107,8 @@ class SearchTerm {
 /**
  * Wrap target. ++MSISDN++ resource in Mavenir inventory.
  */
+@System()
+@Entity()
 class MavenirMsisdnResource {
   id: string;
   // always available, locked, or reserved
@@ -119,6 +123,8 @@ class MavenirMsisdnResource {
 /**
  * Mavenir `inventoryGateway` (`.../msisdn/resource`, `.../sim/resource`).
  */
+@Service()
+@System()
 class InventoryGateway {
   constructor() {
   }
@@ -155,6 +161,8 @@ class InventoryGateway {
   }
 }
 
+@System()
+@Entity()
 class MavenirSimResource {
   id: string;
   // available passes

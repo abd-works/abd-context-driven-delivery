@@ -45,8 +45,8 @@ with description("guidance diagnostics install"):
         from cdd_guidance.actions.render.render import Render
 
         probe = GuidanceProbe(installer, ["stories", "clean-engineering-model"])
-        args, missing = probe.arguments_for("render.render", Render.render)
-        probe.cleanup()
+        args, missing = probe.arguments.for_operation("render.render", Render.render)
+        probe.arguments.cleanup()
         expect(missing).to(equal([]))
         expect(args["format"]).to(equal("markdown"))
         expect(args["paths"][0]).to(contain("cdd_guidance"))

@@ -15,9 +15,9 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.rule import Rule
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
+from harness.name.name import Name
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
-from space.session import name_of
 from space.session.session_log import SessionLog
 from space.session.sessions import Sessions
 
@@ -185,7 +185,7 @@ class Board:
     def open_ticket(self, title: str, scope: str, parent: str, path: str) -> Ticket:
         """A new ticket titled title in Discovery, its session working on path, a folder in the repository (its top when
         empty)."""
-        name = name_of(title)
+        name = Name(title).title_slug
         root = self._repo.root
         workpath = (root / path).resolve() if path else root
         self.sessions.create(name, workpath, title=title, scope=scope, parent=parent)

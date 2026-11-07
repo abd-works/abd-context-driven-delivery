@@ -274,7 +274,7 @@ AWS Amplify Auth in My Paradise. Talks to Cognito. Not a hosted record store.
 	// My Paradise reads the Mavenir customer id from Cognito user attributes through Amplify
 + getUser(email: string): CognitoUser | null
 
-## CognitoUser
+## CognitoUser <<represents>>
 
 Cognito confirmed status is `confirmed`; Paradise reads it as `AccountCredentials.verified`. `AccountCredentials` `` this type.
 
@@ -806,7 +806,7 @@ ON-BOARDING channel on shoppingCart create.
 
 # Plans
 
-## Plan
+## Plan <<represents>>
 
 Paradise *Plan* `` ++MavenirProductOffering++.
 
@@ -910,7 +910,7 @@ Paradise collection of ++AvailableSim++. Mavenir builds the wrap target. Availab
 	// available only
 	// empty or not-available is miss
 
-## AvailableNumber
+## AvailableNumber <<represents>>
 
 Paradise *AvailableNumber* `` ++MavenirMsisdnResource++.
 
@@ -919,7 +919,7 @@ Paradise *AvailableNumber* `` ++MavenirMsisdnResource++.
 + id: string
 ----
 
-## AvailableSim
+## AvailableSim <<represents>>
 
 Paradise *AvailableSim* `` ++MavenirSimResource++.
 
@@ -987,7 +987,7 @@ Mavenir `inventoryGateway` (`.../msisdn/resource`, `.../sim/resource`).
 
 # Porting
 
-## Portability
+## Portability <<association>>
 
 Donor / account / device / verified live here. Cart **links** this type (``). `planSelected` is the cart bundle name.
 
@@ -1379,7 +1379,7 @@ The phone line on a Cart or Subscription. Owns number, SIM type, ICCID, and port
 	// absent waiting pSIM: Error
 	// waiting pSIM Cleared: Error
 
-## Subscription
+## Subscription <<represents>>
 
 Paradise view of one line. Self-care: `{ id, bundle, number, simType, status, usage }`. Onboarding thinner: `{ type, number, status }` until agreement is live. `` ++MavenirAgreement++ (`agreementManagement/agreement`).
 
@@ -1531,7 +1531,7 @@ Vouchera redeem at cook. Written on Subscription. Cart.voucher is the code.
 
 # Care
 
-## Case
+## Case <<represents>>
 
 Paradise *Case* `` a Zendesk ++Ticket++. One subject per open. Not stored on the Customer session.
 

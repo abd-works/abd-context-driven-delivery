@@ -8,6 +8,8 @@ import os
 import re
 from pathlib import Path
 
+from harness.name.name import Name
+
 # A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.
 _CHAT_ID = re.compile(r"[0-9A-Za-z-]+")
 _IN_LOG_LINE = re.compile(
@@ -91,28 +93,21 @@ class ChatPointer:
         if not path.is_file():
             return cls(path.stem, path, ""), ""
         lines = path.read_text(encoding="utf-8").splitlines()
-        chat_id = ""
-        line_numbers = ""
-        body_start = 0
-        for index, line in enumerate(lines):
-            if not line.strip():
-                body_start = index + 1
-                break
-            if ":" not in line:
-                continue
-            key, value = line.split(":", 1)
-            token = key.strip().lower().replace("_", "-")
-            if token in {"chat-id", "conversation-id"}:
-                chat_id = value.strip()
-            elif token == "lines":
-                line_numbers = value.strip()
-        else:
-            body_start = len(lines)
-        body = "\n".join(lines[body_start:]).strip()
-        if not line_numbers:
-            count = len(body.splitlines()) if body else 1
-            line_numbers = f"1-{count}" if count > 1 else "1"
-        return cls(chat_id or path.stem, path, line_numbers), body
+        blank = next((index for index, line in enumerate(lines) if not line.strip()), None)
+        headers = cls._headers(lines[:blank] if blank is not None else lines)
+        body = "\n".join(lines[blank + 1:] if blank is not None else []).strip()
+        chat_id = headers.get("chat-id") or headers.get("conversation-id") or path.stem
+        return cls(chat_id, path, headers.get("lines") or cls._lines_of(body)), body
+
+    @staticmethod
+    def _headers(lines: list[str]) -> dict[str, str]:
+        """The ``key: value`` header lines above a chat file's first blank line, by kebab-case key."""
+        return {Name(key.strip()).kebab: value.strip() for key, _, value in (line.partition(":") for line in lines if ":" in line)}
+
+    @staticmethod
+    def _lines_of(body: str) -> str:
+        count = len(body.splitlines()) if body else 1
+        return f"1-{count}" if count > 1 else "1"
 
     @property
     def is_missing(self) -> bool:
@@ -168,12 +163,9 @@ class ChatPointer:
             found = found or value
         return found
 
-    @staticmethod
-    def _all_lines_of(path: Path) -> str:
-        if not path.is_file():
-            return "1"
-        count = len(path.read_text(encoding="utf-8").splitlines()) or 1
-        return f"1-{count}" if count > 1 else "1"
+    @classmethod
+    def _all_lines_of(cls, path: Path) -> str:
+        return cls._lines_of(path.read_text(encoding="utf-8")) if path.is_file() else "1"
 
     @staticmethod
     def _event_text(line: str, line_no: int) -> str:

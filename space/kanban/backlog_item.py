@@ -8,10 +8,10 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import data_field, identity, language_adapter
+from harness.name.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
 from space.kanban.ticket import Ticket
 from harness.mcp.mcp_server import mcp
-from space.session import name_of
 
 
 class BacklogItemNotFoundError(LookupError):
@@ -47,7 +47,7 @@ class BacklogItem(Card):
     def create(cls, title: str, text: str = "", *, project: Path | str) -> BacklogItem:
         """Add an idea to the Backlog: one markdown file, with title as its heading and text under it."""
         board = Board.load(project)
-        item = cls(board.sessions.backlog_folder / f"{name_of(title)}.md", board)
+        item = cls(board.sessions.backlog_folder / f"{Name(title).title_slug}.md", board)
         item._write(title, text)
         return item
 

@@ -13,7 +13,7 @@ import re
 from functools import cached_property, lru_cache
 from pathlib import Path
 
-from harness.graph.graph import edge_order
+from harness.graph.graph import EdgeType
 from harness.guidance.schema import Schema
 from harness.name.name import Name
 
@@ -242,11 +242,10 @@ class SchemaEdges:
         return [target for target in targets if target is not owner and self._matches(field.kind, owner, target)]
 
     def _record(self, kind: str, parent, child) -> None:
-        display = _DISPLAY.get(kind, "relationship")
-        fact = {"kind": kind, "order": edge_order(kind, display), "display": display}
-        parent.practice.record(fact, parent, child)
+        edge_type = EdgeType.from_kind(kind, _DISPLAY.get(kind, "relationship"))
+        parent.practice.record(edge_type, parent, child)
         if parent.practice is not child.practice:
-            child.practice.record(fact, child, parent)
+            child.practice.record(edge_type, child, parent)
 
     def _matches(self, kind: str, owner, target) -> bool:
         evidence = NodeEvidence(owner)

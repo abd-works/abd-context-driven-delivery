@@ -1,5 +1,7 @@
 // === Payments ===
 
+@AggregateRoot()
+@Entity()
 class Payment {
   // always compared to GrowthBook PAYMENT_ATTEMPTS
   // always null until enter
@@ -80,6 +82,8 @@ class PaymentCharge {
 /**
  * Wrap target. FAC hosted payment page. No Paradise types.
  */
+@System()
+@Entity()
 class PaymentIframe {
   html: string;
   transactionId: string;
@@ -93,6 +97,8 @@ class PaymentIframe {
 /**
  * FAC CCS builds the ++PaymentIframe++. Midtier maps; it is not a type. POST `fac/cards/spi/auth`; GET `getTokenizedCard`.
  */
+@Service()
+@System()
 class FAC {
   constructor() {
   }
@@ -122,6 +128,8 @@ class FAC {
 /**
  * Outcome of a tokenized-card read. No Paradise types. No repository.
  */
+@System()
+@Entity()
 class PaymentStatus {
   // completed | failed
   status: string;
@@ -137,6 +145,8 @@ class PaymentStatus {
 /**
  * Wrap target. Apple / DigiCert BM domain certificate Midtier serves. No Paradise types.
  */
+@System()
+@Entity()
 class ApplePayCertificate {
   // bmApplePayCert serial CertificateSerialNumber=08b3a3b7b23c2c56a625e95211699f0b
   // live JSON wraps serial in []
@@ -153,6 +163,8 @@ class ApplePayCertificate {
 /**
  * Midtier serves the ++ApplePayCertificate++. Apple / DigiCert builds it; Midtier is not a type. POST `/apple/cert` `getCert`.
  */
+@Service()
+@System()
 class Apple {
   constructor() {
   }

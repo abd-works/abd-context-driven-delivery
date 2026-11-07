@@ -16,6 +16,7 @@ from mamba import description, it
 
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.rule import Rule
+from space.session.session import Session
 
 
 class _Fidelities:
@@ -25,13 +26,15 @@ class _Fidelities:
         "acceptance_tests": None,
     }
 
+    def __iter__(self):
+        return iter(())
+
 
 class _StoriesRules(PracticeGuidance):
-    def __init__(self, path=None) -> None:
-        self.path = path
-        self.workspace = None
-        self.session = None
+    def __init__(self, root=None) -> None:
         self.format = None
+        if root is not None:
+            Session(root).practice("stories").guideline = self
 
     @property
     def context_index_key(self) -> str:
@@ -87,7 +90,6 @@ with description("project rules"):
 
     with it("should return no rules when the practice works in no folder"):
         expect(_StoriesRules().project_rules()).to(equal([]))
-        expect(_StoriesRules(".").project_rules()).to(equal([]))
 
     with it("should load rules from an asset location under the project"):
         with tempfile.TemporaryDirectory() as tmp:

@@ -79,8 +79,8 @@ class Stories(PracticeGuidance):
         """The folder paths are named from: the repository of the session this practice works in. The MCP host serves
         every project from its own folder, so a practice in no session, as a script makes one, takes only absolute
         paths and names its files from the folder those paths share."""
-        if self.workspace is not None:
-            return self.workspace.repo_path
+        if self.session is not None:
+            return self.session.repo_path
         if not named or not all(path.is_absolute() for path in named):
             raise PracticeOutsideSession(
                 f"{type(self).__name__} works in no session, so it has no project to read {[str(path) for path in named]} from"

@@ -3,15 +3,24 @@
 from __future__ import annotations
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import command, skill
-from harness.mcp.mcp_server import mcp
+from harness.mcp.mcp_server import long_call, mcp
 
 
 @agent_toolset
 class GuidanceDiagnostics:
-    """Probe installed guidance instructions and guidance-action MCP operations."""
+    """Probe installed guidance instructions and guidance-action MCP operations. Made for one call, so it probes the
+    install of the project that call names."""
+
+    def __init__(self, call: ToolCall | None = None) -> None:
+        self._call = call or ToolCall()
+
+    def for_call(self, call: ToolCall) -> GuidanceDiagnostics:
+        return type(self)(call)
 
     @mcp
+    @long_call
     @skill
     @command("guidance-diagnostics")
     @agent_tool
@@ -24,5 +33,5 @@ class GuidanceDiagnostics:
         from harness.diagnostics.guidance_probe import GuidanceProbe
         from harness.installer.installer import Installer
 
-        probe = GuidanceProbe.filtered_by(Installer(), guidance)
+        probe = GuidanceProbe.from_filter(Installer(repo=self._call.project), guidance)
         return "\n\n".join((probe.instructions(), probe.actions()))

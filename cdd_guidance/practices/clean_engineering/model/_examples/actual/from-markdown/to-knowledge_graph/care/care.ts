@@ -3,6 +3,8 @@
 /**
  * Paradise *Case* `<<represents>>` a Zendesk ++Ticket++. One subject per open. Not stored on the Customer session.
  */
+@AggregateRoot()
+@Entity()
 class Case {
   // GWT seven: ID Verification Required | SIM Delivery Required | ID Verification Required and SIM Delivery Required | Promotional trial | Portability Required | Payment failed | Roaming plan - New Subscription
   // cardAdditionFailed config out of GWT
@@ -13,6 +15,7 @@ class Case {
   }
 }
 
+@Repository()
 class CaseRepository {
   // << aggregation >>
   cases: Collection<Case>;
@@ -36,6 +39,8 @@ class CaseRepository {
 /**
  * Wrap target. Zendesk ++Ticket++. No Paradise types.
  */
+@System()
+@Entity()
 class Ticket {
   id: string;
   subject: string;
@@ -55,6 +60,8 @@ class Ticket {
 /**
  * Zendesk builds the ++Ticket++. Midtier maps; it is not a type. POST tickets.json.
  */
+@Service()
+@System()
 class Zendesk {
   constructor() {
   }
@@ -73,6 +80,8 @@ class Zendesk {
 /**
  * Wrap target. Persona inquiry. Care owns the inquiry record. KYC `ProfileRequirements.mapInquiry` writes Identity / Address.
  */
+@System()
+@Entity()
 class PersonaInquiry {
   inquiryId: string;
   status: string;
@@ -118,6 +127,8 @@ class PersonaInquiry {
 /**
  * Wrap target. Persona government-id document. Care owns the document. KYC reads expiry onto Identity.
  */
+@System()
+@Entity()
 class PersonaDocument {
   documentId: string;
   expirationDate: string;
@@ -133,6 +144,8 @@ class PersonaDocument {
 /**
  * Persona builds the ++PersonaInquiry++. Midtier maps; it is not a type.
  */
+@Service()
+@System()
 class PersonaService {
   constructor() {
   }

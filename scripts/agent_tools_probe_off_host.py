@@ -26,7 +26,7 @@ def main() -> int:
 
     installer = Installer(path=args.path, repo=_REPO)
     installer.toolsets.ensure_import_path()
-    report = AgentToolsProbe(installer, args.guidance).run_standalone()
+    report = AgentToolsProbe(installer, args.guidance).run()
     print(report)
     first_lines = [line.lstrip("!") for line in report.split("\n") if line.strip()]
     return 1 if any(line.startswith("red") for line in first_lines[:4]) else 0

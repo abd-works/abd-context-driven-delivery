@@ -9,7 +9,7 @@ from expects import be_above, contain, equal, expect
 from harness.installation.destination import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
-from harness.graph.graph import Graph, Node, PracticeGraph, Source
+from harness.graph.graph import EdgeType, Graph, Node, PracticeGraph, Source
 
 _ROOT = _HERE
 _SAMPLE = _ROOT / "_examples" / "input"
@@ -1001,7 +1001,7 @@ with description("a scenario"):
             self.given = _node(self.practice, "Step", "given the account exists", 10)
             self.when = _node(self.practice, "Step", "when the User creates their account", 20)
             self.then = _node(self.practice, "Step", "then the account is unconfirmed", 30)
-            owns = {"kind": "owns", "order": 1, "display": "direct"}
+            owns = EdgeType("owns", 1, "direct")
             self.practice.record(owns, self.scenario, self.then)
             self.practice.record(owns, self.scenario, self.when)
             self.practice.record(owns, self.scenario, self.given)
@@ -1017,7 +1017,7 @@ with description("a scenario"):
             self.step = _node(self.practice, "Step", "when the User creates their account", 20)
             self.later = _node(self.practice, "Operation", "register", 80)
             self.earlier = _node(self.practice, "Operation", "save", 5)
-            invokes = {"kind": "invokes", "order": 2, "display": "grouped"}
+            invokes = EdgeType("invokes", 2, "grouped")
             self.practice.record(invokes, self.step, self.later)
             self.practice.record(invokes, self.step, self.earlier)
             self.step.populate()

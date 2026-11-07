@@ -5,7 +5,7 @@ this module only spells JavaScript lines.
 """
 from __future__ import annotations
 
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     OoadClass,
@@ -13,14 +13,10 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     example_extension_kind,
     is_interface_name,
 )
-from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.code_class_model import BraceCleanEngineeringModel, CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-
-if TYPE_CHECKING:
-    from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering as CleanEngineeringGuidance
 
 _JAVASCRIPT = CodeLanguage.named("javascript")
 _EXAMPLE_MODES = {
@@ -30,24 +26,8 @@ _EXAMPLE_MODES = {
 }
 
 
-class JavaScriptCleanEngineeringModel(CodeCleanEngineeringModel):
+class JavaScriptCleanEngineeringModel(BraceCleanEngineeringModel):
     language = _JAVASCRIPT
-
-    def __init__(
-        self,
-        name: str = "",
-        sequential_order: int = 1,
-        guidance: Optional["CleanEngineeringGuidance"] = None,
-    ) -> None:
-        super().__init__(name, sequential_order)
-        self._guidance = guidance
-
-    def parse(self, text: str) -> "JavaScriptCleanEngineeringModel":
-        return CFamilyParse(
-            model_factory=lambda: type(self)(name="", sequential_order=1),
-            class_factory=OoadClass,
-            language=_JAVASCRIPT,
-        ).parse(text)
 
     def render_class(self, oclass: OoadClass, known_names: List[str], kept: CodeCleanEngineeringModel) -> List[str]:
         kind = example_extension_kind(oclass.name)
@@ -61,10 +41,15 @@ class JavaScriptCleanEngineeringModel(CodeCleanEngineeringModel):
 
     def interface_declaration(self, oclass: OoadClass) -> List[str]:
         """JavaScript has no interfaces, so the contract is a class that says it is one."""
-        return [f"// interface {oclass.name}"] + self.class_declaration(oclass)
+        return [f"// interface {oclass.name}"] + self.class_declaration(oclass, [])
 
-    def implementing_declaration(self, oclass: OoadClass, interface: str) -> List[str]:
-        return [f"// implements {interface}"] + self.class_declaration(oclass)
+    def class_declaration(self, oclass: OoadClass, bases: List[str]) -> List[str]:
+        """JavaScript extends one class and has no `implements`, so the other bases are named in an `// implements`
+        line above the class, where the parse reads them back."""
+        extended, implemented = self.heritage(bases)
+        extends = f" extends {extended}" if extended else ""
+        noted = [f"// implements {', '.join(implemented)}"] if implemented else []
+        return noted + [f"class {oclass.name}{extends} {{"]
 
     def property_line(self, prop: Property, contract: bool) -> List[str]:
         return []

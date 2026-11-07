@@ -16,14 +16,13 @@ A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities s
 
 Base of every guidance class; an *AgentToolSet* through `@agent_toolset`.
 
-Guidance(format, path, session, workspace)
+Guidance(format)
 ------
 format: str
 	Invariant: an omitted format uses default_format
 default_format: str
-path: str | None
-session: str | None
-workspace: Any
+session: Session | None
+	// the session work_in gives a practice; none until a session works on it
 name: str | None
 slug: str
 registration_name: str
@@ -99,7 +98,10 @@ project_rules(): list[Rule]
 	-> ProjectRulesets.folders_for
 	-> RulesCollection.from_markdown
 schema_guide(): str
-schema_node_fidelities(): dict[str, str]
+schema_node_fidelities(): dict[str, list[str]]
+	// each schema node type with the fidelity that creates it and every higher one
+schema_fidelity_errors(): list[str]
+	// node fidelities the schema names that the practice does not have
 domain_markdown_path(): Path
 scoped_markdown(): str
 	// overview, guidance, shared rules, language, and the active fidelity's block (every block when none is active)
@@ -193,9 +195,8 @@ A practice's or fidelity's rules with where they apply.
 
 RulesCollection(entries, applies_to: AppliesTo | None, parent)
 ------
-always_apply: bool | None
-glob: str
-appliesTo: AppliesTo
+applies_to: AppliesTo
+	// which edited files the rules apply to: always, or the files its glob patterns match
 practice_key: str
 fidelity_name: str
 markdown_block: str
@@ -255,12 +256,12 @@ toolset_ref(slug: str): str | dict | None
 
 ## ActionCatalogue
 
-Every action CDD ships, read from the folders under `cdd_guidance/actions`: each folder holds its kit as the class of the folder's name in Pascal case, and each operation that kit marks as a skill is one *Action*. A new action folder joins the catalogue by being there.
+Every action CDD ships, read from the folders under `cdd_guidance/actions`: each folder holds its toolset as the class of the folder's name in Pascal case, and each operation that toolset installs as a skill is one *Action*; a `@noDeploy` operation is not installed, so it is no action. A new action folder joins the catalogue by being there.
 
 ActionCatalogue
 ------
 ----
-kits(): tuple[type, ...]
+toolsets(): tuple[type, ...]
 	// imported on first use and kept for the process
 actions(): tuple[Action, ...]
 names(): tuple[str, ...]
@@ -269,17 +270,17 @@ action(name: str): Action | None
 
 ## Action
 
-One action CDD ships, such as generate, repair, or createRule. One kit can publish several.
+One action CDD ships, such as generate, repair, or verify_fix. One toolset can install several.
 
-Action(name: str, kit_class: type)
+Action(name: str, toolset_class: type)
 ------
 name: str
-kit_class: type
-kit_ref: str
-	// "{module}:{Class}" of the kit
+toolset_class: type
+toolset_ref: str
+	// "{module}:{Class}" of the toolset
 operation: Callable
 folder: Path
-	// the kit's folder under cdd_guidance/actions
+	// the toolset's folder under cdd_guidance/actions
 ----
 
 ## ApproachStages

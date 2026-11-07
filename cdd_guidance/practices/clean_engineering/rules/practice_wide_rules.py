@@ -169,6 +169,19 @@ class ExtensionsLiveWithTheDomain(PracticeGraphRule):
         ]
 
 
+class SourceParses(PracticeGraphRule):
+    """A source file its language cannot parse is read into no class, so every other rule passes it without a look."""
+
+    slug = "source-parses"
+    node_types = _FOLDER_TYPES
+
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+        return [
+            f"Source file {entry}; fix it so its classes can be checked."
+            for entry in node.get_fact("unreadable_sources", []) or []
+        ]
+
+
 def _folders(context: "RuleCheckContext") -> list["Node"]:
     return [folder for kind in _FOLDER_TYPES for folder in context.practice.nodes.get(kind, [])]
 

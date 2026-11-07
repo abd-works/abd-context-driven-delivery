@@ -1,5 +1,7 @@
 // === Customer ===
 
+@AggregateRoot()
+@Entity()
 class Customer {
   // derived from accountCredentials.customerId when not passed
   // empty string when credentials have no customer id
@@ -62,6 +64,7 @@ class Customer {
   }
 }
 
+@Repository()
 class CustomerRepository {
   // << aggregation >>
   customers: Collection<Customer>;
@@ -95,6 +98,7 @@ class CustomerRepository {
 /**
  * My Paradise HTTP boundary to Midtier. Midtier validates the account token and forwards customer operations to Mavenir.
  */
+@Service()
 class MidtierCustomerService {
   constructor() {
   }
@@ -116,6 +120,7 @@ class MidtierCustomerService {
 /**
  * One typed Customer failure carrying enough domain context for callers to handle and report repository and aggregate failures safely.
  */
+@Exception()
 class CustomerException {
   // << association >>
   operation: CustomerOperation;
@@ -132,6 +137,7 @@ class CustomerException {
   }
 }
 
+@Entity()
 class Identity {
   email: string;
   name: string;
@@ -160,6 +166,7 @@ class Identity {
   }
 }
 
+@Entity()
 class Address {
   street: string;
   complement: string;
@@ -181,6 +188,8 @@ class Address {
 /**
  * Paradise wrap of ++CognitoUser++. Own aggregate: constructed through `AccountRepository.newAccount()`. Auth operations live on this object and persist through the wired repository. `verified` is Cognito confirmed / unconfirmed.
  */
+@AggregateRoot()
+@Entity()
 class AccountCredentials {
   // from CognitoUser.email when constructed from CognitoUser
   email: string;
@@ -269,6 +278,7 @@ class AccountCredentials {
 /**
  * Wraps the Cognito agent. Credentials exist before a Customer. `newAccount` is the canonical constructor: it returns AccountCredentials with the repository wired so register / activate / authenticateAccount / resendValidationCode persist.
  */
+@Repository()
 class AccountRepository {
   // << aggregation >>
   accountCredentials: Collection<AccountCredentials>;
@@ -331,6 +341,7 @@ class AccountCredentialsErrors {
 /**
  * Thrown by `AccountCredentials.resendValidationCode` when the 60-second wait has not elapsed. No Cognito call is made.
  */
+@Exception()
 class ValidationCodeResendWaitException {
   availableAt: Date;
 
@@ -388,6 +399,8 @@ class AccountCredentialRequirements {
 /**
  * AWS Amplify Auth in My Paradise. Talks to Cognito. Not a hosted record store.
  */
+@Service()
+@System()
 class AmplifyService {
   constructor() {
   }
@@ -425,6 +438,8 @@ class AmplifyService {
 /**
  * Cognito confirmed status is `confirmed`; Paradise reads it as `AccountCredentials.verified`. `AccountCredentials` `<<represents>>` this type.
  */
+@System()
+@Entity()
 class CognitoUser {
   email: string;
   confirmed: boolean;
@@ -442,6 +457,7 @@ class CognitoUser {
   }
 }
 
+@System()
 class AccountToken {
   email: string;
   customerId: string | null;
@@ -452,6 +468,7 @@ class AccountToken {
   }
 }
 
+@System()
 class ValidationCode {
   code: string;
 
@@ -463,6 +480,7 @@ class ValidationCode {
 /**
  * Timestamped record of every initial or repeated validation-code send performed by Amplify.
  */
+@System()
 class ValidationCodeSend {
   code: string;
   sentAt: Date;
@@ -475,6 +493,8 @@ class ValidationCodeSend {
   }
 }
 
+@AggregateRoot()
+@Entity()
 class MavenirCustomer {
   id: string;
   // << association >>
@@ -523,6 +543,8 @@ class MavenirCustomer {
 /**
  * Mavenir `portalGateway`. Party create / read / profile. Cart, catalog, billing, and order slices live on the same service in their modules.
  */
+@Service()
+@System()
 class PortalGateway {
   constructor() {
   }

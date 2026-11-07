@@ -20,7 +20,7 @@ from cdd_guidance.practices.ddd.model.markdown.nodes import (
     MarkdownIntegration,
 )
 from cdd_guidance.practices.ddd.model.nodes import BoundedContext, BoundedContextMap
-from cdd_guidance.practices.ddd.model.stereotypes import tactical_stereotypes
+from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 _PLACE = " · "
 _DEFAULT_CONTEXT = "Domain"
@@ -89,7 +89,7 @@ def _card_from_class(oclass: OoadClass) -> tuple[ClassCard, list[str]]:
     place = [part.strip() for part in first.split(_PLACE.strip()) if part.strip()]
     if len(place) < 2:
         place, rest = [], oclass.intent or ""
-    marks = tactical_stereotypes(oclass.stereotypes)
+    marks = TacticalClass(oclass.name, oclass.stereotypes).stereotypes
     card = ClassCard.from_name(oclass.name, marks or _stereotypes_by_name(oclass.name))
     node = card.node
     node.sequential_order = oclass.sequential_order

@@ -9,7 +9,6 @@ from pathlib import Path
 
 from harness.graph.graph import Graph, Node, PracticeGraph, Source
 from harness.graph.graph_practice import GraphOverlay, GraphPractices
-from harness.graph.schema_edges import overlay_edge_display
 from harness.graph.skipped_folders import scanned_files
 
 _VIEW_EXPORT = re.compile(r"export\s+function\s+(\w+View)\s*\(")
@@ -26,6 +25,15 @@ _BEHAVIOR_TIERS = {
 
 
 class LernOverlay(GraphOverlay):
+    # The LERN and DDD schema kinds that place a node as a child in the explorer tree.
+    direct_kinds = frozenset(
+        {
+            "owns", "root", "entityRoot", "nodeRoot", "clientRoot", "nodeRepository", "repository", "route", "view",
+            "views", "mappedTo", "local", "remote", "jsonStore", "hosts", "interacts", "calls", "writes", "stores",
+            "writtenBy", "belongsTo",
+        }
+    )
+
     def guidance(self):
         from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
 
@@ -34,11 +42,7 @@ class LernOverlay(GraphOverlay):
     def read(self, graph: Graph) -> None:
         if not graph.folder:
             return
-        _LernReading(graph, Path(graph.folder)).read()
-
-
-def _link(practice: PracticeGraph, kind: str, parent: Node, child: Node) -> None:
-    practice.link(kind, parent, child, overlay_edge_display(kind))
+        _LernReading(self, graph, Path(graph.folder)).read()
 
 
 def _file_node(practice: PracticeGraph, relative: str, semantic: str, name: str = "") -> Node:
@@ -53,9 +57,13 @@ def _file_node(practice: PracticeGraph, relative: str, semantic: str, name: str 
 class _LernReading:
     """One read of the LERN tiers of a working copy onto the practices the graph holds."""
 
-    def __init__(self, graph: Graph, root: Path) -> None:
+    def __init__(self, overlay: LernOverlay, graph: Graph, root: Path) -> None:
+        self.overlay = overlay
         self.graph = graph
         self.root = root
+
+    def _link(self, practice: PracticeGraph, kind: str, parent: Node, child: Node) -> None:
+        practice.link(kind, parent, child, self.overlay.display_of(kind))
 
     def read(self) -> None:
         from cdd_guidance.patterns.lern_domain_driven.tier_facts import test_setup_text
@@ -98,7 +106,7 @@ class _LernReading:
         slug = Path(folder).name
         tiers = {semantic: _file_node(self.ddd, f"{folder}/{name.format(slug=slug)}", semantic) for name, semantic in _TIER_FILES if (self.root / folder / name.format(slug=slug)).is_file()}
         for tier in tiers.values():
-            _link(self.ddd, "owns", aggregate, tier)
+            self._link(self.ddd, "owns", aggregate, tier)
         self._other_node_files(folder, slug, aggregate)
         roots = [node for node in self.ddd.nodes.get("EntityRoot", []) if _folder_of(node.source.file) == folder]
         repositories = [node for node in self.ddd.nodes.get("Repository", []) if _folder_of(node.source.file) == folder]
@@ -107,25 +115,25 @@ class _LernReading:
         views = self._views(folder, slug, aggregate, tiers.get("ClientRoot"), repositories[0] if repositories else None)
         if "NodeRoot" in tiers:
             for view in views:
-                _link(self.ddd, "views", tiers["NodeRoot"], view)
+                self._link(self.ddd, "views", tiers["NodeRoot"], view)
 
     def _link_tiers(self, tiers: dict[str, Node], roots: list[Node], repositories: list[Node]) -> None:
         node_root, client_root, route, store = (tiers.get(name) for name in ("NodeRoot", "ClientRoot", "Route", "JsonStore"))
         for entity in roots:
             if node_root is not None:
-                _link(self.ddd, "nodeRoot", entity, node_root)
-                _link(self.ddd, "hosts", entity, node_root)
+                self._link(self.ddd, "nodeRoot", entity, node_root)
+                self._link(self.ddd, "hosts", entity, node_root)
             if client_root is not None:
-                _link(self.ddd, "interacts", entity, client_root)
+                self._link(self.ddd, "interacts", entity, client_root)
         if client_root is not None and route is not None:
-            _link(self.ddd, "calls", client_root, route)
+            self._link(self.ddd, "calls", client_root, route)
         if route is not None and node_root is not None:
-            _link(self.ddd, "nodeRoot", route, node_root)
+            self._link(self.ddd, "nodeRoot", route, node_root)
         for repository in repositories:
             if store is not None:
-                _link(self.ddd, "writes", repository, store)
+                self._link(self.ddd, "writes", repository, store)
             if node_root is not None:
-                _link(self.ddd, "nodeRepository", node_root, repository)
+                self._link(self.ddd, "nodeRepository", node_root, repository)
 
     def _tier_facts(self, folder: str, aggregate: Node, tiers: dict[str, Node], repositories: list[Node]) -> None:
         """Read each LERN tier file once and record what its rules need on the node it became."""
@@ -148,7 +156,7 @@ class _LernReading:
         folder_path = self.root / folder
         for file in sorted(folder_path.glob("*-node.ts")) if folder_path.is_dir() else []:
             if file.name != f"{slug}-node.ts":
-                _link(self.ddd, "owns", aggregate, _file_node(self.ddd, file.relative_to(self.root).as_posix(), "NodeRoot"))
+                self._link(self.ddd, "owns", aggregate, _file_node(self.ddd, file.relative_to(self.root).as_posix(), "NodeRoot"))
 
     def _views(self, folder: str, slug: str, aggregate: Node, client_root: Node | None, repository: Node | None) -> list[Node]:
         views = []
@@ -159,11 +167,11 @@ class _LernReading:
                 continue
             view = _file_node(self.ddd, file.relative_to(self.root).as_posix(), "View", match.group(1))
             views.append(view)
-            _link(self.ddd, "view", aggregate, view)
+            self._link(self.ddd, "view", aggregate, view)
             if client_root is not None:
-                _link(self.ddd, "clientRoot", view, client_root)
+                self._link(self.ddd, "clientRoot", view, client_root)
             if repository is not None:
-                _link(self.ddd, "nodeRepository", view, repository)
+                self._link(self.ddd, "nodeRepository", view, repository)
         return views
 
     def _context_mappings(self) -> None:
@@ -180,11 +188,11 @@ class _LernReading:
                     continue
                 left, right = match.group(1).strip(), match.group(2).strip()
                 mapping = self.ddd.add_named("ContextMapping", map_id, f"{left} → {right}", Source(markdown, index, index, self.ddd.source_root))
-                _link(self.ddd, "mappedTo", context, mapping)
+                self._link(self.ddd, "mappedTo", context, mapping)
                 for kind, label in (("local", left), ("remote", right)):
                     aggregate = self._aggregate_named(label)
                     if aggregate is not None:
-                        _link(self.ddd, kind, mapping, aggregate)
+                        self._link(self.ddd, kind, mapping, aggregate)
 
     def _aggregate_named(self, label: str) -> Node | None:
         label = label.strip()
@@ -207,7 +215,7 @@ class _LernReading:
             node = _file_node(stories, relative, semantic, Path(relative).name)
             parent = _parent_story_scope(stories, relative)
             if parent is not None:
-                _link(stories, "owns", parent, node)
+                self._link(stories, "owns", parent, node)
             for key, value in story_file_facts(file.read_text(encoding="utf-8")).items():
                 node.set_fact(key, value)
 

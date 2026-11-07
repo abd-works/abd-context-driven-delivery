@@ -27,23 +27,21 @@ with description("a shared rules section containing rule bullets") as self:
         with it("should parse bullets into a rules collection"):
             expect("sample-rule-one" in self.guidance.rules.entries).to(equal(True))
 
-        with it("should expose appliesTo from the rules yaml fence"):
-            expect(self.guidance.rules.appliesTo.always_apply).to(equal(False))
-            expect(self.guidance.rules.appliesTo.globs).to(contain("**/*sample*"))
+        with it("should say which files the rules apply to from the rules yaml fence"):
+            expect(self.guidance.rules.applies_to.always_apply).to(equal(False))
+            expect(self.guidance.rules.applies_to.globs).to(contain("**/*sample*"))
 
-        with it("should bind globs from the yaml fence onto glob"):
-            expect(self.guidance.rules.glob).to(contain("**/*sample*"))
 
         with it("should match a path against glob"):
-            expect(self.guidance.rules.matches("pkg/foo_sample_bar.py")).to(equal(True))
-            expect(self.guidance.rules.matches("pkg/other.py")).to(equal(False))
+            expect(self.guidance.rules.applies_to.matches("pkg/foo_sample_bar.py")).to(equal(True))
+            expect(self.guidance.rules.applies_to.matches("pkg/other.py")).to(equal(False))
 
         with it("should match any file when always_apply and the bag has no glob"):
             from harness.guidance.rule import AppliesTo, RulesCollection
 
             bag = RulesCollection(applies_to=AppliesTo(always_apply=True))
-            expect(bag.matches("pkg/notes.md")).to(equal(True))
-            expect(bag.matches("C:/dev/repo/src/app.py")).to(equal(True))
+            expect(bag.applies_to.matches("pkg/notes.md")).to(equal(True))
+            expect(bag.applies_to.matches("C:/dev/repo/src/app.py")).to(equal(True))
 
         with it("should not treat a trailing directory ** as every filename"):
             from harness.guidance.rule import AppliesTo, RulesCollection
@@ -51,8 +49,8 @@ with description("a shared rules section containing rule bullets") as self:
             bag = RulesCollection(
                 applies_to=AppliesTo(globs="**/*agent_spec*,**/.agent_bdd_sessions/**")
             )
-            expect(bag.matches("harness/guidance/rule.py")).to(equal(False))
-            expect(bag.matches("foo/bar_agent_spec.py")).to(equal(True))
+            expect(bag.applies_to.matches("harness/guidance/rule.py")).to(equal(False))
+            expect(bag.applies_to.matches("foo/bar_agent_spec.py")).to(equal(True))
 
         with it("should not match by filename alone when the glob names a path prefix"):
             from harness.guidance.rule import AppliesTo, RulesCollection
@@ -60,8 +58,8 @@ with description("a shared rules section containing rule bullets") as self:
             bag = RulesCollection(
                 applies_to=AppliesTo(globs="packages/**/*-server.ts")
             )
-            expect(bag.matches("packages/onboard/carts/cart-server.ts")).to(equal(True))
-            expect(bag.matches("src/customer/customer-server.ts")).to(equal(False))
+            expect(bag.applies_to.matches("packages/onboard/carts/cart-server.ts")).to(equal(True))
+            expect(bag.applies_to.matches("src/customer/customer-server.ts")).to(equal(False))
 
         with it("should not inject AgentBdd rules for a production python file"):
             from cdd_guidance.practices.agent_bdd.agent_bdd import AgentBdd

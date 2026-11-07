@@ -65,7 +65,7 @@ class _DddReading:
 
     def _members_by_folder(self) -> dict[str, list[tuple[Node, str]]]:
         """The classes Clean Engineering read that DDD names a building block, by folder, each with its kind."""
-        from cdd_guidance.practices.ddd.model.stereotypes import decorated_name, inferred_tactical_kind
+        from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
         clean = self.practice.graph.practices.get("clean_engineering")
         classes = clean.nodes.get("OoadClass", []) if clean is not None else []
@@ -73,7 +73,7 @@ class _DddReading:
         members: dict[str, list[tuple[Node, str]]] = {}
         for cls in classes:
             folder = str(Path(cls.source.file).parent).replace("\\", "/")
-            kind = inferred_tactical_kind(decorated_name(cls.name, cls.get_fact("stereotypes") or []), names)
+            kind = TacticalClass(cls.name, cls.get_fact("stereotypes") or []).inferred_kind(names)
             if kind is not None and not f"{folder}/".startswith(_TEST_FOLDERS):
                 members.setdefault(folder, []).append((cls, kind))
         return members

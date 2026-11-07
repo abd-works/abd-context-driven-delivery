@@ -218,10 +218,10 @@ class ReportFile:
     def _scanned_rules(self) -> set[str]:
         """The rules a scanner checks now; a saved graph keeps the hits of a scanner deleted since it was saved."""
         from harness.graph.graph_practice import GraphPractices
-        from harness.graph.schema_rules import active_overlay_patterns
+        from harness.graph.pattern_overlays import PatternOverlays
 
         overlays = json.loads(self._graph.read_text(encoding="utf-8")).get("overlays", [])
-        return set(GraphPractices.named(self._practice.key).checks(active_overlay_patterns(tuple(overlays))))
+        return set(GraphPractices.named(self._practice.key).checks(PatternOverlays(overlays).patterns))
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""

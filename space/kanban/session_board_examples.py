@@ -16,28 +16,36 @@ The ticket names, titles, and log lines are those of `fixture-repo.ts` and of th
 from __future__ import annotations
 
 import json
-import os
-import shutil
 import subprocess
-import tempfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from harness.graph.saved_graph import SavedGraph, SavedNode, SavedPractice
+from harness.graph.violation import Violation
 from space.kanban.board import Board
+from space.session.throwaway_project import ThrowawayProject
 from space.work_state import WorkState
 
 STAMP = "2026-11-01T10:00:00Z"
 STORY_MAP_FILE = ".context/story-map.md"
 STORY_MAP_TEXT = "# Check Out Order\n\n## Payment\n\n- Enter Card Details\n- Handle Payment\n- Confirm Order\n"
 STORY_MAP_REPORT = "stories-story-map-20261101T100000"
-STORY_MAP_GRAPH = {
-    "practices": {
-        "stories": {
-            "nodes": [["node-1", "", "Story", "stories", STORY_MAP_FILE, 6, 6]],
-            "rules": [["verb-noun-format", "node-1", "Name the story with a verb"]],
-        },
-    },
-}
+
+
+def saved_practice(practice: str, node_id: str, file: str, line: int, *hits: tuple[str, str]) -> SavedPractice:
+    """Seed: one practice of a graph validate saved, as the saved graph keeps it: one story node at file and line, and
+    each hit, a rule and its message, on that node."""
+    node = SavedNode(node_id, "", "Story", practice, file, line, line, "", {})
+    found = [Violation(rule, message, practice=practice, node_id=node_id, location=file, line=line, end_line=line) for rule, message in hits]
+    return SavedPractice(practice, "", {}, [node], [], found)
+
+
+def saved_graph(*practices: SavedPractice) -> dict:
+    """Seed: the graph validate saves beside its report, in the shape the saved graph writes."""
+    return SavedGraph([], {practice.name: practice for practice in practices}).document
+
+
+STORY_MAP_GRAPH = saved_graph(saved_practice("stories", "node-1", STORY_MAP_FILE, 6, ("verb-noun-format", "Name the story with a verb")))
 GRAPH_EXAMPLES = Path(__file__).resolve().parents[2] / "harness" / "graph" / "_examples" / "input"
 ENTITY_ROOT_FILE = "src/account-credentials/account-credentials.ts"
 STORY_FILE = "tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts"
@@ -199,23 +207,13 @@ NO_SUCH_FIDELITY = "stories-no_such_fidelity"
 LEAVE_SESSION_COMMIT = "checkout-flow: leave session"
 
 
-class SessionsProject:
+class SessionsProject(ThrowawayProject):
     """A throwaway project named by CDD_PROJECT while a scenario runs, whose `.sessions/` and files a scenario seeds."""
 
     def __init__(self, name: str = "project") -> None:
-        self._parent = Path(tempfile.mkdtemp(prefix="session-board-story-"))
-        self.root = (self._parent / name).resolve()
+        super().__init__(name)
         self.sessions = self.root / ".sessions"
         self.sessions.mkdir(parents=True)
-        self._saved = os.environ.get("CDD_PROJECT")
-        os.environ["CDD_PROJECT"] = str(self.root)
-
-    def close(self) -> None:
-        if self._saved is None:
-            os.environ.pop("CDD_PROJECT", None)
-        else:
-            os.environ["CDD_PROJECT"] = self._saved
-        shutil.rmtree(self._parent, ignore_errors=True)
 
     def seed_session(self, seed: SessionSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name
@@ -290,7 +288,7 @@ class SessionsProject:
 
     def seed_origin(self) -> None:
         """A bare repository beside the project as its origin, holding main."""
-        origin = self._parent / "origin.git"
+        origin = self.folder / "origin.git"
         subprocess.run(["git", "init", "-q", "--bare", str(origin)], check=True, capture_output=True)
         self.git("remote", "add", "origin", str(origin))
         self.git("push", "-q", "-u", "origin", "main")
@@ -312,7 +310,7 @@ class SessionsProject:
 
     def origin_log(self, branch: str) -> list[str]:
         """The commit subjects origin holds on branch, newest first."""
-        return self.git("log", "--format=%s", branch, repository=self._parent / "origin.git").splitlines()
+        return self.git("log", "--format=%s", branch, repository=self.folder / "origin.git").splitlines()
 
 
 def seed_surface_fixture(project: SessionsProject) -> None:

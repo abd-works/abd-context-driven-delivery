@@ -102,7 +102,7 @@ class HubBoard:
         return attributes
 
     def _highlighted_column(self, practice, fidelity) -> StageColumn | None:
-        """The column holding ``fidelity`` on ``practice``'s row; none when no fidelity is highlighted."""
+        """The column holding ``fidelity`` in ``practice``'s place on the board; none when no fidelity is highlighted."""
         if practice is None or fidelity is None:
             return None
         return next((column for column in STAGE_COLUMNS if practice.fidelity_in(column) is fidelity), None)
@@ -129,7 +129,7 @@ class HubBoard:
         )
 
     def _column(self, column: StageColumn, path_prefix: str, practice, fidelity) -> str:
-        cells = "".join(self._cell(column, row, path_prefix, fidelity) for row in self.practices)
+        cells = "".join(self._cell(column, listed, path_prefix, fidelity) for listed in self.practices)
         active = " active" if self._highlighted_column(practice, fidelity) is column else ""
         example_href = StageExample(self._stage(column)).href(path_prefix)
         label = html.escape(column.label)

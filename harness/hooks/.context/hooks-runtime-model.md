@@ -33,7 +33,6 @@ The `@Hook` decorator on an operation. Event is required and must be an IDE even
 	// the destination's flags plus _hook_disabled
 + disabled_on(operation): bool
 	// the one reader of the disabled mark
-+ normalize_event(event: str): str
 	// sessionStart → session_start
 
 ## Hooks                                                          <!-- Md -->
@@ -60,7 +59,13 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 + server: HookServer | None
 + diagnosis: dict | None
 + dispatch_command: str
-	// "{python} -u {repo}/harness/hooks/hook_server.py", with the console Python harness/process names
+	// "{console python} -u {this folder}/hook_server.py"; the hook command sits beside hooks.py
++ << composition >> handlers_file: HookHandlersFile
++ << composition >> manifest: HooksManifest
++ registered_events: list[str]
+	-> HooksManifest.registered_events
++ registered_operations: list[str]
+	-> HookHandlersFile.operation_names
 ----
 + write(tool: AgentTool): None
 	// skip unless tool.install_to_hook, the toolset class is not @Hooks(deploy=False), and tool.hook_event is set
@@ -68,27 +73,48 @@ Install-time writer for hook artifacts. Same walk as markdown and MCP; only the 
 	-> write_hooks_manifest()
 	-> write_handlers()
 + write_handlers(): None
-	// hook-handlers.json is { handlers: [{ event, operation, ref }] }
+	-> HookHandlersFile.write
 + write_hooks_manifest(): None
-	// hooks.json version 1; one dispatch command per distinct event
-	// postToolUse also installs afterFileEdit, stop, and subagentStop
+	// one dispatch command per distinct event; postToolUse also installs afterFileEdit, stop, and subagentStop
 	// afterAgentResponse holds only the dispatch command — the IDE runs the first entry only
-	// other events keep non-dispatch commands already in the file
+	// every other command the file holds stays
+	-> HooksManifest.hooks
+	-> HooksManifest.write
 + standup(): HookServer
 	-> HookServer.from_handlers
 + diagnose(): dict
 	-> HookServer.diagnose
 
-## CursorEvent                                                    <!-- Md -->
+## HooksManifest                                                  <!-- Md -->
 
-Named IDE hook moment. Identity is the event string.
+`hooks.json`: the command an IDE runs for each hook event, beside the person's own hooks.
 
-+ CursorEvent(name: str)
++ HooksManifest(path: Path)
 ------
-+ name: str
++ hooks: dict[str, list[dict]]
+	// a file that is not a JSON object raises HooksFileUnreadable; an install never writes over it
++ registered_events: list[str]
 ----
-+ normalize(): str
-	-> Hook.normalize_event
++ write(hooks: dict): None
+
+## HookHandlersFile                                               <!-- Md -->
+
+`hook-handlers.json`: the hook operations an install registered. The one reader and writer of the file.
+
++ HookHandlersFile(path: Path)
+------
++ handlers: list[dict]
+	// { event, operation, ref } each; a malformed file raises HooksFileUnreadable
++ refs: tuple[str, ...]
++ operation_names: list[str]
+----
++ write(handlers: list[dict]): None
+
+## HooksFileUnreadable : Exception                                <!-- Md -->
+
+A hooks file is not the JSON object it should be; the install stops and names the file.
+
++ HooksFileUnreadable(path: Path, cause: Exception)
 
 ## HookPayload : Mapping[str, Any]                                <!-- Md -->
 
@@ -101,6 +127,8 @@ The stdin JSON for one firing. Handlers read it through the named properties; it
 + hook_event_name: str
 	// empty name means no handlers run; result is permission allow
 + conversation_id: str
++ chat_id: str
+	// the chat an injection belongs to: a subagent's own transcript for subagentStop, else the conversation
 + generation_id: str
 + tool_name: str
 	// empty for an event about no tool
@@ -146,9 +174,8 @@ Fields the IDE reads back from the hook process.
 
 One marked operation that may run for an event.
 
-+ HookHandler(tool: AgentTool, event: CursorEvent, repo_root: Path)
++ HookHandler(tool: AgentTool, repo_root: Path)
 ------
-+ event: CursorEvent
 + << association >> tool: AgentTool
 	// name, toolset, callable, hook_event, and docstring are read from the tool, never copied
 + repo_root: Path
@@ -171,31 +198,22 @@ The toolsets whose hooks the server runs.
 
 + HandlerCatalog(toolsets: list | None = None, repo_root: Path | None = None, handlers: Path | None = None)
 	// given handlers file, given toolsets, else .cursor/hook-handlers.json, else RepositoryToolsets.collect
+	-> HookHandlersFile.refs
 ------
 + << composition >> toolsets: list[AgentToolSet]
 	// skips toolsets named in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
 + repo_root: Path | None
 + failures: list[tuple[str, BaseException]]
+	// a reference that does not load (bad reference, missing module or class, not a toolset, constructor mismatch)
++ event_names: list[str]
 ----
-+ refs_from_handlers(handlers: Path): tuple[str, ...]
 + ref_label(item): str
-+ for_event(event: CursorEvent): list[HookHandler]
-	// tools_for(InstallDestination.HOOK) whose hook_event matches the event; inject_rules marked postToolUse also serves afterFileEdit
-
-## HookStandupFailed : Exception                                  <!-- Md -->
-
-The hook server could not stand up or failed diagnose.
-
-+ HookStandupFailed(operation: str, server: HookServer | None, message: str, cause: BaseException | None = None)
-------
-+ operation: str
-+ server: HookServer | None
-+ cause: BaseException | None
-----
++ for_event(event_name: str): list[HookHandler]
+	// tools_for(InstallDestination.HOOK) whose hook_event matches; inject_rules marked postToolUse also serves afterFileEdit
 
 ## HookIllegitimateHandler : Exception                            <!-- Md -->
 
-One hook handler was skipped so the hook server could finish standup.
+One hook handler was skipped: its toolset did not load, or it raised while answering an event. The other handlers keep answering.
 
 + HookIllegitimateHandler(tool: str, reason: str, cause: BaseException | None = None)
 ------
@@ -204,34 +222,46 @@ One hook handler was skipped so the hook server could finish standup.
 + cause: BaseException | None
 ----
 
+## ChatInjections                                                 <!-- Md -->
+
+The rules a hook gave each chat of one session, so the next prompt in the same chat gets them again and no other chat does.
+
++ ChatInjections(session: Session, repo_root: Path)
+------
+----
++ path_for(chat_id: str): Path
+	// {session}/chat-injections/{chat}.md
++ keep(result: HookResult, payload: HookPayload): None
+	// writes the chat's injection and the session's last-chat-injected-rules.md
++ replay(payload: HookPayload, result: HookResult): HookResult
+	// on beforeSubmitPrompt with no rules of its own; a saved edit-rules dump is dropped, not replayed
++ is_rules_dump(body: str): bool
+
 ## HookServer                                                     <!-- Md -->
 
-The long-running process that answers every hook call for one repository. `hook_server.py` calls `HookServer.ensure(repo).handle_stdin(raw)`.
+The hooks of one checkout, loaded once in its hook daemon. It runs the enabled handlers for each event and merges their answers.
 
-+ HookServer(repo_root: Path, catalog: HandlerCatalog | None = None, host: str | None = None, port: int | None = None)
-	// with a port, this object is a client of the running daemon and forwards stdin to it
++ HookServer(repo_root: Path, catalog: HandlerCatalog)
 ------
 + << association >> catalog: HandlerCatalog
 + exceptions: list[HookIllegitimateHandler]
 + session: Session | None
 	// the session open in .sessions/session.json (main when none), read for each event the way every tool call reads it
 	-> ToolCall(project=repo_root).session
++ chat_injections: ChatInjections | None
+	// none when no sessions are registered; the event is still answered
 ----
 + show_toasts_with(show: Callable[[str, list[Path]], Any]): None
 	// the notifier registers itself when it is loaded, so a hook names its toast and never the notifier
-+ state_path(repo: Path): Path
-	// .cursor/hook-server.json, the running daemon's address
-+ ensure(repo: Path): HookServer
-	// replace a daemon on older code, connect to the live one, or spawn one and wait for it
-	-> HookDaemon.replace_stale
-	-> HookDaemon.live_address
-	-> HookDaemon.spawn
++ from_toolsets(repo_root: Path, toolsets: list | None = None): HookServer
++ from_handlers(handlers: Path, repo: Path): HookServer
+	-> notify_exceptions()
 + handle_stdin(raw: bytes): HookResult
 	// empty or unreadable raw → permission allow
 	-> HookPayload.from_stdin
 	-> dispatch(payload)
-+ run(): None
-	// print handle_stdin(stdin) as JSON
+	-> ChatInjections.keep
+	-> ChatInjections.replay
 + dispatch(payload: HookPayload): HookResult
 	// no event → permission allow
 	-> HandlerCatalog.for_event
@@ -241,16 +271,9 @@ The long-running process that answers every hook call for one repository. `hook_
 	// then hands the merged toast to the registered notifier
 + skip(tool: str, error: BaseException): None
 	// records a HookIllegitimateHandler; a failing handler never stops the others
-+ from_toolsets(repo_root: Path, toolsets: list | None = None): HookServer
-	-> HandlerCatalog
-+ from_handlers(handlers: Path, repo: Path | None = None): HookServer
-+ standup(): HookServer
-	-> notify_exceptions()
 + diagnose(): dict
-	-> ping()
 	-> dispatch
-+ ping(): str
-	// "pong"
+	-> HandlerCatalog.event_names
 + notice(): str
 + notify_exceptions(): None
 - _append_debug(message: str): None
@@ -259,30 +282,48 @@ The long-running process that answers every hook call for one repository. `hook_
 
 ## HookDaemon                                                     <!-- Md -->
 
-Finds, starts, checks, and serves the one hook server process for a repository over a local socket.
+The hook daemon of one checkout: it listens on the one port the checkout's daemon may hold, publishes its address, and serves every hook command with one loaded HookServer. `hook_server.py` runs `HookDaemon(checkout).ensure().handle_stdin(raw)`.
 
-+ HookDaemon(host: str | None = None, port: int | None = None)
++ HookDaemon(repo: Path, port: int | None = None)
 ------
 + HOST: str
 	// "127.0.0.1"
-+ host: str
-+ port: int | None
++ repo: Path
++ state_path: Path
+	// .cursor/hook-server.json, the running daemon's address
++ port: int
+	// the one port this checkout's daemon may listen on, from the checkout's path
++ source_stamp: str
+	// identity of the hook code the checkout holds now
 ----
-+ live_address(path: Path): tuple | None
-	// (host, port, pid) when the address file names a daemon that answers ping
-+ call_handle_stdin(raw: bytes): dict
-+ spawn(repo: Path, path: Path): None
-+ repo_port(repo: Path): int
-	// the one port this checkout's daemon may listen on
-+ serve(repo: Path, inner: HookServer | None = None): None
-	// imports every toolset module the repository defines first, so their registrations (such as how a call opens its session) hold here
++ live_address(): HookDaemonAddress | None
+	// the published address when a daemon answers a ping there
++ is_running(): bool
++ ensure(): HookDaemonAddress
+	// replace a daemon on older code, then the live one, or start one (one hook command at a time) and wait for it
+	-> replace_stale
+	-> spawn
++ replace_stale(): None
+	-> StoppableProcess.stop
++ spawn(): None
+	// the daemon imports from the checkout, through RepositoryToolsets.pythonpath and pycache_prefix
++ serve(server: HookServer | None = None): None
+	// with no server, imports every toolset module the repository defines first, so their registrations hold here
 	-> RepositoryToolsets.import_modules
 	-> HookServer.from_toolsets
-+ source_stamp(repo: Path): str
-	// identity of the hook code this process loaded
-+ replace_stale(repo: Path, path: Path): None
-	// stop a daemon that loaded older hook code
-	-> StoppableProcess.stop
+
+## HookDaemonAddress                                              <!-- Md -->
+
+Where a running hook daemon answers.
+
++ HookDaemonAddress(host: str, port: int, pid: int | None = None)
+------
++ host: str
++ port: int
++ pid: int | None
+----
++ answers(): bool
++ handle_stdin(raw: bytes): dict
 
 ---
 
@@ -290,8 +331,9 @@ Finds, starts, checks, and serves the one hook server process for a repository o
 
 ```
 {Installer.path}/                 typically .cursor/
-  hooks.json                      CursorEvent → hook_server.py command
-  hook-handlers.json              HandlerCatalog
-  hook-server.json                HookServer.state_path — the running daemon's address
+  hooks.json                      HooksManifest — event → hook_server.py command
+  hook-handlers.json              HookHandlersFile
+  hook-server.json                HookDaemon.state_path — the running daemon's address
 .sessions/{name}/logs/            dispatch.debug, prompt-log.txt
+.sessions/{name}/chat-injections/ ChatInjections
 ```

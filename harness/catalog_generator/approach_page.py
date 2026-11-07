@@ -32,7 +32,7 @@ _LIBRARY_HEAD = (
     '<a class="approach-grid__label approach-grid__label--cdd" href="cdd-approach.html">'
     "context-driven-delivery</a>"
 )
-# The rail label of each practice's Product Engineering row, where its key does not read as one.
+# The rail label of each practice's Product Engineering board, where its key does not read as one.
 _PRODUCT_ENGINEERING_LABELS = {"ddd": "Domain-driven design"}
 # The windows Iterate and Learn narrows through, from the whole solution to one story: (shape, name, reach, pace,
 # what the work decides).
@@ -92,7 +92,7 @@ class PrincipleBullets:
 
     @property
     def product_engineering_html(self) -> str:
-        """A centred lead, three phrase and so-what columns, then a closing row of its own."""
+        """A centred lead, three phrase and so-what columns, then a closing line of its own."""
         if not self.items:
             return ""
         lead, *rest = self.items
@@ -113,7 +113,7 @@ class PrincipleBullets:
 
 
 @dataclass(frozen=True)
-class RefineRow:
+class RefineBoard:
     """A context rail, the rewind and play buttons, and the three stage columns that open one at a time: the layout
     Iterate and Learn and each Product Engineering practice share. ``panels`` and ``openings`` hold each stage's
     example and the opening of its fidelity, by stage."""
@@ -227,7 +227,7 @@ class ApproachGrids:
             if panel:
                 panels[stage_id] = panel
                 openings[stage_id] = self._stories_opening(stage_id)
-        row = RefineRow(
+        board = RefineBoard(
             host_id="approach-stage-examples",
             rail_label="Context",
             panels=panels,
@@ -237,19 +237,19 @@ class ApproachGrids:
             aria_label="Context feeds a narrowing window from Whole Solution to Story",
             role="img",
         )
-        return row.html + self._monaco_scripts(panels)
+        return board.html + self._monaco_scripts(panels)
 
     @property
     def product_engineering(self) -> str:
-        """One refine row per practice, each stage column holding the practice's example at that stage."""
-        rows: list[str] = []
+        """One refine board per practice, each stage column holding the practice's example at that stage."""
+        boards: list[str] = []
         all_panels: dict[str, str] = {}
         for practice in self.practices:
             label = _PRODUCT_ENGINEERING_LABELS.get(practice.key, Name(practice.key).kebab)
             panels, openings = self._practice_panels(practice)
             all_panels.update({f"{practice.key}-{stage}": panel for stage, panel in panels.items()})
-            rows.append(
-                RefineRow(
+            boards.append(
+                RefineBoard(
                     host_id=f"refine-row-{practice.key}",
                     rail_label=label,
                     rail_family=practice.perspective,
@@ -258,7 +258,7 @@ class ApproachGrids:
                     aria_label=f"{label} discovery, specification, and implementation",
                 ).html
             )
-        return f'<div class="approach-pe-rows" id="pe-engineering">{"".join(rows)}{self._monaco_scripts(all_panels)}</div>'
+        return f'<div class="approach-pe-rows" id="pe-engineering">{"".join(boards)}{self._monaco_scripts(all_panels)}</div>'
 
     @property
     def _windows(self) -> str:

@@ -19,4 +19,4 @@ class PathsFromProject:
         path = Path(named)
         if path.is_absolute():
             return path.resolve()
-        return (self.session.repo_from_session() / path).resolve()
+        return (self.session.repo_path / path).resolve()

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from harness.catalog_generator.drawio_diagram import DrawioDiagram
-from harness.catalog_generator.front_matter import FrontMatter
+from harness.markdown.front_matter import FrontMatter
 from harness.catalog_generator.markdown_html import MarkdownHtml
 from harness.catalog_generator.source_folds import Fold, SourceFolds
 from harness.catalog_generator.stage_columns import BoardLabel
@@ -288,8 +288,7 @@ class CatalogFidelity:
                     break
             else:
                 lines.append(line)
-        return "
-".join(lines).strip()
+        return "\n".join(lines).strip()
 
     @property
     def examples_folder(self) -> Path:

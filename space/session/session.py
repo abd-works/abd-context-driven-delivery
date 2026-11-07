@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -36,11 +35,6 @@ SESSION_FILE = "session.json"
 _REPORT_FOLDER = "validation-reports"
 _HOOK_LOGS_FOLDER = "logs"
 _DECISION_RECORDS_FOLDER = "cdr"
-
-
-def name_of(text: str) -> str:
-    """The name a session, its folder, and its branch get: `Pet visits` is `pet-visits`, since git refuses a space in a branch name."""
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
 class SessionNotFoundError(LookupError):
@@ -117,10 +111,6 @@ class Session:
     def repo(self) -> Repo:
         """The repository that holds this session's ``.sessions``."""
         return Repo(self.repo_path)
-
-    def repo_from_session(self) -> Path:
-        """The folder of the repository that holds this session's ``.sessions``: the one it was opened in."""
-        return self.repo_path
 
     @property
     def is_closed(self) -> bool:

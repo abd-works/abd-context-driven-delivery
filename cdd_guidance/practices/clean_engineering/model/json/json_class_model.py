@@ -76,6 +76,8 @@ class JsonOoadClass(OoadClass):
             intent=record.get("intent", ""),
             collaborators=record.get("collaborators", []),
         )
+        loaded.stereotypes = list(record.get("stereotypes", []))
+        loaded.bases = list(record.get("bases", []))
         loaded.properties = [JsonProperty.from_record(item) for item in record.get("properties", [])]
         loaded.operations = [JsonOperation.from_record(item) for item in record.get("operations", [])]
         for item in record.get("relationships", []):

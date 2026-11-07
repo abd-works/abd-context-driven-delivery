@@ -63,11 +63,11 @@ with description("stereotype-above-class-name scanner"):
             violations = _ScannerExample("stereotype-above-class-name").scan_xml(_CLEAN)
             expect(violations).to(equal([]))
 
-    with context("HTML emitted for a class whose name still carries tactical tags"):
+    with context("HTML emitted for a class that carries stereotypes"):
         with before.each:
-            self.html = DrawIOClass(
-                name="Catalog <<Aggregate Root>> <<Entity>>", sequential_order=1
-            ).html()
+            catalog = DrawIOClass(name="Catalog", sequential_order=1)
+            catalog.stereotypes = ["Aggregate Root", "Entity"]
+            self.html = catalog.html()
 
         with it("should include the Aggregate Root stereotype"):
             expect("&lt;&lt;Aggregate Root&gt;&gt;" in self.html).to(equal(True))

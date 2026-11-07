@@ -1,13 +1,11 @@
 """Python code channel for the CleanEngineering model - module-first.
 
-Regex covers design stubs. The ast covers executable Python. Rules read the
-source themselves when the graph loads.
+The model is read from Python's own syntax tree, so a file that does not parse raises UnreadableSource rather than
+reading as a partial or empty model. Rules read the source themselves when the graph loads.
 """
 from __future__ import annotations
 
 import ast
-import re
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
@@ -15,6 +13,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
+    UnreadableSource,
     companion_interface_name,
     is_interface_name,
 )
@@ -31,21 +30,8 @@ from cdd_guidance.practices.clean_engineering.model.code_class_model import Code
 from cdd_guidance.practices.clean_engineering.model.operation import operation_body_fingerprint
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import apply_python_function_metrics
 
-_MODULE_MARKER = re.compile(r"^#\s*===\s*(.+?)\s*===$", re.MULTILINE)
-_CLASS_PATTERN = re.compile(r'class\s+(\w+)[^:]*:\s*\n\s+"""([^"]*?)"""', re.DOTALL)
-_CLASS_NAME_ONLY = re.compile(r"class\s+(\w+)")
 _FUTURE_IMPORT = "from __future__ import annotations"
 _ABC_IMPORT = "from abc import ABC, abstractmethod"
-
-
-@dataclass
-class ParsedPython:
-    """Result of the single Python parse surface."""
-
-    model: "PythonCleanEngineeringModel"
-    content: str
-    lines: list[str]
-    tree: ast.AST | None
 
 
 class PythonModule(Module):
@@ -124,51 +110,13 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         return PythonModule(name=source.name, sequential_order=source.sequential_order)
 
     def parse(self, text: str) -> "PythonCleanEngineeringModel":
-        return self.parse_detailed(text).model
-
-    def parse_detailed(self, text: str) -> ParsedPython:
-        """Single parse entry - prefer ast (metrics); fall back to regex stubs."""
+        """The model the Python text declares. Text that is not valid Python raises UnreadableSource."""
         self._text = text
-        lines = text.split("\n")
         try:
             tree = ast.parse(text)
-        except SyntaxError:
-            model = self._parse_regex(text)
-            return ParsedPython(model=model, content=text, lines=lines, tree=None)
-        model = self._parse_ast(tree)
-        return ParsedPython(model=model, content=text, lines=lines, tree=tree)
-
-    def parse_file(self, path: Path) -> ParsedPython | None:
-        if not path.is_file():
-            return None
-        try:
-            content = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            return None
-        try:
-            return self.parse_detailed(content)
-        except SyntaxError:
-            return None
-
-    def _parse_regex(self, text: str) -> "PythonCleanEngineeringModel":
-        model = type(self)(name="", sequential_order=1)
-        segments = _MODULE_MARKER.split(text)
-
-        if len(segments) <= 1:
-            module = PythonModule(name="", sequential_order=1)
-            self._populate_classes_regex(text, module)
-            if module.classes:
-                model.modules.append(module)
-        else:
-            module_order = 1
-            for i in range(1, len(segments), 2):
-                name = segments[i].strip()
-                body = segments[i + 1] if i + 1 < len(segments) else ""
-                module = PythonModule(name=name, sequential_order=module_order)
-                self._populate_classes_regex(body, module)
-                model.modules.append(module)
-                module_order += 1
-        return model
+        except SyntaxError as error:
+            raise UnreadableSource(f"Python does not parse at line {error.lineno}: {error.msg}") from error
+        return self._parse_ast(tree)
 
     def _parse_ast(self, tree: ast.AST) -> "PythonCleanEngineeringModel":
         model = type(self)(name="", sequential_order=1)
@@ -269,7 +217,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         statements = node.body[1:] if ast.get_docstring(node) is not None else node.body
         if not statements:
             return CodeBody()
-        source = getattr(self, "_text", "")
+        source = self._text
         if statements[0].lineno == node.lineno:
             return CodeBody("\n".join(ast.get_source_segment(source, stmt) or "" for stmt in statements), self.language)
         lines = source.split("\n")
@@ -285,7 +233,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         if first is None:
             return CodeBody()
         start = min([first.lineno] + [decorator.lineno for decorator in first.decorator_list])
-        above = getattr(self, "_text", "").split("\n")[: start - 1]
+        above = self._text.split("\n")[: start - 1]
         return CodeBody("\n".join(above).rstrip(), self.language)
 
     def _parameter_strings(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str]:
@@ -333,21 +281,6 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         return any(isinstance(d, ast.Name) and d.id == "property" for d in node.decorator_list)
 
 
-    def _populate_classes_regex(self, text: str, module: PythonModule) -> None:
-        order = len(module.classes) + 1
-        for m in _CLASS_PATTERN.finditer(text):
-            oclass = OoadClass(
-                name=m.group(1),
-                sequential_order=order,
-                intent=m.group(2).strip(),
-            )
-            module.classes.append(oclass)
-            order += 1
-        if not module.classes:
-            for m in _CLASS_NAME_ONLY.finditer(text):
-                module.classes.append(OoadClass(name=m.group(1), sequential_order=order))
-                order += 1
-
 
     def file_header(self, canonical: CleanEngineeringModel, preamble: CodeBody) -> List[str]:
         lines = preamble.lines_in(self.language, "", "") or [_FUTURE_IMPORT]
@@ -358,8 +291,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         return lines
 
     def class_open(self, oclass: OoadClass, known_names: List[str]) -> List[str]:
-        self._known_names = known_names
-        bases = self._bases(oclass)
+        bases = ", ".join(oclass.declared_bases(known_names) or (["ABC"] if is_interface_name(oclass.name) else []))
         heading = f"class {oclass.name}({bases}):" if bases else f"class {oclass.name}:"
         lines = ["", ""] + [f"@{snake_case_decorator(item)}" for item in oclass.stereotypes] + [heading]
         if oclass.intent:
@@ -419,13 +351,3 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
             is_interface_name(oclass.name) or companion_interface_name(oclass.name, known)
             for oclass in canonical.every_class()
         )
-
-    def _bases(self, oclass: OoadClass) -> str:
-        if oclass.collaborators:
-            return ", ".join(oclass.collaborators)
-        iface = companion_interface_name(oclass.name, self._known_names)
-        if is_interface_name(oclass.name):
-            return "ABC"
-        if iface:
-            return iface
-        return ""

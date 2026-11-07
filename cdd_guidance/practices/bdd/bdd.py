@@ -29,8 +29,6 @@ class Bdd(PracticeGuidance):
         self,
         fidelity: str = "behavior",
         format: str | None = None,
-        path: str | None = None,
-        session: str | None = None,
     ) -> None:
         super().__init__(
             format=format,
@@ -45,5 +43,3 @@ class Bdd(PracticeGuidance):
                 "graph": ("cdd_guidance.practices.bdd.model.graph_bdd_model", "GraphBddModel"),
             },
         )
-        if path is not None or session is not None:
-            self._attach_workspace(path=path, session=session)

@@ -1,8 +1,13 @@
 """A toolset whose calls end in each way a chat can meet: an answer, a failure, and a call that may take minutes."""
 from __future__ import annotations
 
+import time
+
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.mcp.mcp_server import long_call, mcp
+
+
+MONTH_END_SECONDS = 2
 
 
 class LedgerIsLocked(Exception):
@@ -24,6 +29,13 @@ class CallOutcomes:
     def post_entry(self) -> str:
         """Fail, because the ledger is locked."""
         raise LedgerIsLocked("the ledger is locked for month end")
+
+    @mcp
+    @agent_tool
+    def close_month(self) -> str:
+        """Wait for month end, which takes longer than a diagnostics probe waits for any tool."""
+        time.sleep(MONTH_END_SECONDS)
+        return "closed"
 
     @mcp
     @long_call

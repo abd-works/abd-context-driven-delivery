@@ -56,14 +56,11 @@ parameter_notes: dict[str, str]
 tools_for(destination: str): list[AgentTool]
 	-> AgentTool.install_to
 child_toolsets(): Iterator[AgentToolSet]
-instantiate(item: Any = None): AgentToolSet
-	// item is None, a "{module}:{Class}" ref, a {toolset, context} dict, a class, or an instance
-from_items(items: list, context: dict | None = None, skip_errors: bool = False): list[AgentToolSet]
+instantiate(toolset: Any = None): AgentToolSet
+	// toolset is None, a "{module}:{Class}" ref, a {toolset, context} dict, a class, or an instance
+	-> ToolsetReference.toolset_class
+from_items(items: list, context: dict | None = None): list[AgentToolSet]
 	// one instance per toolset class
-tool_subject_of(toolset: type): Callable | None
-	// the @tool_subject loader, given the called project when it takes one
-given_the_called_project(operation: Callable): Callable
-	// a class operation that takes project, with project left out of its signature
 for_call(call: ToolCall): AgentToolSet
 	// this toolset as the call works on it; self unless the toolset keeps state of one call (a guidance action)
 session_for(call: ToolCall): Session | None
@@ -212,7 +209,83 @@ answer(call: ToolCall): str
 	// the instructions an agent follows for this call, expanded by the toolset made for it, with the session context of a guidance action appended
 	-> on(toolset.for_call(call)).log_session_invocation(call)
 	-> expand
-substitute_template(template: str, arguments: dict, parameter_names: set[str], instance: Any = None): str
+members_of(target: AgentToolSet): ToolsetMembers
+member_of(target: AgentToolSet, member: str): AgentInstructions
+provider_of(owner: Any, provider_name: str): Any
+parent_recipe(after_class: type | None = None): tuple[AgentInstructions, type] | None
+	// the same-named recipe on the nearest class above, for a recipe that defers to its parent
+
+## RecipeExpansion                                                <!-- Md -->
+
+One expansion of one recipe for one call's arguments; made per expansion, so two calls never share what it collects.
+
+RecipeExpansion(instructions: AgentInstructions, arguments: dict | None, expanding: frozenset, defining_class: type | None)
+------
+prompt: tuple[str, ...]
+tools: list[str]
+----
+run(): RecipeExpansion
+	// raises RecipeLineFailed for a line that raises, RecipeCallsItself for a recipe that expands back into itself
+
+## RecipeSource                                                   <!-- Md -->
+
+RecipeSource(recipe: Callable)
+------
+module: ast.Module
+function_def: ast.FunctionDef
+only_defers_to_parent: bool
+result_template: str
+----
+member_on_self(node): str | None
+provider_member(node, roots): tuple[str, str] | None
+loop_providers(): set[str]
+
+## RecipePlaceholders                                             <!-- Md -->
+
+RecipePlaceholders(arguments: dict, parameter_names: set[str], toolset: Any = None)
+------
+----
+filled(template: str): str
+	// {{name}} from arguments, {{self.attribute}} from the toolset
+
+## ToolsetMembers                                                 <!-- Md -->
+
+The members of one toolset class and which of them its marks make tools; each class is walked once.
+
+ToolsetMembers(owner: type)
+------
+every: list[tuple[str, Any]]
+marked: list[tuple[str, Any]]
+tool_names: set[str]
+instruction_names: frozenset[str]
+----
+callable_on(instance, name, member): Callable
+
+## ToolsetReference                                               <!-- Md -->
+
+ToolsetReference(reference: str)
+------
+toolset_class: type
+	// raises TypeError for a class that is not an @agent_toolset
+----
+
+## ToolsetValidator                                               <!-- Md -->
+
+ToolsetValidator(toolset_class: type)
+------
+----
+validate(): None
+	// raises AgentToolValidationError
+
+## ToolSubjectLoader                                              <!-- Md -->
+
+ToolSubjectLoader(toolset_class: type)
+------
+loader: Callable | None
+	// the @tool_subject classmethod, given the called project when it takes one
+----
+on_subject(load, operation): Callable
+given_the_called_project(operation: Callable): Callable
 
 ## ExpansionMode                                                  <!-- Md -->
 

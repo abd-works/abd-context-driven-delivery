@@ -15,8 +15,6 @@ class SubAgent:
     without waiting for completion.
     """
 
-    domain_slug = "sub-agent"
-
     @mcp
     @skill(name="sub-agent")
     @agent_instructions

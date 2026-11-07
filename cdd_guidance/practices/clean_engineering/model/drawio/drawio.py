@@ -26,8 +26,7 @@ class Drawio:
     validate/scan layout rules → repair (sub-agent) on definitive failures.
     """
 
-    def __init__(self, workspace=None) -> None:
-        self.workspace = workspace
+    def __init__(self) -> None:
         self.source_format = "markdown"
         self.previous = ""
         self.keep_positioning = False

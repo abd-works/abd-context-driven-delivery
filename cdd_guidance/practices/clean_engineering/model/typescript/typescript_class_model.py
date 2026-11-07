@@ -7,27 +7,18 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
+from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass, is_interface_name
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import pascal_case_decorator
 from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.code_class_model import BraceCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 _TYPESCRIPT = CodeLanguage.named("typescript")
 
 
-class TypeScriptCleanEngineeringModel(CodeCleanEngineeringModel):
+class TypeScriptCleanEngineeringModel(BraceCleanEngineeringModel):
     language = _TYPESCRIPT
-
-    @classmethod
-    def parse(cls, text: str) -> "TypeScriptCleanEngineeringModel":
-        return CFamilyParse(
-            model_factory=lambda: cls(name="", sequential_order=1),
-            class_factory=OoadClass,
-            language=_TYPESCRIPT,
-        ).parse(text)
 
     def class_doc(self, intent: str) -> List[str]:
         notes = [f" * {note.strip()}" for note in intent.splitlines() if note.strip()]
@@ -42,8 +33,9 @@ class TypeScriptCleanEngineeringModel(CodeCleanEngineeringModel):
     def interface_declaration(self, oclass: OoadClass) -> List[str]:
         return [f"interface {oclass.name} {{"]
 
-    def implementing_declaration(self, oclass: OoadClass, interface: str) -> List[str]:
-        return [f"abstract class {oclass.name} implements {interface} {{"]
+    def class_modifiers(self, implemented: List[str]) -> str:
+        """A class that implements its I{Class} contract leaves the contract's members to its subclasses."""
+        return "abstract " if any(is_interface_name(base) for base in implemented) else ""
 
     def property_line(self, prop: Property, contract: bool) -> List[str]:
         type_name = self.language.type_name(prop.type_hint) if prop.type_hint else "any"

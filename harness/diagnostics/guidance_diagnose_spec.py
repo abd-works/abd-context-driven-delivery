@@ -16,7 +16,8 @@ RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 from expects import contain, equal, expect, have_key
 from mamba import description, it
 
-from harness.diagnostics.guidance_probe import GuidanceProbe, instruction_result
+from harness.diagnostics.guidance_probe import GuidanceProbe
+from harness.diagnostics.probe_outcome import ProbeOutcome
 from harness.diagnostics.guidance_diagnostics import GuidanceDiagnostics
 import space.session.session  # noqa: F401 - registers how a tool call opens its session, as the server does at start
 
@@ -62,7 +63,7 @@ with description("guidance diagnostics"):
 
         with it("should probe the folder of that fidelity's practice"):
             probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories-story-map"])
-            expect(probe.content_paths).to(equal([str(_REPO_ROOT / "cdd_guidance" / "practices" / "stories")]))
+            expect(probe.arguments.content_paths).to(equal([str(_REPO_ROOT / "cdd_guidance" / "practices" / "stories")]))
 
     with it("should return stories instructions from the installed mcp list"):
         tree = Path(tempfile.mkdtemp())
@@ -78,12 +79,18 @@ with description("guidance diagnostics"):
         expect(items[0]["color"]).to(equal("green"))
         expect(items[0]["chars"] > 0).to(equal(True))
 
+    with it("should report red when an instruction it probes cannot be read"):
+        tree = Path(tempfile.mkdtemp())
+        installer = _installer(tree, {"installs": [{"mcp": {"items": ["no-such-practice.instructions"]}}]})
+        report = GuidanceProbe(installer, ["no-such-practice"]).instructions()
+        expect(report.startswith("!red\n")).to(equal(True))
+
     with it("should pass index_only mode when probing partition.partition"):
         from cdd_guidance.actions.partition.partition import Partition
 
         probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories", "clean-engineering-model"])
-        args, missing = probe.arguments_for("partition.partition", Partition.partition)
-        probe.cleanup()
+        args, missing = probe.arguments.for_operation("partition.partition", Partition.partition)
+        probe.arguments.cleanup()
         expect(missing).to(equal([]))
         expect(args["mode"]).to(equal("index_only"))
 
@@ -91,8 +98,7 @@ with description("guidance diagnostics"):
         from cdd_guidance.actions.sketch.sketch import Sketch
 
         probe = GuidanceProbe(Installer(repo=_REPO_ROOT), ["stories"])
-        text = Sketch(session=probe.work_session()).list_sketches()
-        probe.cleanup()
+        text = Sketch(session=probe.arguments.work_session()).list_sketches()
+        probe.arguments.cleanup()
         expect(text).to(equal("no sketches"))
-        item = instruction_result("sketch.list_sketches", text)
-        expect(item["color"]).to(equal("green"))
+        expect(ProbeOutcome.from_answer("sketch.list_sketches", text).color).to(equal("green"))

@@ -97,7 +97,6 @@ class AgentToolsProbe:
     def run(self) -> str:
         """Ping, invoke, and heavy invoke, each phase written to diagnostics.json; the reply holds each phase's colour."""
         self._progress("run", "agent-tools-diagnostics", "start")
-        self.host
         report = "\n\n".join((self.ping(), self.invoke(), self.heavy_invoke()))
         self._progress("run", "agent-tools-diagnostics", "done")
         return report
@@ -137,22 +136,20 @@ class AgentToolsProbe:
         return section.reply
 
     def _ping_one(self, mcp_name: str) -> ProbeOutcome:
-        outcome = self._called(mcp_name, {"ping": True}, "ping")
-        if outcome.is_red or outcome.details.get("preview") == '{"ping": "pong", "tool": "' + mcp_name + '"}':
-            return outcome if outcome.is_red else ProbeOutcome(mcp_name, ProbeOutcome.GREEN, preview="pong")
-        return ProbeOutcome.from_refusal(mcp_name, f"unexpected ping response: {outcome.details.get('preview')}")
+        try:
+            answer = self._answer(mcp_name, {"ping": True}, "ping")
+        except Exception as failure:
+            # A probe reports what failed: the failure is its red outcome.
+            return ProbeOutcome.from_failure(mcp_name, failure)
+        if answer == {"ping": "pong", "tool": mcp_name}:
+            return ProbeOutcome(mcp_name, ProbeOutcome.GREEN, preview="pong")
+        return ProbeOutcome.from_refusal(mcp_name, f"unexpected ping response: {answer!r}")
 
     def _skipped_at_start(self) -> list[ProbeOutcome]:
-        refs = set(self.toolset_refs)
-        return [
-            ProbeOutcome.from_refusal(item["tool"], f"skipped at start-up: {item['reason']}")
-            for item in self.host.checkout_server.skipped
-            if item["tool"] in refs or any(item["tool"] == name or item["tool"].startswith(f"{name}.") for name in self._probed_slugs)
-        ]
-
-    @property
-    def _probed_slugs(self) -> set[str]:
-        return {name.split(".", 1)[0] for name in self.installer.diagnostics.installed_items("mcp")} - {"cdd"}
+        """A probed toolset, or an installed tool, the host skipped when it started."""
+        probed = {*self.toolset_refs, *self.installer.diagnostics.installed_items("mcp")}
+        skipped = self.host.checkout_server.skipped
+        return [ProbeOutcome.from_refusal(item["tool"], f"skipped at start-up: {item['reason']}") for item in skipped if item["tool"] in probed]
 
     def _invoke_one(self, mcp_name: str, arguments: ProbeArguments) -> ProbeOutcome:
         skip = _SKIP_INVOKE.get(mcp_name) or ("skipped for invoke (heavy or mutating)" if mcp_name.startswith(_INVOKE_SKIP_PREFIXES) else "")
@@ -162,38 +159,41 @@ class AgentToolsProbe:
         return self._invoked_with(mcp_name, arguments, "invoke")
 
     def _heavy_invoke_one(self, mcp_name: str, arguments: ProbeArguments) -> ProbeOutcome:
-        if arguments.fixtures.probe_arguments(mcp_name) is None:
+        fixture = arguments.fixtures.probe_arguments(mcp_name)
+        if fixture is None:
             self._progress("heavy_invoke", mcp_name, "skip (no fixture)")
             return ProbeOutcome.from_skip(mcp_name, "no cdd-diagnostic fixture")
-        return self._invoked_with(mcp_name, arguments, "heavy_invoke")
+        return self._called_with(mcp_name, *fixture, "heavy_invoke")
 
     def _invoked_with(self, mcp_name: str, arguments: ProbeArguments, phase: str) -> ProbeOutcome:
         tool = self.host.checkout_server.enrolled(mcp_name)
         if tool is None:
             return ProbeOutcome.from_refusal(mcp_name, "not enrolled on host")
-        values, missing = arguments.for_operation(mcp_name, tool.callable)
+        return self._called_with(mcp_name, *arguments.for_operation(mcp_name, tool.callable), phase)
+
+    def _called_with(self, mcp_name: str, values: dict[str, Any], missing: list[str], phase: str) -> ProbeOutcome:
         if missing:
             return ProbeOutcome.from_refusal(mcp_name, "needs " + ", ".join(missing))
-        return self._called(mcp_name, values or None, phase).called_on(values.get("paths") or [])
+        try:
+            answer = self._answer(mcp_name, values or None, phase)
+        except Exception as failure:
+            return ProbeOutcome.from_failure(mcp_name, failure)
+        return ProbeOutcome.from_answer(mcp_name, answer).called_on(values.get("paths") or [])
 
-    def _called(self, mcp_name: str, values: dict[str, Any] | None, phase: str) -> ProbeOutcome:
-        """Call the tool through the host and wait at most ``_DISPATCH_SECONDS``. The call runs on a thread of its own
-        that the probe never waits for past the limit, so a tool that hangs cannot hang the diagnostics."""
+    def _answer(self, mcp_name: str, values: dict[str, Any] | None, phase: str) -> object:
+        """The tool's answer through the host, waiting at most ``_DISPATCH_SECONDS``. The call runs on a thread of its
+        own that the probe never waits for past the limit, so a tool that hangs cannot hang the diagnostics."""
         self._progress(phase, mcp_name, f"call {values!r}"[:200])
         pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         try:
             answer = pool.submit(self.host.dispatch, mcp_name, values, self.project).result(timeout=_DISPATCH_SECONDS)
         except concurrent.futures.TimeoutError:
-            outcome = ProbeOutcome.from_failure(mcp_name, ProbeCallTimedOut(mcp_name, _DISPATCH_SECONDS))
-        except Exception as failure:
-            # A probe reports what failed: the failure is its red outcome.
-            outcome = ProbeOutcome.from_failure(mcp_name, failure)
-        else:
-            outcome = ProbeOutcome.from_answer(mcp_name, answer)
+            self._progress(phase, mcp_name, f"timeout ({_DISPATCH_SECONDS:g}s)")
+            raise ProbeCallTimedOut(mcp_name, _DISPATCH_SECONDS) from None
         finally:
             pool.shutdown(wait=False, cancel_futures=True)
-        self._progress(phase, mcp_name, outcome.color)
-        return outcome
+        self._progress(phase, mcp_name, "returned")
+        return answer
 
     def _progress(self, phase: str, mcp_name: str, detail: str) -> None:
         """A live trace on stderr, since stdout carries MCP; ``CDD_PROBE_QUIET=1`` silences it."""

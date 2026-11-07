@@ -69,7 +69,7 @@ class DrawIOClass(DiagramClass, DrawioVertex):
         return max(CARD_MIN_WIDTH, math.ceil(wanted / CARD_WIDTH_STEP) * CARD_WIDTH_STEP)
 
     def html(self) -> str:
-        name_html = html.escape(self.display_name())
+        name_html = html.escape(self.name)
         stereo = self._stereotype_html()
         return (
             f'<p style="margin:0px;margin-top:4px;text-align:center;">'
@@ -97,7 +97,7 @@ class DrawIOClass(DiagramClass, DrawioVertex):
         ]
 
     def _member_lines(self) -> List[str]:
-        return [self.display_name()] + self._property_lines() + self._operation_lines()
+        return [self.name] + self._property_lines() + self._operation_lines()
 
     def _properties_html(self) -> str:
         return ''.join(f'{html.escape(line)}<br/>' for line in self._property_lines()) or '<br/>'
@@ -106,10 +106,10 @@ class DrawIOClass(DiagramClass, DrawioVertex):
         return ''.join(f'{html.escape(line)}<br/>' for line in self._operation_lines()) or '<br/>'
 
     def _stereotype_html(self) -> str:
-        stereotypes = self.tactical_stereotypes()
-        if not stereotypes:
+        """The class's stereotypes as `<<Mark>>`s in small italics above its name, where parse reads them back."""
+        if not self.stereotypes:
             return ''
-        label = ' '.join(stereotypes)
+        label = ' '.join(f'<<{item}>>' for item in self.stereotypes)
         return f'<i style="font-size:9px;color:#888;">{html.escape(label)}</i><br/>'
 
 
@@ -117,7 +117,7 @@ class ImportedClass(SharedImportedClass, DrawIOClass):
     """Dashed Draw.io card for a class owned by another aggregate."""
 
     def html(self) -> str:
-        name_html = html.escape(self.display_name())
+        name_html = html.escape(self.name)
         from_html = html.escape(f'«from: {self.from_module}»')
         props_html = ''.join(
             (

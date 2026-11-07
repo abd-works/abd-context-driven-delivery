@@ -1,7 +1,7 @@
 """@subAgent mark — prepend non-blocking delegation instructions to agent ops."""
 from __future__ import annotations
 
-from typing import Any, Callable
+from harness.marks.mark import Mark
 
 SUB_AGENT_CALLER_PREAMBLE = """Hand work to a background sub-agent and continue without waiting.
 
@@ -14,35 +14,18 @@ generalPurpose. Pass the instructions below as the task prompt.
 Tell the user you launched a non-blocking sub-agent and summarize what you delegated."""
 
 
-def marked_as_sub_agent(callable: Any) -> bool:
-    return bool(getattr(callable, "_sub_agent", False))
-
-
-def prepend_sub_agent_instructions(text: str) -> str:
-    preamble = SUB_AGENT_CALLER_PREAMBLE.strip()
-    body = (text or "").strip()
-    if not body:
-        return preamble
-    return f"{preamble}\n\n{body}"
-
-
-class SubAgentMark:
-    """Mark an @agent_tool or @agent_instructions member for non-blocking sub-agent launch."""
+class SubAgentMark(Mark):
+    """Mark an @agent_tool or @agent_instructions member for non-blocking sub-agent launch: its description starts with
+    the hand-off to a background sub-agent."""
 
     flag = "_sub_agent"
 
-    def __new__(cls, fn: Callable[..., Any] | None = None):
-        mark = object.__new__(cls)
-        if callable(fn):
-            return mark.annotate(fn)
-        return mark
-
-    def annotate(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        setattr(fn, self.flag, True)
-        return fn
-
-    def __call__(self, fn: Callable[..., Any]) -> Callable[..., Any]:
-        return self.annotate(fn)
+    @classmethod
+    def with_hand_off(cls, text: str) -> str:
+        """text with the hand-off to a background sub-agent in front of it."""
+        preamble = SUB_AGENT_CALLER_PREAMBLE.strip()
+        body = (text or "").strip()
+        return f"{preamble}\n\n{body}" if body else preamble
 
 
 subAgent = SubAgentMark()

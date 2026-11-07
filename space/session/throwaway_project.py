@@ -12,15 +12,23 @@ class ThrowawayProject:
     """An empty project named by ``CDD_PROJECT`` while a spec runs. An action writes a line to the open session's log,
     and run in this repository the open session is whoever is working here, so a spec's actions land in that person's
     log and the session board counts them as their work. ``close_all`` closes every project still open, from an
-    ``after.each``."""
+    ``after.each``. A project given a name gets a folder of that name, for a spec that reads the project's name."""
 
     _open: list[ThrowawayProject] = []
 
-    def __init__(self) -> None:
-        self.root = Path(tempfile.mkdtemp(prefix="cdd-spec-project-"))
+    def __init__(self, name: str = "") -> None:
+        self._folder = Path(tempfile.mkdtemp(prefix="cdd-spec-project-"))
+        self.root = (self._folder / name).resolve() if name else self._folder
+        self.root.mkdir(exist_ok=True)
         self._saved = os.environ.get("CDD_PROJECT")
         os.environ["CDD_PROJECT"] = str(self.root)
         type(self)._open.append(self)
+
+    @property
+    def folder(self) -> Path:
+        """The temporary folder the project sits in, which holds what a spec keeps beside the project, such as its git
+        origin; the project itself when it has no name."""
+        return self._folder
 
     @classmethod
     def close_all(cls) -> None:
@@ -35,5 +43,5 @@ class ThrowawayProject:
             os.environ.pop("CDD_PROJECT", None)
         else:
             os.environ["CDD_PROJECT"] = self._saved
-        shutil.rmtree(self.root, ignore_errors=True)
+        shutil.rmtree(self._folder, ignore_errors=True)
 

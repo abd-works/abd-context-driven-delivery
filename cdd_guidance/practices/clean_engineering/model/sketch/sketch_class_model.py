@@ -12,6 +12,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     Module,
     OoadClass,
 )
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
 from cdd_guidance.practices.clean_engineering.model.operation import Operation, Parameter
 from cdd_guidance.practices.clean_engineering.model.property import (
     Property,
@@ -32,7 +33,8 @@ _FENCE = "```"
 _MODULE_HEADING = re.compile(r"^([A-Za-z0-9_][\w./-]*)/$")
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 _RELATIONSHIP_KINDS = frozenset({"composition", "aggregation", "association"})
-_CLASS = re.compile(r"^([A-Z][A-Za-z0-9]+)(?:\s*:\s*(.+))?$")
+# `Cart <<Aggregate Root>> : Basket, Auditable`: the name, its stereotypes, then its bases.
+_CLASS = re.compile(r"^([A-Z][A-Za-z0-9]+)((?:\s*<<[^>]+>>)*)(?:\s*:\s*(.+))?$")
 _BOLD_CLASS = re.compile(r"^\*\*([A-Z][A-Za-z0-9]+)\*\*$")
 _MODULE = re.compile(r"Module:\**\s*`([^`]+)`", re.I)
 _UML_OP = re.compile(r"^[+\-]\s*([A-Za-z_][A-Za-z0-9_]*)\((.*)\)\s*(?::\s*(.+))?$")
@@ -49,11 +51,10 @@ _PROSE = re.compile(
 
 
 class SketchCleanEngineeringModel(CleanEngineeringModel):
-    @classmethod
-    def parse(cls, text: str) -> "SketchCleanEngineeringModel":
+    def parse(self, text: str) -> "SketchCleanEngineeringModel":
         declared = _MODULE.search(text)
         model_name = declared.group(1) if declared else "KnowledgeGraph"
-        model = cls(name=model_name, sequential_order=1)
+        model = type(self)(name=model_name, sequential_order=1)
         body = SketchOutline(text, _NESTING_INDENT).body_for(SketchLens.of("clean_engineering"))
         model.modules = _modules_in(body, model_name)
         return model
@@ -88,8 +89,9 @@ class _SketchSection:
             self._write_module(nested, depth + 1)
 
     def _write_class(self, oclass: OoadClass, depth: int) -> None:
-        bases = f" : {' '.join(oclass.collaborators)}" if oclass.collaborators else ""
-        self._lines.extend([f"{'#' * depth} {oclass.name}{bases}", ""])
+        marks = "".join(f" <<{item}>>" for item in oclass.stereotypes)
+        bases = f" : {', '.join(oclass.bases)}" if oclass.bases else ""
+        self._lines.extend([f"{'#' * depth} {oclass.name}{marks}{bases}", ""])
         members: List[str] = []
         for prop in oclass.properties:
             members.append(prop.name)
@@ -193,9 +195,12 @@ def _merge_class(into: OoadClass, incoming: OoadClass) -> None:
         if operation.name not in seen_ops:
             into.operations.append(operation)
             seen_ops.add(operation.name)
-    for collaborator in incoming.collaborators:
-        if collaborator not in into.collaborators:
-            into.collaborators.append(collaborator)
+    for base in incoming.bases:
+        if base not in into.bases:
+            into.bases.append(base)
+    for stereotype in incoming.stereotypes:
+        if stereotype not in into.stereotypes:
+            into.stereotypes.append(stereotype)
     if incoming.intent and not into.intent:
         into.intent = incoming.intent
 
@@ -223,10 +228,8 @@ def _classes_in(text: str) -> list[OoadClass]:
         headed = _CLASS.match(stripped)
         if headed and (current is None or headed.group(1) != current.name):
             current = OoadClass(name=headed.group(1), sequential_order=len(classes) + 1)
-            bases = headed.group(2) or ""
-            current.collaborators = [part.strip() for part in bases.split() if part.strip()]
-            if current.collaborators:
-                current.intent = " : ".join(current.collaborators)
+            current.stereotypes = marks_in(headed.group(2) or "")
+            current.bases = [base.strip() for base in split_top_level(headed.group(3) or "") if base.strip()]
             classes.append(current)
             index += 1
             continue

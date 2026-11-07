@@ -83,12 +83,6 @@ class ExpansionMode:
     def __str__(self) -> str:
         return self.value
 
-    @classmethod
-    def of(cls, target: Any) -> str:
-        """The mode target's recipes expand in; ``instructions`` for an object that names none."""
-        mode = getattr(target, "mode", "instructions")
-        return mode.value if isinstance(mode, ExpansionMode) else str(mode)
-
 
 @dataclass(frozen=True)
 class ExpansionResult:
@@ -255,7 +249,7 @@ class RecipeExpansion:
         self._source = RecipeSource(self._recipe)
         self._defining_class = defining_class
         self._expanding = self._expanding_with_this(expanding)
-        self._mode = ExpansionMode.of(self._toolset)
+        self._mode = self._declared_mode(self._toolset)
         self._prompt: list[str] = []
         self._tools: list[str] = []
         self._loop_item_modes: dict[int, str] = {}
@@ -335,7 +329,11 @@ class RecipeExpansion:
     def _mode_of(self, target: Any) -> str:
         if target is self._toolset:
             return self._mode
-        return self._loop_item_modes.get(id(target)) or ExpansionMode.of(target)
+        return self._loop_item_modes.get(id(target)) or self._declared_mode(target)
+
+    def _declared_mode(self, target: Any) -> str:
+        """The mode target's recipes expand in; ``instructions`` for an object that names none."""
+        return str(getattr(target, "mode", "instructions"))
 
     def _expand_member(self, member: str, target: Any) -> None:
         if self._mode_of(target) == "tool":

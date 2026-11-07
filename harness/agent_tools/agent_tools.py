@@ -18,6 +18,7 @@ from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.agent_tools.tool_call import ToolCall
 from harness.markdown.markdown import Markdown, MarkdownCollection
 from harness.marks.mark import Mark, mark_kinds
+from harness.agent_tools.sub_agent.mark import SubAgentMark
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource
 
 ContextDocument = dict[str, Any]
@@ -870,14 +871,7 @@ class AgentTool(AgentToolDestination):
         return text
 
     def _with_sub_agent_preamble(self, text: str) -> str:
-        from harness.agent_tools.sub_agent.mark import (
-            marked_as_sub_agent,
-            prepend_sub_agent_instructions,
-        )
-
-        if marked_as_sub_agent(self.callable):
-            return prepend_sub_agent_instructions(text)
-        return text
+        return SubAgentMark.with_hand_off(text) if SubAgentMark.marks(self.callable) else text
 
     @functools.cached_property
     def description(self) -> str:
@@ -1134,89 +1128,65 @@ class AgentInstructionsMark(Mark):
     flag = "_is_agent_instructions"
 
 
-class AgentToolSetMark(Mark):
-    """Mark a class as an agent toolset — @agent_tool and @agent_instructions."""
+class _ClassJoiningMark(Mark):
+    """A class mark that gives the class it marks a framework base by making, in its place, a class of the same name
+    that derives from both: ``@agent_toolset`` gives AgentToolSet, ``@toolset_collection`` ToolSetCollection. Authors
+    mark the class rather than subclass the base, so a class reads as its own domain first."""
 
-    flag = "_is_agent_toolset"
-    copied = False
-
-    def __new__(cls, target: type | None = None):
-        mark = object.__new__(cls)
-        if isinstance(target, type):
-            return mark.annotate(target)
-        return mark
-
-    def __call__(self, target: type) -> type:
-        return self.annotate(target)
-
-    def annotate(self, toolset_cls: type) -> type:
-        if self.flag in toolset_cls.__dict__:
-            return toolset_cls
-        if self.marks(toolset_cls):
-            ToolsetValidator(toolset_cls).validate()
-            return toolset_cls
-        if issubclass(toolset_cls, AgentToolSet):
-            raise TypeError(
-                f"{toolset_cls.__name__} must use @agent_toolset — do not subclass AgentToolSet directly"
-            )
-        merged = type(
-            toolset_cls.__name__,
-            (toolset_cls, AgentToolSet),
-            {
-                attribute_name: attribute_value
-                for attribute_name, attribute_value in vars(toolset_cls).items()
-                if attribute_name not in ("__dict__", "__weakref__")
-            },
-        )
-        merged.__doc__ = toolset_cls.__doc__
-        merged.__module__ = toolset_cls.__module__
-        merged.__qualname__ = toolset_cls.__qualname__
-        setattr(merged, self.flag, True)
-        ToolsetValidator(merged).validate()
-        return merged
-
-
-class ToolSetCollectionMark(Mark):
-    """Mark a class as a ToolSetCollection, or a property as one of this toolset's collections."""
-
-    flag = "_is_toolset_collection"
+    mark_name = ""
 
     def __new__(cls, target: Any = None):
         mark = object.__new__(cls)
-        if target is not None:
-            return mark.annotate(target)
-        return mark
+        return mark.annotate(target) if target is not None else mark
 
     def __call__(self, target: Any) -> Any:
         return self.annotate(target)
 
+    def _joined(self, target: type, base: type) -> type:
+        """target joined with base, or target itself when it already carries this mark. Raises TypeError for a class
+        that subclasses base directly."""
+        if self.flag in target.__dict__ or self.marks(target):
+            return target
+        if issubclass(target, base):
+            raise TypeError(f"{target.__name__} must use @{self.mark_name} — do not subclass {base.__name__} directly")
+        own = {name: value for name, value in vars(target).items() if name not in ("__dict__", "__weakref__")}
+        joined = type(target.__name__, (target, base), own)
+        joined.__doc__ = target.__doc__
+        joined.__module__ = target.__module__
+        joined.__qualname__ = target.__qualname__
+        setattr(joined, self.flag, True)
+        return joined
+
+
+class AgentToolSetMark(_ClassJoiningMark):
+    """Mark a class as an agent toolset — @agent_tool and @agent_instructions."""
+
+    flag = "_is_agent_toolset"
+    mark_name = "agent_toolset"
+    copied = False
+
+    def __new__(cls, target: type | None = None):
+        return super().__new__(cls, target if isinstance(target, type) else None)
+
+    def annotate(self, toolset_class: type) -> type:
+        if self.flag in toolset_class.__dict__:
+            return toolset_class
+        joined = self._joined(toolset_class, AgentToolSet)
+        ToolsetValidator(joined).validate()
+        return joined
+
+
+class ToolSetCollectionMark(_ClassJoiningMark):
+    """Mark a class as a ToolSetCollection, or a property as one of this toolset's collections."""
+
+    flag = "_is_toolset_collection"
+    mark_name = "toolset_collection"
+
     def annotate(self, target: Any) -> Any:
-        if not inspect.isclass(target):
-            fn = getattr(target, "fget", target)
-            setattr(fn, self.flag, True)
-            return target
-        if self.flag in target.__dict__:
-            return target
-        if self.marks(target):
-            return target
-        if issubclass(target, ToolSetCollection):
-            raise TypeError(
-                f"{target.__name__} must use @toolset_collection — do not subclass ToolSetCollection directly"
-            )
-        merged = type(
-            target.__name__,
-            (target, ToolSetCollection),
-            {
-                attribute_name: attribute_value
-                for attribute_name, attribute_value in vars(target).items()
-                if attribute_name not in ("__dict__", "__weakref__")
-            },
-        )
-        merged.__doc__ = target.__doc__
-        merged.__module__ = target.__module__
-        merged.__qualname__ = target.__qualname__
-        setattr(merged, self.flag, True)
-        return merged
+        if inspect.isclass(target):
+            return self._joined(target, ToolSetCollection)
+        setattr(getattr(target, "fget", target), self.flag, True)
+        return target
 
 
 class NoSessionLog(Mark):

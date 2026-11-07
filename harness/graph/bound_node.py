@@ -9,7 +9,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Iterable, Iterator, Optional
 
-from harness.graph.graph import Graph, Node, Source, edge_order
+from harness.graph.graph import EdgeType, Graph, Node, Source
 
 # The file a new model object names until a loader tells it which file it came from.
 NO_SOURCE_FILE = "."
@@ -125,17 +125,9 @@ class BoundNode(Node):
             return
         self._adopt(child)
         child.parent = self
-        self.practice.record(
-            {"kind": kind, "order": edge_order(kind), "display": "direct"},
-            self,
-            child,
-        )
+        self.practice.record(EdgeType.from_kind(kind), self, child)
         if (child.semantic_type(), self.semantic_type()) in type(self)._belongs:
-            self.practice.record(
-                {"kind": "belongsTo", "order": edge_order("belongsTo"), "display": "relationship"},
-                child,
-                self,
-            )
+            self.practice.record(EdgeType.from_kind("belongsTo", "relationship"), child, self)
         self._sync_schema_edges()
 
     def _unlink(self, child, kind: str) -> None:
@@ -178,11 +170,7 @@ class BoundNode(Node):
             for node in subtree:
                 node._move_to(self.practice)
         for edge in carried:
-            self.practice.record(
-                {"kind": edge.kind, "order": edge.order, "display": edge.display},
-                edge.parent,
-                edge.child,
-            )
+            self.practice.record(EdgeType(edge.kind, edge.order, edge.display), edge.parent, edge.child)
 
     def _move_to(self, practice) -> None:
         if self.practice is practice:

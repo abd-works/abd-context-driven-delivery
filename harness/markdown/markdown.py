@@ -83,6 +83,17 @@ class MarkdownText:
     def __init__(self, text: str) -> None:
         self._text = text
 
+    @property
+    def yaml_fields(self) -> dict[str, Any]:
+        """The fields of every ```yaml block in the document, merged in order, so a section keeps its settings beside
+        its prose."""
+        return YamlFields().yaml_fields(self._text)
+
+    @property
+    def without_yaml(self) -> str:
+        """The document with its ```yaml blocks taken out: the prose an agent reads and an installed file holds."""
+        return _YAML_FENCE.sub("", self._text).strip()
+
     def _fence_update(self, fence: str | None, bare: str) -> tuple[str | None, bool]:
         fence_match = re.match(r"^\s*(```|~~~)", bare)
         if not fence_match:
@@ -717,10 +728,6 @@ class YamlFields:
         return current is not None and not isinstance(current, (str, int, float, bool, list, tuple, bytes, dict))
 
 
-def strip_yaml_fences(text: str) -> str:
-    return _YAML_FENCE.sub("", text).strip()
-
-
 class MarkdownCollection:
     """Listed or keyed extracts that keep the original markdown."""
 
@@ -858,7 +865,7 @@ class Markdown:
     def extract(self) -> str:
         text = self.raw()
         YamlFields(self._instance).assign_yaml(text)
-        return strip_yaml_fences(text)
+        return MarkdownText(text).without_yaml
 
     def expand_docstring(self, docstring: str | None) -> str:
         """Plain docstring text, or the markdown section when the docstring is one word."""
@@ -897,7 +904,7 @@ class Markdown:
         raw = self.raw()
         YamlFields(self._instance).assign_yaml(raw)
         if build is None and self._reads_plain_text(return_type):
-            return self.coerce(strip_yaml_fences(raw), return_type)
+            return self.coerce(MarkdownText(raw).without_yaml, return_type)
         result = build(self, return_type, self._instance) if build is not None else self.coerce(raw, return_type)
         YamlFields(result).assign_yaml(raw)
         return result

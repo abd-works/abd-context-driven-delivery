@@ -47,7 +47,7 @@ class ServerStateUnreadable(Exception):
 class McpDaemon:
     """Start, find, and stop the one cdd server. Every IDE connects to its URL, so no chat starts a copy of its own.
 
-    The exclusive bind on the port is the claim: two servers cannot both hold it, so a second start exits quietly."""
+    Holding the port exclusively is the claim: two servers cannot both hold it, so a second start exits quietly."""
 
     HOST = "127.0.0.1"
 

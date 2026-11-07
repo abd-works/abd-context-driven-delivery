@@ -156,9 +156,11 @@ class PracticeSchema:
 
     @cached_property
     def _fidelities(self) -> dict[str, list[str]]:
-        from harness.guidance.schema_map import load_node_fidelities
+        from harness.guidance.practice_catalogue import PracticeCatalogue
 
-        return load_node_fidelities(_PRACTICES_ROOT / self.practice)
+        if not PracticeCatalogue.has(self.practice):
+            return {}
+        return PracticeCatalogue.practice(self.practice).schema_node_fidelities()
 
     def _carried_rules(self, node_type: str, anchored_rules: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
         inherited = [self._direct_rules.get(step, ()) for step in self._supertype_chain(node_type)]

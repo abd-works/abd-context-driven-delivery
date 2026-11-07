@@ -693,7 +693,7 @@ class _BrokenProvider:
 
     @agent_instructions
     def wrap(self) -> str:
-        """BROKEN_PROVIDER_MARKER: still list the named tool."""
+        """BROKEN_PROVIDER_MARKER: a provider that raises fails its line."""
         tools(self.missing().finish_turn())
         return ""
 
@@ -958,11 +958,11 @@ with description("a cross-instance call whose provider cannot resolve"):
     with after.each:
         ThrowawayProject.close_all()
 
-    with it("should still list the named tool"):
+    with it("should fail the recipe line, naming the provider and its failure"):
         body = AgentInstructions.for_callable(
             _BrokenProvider.wrap, _BrokenProvider()
         )
-        expect("finish_turn" in body.tools).to(be_true)
+        expect(lambda: body.tools).to(raise_error(RecipeLineFailed, contain("self.missing().finish_turn()", "no session")))
 
 
 with description("AgentToolValidationError"):

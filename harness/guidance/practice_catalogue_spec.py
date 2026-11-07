@@ -6,10 +6,10 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_none, equal, expect
+from expects import be_none, equal, expect, raise_error
 from mamba import description, it
 
-from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.guidance.practice_catalogue import PracticeCatalogue, UnknownPractice
 
 _STORIES = "cdd_guidance.practices.stories.stories:Stories"
 
@@ -17,6 +17,9 @@ _STORIES = "cdd_guidance.practices.stories.stories:Stories"
 with description("the practice catalogue"):
     with it("should list the practices in the order the approach walks them"):
         expect(PracticeCatalogue.keys()).to(equal(("stories", "ddd", "ux", "clean_engineering", "bdd")))
+
+    with it("should name a practice key it does not hold as an unknown practice"):
+        expect(lambda: PracticeCatalogue.create("clean-engineering")).to(raise_error(UnknownPractice))
 
     with description("that is asked for the toolset a slug names"):
         with it("should name the practice's toolset for the practice's slug"):

@@ -181,16 +181,16 @@ with description("a LernDomainDriven generator"):
             expect(len(list(self.rules))).to(equal(len(_ALL_RULE_SLUGS)))
 
         with it("should scope inject globs to src domains and epic packages"):
-            expect(self.rules.glob).to(equal("packages/**/*,src/**/*"))
+            expect(self.rules.applies_to.globs).to(equal("packages/**/*,src/**/*"))
 
         with it("should match domain node files under src"):
-            expect(self.rules.matches("src/customer/customer-node.ts")).to(equal(True))
+            expect(self.rules.applies_to.matches("src/customer/customer-node.ts")).to(equal(True))
 
         with it("should match epic screen files under packages"):
-            expect(self.rules.matches("packages/wire-pay/send-wire/send-wire.tsx")).to(equal(True))
+            expect(self.rules.applies_to.matches("packages/wire-pay/send-wire/send-wire.tsx")).to(equal(True))
 
         with it("should not match unrelated files outside src or packages"):
-            expect(self.rules.matches("cdd_guidance/actions/validate/validate.py")).to(equal(False))
+            expect(self.rules.applies_to.matches("cdd_guidance/actions/validate/validate.py")).to(equal(False))
 
         with it("should inject rules markdown when a matching src file is written"):
             result = self.rules.inject_rules(self.payload)

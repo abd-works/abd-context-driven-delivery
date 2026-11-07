@@ -16,11 +16,13 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
-from expects import contain, equal, expect
-from mamba import after, before, description, it
+from expects import contain, equal, expect, have_key
+from mamba import after, before, context, description, it
 from space.session.throwaway_project import ThrowawayProject
 
+from harness.diagnostics import agent_tools_probe
 from harness.diagnostics.agent_tools_diagnostics import AgentToolsDiagnostics
+from harness.mcp._examples.call_outcomes.call_outcomes import MONTH_END_SECONDS
 from harness.mcp.mcp_server import McpHost
 from harness.mcp.spec_support import SpecServer
 from harness.diagnostics.agent_tools_probe import (
@@ -32,7 +34,13 @@ from harness.diagnostics.agent_tools_probe import (
 _AGENT_TOOLS_DIAGNOSTICS_REF = (
     "harness.diagnostics.agent_tools_diagnostics:AgentToolsDiagnostics"
 )
+_REPO_TOOLSET = "space.repo.repo:Repo"
+_CALL_OUTCOMES = "harness.mcp._examples.call_outcomes.call_outcomes:CallOutcomes"
 _DIAGNOSTICS_SECONDS = 150
+
+
+def _host_of(*refs: str) -> McpHost:
+    return McpHost.from_refs(refs, repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
 
 
 def _call_agent_tools_diagnostics(project: Path) -> tuple[float, str]:
@@ -97,19 +105,22 @@ with description("mcp tools diagnostics"):
             repo=str(_REPO_ROOT),
             project=str(_REPO_ROOT),
         )
-        name = "agent-tools-diagnostics.agent_tools_diagnostics"
-        expect(name in host._runtime._tools).to(equal(True))
-        expect(name in host._runtime._prompts).to(equal(False))
+        expect(host.checkout_server.tools).to(have_key("agent-tools-diagnostics.agent_tools_diagnostics"))
 
     with it("should treat agent_tools_diagnostics as kind tool for MCP enrollment"):
         tool = AgentToolsDiagnostics().tools["agent_tools_diagnostics"]
         expect(tool.kind).to(equal("tool"))
 
-    with it("should complete agent-tools-diagnostics through the cdd server within two minutes"):
-        elapsed, text = _call_agent_tools_diagnostics(self.project.root)
-        expect(elapsed < 120.0).to(equal(True))
-        expect("green" in text.split("\n")[0]).to(equal(True))
-        expect("invoke:" in text).to(equal(True))
+    # A chat on a project with nothing installed probes nothing, so its ping phase is red; the call still completes.
+    with context("that a chat calls through the cdd server"):
+        with before.each:
+            self.elapsed, self.text = _call_agent_tools_diagnostics(self.project.root)
+
+        with it("should complete within two minutes"):
+            expect(self.elapsed < 120.0).to(equal(True))
+
+        with it("should report the invoke phase"):
+            expect(self.text).to(contain("invoke:"))
 
     with it("should never publish nested diagnostics tools as workspace probe targets"):
         tree = Path(tempfile.mkdtemp())
@@ -123,7 +134,7 @@ with description("mcp tools diagnostics"):
                 ],
                 toolset_items=["space.repo.repo:Repo"],
             )
-            scoped = AgentToolsProbe(installer).published
+            scoped = AgentToolsProbe(installer, mcp_host=_host_of(_REPO_TOOLSET, _AGENT_TOOLS_DIAGNOSTICS_REF)).published
             expect(scoped).to(contain("repo.switch_branch"))
             expect(scoped).not_to(contain("agent-tools-diagnostics.agent_tools_diagnostics"))
             expect(scoped).not_to(contain("guidance-diagnostics.guidance_diagnostics"))
@@ -138,7 +149,7 @@ with description("mcp tools diagnostics"):
                 ["repo.switch_branch", "bdd-behavior", "cdd.ping"],
                 toolset_items=["space.repo.repo:Repo"],
             )
-            scoped = AgentToolsProbe(installer).published
+            scoped = AgentToolsProbe(installer, mcp_host=_host_of(_REPO_TOOLSET)).published
             expect(scoped).to(equal(["repo.switch_branch"]))
             expect(scoped).not_to(contain("bdd-behavior"))
         finally:
@@ -152,7 +163,7 @@ with description("mcp tools diagnostics"):
                 ["repo.switch_branch", "bdd-behavior", "cdd.ping"],
                 toolset_items=["space.repo.repo:Repo"],
             )
-            report = AgentToolsProbe(installer).run_standalone()
+            report = AgentToolsProbe(installer, mcp_host=_host_of(_REPO_TOOLSET)).run()
             expect("green" in report.split("\n")[0]).to(equal(True))
             data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
             section = data[AGENT_TOOLS_PROBE_SECTION]
@@ -178,3 +189,23 @@ with description("mcp tools diagnostics"):
             expect(names).to(contain("agent-tools-diagnostics.agent_tools_diagnostics"))
         finally:
             shutil.rmtree(tree, ignore_errors=True)
+
+    with context("with a tool that does not answer within the probe's time limit"):
+        with before.each:
+            self.tree = Path(tempfile.mkdtemp())
+            installer = _installer(self.tree, ["call-outcomes.close_month"], toolset_items=[_CALL_OUTCOMES])
+            self.limit = agent_tools_probe._DISPATCH_SECONDS
+            agent_tools_probe._DISPATCH_SECONDS = 0.2
+            started = time.perf_counter()
+            self.report = AgentToolsProbe(installer, mcp_host=_host_of(_CALL_OUTCOMES)).invoke()
+            self.elapsed = time.perf_counter() - started
+
+        with after.each:
+            agent_tools_probe._DISPATCH_SECONDS = self.limit
+            shutil.rmtree(self.tree, ignore_errors=True)
+
+        with it("should answer before the tool finishes"):
+            expect(self.elapsed < MONTH_END_SECONDS).to(equal(True))
+
+        with it("should report the probe red"):
+            expect(self.report.split("\n")[0]).to(equal("!red"))

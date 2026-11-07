@@ -58,9 +58,9 @@ class CleanEngineering(PracticeGuidance):
 
     @property
     def drawio(self) -> Drawio:
-        """The Draw.io toolset this practice renders its diagrams with, made for this practice's workspace."""
+        """The Draw.io toolset this practice renders its diagrams with."""
         if self._drawio is None:
-            self._drawio = Drawio(workspace=self.workspace)
+            self._drawio = Drawio()
             self._drawio.mode = "tool"
         return self._drawio
 

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable
 
 from harness.agent_tools.agent_tools import AgentTool, InstallDestination, agent_instructions, agent_tool, agent_toolset, tool_subject
-from harness.hooks.hooks import Hook, HookHandlersFile, HookInstallation, HooksManifest
+from harness.hooks.hooks import HookInstallation, hook
 from harness.installation.destination import Installation, noCatalog
 from harness.installation.files import FileInstallation, command
 from harness.installation.ide_layout import IdeLayout
@@ -328,8 +328,8 @@ class Installer:
         mcp = "running" if self._channels_of_run().mcp.server_is_running() else "not running"
         address = HookDaemon(self.repo).live_address()
         hook = f"running (pid {address.pid})" if address is not None else "not running"
-        events = HooksManifest(self.path / HooksManifest.NAME).registered_events
-        operations = HookHandlersFile(self.path / HookHandlersFile.NAME).operation_names
+        hooks = HookInstallation(self.ide, self.path)
+        events, operations = hooks.registered_events, hooks.registered_operations
         return "\n".join(
             [
                 f"cdd server: {mcp}",
@@ -370,13 +370,13 @@ class Installer:
         """How to diagnose an install whose deployed counts do not match."""
         return str(self.diagnose_install_instructions).strip()
 
-    @Hook("sessionStart")
+    @hook("sessionStart")
     def ensure_mcp_server_on_session_start(self, payload: HookPayload) -> str:
         """Start the cdd server when a chat starts; the hook server's toolset holds no project, so this builds the
         installer of the checkout the server is installed from."""
         return Installer(repo=_CDD_CHECKOUT).ensure_mcp_server()
 
-    @Hook("afterAgentResponse")
+    @hook("afterAgentResponse")
     def ensure_mcp_server_after_agent_response(self, payload: HookPayload) -> str:
         return Installer(repo=_CDD_CHECKOUT).ensure_mcp_server()
 

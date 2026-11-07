@@ -31,15 +31,16 @@ Relationships:
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.call_graph import parse_arrow_line
+from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    companion_interface_name,
     is_interface_name,
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
@@ -54,87 +55,111 @@ _CARD_HEADING = re.compile(r"^(#{2,6})\s+\*\*([^*]+)\*\*(.*?)\s*$")
 _FENCE = re.compile(r"^\s*(```|~~~)")
 
 
-def _class_heading_name(raw: str) -> str:
-    bold = re.match(r"^\*\*([^*]+)\*\*", raw.strip())
-    if bold:
-        return bold.group(1).strip()
-    name = re.sub(r"<<[^>]+>>", "", raw)
-    name = name.replace("**", "").strip()
-    if " : " in name:
-        name = name.split(" : ", 1)[0].strip()
-    return name
+def _split_bases(text: str) -> List[str]:
+    return [base.strip() for base in split_top_level(text) if base.strip()]
 
 
-def _class_heading_bases(raw: str) -> List[str]:
-    name = re.sub(r"<<[^>]+>>", "", raw).replace("**", "").strip()
-    return [name.split(" : ", 1)[1].strip()] if " : " in name else []
+@dataclass
+class ClassHeading:
+    """A class heading as written: `Cart <<Aggregate Root>> : Basket, Auditable`, or a card's
+    `**Cart** <<Entity>> — *Access Selfcare*`.
+
+    The name comes first, then the class's stereotypes as `<<Mark>>`s, then its base classes after ` : `. A card may
+    end with a note, which is kept as written so a card the model did not change reads the same."""
+
+    name: str
+    stereotypes: List[str] = field(default_factory=list)
+    bases: List[str] = field(default_factory=list)
+    note: str = ""
+
+    @classmethod
+    def read(cls, raw: str) -> "ClassHeading":
+        text = raw.strip()
+        bold = re.match(r"^\*\*([^*]+)\*\*", text)
+        if bold is None:
+            name, _, bases = without_marks(text.replace("**", "")).partition(" : ")
+            return cls(name.strip(), marks_in(text), _split_bases(bases))
+        rest = without_marks(text[bold.end():])
+        bases, note = (rest[1:], "") if rest.startswith(":") else ("", rest)
+        if " — " in bases:
+            bases, note = bases.split(" — ", 1)[0], "— " + bases.split(" — ", 1)[1]
+        return cls(bold.group(1).strip(), marks_in(text[bold.end():]), _split_bases(bases), note.strip())
+
+    def text(self) -> str:
+        return f"{self.name}{self._tail()}"
+
+    def card_text(self) -> str:
+        note = f" {self.note}" if self.note else ""
+        return f"**{self.name}**{self._tail()}{note}"
+
+    def _tail(self) -> str:
+        marks = "".join(f" <<{item}>>" for item in self.stereotypes)
+        bases = f" : {', '.join(self.bases)}" if self.bases else ""
+        return f"{marks}{bases}"
 
 
 class MarkdownOoadClass(OoadClass):
 
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # The card this class was read from, the note on its heading, and the class as it read then.
+        self._card: Optional[str] = None
+        self._card_note = ""
+        self._card_model = ""
+
     def render(self, known_names: Optional[List[str]] = None) -> str:
-        names = known_names or []
-        heading = self.name
-        base = companion_interface_name(self.name, names) or next(iter(self.bases), None)
-        if base:
-            heading = f"{self.name} : {base}"
-        lines: List[str] = [f"## {heading}", ""]
+        lines: List[str] = [f"## {self.heading(known_names or []).text()}", ""]
         if self.intent:
-            lines.append(self.intent)
-            lines.append("")
-        params = ", ".join(
-            f"{property_row.name}: {property_row.type_hint}" if property_row.type_hint else property_row.name
-            for property_row in self.properties
-        )
-        constructors = [
-            operation for operation in self.operations
-            if operation.name in {self.name, "constructor"}
-        ]
-        methods = [
-            operation for operation in self.operations
-            if operation.name not in {self.name, "constructor"}
-        ]
+            lines.extend([self.intent, ""])
         if self.properties or self.operations:
-            signature = self._constructor_signature(constructors[0]) if constructors else f"{self.name}({params})"
-            lines.append(self._public_line(signature))
-            for operation in constructors:
-                for callee in operation.callees:
-                    lines.append(f"\t-> {callee}")
-                for note in invariant_lines(operation):
-                    lines.append(f"\t// {note}")
-            lines.append("------")
-            for property_row in self.properties:
-                lines.append(self._property_line(property_row))
-                for callee in property_row.callees:
-                    lines.append(f"\t-> {callee}")
-                for note in property_notes(property_row):
-                    lines.append(f"\t// {note}")
-            lines.append("----")
-            for operation in methods:
-                if is_interface_name(self.name) and operation.name.startswith("_"):
-                    continue
-                lines.append(self._public_line(operation.render()))
-                for callee in operation.callees:
-                    lines.append(f"\t-> {callee}")
-                for note in invariant_lines(operation):
-                    lines.append(f"\t// {note}")
+            lines.extend(self._member_lines())
         lines.append("")
         return "\n".join(lines)
 
-    def keep_card(self, card: str, heading: "re.Match") -> None:
+    def heading(self, known_names: List[str]) -> ClassHeading:
+        """The class's heading: its stereotypes, then the bases its declaration names."""
+        return ClassHeading(self.name, list(self.stereotypes), self.declared_bases(known_names), self._card_note)
+
+    def _member_lines(self) -> List[str]:
+        constructors = [operation for operation in self.operations if operation.name in {self.name, "constructor"}]
+        methods = [operation for operation in self.operations if operation.name not in {self.name, "constructor"}]
+        lines = [self._public_line(self._constructor_line(constructors))]
+        for operation in constructors:
+            lines.extend(self._notes_under(operation.callees, invariant_lines(operation)))
+        lines.append("------")
+        for prop in self.properties:
+            lines.append(self._property_line(prop))
+            lines.extend(self._notes_under(prop.callees, property_notes(prop)))
+        lines.append("----")
+        for operation in methods:
+            if is_interface_name(self.name) and operation.name.startswith("_"):
+                continue
+            lines.append(self._public_line(operation.render()))
+            lines.extend(self._notes_under(operation.callees, invariant_lines(operation)))
+        return lines
+
+    def _constructor_line(self, constructors: List[Operation]) -> str:
+        if constructors:
+            return self._constructor_signature(constructors[0])
+        params = ", ".join(f"{prop.name}: {prop.type_hint}" if prop.type_hint else prop.name for prop in self.properties)
+        return f"{self.name}({params})"
+
+    def _notes_under(self, callees: List[str], notes: List[str]) -> List[str]:
+        """The call-graph arrows and invariant notes written under a member, indented."""
+        return [f"\t-> {callee}" for callee in callees] + [f"\t// {note}" for note in notes]
+
+    def keep_card(self, card: str, heading: ClassHeading) -> None:
         """Remember the card this class was read from, so an unchanged class writes it back as is."""
         self._card = card
-        self._card_name = self.name
-        self._card_suffix = heading.group(3)
+        self._card_note = heading.note
         self._card_model = self.render()
 
     def render_card(self, level: int) -> str:
         """The card as it was read while the class is unchanged; otherwise the card written from the model."""
-        if getattr(self, "_card", None) is not None and self.render() == self._card_model:
+        if self._card is not None and self.render() == self._card_model:
             return self._card
-        suffix = getattr(self, "_card_suffix", "")
         body = self.render().split("\n", 1)[1]
-        return f"{'#' * level} **{self.name}**{suffix}\n{body}\n"
+        return f"{'#' * level} {self.heading([]).card_text()}\n{body}\n"
 
     def _constructor_signature(self, operation: Operation) -> str:
         """Markdown names the constructor after the class. Code channels keep the word constructor."""
@@ -172,11 +197,13 @@ class MarkdownOoadClass(OoadClass):
         return ""
 
     @classmethod
-    def parse_body(cls, name: str, body: str, sequential_order: int) -> "MarkdownOoadClass":
+    def parse_body(cls, heading: ClassHeading, body: str, sequential_order: int) -> "MarkdownOoadClass":
         host = MarkdownCleanEngineeringModel(name="", sequential_order=1)
         host._class_order = sequential_order
-        parsed = host._parse_class(name, body)
+        parsed = host._parse_class(heading.name, body)
         loaded = cls(name=parsed.name, sequential_order=sequential_order)
+        loaded.stereotypes = list(heading.stereotypes)
+        loaded.bases = list(heading.bases)
         loaded.intent = parsed.intent
         loaded.properties = parsed.properties
         loaded.operations = parsed.operations
@@ -188,11 +215,9 @@ class MarkdownModule(Module):
     def get_next_class_from_file(self) -> MarkdownOoadClass:
         class_block = self._class_blocks.pop(0)
         heading = re.match(r"^#{2,3}\s+(.+)", class_block)
-        class_name = _class_heading_name(heading.group(1)) if heading else ""
+        class_heading = ClassHeading.read(heading.group(1)) if heading else ClassHeading("")
         body = class_block[heading.end():].lstrip("\n") if heading else class_block
-        parsed = MarkdownOoadClass.parse_body(class_name, body, len(self.classes) + 1)
-        parsed.bases = _class_heading_bases(heading.group(1)) if heading else []
-        return parsed
+        return MarkdownOoadClass.parse_body(class_heading, body, len(self.classes) + 1)
 
     def load_class(self, source: OoadClass) -> MarkdownOoadClass:
         loaded = MarkdownOoadClass(name=source.name, sequential_order=source.sequential_order)
@@ -360,11 +385,10 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             heading = re.match(r"^#{2,3}\s+(.+)", class_block)
             if heading is None:
                 continue
-            class_name = _class_heading_name(heading.group(1))
-            if not class_name or class_name.lower().startswith("module "):
+            class_heading = ClassHeading.read(heading.group(1))
+            if not class_heading.name or class_heading.name.lower().startswith("module "):
                 continue
-            parsed = MarkdownOoadClass.parse_body(class_name, class_block[heading.end():].lstrip("\n"), class_order)
-            parsed.bases = _class_heading_bases(heading.group(1))
+            parsed = MarkdownOoadClass.parse_body(class_heading, class_block[heading.end():].lstrip("\n"), class_order)
             module.classes.append(parsed)
             class_order += 1
 
@@ -440,10 +464,10 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         return "".join(lines[start + 1:end]).strip()
 
     def _append_card(self, module: MarkdownModule, card: str) -> None:
-        heading = _CARD_HEADING.match(card.split("\n", 1)[0])
+        class_heading = ClassHeading.read(card.split("\n", 1)[0].lstrip("#"))
         body = card.split("\n", 1)[1] if "\n" in card else ""
-        loaded = MarkdownOoadClass.parse_body(heading.group(2).strip(), body, len(module.classes) + 1)
-        loaded.keep_card(card, heading)
+        loaded = MarkdownOoadClass.parse_body(class_heading, body, len(module.classes) + 1)
+        loaded.keep_card(card, class_heading)
         module.classes.append(loaded)
         module._card_parts.append(loaded)
 
@@ -714,41 +738,11 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         return props, rels
 
 
-    def _parse_properties(self, text: str) -> List[Property]:
-        props, _ = self._parse_properties_and_relationships(text)
-        return props
-
-
-    def _parse_operations(self, text: str) -> List[Operation]:
-        ops, _ = self._parse_operations_and_relationships(text)
-        return ops
-
-
-
     def _relationships_from_properties(self, props: List[Property]) -> None:
         """A relationship is optional on the property. A primitive or a third-party type has none."""
 
         for prop in props:
             prop.derive_relationship()
-
-    def _dedupe_relationships(self, rels: List[Relationship]) -> List[Relationship]:
-        """One edge per target; stronger ownership (composition > aggregation > association) wins."""
-        rank = {"composition": 3, "aggregation": 2, "association": 1}
-        best: dict[str, Relationship] = {}
-        for rel in rels:
-            kind = (rel.kind or "association").lower()
-            if kind not in rank:
-                kind = "association"
-            prev = best.get(rel.target)
-            if prev is None or rank[kind] > rank.get((prev.kind or "association").lower(), 1):
-                best[rel.target] = Relationship(
-                    kind=kind,
-                    target=rel.target,
-                    cardinality=rel.cardinality,
-                    description=rel.description,
-                )
-        return list(best.values())
-
 
     def _parse_operations_and_relationships(self, 
         text: str,

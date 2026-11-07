@@ -39,8 +39,7 @@ class Name:
     @property
     def camel(self) -> str:
         """`storyMap`: how TypeScript names a member."""
-        head, *rest = self.words or [""]
-        return head + "".join(word.capitalize() for word in rest)
+        return self._camel_case(self.words)
 
     @property
     def spellings(self) -> list[str]:
@@ -68,10 +67,16 @@ class Name:
     @property
     def title_pascal(self) -> str:
         """`PetVisits` for `Pet visits`: each of the title's words capitalised, as a class name."""
-        return "".join(word.capitalize() for word in self.title_words)
+        return self._pascal_case(self.title_words)
 
     @property
     def title_camel(self) -> str:
         """`petVisits` for `Pet visits`: the title in Pascal case with its first word in lower case, as a member name."""
-        head, *rest = self.title_words or [""]
-        return head + "".join(word.capitalize() for word in rest)
+        return self._camel_case(self.title_words)
+
+    def _camel_case(self, words: list[str]) -> str:
+        head, *rest = words or [""]
+        return head + self._pascal_case(rest)
+
+    def _pascal_case(self, words: list[str]) -> str:
+        return "".join(word.capitalize() for word in words)

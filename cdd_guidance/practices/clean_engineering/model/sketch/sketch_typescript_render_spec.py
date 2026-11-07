@@ -31,7 +31,7 @@ KnowledgeGraphCallSource : KnowledgeGraphSource
 
 
 def _model():
-    return SketchCleanEngineeringModel.parse(_SKETCH)
+    return SketchCleanEngineeringModel().parse(_SKETCH)
 
 
 def _graph():
@@ -117,12 +117,12 @@ _UML = """
 
 with description("a sketch that names its classes in bold headings"):
     with it("should read Session and Loop from the clean engineering section"):
-        model = SketchCleanEngineeringModel.parse(_UML)
+        model = SketchCleanEngineeringModel().parse(_UML)
         names = [member.name for member in model.modules[0].classes]
         expect(names).to(equal(["Session", "Loop"]))
 
     with it("should read the uml operation and its callee"):
-        model = SketchCleanEngineeringModel.parse(_UML)
+        model = SketchCleanEngineeringModel().parse(_UML)
         session = next(member for member in model.modules[0].classes if member.name == "Session")
         new = next(member for member in session.operations if member.name == "new")
         expect(new.return_type).to(equal("str"))
@@ -134,11 +134,11 @@ with description("a sketch that names its classes in bold headings"):
         expect(new.callees).to(equal(["keep_log()"]))
 
     with it("should leave prose headings out of the classes"):
-        model = SketchCleanEngineeringModel.parse(_UML)
+        model = SketchCleanEngineeringModel().parse(_UML)
         names = [member.name for member in model.modules[0].classes]
         expect("Invariants" in names).to(equal(False))
         expect("Instructions" in names).to(equal(False))
 
     with it("should name the module the sketch declares"):
-        model = SketchCleanEngineeringModel.parse(_UML)
+        model = SketchCleanEngineeringModel().parse(_UML)
         expect(model.modules[0].name).to(equal("space/session"))

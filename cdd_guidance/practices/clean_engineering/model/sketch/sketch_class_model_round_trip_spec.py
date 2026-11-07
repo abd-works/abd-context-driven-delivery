@@ -17,10 +17,11 @@ def _shop() -> CleanEngineeringModel:
     order = OoadClass(
         name="Order",
         sequential_order=1,
-        collaborators=["Entity"],
         properties=[lines],
         operations=[add_line, Operation(name="total", return_type="Money"), Operation(name="checkout")],
     )
+    order.bases = ["Entity"]
+    order.stereotypes = ["Aggregate Root"]
     line = OoadClass(name="OrderLine", sequential_order=2, properties=[Property(name="quantity")])
     invoice = OoadClass(name="Invoice", sequential_order=1, operations=[Operation(name="issue", parameters=["order"])])
     sales = Module(name="sales", sequential_order=1)
@@ -43,7 +44,7 @@ def _operation(model, class_name, name):
 with description("a class model written as a sketch"):
     with context("that is read back"):
         with before.each:
-            self.parsed = SketchCleanEngineeringModel.parse(SketchCleanEngineeringModel().render(_shop()))
+            self.parsed = SketchCleanEngineeringModel().parse(SketchCleanEngineeringModel().render(_shop()))
 
         with it("should keep the model name"):
             expect(self.parsed.name).to(equal("shop"))
@@ -57,7 +58,10 @@ with description("a class model written as a sketch"):
             )
 
         with it("should keep the base a class extends"):
-            expect(_class(self.parsed, "Order").collaborators).to(equal(["Entity"]))
+            expect(_class(self.parsed, "Order").bases).to(equal(["Entity"]))
+
+        with it("should keep the stereotypes a class carries"):
+            expect(_class(self.parsed, "Order").stereotypes).to(equal(["Aggregate Root"]))
 
         with it("should keep properties as properties"):
             expect([prop.name for prop in _class(self.parsed, "Order").properties]).to(equal(["lines"]))
@@ -107,6 +111,6 @@ with description("a class model written as a sketch"):
 
         with it("should replace the old clean engineering section"):
             expect("Stale" in self.written).to(equal(False))
-            expect([oclass.name for oclass in SketchCleanEngineeringModel.parse(self.written).every_class()]).to(
+            expect([oclass.name for oclass in SketchCleanEngineeringModel().parse(self.written).every_class()]).to(
                 equal(["Order", "OrderLine", "Invoice"])
             )

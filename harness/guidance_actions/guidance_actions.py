@@ -6,15 +6,16 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, NotRequired, TypedDict
 
 from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions, agent_toolset, tools
+from harness.agent_tools.agent_tools import InstallDestination
 from harness.name.name import Name
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.hooks.hook_server import rules_toast
 from harness.hooks.hooks import Hook
-from harness.marks.mark import Toast
+from harness.marks.mark import Toast, mark_kinds
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
@@ -57,6 +58,77 @@ def source_label(content: str = "", paths: list[str] | str | None = None) -> str
     return "\n".join(str(entry) for entry in paths)
 
 
+class GuidanceArgument:
+    """The guidance argument a call sends an action, read as what the action works on. It is the Guidance list, one
+    Guidance (a ``module:Class`` ref, a slug, a ``{"toolset": ...}`` mapping or its JSON, or a Guidance already made),
+    or text the action runs once on. Agents on MCP often send several slugs, a ``format=`` word, and a ``session=`` word
+    in one string; the slugs are Guidance, the format word is each one's format, and the session word names the
+    session the call is for. A string with any other word is text, so prose still runs once."""
+
+    def __init__(self, guidance: GuidanceArg) -> None:
+        self._guidance = guidance
+
+    @property
+    def text(self) -> str | None:
+        """The text the action runs once on; none when the argument names Guidance."""
+        if not isinstance(self._guidance, str) or self._one_item() is not None or self._slug_words():
+            return None
+        return self._guidance
+
+    @property
+    def items(self) -> list:
+        """Each Guidance the argument names, as a ref, a ref mapping, or the Guidance itself."""
+        one = self._one_item() if not isinstance(self._guidance, list) else None
+        if one is not None:
+            return [one]
+        if isinstance(self._guidance, str):
+            return self._slug_words()
+        return [item if (named := self._item(item)) is None else named for item in list(self._guidance or [])]
+
+    @property
+    def session_named(self) -> str:
+        """The session.json a ``session=`` word names, as the session board writes it; empty when none does."""
+        if not isinstance(self._guidance, str):
+            return ""
+        return next((word[len(_SESSION_WORD):] for word in self._guidance.split() if word.startswith(_SESSION_WORD)), "")
+
+    def _one_item(self) -> Any:
+        return self._item(self._guidance)
+
+    def _slug_words(self) -> list:
+        words = [word for word in self._guidance.split() if not word.startswith(_SESSION_WORD)]
+        formats = [word[len(_FORMAT_WORD):].split(",")[0] for word in words if word.startswith(_FORMAT_WORD)]
+        slugs = [slug for word in words if not word.startswith(_FORMAT_WORD) for slug in word.split(",") if slug]
+        refs = [self._slug_ref(slug) for slug in slugs]
+        if not refs or None in refs:
+            return []
+        if not formats or not formats[0]:
+            return refs
+        return [{**(ref if isinstance(ref, dict) else {"toolset": ref}), "format": formats[0]} for ref in refs]
+
+    def _item(self, item: Any) -> Any:
+        """One Guidance as item names it; none for a string that names none."""
+        if not isinstance(item, str):
+            return item
+        text = item.strip()
+        mapping = self._json_ref(text)
+        if mapping is not None:
+            return mapping
+        return text if _TOOLSET_REF.match(text) else self._slug_ref(text)
+
+    def _json_ref(self, text: str) -> dict[str, Any] | None:
+        if not (text.startswith("{") and text.endswith("}")):
+            return None
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return None
+        return parsed if isinstance(parsed, dict) and parsed.get("toolset") else None
+
+    def _slug_ref(self, text: str) -> str | dict[str, Any] | None:
+        return PracticeCatalogue.toolset_ref(text) if _GUIDANCE_SLUG.match(text) else None
+
+
 class ActionWorksInNoSession(Exception):
     """An action made for no session, such as one listed for install, was asked for the session it works in."""
 
@@ -79,6 +151,9 @@ class GuidanceAction:
     """
 
     parameter_notes = {"guidance": GUIDANCE_PARAMETER}
+    injects_rules: ClassVar[bool] = True
+    """Whether the action hands the agent its listed Guidance's rules after it returns; an action that only records
+    what exists, such as Document, sets it false."""
 
     def __init__(self, session: Any = None) -> None:
         super().__init__()
@@ -95,7 +170,8 @@ class GuidanceAction:
         in a ``session=`` word, else the session open in the call's project, else the session this action was made for.
         A session is space/session's *Session*, which the call opens; the framework never names its class."""
         guidance = call.arguments.get("guidance")
-        action = self.made_for(self._session_named_in(guidance, call) or call.session or self._session)
+        named = GuidanceArgument(guidance).session_named if guidance is not None else ""
+        action = self.made_for((call.session_named(named) if named else None) or call.session or self._session)
         action._work_on(guidance)
         return action
 
@@ -114,16 +190,6 @@ class GuidanceAction:
             raise ActionWorksInNoSession(type(self).__name__)
         return self._session
 
-    def _session_named_in(self, guidance: Any, call: ToolCall) -> Any:
-        """The session whose session.json guidance names in a ``session=`` word, a path from the call's project or an
-        absolute one, opened for call; none when it names none."""
-        if not isinstance(guidance, str):
-            return None
-        named = next((word[len(_SESSION_WORD):] for word in guidance.split() if word.startswith(_SESSION_WORD)), "")
-        if not named:
-            return None
-        return call.session_named(named)
-
     def _discover_operations(self) -> dict[str, AgentOperation]:
         from harness.agent_tools.agent_tools import AgentToolMark, GuidanceAgentOperation
 
@@ -134,26 +200,15 @@ class GuidanceAction:
         }
 
     def _work_on(self, guidance: GuidanceArg | None = None) -> None:
-        """Guidance ref or dict: iterate Guidance. Other strings: run once on that text. Naming again what this action
-        already works on keeps the Guidance it built, so its operations all work on the same objects."""
+        """Work on what guidance names: its Guidance, or its text. Naming again what this action already works on keeps
+        the Guidance it built, so its operations all work on the same objects."""
         if guidance is None or guidance == self._guidance_worked_on:
             return
+        argument = GuidanceArgument(guidance)
         self._guidance_worked_on = guidance
         self._listed_items = None
-        listed = self._as_guidance_item(guidance)
-        if listed is not None and not isinstance(guidance, list):
-            self._guidance_text = None
-            self._tool_items = [listed]
-            return
-        if isinstance(guidance, str):
-            self._work_on_text(guidance)
-            return
-        self._guidance_text = None
-        items = []
-        for item in list(guidance or []):
-            listed = self._as_guidance_item(item)
-            items.append(item if listed is None else listed)
-        self._tool_items = items
+        self._guidance_text = argument.text
+        self._tool_items = argument.items if self._guidance_text is None else []
 
     def _work_on_listed(self, worked_on: str | list) -> None:
         """Work on what another action already took: its text, or the Guidance it listed, as the same objects."""
@@ -166,56 +221,6 @@ class GuidanceAction:
         self._guidance_text = None
         self._tool_items = list(worked_on)
         self._listed_items = list(worked_on)
-
-    def _work_on_text(self, text: str) -> None:
-        """Agents on MCP often send several slugs, a ``format=`` word, and a ``session=`` word in one string; list the
-        slugs as Guidance. The session word chose the session this action was made for. Any other word keeps the whole
-        string as text, so prose still runs once."""
-        refs = self._slug_words(text)
-        if refs:
-            self._guidance_text = None
-            self._tool_items = refs
-            return
-        self._guidance_text = text
-        self._tool_items = []
-
-    def _slug_words(self, text: str) -> list:
-        words = [word for word in text.split() if not word.startswith(_SESSION_WORD)]
-        formats = [word[len(_FORMAT_WORD):].split(",")[0] for word in words if word.startswith(_FORMAT_WORD)]
-        slugs = [slug for word in words if not word.startswith(_FORMAT_WORD) for slug in word.split(",") if slug]
-        refs = [self._guidance_slug(slug) for slug in slugs]
-        if not refs or None in refs:
-            return []
-        if not formats or not formats[0]:
-            return refs
-        return [self._with_format(ref, formats[0]) for ref in refs]
-
-    def _with_format(self, ref: str | dict[str, Any], format: str) -> dict[str, Any]:
-        item = dict(ref) if isinstance(ref, dict) else {"toolset": ref}
-        item["format"] = format
-        return item
-
-    def _as_guidance_item(self, item: Any) -> Any:
-        if isinstance(item, dict):
-            return item
-        if not isinstance(item, str):
-            return item
-        text = item.strip()
-        if text.startswith("{") and text.endswith("}"):
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError:
-                parsed = None
-            if isinstance(parsed, dict) and parsed.get("toolset"):
-                return parsed
-        if _TOOLSET_REF.match(text):
-            return text
-        return self._guidance_slug(text)
-
-    def _guidance_slug(self, text: str) -> str | dict[str, Any] | None:
-        if not _GUIDANCE_SLUG.match(text):
-            return None
-        return PracticeCatalogue.toolset_ref(text)
 
     def guidance_text(self) -> str | None:
         """The string to run this action on, when guidance was not a Guidance list."""
@@ -270,14 +275,14 @@ class GuidanceAction:
         )
         return inner
 
-    def each(self, operation):
+    def each(self, operation: Callable[[Any], Any]) -> list:
         """Run ``operation`` once on a guidance string, or once per Guidance."""
         text = self._guidance_text
         if text is not None:
             return [operation(text)]
         return [operation(item) for item in self.listed()]
 
-    def run(self, operation, *, action: str = "") -> list:
+    def run(self, operation: Callable[[Any], Any], *, action: str = "") -> list:
         """Run ``operation`` on the guidance this action works on: once on its string, or once per Guidance."""
         self._keep_named_formats()
         self._log_running_action(action)
@@ -322,7 +327,7 @@ class GuidanceAction:
             return ""
         session_json = session.session_file
         root = session.root.as_posix()
-        project = session.repo_from_session().as_posix()
+        project = session.repo_path.as_posix()
         practices = [(item, self._session_practice(item)) for item in self.listed() if not isinstance(item, str)]
         writes = [f"- {item.slug}: {practice.folder.as_posix()}" for item, practice in practices if practice is not None]
         stored = session_json.read_text(encoding="utf-8").strip() if session_json.is_file() else "{}"
@@ -355,7 +360,7 @@ class GuidanceAction:
     @Hook("postToolUse")
     def inject_rules(self, payload: HookPayload) -> dict[str, Any]:
         """Inject listed Guidance rules markdown after this action returns."""
-        if type(self).__name__ == "Document" or not self._payload_is_this_action(payload):
+        if not self.injects_rules or not self._payload_is_this_action(payload):
             return {}
         action = self.for_call(ToolCall(payload.tool_input, payload.project))
         parts, labels = action._listed_inject_parts(payload)
@@ -366,31 +371,24 @@ class GuidanceAction:
     def _listed_inject_parts(self, payload: HookPayload) -> tuple[list[str], list[str]]:
         parts: list[str] = []
         labels: list[str] = []
+        from harness.guidance.guidance import Guidance
+
         for guidance in self.listed():
-            text = self._listed_guidance_rules(guidance, payload)
-            if not text:
-                continue
-            parts.append(text)
-            labels.append(type(guidance).__name__)
+            text = guidance.rules_after_edit(payload) if isinstance(guidance, Guidance) else ""
+            if text:
+                parts.append(text)
+                labels.append(type(guidance).__name__)
         return parts, labels
 
-    def _listed_guidance_rules(self, guidance: Any, payload: HookPayload) -> str:
-        rules = getattr(guidance, "rules", None)
-        if rules is None:
-            return ""
-        globbed = getattr(rules, "inject_rules", None)
-        if Hook.disabled_on(globbed):
-            return ""
-        if callable(globbed):
-            text = (globbed(payload).get("additional_context") or "").strip()
-            if text:
-                return text
-        return (getattr(rules, "markdown", None) or "").strip()
-
     def _payload_is_this_action(self, payload: HookPayload) -> bool:
-        tool = payload.tool_name.lower()
-        if not tool:
-            return False
-        name = Name(type(self).__name__)
-        aliases = {name.snake, name.kebab, "".join(name.words)}
-        return any(alias and alias in tool for alias in aliases)
+        """True when the hook is about one of this action's own MCP tools, whatever prefix the IDE gives its name:
+        ``generate.generate``, or ``mcp__cdd__generate_generate`` in Claude Code."""
+        called = self._comparable(payload.tool_name.rsplit("__", 1)[-1])
+        own = {
+            self._comparable(f"{self.slug}.{name}")
+            for name, member in self._members.marked if mark_kinds.marked_for(InstallDestination.MCP, member)
+        }
+        return bool(called) and called in own
+
+    def _comparable(self, tool_name: str) -> str:
+        return tool_name.casefold().replace(".", "_").replace("-", "_")

@@ -1,26 +1,13 @@
-"""catalog_generator - discover-and-render primitives for the CDD HTML catalog.
+"""catalog_generator - the CDD HTML catalog: a page for every practice, fidelity, lifecycle action, and utility, the
+board that links them, and the approach page.
 
-Wraps the real object model directly (the practice catalogue's live
-PracticeGuidance and FidelityGuidance, each action kit's AgentTools) - there is
-no separate scraped schema. See ``catalog/cdd-catalog-plan.md`` and
-``catalog/cdd-catalog-sketch.md`` for the full design; this module implements
-the "Assemble Catalog Page Data" epic's four discover-step stories:
-
-- ``catalog_practices`` / ``catalog_utilities`` - the practice catalogue's practices and the installer's utilities
-- each practice's live ``FidelityGuidance`` gives the fidelity name, stage, default format, and ``section`` text
-- ``catalog_actions`` - each action in the action catalogue: its kit, its live tool, and its folder
-- ``SkillSlashName`` - Collect Skill Slash-Command Map From SKILL Frontmatter
-
-It also implements "Render Self-Contained Catalog Pages" (``CatalogTool`` /
-``CatalogAction`` / ``CatalogFidelity`` / ``CatalogContextTool`` /
-``CatalogUtility`` / ``Catalog``, each with one ``generate_catalog(...)``
-operation - see the sketch's Clean Engineering pass), "Make Catalog Output
-Portable" (``git_blob_url``, ``resolve_repo_remote``, ``write_page``, ``build_run_request``), and
-"Configure Illustrated Examples" (``parse_illustrated_examples``,
-``extract_whole_file``, ``extract_heading_section``, ``extract_comment_tag``).
+The catalog reads the live object model - the practice catalogue's ``PracticeGuidance`` and ``FidelityGuidance``, the
+action catalogue's actions and their live tools, and the toolsets the installer finds - so there is no separate scraped
+schema. Each page class below renders one of those objects; ``Catalog`` writes them all with the Foundry chrome.
 """
 from __future__ import annotations
 
+import html
 import importlib
 import inspect
 import logging
@@ -32,33 +19,50 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from harness.name.name import Name
-from harness.catalog_generator.foundry_chrome import STAGE_COLUMNS, StageColumn
+from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
+from harness.agent_tools.agent_tools import tool_subject
+from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
+from harness.catalog_generator.approach_page import ApproachPage
+from harness.catalog_generator.brand import Brand
+from harness.catalog_generator.catalog_examples import CatalogFidelity, PracticeExamples
+from harness.markdown.front_matter import FrontMatter
+from harness.catalog_generator.hub_board import HubBoard
+from harness.catalog_generator.markdown_html import MarkdownHtml
+from harness.catalog_generator.page_shell import PageShell
+from harness.catalog_generator.stage_columns import STAGE_COLUMNS, StageColumn
 from harness.guidance.action_catalogue import Action, ActionCatalogue
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.practice_catalogue import PracticeCatalogue
+from harness.installation.destination import NoCatalog
+from harness.installation.files import skill
+from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.markdown.format import Format
 from harness.markdown.markdown import MarkdownText
-from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
-from harness.agent_tools.agent_tools import tool_subject
-from harness.installation.destination import NoCatalog, noCatalog
-from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
+from harness.name.name import Name
+from harness.process.git import Git
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_ROOTS = (_REPO_ROOT / ".claude" / "skills", _REPO_ROOT / ".cursor" / "skills")
 _SKILL_NAME_RE = re.compile(r"^name:\s*(.+?)\s*$", re.MULTILINE)
+# The command a person runs to install CDD into an IDE, and the file it runs.
+_INSTALL_COMMAND = "python scripts/install.py --ide Claude"
+_INSTALL_SCRIPT = _REPO_ROOT / "scripts" / "install.py"
+_HEADLINE = 'ABD <span class="accent">Context Driven Delivery</span> Harness'
+_SITE_TITLE = "ABD Context Driven Delivery Harness"
+_SITE_SENTENCE = (
+    "Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. "
+)
+_BACK_TO_CATALOG = '<a href="index.html">Back to catalog</a>.'
+_TITLE_LINE = re.compile(r"^#\s+.*\n+", re.MULTILINE)
 
-# -- Practices and utilities --------------------------------------------------
-#
-# The practices come from the practice catalogue: each live PracticeGuidance with
-# at least one fidelity on the board, unless marked @noCatalog. Each practice
-# describes itself for the catalog in its ``catalog_card``.
+
+# -- What the catalog shows ---------------------------------------------------
 
 
 class CatalogPractice:
     """One practice as the catalog shows it: the live ``PracticeGuidance``, the catalog card it gives itself, and its
-    fidelities placed in the board's stage columns. Every page, board row, and grid card for the practice reads it."""
+    fidelities placed in the board's stage columns. Every page, board ticket, and grid card for the practice reads it."""
 
     _CARD_DEFAULTS: dict[str, Any] = {
         "family": "aad-fam-other",
@@ -73,15 +77,23 @@ class CatalogPractice:
         self._skills = skills or SkillSlashName()
         self._card = self._card_of(type(practice))
 
+    @classmethod
+    def load_all(cls) -> list[CatalogPractice]:
+        """Every practice in the practice catalogue with a fidelity on the board, unless marked ``@noCatalog``, in the
+        order each practice's catalog card gives."""
+        practices = [cls(practice) for practice in PracticeCatalogue.practices() if not NoCatalog.marks(type(practice))]
+        shown = [practice for practice in practices if practice.on_board]
+        return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
+
     def _card_of(self, practice_class: type) -> dict[str, Any]:
         card = {**self._CARD_DEFAULTS, **(getattr(practice_class, "catalog_card", None) or {})}
-        card.setdefault("name", re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", practice_class.__name__))
-        card.setdefault("label", card["name"].lower().replace(" ", "-"))
+        card.setdefault("name", " ".join(word.capitalize() for word in Name(practice_class.__name__).words))
+        card.setdefault("label", Name(card["name"]).title_slug)
         return card
 
     @property
     def key(self) -> str:
-        """The practice's key, such as ``clean_engineering``: its page names, board rows, and skill lookups use it."""
+        """The practice's key, such as ``clean_engineering``: its page names, board tickets, and skill lookups use it."""
         return self.practice.key
 
     @property
@@ -153,24 +165,9 @@ class CatalogPractice:
         return "\n\n".join(section for section in sections if section)
 
 
-def catalog_practices() -> list[CatalogPractice]:
-    """Every practice in the practice catalogue with a fidelity on the board, unless marked ``@noCatalog``, in the
-    order each practice's catalog card gives."""
-    practices = [
-        CatalogPractice(practice)
-        for practice in PracticeCatalogue.practices()
-        if not NoCatalog.marks(type(practice))
-    ]
-    shown = [practice for practice in practices if practice.on_board]
-    return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
-
-
-# -- Utilities ----------------------------------------------------------------
-#
 # The utilities are the toolsets the installer finds in ``space`` (sessions, the board, the repository) and ``tools``
 # (chat, echo, Granola, the file manager), unless marked @noCatalog. The harness's own toolsets are the framework the
 # practices and actions run on, and the guidance under ``cdd_guidance`` has its own pages.
-
 _UTILITY_PACKAGES = ("space.", "tools.")
 
 
@@ -179,6 +176,14 @@ class Utility:
 
     def __init__(self, toolset_class: type) -> None:
         self.toolset_class = toolset_class
+
+    @classmethod
+    def load_all(cls) -> list[Utility]:
+        """Every toolset the installer finds in ``space`` and ``tools``, less those marked ``@noCatalog``, in the order
+        the installer finds them. A toolset that cannot be imported raises rather than leaving a silent gap."""
+        refs = [ref for ref in RepositoryToolsets(_REPO_ROOT).collect() if ref.startswith(_UTILITY_PACKAGES)]
+        classes = [getattr(importlib.import_module(module), name) for module, name in (ref.split(":") for ref in refs)]
+        return [cls(toolset_class) for toolset_class in classes if not NoCatalog.marks(toolset_class)]
 
     @property
     def name(self) -> str:
@@ -189,266 +194,38 @@ class Utility:
     def href(self) -> str:
         return f"tools/{self.name}.html"
 
-    @property
-    def owner(self) -> object:
-        """An instance of the utility, or the class itself when it cannot be built without arguments."""
-        try:
-            return self.toolset_class()
-        except TypeError as error:
-            logging.debug("Utility %s is not constructible: %s", self.name, error)
-            return self.toolset_class
-
-
-def catalog_utilities() -> list[Utility]:
-    """Every toolset the installer finds in ``space`` and ``tools``, less those marked ``@noCatalog``, in the order
-    the installer finds them. A toolset that cannot be imported raises rather than leaving a silent gap."""
-    from harness.installation.repository_toolsets import RepositoryToolsets
-
-    refs = [ref for ref in RepositoryToolsets(_REPO_ROOT).collect() if ref.startswith(_UTILITY_PACKAGES)]
-    classes = [getattr(importlib.import_module(module), name) for module, name in (ref.split(":") for ref in refs)]
-    return [Utility(toolset_class) for toolset_class in classes if not NoCatalog.marks(toolset_class)]
-
-
-# -- Fidelity templates -------------------------------------------------------
-
-
-class TemplateFrontmatter:
-    """Tokens in a template file's leading YAML or ``# ---`` comment block."""
-
-    def tokens(self, text: str) -> set[str]:
-        self._blob = _template_frontmatter_blob(text).lower()
-        self._token_set: set[str] = set()
-        for key in ("fidelity", "artifact", "format"):
-            self._key = key
-            self._collect_key_tokens()
-        return self._token_set
-
-    def _collect_key_tokens(self) -> None:
-        blob = self._blob
-        key = self._key
-        listed = re.search(rf"{key}\s*:\s*\[([^\]]*)\]", blob)
-        if listed:
-            self._add_bracket_tokens(listed.group(1))
-            return
-        scalar = re.search(rf"{key}\s*:\s*([^\n]+)", blob)
-        if not scalar:
-            return
-        tok = scalar.group(1).strip().strip("\"'").lower()
-        if tok:
-            self._token_set.add(tok)
-
-    def _add_bracket_tokens(self, raw: str) -> None:
-        for part in raw.split(","):
-            tok = part.strip().strip("\"'").lower()
-            if tok:
-                self._token_set.add(tok)
-
-
-def _template_frontmatter_blob(text: str) -> str:
-    """Return the leading frontmatter block (YAML or ``# ---`` comment form)."""
-    lines = text.splitlines()
-    if not lines:
-        return ""
-    if lines[0].strip() == "---":
-        end = next((i for i, ln in enumerate(lines[1:], 1) if ln.strip() == "---"), None)
-        return "\n".join(lines[1:end]) if end is not None else ""
-    if lines[0].strip() in ("# ---", "#---"):
-        blob: list[str] = []
-        for ln in lines[1:]:
-            stripped = ln.strip()
-            if stripped in ("# ---", "#---", "---"):
-                break
-            blob.append(stripped[2:].lstrip() if stripped.startswith("#") else stripped)
-        return "\n".join(blob)
-    return ""
-
-class HeadingSection:
-    """Body under one markdown heading, up to the next heading of that level."""
-
-    def __init__(self, markdown: str, level: int = 2) -> None:
-        self.markdown = markdown
-        self.level = level
-
-    def extract(self, heading: str) -> str | None:
-        marker = "#" * self.level + " "
-        lines = self.markdown.splitlines()
-        start = None
-        for i, line in enumerate(lines):
-            if line.strip().lower() == (marker + heading).lower():
-                start = i + 1
-                break
-        if start is None:
-            return None
-        end = len(lines)
-        heading_re = re.compile(r"^#{1," + str(self.level) + r"}\s")
-        for i in range(start, len(lines)):
-            if heading_re.match(lines[i]):
-                end = i
-                break
-        return "\n".join(lines[start:end]).strip()
-
-
-class GitCitation:
-    """Git blob URLs — the only source citation shape catalog pages emit."""
-
-    def __init__(self, repo_url: str = "", ref: str = "") -> None:
-        self.repo_url = repo_url
-        self.ref = ref
-
-    @classmethod
-    def normalize(cls, repo_url: str) -> str:
-        url = repo_url.strip()
-        if url.startswith("git@"):
-            host_and_path = url[len("git@"):]
-            hostname, _, path = host_and_path.partition(":")
-            url = f"https://{hostname}/{path}"
-        if url.endswith(".git"):
-            url = url[: -len(".git")]
-        return url
-
-    @classmethod
-    def from_checkout(cls, repo_root: Path | None = None) -> GitCitation:
-        root = repo_root or _REPO_ROOT
-        repo_url = subprocess.run(
-            ["git", "remote", "get-url", "origin"],
-            cwd=root, capture_output=True, text=True, check=True,
-        ).stdout.strip()
-        ref = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=root, capture_output=True, text=True, check=True,
-        ).stdout.strip()
-        return cls(cls.normalize(repo_url), ref)
-
-    def blob_url(self, path: Path, lines: tuple[int, int] | None = None) -> str:
-        try:
-            relative = path.resolve().relative_to(_REPO_ROOT)
-        except ValueError:
-            relative = path
-        posix_path = relative.as_posix()
-        url = f"{self.repo_url.rstrip('/')}/blob/{self.ref}/{posix_path}"
-        if lines:
-            start, end = lines
-            url += f"#L{start}-L{end}" if end != start else f"#L{start}"
-        return url
-
-    def blob_url_for_callable(self, func: object) -> str:
-        source_file = Path(inspect.getsourcefile(func))  # type: ignore[arg-type]
-        _, start_line = inspect.getsourcelines(func)  # type: ignore[arg-type]
-        end_line = start_line + len(inspect.getsource(func).splitlines()) - 1  # type: ignore[arg-type]
-        return self.blob_url(source_file, (start_line, end_line))
-
-
-class CatalogPage:
-    """One generated HTML page written under an output root."""
-
-    def __init__(self, out_root: Path) -> None:
-        self.out_root = Path(out_root)
-
-    def write(self, relative_path: str, html: str) -> Path:
-        target = self.out_root / relative_path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(html, encoding="utf-8")
-        return target
-
-
-class SkillSlashName:
-    """Slash-invocable skill name from deployed SKILL.md frontmatter."""
-
-    def __init__(self, skills_roots: Iterable[Path] = _SKILLS_ROOTS) -> None:
-        self._skills_roots = tuple(skills_roots)
-
-    def resolve(self, module_dir_name: str) -> str | None:
-        for candidate in (module_dir_name, module_dir_name.replace("_", "-")):
-            for skill_md in self._skill_files(candidate):
-                match = _SKILL_NAME_RE.search(skill_md.read_text(encoding="utf-8"))
-                if match:
-                    return match.group(1)
-        return None
-
-    def _skill_files(self, candidate: str) -> list[Path]:
-        found: list[Path] = []
-        for root in self._skills_roots:
-            found.extend(self._skill_files_under(root, candidate))
-        return [path for path in found if path.is_file()]
-
-    def _skill_files_under(self, root: Path, candidate: str) -> list[Path]:
-        """``{candidate}/SKILL.md`` at the skills root, the Cursor layout
-        ``{category}/{candidate}/SKILL.md``, and the Claude layout, which joins the
-        category into one folder name: ``{category}-{candidate}/SKILL.md``."""
-        found = [root / candidate / "SKILL.md"]
-        if not root.is_dir():
-            return found
-        flat_name = re.compile(rf"^[a-z0-9_]+-{re.escape(candidate)}$")
-        for folder in sorted(root.iterdir()):
-            if not folder.is_dir():
-                continue
-            found.append(folder / candidate / "SKILL.md")
-            if flat_name.match(folder.name):
-                found.append(folder / "SKILL.md")
-        return found
-
-
-
-
-
-def _insert_after_heading(html_text: str, heading: str, insertion: str) -> str:
-    """Place ``insertion`` after the named heading's section, before the next heading."""
-    match = re.search(rf"<h([1-4])>{re.escape(heading)}</h\1>", html_text)
-    if not match:
-        return html_text + insertion
-    start = match.end()
-    nxt = re.search(r"<h[1-4]>", html_text[start:])
-    insert_at = start + nxt.start() if nxt else len(html_text)
-    return html_text[:insert_at] + insertion + html_text[insert_at:]
-
-
-def _first_prose_paragraph(text: str) -> str:
-    lines: list[str] = []
-    started = False
-    in_fence = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("```"):
-            if started:
-                break
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        if not stripped or stripped.startswith("#"):
-            if started:
-                break
-            continue
-        started = True
-        lines.append(line)
-    return "\n".join(lines).strip()
-
-# -- Lifecycle actions --------------------------------------------------------
-
 
 class LifecycleAction:
-    """One action as the catalog gives it a page: the action catalogue's ``Action``, its kit built once, and that
-    kit's live ``AgentTool`` for it. The kit's folder holds the action's guide and module overview."""
+    """One action as the catalog gives it a page: the action catalogue's ``Action``, the toolset that defines it built
+    once, and that toolset's live ``AgentTool`` for it. The toolset's folder holds the action's guide and module
+    overview."""
 
     def __init__(self, action: Action) -> None:
         self.action = action
-        self._kit: object | None = None
+        self._toolset: object | None = None
+
+    @classmethod
+    def load_all(cls) -> list[LifecycleAction]:
+        """Every action in the action catalogue whose toolset has a live tool for it that the catalog shows: a toolset
+        or an operation marked ``@noCatalog`` stays out."""
+        shown = [cls(action) for action in ActionCatalogue.actions() if not NoCatalog.marks(action.toolset_class)]
+        return [action for action in shown if action.tool is not None]
 
     @property
     def name(self) -> str:
         return self.action.name
 
     @property
-    def kit(self) -> object:
-        """The action kit, built once."""
-        if self._kit is None:
-            self._kit = self.action.toolset_class()
-        return self._kit
+    def toolset(self) -> object:
+        """The toolset that defines the action, built once."""
+        if self._toolset is None:
+            self._toolset = self.action.toolset_class()
+        return self._toolset
 
     @property
     def tool(self) -> object | None:
-        """The kit's live tool for this action; none when the kit has no such tool or marks it ``@noCatalog``."""
-        tools = self.kit.tools
+        """The toolset's live tool for this action; none when it has no such tool or marks it ``@noCatalog``."""
+        tools = self.toolset.tools
         tool = tools[self.name] if self.name in tools else None
         if tool is None or NoCatalog.marks(getattr(tool, "callable", tool)):
             return None
@@ -456,7 +233,7 @@ class LifecycleAction:
 
     @property
     def source_dir(self) -> Path:
-        """The kit's folder under ``cdd_guidance/actions``."""
+        """The toolset's folder under ``cdd_guidance/actions``."""
         return self.action.folder
 
     @property
@@ -464,298 +241,22 @@ class LifecycleAction:
         return f"actions/{self.name}.html"
 
 
-def catalog_actions() -> list[LifecycleAction]:
-    """Every action in the action catalogue whose kit has a live tool for it that the catalog shows: a kit or an
-    operation marked ``@noCatalog`` stays out."""
-    shown = [LifecycleAction(action) for action in ActionCatalogue.actions() if not NoCatalog.marks(action.toolset_class)]
-    return [action for action in shown if action.tool is not None]
-
-
-def _declared_parameters(fn: object) -> dict[str, str]:
-    """Named parameters (minus ``self`` and ``*args`` / ``**kwargs``) with their annotation text.
-
-    The toolset manifest carries kind / instructions only, so parameters come
-    from the live Python signature. A property or other non-callable declares none.
-    """
-    if not callable(fn):
-        return {}
-    try:
-        params = inspect.signature(fn).parameters
-    except (TypeError, ValueError):
-        return {}
-    declared: dict[str, str] = {}
-    for name, param in params.items():
-        if name == "self" or param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
-            continue
-        annotation = param.annotation
-        if annotation is inspect.Parameter.empty:
-            declared[name] = ""
-        elif isinstance(annotation, str):
-            declared[name] = annotation
-        else:
-            declared[name] = getattr(annotation, "__name__", str(annotation))
-    return declared
-
-
-def _example_value(name: str, type_str: str) -> object:
-    """A placeholder for one parameter in a run request: none for an optional one, an empty list for a list."""
-    compact = type_str.replace(" ", "")
-    if compact.endswith("|None") or compact == "None":
-        return None
-    if compact.startswith("list["):
-        return []
-    return f"<{name}>"
-
-
-def _is_guidance_class(cls: type) -> bool:
-    from harness.guidance.guidance import Guidance
-
-    return isinstance(cls, type) and issubclass(cls, Guidance)
-
-
-def build_run_request(
-    cls: type,
-    *,
-    action: str,
-    fidelity: str | None = None,
-) -> dict:
-    """Build a spec run-request dict from the live toolset.
-
-    Constructor parameters become ``context``; the named action's parameters
-    become ``arguments``. ``fidelity`` (when the constructor accepts it) is
-    filled with the given fidelity key.
-
-    Guidance (practices) do not own the actions — each lives on its action kit,
-    whose operation takes the guidance it works on. A request for an action in
-    the action catalogue on a Guidance class is rewritten to the action's kit
-    with ``arguments.guidance`` carrying that Guidance.
-    """
-
-    def _context() -> dict[str, object]:
-        context: dict[str, object] = {}
-        for name, type_str in _declared_parameters(cls.__init__).items():
-            if name == "fidelity" and fidelity is not None:
-                context[name] = fidelity
-            else:
-                context[name] = _example_value(name, type_str)
-        return context
-
-    kit = ActionCatalogue.action(action)
-    if kit is not None and _is_guidance_class(cls):
-        return {
-            "toolset": kit.toolset_ref,
-            "action": action,
-            "arguments": {
-                "guidance": [
-                    {"toolset": f"{cls.__module__}:{cls.__name__}", "context": _context()},
-                ]
-            },
-        }
-
-    action_fn = inspect.getattr_static(cls, action, None)
-    if isinstance(action_fn, (staticmethod, classmethod)):
-        action_fn = action_fn.__func__
-    action_params = _declared_parameters(action_fn)
-
-    request: dict[str, object] = {
-        "toolset": f"{cls.__module__}:{cls.__name__}",
-        "context": _context(),
-        "action": action,
-    }
-    if action_params:
-        request["arguments"] = {
-            name: _example_value(name, type_str)
-            for name, type_str in action_params.items()
-        }
-    return request
-
-
-def dump_run_request_yaml(
-    cls: type,
-    *,
-    action: str,
-    fidelity: str | None = None,
-) -> str:
-    """Serialize :func:`build_run_request` as plain YAML (no fences)."""
-    try:
-        import yaml
-    except ImportError as exc:  # pragma: no cover
-        raise RuntimeError("PyYAML is required to dump catalog request manifests") from exc
-    return yaml.safe_dump(
-        build_run_request(cls, action=action, fidelity=fidelity),
-        sort_keys=False,
-        default_flow_style=False,
-    )
-
-# -- Illustrated examples -----------------------------------------------------
-
-@dataclass(frozen=True)
-class IllustratedExampleRow:
-    """One parsed row of a tool's ``## Illustrated examples`` config table."""
-
-    fidelity: str
-    source: str
-    anchor: str
-
-    @classmethod
-    def parse(cls, markdown: str) -> list[IllustratedExampleRow]:
-        section = HeadingSection(markdown).extract("Illustrated examples")
-        if not section:
-            return []
-        rows: list[IllustratedExampleRow] = []
-        lines = [line for line in section.splitlines() if _TABLE_ROW_RE.match(line)]
-        for line in lines[2:]:
-            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-            if len(cells) < 3:
-                continue
-            fidelity, source, anchor = cells[0], cells[1], cells[2]
-            rows.append(cls(fidelity=fidelity, source=source, anchor=anchor))
-        return rows
-
-    @classmethod
-    def whole_file(cls, source_path: Path) -> str:
-        return source_path.read_text(encoding="utf-8")
-
-    @classmethod
-    def comment_tag(cls, text: str, tag: str) -> str:
-        return "\n".join(line for line in text.splitlines() if tag in line)
-
-    def resolve(self, tool_dir: Path) -> str:
-        source_path = tool_dir / self.source
-        if self.anchor == "whole-file":
-            return self.whole_file(source_path)
-        text = source_path.read_text(encoding="utf-8")
-        if self.anchor.startswith("<!--"):
-            return self.comment_tag(text, self.anchor)
-        level = 3 if self.anchor.startswith("###") else 2
-        heading = self.anchor.lstrip("#").strip()
-        section = HeadingSection(text, level=level).extract(heading)
-        return section if section is not None else text
-
-_TABLE_ROW_RE = re.compile(r"^\|(.+)\|\s*$")
-
-# -- Render model (Clean Engineering pass) ------------------------------------
-#
-# Each renderer below is built once with what every page shares (the repository
-# citation, the action page links) and exposes one operation, generate_catalog,
-# which renders the live object it is given: a LifecycleAction, a CatalogPractice
-# and one of its fidelities, or a Utility. Nothing is copied into
-# the renderer between pages, so a page shows exactly what its object holds.
-# See catalog/cdd-catalog-sketch.md's Clean Engineering pass for the model.
-
-class CatalogTool:
-    """The one-line, hyperlinked rendering of a single real ``@agent_tool`` call
-    site - a git-blob source citation, since no catalog page exists for a
-    plain tool."""
-
-    def __init__(self, repo_url: str, ref: str) -> None:
-        self.repo_url = repo_url
-        self.ref = ref
-
-    def generate_catalog(self, tool: object, owner: object) -> str:
-        """Render one "Tools/actions called" bullet for a plain @agent_tool name.
-        ``tool`` is the tool's name (str) or a ``_Tool``; ``owner`` is the
-        toolset instance/class it was called on - never mutated."""
-        name = tool if isinstance(tool, str) else getattr(tool, "name", str(tool))
-        func = getattr(owner, name, None)
-        if func is not None and callable(func):
-            try:
-                href = GitCitation(self.repo_url, self.ref).blob_url_for_callable(func)
-                return f'<li><a href="{href}">{name}</a> <span class="tag">(tool, no page)</span></li>'
-            except (TypeError, OSError) as error:
-                logging.debug("Skipping source citation for %s: %s", name, error)
-        return f'<li>{name} <span class="tag">(tool, no page)</span></li>'
-
-class CatalogAction:
-    """The four-fixed-section rendering of one lifecycle action - Tools/actions
-    called, Markdown instructions, Module overview - used for every
-    lifecycle-action detail page."""
-
-    def __init__(
-        self,
-        repo_url: str,
-        ref: str,
-        catalog_tool: CatalogTool,
-        action_page_hrefs: dict[str, str] | None = None,
-    ) -> None:
-        self.repo_url = repo_url
-        self.ref = ref
-        self.catalog_tool = catalog_tool
-        self.action_page_hrefs = action_page_hrefs or {}
-
-    def _calls_section(self, action: LifecycleAction) -> str:
-        tools = list(getattr(action.tool, "signature_entry", {}).get("tools", []))
-        if not tools:
-            return "<p>Calls nothing else directly.</p>"
-        items = []
-        for name in tools:
-            href = self.action_page_hrefs.get(name)
-            if href:
-                items.append(f'<li><a href="{href}">{name}</a></li>')
-            else:
-                items.append(self.catalog_tool.generate_catalog(name, action.kit))
-        return "<ul>" + "".join(items) + "</ul>"
-
-    def _guide_section(self, action: LifecycleAction) -> str:
-        from harness.catalog_generator.foundry_chrome import markdown_to_html
-
-        # Prefer ``{action}.md`` when two lifecycle actions share a kit folder
-        # (validate and createRule both live under actions/validate/).
-        source_dir = action.source_dir
-        for guide_path in (source_dir / f"{action.name}.md", source_dir / f"{source_dir.name}.md"):
-            if guide_path.is_file():
-                return markdown_to_html(guide_path.read_text(encoding="utf-8"))
-        return "<p>No dedicated guide - see module overview below.</p>"
-
-    def _overview_section(self, action: LifecycleAction) -> str:
-        from harness.catalog_generator.foundry_chrome import markdown_to_html
-
-        overview_path = action.source_dir / ".context" / "module-context.md"
-        if not overview_path.is_file():
-            return "<p>No module-context.md yet.</p>"
-        return markdown_to_html(overview_path.read_text(encoding="utf-8"))
-
-    def generate_catalog(self, action: LifecycleAction) -> str:
-        """Render one action detail body — fidelity-style dark callouts.
-
-        Guide and ``.context/module-context.md`` render as HTML (same as fidelity
-        guidance). No source-code dump.
-        Page shell (board + skill-detail wrap) is applied by ``Catalog``.
-        """
-        import html as html_mod
-
-        name = action.name
-        return (
-            f'<header class="page-hero--detail fidelity-detail-header">'
-            f'<p class="s-name">Lifecycle action</p>'
-            f'<h1 class="page-headline">{html_mod.escape(name)}</h1>'
-            f"</header>\n"
-            f'<section class="install-block action-invoke" aria-labelledby="action-invoke-heading">'
-            f'<h2 id="action-invoke-heading">Request</h2>'
-            f'<p class="install-hint">used as action: <code>{html_mod.escape(name)}</code> in the request</p>'
-            f"</section>\n"
-            f'<section class="install-block action-section" aria-label="Tools / actions called">'
-            f"<h2>Tools / actions called</h2>"
-            f"{self._calls_section(action)}"
-            f"</section>\n"
-            f'<section class="install-block fidelity-guidance action-section" '
-            f'aria-label="Markdown instructions">'
-            f"<h2>Markdown instructions</h2>"
-            f"{self._guide_section(action)}"
-            f"</section>\n"
-            f'<section class="install-block fidelity-guidance action-section" '
-            f'aria-label="Module overview">'
-            f"<h2>Module overview</h2>"
-            f"{self._overview_section(action)}"
-            f"</section>\n"
-        )
-
-
 class FidelityTemplate:
     """The template file a fidelity page shows for the fidelity's default format: a template named for the practice,
-    else the best match in the practice's ``templates`` folder by name, front matter, stage, and format folder."""
+    else the best match in the practice's ``templates`` folder by name, settings, stage, and format folder."""
 
     _NOT_TEMPLATE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".trap"})
+    # The settings a template names its fidelity, artifact, and format in.
+    _SETTING_KEYS = ("fidelity", "artifact", "format")
+    # How strongly each sign ties a template to the fidelity.
+    _NAMED_FOR_FIDELITY = 100
+    _NAME_HOLDS_FIDELITY = 40
+    _SETTINGS_NAME_FIDELITY = 50
+    _SETTINGS_NAME_STAGE = 30
+    _IN_FORMAT_FOLDER = 5
+    _PRODUCTION_TEMPLATE = -20
+    _CODE_TEMPLATE = 10
+    _MAIN_FLOW_SCENARIO = 25
 
     def __init__(self, fidelity: FidelityGuidance) -> None:
         self.fidelity = fidelity
@@ -801,24 +302,31 @@ class FidelityTemplate:
         path = self.path
         if path.name.endswith(".py.tpl"):
             return "python"
-        lang = path.suffix.lstrip(".") or "text"
-        return {"md": "markdown", "tpl": "text"}.get(lang, lang)
+        language = path.suffix.lstrip(".") or "text"
+        return {"md": "markdown", "tpl": "text"}.get(language, language)
+
+    @property
+    def fence_html(self) -> str:
+        return (
+            f'<pre class="code-fence"><code class="language-{html.escape(self.language)}">'
+            f"{html.escape(self.body)}</code></pre>"
+        )
 
     def _format_aliases(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys((self._format.short, self._format.name)))
 
     def _named_template_file(self) -> Path | None:
-        ext = self._format.template_extension
+        extension = self._format.template_extension
         for slug in Name(self.fidelity.practice_guidance.key).spellings:
             for stem in (f"{slug}-templates", f"{slug}-template"):
-                found = self._named_stem_path(stem, ext)
+                found = self._named_stem_path(stem, extension)
                 if found is not None:
                     return found
         return None
 
-    def _named_stem_path(self, stem: str, ext: str) -> Path | None:
-        if ext:
-            preferred = self.templates_root / f"{stem}{ext}"
+    def _named_stem_path(self, stem: str, extension: str) -> Path | None:
+        if extension:
+            preferred = self.templates_root / f"{stem}{extension}"
             if preferred.is_file():
                 return preferred.resolve()
         for path in sorted(self.templates_root.glob(f"{stem}.*")):
@@ -841,292 +349,422 @@ class FidelityTemplate:
         return path.suffix.lower() not in self._NOT_TEMPLATE_SUFFIXES
 
     def _scored_templates(self) -> list[tuple[int, Path]]:
-        scored = [(self._template_score(path), path) for path in self._candidate_template_paths()]
+        scored = [(self._name_score(path) + self._settings_score(path), path) for path in self._candidate_template_paths()]
         return [(score, path) for score, path in scored if score > 0]
 
-    def _template_score(self, path: Path) -> int:
-        fidelity = self.fidelity.name
-        fidelity_kebab = fidelity.replace("_", "-")
-        name_l = path.name.lower()
-        stem_kebab = path.stem.replace("_", "-").lower()
+    def _name_score(self, path: Path) -> int:
+        fidelity = Name(self.fidelity.name).kebab
+        stem = Name(path.stem).kebab
         score = 0
-        if stem_kebab == fidelity_kebab or path.stem.lower() == fidelity.lower():
-            score += 100
-        elif fidelity_kebab in stem_kebab or fidelity.lower() in path.stem.lower():
-            score += 40
-        tokens = self._path_frontmatter_tokens(path)
-        if fidelity.lower() in tokens or fidelity_kebab in tokens:
-            score += 50
-        if self._stage_tokens() & tokens:
-            score += 30
+        if stem == fidelity:
+            score += self._NAMED_FOR_FIDELITY
+        elif fidelity in stem:
+            score += self._NAME_HOLDS_FIDELITY
         if any(alias == path.parent.name.lower() for alias in self._format_aliases()):
-            score += 5
-        if "production" in name_l:
-            score -= 20
-        if path.suffix == ".tpl" or name_l.endswith(".py.tpl"):
-            score += 10
-        if fidelity == "scenarios" and "main-flow" in stem_kebab:
-            score += 25
+            score += self._IN_FORMAT_FOLDER
+        if "production" in path.name.lower():
+            score += self._PRODUCTION_TEMPLATE
+        if path.suffix == ".tpl":
+            score += self._CODE_TEMPLATE
+        if self.fidelity.name == "scenarios" and "main-flow" in stem:
+            score += self._MAIN_FLOW_SCENARIO
         return score
 
-    def _path_frontmatter_tokens(self, path: Path) -> set[str]:
+    def _settings_score(self, path: Path) -> int:
+        tokens = self._settings_tokens(path)
+        score = self._SETTINGS_NAME_FIDELITY if {self.fidelity.name.lower(), Name(self.fidelity.name).kebab} & tokens else 0
+        stage_tokens = set(self._column.template_tokens) if self._column is not None else set()
+        return score + (self._SETTINGS_NAME_STAGE if stage_tokens & tokens else 0)
+
+    def _settings_tokens(self, path: Path) -> set[str]:
+        """The values a template's settings give its fidelity, artifact, and format, in lower case."""
         try:
-            text = path.read_text(encoding="utf-8")
+            settings = FrontMatter(path.read_text(encoding="utf-8")).settings.lower()
         except (OSError, UnicodeDecodeError):
             return set()
-        if not text:
-            return set()
-        return TemplateFrontmatter().tokens(text)
-
-    def _stage_tokens(self) -> set[str]:
-        """The words a template's front matter uses for the fidelity's stage."""
-        return set(self._column.template_tokens) if self._column is not None else set()
+        tokens: set[str] = set()
+        for key in self._SETTING_KEYS:
+            listed = re.search(rf"{key}\s*:\s*\[([^\]]*)\]", settings)
+            single = re.search(rf"{key}\s*:\s*([^\n]+)", settings)
+            values = listed.group(1).split(",") if listed else [single.group(1)] if single else []
+            tokens.update(value.strip().strip("\"'").lower() for value in values)
+        return {token for token in tokens if token}
 
     def _fallback_root_template(self) -> Path | None:
-        ext = self._format.template_extension
+        extension = self._format.template_extension
         aliases = self._format_aliases()
         root_files = [
             path for path in self.templates_root.iterdir()
             if path.is_file() and "sketch" not in path.name.lower()
-            and (not ext or path.suffix == ext or path.suffix.lstrip(".") in aliases)
+            and (not extension or path.suffix == extension or path.suffix.lstrip(".") in aliases)
         ]
         if len(root_files) == 1:
             return root_files[0].resolve()
-        fidelity_kebab = self.fidelity.name.replace("_", "-")
-        named = [
-            path for path in root_files
-            if fidelity_kebab in path.stem.replace("_", "-").lower()
-            or self.fidelity.name.lower() in path.stem.lower()
-        ]
-        if named:
-            return sorted(named)[0].resolve()
+        fidelity = Name(self.fidelity.name).kebab
+        named = [path for path in root_files if fidelity in Name(path.stem).kebab]
+        return sorted(named)[0].resolve() if named else None
+
+
+class GitCitation:
+    """Git blob URLs, the only source citation catalog pages give. An SSH remote and a trailing ``.git`` are written
+    as the plain https address of the repository."""
+
+    def __init__(self, repo_url: str = "", ref: str = "") -> None:
+        self.repo_url = self._https(repo_url)
+        self.ref = ref
+
+    @classmethod
+    def from_checkout(cls, repo_root: Path | None = None) -> GitCitation:
+        """The checkout's origin and the commit it has checked out."""
+        git = Git(repo_root or _REPO_ROOT)
+        return cls(git.run("remote", "get-url", "origin"), git.run("rev-parse", "HEAD"))
+
+    def blob_url(self, path: Path, lines: tuple[int, int] | None = None) -> str:
+        try:
+            relative = path.resolve().relative_to(_REPO_ROOT)
+        except ValueError:
+            relative = path
+        url = f"{self.repo_url.rstrip('/')}/blob/{self.ref}/{relative.as_posix()}"
+        if lines:
+            start, end = lines
+            url += f"#L{start}-L{end}" if end != start else f"#L{start}"
+        return url
+
+    def blob_url_for_callable(self, func: object) -> str:
+        source_file = Path(inspect.getsourcefile(func))  # type: ignore[arg-type]
+        _, start_line = inspect.getsourcelines(func)  # type: ignore[arg-type]
+        end_line = start_line + len(inspect.getsource(func).splitlines()) - 1  # type: ignore[arg-type]
+        return self.blob_url(source_file, (start_line, end_line))
+
+    def _https(self, repo_url: str) -> str:
+        url = repo_url.strip()
+        if url.startswith("git@"):
+            hostname, _, path = url[len("git@"):].partition(":")
+            url = f"https://{hostname}/{path}"
+        return url[: -len(".git")] if url.endswith(".git") else url
+
+
+class CatalogPage:
+    """One generated HTML page written under an output root."""
+
+    def __init__(self, out_root: Path) -> None:
+        self.out_root = Path(out_root)
+
+    def write(self, relative_path: str, html_text: str) -> Path:
+        target = self.out_root / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(html_text, encoding="utf-8")
+        return target
+
+
+class SkillSlashName:
+    """Slash-invocable skill name from deployed SKILL.md frontmatter."""
+
+    def __init__(self, skills_roots: Iterable[Path] = _SKILLS_ROOTS) -> None:
+        self._skills_roots = tuple(skills_roots)
+
+    def resolve(self, module_dir_name: str) -> str | None:
+        for candidate in (module_dir_name, module_dir_name.replace("_", "-")):
+            for skill_md in self._skill_files(candidate):
+                match = _SKILL_NAME_RE.search(skill_md.read_text(encoding="utf-8"))
+                if match:
+                    return match.group(1)
         return None
 
+    def _skill_files(self, candidate: str) -> list[Path]:
+        found: list[Path] = []
+        for root in self._skills_roots:
+            found.extend(self._skill_files_under(root, candidate))
+        return [path for path in found if path.is_file()]
 
-class CatalogFidelity:
-    """The page body for one fidelity of one practice: the chat invoke line, the fidelity's guidance, its default
-    template, and its illustrated example."""
+    def _skill_files_under(self, root: Path, candidate: str) -> list[Path]:
+        """``{candidate}/SKILL.md`` at the skills root, the Cursor layout
+        ``{category}/{candidate}/SKILL.md``, and the Claude layout, which joins the
+        category into one folder name: ``{category}-{candidate}/SKILL.md``."""
+        found = [root / candidate / "SKILL.md"]
+        if not root.is_dir():
+            return found
+        flat_name = re.compile(rf"^[a-z0-9_]+-{re.escape(candidate)}$")
+        for folder in sorted(root.iterdir()):
+            if not folder.is_dir():
+                continue
+            found.append(folder / candidate / "SKILL.md")
+            if flat_name.match(folder.name):
+                found.append(folder / "SKILL.md")
+        return found
 
-    def __init__(
-        self,
-        repo_url: str,
-        ref: str,
-        catalog_action: CatalogAction,
-        lifecycle_actions: list[LifecycleAction],
-    ) -> None:
-        self.repo_url = repo_url
-        self.ref = ref
-        self.catalog_action = catalog_action
-        self.lifecycle_actions = lifecycle_actions
 
-    def _quick_invoke(self, practice: CatalogPractice, fidelity: FidelityGuidance) -> str:
-        """Invoke block — Foundry install-block chrome, sits under the board."""
-        skill_name = practice.skill_name
-        action_links = ", ".join(
-            f'<a href="../{action.href}">{action.name}</a>' for action in self.lifecycle_actions
-        )
-        return (
-            f'<section class="install-block fidelity-invoke" aria-labelledby="fidelity-invoke-heading">'
-            f'<h2 id="fidelity-invoke-heading">Chat invoke</h2>'
-            f'<pre class="install-snippet"><code>/{skill_name} &lt;action&gt; {fidelity.name}'
-            f" — e.g. /{skill_name} generate {fidelity.name}</code></pre>"
-            f'<p class="install-hint">&lt;action&gt; is one of: {action_links}</p>'
-            f"</section>"
-        )
+# -- Detail pages ---------------------------------------------------------------
+#
+# Each detail page is made for the object it shows and gives its file, title, navigation entry, body, and the practice
+# and fidelity its board highlights. ``Catalog`` wraps each in the page chrome with the board on top.
 
-    def _illustrated_example_panel(self) -> str:
-        return (
-            '<section class="skill-cr-single illustrated-example">'
-            "<h2>Illustrated example</h2>"
-            "<p>No illustrated example configured yet.</p></section>"
-        )
 
-    def _default_template_panel(self, fidelity: FidelityGuidance) -> str:
-        """Default-format template callout — sits above the illustrated example."""
-        import html as html_mod
+class DetailPage:
+    """A page one folder below the hub, about one practice, fidelity, action, or utility."""
 
-        from harness.catalog_generator.foundry_chrome import fence
+    nav_current = ""
 
-        default_format = fidelity.default_format
-        template = FidelityTemplate(fidelity)
-        path = template.path
-        if path is None or not path.is_file():
-            fmt = html_mod.escape(default_format or "unknown")
-            return (
-                '<section class="install-block fidelity-template" aria-label="Default template">'
-                "<h2>Default template</h2>"
-                f"<p>No template file for default format <code>{fmt}</code>.</p>"
-                "</section>"
-            )
-        blob = GitCitation(self.repo_url, self.ref).blob_url(path)
-        return (
-            f'<section class="install-block fidelity-template" aria-label="Default template">'
-            f"<h2>Default template</h2>"
-            f'<p class="install-hint">Default format: <code>{html_mod.escape(default_format or "")}</code>'
-            f' — <a href="{html_mod.escape(blob)}">{html_mod.escape(template.relative_path)}</a></p>'
-            f"{fence(template.language, template.body)}"
-            f"</section>"
-        )
+    @property
+    def href(self) -> str:
+        raise NotImplementedError
 
-    def _guidance_preview(self, fidelity: FidelityGuidance, label: str) -> str:
-        from harness.catalog_generator.foundry_chrome import (
-            catalog_examples_html,
-            markdown_to_html,
-            wrap_guidance_body,
-        )
+    @property
+    def title(self) -> str:
+        raise NotImplementedError
 
-        section = fidelity.section
-        fid_md = f"## {label}\n\n{section}" if section else section
-        examples = catalog_examples_html(fidelity)
-        preview = wrap_guidance_body(markdown_to_html(fid_md))
-        if examples:
-            preview = _insert_after_heading(preview, "Overview", examples)
-        return preview
+    @property
+    def body(self) -> str:
+        raise NotImplementedError
 
-    def generate_catalog(self, practice: CatalogPractice, fidelity: FidelityGuidance) -> str:
-        """Render everything under the board: title, invoke, guidance, template, example.
+    @property
+    def highlighted_practice(self) -> CatalogPractice | None:
+        return None
 
-        Uses Foundry install-block chrome for invoke + guidance + default template
-        (dark callout, orange links) — not the white skill-md-preview card.
-        """
-        import html as html_mod
+    @property
+    def highlighted_fidelity(self) -> FidelityGuidance | None:
+        return None
 
-        from harness.catalog_generator.foundry_chrome import display_label
-
-        label = display_label(fidelity.name)
+    def _header(self, kind: str, title: str) -> str:
         return (
             f'<header class="page-hero--detail fidelity-detail-header">'
-            f'<p class="s-name">{html_mod.escape(practice.display_name)} · fidelity</p>'
-            f'<h1 class="page-headline">{html_mod.escape(label)}</h1>'
+            f'<p class="s-name">{html.escape(kind)}</p>'
+            f'<h1 class="page-headline">{html.escape(title)}</h1>'
             f"</header>\n"
-            f"{self._quick_invoke(practice, fidelity)}\n"
-            f'<section class="install-block fidelity-guidance" '
-            f'data-fidelity="{html_mod.escape(fidelity.name)}" '
-            f'aria-label="Fidelity guidance">'
-            f"{self._guidance_preview(fidelity, label)}</section>\n"
-            f"{self._default_template_panel(fidelity)}\n"
-            f"{self._illustrated_example_panel()}\n"
         )
 
+    def _section(self, label: str, inner: str) -> str:
+        return (
+            f'<section class="install-block fidelity-guidance action-section" aria-label="{label}">'
+            f"<h2>{label}</h2>{inner}</section>\n"
+        )
 
-class CatalogContextTool:
-    """The practice page for one catalog practice: its shared sections and a link to each fidelity page."""
+    def _markdown_file(self, path: Path, missing: str) -> str:
+        return MarkdownHtml(path.read_text(encoding="utf-8")).html if path.is_file() else missing
 
-    def __init__(self, repo_url: str, ref: str, catalog_fidelity: CatalogFidelity) -> None:
-        self.repo_url = repo_url
-        self.ref = ref
-        self.catalog_fidelity = catalog_fidelity
 
-    def generate_catalog(self, practice: CatalogPractice) -> str:
-        """Render one practice page the way a fidelity page is rendered.
+class PracticePage(DetailPage):
+    """A practice's page: its practice-level sections, then each fidelity's title, opening, and examples, linking the
+    fidelity's own page."""
 
-        Shared practice sections (overview, guidance, shared rules, and any
-        other practice-level heading) sit in the guidance block. Fidelity
-        pages are linked, not inlined.
-        """
-        import html as html_mod
+    nav_current = "context-tools"
 
-        from harness.catalog_generator.foundry_chrome import markdown_to_html, wrap_guidance_body
+    def __init__(self, practice: CatalogPractice) -> None:
+        self.practice = practice
 
-        shared_html = wrap_guidance_body(markdown_to_html(practice.shared_markdown))
+    @property
+    def href(self) -> str:
+        return self.practice.href
+
+    @property
+    def title(self) -> str:
+        return f"{self.practice.display_name} — CDD Catalog"
+
+    @property
+    def highlighted_practice(self) -> CatalogPractice:
+        return self.practice
+
+    @property
+    def body(self) -> str:
+        shared = MarkdownHtml(self.practice.shared_markdown).guidance_html
         guidance = (
-            f'<section class="install-block fidelity-guidance" aria-label="Practice guidance">'
-            f"{shared_html}</section>\n"
-            if shared_html.strip()
+            f'<section class="install-block fidelity-guidance" aria-label="Practice guidance">{shared}</section>\n'
+            if shared.strip()
             else ""
         )
-        return (
-            f'<header class="page-hero--detail fidelity-detail-header">'
-            f'<p class="s-name">Practice</p>'
-            f'<h1 class="page-headline">{html_mod.escape(practice.display_name)}</h1>'
-            f"</header>\n"
-            f"{guidance}"
-            f"{self._fidelity_section(practice)}"
-        )
+        return self._header("Practice", self.practice.display_name) + guidance + self._fidelities
 
-    def _fidelity_section(self, practice: CatalogPractice) -> str:
-        rows = [self._fidelity_row(practice, fidelity) for fidelity in practice.fidelities]
-        if not rows:
+    @property
+    def _fidelities(self) -> str:
+        entries = "".join(self._fidelity_entry(fidelity) for fidelity in self.practice.fidelities)
+        if not entries:
             return ""
         return (
             '<section class="install-block" aria-label="Fidelities">'
             "<h2>Fidelities</h2>"
-            f'<div class="practice-fidelities">{"".join(rows)}</div>'
+            f'<div class="practice-fidelities">{entries}</div>'
             "</section>\n"
         )
 
-    def _fidelity_row(self, practice: CatalogPractice, fidelity: FidelityGuidance) -> str:
-        import html as html_mod
-
-        from harness.catalog_generator.foundry_chrome import catalog_examples_html, display_label, markdown_to_html
-
-        opening = _first_prose_paragraph(fidelity.overview or fidelity.section)
-        opening_html = markdown_to_html(opening) if opening else ""
+    def _fidelity_entry(self, fidelity: FidelityGuidance) -> str:
+        shown = CatalogFidelity(fidelity)
+        opening = MarkdownHtml(shown.opening).html if shown.opening else ""
         return (
             '<div class="practice-fidelity">'
             f'<h3 class="practice-fidelity__title">'
-            f'<a href="../{html_mod.escape(practice.fidelity_href(fidelity))}">'
-            f"{html_mod.escape(display_label(fidelity.name))}</a></h3>"
-            f'<div class="practice-fidelity__opening">{opening_html}</div>'
-            f"{catalog_examples_html(fidelity)}"
+            f'<a href="../{html.escape(self.practice.fidelity_href(fidelity))}">{html.escape(shown.label)}</a></h3>'
+            f'<div class="practice-fidelity__opening">{opening}</div>'
+            f"{shown.examples_html}"
             "</div>"
         )
 
 
-class CatalogUtility:
-    """The utility-row detail page for one plain-utility ``Toolset``."""
+class FidelityPage(DetailPage):
+    """A fidelity's page: the chat command that runs it, its guidance with its examples under the Overview, and the
+    template for its default format."""
 
-    def __init__(self, repo_url: str, ref: str, catalog_tool: CatalogTool, catalog_action: CatalogAction) -> None:
-        self.repo_url = repo_url
-        self.ref = ref
-        self.catalog_tool = catalog_tool
-        self.catalog_action = catalog_action
+    nav_current = "fidelities"
 
-    def generate_catalog(self, utility: Utility) -> str:
-        """Render one utility page body — fidelity-style dark callouts."""
-        import html as html_mod
+    def __init__(
+        self,
+        practice: CatalogPractice,
+        fidelity: FidelityGuidance,
+        citation: GitCitation,
+        actions: list[LifecycleAction],
+    ) -> None:
+        self.practice = practice
+        self.fidelity = fidelity
+        self.citation = citation
+        self.actions = actions
 
-        from harness.catalog_generator.foundry_chrome import markdown_to_html
+    @property
+    def href(self) -> str:
+        return self.practice.fidelity_href(self.fidelity)
 
-        owner = utility.owner
-        target_cls = owner if isinstance(owner, type) else type(owner)
-        module_dir = Path(inspect.getfile(target_cls)).resolve().parent
-        purpose = (
-            (getattr(owner, "__doc__", None) if not isinstance(owner, type) else None)
-            or target_cls.__doc__
-            or ""
-        ).strip()
-        guide_path = module_dir / f"{module_dir.name}.md"
-        overview_path = module_dir / ".context" / "module-context.md"
-        guide_html = (
-            markdown_to_html(guide_path.read_text(encoding="utf-8"))
-            if guide_path.is_file()
-            else "<p>No dedicated guide.</p>"
-        )
-        overview_html = (
-            markdown_to_html(overview_path.read_text(encoding="utf-8"))
-            if overview_path.is_file()
-            else f"<p>{html_mod.escape(purpose)}</p>"
-        )
+    @property
+    def title(self) -> str:
+        return f"{CatalogFidelity(self.fidelity).label} — {self.practice.display_name}"
+
+    @property
+    def highlighted_practice(self) -> CatalogPractice:
+        return self.practice
+
+    @property
+    def highlighted_fidelity(self) -> FidelityGuidance:
+        return self.fidelity
+
+    @property
+    def body(self) -> str:
+        label = CatalogFidelity(self.fidelity).label
         return (
-            f'<header class="page-hero--detail fidelity-detail-header">'
-            f'<p class="s-name">Utility</p>'
-            f'<h1 class="page-headline">{html_mod.escape(utility.name)}</h1>'
-            f"</header>\n"
-            f'<section class="install-block fidelity-guidance action-section" '
-            f'aria-label="Module overview">'
-            f"<h2>Module overview</h2>"
-            f"{overview_html}"
-            f"</section>\n"
-            f'<section class="install-block fidelity-guidance action-section" aria-label="Guide">'
-            f"<h2>Guide</h2>"
-            f"{guide_html}"
-            f"</section>\n"
+            self._header(f"{self.practice.display_name} · fidelity", label)
+            + f"{self._chat_command}\n"
+            f'<section class="install-block fidelity-guidance" '
+            f'data-fidelity="{html.escape(self.fidelity.name)}" '
+            f'aria-label="Fidelity guidance">'
+            f"{self._guidance(label)}</section>\n"
+            f"{self._template}\n"
+        )
+
+    @property
+    def _chat_command(self) -> str:
+        skill_name, name = self.practice.skill_name, self.fidelity.name
+        links = ", ".join(f'<a href="../{action.href}">{action.name}</a>' for action in self.actions)
+        return (
+            f'<section class="install-block fidelity-invoke" aria-labelledby="fidelity-invoke-heading">'
+            f'<h2 id="fidelity-invoke-heading">Chat invoke</h2>'
+            f'<pre class="install-snippet"><code>/{skill_name} &lt;action&gt; {name}'
+            f" — e.g. /{skill_name} generate {name}</code></pre>"
+            f'<p class="install-hint">&lt;action&gt; is one of: {links}</p>'
+            f"</section>"
+        )
+
+    def _guidance(self, label: str) -> str:
+        section = self.fidelity.section
+        guidance = MarkdownHtml(f"## {label}\n\n{section}" if section else section).guidance_html
+        examples = CatalogFidelity(self.fidelity).examples_html
+        return self._after_overview(guidance, examples) if examples else guidance
+
+    def _after_overview(self, guidance: str, insertion: str) -> str:
+        """``insertion`` at the end of the Overview section, before the next heading."""
+        overview = re.search(r"<h([1-4])>Overview</h\1>", guidance)
+        if not overview:
+            return guidance + insertion
+        following = re.search(r"<h[1-4]>", guidance[overview.end():])
+        at = overview.end() + following.start() if following else len(guidance)
+        return guidance[:at] + insertion + guidance[at:]
+
+    @property
+    def _template(self) -> str:
+        default_format = self.fidelity.default_format
+        template = FidelityTemplate(self.fidelity)
+        path = template.path
+        if path is None or not path.is_file():
+            return (
+                '<section class="install-block fidelity-template" aria-label="Default template">'
+                "<h2>Default template</h2>"
+                f"<p>No template file for default format <code>{html.escape(default_format or 'unknown')}</code>.</p>"
+                "</section>"
+            )
+        return (
+            f'<section class="install-block fidelity-template" aria-label="Default template">'
+            f"<h2>Default template</h2>"
+            f'<p class="install-hint">Default format: <code>{html.escape(default_format or "")}</code>'
+            f' — <a href="{html.escape(self.citation.blob_url(path))}">{html.escape(template.relative_path)}</a></p>'
+            f"{template.fence_html}"
+            f"</section>"
         )
 
 
-class CatalogPageNotRendered(Exception):
-    """A catalog page could not be rendered from its guidance; the message names the page."""
+class ActionPage(DetailPage):
+    """A lifecycle action's page: the request that runs it, its guide, and its module overview."""
+
+    nav_current = "actions"
+
+    def __init__(self, action: LifecycleAction) -> None:
+        self.action = action
+
+    @property
+    def href(self) -> str:
+        return self.action.href
+
+    @property
+    def title(self) -> str:
+        return f"{self.action.name} — lifecycle action"
+
+    @property
+    def body(self) -> str:
+        return (
+            self._header("Lifecycle action", self.action.name)
+            + f'<section class="install-block action-invoke" aria-labelledby="action-invoke-heading">'
+            f'<h2 id="action-invoke-heading">Request</h2>'
+            f'<p class="install-hint">used as action: <code>{html.escape(self.action.name)}</code> in the request</p>'
+            "</section>\n"
+            + self._section("Markdown instructions", self._guide)
+            + self._section("Module overview", self._overview)
+        )
+
+    @property
+    def _guide(self) -> str:
+        """``{action}.md`` when two actions share a toolset folder, else the folder's own guide."""
+        folder = self.action.source_dir
+        guides = (folder / f"{self.action.name}.md", folder / f"{folder.name}.md")
+        guide = next((path for path in guides if path.is_file()), None)
+        return self._markdown_file(guide, "") if guide else "<p>No dedicated guide - see module overview below.</p>"
+
+    @property
+    def _overview(self) -> str:
+        overview = self.action.source_dir / ".context" / "module-context.md"
+        return self._markdown_file(overview, "<p>No module-context.md yet.</p>")
+
+
+class UtilityPage(DetailPage):
+    """A utility's page: its module overview and its guide."""
+
+    nav_current = "tools"
+
+    def __init__(self, utility: Utility) -> None:
+        self.utility = utility
+
+    @property
+    def href(self) -> str:
+        return self.utility.href
+
+    @property
+    def title(self) -> str:
+        return f"{self.utility.name} — utility"
+
+    @property
+    def body(self) -> str:
+        toolset_class = self.utility.toolset_class
+        folder = Path(inspect.getfile(toolset_class)).resolve().parent
+        purpose = f"<p>{html.escape((toolset_class.__doc__ or '').strip())}</p>"
+        overview = self._markdown_file(folder / ".context" / "module-context.md", purpose)
+        guide = self._markdown_file(folder / f"{folder.name}.md", "<p>No dedicated guide.</p>")
+        return self._header("Utility", self.utility.name) + self._section("Module overview", overview) + self._section("Guide", guide)
+
+
+# -- The project a catalog is generated for -------------------------------------
 
 
 class CatalogNotGenerated(Exception):
@@ -1211,11 +849,33 @@ class CatalogProject:
         return environment
 
 
+@dataclass(frozen=True)
+class _SourceDocument:
+    """A repository document the catalog shows as a page of its own, without its title line."""
+
+    source: Path
+    file_name: str
+    title: str
+    heading: str
+    article_class: str
+    nav_current: str = ""
+    include_tables: bool = False
+
+
+_SOURCE_DOCUMENTS = (
+    _SourceDocument(_REPO_ROOT / "README.md", "readme.html", f"README — {_SITE_TITLE}", "README", "catalog-source-doc"),
+    _SourceDocument(
+        _REPO_ROOT / "catalog" / "workflow.md", "workflow.html", f"CDD Workflow — {_SITE_TITLE}", "CDD Workflow",
+        "catalog-workflow-page", nav_current="hub", include_tables=True,
+    ),
+)
+
+
 @agent_toolset
 class Catalog:
-    """The top-level entry point - the only class ``generate_cdd_catalog.py``
-    calls. Owns the shared portability config and the practices, lifecycle
-    actions, and utilities it renders. Always copies Foundry commons into ``out_root``."""
+    """The top-level entry point - the only class ``generate_cdd_catalog.py`` calls. Holds the repository citation and
+    the practices, lifecycle actions, and utilities it renders, and always copies the Foundry commons into
+    ``out_root``."""
 
     def __init__(
         self,
@@ -1223,55 +883,20 @@ class Catalog:
         ref: str = "",
         out_root: str = "",
         brands_root: str | Path | None = None,
-        catalog_context_tool: CatalogContextTool | None = None,
-        catalog_action: CatalogAction | None = None,
-        catalog_utility: CatalogUtility | None = None,
         approach_md_path: str | Path | None = None,
         project: str | Path | None = None,
     ) -> None:
         self._project_folder = Path(project).resolve() if project is not None else Path.cwd().resolve()
-        citation = GitCitation.from_checkout()
-        self.repo_url = repo_url or citation.repo_url
-        self.ref = ref or citation.ref
+        checkout = GitCitation(repo_url, ref) if repo_url and ref else GitCitation.from_checkout()
+        self.citation = GitCitation(repo_url or checkout.repo_url, ref or checkout.ref)
         self._named_out_root = Path(out_root) if out_root else None
-        from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN
-
-        self.approach_md_path = (
-            Path(approach_md_path) if approach_md_path is not None else APPROACH_MARKDOWN
-        )
-        self.brand = None
-        from harness.catalog_generator.foundry_chrome import Brand
-
+        self.approach_md_path = Path(approach_md_path) if approach_md_path is not None else APPROACH_MARKDOWN
         self.brands_root = Path(brands_root) if brands_root is not None else Brand().collection
-        if catalog_context_tool is None or catalog_action is None or catalog_utility is None:
-            wired = self._wire_catalog_renderers()
-            self.catalog_context_tool = catalog_context_tool or wired[0]
-            self.catalog_action = catalog_action or wired[1]
-            self.catalog_utility = catalog_utility or wired[2]
-        else:
-            self.catalog_context_tool = catalog_context_tool
-            self.catalog_action = catalog_action
-            self.catalog_utility = catalog_utility
+        self.brand: Path | None = None
         self._practices: list[CatalogPractice] | None = None
         self._utilities: list[Utility] | None = None
         self._lifecycle_actions: list[LifecycleAction] | None = None
-        self._loaded_approach_copy = None
-        self._tool_bodies: list[str] = []
-        self._action_bodies: list[str] = []
-        self._utility_bodies: list[str] = []
-        self.pages: dict[str, str] = {}
-
-    def _wire_catalog_renderers(self) -> tuple[CatalogContextTool, CatalogAction, CatalogUtility]:
-        lifecycle_actions = catalog_actions()
-        catalog_tool = CatalogTool(self.repo_url, self.ref)
-        hrefs = {action.name: action.href for action in lifecycle_actions}
-        catalog_action = CatalogAction(self.repo_url, self.ref, catalog_tool, hrefs)
-        catalog_fidelity = CatalogFidelity(
-            self.repo_url, self.ref, catalog_action, lifecycle_actions
-        )
-        catalog_context_tool = CatalogContextTool(self.repo_url, self.ref, catalog_fidelity)
-        catalog_utility = CatalogUtility(self.repo_url, self.ref, catalog_tool, catalog_action)
-        return catalog_context_tool, catalog_action, catalog_utility
+        self._approach_copy: ApproachCopy | None = None
 
     @classmethod
     @tool_subject
@@ -1279,6 +904,10 @@ class Catalog:
         """The catalog of project, the folder the tool call names; one server answers every chat, so each call makes
         its own."""
         return cls(project=project)
+
+    @property
+    def repo_url(self) -> str:
+        return self.citation.repo_url
 
     @property
     def project(self) -> CatalogProject:
@@ -1294,52 +923,35 @@ class Catalog:
     def practices(self) -> list[CatalogPractice]:
         """The practices the catalog renders, loaded on first use."""
         if self._practices is None:
-            self._practices = catalog_practices()
+            self._practices = CatalogPractice.load_all()
         return self._practices
 
     @property
     def utilities(self) -> list[Utility]:
         if self._utilities is None:
-            self._utilities = catalog_utilities()
+            self._utilities = Utility.load_all()
         return self._utilities
 
     @property
     def lifecycle_actions(self) -> list[LifecycleAction]:
         if self._lifecycle_actions is None:
-            self._lifecycle_actions = catalog_actions()
+            self._lifecycle_actions = LifecycleAction.load_all()
         return self._lifecycle_actions
 
-    @classmethod
-    def from_registry(cls, guidance: Iterable[Any] | None = None) -> Catalog:
-        catalog = cls()
-        for item in list(guidance or ()):
-            catalog.add_guidance(item)
-        return catalog
+    @property
+    def approach_copy(self) -> ApproachCopy:
+        """The approach page's copy, read from ``approach_md_path`` on first use."""
+        if self._approach_copy is None:
+            self._approach_copy = ApproachCopy.load(self.approach_md_path)
+        return self._approach_copy
 
-    def add_guidance(self, guidance: Any) -> None:
-        from harness.markdown import HTML, Markdown
+    @property
+    def board(self) -> HubBoard:
+        return HubBoard(self.practices, self.lifecycle_actions, self.utilities, self.approach_copy.board_stages)
 
-        if NoCatalog.marks(guidance):
-            return
-        slug = getattr(guidance, "context_index_key", None) or type(guidance).__name__
-        for label in ("context", "guidance", "examples"):
-            try:
-                page = Markdown.from_label(guidance, "overview" if label == "context" else label).html()
-            except Exception as error:
-                raise CatalogPageNotRendered(f"Catalog page {slug}-{label} could not be rendered: {error}") from error
-            if str(page).strip():
-                self.pages[f"{slug}-{label}"] = str(page)
-        fidelities = getattr(guidance, "fidelities", None)
-        entries = getattr(fidelities, "entries", {}) if fidelities is not None else {}
-        for name, child in entries.items():
-            html = HTML.from_markdown(getattr(child, "guidance", "") or "")
-            self.pages[f"{slug}-{name}"] = str(html)
-
-    def _write_guidance_html_pages(self, out_root: Path) -> None:
-        root = Path(out_root)
-        root.mkdir(parents=True, exist_ok=True)
-        for name, body in self.pages.items():
-            (root / f"{name}.html").write_text(body, encoding="utf-8")
+    @property
+    def brands(self) -> dict[str, Path]:
+        return Brand(collection=self.brands_root).folders()
 
     @mcp
     @skill
@@ -1353,24 +965,11 @@ class Catalog:
         written outside ``out_root``.
         ``brand`` is a collection name under the brands folder, or a path to a
         brand folder; empty uses bundled abd-works."""
-        from harness.catalog_generator.foundry_chrome import Brand
-
-        if self.pages:
-            root = Path(brand) if brand else self.out_root
-            self._write_guidance_html_pages(root)
-            return f"Wrote {len(self.pages)} guidance pages into {root}"
-        project = self.project
-        if project.shows_own_guidance:
-            return project.generate_with_own_guidance(self.out_root, str(brand))
+        if self.project.shows_own_guidance:
+            return self.project.generate_with_own_guidance(self.out_root, str(brand))
         self.brand = Brand(collection=self.brands_root).resolve(str(brand)) if brand else None
         self._render_catalog()
-        return f"Catalog regenerated into {self.out_root} using {self.repo_url}@{self.ref}"
-
-    @property
-    def brands(self) -> dict[str, Path]:
-        from harness.catalog_generator.foundry_chrome import Brand
-
-        return Brand(collection=self.brands_root).folders()
+        return f"Catalog regenerated into {self.out_root} using {self.citation.repo_url}@{self.citation.ref}"
 
     @mcp
     @skill
@@ -1380,74 +979,31 @@ class Catalog:
         generated catalog commons without regenerating pages. ``name`` is a
         folder name under the brands collection, or a path to a brand folder.
         Bundled ``abd-works`` is always available."""
-        from harness.catalog_generator.foundry_chrome import Brand
-
         if not name:
             return f"Known brands: {', '.join(sorted(self.brands))}"
-        dest = Brand(collection=self.brands_root).apply_named(self.out_root, name)
-        self.brand = dest
-        return f"Applied brand {name} under {dest}"
+        self.brand = Brand(collection=self.brands_root).apply_named(self.out_root, name)
+        return f"Applied brand {name} under {self.brand}"
 
     @mcp
     @skill
     @agent_tool
-    def generate_project_approach(
-        self,
-        project_root: str,
-        out_root: str = "",
-        project_title: str = "",
-        repo_url: str = "",
-        examples_json: str = "",
-    ) -> str:
-        """Render ``cdd-approach.html`` for a project using mapped example artifacts.
+    def generate_project_approach(self, examples_json: str = "", project_title: str = "") -> str:
+        """Render ``cdd-approach.html`` for the project the call names, into its catalog folder, using its example
+        artifacts. ``examples_json`` is optional JSON mapping practice → stage → path relative to the project; when
+        blank, use ``.context/project-approach-examples.json`` and auto-discovery. ``project_title`` names the page;
+        blank uses the saved title, else the project folder's name."""
+        from harness.catalog_generator.project_approach import ProjectApproach
 
-        ``project_root`` is the project checkout. ``out_root`` defaults to
-        ``{project_root}/catalog``. ``examples_json`` is optional JSON mapping
-        practice → stage → relative path; when blank, use
-        ``.context/project-approach-examples.json`` and auto-discovery."""
-        from harness.catalog_generator.project_approach import (
-            ProjectApproach,
-            merge_example_sources,
-            save_examples_manifest,
-        )
-
-        root = Path(project_root).resolve()
-        destination = Path(out_root).resolve() if out_root else root / "catalog"
-        merged = merge_example_sources(root)
-        if examples_json.strip():
-            payload = __import__("json").loads(examples_json)
-            for practice, stages in (payload.get("examples") or payload).items():
-                if not isinstance(stages, dict):
-                    continue
-                for stage, relative in stages.items():
-                    merged[(practice, stage)] = (root / str(relative)).resolve()
-        save_examples_manifest(
-            root,
-            merged,
-            project_title=project_title,
-            repo_url=repo_url,
-        )
-        approach = ProjectApproach(
-            project_root=root,
-            project_title=project_title or root.name.replace("-", " ").title(),
-            repo_url=repo_url or self.repo_url,
-            examples=merged,
-        )
-        return approach.generate(destination, brands_root=self.brands_root)
+        approach = ProjectApproach.for_project(self.project.root, project_title).with_examples_json(examples_json)
+        approach.save_examples()
+        return approach.generate(self.out_root, brands_root=self.brands_root)
 
     @mcp
     @skill
     @agent_instructions
-    def configure_project_approach(
-        self,
-        project_root: str,
-        example_paths: list[str] | None = None,
-        out_root: str = "",
-    ) -> str:
+    def configure_project_approach(self, example_paths: list[str] | None = None) -> str:
         """Build a project-specific ``cdd-approach.html`` slide from example artifacts.
 
-        project_root={project_root}
-        out_root={out_root or '{project_root}/catalog'}
         example_paths={example_paths or 'discover from project tree'}
 
         Each example lands under one practice and one stage on the approach page.
@@ -1492,735 +1048,136 @@ class Catalog:
         {{"examples": {{"stories": {{"discovery": "stories/story-map.drawio", ...}}}}}}
         ```
 
-        Call ``generate_project_approach`` with ``project_root``, ``out_root``,
-        ``project_title``, ``repo_url``, and ``examples_json``."""
+        Call ``generate_project_approach`` with ``examples_json``, and with
+        ``project_title`` when the user names the page."""
         tools(self.generate_project_approach)
         return "Project approach slide generated."
 
-    def write_page(self, relative_path: str, html: str) -> Path:
-        return CatalogPage(self.out_root).write(relative_path, html)
-
-    def write_raw_manifests(self) -> None:
-        return None
+    def write_page(self, relative_path: str, html_text: str) -> Path:
+        return CatalogPage(self.out_root).write(relative_path, html_text)
 
     def _render_catalog(self) -> None:
         """Write every catalog page under ``self.out_root``."""
-        from harness.catalog_generator.foundry_chrome import Brand
-
         self.out_root.mkdir(parents=True, exist_ok=True)
         Brand(collection=self.brands_root, folder=self.brand).copy_commons(self.out_root)
-        self._tool_bodies = []
-        self._action_bodies = []
-        self._utility_bodies = []
-        for practice in self.practices:
-            self._write_practice_page(practice)
-        for action in self.lifecycle_actions:
-            self._write_action_page(action)
-        for utility in self.utilities:
-            self._write_utility_page(utility)
-        self._write_hub()
-        self._write_source_docs()
-        self._write_workflow()
-        self._write_grid_pages()
-
-    def _kanban_embed(
-        self,
-        highlight_practice: CatalogPractice | None = None,
-        highlight_fidelity: FidelityGuidance | None = None,
-    ) -> str:
-        """The board shown on a detail page one folder below the hub, highlighting the page's practice and fidelity."""
-        from harness.catalog_generator.foundry_chrome import render_hub_board
-
-        return render_hub_board(
-            self.practices,
-            self.lifecycle_actions,
-            self.utilities,
-            path_prefix="../",
-            highlight_practice=highlight_practice,
-            highlight_fidelity=highlight_fidelity,
-        )
-
-    def _detail_page(self, title: str, body: str, nav_current: str, kanban_embed: str) -> str:
-        from harness.catalog_generator.foundry_chrome import page_shell
-
-        return page_shell(
-            title=title,
-            h1=self._harness_headline(),
-            tagline=self._harness_tagline(),
-            body_inner=body,
-            commons_prefix="../commons/",
-            nav_prefix="../",
-            nav_current=nav_current,
-            show_hero=True,
-            body_wrap_class="skill-detail-page",
-            kanban_embed=kanban_embed,
-        )
-
-    def _write_practice_page(self, practice: CatalogPractice) -> None:
-        body = self.catalog_context_tool.generate_catalog(practice)
-        self._tool_bodies.append(body)
-        page = self._detail_page(
-            f"{practice.display_name} — CDD Catalog", body, "context-tools", self._kanban_embed(practice)
-        )
-        self.write_page(practice.href, page)
-        for fidelity in practice.fidelities:
-            self._write_fidelity_page(practice, fidelity)
-
-    def _write_fidelity_page(self, practice: CatalogPractice, fidelity: FidelityGuidance) -> None:
-        from harness.catalog_generator.foundry_chrome import display_label
-
-        body = self.catalog_context_tool.catalog_fidelity.generate_catalog(practice, fidelity)
-        page = self._detail_page(
-            f"{display_label(fidelity.name)} — {practice.display_name}",
-            body,
-            "fidelities",
-            self._kanban_embed(practice, fidelity),
-        )
-        self.write_page(practice.fidelity_href(fidelity), page)
-
-    def _write_action_page(self, action: LifecycleAction) -> None:
-        body = self.catalog_action.generate_catalog(action)
-        self._action_bodies.append(body)
-        page = self._detail_page(f"{action.name} — lifecycle action", body, "actions", self._kanban_embed())
-        self.write_page(action.href, page)
-
-    def _write_utility_page(self, utility: Utility) -> None:
-        body = self.catalog_utility.generate_catalog(utility)
-        self._utility_bodies.append(body)
-        page = self._detail_page(f"{utility.name} — utility", body, "tools", self._kanban_embed())
-        self.write_page(utility.href, page)
-    def _harness_headline(self) -> str:
-        return 'ABD <span class="accent">Context Driven Delivery</span> Harness'
-
-    def _harness_tagline(self) -> str:
-        return (
-            "Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. "
-            f'Get the repo <a href="{self.repo_url}" '
-            'target="_blank" rel="noopener noreferrer">here</a>.'
-        )
-
-    def _write_hub(self) -> None:
-        from harness.catalog_generator.foundry_chrome import page_shell, render_hub_board
-
-        board = render_hub_board(self.practices, self.lifecycle_actions, self.utilities)
-        hub = page_shell(
-            title="ABD Context Driven Delivery Harness",
-            h1=self._harness_headline(),
-            tagline=self._harness_tagline(),
-            after_tagline=self._hub_doc_links(),
-            body_inner=self._hub_body(),
-            commons_prefix="commons/",
-            nav_prefix="",
-            nav_current="hub",
-            kanban_embed=board,
-        )
-        self.write_page("index.html", hub)
-
-    def _hub_doc_links(self) -> str:
-        return (
-            '<a class="page-hero__approach-btn" href="cdd-approach.html">The approach</a>'
-        )
-
-    def _write_source_docs(self) -> None:
-        self._write_approach_page()
-        self._write_approach_practice_pages()
-        self._write_coming_soon_pages()
-        self._write_readme_page()
+        board = self.board
+        practice_pages = [PracticePage(practice) for practice in self.practices]
+        action_pages = [ActionPage(action) for action in self.lifecycle_actions]
+        utility_pages = [UtilityPage(utility) for utility in self.utilities]
+        for page in [*practice_pages, *self._fidelity_pages, *action_pages, *utility_pages]:
+            self._write_detail_page(page, board)
+        self._write_hub(board)
+        self._write_approach_pages()
+        for document in _SOURCE_DOCUMENTS:
+            self._write_source_document(document)
+        self._write_grid_pages(practice_pages, action_pages, utility_pages)
 
     @property
-    def approach_copy(self):
-        """The approach page's copy, read from ``approach_md_path`` on first use."""
-        from harness.catalog_generator.approach_copy import load_approach_copy
+    def _fidelity_pages(self) -> list[FidelityPage]:
+        return [
+            FidelityPage(practice, fidelity, self.citation, self.lifecycle_actions)
+            for practice in self.practices
+            for fidelity in practice.fidelities
+        ]
 
-        if self._loaded_approach_copy is None:
-            self._loaded_approach_copy = load_approach_copy(self.approach_md_path)
-        return self._loaded_approach_copy
+    @property
+    def _repo_link(self) -> str:
+        return f'Get the repo <a href="{self.repo_url}" target="_blank" rel="noopener noreferrer">here</a>.'
 
-    def _write_approach_page(self) -> None:
-        from harness.catalog_generator.foundry_chrome import (
-            copy_practice_examples,
-            page_shell,
-            write_stage_example_pages,
-        )
-
-        copy_practice_examples(self.out_root)
-        example_hrefs = write_stage_example_pages(self.out_root, self.approach_copy.stages)
-        page = page_shell(
-            title="ABD Context Driven Delivery Harness",
-            h1=self._harness_headline(),
-            tagline="",
-            subhead=self.approach_copy.subhead,
-            after_subhead=(
-                f'Get the repo <a href="{self.repo_url}" '
-                'target="_blank" rel="noopener noreferrer">here</a>.'
+    def _write_detail_page(self, page: DetailPage, board: HubBoard) -> None:
+        shell = PageShell(
+            title=page.title,
+            h1=_HEADLINE,
+            tagline=_SITE_SENTENCE + self._repo_link,
+            body_inner=page.body,
+            commons_prefix="../commons/",
+            nav_prefix="../",
+            nav_current=page.nav_current,
+            body_wrap_class="skill-detail-page",
+            kanban_embed=board.html(
+                path_prefix="../", practice=page.highlighted_practice, fidelity=page.highlighted_fidelity
             ),
-            body_inner=self.approach_page_body(example_hrefs),
-            commons_prefix="commons/",
-            nav_prefix="",
-            nav_current="",
-            body_wrap_class="approach-wrap",
         )
-        self.write_page("cdd-approach.html", page)
+        self.write_page(page.href, shell.html)
 
-    def _write_coming_soon_pages(self) -> None:
-        import html as html_mod
-
-        from harness.catalog_generator.foundry_chrome import page_shell
-
-        for slug, title in (
-            ("customer-discovery", "Customer Discovery"),
-            ("devops", "DevOps"),
-        ):
-            body = (
-                '<article class="approach-practice">'
-                '<p class="approach-practice__back"><a href="cdd-approach.html">← Back to the approach</a></p>'
-                f'<h2 class="approach-practice__title">{html_mod.escape(title)}</h2>'
-                '<p class="approach-practice__para">Coming soon.</p>'
-                "</article>"
-            )
-            page = page_shell(
-                title=f"{title} — ABD Context Driven Delivery",
-                h1=f'<span class="accent">{html_mod.escape(title)}</span>',
-                tagline="",
-                body_inner=body,
-                commons_prefix="commons/",
-                nav_prefix="",
-                nav_current="",
-                body_wrap_class="approach-wrap",
-            )
-            self.write_page(f"{slug}.html", page)
-
-    def _write_approach_practice_pages(self) -> None:
-        import html as html_mod
-
-        from harness.catalog_generator.foundry_chrome import page_shell
-
-        from harness.catalog_generator.approach_copy import format_principle_bullet
-
-        for practice in self.approach_copy.practices:
-            paras = "".join(
-                f'<p class="approach-practice__para">{format_principle_bullet(item)}</p>'
-                for item in practice.get("bullets", ())
-            )
-            caption = practice.get("caption", "")
-            if caption:
-                paras += f'<p class="approach-practice__para">{caption}</p>'
-            body = (
-                '<article class="approach-practice">'
-                f'<p class="approach-practice__back"><a href="cdd-approach.html">← Back to the approach</a></p>'
-                f'<h2 class="approach-practice__title">{html_mod.escape(practice["title"])}</h2>'
-                f'<div class="approach-practice__body">{paras}</div>'
-                "</article>"
-            )
-            page = page_shell(
-                title=f'{practice["title"]} — ABD Context Driven Delivery',
-                h1=f'<span class="accent">{html_mod.escape(practice["title"])}</span>',
-                tagline="",
-                body_inner=body,
-                commons_prefix="commons/",
-                nav_prefix="",
-                nav_current="",
-                body_wrap_class="approach-wrap",
-            )
-            self.write_page(f'cdd-{practice["slug"]}.html', page)
-
-    def approach_page_body(
-        self,
-        example_hrefs: dict[str, str] | None = None,
-        *,
-        example_sources=None,
-        catalog_root: str | Path | None = None,
-    ) -> str:
-        import html as html_mod
-
-        from harness.catalog_generator.approach_copy import (
-            format_principle_bullet,
-            product_engineering_layout,
-            so_what_row,
+    def _write_hub(self, board: HubBoard) -> None:
+        shell = PageShell(
+            title=_SITE_TITLE,
+            h1=_HEADLINE,
+            tagline=_SITE_SENTENCE + self._repo_link,
+            after_tagline='<a class="page-hero__approach-btn" href="cdd-approach.html">The approach</a>',
+            body_inner=self._install_steps,
+            nav_current="hub",
+            kanban_embed=board.html(),
         )
+        self.write_page("index.html", shell.html)
 
-        copy = self.approach_copy
-        resolved_catalog_root = Path(catalog_root) if catalog_root is not None else self.out_root
-        stages = copy.stages
-        principles = copy.practices
-        example_hrefs = example_hrefs or {}
-
-        stage_buttons: list[str] = []
-        for index, stage in enumerate(stages):
-            items = "".join(
-                f'<li class="approach-stage__item kb-ticket aad-skill aad-fam-{html_mod.escape(fam)}">'
-                f"{html_mod.escape(item)}</li>"
-                for item, fam in zip(stage["items"], stage["item_fams"])
-            )
-            shape = (
-                '<span class="kb-col-scope-shape-wrap approach-stage__scope">'
-                f'<span class="kb-col-scope-shape kb-col-scope-shape--{html_mod.escape(stage["shape"])}" '
-                f'aria-label="{html_mod.escape(stage["scope_name"])}. {html_mod.escape(stage["scope_width"])}"></span>'
-                '<span class="kb-col-shape-tooltip" role="tooltip">'
-                f'<span class="kb-col-shape-tooltip__name">{html_mod.escape(stage["scope_name"])}</span>'
-                f'<span class="kb-col-shape-tooltip__width">{html_mod.escape(stage["scope_width"])}</span>'
-                "</span></span>"
-            )
-            active = " is-active" if index == 0 else ""
-            label_html = (
-                f'<span class="approach-stage__label">{html_mod.escape(stage["label"])}</span>'
-            )
-            stage_buttons.append(
-                f'<div class="approach-stage{active}" role="button" tabindex="0" '
-                f'data-stage-index="{index}" data-stage-id="{html_mod.escape(stage["id"])}" '
-                f'aria-pressed="{"true" if index == 0 else "false"}">'
-                f'<span class="approach-stage__head">'
-                f'{shape}'
-                f"{label_html}"
-                f"</span>"
-                f'<ul class="approach-stage__items">{items}</ul>'
-                "</div>"
-            )
-
-        first = stages[0]
-        bullets = "".join(
-            f"<li>{html_mod.escape(para)}</li>" for para in first["paras"]
-        )
-        stage_json = html_mod.escape(
-            __import__("json").dumps(
-                [
-                    {
-                        "id": s["id"],
-                        "label": s["label"],
-                        "detail_title": s["detail_title"],
-                        "items": list(s["items"]),
-                        "paras": list(s["paras"]),
-                        "example_href": example_hrefs.get(s["id"], ""),
-                    }
-                    for s in stages
-                ]
-            ),
-            quote=True,
-        )
-
-        from harness.catalog_generator.foundry_chrome import approach_principle_grid
-
-        principle_kinds = {
-            "product-engineering": "descriptions",
-            "iterate-and-learn": "windows",
-            "code-is-context": "spec",
-        }
-        principle_cards: list[str] = []
-        for number, practice in enumerate(principles, start=1):
-            kind = practice.get("kind") or principle_kinds.get(practice["slug"], "tickets")
-            grid = approach_principle_grid(
-                self.practices,
-                kind,
-                stages=stages if practice["slug"] == "iterate-and-learn" else None,
-                example_sources=example_sources,
-                catalog_root=resolved_catalog_root,
-            )
-            caption = practice.get("caption", "")
-            caption_html = (
-                f'<aside class="approach-principle__caption"><p class="approach-principle__caption-body">{caption}</p></aside>'
-                if caption
-                else ""
-            )
-            bullet_list = list(practice.get("bullets", ()))
-            if practice["slug"] == "iterate-and-learn" and bullet_list:
-                bullets_html = (
-                    '<div class="approach-refine__layout approach-refine__layout--bullets">'
-                    '<div class="approach-refine__context" aria-hidden="true"></div>'
-                    + so_what_row(bullet_list, modifier="approach-so--stages")
-                    + "</div>"
-                )
-            elif practice["slug"] == "product-engineering" and bullet_list:
-                bullets_html = product_engineering_layout(bullet_list)
-            else:
-                bullet_items = "".join(
-                    f"<li>{format_principle_bullet(item)}</li>" for item in bullet_list
-                )
-                bullets_html = (
-                    f'<ul class="approach-principle__bullets">{bullet_items}</ul>' if bullet_items else ""
-                )
-            principle_cards.append(
-                f'<section class="approach-principle" data-principle="{html_mod.escape(practice["slug"])}">'
-                f'<button type="button" class="approach-principle__toggle" aria-expanded="false">'
-                f'<span class="approach-principle__num" aria-hidden="true">{number}</span>'
-                f'<span class="approach-principle__copy">'
-                f'<h3 class="approach-principle__title">{html_mod.escape(practice["title"])}</h3>'
-                f"</span></button>"
-                f'<div class="approach-principle__panel"><div class="approach-principle__panel-inner">{bullets_html}{grid}{caption_html}</div></div>'
-                "</section>"
-            )
-
-        return (
-            '<div class="approach-page" id="approach-page" tabindex="0" '
-            f'data-stages="{stage_json}">'
-            '<div class="approach-main" id="approach-main">'
-            f'<div class="approach-stage-row" role="list">{"".join(stage_buttons)}</div>'
-            '<section class="approach-detail" id="approach-detail" aria-live="polite">'
-            f'<h2 class="approach-detail__title" id="approach-detail-title">'
-            f'{html_mod.escape(first["detail_title"])}</h2>'
-            f'<ul class="approach-detail__body" id="approach-detail-body">{bullets}</ul>'
-            "</section>"
-            "</div>"
-            '<aside class="approach-principles" id="approach-principles" aria-labelledby="approach-principles-heading">'
-            '<h2 class="approach-principles__title" id="approach-principles-heading">'
-            f"{html_mod.escape(copy.principles_heading)}"
-            "</h2>"
-            f'<div class="approach-principles__list">{"".join(principle_cards)}</div>'
-            "</aside>"
-            '<section class="approach-library" aria-labelledby="approach-library-heading">'
-            '<h2 class="approach-library__title" id="approach-library-heading">'
-            f"{html_mod.escape(copy.library_heading)}"
-            "</h2>"
-            f"{approach_principle_grid(self.practices, 'tickets', example_sources=example_sources, catalog_root=resolved_catalog_root)}"
-            "</section>"
-            "</div>"
-            "<script>(function(){"
-            "var root=document.getElementById('approach-page');"
-            "if(!root)return;"
-            "var stages=[];"
-            "try{stages=JSON.parse(root.getAttribute('data-stages')||'[]');}catch(e){return;}"
-            "var buttons=[].slice.call(root.querySelectorAll('.approach-stage'));"
-            "var titleEl=document.getElementById('approach-detail-title');"
-            "var bodyEl=document.getElementById('approach-detail-body');"
-            "var principlesEl=document.getElementById('approach-principles');"
-            "var principles=[].slice.call(root.querySelectorAll('.approach-principle'));"
-            "var principleIndex=-1;"
-            "var index=0;"
-            "var ready=false;"
-            "var started=false;"
-            "var onPrinciples=false;"
-            "function scrollRefineToTop(){"
-            "window.scrollTo({top:0,behavior:'smooth'});"
-            "}"
-            "function scrollPrinciple(el){"
-            "var nav=document.querySelector('.site-nav');"
-            "var navH=nav?nav.getBoundingClientRect().height:0;"
-            "var pad=navH+16;"
-            "var top=el.getBoundingClientRect().top+window.pageYOffset;"
-            "var height=el.offsetHeight;"
-            "var room=window.innerHeight-pad;"
-            "var y=top-pad;"
-            "if(height<room)y=top-pad-Math.min(24,room-height);"
-            "window.scrollTo({top:Math.max(0,y),behavior:'smooth'});"
-            "}"
-            "function showPrinciple(i,scroll){"
-            "principleIndex=i;"
-            "onPrinciples=i>=0;"
-            "principles.forEach(function(el,n){"
-            "var open=n===i;"
-            "el.classList.toggle('is-open',open);"
-            "var toggle=el.querySelector('.approach-principle__toggle');"
-            "if(toggle)toggle.setAttribute('aria-expanded',open?'true':'false');"
-            "});"
-            "if(scroll&&i>=0&&principles[i]){"
-            "var target=principles[i];"
-            "window.setTimeout(function(){scrollPrinciple(target);},440);"
-            "}"
-            "}"
-            "function paint(scroll){"
-            "buttons.forEach(function(btn,i){"
-            "var on=!onPrinciples&&i===index;"
-            "btn.classList.toggle('is-active',on);"
-            "btn.classList.remove('is-done');"
-            "btn.setAttribute('aria-pressed',on?'true':'false');"
-            "if(on){"
-            "btn.classList.remove('is-flash');"
-            "void btn.offsetWidth;"
-            "btn.classList.add('is-flash');"
-            "}"
-            "});"
-            "var stage=stages[index];"
-            "if(!stage)return;"
-            "titleEl.textContent=stage.detail_title;"
-            "showStageExample(stage,scroll&&started);"
-            "bodyEl.classList.remove('is-enter');"
-            "void bodyEl.offsetWidth;"
-            "bodyEl.innerHTML=stage.paras.map(function(para){"
-            "return '<li>'+para.replace(/</g,'&lt;')+'</li>';"
-            "}).join('');"
-            "bodyEl.classList.add('is-enter');"
-            "if(scroll&&!onPrinciples&&started&&!(stage.example_href))scrollRefineToTop();"
-            "}"
-            "function showStageExample(){}"
-            "function openNextColumn(){"
-            "var host=document.getElementById('approach-stage-examples');"
-            "return !!(window.catalogRefineOpenNext&&window.catalogRefineOpenNext(host));"
-            "}"
-            "function closeLastColumn(){"
-            "var host=document.getElementById('approach-stage-examples');"
-            "return !!(window.catalogRefineCloseLast&&window.catalogRefineCloseLast(host));"
-            "}"
-            "function principleSlug(i){"
-            "return principles[i]?principles[i].getAttribute('data-principle'):'';"
-            "}"
-            "var peStep=-1;"
-            "function peSteps(){"
-            "var steps=[];"
-            "document.querySelectorAll('#pe-engineering .approach-refine-row').forEach(function(host){"
-            "['discovery','specification','implementation'].forEach(function(id){"
-            "if(host.querySelector('.approach-stage-column[data-stage-id=\"'+id+'\"]')){"
-            "steps.push({host:host,id:id});"
-            "}"
-            "});"
-            "});"
-            "return steps;"
-            "}"
-            "function walkPe(delta){"
-            "if(!window.catalogRefineSetStage)return false;"
-            "var steps=peSteps();"
-            "if(!steps.length)return false;"
-            "if(delta>0){"
-            "if(peStep>=steps.length-1)return false;"
-            "peStep+=1;"
-            "return window.catalogRefineSetStage(steps[peStep].host,steps[peStep].id,true);"
-            "}"
-            "if(peStep<0)return false;"
-            "window.catalogRefineSetStage(steps[peStep].host,steps[peStep].id,false);"
-            "peStep-=1;"
-            "return true;"
-            "}"
-            "function move(delta){"
-            "started=true;"
-            "if(phase==='stages'){"
-            "if(delta>0&&index>=stages.length-1){"
-            "phase='principles';"
-            "closePrinciples();"
-            "if(principlesEl){"
-            "var nav=document.querySelector('.site-nav');"
-            "var navH=nav?nav.getBoundingClientRect().height:0;"
-            "var top=principlesEl.getBoundingClientRect().top+window.pageYOffset-(navH+16);"
-            "window.scrollTo(0,Math.max(0,top));"
-            "}"
-            "return;"
-            "}"
-            "if(delta<0&&index<=0)return;"
-            "index+=delta;"
-            "closePrinciples();"
-            "paint(false);"
-            "return;"
-            "}"
-            "if(phase==='travel'||phase==='library')phase='principles';"
-            "if(delta>0){"
-            "if(principleIndex<0){showPrinciple(0,false);paint(false);return;}"
-            "if(principleSlug(principleIndex)==='iterate-and-learn'&&openNextColumn())return;"
-            "if(principleSlug(principleIndex)==='product-engineering'&&walkPe(1))return;"
-            "if(principleIndex>=principles.length-1)return;"
-            "showPrinciple(principleIndex+1,false);"
-            "if(principleSlug(principleIndex)==='product-engineering')peStep=-1;"
-            "paint(false);"
-            "return;"
-            "}"
-            "if(principleSlug(principleIndex)==='product-engineering'&&walkPe(-1))return;"
-            "if(principleSlug(principleIndex)==='iterate-and-learn'&&closeLastColumn())return;"
-            "if(principleIndex>0){showPrinciple(principleIndex-1,false);paint(false);return;}"
-            "if(principleIndex===0){closePrinciples();paint(false);return;}"
-            "phase='stages';"
-            "index=stages.length-1;"
-            "paint(false);"
-            "}"
-            "buttons.forEach(function(btn,i){"
-            "btn.addEventListener('click',function(e){"
-            "if(e.target.closest&&e.target.closest('a'))return;"
-            "started=true;"
-            "phase='stages';"
-            "index=i;"
-            "if(!stages[i]||!stages[i].example_href)showPrinciple(-1,false);"
-            "paint(ready);"
-            "});"
-            "btn.addEventListener('keydown',function(e){"
-            "if(e.target!==btn)return;"
-            "if(e.key==='Enter'||e.key===' '){e.preventDefault();btn.click();}"
-            "});"
-            "});"
-            "principles.forEach(function(el,i){"
-            "var toggle=el.querySelector('.approach-principle__toggle');"
-            "if(!toggle)return;"
-            "toggle.addEventListener('click',function(){"
-            "started=true;"
-            "phase='principles';"
-            "if(principleIndex===i){showPrinciple(-1,false);paint(false);return;}"
-            "showPrinciple(i,false);"
-            "if(principleSlug(i)==='product-engineering')peStep=-1;"
-            "paint(false);"
-            "});"
-            "});"
-            "document.addEventListener('keydown',function(e){"
-            "if(e.target.closest('input,textarea,select,a'))return;"
-            "if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();move(1);}"
-            "else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();move(-1);}"
-            "});"
-            "var phase='stages';"
-            "var dragClip=null,dragX=0,dragLeft=0;"
-            "document.addEventListener('pointerdown',function(e){"
-            "var clip=e.target.closest&&e.target.closest('.approach-stage-examples__clip');"
-            "if(!clip||e.button!==0)return;"
-            "if(e.target.closest('button,a,input,textarea,select,.catalog-monaco,.mxgraph,.skill-drawio-wrap'))return;"
-            "dragClip=clip;dragX=e.clientX;dragLeft=clip.scrollLeft;"
-            "clip.classList.add('is-dragging');"
-            "try{clip.setPointerCapture(e.pointerId);}catch(err){}"
-            "});"
-            "document.addEventListener('pointermove',function(e){"
-            "if(!dragClip)return;"
-            "dragClip.scrollLeft=dragLeft-(e.clientX-dragX);"
-            "});"
-            "document.addEventListener('pointerup',function(){"
-            "if(!dragClip)return;"
-            "dragClip.classList.remove('is-dragging');"
-            "dragClip=null;"
-            "});"
-            "function closePrinciples(){"
-            "showPrinciple(-1,false);"
-            "}"
-            "paint(false);"
-            "ready=true;"
-            "})();</script>"
-        )
-
-    def _write_readme_page(self) -> None:
-        from harness.catalog_generator.foundry_chrome import markdown_to_html, page_shell
-
-        source = _REPO_ROOT / "README.md"
-        if not source.is_file():
-            return
-        raw = source.read_text(encoding="utf-8")
-        body_md = re.sub(r"^#\s+.*\n+", "", raw.lstrip(), count=1, flags=re.MULTILINE)
-        page = page_shell(
-            title="README — ABD Context Driven Delivery Harness",
-            h1="README",
-            tagline=(
-                "Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. "
-                '<a href="index.html">Back to catalog</a>.'
-            ),
-            body_inner=f'<article class="catalog-source-doc">{markdown_to_html(body_md)}</article>',
-            commons_prefix="commons/",
-            nav_prefix="",
-            nav_current="",
-        )
-        self.write_page("readme.html", page)
-
-    def _hub_body(self) -> str:
-        import html as html_mod
-
-        harness_href = GitCitation(self.repo_url, self.ref).blob_url(
-            _REPO_ROOT / "harness" / "harness" / "harness.py",
-        )
+    @property
+    def _install_steps(self) -> str:
+        repo_url = html.escape(self.repo_url)
+        install_script = html.escape(self.citation.blob_url(_INSTALL_SCRIPT))
         return (
             '<section class="install-block catalog-install">'
-            '<details>'
+            "<details>"
             '<summary id="catalog-install-heading">Install</summary>'
             "<ol>"
-            "<li>Get the repository: "
-            f'<a href="{html_mod.escape(self.repo_url)}" target="_blank" rel="noopener noreferrer">'
-            f"{html_mod.escape(self.repo_url)}</a>.</li>"
+            f'<li>Get the repository: <a href="{repo_url}" target="_blank" rel="noopener noreferrer">{repo_url}</a>.</li>'
             "<li>Add it to your project (clone into the workspace or add it as a sibling "
             "checkout the agent can see).</li>"
-            "<li>Drop "
-            f'<a href="{html_mod.escape(harness_href)}" target="_blank" rel="noopener noreferrer">'
-            "<code>installation/harness.py</code></a> "
-            "into the chat and ask the agent to run "
-            "<strong>generate</strong> "
-            "(action <code>generate</code>). "
-            "That deploys each context tool as an IDE skill shim.</li>"
+            f'<li>From the repository, run <a href="{install_script}" target="_blank" rel="noopener noreferrer">'
+            f"<code>{_INSTALL_COMMAND}</code></a> (or <code>--ide Cursor</code>, <code>--ide \"VS Code\"</code>, "
+            "<code>--ide Kilo</code>). That installs each practice and action into the IDE as a skill.</li>"
             "</ol>"
             "</details>"
             "</section>\n"
         )
 
-    def _write_workflow(self) -> None:
-        from harness.catalog_generator.foundry_chrome import markdown_to_html, page_shell
+    def _write_approach_pages(self) -> None:
+        PracticeExamples().copy_into(self.out_root)
+        page = ApproachPage(self.approach_copy, self.practices, self.out_root)
+        page.write_stage_example_pages()
+        shell = PageShell(
+            title=_SITE_TITLE,
+            h1=_HEADLINE,
+            tagline="",
+            subhead=self.approach_copy.subhead,
+            after_subhead=self._repo_link,
+            body_inner=page.body,
+            body_wrap_class="approach-wrap",
+        )
+        self.write_page("cdd-approach.html", shell.html)
+        for file_name, page_html in page.principle_pages.items():
+            self.write_page(file_name, page_html)
 
-        workflow_md_path = _REPO_ROOT / "catalog" / "workflow.md"
-        if not workflow_md_path.is_file():
+    def _write_source_document(self, document: _SourceDocument) -> None:
+        if not document.source.is_file():
             return
-        workflow_md = workflow_md_path.read_text(encoding="utf-8")
-        workflow_body_md = re.sub(
-            r"^#\s+.*\n+", "", workflow_md.lstrip(), count=1, flags=re.MULTILINE
+        text = _TITLE_LINE.sub("", document.source.read_text(encoding="utf-8").lstrip(), count=1)
+        article = MarkdownHtml(text, include_tables=document.include_tables).html
+        shell = PageShell(
+            title=document.title,
+            h1=document.heading,
+            tagline=_SITE_SENTENCE + _BACK_TO_CATALOG,
+            body_inner=f'<article class="{document.article_class}">{article}</article>',
+            nav_current=document.nav_current,
         )
-        workflow_html = page_shell(
-            title="CDD Workflow — ABD Context Driven Delivery Harness",
-            h1="CDD Workflow",
-            tagline=(
-                "Agentic tools that bring the best of agile product, delivery, and engineering practices into the age of AI. "
-                '<a href="index.html">Back to catalog</a>.'
-            ),
-            body_inner=(
-                '<article class="catalog-workflow-page">'
-                + markdown_to_html(workflow_body_md, include_tables=True)
-                + "</article>"
-            ),
-            commons_prefix="commons/",
-            nav_prefix="",
-            nav_current="hub",
-        )
-        self.write_page("workflow.html", workflow_html)
+        self.write_page(document.file_name, shell.html)
 
-    def _write_grid_pages(self) -> None:
-        self._write_context_tools_grid()
-        self._write_actions_grid()
-        self._write_utilities_grid()
-        self._write_fidelities_grid()
+    def _write_grid_pages(
+        self, practice_pages: list[PracticePage], action_pages: list[ActionPage], utility_pages: list[UtilityPage]
+    ) -> None:
+        practices = [self._card(practice.display_name, practice.href, practice.display_name) for practice in self.practices]
+        actions = [self._card(action.name, action.href, "Lifecycle action") for action in self.lifecycle_actions]
+        utilities = [self._card(utility.name, utility.href, "Utility") for utility in self.utilities]
+        self._write_grid("context-tools", "Context tools", "Every context tool in the catalog", practices, practice_pages)
+        self._write_grid("actions", "Actions", "Lifecycle actions", actions, action_pages)
+        self._write_grid("tools", "Utilities", "Foundational utilities", utilities, utility_pages)
+        self._write_grid("fidelities", "Fidelities", "Every fidelity ticket", self._fidelity_cards, None)
 
-    def _write_context_tools_grid(self) -> None:
-        from harness.catalog_generator.foundry_chrome import cap_card, page_shell
-
-        self.write_page(
-            "context-tools.html",
-            page_shell(
-                title="Context tools — CDD Catalog",
-                h1="Context tools",
-                tagline="Every context tool in the catalog",
-                body_inner='<div class="cap-grid">' + "".join(
-                    cap_card(practice.display_name, practice.href, practice.display_name)
-                    for practice in self.practices
-                ) + "</div>"
-                + f'<div hidden>{"".join(self._tool_bodies)}</div>',
-                commons_prefix="commons/",
-                nav_current="context-tools",
-            ),
-        )
-
-    def _write_actions_grid(self) -> None:
-        from harness.catalog_generator.foundry_chrome import cap_card, page_shell
-
-        self.write_page(
-            "actions.html",
-            page_shell(
-                title="Actions — CDD Catalog",
-                h1="Actions",
-                tagline="Lifecycle actions",
-                body_inner='<div class="cap-grid">' + "".join(
-                    cap_card(action.name, action.href, "Lifecycle action")
-                    for action in self.lifecycle_actions
-                ) + "</div>"
-                + f'<div hidden>{"".join(self._action_bodies)}</div>',
-                commons_prefix="commons/",
-                nav_current="actions",
-            ),
-        )
-
-    def _write_utilities_grid(self) -> None:
-        from harness.catalog_generator.foundry_chrome import cap_card, page_shell
-
-        self.write_page(
-            "tools.html",
-            page_shell(
-                title="Utilities — CDD Catalog",
-                h1="Utilities",
-                tagline="Foundational utilities",
-                body_inner='<div class="cap-grid">' + "".join(
-                    cap_card(utility.name, utility.href, "Utility")
-                    for utility in self.utilities
-                ) + "</div>"
-                + f'<div hidden>{"".join(self._utility_bodies)}</div>',
-                commons_prefix="commons/",
-                nav_current="tools",
-            ),
-        )
-
-    def _write_fidelities_grid(self) -> None:
-        from harness.catalog_generator.foundry_chrome import cap_card, page_shell
-
-        fid_cards = [
-            cap_card(
+    @property
+    def _fidelity_cards(self) -> list[str]:
+        return [
+            self._card(
                 fidelity.name,
                 practice.fidelity_href(fidelity),
                 f"{practice.display_name} · {practice.column_of(fidelity).key}",
@@ -2230,15 +1187,24 @@ class Catalog:
             for fidelity in practice.fidelities
             if practice.column_of(fidelity) is not None
         ]
-        self.write_page(
-            "fidelities.html",
-            page_shell(
-                title="Fidelities — CDD Catalog",
-                h1="Fidelities",
-                tagline="Every fidelity ticket",
-                body_inner='<div class="cap-grid">' + "".join(fid_cards) + "</div>",
-                commons_prefix="commons/",
-                nav_current="fidelities",
-            ),
-        )
 
+    def _write_grid(self, name: str, heading: str, tagline: str, cards: list[str], pages: list[DetailPage] | None) -> None:
+        """A grid page of cards; the pages' bodies are kept hidden in it, so a search of the page finds them."""
+        hidden = f'<div hidden>{"".join(page.body for page in pages)}</div>' if pages is not None else ""
+        shell = PageShell(
+            title=f"{heading} — CDD Catalog",
+            h1=heading,
+            tagline=tagline,
+            body_inner=f'<div class="cap-grid">{"".join(cards)}</div>{hidden}',
+            nav_current=name,
+        )
+        self.write_page(f"{name}.html", shell.html)
+
+    def _card(self, title: str, href: str, summary: str, label: str = "Catalog") -> str:
+        return (
+            f'<a class="cap-card" href="{html.escape(href)}">'
+            f'<p class="cap-card__title">{html.escape(title)}</p>'
+            f'<p class="cap-card__label">{html.escape(label)}</p>'
+            f'<p class="cap-card__summary">{html.escape(summary)}</p>'
+            f'<p class="cap-card__more">Open →</p></a>'
+        )

@@ -104,7 +104,7 @@ with description("an example graph"):
                 expect(self.opened["file"]).to(contain("."))
 
             with it("should hold the classes and operations a call in it can open"):
-                expect({member["kind"] for member in self.opened["members"]}).to(contain("Operation"))
+                expect({member["type"] for member in self.opened["members"]}).to(contain("Operation"))
 
         with context("with an id the graph holds no node for, such as a rule's row"):
             with it("should have no source to show"):

@@ -118,22 +118,22 @@ class _MarkdownReading:
             ):
                 self._index += 1
             return
-        rows: list[list[str]] = []
+        lines: list[list[str]] = []
         while self._index < len(self._lines) and _TABLE_LINE.match(self._lines[self._index]):
-            rows.append([cell.strip() for cell in self._lines[self._index].strip().strip("|").split("|")])
+            lines.append([cell.strip() for cell in self._lines[self._index].strip().strip("|").split("|")])
             self._index += 1
-        data = [row for row in rows if not _TABLE_SEPARATOR.match("|" + "|".join(row) + "|")]
+        data = [cells for cells in lines if not _TABLE_SEPARATOR.match("|" + "|".join(cells) + "|")]
         if data:
             self._out.append(self._table(data))
 
-    def _table(self, rows: list[list[str]]) -> str:
-        header, *body = rows
+    def _table(self, lines: list[list[str]]) -> str:
+        header, *body = lines
         parts = ['<table class="catalog-md-table">']
         parts.append("<thead><tr>" + "".join(f"<th>{self._inline(cell)}</th>" for cell in header) + "</tr></thead>")
         if body:
             parts.append("<tbody>")
-            for row in body:
-                cells = (row + [""] * len(header))[: len(header)]
+            for line in body:
+                cells = (line + [""] * len(header))[: len(header)]
                 parts.append("<tr>" + "".join(f"<td>{self._inline(cell)}</td>" for cell in cells) + "</tr>")
             parts.append("</tbody>")
         parts.append("</table>")

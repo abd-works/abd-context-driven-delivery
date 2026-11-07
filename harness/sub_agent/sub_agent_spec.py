@@ -9,7 +9,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect
 from harness.sub_agent.fixtures import MarkedActionExample, MarkedToolExample
 from harness.agent_tools.agent_tools import AgentToolSet
-from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE, marked_as_sub_agent
+from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE, SubAgentMark
 from harness.sub_agent.sub_agent import SubAgent
 from mamba import context, description, it
 
@@ -40,7 +40,7 @@ with description("@subAgent mark"):
 
         with it("marks the tool as launched on a sub-agent"):
             tool = MarkedToolExample().operations["run_check"]
-            expect(marked_as_sub_agent(tool.callable)).to(equal(True))
+            expect(SubAgentMark.marks(tool.callable)).to(equal(True))
 
     with context("on @agent_instructions"):
         with it("prepends delegation instructions when expanded"):
@@ -53,4 +53,4 @@ with description("@subAgent mark"):
 
         with it("marks the instructions as launched on a sub-agent"):
             tool = MarkedActionExample().instructions["plan_work"]
-            expect(marked_as_sub_agent(tool.callable)).to(equal(True))
+            expect(SubAgentMark.marks(tool.callable)).to(equal(True))

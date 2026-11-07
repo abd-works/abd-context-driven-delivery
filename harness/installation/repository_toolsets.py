@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Iterable
 
 from harness.agent_tools.agent_tools import AgentToolSet
+from harness.name.name import Name
 
 logger = logging.getLogger(__name__)
 
@@ -51,20 +52,10 @@ class RepositoryToolsets:
     )
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
-    # The class names install reads on members, by name, because it reads the source without importing it.
+    # The marks install reads on members, by name, because it reads the source without importing it. A mark is matched
+    # by its snake-case name, so its class name (``Mcp``) and its lowercase alias (``mcp``) both count.
     ANNOTATIONS = frozenset(
-        {
-            "Skill",
-            "Command",
-            "Rules",
-            "Agent",
-            "AgentGuidance",
-            "Mcp",
-            "Hook",
-            "Hooks",
-            "agent_tool",
-            "agent_instructions",
-        }
+        {"skill", "command", "rules", "agent", "agent_guidance", "mcp", "hook", "hooks", "agent_tool", "agent_instructions"}
     )
 
     def __init__(self, root: Path | str) -> None:
@@ -173,7 +164,7 @@ class RepositoryToolsets:
         if any(self._annotation_id(dec) == "agent_toolset" for dec in class_def.decorator_list):
             return True
         return any(
-            self._annotation_id(dec) in self.ANNOTATIONS
+            Name(self._annotation_id(dec) or "").snake in self.ANNOTATIONS
             for item in class_def.body
             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
             for dec in item.decorator_list

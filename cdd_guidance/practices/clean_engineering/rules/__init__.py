@@ -27,6 +27,7 @@ from cdd_guidance.practices.clean_engineering.rules.practice_wide_rules import (
     ExtensionsLiveWithTheDomain,
     LowCoupling,
     OneWayDeps,
+    SourceParses,
 )
 
 RULES: tuple = (
@@ -46,6 +47,7 @@ RULES: tuple = (
     DoNotInventParallelObjectModels(),
     LayerSeparation(),
     OneWayDeps(),
+    SourceParses(),
     LowCoupling(),
     DeepModule(),
     ExtensionsLiveWithTheDomain(),

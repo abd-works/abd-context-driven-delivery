@@ -10,7 +10,7 @@ from pathlib import Path
 
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_source
 from harness.graph.rule_context import RuleCheckContext
-from cdd_guidance.practices.ddd.model.stereotypes import decorated_name, inferred_tactical_kind
+from cdd_guidance.practices.ddd.model.stereotypes import TacticalClass
 
 
 def ddd_rule_by_slug(slug: str):
@@ -25,7 +25,7 @@ def ddd_rule_by_slug(slug: str):
 def _node_type_for_class(clean, class_node) -> str:
     """The building block the DDD practice's graph reader names the class: its stereotypes first, then its name."""
     names = {node.name for node in clean.nodes.get("OoadClass", [])}
-    kind = inferred_tactical_kind(decorated_name(class_node.name, class_node.get_fact("stereotypes") or []), names)
+    kind = TacticalClass(class_node.name, class_node.get_fact("stereotypes") or []).inferred_kind(names)
     if kind is None and class_node.name.endswith("Repository"):
         return "Repository"
     if kind is None and class_node.name.endswith("Service"):
