@@ -103,19 +103,52 @@ No class of this module acts on another class of the model at run time.
 
 # harness/process
 
-## StoppableProcess
+Starting, watching, stopping and talking to other processes. Every class here is a leaf: it calls nothing else in the model, and the daemons, the repository and the catalog rely on it.
+
+## RunningProcess
+
+- **Used by**
+  - `HookDaemon` `-> RunningProcess(pid).alive` checks whether the hook server holding the address file is still alive · harness/hooks/hook_daemon.py:130
+  - `scripts/instances.py` `-> RunningProcess(pid).alive` lists live servers · scripts/instances.py:85
+
+## StoppableProcess `<<is a>>` RunningProcess
 
 - `StoppableProcess.stop`
-  - `-> raise ProcessNotStopped` raises · harness/process/stoppable_process.py:38
+  - `-> raise ProcessNotStopped` when the signal is refused or the process outlives the wait · harness/process/stoppable_process.py:38
 - `StoppableProcess._wait_until_ended`
-  - `-> raise ProcessNotStopped` raises · harness/process/stoppable_process.py:46
+  - `-> raise ProcessNotStopped` · harness/process/stoppable_process.py:46
+- **Used by**
+  - `McpDaemon` `-> StoppableProcess(pid).stop(_STOP_SECONDS)` stops the old cdd server before a restart · harness/mcp/mcp_daemon.py:91
+  - `HookDaemon` `-> StoppableProcess(pid).stop(_STOP_SECONDS)` replaces a stale hook server · harness/hooks/hook_daemon.py:204
+
+## PythonInterpreter
+
+- **Used by**
+  - `McpDaemon._start_process` `-> PythonInterpreter(home.python).windowless` the interpreter the cdd server runs under · harness/mcp/mcp_daemon.py:106
+  - `HookDaemon` `-> PythonInterpreter().windowless` the interpreter the hook server runs under · harness/hooks/hook_daemon.py:230
+  - `Hooks` `-> PythonInterpreter(python).console` the interpreter each installed hook command calls · harness/hooks/hooks.py:206
+
+## BackgroundStart
+
+- `BackgroundStart.run` `-> subprocess.Popen` starts a detached process with no console window · harness/process/process.py:70
+- **Used by**
+  - `McpDaemon` `-> BackgroundStart().run` / `.inside_starters_job()` starts the cdd server · harness/mcp/mcp_daemon.py:97, :103
+  - `HookDaemon` `-> BackgroundStart().run` starts the hook server · harness/hooks/hook_daemon.py:229
+  - `scripts/start.py` `-> BackgroundStart().creationflags / .startupinfo` · scripts/start.py:184
 
 ## Git
 
+The one way the code runs git, with a timeout and no stdin.
+
 - `Git.run`
-  - `-> raise RepoConnectError` raises · harness/process/git.py:39
+  - `-> raise RepoConnectError` when git fails or times out · harness/process/git.py:39
 - `Git._executable`
-  - `-> raise RepoConnectError` raises · harness/process/git.py:58
+  - `-> raise RepoConnectError` when git is not installed · harness/process/git.py:58
+- **Used by**
+  - `Repo.git` `-> Git(root)` every branch, commit and worktree operation of a repository · space/repo/repo.py:122
+  - `CddHome` `-> Git(folder).run / .succeeds` checks the remote and copies the pinned runtime · harness/mcp/cdd_home.py:213, :216, :227
+  - `Catalog` `-> Git(repo_root)` reads the commit its source links cite · harness/catalog_generator/catalog_generator.py:419
+  - `ProjectApproach` `-> RepoConnectError` reports a project with no reachable git · harness/catalog_generator/project_approach.py:23
 
 # harness/markdown
 
