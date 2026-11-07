@@ -146,6 +146,13 @@ class Destination(Mark):
         return any(kind.enlists_member and kind.marks(member) for kind in Destination._channels.values())
 
 
+class Toast(Destination):
+    """Mark an operation or instructions so the IDE shows a toast naming it when an agent calls it. The notifier that
+    shows toasts reads this mark; the operation names no notifier."""
+
+    flag = "_toast"
+
+
 class NamedDestination(Destination):
     """A destination whose mark may name what it installs: ``@skill("name")``, ``@skill(name="name")``, or bare
     ``@skill`` for the operation's own name."""

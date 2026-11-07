@@ -4,7 +4,7 @@ On top of the framework sit its applications: the chat's board plugin and server
 
 - **Purpose:** Give practices, actions, and tools one framework for publishing classes to agents and IDEs, and the applications that show the work.
 - **Seam (terms):** the marks `@agent_toolset`, `@agent_tool`, `@agent_instructions`, `@markdown`, `@mcp`, `@skill`, `@command`, `@rules`, `@Hook`; *PracticeGuidance*; *GuidanceAction*; *Graph*; `python scripts/install.py --ide {IDE}`
-- **Dependencies (one-way):** inside harness the modules depend one way, lowest first as listed above. Outside it: space (session through *ToolCall*, and still context_config, work_state, and session directly in a few places), tools (prompt_notify), cdd_guidance (the practices through *PracticeCatalogue*, `cdd_guidance/practices/stages`, and the practices' rules in the graph's example harnesses). space, tools, and cdd_guidance import harness back, so those remaining imports keep the four folders in one dependency cycle; `.sessions/_backlog/break-module-dependency-cycles.md` lists each one.
+- **Dependencies (one-way):** inside harness the modules depend one way, lowest first as listed above. Nothing in harness imports space, tools, or cdd_guidance: where the framework needs what they keep, it declares a seam and they register with it — space/session registers how a *ToolCall* opens its session, tools/prompt_notify registers the notifier that shows a hook's toast, each practice registers its *GraphPractice*, and *PracticeCatalogue* and *ActionCatalogue* name the practices and actions by reference. The stage names every fidelity is in are framework vocabulary (`harness/guidance/stages.py`).
 
 ## Constraint
 
@@ -17,7 +17,7 @@ Import a child package (`harness.agent_tools`, `harness.guidance`, ...); this fo
 
 - **Purpose:** Hold the toolsets that are useful on their own, outside any one practice or action.
 - **Seam (terms):** Chat, FileManager, Echo, Granola, PromptLog, PromptNotify; the MCP operations `chat.*`, `file-manager.*`, `echo.*`, `granola.*`
-- **Dependencies (one-way):** harness (agent_tools, installation, mcp, hooks), space/session. harness and space import tools/prompt_notify and tools/file_manager back, so those two are in the cycle listed in `.sessions/_backlog/break-module-dependency-cycles.md`.
+- **Dependencies (one-way):** harness (agent_tools, installation, mcp, hooks, marks), space/session (*PromptLog* writes in the open session's log folder). space/session, space/repo, and space/kanban import tools/file_manager, which imports nothing of space: it opens its session through *ToolCall*.
 
 ## Constraint
 
@@ -30,7 +30,7 @@ Import repository and session types from `space`, never from a tool, so a tool s
 
 - **Purpose:** Hold the practices, actions, and patterns an agent follows to deliver work, as classes plus markdown the installer publishes.
 - **Seam (terms):** each practice's and fidelity's instructions, published under its slug (`stories`, `clean-engineering-model`); each action's MCP operations (`generate.generate`, `validate.validate`, ...); each pattern's instructions
-- **Dependencies (one-way):** harness (agent_tools, graph, guidance, guidance_actions, installation, markdown, mcp, design_canvas). harness imports the practices, the patterns, and the validate action back, and space/session imports the generate and validate actions, so these are cycles today (`.sessions/_backlog/break-module-dependency-cycles.md`).
+- **Dependencies (one-way):** harness (agent_tools, graph, guidance, guidance_actions, installation, markdown, mcp, design_canvas). Nothing in harness imports the practices, patterns, or actions; each practice keeps the spec support that runs its rules on examples in its own `rules/` folder. space imports some of them (the session diagnostics probe runs generate and validate, and the board reads the saved graph through validate's reader), and nothing here imports space back.
 
 ## Constraint
 

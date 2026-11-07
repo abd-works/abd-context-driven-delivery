@@ -49,7 +49,7 @@ def main() -> int:
 
     from harness.installation.bootstrap import ensure_import_path
     from space.session import Sessions
-    from space.session.chat_pointer import ChatPointer
+    from harness.agent_tools.chat_pointer import ChatPointer
 
     ensure_import_path(_REPO)
     transcript = Path(args.transcript).resolve()

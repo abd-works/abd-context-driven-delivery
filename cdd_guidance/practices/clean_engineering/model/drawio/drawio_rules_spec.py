@@ -4,11 +4,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parents[1]
-for path in (_HERE, _REPO):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+_REPO = Path(__file__).resolve().parents[5]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
 from expects import be_true, equal, expect
 from mamba import before, context, description, it

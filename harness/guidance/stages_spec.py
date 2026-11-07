@@ -9,7 +9,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import be_none, equal, expect
 from mamba import description, it
 
-from cdd_guidance.practices.stages import REVIEW, STAGES
+from harness.guidance.stages import REVIEW, STAGES
 from harness.guidance.action_catalogue import ActionCatalogue
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_of

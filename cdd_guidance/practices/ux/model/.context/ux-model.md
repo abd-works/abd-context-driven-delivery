@@ -1,432 +1,325 @@
 # UX map
 
-*UxMap* reads one file into screens, then each screen's regions, controls, and interactions, and into transitions, content types, nav components, and one context. JSON and HTML continue through controls and interactions. Draw.io stops at regions and also reads transitions. Markdown stops at context. Every channel uses the same walk. A channel only differs in how the next node is taken out of the file.
+*UxMap* is one information architecture: screens, then each screen's regions, controls, and interactions, then the transitions between screens, the content types and nav components the screens share, and one context of notes and invariants. Every node is a graph node (*BoundNode*), so a map is also the UX practice's part of the knowledge graph.
 
-Callers use the base nodes. `UxModelFactory.load` takes a file or a folder, chooses the channel UX map, and returns a `UxMap`.
+Each format is a *UxMap* subclass, listed by `Ux` under `formats`: drawio, html, markdown, json, claude_design. A format adds no node types of its own; it reads with `parse(content)` into a new map of its class and writes with `render(ux_map)`. JSON and HTML carry the whole map. Draw.io carries screens, their regions, and transitions. Markdown carries the scope and the context. Claude Design places the prototype screens on a canvas and is never read back.
 
 ```
-ux_map = UxModelFactory.load(path)
+ux_map = JsonUxMap.from_workspace(folder)       # ux-map.json or ux.json in the folder
+drawio = DrawioUxMap.create().render(ux_map)
 ```
 
 # practices/ux/model
 
 - **Purpose:** Keep the information architecture as one UX map — screens, regions, controls, and the transitions between screens — so a diagram, a JSON file, and an HTML mockup stay the same hierarchy every later fidelity reads.
-- **Seam (terms):** UxModelFactory, UxMap, Screen, Region, Control, StoryDemoControl, Interaction, Transition, ContentType, NavComponent, UxContext
-- **Dependencies (one-way):** *(none)*
+- **Seam (terms):** UxMap, Screen, Region, Control, StoryDemoControl, StoryStep, Interaction, UxComponent, Transition, ContentType, NavComponent, UxContext, ReferencePaths, and one UxMap subclass per format
+- **Dependencies (one-way):** harness/graph (*BoundNode*, *BoundChildren*, *Graph*), harness/name (*Name*); the Claude Design story canvas also uses practices/stories/model (*DiagramStoryModel*, *StoryModel*) and harness/design_canvas (*DesignCanvas*)
 
-## UxModelFactory
+These dependencies are owned by the modules named; this model only uses them. A screen names the stories, scenarios, and steps it shows as text keyed the way Stories keys them; the graph turns each name into a `shownOn` edge from the Stories node to the screen (`harness/graph/schema_edges.py`). A link from one screen to another — a transition, a tab's chrome, an interaction's destination, a nav destination — holds the *Screen* itself, so renaming a screen keeps it.
 
-+ load(path: str): UxMap
-	// path is a file, or a folder of files
-	// the file type, or the files in the folder, selects the channel UX map
-	// that map loads itself
-	// the return is a UxMap
+## UxNode : BoundNode
 
-## UxMap
+Every node of the map. Each child belongs to its owner on the graph: a screen, transition, content type, nav component, and context to the map; a region to its screen; a control to its region; an interaction to its control.
 
-+ UxMap(source: UxMap)
-	// source empty: the map is empty until load
-	// source set: screens, transitions, content types, and nav components are this channel's types
-	// the source context becomes this channel's context
-	// the new map does not keep the source's channel types
++ UxNode(name: str, sequential_order: int, graph: Graph | None = None)
+
+## UxMap : UxNode
+
++ UxMap(name: str = "UxMap", sequential_order: int = 0, graph: Graph | None = None)
 ------
-+ file: str
 + scope: str
-+ story_references: list[str]
++ story_references: ReferencePaths
 	// paths to story JavaScript. A path is stored once
-+ object_references: list[str]
++ object_references: ReferencePaths
 	// paths to object-model JavaScript. A path is stored once
 + screens: list[Screen]
 	// composition — a screen has no map outside this UX map
-+ transitions: list[Transition]
++ transitions: Transitions
 	// composition
-+ content_types: list[ContentType]
++ content_types: ContentTypes
 	// composition
-+ nav_components: list[NavComponent]
++ nav_components: NavComponents
 	// composition
 + context: UxContext
 	// composition — the map has one context
-+ screen_type: type
-+ transition_type: type
-+ content_type: type
-+ nav_component_type: type
-+ context_type: type
++ workspace_files: tuple[str]
+	// class field: where this format's map sits in a folder, as glob patterns tried in order
 ----
-+ load(file: str): UxMap
-	// stores file, then runs the same walk for every channel
-	self.file = file
-	self.load_ux_map_content()
-	self.load_screens()
-	self.load_transitions()
-	self.load_content_types()
-	self.load_nav_components()
-	self.load_context()
-+ save(): str
-	// every channel writes its file with this operation
++ create(name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None): UxMap
+	// class operation: a new map, or, given a graph, the map already on that graph
++ from_workspace(root: Path): UxMap | None
+	// class operation: the map this format reads from its file in root; none when the folder has no such file
+	-> workspace_file(root)
+	-> parse
++ workspace_file(root: Path): Path | None
++ parse(content: str): UxMap
+	// each format: a new map of this class read from content
++ render(ux_map: UxMap): str
+	// each format: ux_map written in this format
 + append_screen(screen: Screen): None
-+ remove_screen(name: str): Screen
++ remove_screen(screen_name: str): Screen
 + find_screen(name: str): Screen
-	// a screen name is unique on the map
+	// raises ScreenNotOnMap when the map has no screen of that name
 + all_story_names(): list[str]
 	// the story names on the screens, each name once
-- load_ux_map_content(): None
-	// channel prepares its cursor over file
-- load_screens(): None
-	// while has_more_screen: append_screen(load_next_screen())
-- has_more_screen(): bool
-- load_next_screen(): Screen
-	// screen = get_next_screen_from_file()
-	// -> screen.load_regions()
-- get_next_screen_from_file(): Screen
-	// channel: the next screen shell from file, in screen_type
-- load_transitions(): None
-	// while has_more_transition: transitions.append(load_next_transition())
-- has_more_transition(): bool
-- load_next_transition(): Transition
-	// transition = get_next_transition_from_file()
-- get_next_transition_from_file(): Transition
-	// channel: the next transition, in transition_type
-- load_content_types(): None
-	// while has_more_content_type: content_types.append(load_next_content_type())
-- has_more_content_type(): bool
-- load_next_content_type(): ContentType
-- get_next_content_type_from_file(): ContentType
-- load_nav_components(): None
-	// while has_more_nav_component: nav_components.append(load_next_nav_component())
-- has_more_nav_component(): bool
-- load_next_nav_component(): NavComponent
-- get_next_nav_component_from_file(): NavComponent
-- load_context(): None
-	// context = get_context_from_file()
-- get_context_from_file(): UxContext
-	// channel: the context shell from file, in context_type
 
-## Screen
+## ScreenNotOnMap : KeyError
 
-+ Screen(source: Screen)
-	// copies name, order, slug, layout, description, and chrome
-	// each source region becomes this channel's region
-------
 + name: str
-+ sequential_order: int
+
+## Screen : UxNode
+
++ Screen(name: str, sequential_order: int, slug: str = "", layout: str = "", description: str = "", chrome_of: Screen | None = None, graph: Graph | None = None)
+	// slug defaults to the name's title slug
+------
 + slug: str
 + layout: str
 + description: str
-+ chrome_of: Screen
++ chrome_of: Screen | None
 	// the screen whose chrome this tab shares
 + inactive_tabs: list[str]
 + story_names: list[str]
-	// story links are names keyed the way Stories keys them; scenario_names and step_names add Story › Scenario and Story › Scenario › Step
-	// each story on the graph that the screen names records shownOn, and the screen records shows
+	// stories this screen shows, by name
++ scenario_names: list[str]
+	// scenarios this screen shows, as Story › Scenario
++ step_names: list[str]
+	// steps this screen shows, as Story › Scenario › Step
 + domain_terms: list[str]
 + domain_concepts: list[str]
++ image: str
+	// a capture of the screen
++ prototype: str
+	// the screen's Claude Design artboard; it wins over image wherever both exist
 + regions: list[Region]
 	// composition — a region has no screen outside this screen
-+ region_type: type
 ----
-+ apply_layout(layout: str): None
++ apply_layout(layout_id: str): None
 	// sets layout. The caller appends the regions. This does not create regions
 + append_region(region: Region): None
 + attach_story_name(story_name: str): None
-	// a story name is stored once
++ attach_scenario_name(scenario_name: str): None
++ attach_step_name(step_name: str): None
+	// each name is stored once, and the graph's shownOn edges follow it
 + attach_domain_term(term: str): None
-	// a term is stored once
-- load_regions(): None
-	// while has_more_region: append_region(load_next_region())
-- has_more_region(): bool
-- load_next_region(): Region
-	// region = get_next_region_from_file()
-	// -> region.load_controls()
-- get_next_region_from_file(): Region
-	// channel: the next region shell from the file, in region_type
 
-## Region
+## Region : UxNode
 
-+ Region(source: Region)
-	// copies name, order, and area
-	// a source StoryDemoControl becomes this channel's story demo control
-	// any other source control becomes this channel's control
++ Region(name: str, sequential_order: int, area: str = "", graph: Graph | None = None)
 ------
-+ name: str
-+ sequential_order: int
 + area: str
 + controls: list[Control]
 	// composition
-+ control_type: type
-	// the channel class that builds the next control. The string on Control is the widget kind
-+ story_demo_control_type: type
-	// the channel class used when the next control carries story steps
 ----
 + append_control(control: Control): None
-- load_controls(): None
-	// while has_more_control: append_control(load_next_control())
-- has_more_control(): bool
-- load_next_control(): Control
-	// control = get_next_control_from_file()
-	// -> control.load_interactions()
-- get_next_control_from_file(): Control
-	// channel: the next control shell, in control_type or story_demo_control_type
 
-## Control
+## Control : UxNode
 
-+ Control(source: Control)
-	// copies name, order, control type, label, and states
-	// each source interaction becomes this channel's interaction
++ Control(name: str, sequential_order: int, control_type: str = "", label: str = "", bound_field: str = "", graph: Graph | None = None)
 ------
-+ name: str
-+ sequential_order: int
 + control_type: str
 	// what the control is on the screen: button, field, list
 + label: str
+	// the name when none is given
++ bound_field: str
+	// the expose path this control displays. The control does not own the domain value
 + states: list[str]
 + interactions: list[Interaction]
 	// composition
-+ interaction_type: type
 ----
 + append_interaction(interaction: Interaction): None
-- load_interactions(): None
-	// while has_more_interaction: append_interaction(load_next_interaction())
-- has_more_interaction(): bool
-- load_next_interaction(): Interaction
-- get_next_interaction_from_file(): Interaction
 
 ## StoryDemoControl : Control
 
-+ StoryDemoControl(source: StoryDemoControl)
-	// copies the control fields, then the story-demo bindings
+A control that runs story steps in the Story Demo's Play and Interactive modes.
+
++ StoryDemoControl(name, sequential_order, control_type = "", label = "", bound_field = "", story_steps = None, set_input = "", item_story_steps = None, item_value = "", item_label = "", graph = None)
 ------
-+ bound_field: str
-	// the expose path this control displays. The control does not own the domain value
 + story_steps: list[StoryStep]
-	// each StoryStep is a kind and a label. Play emphasizes that step. Interactive runs the When
+	// Play emphasizes that step. Interactive runs the When
 + set_input: str
+	// the scenario input this control's value fills
 + item_story_steps: list[StoryStep]
+	// the When each item of a bound list runs
 + item_value: str
 + item_label: str
 
-## Interaction
+## StoryStep
 
-+ Interaction(source: Interaction)
-	// copies name, order, trigger, effect, and destination screen
+A story step a control runs: its kind (given, when, then) and the step text Stories wrote. Frozen.
+
++ kind: str
++ label: str
+----
++ from_value(value: StoryStep | Mapping): StoryStep
+	// class operation: a step from a file's {kind, label} object, or the step itself
++ as_dict(): dict
+
+## Interaction : UxNode
+
++ Interaction(name: str, sequential_order: int, trigger: str = "", effect: str = "", destination: Screen | None = None, graph: Graph | None = None)
 ------
-+ name: str
-+ sequential_order: int
 + trigger: str
+	// the name when none is given
 + effect: str
-+ destination: Screen
-	// association to a screen on the same map; a renamed screen keeps it
++ destination: Screen | None
+	// association to a screen on the same map
 
-## UxComponent
+## UxComponent : UxNode
 
-+ UxComponent(source: UxComponent)
-	// copies name and order
-------
-+ name: str
-+ sequential_order: int
+A structural peer of the screens on the map: a transition, a content type, or a nav component.
 
 ## Transition : UxComponent
 
-+ Transition(source: Transition)
-	// copies name, order, the two screens, trigger, and nav type
++ Transition(name: str, sequential_order: int, from_screen: Screen | None = None, to_screen: Screen | None = None, trigger: str = "", nav_type: str = "action", graph: Graph | None = None)
 ------
-+ from_screen: Screen
-+ to_screen: Screen
++ from_screen: Screen | None
++ to_screen: Screen | None
 + trigger: str
 + nav_type: str
+	// "tab" draws dashed on the site map
 
 ## ContentType : UxComponent
 
-+ ContentType(source: ContentType)
-	// copies name, order, hierarchy, and key actions
++ ContentType(name: str, sequential_order: int, hierarchy: str = "", graph: Graph | None = None)
 ------
 + hierarchy: str
 + key_actions: list[str]
 
 ## NavComponent : UxComponent
 
-+ NavComponent(source: NavComponent)
-	// copies name, order, UX type, and destinations
++ NavComponent(name: str, sequential_order: int, ux_type: str = "", graph: Graph | None = None)
 ------
 + ux_type: str
 + destinations: list[Screen]
 
-## UxContext
+## UxContext : UxNode
 
-+ UxContext(source: UxContext)
-	// copies notes and invariants
++ UxContext(name: str = "context", sequential_order: int = 0, graph: Graph | None = None)
 ------
 + notes: list[str]
 + invariants: list[str]
 
-## MarkdownUxNode
+## UxComponentCollection
 
-+ strip_markup(text: str): str
+One kind of *UxComponent* on the map. Appending records the map's edge to the component and renumbers the collection. *Transitions*, *ContentTypes*, and *NavComponents* each accept only their own type.
 
-## MarkdownUxMap : UxMap
-
-+ MarkdownUxMap(source: UxMap)
-------
-+ screen_type: MarkdownScreen
-+ context_type: MarkdownUxContext
++ UxComponentCollection(owner: UxNode)
 ----
-- load_ux_map_content(): None
-	// cursor is the markdown headings in file
-- has_more_screen(): bool
-	// a markdown file has no screens
-- has_more_transition(): bool
-- has_more_content_type(): bool
-- has_more_nav_component(): bool
-- get_context_from_file(): MarkdownUxContext
-+ save(): str
-	// scope, invariants, and notes
++ append(component: UxComponent): None
+	// raises TypeError for a component of another kind
++ remove(name: str): UxComponent
++ find(name: str): UxComponent
 
-## MarkdownScreen : Screen, MarkdownUxNode
+## ReferencePaths
 
-## MarkdownUxContext : UxContext, MarkdownUxNode
+Ordered paths to story or object-model JavaScript, each stored once.
 
-## JsonUxNode
++ ReferencePaths(paths: Iterable[str] | None = None)
+----
++ add(path: str): None
++ replace(paths: Iterable[str]): None
++ clear(): None
++ as_list(): list[str]
 
-+ record(): dict
-	// this node's JSON object
+---
+
+## Formats
+
+Each format class below is a *UxMap* subclass. It overrides `parse`, `render`, and `workspace_files`, and builds the base node types; a reader or writer class beside it holds the steps.
 
 ## JsonUxMap : UxMap
 
-+ JsonUxMap(source: UxMap)
-------
-+ screen_type: JsonScreen
-+ transition_type: JsonTransition
-+ content_type: JsonContentType
-+ nav_component_type: JsonNavComponent
-+ context_type: JsonUxContext
+The `json` format: the whole map as one JSON document; every other format can round-trip through it. Files: `ux-map.json`, `ux.json`.
+
 ----
-- load_ux_map_content(): None
-	// cursor is the JSON object in file
-- has_more_screen(): bool
-- get_next_screen_from_file(): JsonScreen
-- has_more_transition(): bool
-- get_next_transition_from_file(): JsonTransition
-- has_more_content_type(): bool
-- get_next_content_type_from_file(): JsonContentType
-- has_more_nav_component(): bool
-- get_next_nav_component_from_file(): JsonNavComponent
-- get_context_from_file(): JsonUxContext
-+ save(): str
++ parse(content: str | dict): UxMap
+	-> JsonUxMapReader.read
++ render(ux_map: UxMap): str
+	-> JsonUxMapWriter.map_record
 
-## JsonScreen : Screen, JsonUxNode
+## JsonUxMapReader
 
-+ region_type: JsonRegion
++ JsonUxMapReader(ux_map: UxMap, data: dict)
 ----
-- has_more_region(): bool
-- get_next_region_from_file(): JsonRegion
++ read(): UxMap
+	Invariant: every screen is on the map before any link to a screen is read, so a transition, a tab, or a destination names a screen that is already there
 
-## JsonRegion : Region, JsonUxNode
+## JsonUxMapWriter
 
-+ control_type: JsonControl
-+ story_demo_control_type: JsonStoryDemoControl
++ map_record(ux_map: UxMap): dict
+	// a link to a screen is written as that screen's name
+
+## HtmlUxMap : UxMap
+
+The `html` format: the mockup review page, product screens on the left and the story explorer on the right, with the JSON map embedded in a `ux-map-json` comment. Files: `{folder}.html`, `index.html`, `mockup.html`, `ux.html`.
+
 ----
-- has_more_control(): bool
-- get_next_control_from_file(): JsonControl
++ parse(content: str): UxMap
+	// raises UxMapNotEmbedded when the page carries no ux-map-json comment
+	-> JsonUxMap.parse
++ render(ux_map: UxMap): str
+	// fills templates/html/mockup_shell.html; each control carries the data attributes the Story Demo runner reads
 
-## JsonControl : Control, JsonUxNode
-
-+ interaction_type: JsonInteraction
-----
-- has_more_interaction(): bool
-- get_next_interaction_from_file(): JsonInteraction
-
-## JsonStoryDemoControl : StoryDemoControl, JsonUxNode
-
-## JsonInteraction : Interaction, JsonUxNode
-
-## JsonTransition : Transition, JsonUxNode
-
-## JsonContentType : ContentType, JsonUxNode
-
-## JsonNavComponent : NavComponent, JsonUxNode
-
-## JsonUxContext : UxContext, JsonUxNode
-
-## HtmlUxMap : JsonUxMap
-
-+ HtmlUxMap(source: UxMap)
-	// HtmlScreen for each screen, then the JSON child types under Html names
-------
-+ screen_type: HtmlScreen
-+ transition_type: HtmlTransition
-+ content_type: HtmlContentType
-+ nav_component_type: HtmlNavComponent
-+ context_type: HtmlUxContext
-----
-- load_ux_map_content(): None
-	// cursor is the ux-map-json comment in file. The reads are the JSON reads
-+ save(): str
-	// the mockup shell, with the JSON map embedded
-
-## HtmlScreen : JsonScreen
-
-+ region_type: HtmlRegion
-
-## HtmlRegion : JsonRegion
-
-+ control_type: HtmlControl
-+ story_demo_control_type: HtmlStoryDemoControl
-
-## HtmlControl : JsonControl
-
-+ interaction_type: HtmlInteraction
-
-## HtmlStoryDemoControl : JsonStoryDemoControl
-
-## HtmlInteraction : JsonInteraction
-
-## HtmlTransition : JsonTransition
-
-## HtmlContentType : JsonContentType
-
-## HtmlNavComponent : JsonNavComponent
-
-## HtmlUxContext : JsonUxContext
-
-## DrawioUxNode
-
-+ strip_html(value: str): str
-+ matches_screen(cell): bool
-	// a site-map vertex whose value is a screen name
-+ matches_region(cell): bool
-	// a detailed-IA vertex whose parent is a screen
-+ matches_transition(cell): bool
-	// a site-map edge between two screens
+## UxMapNotEmbedded : ValueError
 
 ## DrawioUxMap : UxMap
 
-+ DrawioUxMap(source: UxMap)
+The `drawio` format: a Site Map page and a Detailed IA page, written through the vendored drawio-ux command line (`drawio_ux.mjs`). Files: `information-architecture.drawio`, `ia.drawio`, `site-map.drawio`, any `.drawio` in the folder.
+
 ------
-+ screen_type: DrawioScreen
-+ transition_type: DrawioTransition
++ cli_timeout_seconds: float
 ----
-- load_ux_map_content(): None
-	// cursor is the Site Map page, then the Detailed IA page, in file
-- has_more_screen(): bool
-- get_next_screen_from_file(): DrawioScreen
-- has_more_transition(): bool
-- get_next_transition_from_file(): DrawioTransition
-- has_more_content_type(): bool
-	// a draw.io file has no content types
-- has_more_nav_component(): bool
-+ save(): str
-	// Site Map and Detailed IA
++ parse(content: str): UxMap
+	// JSON content reads through JsonUxMap; otherwise raises UnreadableDrawio when content is not XML
+	-> DrawioUxMapReader.read
++ render(ux_map: UxMap): str
+	// raises DrawioCliMissing, DrawioCliFailed, or DrawioCliTimedOut
+	-> ux_map_to_cli_state
 
-## DrawioScreen : Screen, DrawioUxNode
+## DrawioUxMapReader
 
-+ region_type: DrawioRegion
++ DrawioUxMapReader(ux_map: UxMap, root_element: Element)
 ----
-- has_more_region(): bool
-- load_next_region(): DrawioRegion
-	// returns the region and stops. No controls or interactions
-- get_next_region_from_file(): DrawioRegion
++ read(): UxMap
+	// screens from the Site Map page, then each screen's regions from the Detailed IA page, then the transitions drawn between screens. An edge labelled "there / back" is two transitions
 
-## DrawioRegion : Region, DrawioUxNode
+## MarkdownUxMap : UxMap
 
-## DrawioTransition : Transition, DrawioUxNode
+The `markdown` format: the scope, then the invariants and notes as bullet lists under their own headings. It carries no screens. Files: `.context/ux-context.md`, `ux-context.md`, `.context/context.md`, `context.md`.
 
-JSON continues through screens, regions, controls, interactions, transitions, content types, nav components, and context. HTML extends those JSON types. `HtmlUxMap.load_ux_map_content` takes the embedded JSON comment as its cursor, and `save` writes the mockup shell. Draw.io extends `UxMap` and stops at regions: `load_next_region` returns the region and does not call `load_controls`. Draw.io also reads transitions from site-map edges. Markdown stops at context. A markdown file has no screens, so `has_more_screen` is false, and `save` writes scope, invariants, and notes. A channel overrides only `has_more_*` and `get_next_*_from_file` for the nodes its file contains. `UxMap` loads screens, transitions, content types, nav components, and context. `Screen` loads regions. `Region` loads controls. `Control` loads interactions. `apply_layout` sets the layout name and does not create regions. `StoryDemoControl` is the control that carries `bound_field` and `story_steps`. Every UX map implements `save(): str`.
+----
++ parse(content: str): UxMap
+	-> MarkdownContextReader.read
++ render(ux_map: UxMap): str
+
+## MarkdownContextReader
+
++ MarkdownContextReader(ux_map: UxMap)
+----
++ read(content: str): None
+	// any line outside the scope, or a bullet under any other heading, is a note
+
+## ClaudeDesignUxMap : UxMap
+
+The `claude_design` format: one board per prototype screen, each on its own canvas page.
+
+------
++ folder: str
++ page: str
++ width: int
++ height: int
+----
++ render(ux_map: UxMap): str
+	// the boards as JSON
++ parse(content: str): UxMap
+	// raises ClaudeDesignScreensNotReadable: screens are placed from the UX map and edited on the canvas
++ prototype_names(screens): list[str]
++ names(screens, files = ()): list[str]
++ title(name: str): str
++ page_of(name: str): str
++ pages(screens, files = ()): list[dict]
++ boards(screens, files = ()): dict[str, dict]
+
+## ClaudeDesignStoryModel
+
+The Claude Design story canvas — the story map, the story explorer, and the screens each story is shown on — is a Stories *DiagramStoryModel* drawn in `claude_design/story_canvas.py`, described in `claude_design/story_canvas.md`. It reads this map's screens and *ClaudeDesignUxMap*'s page and folder.

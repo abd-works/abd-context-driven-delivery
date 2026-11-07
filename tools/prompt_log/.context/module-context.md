@@ -3,7 +3,7 @@
 
 - **Purpose:** Record what crossed to the model during a session without changing it.
 - **Seam (terms):** PromptLog
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/hooks` (*Hook*, *Hooks*), `space/repo` (*Repo*, for the open session), `space/work_state` (`project_checkout`)
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/hooks` (*Hook*, *Hooks*), `space/session` (*Sessions*, for the session open in the project the hook fired in)
 
 ## Constraint
 

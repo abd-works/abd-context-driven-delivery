@@ -1,13 +1,11 @@
-"""The chat a session.log line points at: the chat's id, its transcript file, and the transcript lines it covers."""
+"""The chat a tool call came from: the chat's id, its transcript file, and the transcript lines the call covers. A
+session.log line ends with it, so the chat's words can be read back under the line."""
 
 from __future__ import annotations
 
 import json
 import os
 import re
-from collections.abc import Iterator
-from contextlib import contextmanager
-from contextvars import ContextVar
 from pathlib import Path
 
 # A chat id becomes part of a file pattern, so only the letters, digits, and dashes of an id may reach it.
@@ -24,14 +22,12 @@ _LINES_ARGUMENTS = ("transcript_lines", "_transcript_lines")
 
 
 class ChatPointer:
-    """Which chat a session.log line came from, so ``read_loop`` can put that chat's words back under the line.
+    """Which chat a tool call, and the session.log line it writes, came from, so ``read_loop`` can put that chat's words
+    back under the line. Each *ToolCall* carries the chat it came from.
 
     The pointer is written as ``{id} {transcript} {lines}``: the chat's id, the path of its transcript, and the range
     of transcript lines, such as ``1-40``, that the line covers. A chat the server cannot name is written ``no-chat``.
     """
-
-    # The chat of the tool call being served. One cdd server serves every chat at once, so each call keeps its own.
-    _serving: ContextVar[ChatPointer | None] = ContextVar("cdd_chat_pointer", default=None)
 
     def __init__(self, id: str, transcript: Path | None = None, lines: str = "") -> None:
         self.id = id
@@ -76,25 +72,11 @@ class ChatPointer:
         return cls.of(chat_id, found) if found is not None else None
 
     @classmethod
-    def current(cls) -> ChatPointer | None:
-        """The chat of the tool call being served, or else the chat the environment names (``CDD_CONVERSATION_ID``,
-        ``CDD_TRANSCRIPT_PATH``, ``CDD_TRANSCRIPT_LINES``, which hooks and agent runs set)."""
-        serving = cls._serving.get()
-        if serving is not None:
-            return serving
+    def from_environment(cls) -> ChatPointer | None:
+        """The chat the environment names (``CDD_CONVERSATION_ID``, ``CDD_TRANSCRIPT_PATH``, ``CDD_TRANSCRIPT_LINES``),
+        which hooks and agent runs set for work that comes from no tool call; none when it names none."""
         chat_id = os.environ.get("CDD_CONVERSATION_ID", "") or os.environ.get("CDD_CHAT_ID", "")
         return cls.of(chat_id, os.environ.get("CDD_TRANSCRIPT_PATH", ""), os.environ.get("CDD_TRANSCRIPT_LINES", ""))
-
-    @classmethod
-    @contextmanager
-    def serving(cls, chat: ChatPointer | None) -> Iterator[None]:
-        """Make chat the current chat while one tool call runs, and put back the one before it when the call ends,
-        so a call never leaves its chat behind for the next chat's call."""
-        token = cls._serving.set(chat)
-        try:
-            yield
-        finally:
-            cls._serving.reset(token)
 
     @classmethod
     def in_log_line(cls, line: str) -> ChatPointer | None:

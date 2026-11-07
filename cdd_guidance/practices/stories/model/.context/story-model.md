@@ -2,7 +2,7 @@
 
 *StoryModel* is one story map: epics, the sub-epics nested under them, the stories in each, and the increments that slice them, then each story's backgrounds and scenarios down to steps and examples. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Every node is a graph node (*BoundNode*), so a loaded model is also the stories practice's part of the knowledge graph.
 
-Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, claude_design, python, typescript, java, javascript. `StoryModel(source)` copies any model into the subclass's node types; `parse` reads text in that format and `render(canonical, previous)` writes a model out. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro, claude_design) stop at stories and still read increments.
+Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, java, javascript. `StoryModel(source)` copies any model into the subclass's node types; `parse` reads text in that format and `render(canonical, previous)` writes a model out. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
 
 ```
 story_map = StoryModel.load(folder)            # story-map.md (or .json), increments, scenarios
@@ -13,7 +13,7 @@ drawio = DrawIOStoryModel().render(story_map)
 
 - **Purpose:** Keep stakeholder behaviour as one story model — epics, stories, and increments, then scenarios and steps — so a markdown file, a diagram, and a test file stay the same hierarchy every later fidelity reads.
 - **Seam (terms):** StoryNode, StoryModel, StoryModelFactory, Epic, Increment, Story, StoryType, Background, Scenario, Step, StepType, Example, Examples, SourceLocation, and one StoryModel subclass per format
-- **Dependencies (one-way):** harness/graph (*BoundNode*, *Graph*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*), practices/ux/model (*ClaudeDesignUxMap*) and harness/design_canvas (*DesignCanvas*), for the claude_design format
+- **Dependencies (one-way):** harness/graph (*BoundNode*, *Graph*), practices/clean_engineering/model (*CodeBody*, *CodeLanguage*, *WrittenBlock*, *CallGraphEntry*), actions/sketch (*SketchOutline*, *SketchLens*)
 
 These dependencies are owned by the modules named; this model only uses them. *GraphStoryModel* writes a loaded model onto the stories practice graph; cross-practice links from steps and examples to Clean Engineering nodes are recorded there.
 
@@ -317,18 +317,6 @@ The `miro` format: a canvas-composer SVG, with increments as a thin-slice table.
 ----
 + load(text: str): MiroStoryModel
 + save(): str
-
-## ClaudeDesignStoryModel : DiagramStoryModel
-
-The `claude_design` format: the story map as a design canvas page, with each story's screens beside it. Nodes: ClaudeDesignEpic, ClaudeDesignStory.
-
-----
-+ render(canonical: StoryModel | None = None, previous: str | None = None, workspace: str | None = None, screens = None, sources: dict | None = None): str
-	// the canvas files as JSON; screens come from the UX map beside the canvas when none are given
-+ parse(text: str): ClaudeDesignStoryModel
-	// raises NotImplementedError: a canvas is rendered from the story map, never read back
-+ files(): dict[str, str]
-+ canvas(): DesignCanvas
 
 ## CodeStoryModel : StoryModel
 

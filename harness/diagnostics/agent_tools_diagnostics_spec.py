@@ -19,7 +19,6 @@ RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 from expects import contain, equal, expect
 from mamba import after, before, description, it
 from space.session.throwaway_project import ThrowawayProject
-from space.work_state import project_folder
 
 from harness.diagnostics.agent_tools_diagnostics import AgentToolsDiagnostics
 from harness.mcp.mcp_server import McpHost
@@ -36,18 +35,18 @@ _AGENT_TOOLS_DIAGNOSTICS_REF = (
 _DIAGNOSTICS_SECONDS = 150
 
 
-def _call_agent_tools_diagnostics() -> tuple[float, str]:
+def _call_agent_tools_diagnostics(project: Path) -> tuple[float, str]:
     """Run the diagnostics tool through a real cdd server, as a chat working on the spec's own project does."""
     server = SpecServer((_AGENT_TOOLS_DIAGNOSTICS_REF,))
     server.start()
     try:
-        return asyncio.run(_timed_diagnostics(server))
+        return asyncio.run(_timed_diagnostics(server, project))
     finally:
         server.stop()
 
 
-async def _timed_diagnostics(server: SpecServer) -> tuple[float, str]:
-    async with server.chat(project_folder(), _DIAGNOSTICS_SECONDS) as session:
+async def _timed_diagnostics(server: SpecServer, project: Path) -> tuple[float, str]:
+    async with server.chat(project, _DIAGNOSTICS_SECONDS) as session:
         started = time.perf_counter()
         result = await session.call_tool("agent-tools-diagnostics.agent_tools_diagnostics", arguments={})
         return time.perf_counter() - started, result.content[0].text
@@ -70,7 +69,7 @@ def _installer(
 with description("mcp tools diagnostics"):
     # Actions log to the open session, so each example works on its own project rather than this repository's.
     with before.each:
-        ThrowawayProject()
+        self.project = ThrowawayProject()
 
     with after.each:
         ThrowawayProject.close_all()
@@ -107,7 +106,7 @@ with description("mcp tools diagnostics"):
         expect(tool.kind).to(equal("tool"))
 
     with it("should complete agent-tools-diagnostics through the cdd server within two minutes"):
-        elapsed, text = _call_agent_tools_diagnostics()
+        elapsed, text = _call_agent_tools_diagnostics(self.project.root)
         expect(elapsed < 120.0).to(equal(True))
         expect("green" in text.split("\n")[0]).to(equal(True))
         expect("invoke:" in text).to(equal(True))

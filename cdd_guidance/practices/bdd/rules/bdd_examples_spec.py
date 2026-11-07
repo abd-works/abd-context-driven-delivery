@@ -3,15 +3,13 @@
 import sys
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parents[1]
-for path in (_HERE, _REPO):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+_REPO = Path(__file__).resolve().parents[4]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
 from mamba import context, description, it
 
-from harness.graph.bdd_example_harness import assert_bdd_source_pair
+from cdd_guidance.practices.bdd.rules.rule_examples import assert_bdd_source_pair
 
 _EXAMPLES = _REPO / "cdd_guidance/practices/bdd/model/python/_examples"
 _LAYER_FAULT = (_EXAMPLES / "layer-isolation/widget_spec.py").read_text(encoding="utf-8")

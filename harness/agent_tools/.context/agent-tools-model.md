@@ -1,6 +1,6 @@
 # agent_tools — class model (model fidelity)
 
-Markdown channel for the *AgentToolSet* primitive. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet* is the toolset the author marks with `@agent_toolset`; its members are *AgentTool* objects — *AgentOperation* for `@agent_tool` and *AgentInstructions* for `@agent_instructions`. Writing members out to MCP, skills, commands, rules, and hooks belongs to `harness/installation`, `harness/mcp`, and `harness/hooks`; *Mark* and *Destination* belong to `harness/installation`, *Session* to `space/session`, and *Markdown* to `harness/markdown`, and they appear here only as names this module uses.
+Markdown channel for the *AgentToolSet* primitive. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet* is the toolset the author marks with `@agent_toolset`; its members are *AgentTool* objects — *AgentOperation* for `@agent_tool` and *AgentInstructions* for `@agent_instructions`. Writing members out to MCP, skills, commands, rules, and hooks belongs to `harness/installation`, `harness/mcp`, and `harness/hooks`. *Mark* and *Destination* belong to `harness/marks`, *Name* to `harness/name`, *Markdown* to `harness/markdown`, *Session* to `space/session`, *SubAgent* (the `sub-agent.sub_agent` operation) to `harness/sub_agent`, and *AgentToolsProbe* and *AgentToolsDiagnostics* to `harness/diagnostics`; they appear here only as names this module uses.
 
 **Out of scope:** guidance actions (`harness/guidance_actions`, Generate, Validate, …) keep their own model; *GuidanceAgentOperation* is listed only because this module defines it.
 
@@ -16,7 +16,9 @@ Each *AgentTool* exposes `kind`, `description`, `parameters`, `response`, and `i
 - Inside an `@agent_instructions` body, `tools(...)` names operations the agent calls while following the recipe, and `instructions(...)` includes another recipe inline. A recipe that includes itself is rejected when the class is decorated.
 - *ExpansionMode* on the called toolset decides whether a nested recipe expands inline (`instructions`) or is listed as a tool to call (`tool`).
 - `@toolset_collection` on a class makes it a *ToolSetCollection*; on a property it marks one of the toolset's collections, whose children are published as nested toolsets.
-- `@tool_subject` marks the class method that loads the object a tool call acts on; `@noSessionLog` keeps a repeated read out of the session log.
+- `@tool_subject` marks the class method that loads the object a tool call acts on; a loader that takes `project` is handed the checkout the call names. `@noSessionLog` keeps a repeated read out of the session log.
+- `@subAgent` on a member puts the hand-off to a background sub-agent at the start of its description.
+- A toolset's `parameter_notes` are added after the description of every tool that takes that parameter.
 
 ---
 
@@ -48,6 +50,8 @@ mode: ExpansionMode
 	Invariant: value is "instructions" or "tool"
 HOSTED_ONLY_CLASS_NAMES: frozenset[str]
 	// classes whose tools run only through the practice or toolset that holds them; install and the hook server skip them
+parameter_notes: dict[str, str]
+	// parameter name -> note added after the description of each tool that takes it
 ----
 tools_for(destination: str): list[AgentTool]
 	-> AgentTool.install_to
@@ -58,6 +62,13 @@ from_items(items: list, context: dict | None = None, skip_errors: bool = False):
 	// one instance per toolset class
 tool_subject_of(toolset: type): Callable | None
 	// the @tool_subject loader, given the called project when it takes one
+given_the_called_project(operation: Callable): Callable
+	// a class operation that takes project, with project left out of its signature
+for_call(call: ToolCall): AgentToolSet
+	// this toolset as the call works on it; self unless the toolset keeps state of one call (a guidance action)
+session_for(call: ToolCall): Session | None
+	// the session this toolset's tools log the call in
+	-> call.session
 validate(): None
 	Invariant: a recipe body names callable operations only through tools(...) and nested recipes only through instructions(...)
 	Invariant: nested instructions(...) may not form a cycle
@@ -98,13 +109,14 @@ destinations: list[str]
 install_to(destination: str): bool
 invoke_line(): str
 	// the "Use MCP tool:" line a skill or command ends with
-invoke(arguments: dict | None = None, project: Path | None = None): Any
+invoke(arguments: dict | None = None, *, project: Path | None = None): Any
 	-> answer(ToolCall(arguments, project))
 answer(call: ToolCall): Any
-	// runs on the toolset made for the call, toolset.for_call(call); a callable that takes the project is handed call.project
+	// runs on the toolset made for the call; a callable marked as taking the project is handed call.project
 	-> on(toolset.for_call(call)).log_session_invocation(call)
 	-> ParameterSchema.coerced
 	// then call the callable
+	// raises CallNamesNoProject when the callable takes the project and the call names none
 on(toolset: AgentToolSet): AgentTool
 	// this tool on a toolset of the same class made for one call
 log_session_invocation(call: ToolCall): None
@@ -120,16 +132,60 @@ AgentOperation(name: str, callable: Callable, toolset: AgentToolSet)
 
 ## ToolCall                                                      <!-- Md -->
 
-One call of a tool: the arguments its caller sent and the folder of the project the calling chat works on. A tool reads its project, and the session open there, from its own call, because one cdd server answers every chat.
+One call of a tool: the arguments its caller sent, the folder of the project the calling chat works on, and that chat. A tool reads its project, its chat, and the session open there from its own call, because one cdd server answers every chat.
 
-ToolCall(arguments: dict | None = None, project: Path | None = None)
+ToolCall(arguments: dict | None = None, project: Path | None = None, chat: ChatPointer | None = None)
 ------
 arguments: dict
 project: Path | None
+chat: ChatPointer | None
 session: Session | None
-	// the session saved as open in the project's checkout, read once for this call; none when the call names no project
-	-> Sessions.saved
+	// the session saved as open in the project's checkout, read once for this call; none when the call names no project or no opener is registered
+	-> SessionOpener.open_in(self)
 ----
+sent(arguments: dict | None, project: Path | None): ToolCall
+	// the chat named in the arguments is taken out and kept as the call's chat
+	-> ChatPointer.taken_from
+open_sessions_with(opener: SessionOpener): None
+	// space/session registers its opener when it is imported, so this module never imports space
+session_named(session_file: str): Session
+	// the session a board command names by its session.json
+	-> SessionOpener.named_in(session_file, self)
+	// raises SessionsNotLoaded when no opener is registered
+
+## SessionOpener                                                 <!-- Md -->
+
+How a call finds the sessions it works in. A protocol: the module that keeps sessions (`space/session`) implements it.
+
+SessionOpener
+------
+----
+open_in(call: ToolCall): Session
+named_in(session_file: str, call: ToolCall): Session
+
+## ChatPointer                                                   <!-- Md -->
+
+The chat a tool call came from: its id, its transcript file, and the transcript lines the call covers. Every session.log line a call writes ends with it, so `read_loop` can put the chat's words back under the line.
+
+ChatPointer(id: str, transcript: Path | None = None, lines: str = "")
+------
+id: str
+transcript: Path | None
+lines: str
+	// a range such as "1-40"
+is_missing: bool
+	// true for the no-chat pointer
+line_range: tuple[int, int]
+----
+of(chat_id: str, transcript: str | Path | None, lines: str = ""): ChatPointer | None
+taken_from(arguments: dict | None): tuple[ChatPointer | None, dict]
+	// the chat named in a call's arguments, and the arguments left for the tool
+from_claude_chat(chat_id: str): ChatPointer | None
+from_environment(): ChatPointer | None
+	// CDD_CONVERSATION_ID, CDD_TRANSCRIPT_PATH, CDD_TRANSCRIPT_LINES, for work that comes from no tool call
+in_log_line(line: str): ChatPointer | None
+in_chat_file(path: Path): tuple[ChatPointer, str]
+transcript_text(): list[str]
 
 ## GuidanceAgentOperation : AgentOperation                        <!-- Md -->
 
@@ -139,7 +195,7 @@ GuidanceAgentOperation(name: str, callable: Callable, toolset: AgentToolSet)
 ------
 ----
 log_session_invocation(call: ToolCall): None
-	-> toolset._log_running_action
+	-> toolset._log_running_action(name)
 
 ## AgentInstructions : AgentTool                                  <!-- Md -->
 
@@ -152,10 +208,11 @@ tools: list[str]
 result_template: str
 ----
 for_callable(callable: Callable, instance: AgentToolSet | None = None): AgentInstructions
-expand(context: dict, arguments: dict): ExpansionResult
+expand(arguments: dict): ExpansionResult
 	// raises RecipeLineFailed when a recipe line raises
 answer(call: ToolCall): str
 	// the instructions an agent follows for this call, expanded by the toolset made for it, with the session context of a guidance action appended
+	-> on(toolset.for_call(call)).log_session_invocation(call)
 	-> expand
 substitute_template(template: str, arguments: dict, parameter_names: set[str], instance: Any = None): str
 
@@ -174,6 +231,20 @@ ExpansionResult(instructions: str, tools: list[str], result: str)
 instructions: str
 tools: list[str]
 result: str
+----
+
+## InstallDestination                                             <!-- Md -->
+
+The channels a member is published to, in the order a tool lists them. Each channel's mark is a *Destination* its publisher defines, so this module names the channels and never imports the publishers.
+
+InstallDestination
+------
+MCP = "mcp"
+HOOK = "hook"
+SKILL = "skill"
+COMMAND = "command"
+RULE = "rules"
+LISTED: tuple[str, ...]
 ----
 
 ## ToolSetCollection                                              <!-- Md -->
@@ -201,24 +272,6 @@ Collect(fn: Callable): property
 ----
 of(collection: Any, name: str, return_type: Any): Any
 
-## Name                                                           <!-- Md -->
-
-One name written in several cases, so a class name, a toolset slug, and a published tool name always agree.
-
-Name(text: str)
-------
-words: list[str]
-snake: str
-kebab: str
-camel: str
-spellings: list[str]
-title_words: list[str]
-title_slug: str
-title_snake: str
-title_pascal: str
-title_camel: str
-----
-
 ## ParameterSchema                                                <!-- Md -->
 
 The parameters a caller passes to one callable, read from its type hints, so the schema MCP publishes and the arguments it hands on agree.
@@ -230,41 +283,6 @@ json_schema: dict
 coerced(arguments: Mapping): dict
 	// text sent for a Path parameter becomes a Path
 
-## SubAgent                                                       <!-- Md -->
-
-The `sub-agent.sub_agent` operation; `@subAgent` on a member prepends the hand-off instructions to its description.
-
-SubAgent()
-------
-----
-sub_agent(instructions: str, summary: str = ""): str
-
-## AgentToolsProbe                                                <!-- Md -->
-
-Checks the space, harness, and tools operations one install published, through the running MCP server.
-
-AgentToolsProbe(installer: Installer, guidance: list[str] | None = None)
-------
-toolset_refs: tuple[str, ...]
-published: list[str]
-host: Any
-	// the running CDD MCP server; raises ProbeRequiresServingHost when none is serving
-----
-run(): str
-	// ping, invoke, and heavy invoke; on a one-off server when none is serving
-run_standalone(): str
-ping(): str
-invoke(host: Any | None = None): str
-
-## AgentToolsDiagnostics                                          <!-- Md -->
-
-AgentToolsDiagnostics()
-------
-----
-agent_tools_diagnostics(guidance: list[str] | None = None): str
-	// appends results under agent_tools in diagnostics.json
-	-> AgentToolsProbe.run
-
 ## AgentToolValidationError : Exception                           <!-- Md -->
 
 AgentToolValidationError(message: str, class_name: str = "", action_name: str = "", lineno: int | None = None)
@@ -272,6 +290,15 @@ AgentToolValidationError(message: str, class_name: str = "", action_name: str = 
 class_name: str
 action_name: str
 lineno: int | None
+----
+
+## CallNamesNoProject : Exception                               <!-- Md -->
+
+A tool that acts on a project's objects was called without naming the project.
+
+CallNamesNoProject(tool: str)
+------
+tool: str
 ----
 
 ## RecipeLineFailed : Exception                                   <!-- Md -->

@@ -1,4 +1,4 @@
-"""Run PracticeGraphRule checks against a real working-copy build of small fixture trees.
+"""Spec support: run Clean Engineering graph rules against a real working-copy build of small fixture trees.
 
 Fixtures go through the same path as a live load: language parser, model nodes loading
 their own facts, each node holding its parsed object, rules reading ``node.get_fact``.
@@ -14,6 +14,7 @@ from harness.graph.rule_context import RuleCheckContext
 
 _SUFFIX = {"python": ".py", "typescript": ".ts", "javascript": ".js"}
 FIXTURE_FOLDER = "example"
+_PRACTICE = Path(__file__).resolve().parents[1]
 
 
 def ce_rule_by_slug(slug: str):
@@ -90,8 +91,8 @@ def assert_files_rule_pair(slug: str, fault_files: dict[str, str], clean_files: 
 
 def example_asset_paths(slug: str, *, channel: str = "python") -> tuple[Path, Path]:
     root = (
-        Path(__file__).resolve().parents[2]
-        / "cdd_guidance/practices/clean_engineering/model"
+        _PRACTICE
+        / "model"
         / channel
         / "_examples"
         / slug
@@ -108,3 +109,24 @@ def assert_python_example_pair(slug: str) -> None:
         repaired_path.read_text(encoding="utf-8"),
         lang="python",
     )
+
+
+def _example_files(folder: Path) -> dict[str, str]:
+    """The example's asset plus its `.context` files, placed in one fixture folder."""
+    files: dict[str, str] = {}
+    for path in folder.rglob("*"):
+        if path.is_file() and "__pycache__" not in path.parts:
+            relative = path.relative_to(folder).as_posix()
+            files[f"{FIXTURE_FOLDER}/{relative}"] = path.read_text(encoding="utf-8")
+    return files
+
+
+def assert_module_example_pair(slug: str) -> None:
+    rule = ce_rule_by_slug(slug)
+    root_path = _PRACTICE / "model" / "python" / "_examples" / slug
+    fault_hits = violations_for_rule(rule, *practice_from_files(_example_files(root_path / "faulty")))
+    clean_hits = violations_for_rule(rule, *practice_from_files(_example_files(root_path / "repaired")))
+    if not fault_hits:
+        raise AssertionError(f"{slug}: expected fault violations, got none")
+    if clean_hits:
+        raise AssertionError(f"{slug}: expected clean, got {clean_hits!r}")

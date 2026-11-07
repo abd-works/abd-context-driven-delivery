@@ -5,7 +5,7 @@
 
 - **Purpose:** Keep the software in the business's language, with each rule held in the aggregate that owns it, before any technical detail is added.
 - **Seam (terms):** Ddd, BoundedContextMap, `ddd.instructions`, `ddd-bounded-context`, `ddd-model`, `ddd-tactics`, `render`
-- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering/model` (class model, its markdown and draw.io formats). The class model imports DDD's stereotypes back and `harness/graph` imports DDD's model back — cycles tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
+- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `cdd_guidance/actions/sketch` (*SketchOutline*), `cdd_guidance/practices/clean_engineering/model` (class model, its markdown and draw.io formats). Neither the class model nor harness imports DDD back; the spec support that runs its rules on examples is its own `rules/rule_examples.py`.
 
 ## Constraint
 

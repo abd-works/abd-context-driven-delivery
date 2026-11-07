@@ -1,7 +1,6 @@
 """BDD spec for a session's handoff: Session.write_handoff and the handoff_session instructions (session.py)."""
 
 import json
-import os
 import sys
 import tempfile
 from pathlib import Path
@@ -19,15 +18,8 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session.session import Session, SessionNotFoundError
-from space.session.sessions import Sessions
+from space.session.sessions import Sessions
 from space.session.throwaway_project import ThrowawayProject
-
-
-def _restore_project(previous: str | None) -> None:
-    if previous is None:
-        os.environ.pop("CDD_PROJECT", None)
-    else:
-        os.environ["CDD_PROJECT"] = previous
 
 
 def _open_session(root: Path, name: str = "my-session") -> Path:
@@ -62,13 +54,10 @@ with description("a session writing a handoff"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            self._prev_project = os.environ.get("CDD_PROJECT")
-            os.environ["CDD_PROJECT"] = str(self.root)
             _save_current(self.root, "my-session")
-            self.session = Sessions().current()
+            self.session = Sessions(self.root).current()
 
         with after.each:
-            _restore_project(self._prev_project)
             self.tmp.cleanup()
 
         with it("should write a file named handoff-{timestamp}.md in that session's folder"):
@@ -109,44 +98,24 @@ with description("a session writing a handoff"):
         with it("should ignore a session open in another checkout"):
             other = self.root / "tool-checkout"
             _open_session(other, "someone-elses-session")
-            path = Path(Sessions().current().write_handoff("content"))
+            path = Path(Sessions(self.root).current().write_handoff("content"))
             expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "my-session"))
 
     with context("with a project that has no named current session"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.root = Path(self.tmp.name)
-            self._prev_project = os.environ.get("CDD_PROJECT")
-            os.environ["CDD_PROJECT"] = str(self.root)
 
         with after.each:
-            _restore_project(self._prev_project)
             self.tmp.cleanup()
 
         with it("should write into the main session folder"):
-            path = Path(Sessions().current().write_handoff("content"))
+            path = Path(Sessions(self.root).current().write_handoff("content"))
             expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
 
         with it("should write into the main session folder when the saved current is main"):
             _save_current(self.root, "main")
-            path = Path(Sessions().current().write_handoff("content"))
-            expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
-
-    with context("with no CDD_PROJECT"):
-        with before.each:
-            self.tmp = tempfile.TemporaryDirectory()
-            self.root = Path(self.tmp.name)
-            self._prev_project = os.environ.pop("CDD_PROJECT", None)
-            self._prev_cwd = Path.cwd()
-            os.chdir(self.root)
-
-        with after.each:
-            os.chdir(self._prev_cwd)
-            _restore_project(self._prev_project)
-            self.tmp.cleanup()
-
-        with it("should write under the current working folder's main session"):
-            path = Path(Sessions().current().write_handoff("content"))
+            path = Path(Sessions(self.root).current().write_handoff("content"))
             expect(path.parent).to(equal(self.root.resolve() / ".sessions" / "main"))
 
 

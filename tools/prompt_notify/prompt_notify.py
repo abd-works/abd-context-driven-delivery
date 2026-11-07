@@ -24,21 +24,14 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.name.name import Name
 from harness.installation.destination import noCatalog
-from harness.marks.mark import Destination
-from harness.hooks.hook_server import HookPayload
+from harness.marks.mark import Toast
+from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
 from harness.hooks.hooks import Hook
-
-
-class Toast(Destination):
-    """Mark an AgentOperation or AgentInstructions so PromptNotify toasts it when an agent calls it."""
-
-    flag = "_toast"
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
 IDE_TOAST_EXTENSION = "cdd.prompt-notify-0.0.1"
 _YAML_ACTION = re.compile(r"\baction:\s*([A-Za-z0-9_-]+)", re.I)
 _SKIP_BEGIN_FALLBACK = frozenset({"open_workspace", "end", "begin"})
-_ARROW = " \u2192 "
 _SAME_BURST_SECONDS = 2
 _SKILL_DIRS = ("/.cursor/skills/", "/.claude/skills/")
 _RULE_DIRS = ("/.cursor/rules/", "/.claude/rules/")
@@ -98,7 +91,7 @@ class PromptNotify:
         result = self.handle(payload, toolsets=self.echo_toolsets())
         message = result.get("user_message")
         if message:
-            PromptNotify(toast_roots=payload.workspace_roots).show_ide_toast(str(message))
+            self.show_toast(str(message), payload.workspace_roots)
         return result
 
     def handle(self, payload: HookPayload, toolsets: list | None = None) -> dict:
@@ -109,7 +102,7 @@ class PromptNotify:
             return {"permission": "allow"}
         kind, label = detected
         self._log_echo(payload.tool_name, kind, label)
-        return {"permission": "allow", "user_message": f"{kind.title()}{_ARROW}{label}"}
+        return {"permission": "allow", "user_message": f"{kind.title()}{TOAST_ARROW}{label}"}
 
     def detect_echo(
         self, payload: HookPayload, toolsets: list | None = None
@@ -141,6 +134,12 @@ class PromptNotify:
             type(self)._echo_toolsets = loaded
         return loaded
 
+    @classmethod
+    def show_toast(cls, toast: str, workspace_roots: list[Path]) -> Path:
+        """Show toast in this checkout and in every workspace folder of the chat it is for. The hook server hands each
+        hook's toast here, so a hook names its toast and never this notifier."""
+        return cls(toast_roots=workspace_roots).show_ide_toast(toast)
+
     def show_ide_toast(self, echo: str) -> Path:
         dest = self._toast_path(self.repo)
         self._toast_dest = dest
@@ -152,9 +151,6 @@ class PromptNotify:
         for path in self._toast_destinations(dest):
             self._write_notice(path, notice)
         return dest
-
-    def inject_rules_toast(self, source: str, labels: list[str]) -> str:
-        return f"{source}{_ARROW}rules : {', '.join(labels)}"
 
     def chat_edit_source(self, payload: HookPayload) -> str:
         """Name the chat that edited the file, so the toast is not shared across chats."""
@@ -500,10 +496,10 @@ class PromptNotify:
     def _join_arrow_toasts(self, previous: str, incoming: str) -> str:
         if incoming in previous:
             return previous
-        if _ARROW not in previous or _ARROW not in incoming:
+        if TOAST_ARROW not in previous or TOAST_ARROW not in incoming:
             return f"{previous}; {incoming}"
-        prev_src, prev_rest = previous.split(_ARROW, 1)
-        inc_src, inc_rest = incoming.split(_ARROW, 1)
+        prev_src, prev_rest = previous.split(TOAST_ARROW, 1)
+        inc_src, inc_rest = incoming.split(TOAST_ARROW, 1)
         if prev_src.strip() != inc_src.strip() or not self._rules_rest(prev_rest) or not self._rules_rest(inc_rest):
             return f"{previous}; {incoming}"
         names: list[str] = []
@@ -512,4 +508,7 @@ class PromptNotify:
         ) + self._guidance_names_from_toast_rest(inc_rest):
             if name not in names:
                 names.append(name)
-        return f"{prev_src.strip()}{_ARROW}rules : {', '.join(names)}"
+        return rules_toast(prev_src.strip(), names)
+
+
+HookServer.show_toasts_with(PromptNotify.show_toast)

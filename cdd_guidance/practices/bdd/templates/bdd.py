@@ -58,9 +58,9 @@ with description('{DomainEntity}'):
             expect(self.entity.{property}).to(equal({expected_value}))
 
 
-# Rule example pair — mechanical mistake specs use the practice's example harness in harness/graph
+# Rule example pair — a mechanical mistake spec uses the rule examples in its practice's rules folder
 # (assert_rule_pair, assert_bdd_source_pair, assert_ddd_example_pair, assert_stories_example_pair).
-from ce_rule_eval_harness import assert_rule_pair
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import assert_rule_pair
 
 with description('the {Rule} rule'):
     with context('on a failing example and its repaired example'):

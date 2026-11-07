@@ -8,7 +8,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from cdd_guidance.practices.stages import STAGES
+from harness.guidance.stages import STAGES
 
 CATALOG = Path(__file__).resolve().parents[2] / "cdd_guidance" / "catalog"
 

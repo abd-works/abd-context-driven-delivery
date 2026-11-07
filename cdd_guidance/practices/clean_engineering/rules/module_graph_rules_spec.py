@@ -3,7 +3,7 @@
 from expects import equal, expect
 from mamba import context, description, it
 
-from harness.graph.ce_rule_eval_harness import ce_rule_by_slug, practice_from_files, violations_for_rule
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import ce_rule_by_slug, practice_from_files, violations_for_rule
 
 _CLASS = "class Cart:\n    def add(self) -> None:\n        return None\n"
 

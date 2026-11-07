@@ -9,7 +9,7 @@ if str(_REPO) not in sys.path:
 
 from mamba import context, description, it
 
-from harness.graph.bdd_example_harness import assert_bdd_source_pair
+from cdd_guidance.practices.bdd.rules.rule_examples import assert_bdd_source_pair
 
 _FAULT = """
 with description("a bare agentic toolset registered for deploy"):

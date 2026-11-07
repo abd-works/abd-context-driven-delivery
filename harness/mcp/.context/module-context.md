@@ -5,7 +5,7 @@
 
 - **Purpose:** Let any chat, in any project, call the operations authors mark `@mcp`, through one long-running server that keeps each project's toolsets apart.
 - **Seam (terms):** Mcp, McpHost, McpInstallation, McpDaemon, CddHome, ProjectNotNamed; the mark `@mcp`; `serving_mcp_host()`; the MCP operations `cdd.ping` and `cdd.restart`; `python -m harness.mcp`
-- **Dependencies (one-way):** harness/agent_tools, harness/marks (*Destination*), harness/installation (*Installation*, *RepositoryToolsets*, `data_of`), harness/process (the daemon starts and stops its process the way the hook server does), space/session (*ChatPointer*, the chat a call came from), space/work_state (each call still runs inside `working_on(project)` for space code that reads its project from there rather than from its call). Of these, only space/session imports this module back, so the two space imports are what keep it in a cycle (`.sessions/_backlog/break-module-dependency-cycles.md`).
+- **Dependencies (one-way):** harness/agent_tools (*ToolCall*: each request becomes `ToolCall.sent(arguments, project)`, which carries the project and the chat the request came from to the tool and to the session it logs in), harness/marks (*Destination*), harness/installation (*Installation*, *RepositoryToolsets*, `data_of`), harness/process (the daemon starts and stops its process the way the hook server does). It imports nothing above the framework.
 
 ## Constraint
 

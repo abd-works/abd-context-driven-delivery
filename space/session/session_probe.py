@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from space.work_state import working_on
+from harness.agent_tools.chat_pointer import ChatPointer
 
 _SESSION_PROBE_NAME = "guidance-probe"
 _CDD_REPO = Path(__file__).resolve().parents[2]
@@ -22,14 +22,10 @@ def probe_session_log() -> dict[str, Any]:
     (repo / ".git").mkdir()
     work = repo / "work"
     work.mkdir()
-    # The probe runs inside the one cdd server, so it names its own project and chat for this call only; every other
-    # chat's calls keep theirs.
-    with working_on(work):
-        return _probe_in(repo, work)
+    return _probe_in(repo, work)
 
 
 def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
-    from space.session.chat_pointer import ChatPointer
     from space.session.sessions import Sessions
 
     try:
@@ -44,9 +40,10 @@ def _probe_in(repo: Path, work: Path) -> dict[str, Any]:
         from cdd_guidance.actions.generate.generate import Generate
         from cdd_guidance.actions.validate.validate import Validate
 
-        with ChatPointer.serving(ChatPointer("guidance-probe", transcript, "1")):
-            Generate(sessions.current()).generate(["bdd"])
-            Validate(sessions.current()).validate(["bdd"])
+        # The probe's session is opened for its own chat, so its log lines point there and no other chat's do.
+        session.chat = ChatPointer("guidance-probe", transcript, "1")
+        Generate(session).generate(["bdd"])
+        Validate(session).validate(["bdd"])
 
         log_path = session.log.path
         log_text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""

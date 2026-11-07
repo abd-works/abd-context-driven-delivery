@@ -71,4 +71,4 @@ with description("a worktree opened for a branch") as self:
                 expect(self.reply).to(contain("not updated from origin"))
 
             with it("should still open the worktree folder"):
-                expect(WorkState(self.clone).worktree.path.is_dir()).to(be_true)
+                expect(WorkState(self.clone).worktree_folder.is_dir()).to(be_true)

@@ -118,19 +118,19 @@ with description("Stories"):
                 expect([len(story.scenarios) for story in self.model.every_story()]).to(equal([1]))
 
         # The MCP host serves every project from its own folder, so the paths a call names are read from the project
-        # that call works on, and each node names its file from there.
-        with context("that reads a story map named from a project the host does not run in"):
+        # of the session the practice works in, and each node names its file from there.
+        with context("that reads a story map named from its session's project, which the host does not run in"):
             with before.each:
                 import tempfile
 
-                from space.work_state import working_on
+                from space.session.session import Session
 
                 self.root = Path(tempfile.mkdtemp(prefix="cdd-story-project-"))
                 story_map = self.root / "tests" / "story-map.md"
                 story_map.parent.mkdir(parents=True)
                 story_map.write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
-                with working_on(self.root):
-                    self.model = self.stories.read_paths("tests", "python")
+                self.stories.workspace = Session(self.root)
+                self.model = self.stories.read_paths("tests", "python")
 
             with after.each:
                 import shutil

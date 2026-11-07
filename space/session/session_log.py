@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.guidance.action_catalogue import ActionCatalogue
-from space.session.chat_pointer import NO_CHAT, ChatPointer
+from harness.agent_tools.chat_pointer import NO_CHAT, ChatPointer
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
@@ -180,12 +180,12 @@ class SessionLog:
             handle.write(f"{self.timestamp(datetime.now(timezone.utc))} {line}\n")
 
     def note_chat(self, chat: ChatPointer) -> None:
-        """Point the next log line at chat, in place of the chat of the tool call being served."""
+        """Point the next log line at chat, in place of the chat of the tool call the session was opened for."""
         self._chat = chat
 
     def note_chat_given(self, conversation_id: str, transcript_path: str, transcript_lines: str) -> None:
-        """Point the next log line at the chat a call from Python names in its own arguments; an MCP call's chat is
-        already being served."""
+        """Point the next log line at the chat a call from Python names in its own arguments; an MCP call's chat came
+        with the call the session was opened for."""
         chat = ChatPointer.of(conversation_id, transcript_path, transcript_lines)
         if chat is not None:
             self.note_chat(chat)
@@ -361,9 +361,9 @@ class SessionLog:
         return chosen
 
     def _line_chat(self) -> ChatPointer:
-        """The chat the next log line points at: one noted for it, else the chat of the call being served, else
-        ``no-chat``. A noted chat is used once."""
-        chat = self._chat or ChatPointer.current() or NO_CHAT
+        """The chat the next log line points at: one noted for it, else the chat of the call the session was opened
+        for, else the chat the environment names, else ``no-chat``. A noted chat is used once."""
+        chat = self._chat or self._session.chat or ChatPointer.from_environment() or NO_CHAT
         self._chat = None
         return chat
 

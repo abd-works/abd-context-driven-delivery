@@ -4,7 +4,7 @@
 
 - **Purpose:** Check that what an install published answers through the live host, so a broken publication shows up in a report rather than in a failing chat.
 - **Seam (terms):** AgentToolsProbe, ProbeRequiresServingHost, GuidanceProbe; the MCP operations `agent-tools-diagnostics.agent_tools_diagnostics` and `guidance-diagnostics.guidance_diagnostics`
-- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/installer, harness/mcp, harness/guidance, harness/name, space/session (a probe of a guidance action opens a session to call it in). Nothing in the framework imports it.
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/installer, harness/mcp, harness/guidance, harness/name. A probe of a guidance action calls it in the main session of a temp project, which *ToolCall* opens. Nothing in the framework imports it, and it imports nothing above the framework.
 
 ## Constraint
 

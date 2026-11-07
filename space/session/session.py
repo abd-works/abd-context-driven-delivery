@@ -10,19 +10,20 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
 from harness.agent_tools.agent_tools import noSessionLog, tool_subject
+from harness.agent_tools.chat_pointer import ChatPointer
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.documents import load_document
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
-from space.context_config import CONTEXT_FOLDER
+from harness.installation.context_config import CONTEXT_FOLDER
 from space.repo.repo import Repo
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
 from space.session.handoffs import Handoffs
 from space.session.practice_session_output import PracticeSessionOutput
 from space.session.session_files import SessionFiles
 from space.session.session_log import SessionLog
-from space.work_state import WorkState, project_checkout
+from space.work_state import WorkState
 from tools.file_manager.file_manager import FileEntry, FileText
 
 if TYPE_CHECKING:
@@ -67,11 +68,13 @@ class Session:
     uses, and its title; its log, files, handoffs, and decision records are objects of their own. Every tool on it acts
     on the session whose ``session.json`` its ``session`` argument names."""
 
-    def __init__(self, repo_root: Path | str | None = None) -> None:
+    def __init__(self, repo_root: Path | str) -> None:
         self._session_name = ""
         self.workpath: Path | None = None
-        self.repo_path: Path | None = Path(repo_root).resolve() if repo_root else None
+        self.repo_path: Path = Path(repo_root).resolve()
         self.session_path: Path | None = None
+        # The chat of the tool call this session was opened for: its log lines point at it.
+        self.chat: ChatPointer | None = None
         self._known: dict[str, PracticeSessionOutput] = {}
         self._opened: list[PracticeSessionOutput] = []
         self.log = SessionLog(self)
@@ -116,11 +119,8 @@ class Session:
         return Repo(self.repo_from_session())
 
     def repo_from_session(self) -> Path:
-        """The folder of the repository that holds this session's ``.sessions``: the one it was opened in, else the
-        project's."""
-        if self.repo_path is not None:
-            return Path(self.repo_path).resolve()
-        return project_checkout()
+        """The folder of the repository that holds this session's ``.sessions``: the one it was opened in."""
+        return self.repo_path
 
     @property
     def is_closed(self) -> bool:

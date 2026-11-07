@@ -19,13 +19,12 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentInstructions, AgentToolSet
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
-from space.session.throwaway_project import ProjectCall, ThrowawayProject
+from space.session.throwaway_project import ThrowawayProject
 
 
 def _open_session(root: Path) -> Path:
     work = root / "work"
     work.mkdir(parents=True, exist_ok=True)
-    ProjectCall(root)
     Sessions(root).switch("decisions", work)
     return work
 
@@ -42,11 +41,10 @@ with description("a session's decision records"):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         self.work = _open_session(self.root)
-        self.session = Sessions().current()
+        self.session = Sessions(self.root).current()
         self.cdr_dir = self.work / ".context" / "cdr"
 
     with after.each:
-        ProjectCall.close_all()
         self.tmp.cleanup()
 
     with context("whose format is read"):
@@ -127,7 +125,7 @@ with description("decision records of the main session"):
 
     with context("that has no workpath of its own"):
         with it("should write the record under the project's .context/cdr"):
-            written = Path(Sessions().current().write_cdr(slug="main", content="# Main"))
+            written = Path(Sessions(self.project.root).current().write_cdr(slug="main", content="# Main"))
             expect(written.parent).to(equal(self.project.root.resolve() / ".context" / "cdr"))
 
 
@@ -146,7 +144,6 @@ with description("decision records asked for a board ticket's session"):
         self.tool = AgentToolSet.instantiate(Session).tools["write_cdr"]
 
     with after.each:
-        ProjectCall.close_all()
         ThrowawayProject.close_all()
 
     with context("that names a ticket other than the open session"):

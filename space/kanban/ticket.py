@@ -20,7 +20,7 @@ from space.kanban.board import (
     NotAStageError,
     Stage,
 )
-from cdd_guidance.practices.stages import GENERATE, REVIEW, VALIDATE
+from harness.guidance.stages import GENERATE, REVIEW, VALIDATE
 from space.kanban.report import Report, ReportFile
 from space.repo.repo import Branch, Repo
 from space.session import Session, name_of

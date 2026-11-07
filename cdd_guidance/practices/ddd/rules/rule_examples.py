@@ -1,4 +1,4 @@
-"""Evaluate DDD tactical rules against python/_examples fixtures.
+"""Spec support: evaluate DDD tactical rules against python/_examples fixtures.
 
 The fixture goes through the clean engineering working-copy build; the DDD building block
 for the chosen kind then loads its own tactical facts, exactly as the DDD practice's graph reader does.
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from harness.graph.ce_rule_eval_harness import practice_from_source
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_source
 from harness.graph.rule_context import RuleCheckContext
 from cdd_guidance.practices.ddd.model.stereotypes import decorated_name, inferred_tactical_kind
 
@@ -69,11 +69,7 @@ def assert_ddd_example_pair(
     node_type: str | None = None,
     clean_node_type: str | None = None,
 ) -> None:
-    root = (
-        Path(__file__).resolve().parents[2]
-        / "cdd_guidance/practices/ddd/model/python/_examples"
-        / slug
-    )
+    root = Path(__file__).resolve().parents[1] / "model" / "python" / "_examples" / slug
     faulty = (root / "faulty" / "faultyAsset.py").read_text(encoding="utf-8")
     repaired = (root / "repaired" / "repairedAsset.py").read_text(encoding="utf-8")
     rule = ddd_rule_by_slug(slug)

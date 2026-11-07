@@ -549,14 +549,22 @@ class McpServer:
 
     def invoke_tool(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
         """Call the tool published as mcp_name on this runtime's project."""
-        resolved = self.resolve_call_name(mcp_name)
-        if resolved not in self._tools:
-            raise KeyError(resolved)
-        return self._tools[resolved].invoke(arguments, project=self.project)
+        return self.answer_tool(mcp_name, ToolCall(arguments, self.project))
 
     def invoke_prompt(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
         """The instructions published as mcp_name, expanded for a call on this runtime's project."""
-        return self._prompts[self.resolve_call_name(mcp_name)].invoke(arguments, project=self.project)
+        return self.answer_prompt(mcp_name, ToolCall(arguments, self.project))
+
+    def answer_tool(self, mcp_name: str, call: ToolCall) -> object:
+        """Answer call with the tool published as mcp_name."""
+        resolved = self.resolve_call_name(mcp_name)
+        if resolved not in self._tools:
+            raise KeyError(resolved)
+        return self._tools[resolved].answer(call)
+
+    def answer_prompt(self, mcp_name: str, call: ToolCall) -> object:
+        """Answer call with the instructions published as mcp_name, expanded for it."""
+        return self._prompts[self.resolve_call_name(mcp_name)].answer(call)
 
 
 class _ProjectNamedOnly:
@@ -812,30 +820,34 @@ class McpHost:
         return self._dispatch_on_project(resolved, arguments, project)
 
     def _dispatch_on_project(self, resolved: str, arguments: dict[str, object] | None, project: Path | None) -> object:
-        # WHY: space sits above the framework. Space code that has not yet been handed its project reads it from
-        # working_on, so the call still names its project there.
-        from space.work_state import project_folder, working_on
+        call = ToolCall.sent(arguments, project or self._project_named_outside_a_chat())
+        with self._restart_gate.running_call():
+            return self._dispatch_between_restarts(resolved, call)
 
-        with self._restart_gate.running_call(), working_on(project or project_folder()) as checkout:
-            return self._dispatch_between_restarts(resolved, arguments, checkout)
+    def _project_named_outside_a_chat(self) -> Path:
+        """The project of a call made in process, which no chat names: the folder ``CDD_PROJECT`` names, else the
+        current folder. ``CDD_REPO`` names the checkout serving the tools, never the project."""
+        named = os.environ.get("CDD_PROJECT")
+        return Path(named).resolve() if named else Path.cwd().resolve()
 
-    def _dispatch_between_restarts(self, resolved: str, arguments: dict[str, object] | None, checkout: Path) -> object:
-        from space.session.chat_pointer import ChatPointer
+    def _dispatch_between_restarts(self, resolved: str, call: ToolCall) -> object:
+        runtime = self.runtime_for(call.project)
+        try:
+            if call.arguments.get("ping") is True:
+                if not self._enrolled(resolved):
+                    raise KeyError(resolved)
+                return {"ping": "pong", "tool": resolved}
+            if resolved in runtime.prompts:
+                return runtime.answer_prompt(resolved, call)
+            return runtime.answer_tool(resolved, call)
+        except BaseException as failure:
+            self._log_failure(call, failure, resolved)
+            raise
 
-        runtime = self.runtime_for(checkout)
-        chat, args = ChatPointer.taken_from(arguments)
-        with ChatPointer.serving(chat):
-            try:
-                if args.get("ping") is True:
-                    if not self._enrolled(resolved):
-                        raise KeyError(resolved)
-                    return {"ping": "pong", "tool": resolved}
-                if resolved in runtime.prompts:
-                    return runtime.invoke_prompt(resolved, args)
-                return runtime.invoke_tool(resolved, args)
-            except BaseException as failure:
-                ToolCall(args, checkout).session.log.failure(failure, tool=resolved)
-                raise
+    def _log_failure(self, call: ToolCall, failure: BaseException, tool: str) -> None:
+        session = call.session
+        if session is not None:
+            session.log.failure(failure, tool=tool)
 
     def _enrolled(self, name: str) -> bool:
         return (

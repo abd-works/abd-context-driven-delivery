@@ -266,13 +266,18 @@ class Repo:
         own = self._checkout
         if own.is_linked_worktree():
             return own
-        opened = WorkState(own.root).worktree
-        return opened.repository if opened is not None and opened.path.is_dir() else own
+        opened = WorkState(own.root).worktree_folder
+        return Repo(opened) if opened is not None and opened.is_dir() else own
+
+    def _saved_worktree(self) -> Worktree | None:
+        """The worktree saved as open on the main clone, with the branch saved beside it; none when none is open."""
+        state = self._work_state
+        folder = state.worktree_folder
+        return Worktree.from_checkout(folder, state.branch_name) if folder is not None else None
 
     def _named_or_saved_branch(self, name: str) -> Branch:
         """The branch called name on the main clone, else the branch saved as open."""
-        saved = self._work_state.branch
-        cleaned = (name or "").strip() or (saved.name if saved is not None else "")
+        cleaned = (name or "").strip() or self._work_state.branch_name
         if not cleaned:
             raise BranchNameRequiredError()
         return self._main_clone.branch_named(cleaned)
@@ -332,11 +337,11 @@ class Repo:
         Does not merge; the branch stays open as ``branch``. Clears ``worktree`` in
         ``.sessions/session.json`` and returns later repo tools to the main clone.
         """
-        worktree = self._work_state.worktree
+        worktree = self._saved_worktree()
         if worktree is None:
             raise NoOpenWorktreeError()
         branch = worktree.close(commit_message)
-        self._work_state.worktree = None
+        self._work_state.worktree_folder = None
         return f"closed worktree for {branch.name!r}; branch pushed and kept open"
 
     @command(name="switch-branch")
@@ -498,7 +503,7 @@ class Branch:
         if repository.current_branch != self.name:
             repository.branch_named(repository.current_branch).save(f"branch: switch to {self.name}")
             self.check_out()
-        WorkState(repository.root).branch = self
+        WorkState(repository.root).branch_name = self.name
         return self
 
     def open_in_worktree(self) -> Worktree:
@@ -516,8 +521,8 @@ class Branch:
             repository.branch_named(repository.default_branch).check_out()
         opened = self.open_in_worktree()
         state = WorkState(repository.root)
-        state.branch = self
-        state.worktree = opened
+        state.branch_name = self.name
+        state.worktree_folder = opened.path
         return opened
 
     def save(self, commit_message: str) -> None:
@@ -559,4 +564,4 @@ class Branch:
         self.save(commit_message)
         self.land_on_default()
         self.delete()
-        WorkState(repository.root).branch = repository.branch_named(repository.default_branch)
+        WorkState(repository.root).branch_name = repository.default_branch

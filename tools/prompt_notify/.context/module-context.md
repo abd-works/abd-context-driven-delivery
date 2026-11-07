@@ -4,8 +4,8 @@
 `@Toast` is the mark an author puts on an `@agent_tool` or `@agent_instructions` member so that calling it toasts. `harness/guidance_actions` marks the step every guidance action starts with, so each action toasts without its own mark.
 
 - **Purpose:** Make the guidance an agent is following visible to the person while it runs.
-- **Seam (terms):** PromptNotify, the mark `@Toast`
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/installation` (*Destination*, *Installer*, *Skill*), `harness/hooks` (*Hook*), and, read when the catalogue is first built, `harness/guidance` (*PracticeCatalogue*, and *ActionCatalogue*, whose actions are the action names it toasts). `harness/guidance_actions` imports `@Toast` and *PromptNotify*, and `harness/guidance` imports *PromptNotify* to toast injected rules, both as `tools.prompt_notify.prompt_notify`; both of those modules are reached again from `harness/agent_tools`, which this module imports, so the framework reaches up into `tools` in a cycle tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
+- **Seam (terms):** PromptNotify, `PromptNotify.show_toast`; it reads the mark `@Toast` (harness/marks)
+- **Dependencies (one-way):** `harness/agent_tools`, `harness/installation` (*Destination*, *Installer*, *Skill*), `harness/hooks` (*Hook*), and, read when the catalogue is first built, `harness/guidance` (*PracticeCatalogue*, and *ActionCatalogue*, whose actions are the action names it toasts). `harness/marks` (`@Toast`), and `harness/hooks` (*HookServer*: this module registers `PromptNotify.show_toast` with `HookServer.show_toasts_with` when it is loaded, so the toast a hook gives in its result is shown here; `TOAST_ARROW` and `rules_toast` for joining the toasts of one burst). Nothing in the framework imports this module.
 
 ## Constraint
 

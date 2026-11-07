@@ -55,7 +55,7 @@ detect(hook_payload: dict): tuple[str, str] | None
 echo_toolsets(repo: Path | None): list
 show_ide_toast(echo: str): Path
 	// joins same-burst rule lines; never overwrites an earlier guideline in that burst
-inject_rules_toast(source: str, labels: list[str]): str
+show_toast(toast: str, workspace_roots: list[Path]): Path
 	// prefixes the joined names with rules :
 chat_edit_source(hook_payload: dict | None): str
 toast_notice(echo: str): dict[str, str]

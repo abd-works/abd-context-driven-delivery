@@ -10,7 +10,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect
 from mamba import context, description, it
 
-from harness.graph.ce_rule_eval_harness import (
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_rule_pair,
     ce_rule_by_slug,
     practice_from_source,

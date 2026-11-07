@@ -13,7 +13,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import Mcp
-from space.session.chat_pointer import ChatPointer
+from harness.agent_tools.chat_pointer import ChatPointer
 
 # The mod checks in every second, so a chat silent for this long has gone.
 CHAT_GONE_SECONDS = 5

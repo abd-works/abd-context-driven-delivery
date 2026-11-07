@@ -47,7 +47,6 @@ class Stories(PracticeGuidance):
                 "json": ("cdd_guidance.practices.stories.model.json.nodes", "JsonStoryModel"),
                 "drawio": ("cdd_guidance.practices.stories.model.drawio.nodes", "DrawIOStoryModel"),
                 "miro": ("cdd_guidance.practices.stories.model.miro.nodes", "MiroStoryModel"),
-                "claude_design": ("cdd_guidance.practices.stories.model.claude_design.nodes", "ClaudeDesignStoryModel"),
                 "python": ("cdd_guidance.practices.stories.model.python.python_story_model", "PythonStoryModel"),
                 "typescript": ("cdd_guidance.practices.stories.model.typescript.typescript_story_model", "TypeScriptStoryModel"),
                 "java": ("cdd_guidance.practices.stories.model.java.java_story_model", "JavaStoryModel"),
@@ -72,12 +71,9 @@ class Stories(PracticeGuidance):
 
     @property
     def project_folder(self) -> Path:
-        """The project the session this practice works in names its paths from: the session's repository, else the
-        checkout the running call works on. The MCP host serves every project from its own folder, so its current
-        folder is never the project."""
-        from space.work_state import project_checkout
-
-        return Path(getattr(self.workspace, "repo_path", None) or project_checkout())
+        """The project the session this practice works in names its paths from: the session's repository. A practice
+        made outside any session, as a script makes one, names its paths from the current folder."""
+        return Path(getattr(self.workspace, "repo_path", None) or Path.cwd())
 
     def _live_adapter(self, format_name: str):
         if self.story_test_folder is None or Format(format_name).name != "typescript":

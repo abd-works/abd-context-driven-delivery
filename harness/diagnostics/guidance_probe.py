@@ -11,6 +11,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from harness.agent_tools.tool_call import ToolCall
+
 # The guidance probed when the caller names none: one practice and one fidelity of another practice.
 GUIDANCE_PROBE = ["stories", "clean-engineering-model"]
 GUIDANCE_SECTION = "guidance"
@@ -153,14 +155,10 @@ class GuidanceProbe:
         return args, missing
 
     def work_session(self) -> Any:
-        """A session that works in a new temp folder and keeps no log, for probing operations that write under the
-        session's root, so a probe never writes into the session being worked on."""
-        from space.session import Session
-
-        session = Session(self.repo_root)
-        session.name = "diagnostic-probe"
-        session.workpath = Path(self._temp_dir())
-        return session
+        """The main session of a new temp project, for probing operations that write under the session's root, so a
+        probe never writes into the session being worked on; the probe removes the project, its log included. It is
+        opened the way every tool call opens its session."""
+        return ToolCall(project=self._temp_dir()).session
 
     def cleanup(self) -> None:
         """Remove the files and folders the probe made."""

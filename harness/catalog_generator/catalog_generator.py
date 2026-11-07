@@ -40,10 +40,10 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.markdown.format import Format
 from harness.markdown.markdown import MarkdownText
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
+from harness.agent_tools.agent_tools import tool_subject
 from harness.installation.destination import NoCatalog, noCatalog
 from harness.installation.files import skill
 from harness.mcp.mcp_server import mcp
-from space.work_state import project_checkout
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_ROOTS = (_REPO_ROOT / ".claude" / "skills", _REPO_ROOT / ".cursor" / "skills")
@@ -1203,12 +1203,11 @@ class CatalogProject:
         return command + ["--brand", brand] if brand else command
 
     def _generator_environment(self) -> dict[str, str]:
-        """Import path and project for the generator: only the project's folders, so no module is read from the
-        checkout serving these tools."""
+        """Import path for the generator: only the project's folders, so no module is read from the checkout serving
+        these tools. The generator regenerates the checkout it is imported from, so it needs no project named."""
         environment = dict(os.environ)
         environment["PYTHONPATH"] = os.pathsep.join(str(self.root / folder) for folder in _CDD_IMPORT_FOLDERS)
         environment["PYTHONIOENCODING"] = "utf-8"
-        environment["CDD_PROJECT"] = str(self.root)
         return environment
 
 
@@ -1228,7 +1227,9 @@ class Catalog:
         catalog_action: CatalogAction | None = None,
         catalog_utility: CatalogUtility | None = None,
         approach_md_path: str | Path | None = None,
+        project: str | Path | None = None,
     ) -> None:
+        self._project_folder = Path(project).resolve() if project is not None else Path.cwd().resolve()
         citation = GitCitation.from_checkout()
         self.repo_url = repo_url or citation.repo_url
         self.ref = ref or citation.ref
@@ -1272,10 +1273,17 @@ class Catalog:
         catalog_utility = CatalogUtility(self.repo_url, self.ref, catalog_tool, catalog_action)
         return catalog_context_tool, catalog_action, catalog_utility
 
+    @classmethod
+    @tool_subject
+    def load(cls, *, project: Path) -> Catalog:
+        """The catalog of project, the folder the tool call names; one server answers every chat, so each call makes
+        its own."""
+        return cls(project=project)
+
     @property
     def project(self) -> CatalogProject:
-        """The project the running call acts on; one server answers every chat, so it is read for each call."""
-        return CatalogProject(project_checkout())
+        """The project this catalog is generated for: the folder a tool call names, else the folder it was made in."""
+        return CatalogProject(self._project_folder)
 
     @property
     def out_root(self) -> Path:

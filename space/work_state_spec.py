@@ -5,7 +5,6 @@ import shutil
 import stat
 import sys
 import tempfile
-import threading
 from pathlib import Path
 
 from expects import equal, expect
@@ -15,7 +14,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from space.work_state import WorkState, project_checkout, working_on
+from space.work_state import WorkState
 
 
 with description("a repo's work state"):
@@ -57,59 +56,13 @@ with description("a repo's work state"):
                     equal(self.root.resolve() / ".sessions" / "main-release")
                 )
 
+        with context("that saves a branch and a worktree"):
+            with before.each:
+                WorkState(self.root).branch_name = "feature/pet-visits"
+                WorkState(self.root).worktree_folder = self.root / "pet-visits"
 
-with description("the project being worked on"):
-    with before.each:
-        self.first = Path(tempfile.mkdtemp())
-        self.second = Path(tempfile.mkdtemp())
-        for project in (self.first, self.second):
-            (project / ".git").mkdir()
-            (project / "docs").mkdir()
+            with it("should read back the branch by its name"):
+                expect(WorkState(self.root).branch_name).to(equal("feature/pet-visits"))
 
-    with after.each:
-        shutil.rmtree(self.first, ignore_errors=True)
-        shutil.rmtree(self.second, ignore_errors=True)
-
-    with context("that a call names a folder inside a project"):
-        with it("should be the checkout holding that folder"):
-            with working_on(self.first / "docs"):
-                expect(project_checkout()).to(equal(self.first.resolve()))
-
-    with context("that a call names a folder in a linked worktree of a project"):
-        with before.each:
-            self.worktree = Path(tempfile.mkdtemp())
-            worktree_git = self.first / ".git" / "worktrees" / "pet-visits"
-            worktree_git.mkdir(parents=True)
-            (worktree_git / "commondir").write_text("../..\n", encoding="utf-8")
-            (self.worktree / ".git").write_text(f"gitdir: {worktree_git}\n", encoding="utf-8")
-            (self.worktree / "docs").mkdir()
-
-        with after.each:
-            shutil.rmtree(self.worktree, ignore_errors=True)
-
-        with it("should be the worktree holding that folder"):
-            with working_on(self.worktree / "docs"):
-                expect(project_checkout()).to(equal(self.worktree.resolve()))
-
-    with context("that the call has finished"):
-        with it("should no longer be the project that call named"):
-            with working_on(self.first):
-                pass
-            expect(project_checkout()).not_to(equal(self.first.resolve()))
-
-    with context("that two calls work on different projects at the same time"):
-        with it("should give each call its own project"):
-            seen: dict[str, Path] = {}
-            both_inside = threading.Barrier(2)
-
-            def look(name: str, project: Path) -> None:
-                with working_on(project):
-                    both_inside.wait(timeout=5)
-                    seen[name] = project_checkout()
-
-            calls = [threading.Thread(target=look, args=item) for item in (("first", self.first), ("second", self.second))]
-            for call in calls:
-                call.start()
-            for call in calls:
-                call.join()
-            expect(seen).to(equal({"first": self.first.resolve(), "second": self.second.resolve()}))
+            with it("should read back the worktree by its folder"):
+                expect(WorkState(self.root).worktree_folder).to(equal(self.root / "pet-visits"))

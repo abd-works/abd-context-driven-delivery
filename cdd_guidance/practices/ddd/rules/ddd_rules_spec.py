@@ -3,16 +3,14 @@
 import sys
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parents[1]
-for path in (_HERE, _REPO):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+_REPO = Path(__file__).resolve().parents[4]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
 from expects import equal, expect
 from mamba import context, description, it
 
-from harness.graph.ddd_rule_eval_harness import assert_ddd_example_pair, ddd_rule_by_slug, violations_for_ddd_rule
+from cdd_guidance.practices.ddd.rules.rule_examples import assert_ddd_example_pair, ddd_rule_by_slug, violations_for_ddd_rule
 
 with description("DDD tactical rules (python .examples)"):
     with context("every-class-carries-ddd-stereotype"):

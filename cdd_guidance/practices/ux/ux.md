@@ -90,7 +90,7 @@ Decide what screens exist and how users move between them.
 
 Screens, layouts, named regions, transitions, nav components, content types. Story names and domain terms attach as traces. Optional `ux-context.md` for invariants not on the canvas. No control types, no interaction JS, no brand.
 
-Link each story to the screen it shows with a `shownOn` edge — on the story, a scenario, or a step, at the highest level that is true — so the Claude Design story map and explorer show the right screen. Follow `model/claude_design/claude_design.md`.
+Link each story to the screen it shows with a `shownOn` edge — on the story, a scenario, or a step, at the highest level that is true — so the Claude Design story map and explorer show the right screen. Follow `model/claude_design/claude_design.md` and `model/claude_design/story_canvas.md`.
 
 #### Scaffold
 
@@ -156,7 +156,7 @@ Ask what the person does on this screen to accomplish the outcome, and what they
    - Brand/css tokens already exist somewhere in the workspace (check before deciding).
    Do not invent brand. When active, pick the sibling folder under `specifications/` for the brand that applies (e.g. `specifications/abd-works/`) and start from its matching page rather than inventing tokens; if no named brand applies, `specifications/generic/` (no brand layer) is the default. Fall back to whatever brand/css tokens already exist in the workspace when neither covers it. Add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
 9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
-10. **Claude Design channel.** When the session runs in Claude Design, port each story's screen as a prototype screen on the canvas instead of a greybox: the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next story. Follow `practices/stories/model/claude_design/claude_design.md` § Prototype screens.
+10. **Claude Design channel.** When the session runs in Claude Design, port each story's screen as a prototype screen on the canvas instead of a greybox: the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next story. Follow `model/claude_design/story_canvas.md` § Prototype screens.
 
 #### Rules
 

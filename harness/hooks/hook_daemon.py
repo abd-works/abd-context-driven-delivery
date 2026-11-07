@@ -120,7 +120,10 @@ class HookDaemon:
             return
         try:
             from harness.hooks.hook_server import HookServer
+            from harness.installation.repository_toolsets import RepositoryToolsets
 
+            if inner is None:
+                RepositoryToolsets(root).import_modules()
             server = inner if inner is not None else HookServer.from_toolsets(root)
             self._publish_address(HookServer.state_path(root), listener.getsockname()[1], root)
             self._serve_until_stopped(listener, server)

@@ -9,10 +9,7 @@ import time
 from collections.abc import Iterator, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from space.session.session import Session
+from typing import Any, Callable, ClassVar
 
 _READY_WAIT_SECONDS = 90
 _READY_POLL_SECONDS = 0.2
@@ -37,6 +34,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from harness.agent_tools.agent_tools import AgentToolSet, InstallDestination
 from harness.agent_tools.tool_call import ToolCall
+from harness.installation.context_config import ContextConfig
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.hooks.hooks import Hook
 from harness.process.running_process import RunningProcess
@@ -136,8 +134,19 @@ class HookPayload(Mapping[str, Any]):
         return str(tool_input.get("path") or tool_input.get("file_path") or tool_input.get("target_notebook") or "")
 
 
+# A toast that names its source writes it before this arrow, such as `generate → rules : stories scenarios`, so the
+# notifier can join the toasts of one burst.
+TOAST_ARROW = " \u2192 "
+
+
+def rules_toast(source: str, labels: list[str]) -> str:
+    """The toast for the rules a hook gave the agent: what injected them, then each rule set's label."""
+    return f"{source}{TOAST_ARROW}rules : {', '.join(labels)}"
+
+
 class HookResult:
-    """Fields Cursor reads back from the hook process."""
+    """Fields Cursor reads back from the hook process, and the toast the person sees beside the chat. The toast is not
+    sent to Cursor: the hook server hands it to the notifier that shows toasts."""
 
     def __init__(
         self,
@@ -147,6 +156,7 @@ class HookResult:
         agent_message: Any = None,
         followup_message: Any = None,
         additional_context: Any = None,
+        toast: Any = None,
     ) -> None:
         self.permission = permission
         self.continue_flag = continue_flag
@@ -154,6 +164,7 @@ class HookResult:
         self.agent_message = self._optional_text(agent_message)
         self.followup_message = self._optional_text(followup_message)
         self.additional_context = self._optional_text(additional_context)
+        self.toast = self._optional_text(toast)
         self.followup_only = False
 
     def _optional_text(self, value: Any) -> str | None:
@@ -173,6 +184,7 @@ class HookResult:
             agent_message=raw.get("agent_message"),
             followup_message=raw.get("followup_message"),
             additional_context=raw.get("additional_context"),
+            toast=raw.get("toast"),
         )
         if "permission" not in raw and result.followup_message:
             result.followup_only = True
@@ -194,6 +206,7 @@ class HookResult:
             text,
             self.followup_message,
             self.additional_context,
+            self.toast,
         )
 
     def merge(self, other: HookResult) -> HookResult:
@@ -206,6 +219,7 @@ class HookResult:
             self._join_lines(self.agent_message, other.agent_message),
             other.followup_message or self.followup_message,
             self._join_unique_context(other),
+            self._join_lines(self.toast, other.toast),
         )
 
     def _join_lines(self, first: str | None, second: str | None) -> str | None:
@@ -299,16 +313,12 @@ class HookHandler:
         return True
 
     def _context_parents(self, edited: Path) -> list[Path]:
-        from space.context_config import ContextConfig
-
         for parent in edited.resolve().parents:
             if ContextConfig(parent).exists():
                 return [parent]
         return []
 
     def _guideline_value(self, root: Path, pattern: str) -> str:
-        from space.context_config import ContextConfig
-
         return ContextConfig(root).guideline(pattern)
 
     def invoke(self, payload: HookPayload) -> HookResult:
@@ -451,6 +461,15 @@ class HookIllegitimateHandler(Exception):
 
 class HookServer:
     """Long-lived daemon that holds one Session across Cursor hook runs."""
+
+    # Shows a merged result's toast in the chat's workspace folders. The notifier registers itself when it is loaded,
+    # so a hook names its toast in its result and never the notifier; with none registered, no toast is shown.
+    _toast_shown_by: ClassVar[Callable[[str, list[Path]], Any] | None] = None
+
+    @classmethod
+    def show_toasts_with(cls, show: Callable[[str, list[Path]], Any]) -> None:
+        """Have show(toast, workspace_roots) show each toast a dispatched event's hooks give."""
+        cls._toast_shown_by = show
 
     def __init__(
         self,
@@ -605,7 +624,13 @@ class HookServer:
         for item in results:
             merged = merged.merge(item)
         self._append_debug(f"MERGED {json.dumps(merged.as_dict())}")
+        self._show_toast(merged, payload)
         return merged
+
+    def _show_toast(self, result: HookResult, payload: HookPayload) -> None:
+        show = type(self)._toast_shown_by
+        if result.toast and show is not None:
+            show(result.toast, payload.workspace_roots)
 
     def _invoke_enabled(
         self, event: CursorEvent, payload: HookPayload
@@ -659,14 +684,17 @@ class HookServer:
         print(json.dumps(self.handle_stdin(sys.stdin.buffer.read()).as_dict()))
 
     @property
-    def session(self) -> Session:
+    def session(self) -> Any:
         """The session saved as open in the project's ``.sessions/session.json``, main when none is. It is read for each
         event, so hooks follow a switch or a close made through MCP at once. The hook server reads it the way every
-        tool call reads its session, through a call on this repository."""
+        tool call reads its session, through a call on this repository; none when no sessions are registered."""
         return ToolCall(project=self._repo_root).session
 
     def _write_last_chat_injected(self, result: HookResult) -> None:
-        folder = self.session.session_path
+        session = self.session
+        if session is None:
+            return
+        folder = session.session_path
         folder.mkdir(parents=True, exist_ok=True)
         dest = folder / "last-chat-injected-rules.md"
         dest.write_text(result.additional_context or "", encoding="utf-8")
@@ -836,7 +864,10 @@ class HookServer:
         return self
 
     def _append_debug(self, message: str) -> None:
-        path = self.session.hook_log("dispatch.debug")
+        session = self.session
+        if session is None:
+            return
+        path = session.hook_log("dispatch.debug")
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         with open(path, "a", encoding="utf-8") as log:
             log.write(f"{stamp} {message}\n")

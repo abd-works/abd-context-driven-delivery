@@ -17,7 +17,7 @@ import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
-from cdd_guidance.practices.stages import (
+from harness.guidance.stages import (
     DISCOVERY,
     IMPLEMENTATION,
     SPECIFICATION,

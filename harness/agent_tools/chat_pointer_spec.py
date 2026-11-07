@@ -1,4 +1,4 @@
-"""Specs for the chat pointer that ends each session.log line."""
+"""Specs for the chat a tool call came from, which ends each session.log line."""
 import json
 import os
 import sys
@@ -12,9 +12,8 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import be_none, equal, expect
 from mamba import after, before, context, description, it
 
-from space.session.chat_pointer import ChatPointer
-from space.session.sessions import Sessions
-from space.session.throwaway_project import ProjectCall
+from harness.agent_tools.chat_pointer import ChatPointer
+from harness.agent_tools.tool_call import ToolCall
 
 CHAT_ID = "4f1c2b3a-1111-2222-3333-444455556666"
 
@@ -59,18 +58,20 @@ with description("a chat pointer"):
             chat, _ = ChatPointer.taken_from({"path": "cart.py"})
             expect(chat).to(be_none)
 
-    with context("that a tool call is served with"):
+    with context("of a tool call a chat sent"):
         with before.each:
-            self.chat = ChatPointer("chat-a", Path("a.jsonl"), "1-3")
+            self.transcript = self.config / "chat.jsonl"
+            self.transcript.write_text('{"type": "user"}\n', encoding="utf-8")
+            self.call = ToolCall.sent({"conversation_id": "chat-a", "transcript_path": str(self.transcript), "path": "cart.py"}, self.config)
 
-        with it("should be the current chat while the call runs"):
-            with ChatPointer.serving(self.chat):
-                expect(ChatPointer.current()).to(equal(self.chat))
+        with it("should be the call's chat"):
+            expect(self.call.chat).to(equal(ChatPointer("chat-a", self.transcript, "1")))
 
-        with it("should not be the current chat once the call ends"):
-            with ChatPointer.serving(self.chat):
-                pass
-            expect(ChatPointer.current() == self.chat).to(equal(False))
+        with it("should leave the tool only its own arguments"):
+            expect(self.call.arguments).to(equal({"path": "cart.py"}))
+
+        with it("should not be the chat of another call"):
+            expect(ToolCall.sent({"path": "cart.py"}, self.config).chat).to(be_none)
 
     with context("at the end of a session.log line"):
         with it("should read the chat id, the transcript, and the line range"):
@@ -101,28 +102,3 @@ with description("a chat pointer"):
             expect((any("hi" in line for line in lines), any("hello" in line for line in lines))).to(
                 equal((True, True))
             )
-
-
-# (E) Record Session Log
-with description("a session loop"):
-    with after.each:
-        ProjectCall.close_all()
-
-    with context("whose log line points at a chat"):
-        with it("should place the transcript text under that line"):
-            repo = Path(tempfile.mkdtemp())
-            ProjectCall(repo)
-            work = repo / "work"
-            work.mkdir()
-            transcript = work / "chat.jsonl"
-            transcript.write_text(
-                json.dumps({"role": "user", "message": {"content": [{"type": "text", "text": "question"}]}}),
-                encoding="utf-8",
-            )
-            Sessions(repo).switch("alpha", work)
-            session = Sessions(repo).current()
-            session.log.record("--- 1")
-            chat_id = "b4c2a422-7199-47ce-9656-c0429af8adb8"
-            session.log.record(f"2026-10-20T12:00:00Z sketch {work / 'a.py'} {chat_id} {transcript} 1")
-            expanded = session.log.loop_at(1).expanded_text()
-            expect("question" in expanded and "sketch" in expanded).to(equal(True))

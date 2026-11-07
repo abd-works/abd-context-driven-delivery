@@ -16,7 +16,9 @@ from mamba import context, description, it
 from harness.installer.installer import Installer  # noqa: F401 — load Destination before hooks
 from tempfile import TemporaryDirectory
 
-from tools.prompt_notify.prompt_notify import PromptNotify, Toast
+from harness.hooks.hook_server import rules_toast
+from harness.marks.mark import Toast
+from tools.prompt_notify.prompt_notify import PromptNotify
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.hooks.hook_server import HookPayload
 
@@ -282,7 +284,7 @@ with description("prompt echo detection"):
             )
             expect(source).to(equal("chat Story map scenarios edited file"))
             expect(
-                _prompt_notify.inject_rules_toast(source, ["stories scenarios"])
+                rules_toast(source, ["stories scenarios"])
             ).to(equal("chat Story map scenarios edited file \u2192 rules : stories scenarios"))
 
         with it("should not rewrite practice echoes into a rules toast"):
@@ -319,10 +321,10 @@ with description("prompt echo detection"):
                 repo = Path(tmp)
                 _prompt_notify.repo = repo
                 _prompt_notify.show_ide_toast(
-                    _prompt_notify.inject_rules_toast("chat edit", ["agent bdd"]),
+                    rules_toast("chat edit", ["agent bdd"]),
                 )
                 dest = _prompt_notify.show_ide_toast(
-                    _prompt_notify.inject_rules_toast(
+                    rules_toast(
                         "chat edit",
                         ["clean engineering code", "ddd tactics"],
                     ),

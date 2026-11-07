@@ -5,7 +5,7 @@ import json
 from mamba import description, context, it, before
 from expects import contain, equal, expect, have_keys, have_len
 
-from cdd_guidance.practices.stories.model.claude_design.nodes import (
+from cdd_guidance.practices.ux.model.claude_design.story_canvas import (
     ClaudeDesignEpic,
     ClaudeDesignStory,
     ClaudeDesignStoryModel,

@@ -15,7 +15,7 @@ from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.guidance.rule import Rule
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
-from cdd_guidance.practices.stages import STAGES, ApproachStage, StageScope
+from harness.guidance.stages import STAGES, ApproachStage, StageScope
 from space.repo.repo import Repo
 from space.session.session_log import SessionLog
 from space.session.sessions import Sessions

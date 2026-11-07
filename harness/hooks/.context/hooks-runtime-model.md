@@ -1,6 +1,6 @@
 # Hooks — object model (model fidelity)
 
-Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet* and *AgentTool* belong to `harness/agent_tools`, *Destination* and *Installation* to `harness/installation`, *Session* to `space/session`, *Repo* to `space/repo`, and *ContextConfig* to `space/context_config`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
+Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/marks`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess*, *StoppableProcess*, and *ProcessNotStopped* to `harness/process`, and *Session* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
 
 **Install** writes files. **Runtime** is the IDE running `hook_server.py` with the event's JSON on stdin; that script finds or starts one long-running *HookServer* per repository through *HookDaemon* and passes the event to it. `@Hook` and `@mcp` on the same operation remain two independent installs.
 
@@ -10,6 +10,8 @@ Markdown channel for **`harness/hooks`**. The module's purpose, seam, and depend
 
 *HookServer* is the long-running process for one repository: it takes each event's stdin, finds every enabled hook for that event, runs them, merges their results, and returns one JSON object. It is not an MCP client.
 
+A hook's result can carry a `toast`, a short notice the person sees beside the chat. It is not sent to the IDE: the hook server hands the merged toast to the notifier registered with `HookServer.show_toasts_with` (`tools/prompt_notify` registers when it is loaded). `rules_toast(source, labels)` writes the toast for injected rules, and `TOAST_ARROW` separates a toast's source from the rest.
+
 ---
 
 ## Hook : Destination                                             <!-- Md -->
@@ -18,6 +20,7 @@ The `@Hook` decorator on an operation. Event is required and must be an IDE even
 
 + Hook(event: str, disabled: bool = false)
 	// event is one of Hook.EVENTS; unknown names are rejected at decoration
+	// channel is InstallDestination.HOOK
 ------
 + name: str
 	// identity the IDE sends as hook_event_name
@@ -51,13 +54,13 @@ Class annotation. Turns off, or keeps out of the install, every hook on that too
 
 Install-time writer for hook artifacts. Same walk as markdown and MCP; only the leaf writes differ.
 
-+ HookInstallation(ide: str, path: Path, python: str | None = None, repo: Path | None = None)
++ HookInstallation(ide: str, path: Path, *, python: str | None = None, repo: Path | None = None)
 ------
 + python: str
 + server: HookServer | None
 + diagnosis: dict | None
 + dispatch_command: str
-	// "{python} -u {repo}/harness/hooks/hook_server.py"
+	// "{python} -u {repo}/harness/hooks/hook_server.py", with the console Python harness/process names
 ----
 + write(tool: AgentTool): None
 	// skip unless tool.install_to_hook, the toolset class is not @Hooks(deploy=False), and tool.hook_event is set
@@ -87,11 +90,11 @@ Named IDE hook moment. Identity is the event string.
 + normalize(): str
 	-> Hook.normalize_event
 
-## HookPayload                                                    <!-- Md -->
+## HookPayload : Mapping[str, Any]                                <!-- Md -->
 
-The stdin JSON for one firing.
+The stdin JSON for one firing. Handlers read it through the named properties; it also reads as a mapping of every field the IDE sent.
 
-+ HookPayload(fields: dict)
++ HookPayload(fields: Mapping)
 + HookPayload.from_stdin(raw: bytes): HookPayload
 	// strips UTF-8 BOMs; empty or unreadable raw → allow-only result at HookServer.handle_stdin, not here
 ------
@@ -99,17 +102,22 @@ The stdin JSON for one firing.
 	// empty name means no handlers run; result is permission allow
 + conversation_id: str
 + generation_id: str
++ tool_name: str
+	// empty for an event about no tool
++ tool_input: dict
+	// empty when the IDE sent none or sent text that is not a JSON object
++ workspace_roots: list[Path]
++ project: Path | None
+	// the first workspace root, else the folder Claude Code ran in
 ----
 + edited_path(): str
 	// file_path, path, or uri; else the path inside tool_input
-+ as_dict(): dict
-	// remaining keys (tool_name, tool_input, prompt, …) stay on the payload for the handler
 
 ## HookResult                                                     <!-- Md -->
 
 Fields the IDE reads back from the hook process.
 
-+ HookResult(permission: str = "allow", continue_flag: bool | None = None, user_message, agent_message, followup_message, additional_context)
++ HookResult(permission: str = "allow", continue_flag: bool | None = None, user_message, agent_message, followup_message, additional_context, toast)
 ------
 + permission: str
 	// deny wins when any handler returns deny
@@ -121,6 +129,8 @@ Fields the IDE reads back from the hook process.
 	// last non-empty followup_message wins
 + additional_context: str | None
 	// unique parts join with blank lines
++ toast: str | None
+	// shown beside the chat, never sent to the IDE; toasts join with newlines
 + followup_only: bool
 	// as_dict returns only followup_message
 ----
@@ -128,8 +138,9 @@ Fields the IDE reads back from the hook process.
 + with_description(description: str): HookResult
 	// prepends the tool docstring onto agent_message
 + merge(other: HookResult): HookResult
-	// deny and continue false win; user_message and agent_message join with newlines
+	// deny and continue false win; user_message, agent_message, and toast join with newlines
 + as_dict(): dict
+	// the fields the IDE reads; the toast is left out
 
 ## HookHandler                                                    <!-- Md -->
 
@@ -149,7 +160,7 @@ One marked operation that may run for an event.
 	// a toolset with a `pattern` runs only where that guideline is enabled for the edited file
 	-> ContextConfig.guideline
 + invoke(payload: HookPayload): HookResult
-	// call tool.callable with payload.as_dict()
+	// call tool.callable with the payload
 	// agent_message includes tool.docstring unless additional_context is already set
 	-> HookResult.from_handler
 	-> HookResult.with_description
@@ -159,7 +170,7 @@ One marked operation that may run for an event.
 The toolsets whose hooks the server runs.
 
 + HandlerCatalog(toolsets: list | None = None, repo_root: Path | None = None, handlers: Path | None = None)
-	// given handlers file, given toolsets, else .cursor/hook-handlers.json, else Installer.collect_toolsets
+	// given handlers file, given toolsets, else .cursor/hook-handlers.json, else RepositoryToolsets.collect
 ------
 + << composition >> toolsets: list[AgentToolSet]
 	// skips toolsets named in AgentToolSet.HOSTED_ONLY_CLASS_NAMES
@@ -169,7 +180,7 @@ The toolsets whose hooks the server runs.
 + refs_from_handlers(handlers: Path): tuple[str, ...]
 + ref_label(item): str
 + for_event(event: CursorEvent): list[HookHandler]
-	// tools_for(HOOK) whose hook_event matches the event; inject_rules marked postToolUse also serves afterFileEdit
+	// tools_for(InstallDestination.HOOK) whose hook_event matches the event; inject_rules marked postToolUse also serves afterFileEdit
 
 ## HookStandupFailed : Exception                                  <!-- Md -->
 
@@ -202,10 +213,12 @@ The long-running process that answers every hook call for one repository. `hook_
 ------
 + << association >> catalog: HandlerCatalog
 + exceptions: list[HookIllegitimateHandler]
-+ session: Session
-	// the session open in .sessions/session.json (main when none), read for each event
-	-> Sessions.saved
++ session: Session | None
+	// the session open in .sessions/session.json (main when none), read for each event the way every tool call reads it
+	-> ToolCall(project=repo_root).session
 ----
++ show_toasts_with(show: Callable[[str, list[Path]], Any]): None
+	// the notifier registers itself when it is loaded, so a hook names its toast and never the notifier
 + state_path(repo: Path): Path
 	// .cursor/hook-server.json, the running daemon's address
 + ensure(repo: Path): HookServer
@@ -225,6 +238,7 @@ The long-running process that answers every hook call for one repository. `hook_
 	-> HookHandler.is_enabled
 	-> HookHandler.invoke
 	-> HookResult.merge
+	// then hands the merged toast to the registered notifier
 + skip(tool: str, error: BaseException): None
 	// records a HookIllegitimateHandler; a failing handler never stops the others
 + from_toolsets(repo_root: Path, toolsets: list | None = None): HookServer
@@ -261,39 +275,14 @@ Finds, starts, checks, and serves the one hook server process for a repository o
 + repo_port(repo: Path): int
 	// the one port this checkout's daemon may listen on
 + serve(repo: Path, inner: HookServer | None = None): None
+	// imports every toolset module the repository defines first, so their registrations (such as how a call opens its session) hold here
+	-> RepositoryToolsets.import_modules
+	-> HookServer.from_toolsets
 + source_stamp(repo: Path): str
 	// identity of the hook code this process loaded
 + replace_stale(repo: Path, path: Path): None
 	// stop a daemon that loaded older hook code
 	-> StoppableProcess.stop
-
-## RunningProcess                                                 <!-- Md -->
-
-A process on this computer by its id.
-
-+ RunningProcess(pid: int)
-------
-+ pid: int
-+ alive: bool
-----
-
-## StoppableProcess : RunningProcess                              <!-- Md -->
-
-A process by its id that this one may end. An id of 0 and this process's own id are never signalled.
-
-+ StoppableProcess(pid: int)
-------
-----
-+ stop(wait_seconds: float): None
-	// raises ProcessNotStopped when the process is still running
-
-## ProcessNotStopped : Exception                                  <!-- Md -->
-
-+ ProcessNotStopped(pid: int, cause: BaseException | None = None)
-------
-+ pid: int
-+ cause: BaseException | None
-----
 
 ---
 

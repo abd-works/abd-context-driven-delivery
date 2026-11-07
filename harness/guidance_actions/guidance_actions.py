@@ -12,13 +12,12 @@ from harness.agent_tools import AgentOperation, AgentToolSet, agent_instructions
 from harness.name.name import Name
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.practice_catalogue import PracticeCatalogue
-from tools.prompt_notify.prompt_notify import PromptNotify, Toast
+from harness.hooks.hook_server import rules_toast
 from harness.hooks.hooks import Hook
+from harness.marks.mark import Toast
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
-    from space.session.practice_session_output import PracticeSessionOutput
-    from space.session.session import Session
 
 
 class GuidanceRef(TypedDict):
@@ -81,7 +80,7 @@ class GuidanceAction:
 
     parameter_notes = {"guidance": GUIDANCE_PARAMETER}
 
-    def __init__(self, session: Session | None = None) -> None:
+    def __init__(self, session: Any = None) -> None:
         super().__init__()
         self._session = session
         # The guidance argument this action works on, so naming the same argument again keeps what it built.
@@ -93,39 +92,37 @@ class GuidanceAction:
 
     def for_call(self, call: ToolCall) -> GuidanceAction:
         """An action of this kind made for call and working on the guidance it names: in the session that guidance names
-        in a ``session=`` word, else the session open in the call's project, else the session this action was made for."""
+        in a ``session=`` word, else the session open in the call's project, else the session this action was made for.
+        A session is space/session's *Session*, which the call opens; the framework never names its class."""
         guidance = call.arguments.get("guidance")
-        action = self.made_for(self._session_named_in(guidance, call.project) or call.session or self._session)
+        action = self.made_for(self._session_named_in(guidance, call) or call.session or self._session)
         action._work_on(guidance)
         return action
 
-    def made_for(self, session: Session | None) -> GuidanceAction:
+    def made_for(self, session: Any) -> GuidanceAction:
         """An action of this kind, set up as this one is, made for session."""
         return type(self)(session=session)
 
-    def session_for(self, call: ToolCall) -> Session | None:
+    def session_for(self, call: ToolCall) -> Any:
         """The session this action logs call in: the one it was made for."""
         return self._session
 
     @property
-    def session(self) -> Session:
+    def session(self) -> Any:
         """The session this action works in."""
         if self._session is None:
             raise ActionWorksInNoSession(type(self).__name__)
         return self._session
 
-    def _session_named_in(self, guidance: Any, project: Path | None) -> Session | None:
-        """The session whose session.json guidance names in a ``session=`` word, a path from the project or an absolute
-        one; none when it names none."""
+    def _session_named_in(self, guidance: Any, call: ToolCall) -> Any:
+        """The session whose session.json guidance names in a ``session=`` word, a path from the call's project or an
+        absolute one, opened for call; none when it names none."""
         if not isinstance(guidance, str):
             return None
         named = next((word[len(_SESSION_WORD):] for word in guidance.split() if word.startswith(_SESSION_WORD)), "")
         if not named:
             return None
-        # WHY: space sits above the framework, so sessions are imported when an action first needs one.
-        from space.session.session import Session
-
-        return Session.from_file(named, project if project is not None else Path(named).resolve().parent)
+        return call.session_named(named)
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
         from harness.agent_tools.agent_tools import AgentToolMark, GuidanceAgentOperation
@@ -248,7 +245,7 @@ class GuidanceAction:
         its own."""
         return self._names_format(raw) or not isinstance(raw, (str, dict))
 
-    def _session_practice(self, item) -> PracticeSessionOutput | None:
+    def _session_practice(self, item) -> Any:
         """The practice item is, as this action's session holds it; none when the action works in no session or item is
         no practice CDD has."""
         from harness.guidance.guidance import PracticeGuidance
@@ -368,9 +365,7 @@ class GuidanceAction:
         parts, labels = action._listed_inject_parts(payload)
         if not parts:
             return {}
-        echo = PromptNotify(toast_roots=payload.workspace_roots)
-        echo.show_ide_toast(echo.inject_rules_toast(Name(type(self).__name__).kebab, labels))
-        return {"additional_context": "\n\n".join(parts)}
+        return {"additional_context": "\n\n".join(parts), "toast": rules_toast(Name(type(self).__name__).kebab, labels)}
 
     def _listed_inject_parts(self, payload: HookPayload) -> tuple[list[str], list[str]]:
         parts: list[str] = []

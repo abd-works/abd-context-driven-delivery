@@ -16,7 +16,6 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.catalog_generator.catalog_generator import Catalog
-from space.work_state import working_on
 
 # A CDD checkout's own catalog generator, cut down to what the spec observes: it shows the guidance found in its own
 # checkout, so a page naming the project's guidance proves the catalog was read from the project.
@@ -69,8 +68,7 @@ with description("a catalog generated for a project") as self:
         with before.each:
             self.project = _cdd_checkout(self.tmp / "branch-worktree")
             self.serving_before = _serving_catalog_files()
-            with working_on(self.project):
-                self.message = Catalog(repo_url="https://example.com/cdd", ref="abc").generate_catalog()
+            self.message = Catalog(repo_url="https://example.com/cdd", ref="abc", project=self.project).generate_catalog()
 
         with it("should write its pages under the project's cdd_guidance/catalog folder"):
             expect((self.project / "cdd_guidance" / "catalog" / "index.html").is_file()).to(equal(True))
@@ -91,18 +89,23 @@ with description("a catalog generated for a project") as self:
             self.project.mkdir()
 
         with it("should write its pages under the project's catalog folder"):
-            with working_on(self.project):
-                out_root = Catalog(repo_url="https://example.com/cdd", ref="abc").out_root
+            out_root = Catalog(repo_url="https://example.com/cdd", ref="abc", project=self.project).out_root
             expect(out_root).to(equal(self.project / "catalog"))
 
     with context("that is the checkout serving the tools"):
         with it("should write its pages under that checkout's cdd_guidance/catalog folder"):
-            with working_on(_REPO_ROOT):
-                out_root = Catalog(repo_url="https://example.com/cdd", ref="abc").out_root
+            out_root = Catalog(repo_url="https://example.com/cdd", ref="abc", project=_REPO_ROOT).out_root
             expect(out_root).to(equal(_REPO_ROOT / "cdd_guidance" / "catalog"))
+
+    with context("that a tool call names"):
+        with before.each:
+            self.project = self.tmp / "product"
+            self.project.mkdir()
+
+        with it("should write its pages under that project's catalog folder"):
+            expect(Catalog.load(project=self.project).out_root).to(equal(self.project / "catalog"))
 
     with context("with an output folder named by the caller"):
         with it("should write its pages into that folder"):
-            with working_on(self.tmp):
-                out_root = Catalog(repo_url="https://example.com/cdd", ref="abc", out_root=str(self.tmp / "out")).out_root
+            out_root = Catalog(repo_url="https://example.com/cdd", ref="abc", out_root=str(self.tmp / "out"), project=self.tmp).out_root
             expect(out_root).to(equal(self.tmp / "out"))

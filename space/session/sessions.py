@@ -6,11 +6,12 @@ from pathlib import Path
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 from space.repo.repo import Repo
 from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session, name_of
-from space.work_state import WorkState, project_folder
+from space.work_state import WorkState
 
 BACKLOG_FOLDER = "_backlog"
 # Folders in `.sessions` whose names start with this are the ones the sessions share, such as the backlog.
@@ -34,8 +35,8 @@ class Sessions:
     other is. The open session is read from that file each time it is asked for, so a switch or a close made by another
     chat or by the hook server is seen at once."""
 
-    def __init__(self, project: Path | str | None = None) -> None:
-        self.project = Path(project).resolve() if project is not None else project_folder()
+    def __init__(self, project: Path | str) -> None:
+        self.project = Path(project).resolve()
         self.root = Repo(self.project).checkout_folder
 
     @classmethod
@@ -148,8 +149,7 @@ class Sessions:
 
     def _name_to_switch_to(self, name: str) -> str:
         state = WorkState(self.root)
-        branch = state.branch
-        cleaned = name_of(name or state.session or (branch.name if branch is not None else ""))
+        cleaned = name_of(name or state.session or state.branch_name)
         if not cleaned:
             raise SessionNameRequiredError()
         return cleaned
@@ -159,3 +159,24 @@ class Sessions:
         if session.name != self.open_name:
             return
         WorkState(self.root).session = ""
+
+
+class CallSessions:
+    """How a tool call finds the sessions it works in: the session open in the call's project, or the one a board
+    command names by its session.json, each opened for that call so its log lines point at the call's chat. Registered
+    with *ToolCall* when this module is imported, so the framework opens a call's session without importing space."""
+
+    def open_in(self, call: ToolCall) -> Session:
+        session = Sessions(call.project).saved
+        session.chat = call.chat
+        return session
+
+    def named_in(self, session_file: str, call: ToolCall) -> Session:
+        project = call.project if call.project is not None else Path(session_file).resolve().parent
+        session = Session.from_file(session_file, project)
+        session.chat = call.chat
+        return session
+
+
+ToolCall.open_sessions_with(CallSessions())
+

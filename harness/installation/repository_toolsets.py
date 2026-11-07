@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import ast
+import importlib
+import logging
 import os
 import sys
 from pathlib import Path
 from typing import Iterable
 
 from harness.agent_tools.agent_tools import AgentToolSet
+
+logger = logging.getLogger(__name__)
 
 
 class RepositoryToolsets:
@@ -90,6 +94,20 @@ class RepositoryToolsets:
         for entry in entries[1:]:
             if entry not in sys.path:
                 sys.path.insert(0, entry)
+
+    def import_modules(self) -> list[str]:
+        """Import the module of every toolset the repository defines, without making a toolset, and answer the modules
+        that failed. A module that keeps something the framework declares a seam for, such as the sessions a tool call
+        opens, registers it when it is imported; a process that serves only some toolsets, as the hook server does,
+        imports them all so those registrations hold there as they do in the MCP host."""
+        failed: list[str] = []
+        for module in dict.fromkeys(ref.split(":", 1)[0] for ref in self.collect()):
+            try:
+                importlib.import_module(module)
+            except Exception:
+                logger.exception("could not import toolset module %s", module)
+                failed.append(module)
+        return failed
 
     def collect(self) -> list[str]:
         """The ``module:Class`` reference of every toolset class in the repository, each once, in folder order."""

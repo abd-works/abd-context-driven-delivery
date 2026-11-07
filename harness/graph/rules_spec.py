@@ -12,7 +12,7 @@ for path in (_HERE, _REPO):
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from harness.graph.ce_rule_eval_harness import practice_from_source
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_source
 
 # Five parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = """

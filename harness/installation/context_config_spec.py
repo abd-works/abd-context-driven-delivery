@@ -8,11 +8,11 @@ from pathlib import Path
 from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-_REPO_ROOT = Path(__file__).resolve().parents[1]
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from space.context_config import ContextConfig, MalformedContextConfigError
+from harness.installation.context_config import ContextConfig, MalformedContextConfigError
 
 
 with description("a project's context configuration"):

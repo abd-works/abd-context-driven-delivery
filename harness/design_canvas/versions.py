@@ -16,8 +16,8 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from space.work_state import DESIGN_CANVAS_FOLDER, WorkState
-
+# The folder a release keeps its canvas in, under the release's own folder (``.sessions/<release>/``).
+DESIGN_CANVAS_FOLDER = "design-canvas"
 _VERSION = re.compile(r"^version-(\d+)$")
 
 
@@ -34,9 +34,10 @@ class CanvasVersions:
         self.root = Path(root)
 
     @classmethod
-    def from_release(cls, repo_root: str | Path, release: str = "") -> CanvasVersions:
-        """The canvas of *release* in the checkout at *repo_root*; the release being worked on when none is named."""
-        return cls(WorkState(repo_root).release_folder(release) / DESIGN_CANVAS_FOLDER)
+    def in_release(cls, release_folder: str | Path) -> CanvasVersions:
+        """The canvas a release keeps in its folder, such as ``WorkState(repo).release_folder()`` for the release being
+        worked on."""
+        return cls(Path(release_folder) / DESIGN_CANVAS_FOLDER)
 
     @property
     def numbers(self) -> List[int]:

@@ -5,7 +5,7 @@ The class model is written as a sketch, markdown, JSON, draw.io, Python, TypeScr
 
 - **Purpose:** Keep boundaries, types, and code consistent, so a change stays inside one module instead of spreading to every caller.
 - **Seam (terms):** CleanEngineering, `clean-engineering.instructions`, `clean-engineering-modules`, `clean-engineering-model`, `clean-engineering-code`, `render`, `generate_output`
-- **Dependencies (one-way):** `cdd_guidance/practices/clean_engineering/model` (the class model and its formats), `cdd_guidance/practices/clean_engineering/model/drawio` (*DrawIOCleanEngineeringModel*), `harness/guidance` (*PracticeGuidance*), `harness/graph` (graph rules), `harness/agent_tools`, `harness/markdown`. `harness/guidance` imports *CleanEngineering* back (guidance.py), and `harness/graph` imports the class model back — cycles tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
+- **Dependencies (one-way):** `cdd_guidance/practices/clean_engineering/model` (the class model and its formats), `cdd_guidance/practices/clean_engineering/model/drawio` (*DrawIOCleanEngineeringModel*), `harness/guidance` (*PracticeGuidance*), `harness/graph` (graph rules), `harness/agent_tools`, `harness/markdown`. Nothing in harness imports this practice back: *PracticeCatalogue* names it by reference, and the spec support that runs its rules on examples is its own `rules/rule_examples.py`.
 
 ## Constraint
 

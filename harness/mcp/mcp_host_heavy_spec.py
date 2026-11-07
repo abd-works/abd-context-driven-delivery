@@ -31,7 +31,7 @@ from harness.mcp._examples.illegitimate_name.illegitimate_name import (
 )
 from space.repo.repo import Commit, DefaultBranchError
 from space.session import Sessions
-from space.work_state import WorkState, working_on
+from space.work_state import WorkState
 
 
 def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":
@@ -488,28 +488,24 @@ with description("an MCP host") as self:
             )
             self.first = Path(tempfile.mkdtemp(prefix="mcp-host-first-"))
             self.second = Path(tempfile.mkdtemp(prefix="mcp-host-second-"))
-            with working_on(self.first):
-                self.host.dispatch("hosting-demo.increment", {"step": 3})
+            self.host.dispatch("hosting-demo.increment", {"step": 3}, self.first)
 
         with after.each:
             shutil.rmtree(self.first, ignore_errors=True)
             shutil.rmtree(self.second, ignore_errors=True)
 
         with it("should keep one project's toolset state for that project"):
-            with working_on(self.first):
-                expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(3))
+            expect(self.host.dispatch("hosting-demo.read_count", {}, self.first)).to(equal(3))
 
         with it("should start the other project's toolsets fresh"):
-            with working_on(self.second):
-                expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
+            expect(self.host.dispatch("hosting-demo.read_count", {}, self.second)).to(equal(0))
 
         with context("that has been restarted"):
             with before.each:
                 self.host.dispatch("cdd.restart", {})
 
             with it("should start every project's toolsets again on the code as it is now"):
-                with working_on(self.first):
-                    expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
+                expect(self.host.dispatch("hosting-demo.read_count", {}, self.first)).to(equal(0))
 
 
 with description("an MCP host tool ping") as self:

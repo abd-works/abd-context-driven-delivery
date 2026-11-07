@@ -7,7 +7,7 @@ The MCP tools are `file-manager.list(folder)` and `file-manager.read(path)`; the
 
 - **Purpose:** Give every caller one safe way to list and read a session's files, confined to the folders that session works in.
 - **Seam (terms):** FileManager, Folder, FolderEntry, FileEntry, FileText, PathOutsideRootsError, `file-manager.list`, `file-manager.read`
-- **Dependencies (one-way):** `harness/agent_tools`, `harness/installation`, `harness/mcp`, `space/repo` and `space/session` (`FileManager.load`). `space/session`, `space/repo`, and `space/kanban` import this module, and `space/session` is imported back — a cycle tracked in `.sessions/_backlog/break-module-dependency-cycles.md`.
+- **Dependencies (one-way):** `harness/agent_tools` (`FileManager.load` opens the session of the call's project through *ToolCall*), `harness/installation`, `harness/mcp`. `space/session`, `space/repo`, and `space/kanban` import this module; it imports none of them.
 
 ## Constraint
 

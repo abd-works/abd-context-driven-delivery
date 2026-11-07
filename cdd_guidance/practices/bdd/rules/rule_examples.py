@@ -1,4 +1,4 @@
-"""BDD rule checks on spec fixtures, loaded through the real working-copy build.
+"""Spec support: BDD rule checks on spec fixtures, loaded through the real working-copy build.
 
 The spec file's language model parses its describe tree and every node loads its own facts;
 rules read only those facts.

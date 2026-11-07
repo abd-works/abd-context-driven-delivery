@@ -129,7 +129,7 @@ class _CoreInject:
 
 def _guidelines_dispatch(root: Path, toolsets: list, config: str | dict | None = None) -> dict:
     if config is not None:
-        from space.context_config import ContextConfig
+        from harness.installation.context_config import ContextConfig
 
         cfg = ContextConfig(root)
         if isinstance(config, dict):
@@ -802,6 +802,44 @@ with description("a hook handler"):
     with context("with an event Claude Code sent, which names the folder it ran in"):
         with it("should take that folder as the project"):
             expect(HookPayload({"cwd": str(self.root)}).project).to(equal(self.root))
+
+
+@agent_toolset
+class _ToastingInject:
+    @Hook("postToolUse")
+    def on_used(self, payload: HookPayload) -> dict:
+        return {"additional_context": "rules for the edit", "toast": "rules injected for stories-scenarios"}
+
+
+with description("a hook that gives a toast"):
+    with before.each:
+        self.shown: list[tuple[str, list[Path]]] = []
+        self.root = Path(tempfile.mkdtemp())
+        self.registered = HookServer._toast_shown_by
+        self.payload = HookPayload({"hook_event_name": "postToolUse", "tool_name": "Write", "workspace_roots": [str(self.root)]})
+
+    with after.each:
+        HookServer._toast_shown_by = self.registered
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    with context("with a notifier registered to show toasts"):
+        with before.each:
+            HookServer.show_toasts_with(lambda toast, roots: self.shown.append((toast, roots)))
+            self.result = HookServer(self.root, HandlerCatalog([_ToastingInject], self.root)).dispatch(self.payload)
+
+        with it("should have the notifier show the toast in the chat's workspace folders"):
+            expect(self.shown).to(equal([("rules injected for stories-scenarios", [self.root])]))
+
+        with it("should not send the toast to the IDE"):
+            expect(self.result.as_dict()).to(equal({"permission": "allow", "additional_context": "rules for the edit"}))
+
+    with context("with no notifier registered"):
+        with before.each:
+            HookServer._toast_shown_by = None
+
+        with it("should still give the IDE the hook's context"):
+            result = HookServer(self.root, HandlerCatalog([_ToastingInject], self.root)).dispatch(self.payload)
+            expect(result.additional_context).to(equal("rules for the edit"))
 
 
 with description("hook process helpers"):

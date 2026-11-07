@@ -3,16 +3,14 @@
 import sys
 from pathlib import Path
 
-_HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parents[1]
-for path in (_HERE, _REPO):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+_REPO = Path(__file__).resolve().parents[4]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
 from expects import be_true, contain, equal, expect
 from mamba import context, description, it
 
-from harness.graph.ce_multi_language_fixtures import (
+from cdd_guidance.practices.clean_engineering.rules.multi_language_examples import (
     _ELIMINATE_DUPLICATION_CLEAN,
     _ELIMINATE_DUPLICATION_FAULT,
     _KEEP_OPERATIONS_SMALL_FOCUSED_CLEAN,
@@ -28,8 +26,8 @@ from harness.graph.ce_multi_language_fixtures import (
     _USE_EXCEPTIONS_PROPERLY_CLEAN,
     _USE_EXCEPTIONS_PROPERLY_FAULT,
 )
-from harness.graph.ce_module_example_harness import assert_module_example_pair
-from harness.graph.ce_rule_eval_harness import (
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import assert_module_example_pair
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_files_rule_pair,
     assert_python_example_pair,
     practice_from_class_text,

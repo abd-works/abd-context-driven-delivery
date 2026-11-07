@@ -58,7 +58,7 @@ Ask who is trying to reach this outcome, what they need in front of them before 
 
 **Treat a system hop as a boundary interaction.** A hop is an observable request and response across a named system boundary, not every internal function call. Keep internal fan-out within the boundary Story unless another system exposes its own observable interaction. Give an intermediary its own Story when it validates, decides, or translates; keep simple forwarding or display as an outcome on the caller's Story.
 
-**Play the map in Claude Design.** For a stakeholder session, render the map with the `claude_design` format: one story-map artboard laid out like the drawio, one screen thumbnail per story, and a story explorer that runs each story's screen on its scenarios' fixtures. Follow `model/claude_design/claude_design.md`.
+**Play the map in Claude Design.** For a stakeholder session, render the map as the UX practice's Claude Design story canvas: one story-map artboard laid out like the drawio, one screen thumbnail per story, and a story explorer that runs each story's screen on its scenarios' fixtures. The canvas shows the stories on their screens, so the UX practice draws it; follow `practices/ux/model/claude_design/story_canvas.md`.
 
 #### Scaffold
 

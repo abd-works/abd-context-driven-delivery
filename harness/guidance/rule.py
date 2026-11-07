@@ -151,8 +151,6 @@ class RulesCollection(MarkdownCollection):
                 self._note_session_injected_rules(hook_payload, path, bags)
         if Hook.disabled_on(type(self).inject_rules):
             return {}
-        from tools.prompt_notify.prompt_notify import PromptNotify
-
         if not self._just_edited(hook_payload):
             return {}
         path = hook_payload.edited_path()
@@ -163,9 +161,7 @@ class RulesCollection(MarkdownCollection):
         body = self._inject_context(path, bags, parts, hook_payload)
         notice = self._read_only_notice(bags)
         if notice and (hook_payload.get("conversation_id") or hook_payload.get("workspace_roots")):
-            echo = PromptNotify()
-            echo.toast_roots = hook_payload.get("workspace_roots")
-            echo.show_ide_toast(notice)
+            return {"additional_context": body, "toast": notice}
         return {"additional_context": body}
 
     def _note_session_injected_rules(self, payload: HookPayload, path: str, bags: list[RulesCollection]) -> None:

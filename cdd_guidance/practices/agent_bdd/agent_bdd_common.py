@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import contextvars
 import json
+import os
 import re
 import subprocess
 import sys
@@ -513,14 +514,13 @@ class ToolsetInvoke:
     @classmethod
     def create(cls, request: dict[str, Any]) -> ToolsetInvoke:
         """The run a request names, on the project it names; a request that names none runs on the project the spec
-        works on, the one ``CDD_PROJECT`` names."""
+        works on, the one ``CDD_PROJECT`` names, else the current folder."""
         from harness.agent_tools.agent_tools import AgentToolSet
-        from space.work_state import project_checkout
 
         toolset_path = request.get("toolset")
         if not toolset_path:
             raise AgentHarnessError("request missing toolset")
-        project = Path(request["project"]) if request.get("project") else project_checkout()
+        project = Path(request.get("project") or os.environ.get("CDD_PROJECT") or Path.cwd())
         context = dict(request.get("context") or {})
         if request.get("session"):
             context["session"] = cls._session_named(str(request["session"]), project)

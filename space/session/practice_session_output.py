@@ -14,7 +14,7 @@ from harness.agent_tools.agent_tools import noSessionLog, tool_subject
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.installation.destination import data_field, identity, language_adapter
 from harness.mcp.mcp_server import mcp
-from space.context_config import CONTEXT_FOLDER, ContextConfig
+from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from tools.file_manager.file_manager import FileEntry
 
 if TYPE_CHECKING:
@@ -168,7 +168,7 @@ class PracticeSessionOutput:
             from harness.graph.graph import Graph
 
             primary = Path(self._folders[0][0])
-            self._graph = Graph.of_practice(self._session.repo_path or primary, self.name, primary)
+            self._graph = Graph.of_practice(self._session.repo_path, self.name, primary)
         return self._graph
 
     @property

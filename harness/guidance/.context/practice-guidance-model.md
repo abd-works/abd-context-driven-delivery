@@ -1,6 +1,6 @@
 # Practice Guidance — class model (model fidelity)
 
-Markdown channel for `harness/guidance`. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *Markdown*, *MarkdownCollection*, and *YamlFields* belong to `harness/markdown`; the *Render* action to `cdd_guidance/actions/render`; *CleanEngineering* to `cdd_guidance/practices/clean_engineering`; *Session* to `space/session`. They appear here only as names this module uses.
+Markdown channel for `harness/guidance`. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *Markdown*, *MarkdownCollection*, and *YamlFields* belong to `harness/markdown`; the *Render* action to `cdd_guidance/actions/render`; *CleanEngineering* to `cdd_guidance/practices/clean_engineering`; *ToolCall* to `harness/agent_tools`; *Hook* and *HookPayload* to `harness/hooks`; *SessionLog* to `space/session`; *GuidanceProbe* and *GuidanceDiagnostics* to `harness/diagnostics`. They appear here only as names this module uses.
 
 **Out of scope:** the guidance actions (`harness/guidance_actions`), each practice's own subclass and its `model/{format}/` adapters.
 
@@ -20,6 +20,10 @@ Guidance(format, path, session, workspace)
 ------
 format: str
 	Invariant: an omitted format uses default_format
+default_format: str
+path: str | None
+session: str | None
+workspace: Any
 name: str | None
 slug: str
 registration_name: str
@@ -61,6 +65,12 @@ format: str
 formats: dict[str, Any]
 	Invariant: keys are format names; values are adapters in {practice}/model/{format}/
 supported_formats: frozenset
+sketch_titles: tuple[str, ...]
+	// the headings that open this practice's section of a sketch, such as "stories:"
+SHORT_NAME: str
+	// the practice's name where there is little room, such as "CE" on a session board chip
+COLOUR: str
+	// the colour a session board draws the practice's chips and tiles in
 key: str
 	// the practice folder name, such as clean_engineering
 practice_slug: str
@@ -77,7 +87,6 @@ instructions: str
 schema: str
 	// {practice}/model/schema.yaml
 examples: str
-sketch_titles: tuple[str, ...]
 ----
 files(): dict[str, dict[str, list]]
 	-> FidelityGuidance.files
@@ -101,7 +110,10 @@ render(format: str, content: Any, source: str | None, previous: str): dict
 		# otherwise: parse content into the object model, then render the target format
 		-> formats[source or self.format].parse
 		-> formats[format].render
+read_paths(paths: list[str] | str, source: str | None): Any
+	-> load_document
 render_files(format: str, paths: list[str] | str, source: str | None): dict
+	// a renderer that links to other files finds them in the folder of the first path
 	-> read_paths
 	-> render
 
@@ -164,6 +176,7 @@ fidelity: str | None
 tag: str
 	// "base" or "project"
 practice: str
+pattern: str
 shared: bool
 ----
 attribute_to(practice: str, tag: str, shared: bool): Rule
@@ -190,9 +203,12 @@ from_markdown(text: str, fidelity: str | None, parent): RulesCollection
 formatted(): str
 validate(): str
 	// gathered from every rule
-inject_rules(payload: dict | None): dict
-	// @Hook("postToolUse", disabled=True): the rules that apply to an edited file, as additional_context
-	-> Session.note_injected_rules
+inject_rules(payload: HookPayload): dict
+	// @Hook("postToolUse", disabled=True): the rules that apply to an edited file, as additional_context, with a read-only notice as the toast
+	// notes the rules in the session open in the hook's project, even while the hook is disabled
+	-> ToolCall(payload.tool_input, payload.project).session.log.note_injected_rules
+scan(paths: Any): Any
+	// none here; a practice's rules collection that scans files overrides it
 
 ## AppliesTo
 
@@ -231,6 +247,76 @@ create(key: str): PracticeGuidance
 practice_class(key: str): type[PracticeGuidance]
 module_of(key: str): str
 practice_named(slug: str): PracticeGuidance | None
+toolset_ref(slug: str): str | dict | None
+	// the toolset ref a guidance action lists for a practice's or fidelity's slug, or a fidelity's bare name
+
+## ActionCatalogue
+
+Every action CDD ships, read from the folders under `cdd_guidance/actions`: each folder holds its kit as the class of the folder's name in Pascal case, and each operation that kit marks as a skill is one *Action*. A new action folder joins the catalogue by being there.
+
+ActionCatalogue
+------
+----
+kits(): tuple[type, ...]
+	// imported on first use and kept for the process
+actions(): tuple[Action, ...]
+names(): tuple[str, ...]
+has(name: str): bool
+action(name: str): Action | None
+
+## Action
+
+One action CDD ships, such as generate, repair, or createRule. One kit can publish several.
+
+Action(name: str, kit_class: type)
+------
+name: str
+kit_class: type
+kit_ref: str
+	// "{module}:{Class}" of the kit
+operation: Callable
+folder: Path
+	// the kit's folder under cdd_guidance/actions
+----
+
+## ApproachStages
+
+The stages of the CDD approach in the order it walks them. `STAGES` in `harness/guidance/stages.py` is the one instance; `DISCOVERY`, `SPECIFICATION`, and `IMPLEMENTATION` are the stage names each fidelity's **Stage:** gives.
+
+ApproachStages(stages: tuple[ApproachStage, ...])
+------
+names: tuple[str, ...]
+----
+of(name: str): ApproachStage | None
+
+## ApproachStage
+
+One stage: its name, its title, its scope, and the actions a person runs on a fidelity in it. The session board's and the catalog's stage columns are each built on one.
+
+ApproachStage(name: str, scope: StageScope)
+------
+name: str
+title: str
+scope: StageScope
+steps: list[str]
+	// generate, validate, review
+actions: list[str]
+	// the steps, then iterate, sketch, render, document
+producing_actions: list[str]
+	// every action but validate and review
+----
+
+## StageScope
+
+How much of the solution a stage's work covers, from the whole solution (Discovery) to one story (Implementation).
+
+StageScope(shape: str, name: str, reach: str, covers: str)
+------
+shape: str
+name: str
+reach: str
+covers: str
+----
 
 ## Schema
 
@@ -257,32 +343,9 @@ supertype: str
 ----
 field(name: str): str
 
-## GuidanceProbe
+## load_document
 
-Checks an install's practice and fidelity instructions and calls each guidance action with probe arguments.
-
-GuidanceProbe(installer: Installer, slugs: list[str])
-GuidanceProbe.filtered_by(installer: Installer, guidance: list[str] | None): GuidanceProbe
-------
-guidance_folder: str
-repo_root: str
-prefixes: list[str]
-content_paths: list[str]
-----
-matches(mcp_name: str): bool
-instructions(): str
-actions(): str
-work_session(): Session
-cleanup(): None
-
-## GuidanceDiagnostics
-
-GuidanceDiagnostics()
-------
-----
-guidance_diagnostics(guidance: list[str] | None): str
-	// appends results under guidance in diagnostics.json
-	-> GuidanceProbe
+`load_document(content: str = "", paths: list[str] | str | None = None): str` in `documents.py`: the document a call names, read from the files at paths, so an MCP call carries no body.
 
 ## FidelityWithoutSessionError : ValueError
 

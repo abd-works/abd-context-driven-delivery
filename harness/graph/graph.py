@@ -18,7 +18,7 @@ if str(_REPO) not in sys.path:
 
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.progress import report_progress
-from cdd_guidance.practices.stages import STAGES
+from harness.guidance.stages import STAGES
 from harness.installation.destination import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_server import mcp
