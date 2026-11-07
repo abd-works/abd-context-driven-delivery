@@ -10,7 +10,7 @@
 # file: tests/story_test.py
 # ```
 #
-# Stubs for `with story / background / scenario / given / when / then / and_` blocks.
+# Stubs for `with story / background / scenario / given / when / then / and_ / but_` blocks.
 # StoryNodeTransformer (below) compiles them into Mamba example groups at load time.
 
 from __future__ import annotations
@@ -58,6 +58,10 @@ def and_(_name: str) -> None:
     pass
 
 
+def but_(_name: str) -> None:
+    pass
+
+
 def _slug(value: str) -> str:
     slug = re.sub(r"[^0-9a-z]+", "_", value.strip().lower()).strip("_")
     return slug or "step"
@@ -66,7 +70,9 @@ def _slug(value: str) -> str:
 class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
     STORY = frozenset({"story"})
     STRUCTURE = frozenset({"background", "scenario"})
-    STEPS = frozenset({"given", "when", "then", "and_"})
+    STEPS = frozenset({"given", "when", "then", "and_", "but_"})
+    # And and But continue the step kind before them; in a Background every step is a Given.
+    CONTINUATIONS = frozenset({"and_", "but_"})
 
     def visit_With(self, node: ast.With) -> ast.AST:
         name = self._get_name(node)
@@ -122,6 +128,8 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
                 if scope == "all":
                     story_givens.extend(bg_story_givens)
                 body.extend(scenarios)
+            elif isinstance(stmt, ast.With) and self._get_name(stmt) == "scenario":
+                body.append(self._transform_scenario(stmt, []))
             else:
                 transformed = self.visit(stmt)
                 if isinstance(transformed, ast.stmt):
@@ -159,7 +167,7 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
             if not isinstance(stmt, ast.With):
                 continue
             step = self._get_name(stmt)
-            if step == "given":
+            if step == "given" or step in self.CONTINUATIONS:
                 background_givens.append(stmt.body)
             elif step == "scenario":
                 per_scenario_givens = (
@@ -224,22 +232,14 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
                 continue
             step = self._get_name(stmt)
             label = self._human_readable_context_expr(self._context_expr_for(stmt))
+            if step in self.CONTINUATIONS:
+                step = last_kind or "when"
             if step == "given":
                 scenario_givens.append(stmt.body)
                 last_kind = "given"
             elif step == "when":
                 whens.append(stmt.body)
                 last_kind = "when"
-            elif step == "and_":
-                if last_kind in ("when", "and_when"):
-                    whens.append(stmt.body)
-                    last_kind = "and_when"
-                elif last_kind in ("then", "and_then"):
-                    thens.append((label, stmt.body))
-                    last_kind = "and_then"
-                else:
-                    whens.append(stmt.body)
-                    last_kind = "when"
             elif step == "then":
                 thens.append((label, stmt.body))
                 last_kind = "then"

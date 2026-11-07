@@ -107,7 +107,11 @@ try {
     $failures = New-Object System.Collections.Generic.List[string]
 
     if ($Suite -eq "vanilla") {
-        $stories = @(Get-RepoFiles { param($name) $name -like "*_story.test.py" })
+        # A story channel's rendered outputs under _examples/actual import an examples module that is not rendered
+        # beside them; the channel feature checks them, so they do not run as story tests here.
+        $stories = @(Get-RepoFiles { param($name) $name -like "*_story.test.py" } | Where-Object {
+            $_ -notlike "*\_examples\actual\*"
+        })
         $specs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
             $name = [IO.Path]::GetFileName($_)
             -not (Test-AgenticBdd $name) -and -not (Test-Heavy $name)
