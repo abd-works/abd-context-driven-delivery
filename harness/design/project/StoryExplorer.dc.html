@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Story explorer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#E5531A}a:hover{color:#FF6A2E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; background: #0B0B0B; color: #E8E8ED; font-family: 'Inter', system-ui, sans-serif; font-size: 14px; display: flex">
+
+<div style="width: 420px; flex-shrink: 0; border-right: 1px solid #2A2A2A; background: #111113; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #2A2A2A">
+<a href="StoryMapCanvas.dc.html" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; text-decoration: none">‹ story map</a>
+<span style="flex-grow: 1"></span>
+<button type="button" style="font: inherit; font-size: 12px; color: #E8E8ED; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; padding: 4px 10px">Collapse all</button>
+<button type="button" onClick="{{reset}}" style="font: inherit; font-size: 12px; color: #E8E8ED; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; padding: 4px 10px">Reset</button>
+<button type="button" onClick="{{playNext}}" style="font: inherit; font-size: 12px; font-weight: 700; color: #0B0B0B; background: #E5531A; border: 1px solid #E5531A; border-radius: 3px; padding: 4px 10px">Play next</button>
+</div>
+<div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; overflow: hidden">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: #E5531A">MOVE WORK FORWARD ON SESSION BOARD</span>
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; background: #1A1A1E; padding: 3px 6px">STEER TICKET SESSIONS</span>
+<span style="font-weight: 600; color: #F2A07A; padding: 4px 0">▾ Activate Ticket</span>
+<span style="font-weight: 600; padding: 2px 0 2px 12px">▾ Switch to another ticket, committing, pushing, and merging the one left</span>
+<sc-for list="{{steps}}" as="step" hint-placeholder-count="8">
+<div style="{{step.style}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #E5531A; width: 44px; flex-shrink: 0">{{step.kind}}</span><span>{{step.text}}</span></div>
+</sc-for>
+<span style="padding: 6px 0 0 12px; color: #9B9BA8">▸ Activate a ticket when the active one has no branch</span>
+<span style="padding: 2px 0 0 12px; color: #9B9BA8">▸ Commit nothing when the ticket left is not checked out</span>
+<span style="padding: 2px 0 0 12px; color: #9B9BA8">▸ Cancel the switch</span>
+<span style="padding: 2px 0 0 12px; color: #9B9BA8">▸ Create the ticket's branch on activation</span>
+</div>
+</div>
+
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #2A2A2A; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9BA8">
+<span style="color: #E5531A">FIXTURE BAR</span>
+<span style="background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 3px; padding: 3px 8px; color: #E8E8ED">scenario: Switch to another ticket ▾</span>
+<span>data from activate_ticket fixtures</span>
+<span style="flex-grow: 1"></span>
+<span>step {{stepLabel}}</span>
+</div>
+<div style="flex-grow: 1; padding: 24px; display: flex; flex-direction: column; gap: 14px; position: relative">
+<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: #9B9BA8">SESSION BOARD SCREEN · IMPLEMENTATION</span>
+<div style="display: flex; gap: 14px">
+<div style="{{checkoutStyle}}"><span style="font-weight: 600">Checkout flow</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9BA8">branch checkout-flow · pushed</span></div>
+<div style="{{billingStyle}}"><span style="font-weight: 600">Billing report</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9BA8">{{billingBranch}}</span></div>
+</div>
+<sc-if value="{{showDialog}}" hint-placeholder-val="{{false}}">
+<div style="width: 460px; background: #1B1B20; border: 1px solid #2A2A2A; border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-weight: 700">Switch from Checkout flow to Billing report</span>
+<span>☑ commit and push · {{mergeMark}} merge into main</span>
+<span>☑ create a branch for billing-report</span>
+<div style="display: flex; gap: 8px; justify-content: flex-end"><span style="border: 1px solid #2A2A2A; border-radius: 3px; padding: 4px 12px">Cancel</span><span style="background: #E5531A; color: #0B0B0B; font-weight: 700; border-radius: 3px; padding: 4px 12px">Switch</span></div>
+</div>
+</sc-if>
+<sc-if value="{{showToast}}" hint-placeholder-val="{{false}}">
+<div style="align-self: flex-start; background: #1B1B20; border: 1px solid #E5531A; border-radius: 4px; padding: 10px 14px; font-size: 13px">Checkout flow: committed, pushed, merged to main · Billing report: branch created · Billing report is now active</div>
+</sc-if>
+<div style="flex-grow: 1"></div>
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #9B9BA8">Mockup of the story explorer (cdd_guidance/practices/stories/model/claude_design/explorer.dc.html): a drawn stand-in for the board screen, not the real one; the steps are the real Activate Ticket scenario.</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 0 };
+  }
+  renderVals() {
+    const steps = [
+      ['Given', 'checkout-flow is the active ticket, on its own branch pushed to origin'],
+      ['And', 'billing-report has no branch in the repository'],
+      ['When', 'the Person activates billing-report'],
+      ['Then', 'a dialog headed Switch from Checkout flow to Billing report offers commit and push, chosen, and merge, not chosen'],
+      ['And', 'it offers a branch for billing-report, chosen'],
+      ['When', 'the Person chooses merge and confirms'],
+      ['Then', 'billing-report is the active ticket with a thick orange outline'],
+      ['And', 'a toast says Checkout flow: committed, pushed, merged to main · Billing report: branch created · Billing report is now active'],
+    ];
+    const at = this.state.step;
+    const row = 'display: flex; gap: 6px; padding: 3px 6px 3px 24px; border-radius: 4px; font-size: 13px; ';
+    const card = 'width: 240px; display: flex; flex-direction: column; gap: 4px; background: #111113; border-radius: 4px; padding: 12px; ';
+    const switched = at >= 6;
+    return {
+      steps: steps.map(([kind, text], index) => ({
+        kind, text,
+        style: row + (index === at ? 'background: rgba(229,83,26,0.16); font-weight: 600;' : index < at ? 'color: #9B9BA8;' : ''),
+      })),
+      stepLabel: (at + 1) + ' of ' + steps.length,
+      playNext: () => this.setState({ step: Math.min(steps.length - 1, at + 1) }),
+      reset: () => this.setState({ step: 0 }),
+      showDialog: at >= 3 && at <= 5,
+      mergeMark: at >= 5 ? '☑' : '☐',
+      showToast: at >= 7,
+      checkoutStyle: card + (switched ? 'border: 1px solid #2A2A2A;' : 'border: 3px solid #E5531A;'),
+      billingStyle: card + (switched ? 'border: 3px solid #E5531A;' : 'border: 1px solid #2A2A2A;'),
+      billingBranch: switched ? 'branch billing-report · new' : 'no branch',
+    };
+  }
+}
+</script>
+</body>
+</html>

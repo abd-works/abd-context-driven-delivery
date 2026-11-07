@@ -1,13 +1,12 @@
 import type { EngineInterface } from 'claude-code'
 
-import type { ActionPickerJson, ChatBarViewJson, FidelityFilesJson } from '../../types'
+import type { ActionPickerJson, ChatBarViewJson } from '../../types'
 import { BRAND } from '../brand'
 import { GlyphButtonView } from '../glyph-button-view'
 import { ActionButtonView, PickerView } from './action-button-view'
 import { runHandoff, type ChatBarClient } from './chat-bar-client'
 import { openFiles, openReport } from './fidelity-files-client'
 import { selectFidelity, type FidelityProgressClient } from './fidelity-progress-client'
-import { FidelityFilesView } from './fidelity-files-view'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
 import { openClose } from './session-client'
 import { toggleCard, toggleSessionList } from './session-dialogs-client'
@@ -22,7 +21,6 @@ export type ChatBarDraw = {
   chatBar: ChatBarClient
   view: ChatBarViewJson
   picker: ActionPickerJson
-  files: FidelityFilesJson
   health: { band: unknown; panel: unknown }
   width: number
 }
@@ -138,7 +136,6 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
   return (
     <Box key="chat-bar" flexDirection="column" width={draw.width}>
       {chatBar.problem ? <Text color={BRAND.error}>{`The board did not answer: ${chatBar.problem}`}</Text> : null}
-      {FidelityFilesView($, elements, draw.files)}
       {CloseView($, elements, draw)}
       {ActivateView($, elements, draw)}
       {SessionListView($, elements, draw)}

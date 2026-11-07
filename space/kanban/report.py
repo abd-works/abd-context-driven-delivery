@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from harness.graph.saved_graph import SavedGraph, SavedGraphOutdated
 from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.rule import Rule
@@ -64,20 +66,27 @@ class ReportRule:
 
 
 class Report:
-    """The rules a validation found broken. With no report it is empty, and it says when it has no saved graph, because
-    the graph's rules are then missing from it."""
+    """The rules a validation found broken. With no report it is empty, and it says when it has no saved graph, or its
+    saved graph is in a shape the graph no longer writes, because the graph's rules are then missing from it."""
 
-    def __init__(self, path: str = "", text: str = "", rules: list[ReportRule] | None = None, has_saved_graph: bool = False) -> None:
+    def __init__(self, path: str = "", text: str = "", rules: list[ReportRule] | None = None, has_saved_graph: bool = False, is_out_of_date: bool = False) -> None:
         self._path = path
         self._text = text
         self._rules = list(rules or [])
         self._has_saved_graph = has_saved_graph
+        self._is_out_of_date = is_out_of_date
 
     @classmethod
     def from_reports(cls, folder: str, reports: list[Report]) -> Report:
         """Every rule broken in reports, each listed once though two fidelities' reports share it, the latest first."""
         rules = {rule.identity: rule for report in reversed(reports) for rule in report.rules}
-        return cls(folder, "", list(reversed(rules.values())), all(report.has_saved_graph for report in reports))
+        return cls(
+            folder,
+            "",
+            list(reversed(rules.values())),
+            all(report.has_saved_graph for report in reports),
+            any(report.is_out_of_date for report in reports),
+        )
 
     @property
     @data_field
@@ -98,6 +107,12 @@ class Report:
     @data_field
     def has_saved_graph(self) -> bool:
         return self._has_saved_graph
+
+    @property
+    @data_field
+    def is_out_of_date(self) -> bool:
+        """The saved graph was written in a shape the graph no longer reads, so validating again is the way to its rules."""
+        return self._is_out_of_date
 
     @property
     def violation_count(self) -> int:
@@ -150,12 +165,18 @@ class ReportFile:
         return bool(Judgment.from_report(self.text))
 
     def report(self) -> Report:
-        """The rules broken on the nodes of the saved graph, then each rule the agent's judgment fails that the graph did not hit."""
+        """The rules broken on the nodes of the saved graph, then each rule the agent's judgment fails that the graph did
+        not hit. A saved graph in a shape the graph no longer writes gives no rules, and the report says it is out of date."""
         text = self.text
-        graph_rules = self._graph_rules() if self._graph.is_file() else []
+        has_graph = self._graph.is_file()
+        try:
+            graph_rules = self._graph_rules() if has_graph else []
+            is_out_of_date = False
+        except SavedGraphOutdated:
+            graph_rules, is_out_of_date = [], True
         hit = {rule.rule.slug for rule in graph_rules}
         judged = [rule for rule in self._judged_rules(text) if rule.rule.slug not in hit]
-        return Report(self._repo.path_from_top(self._file), text, graph_rules + judged, self._graph.is_file())
+        return Report(self._repo.path_from_top(self._file), text, graph_rules + judged, has_graph, is_out_of_date)
 
     @property
     def _practice(self) -> PracticeGuidance:
@@ -216,10 +237,10 @@ class ReportFile:
 
     def _scanned_rules(self) -> set[str]:
         """The rules a scanner checks now; a saved graph keeps the hits of a scanner deleted since it was saved."""
-        from harness.graph.saved_graph import SavedGraph
-
-        restored = SavedGraph.from_text(self._graph.read_text(encoding="utf-8"), str(self._graph)).restored_graph()
-        return set(restored.practice(self._practice.key).checks())
+        text = self._graph.read_text(encoding="utf-8")
+        # A graph saved from several graphs is a list of their violating nodes, with no overlays.
+        saved = SavedGraph([], {}) if isinstance(json.loads(text or "{}"), list) else SavedGraph.from_text(text, str(self._graph))
+        return set(saved.restored_graph().practice(self._practice.key).checks())
 
     def _judged_rules(self, text: str) -> list[ReportRule]:
         """Each rule the judgment fails, once however many judged files fail it, with its findings at the judged files' lines."""

@@ -112,10 +112,11 @@ export async function selectFidelity($: EngineInterface, fidelity: FidelityProgr
   await clearChosenAction($)
 }
 
-// The one place a chat bar command names its session: every action command names the ticket's session.json, because
-// the chat that runs it can have another session open. Generate writes in the fidelity's default format.
+// The one place a chat bar command names its session and format: every action command names the ticket's session.json,
+// because the chat that runs it can have another session open, and the fidelity's default format, so each action works
+// in the format the band shows rather than whichever one the session last used.
 function actionCommand(chatBar: ChatBarClient, fidelity: FidelityProgressClient, action: string): string {
-  const format = action === 'generate' && fidelity.defaultFormat ? ` format=${fidelity.defaultFormat}` : ''
+  const format = fidelity.defaultFormat ? ` format=${fidelity.defaultFormat}` : ''
   return `/actions-${action} ${fidelity.slug}${format} session=${chatBar.sessionFile}`
 }
 

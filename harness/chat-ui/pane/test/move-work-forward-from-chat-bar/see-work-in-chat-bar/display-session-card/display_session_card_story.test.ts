@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
-import { boardOf, checkoutFlow, checkoutFlowWith, DONE, HEALTHY } from '../../../examples/chat-bar.examples'
-import { CHAT_BAR, drawn, findText, markOf, stateOf, textOf } from '../../../chat-bar-screen'
+import { boardOf, checkoutFlow, checkoutFlowOnOneFolder, checkoutFlowWith, DONE, DISCOVERY, HEALTHY } from '../../../examples/chat-bar.examples'
+import { CHAT_BAR, drawn, findText, markOf, stateOf, textOf, tipOf } from '../../../chat-bar-screen'
 import { scenario, story } from '../../../story-test'
 
 // Epic: Move Work Forward From Chat Bar
@@ -23,7 +23,7 @@ story('Display Session Card', CHAT_BAR, () => {
     // ChatBarView paints the session card from the same ChatBarClient
     then("the card opens with each fidelity's colour, name and state, such as Scenarios done in the Stories colour", async ($, on, scene) => {
       const slugs = ['stories-scenarios', 'ux-mockup', 'clean-engineering-model']
-      const names = await Promise.all(slugs.map(async slug => textOf(await markOf(scene.ui, `card-pick-${slug}-mark`))))
+      const names = await Promise.all(slugs.map(async slug => textOf((await drawn(scene.ui, `card-cell-${slug}`))?.children?.[1])))
       expect(names).toEqual(['Scenarios', 'Mockup', 'Model'])
       const states = await Promise.all(slugs.map(slug => stateOf(scene.ui, slug)))
       expect(states).toEqual(['✓ done', '○ to do', '○ to do'])
@@ -40,6 +40,42 @@ story('Display Session Card', CHAT_BAR, () => {
     })
     and("each fidelity's folders sit beside it", async ($, on, scene) => {
       expect(textOf(await markOf(scene.ui, 'card-folder-clean-engineering-model-mark'))).toBe('▸ harness/chat-ui/pane')
+    })
+  })
+  scenario('List each folder once', ({ given, when, then, and }) => {
+    // Evidence: observed: chat-ui-defects backlog item — the card's folder list for Discovery showed harness five times
+    given("checkout-flow is in Discovery with its five practices all writing under harness", async ($, on, scene) => {
+      scene.world.board = boardOf('checkout-flow', checkoutFlowOnOneFolder('harness'))
+    })
+    when('the Person opens the session card for checkout-flow', async ($, on, scene) => {
+      await scene.ui.press({ key: 'session-name-button' })
+    })
+    then('harness is listed once, beside the first fidelity', async ($, on, scene) => {
+      const chips = await Promise.all(DISCOVERY.map(async slug => textOf(await markOf(scene.ui, `card-folder-${slug}-mark`))))
+      expect(chips).toEqual(['▸ harness', undefined, undefined, undefined, undefined])
+    })
+    and('every fidelity of Discovery is still listed', async ($, on, scene) => {
+      const cells = await Promise.all(DISCOVERY.map(async slug => (await drawn(scene.ui, `card-cell-${slug}`)) !== undefined))
+      expect(cells).toEqual([true, true, true, true, true])
+    })
+  })
+  scenario('Pick a fidelity from anywhere on its line', ({ given, when, then, and }) => {
+    // Evidence: observed: chat-ui-defects backlog item — only the fidelity's name could be pressed; its square and its
+    // state text, the whole line, pick it too
+    given('the session card for checkout-flow is open', async ($, on, scene) => {
+      await scene.ui.press({ key: 'session-name-button' })
+    })
+    when('the Person presses the line of clean-engineering-model', async ($, on, scene) => {
+      await scene.ui.press({ key: 'card-pick-clean-engineering-model' })
+    })
+    // card line press -> selectFidelity($, fidelity)
+    then('the press covers the square, the name and the state, the whole line', async ($, on, scene) => {
+      const cell = await drawn(scene.ui, 'card-cell-clean-engineering-model')
+      const cover = cell?.children?.at(-1)
+      expect([cover?.props?.position, cover?.props?.width, cover?.children?.[0]?.props?.key]).toEqual(['absolute', '■ Model ○ to do'.length, 'card-pick-clean-engineering-model'])
+    })
+    and('clean-engineering-model is the fidelity the action button acts on', async ($, on, scene) => {
+      expect(await tipOf(scene.ui, 'action')).toBe('generate clean-engineering-model')
     })
   })
   scenario('Close the pinned session card', ({ given, when, then }) => {

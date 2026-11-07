@@ -51,6 +51,7 @@ from space.kanban.session_board_examples import (
     generated,
     seed_checkout_flow_open_on_its_pushed_branch,
     seed_checkout_flow_open_on_main,
+    seed_checkout_flow_open_on_pushed_main,
 )
 from space.kanban.story_test import (
     SharedStories,
@@ -315,6 +316,58 @@ def _(s):
         expect_active(world.data_of(world.Board.load().show()), None)
 
 
+@shared_stories.scenario("Close Active Session", "Close a session whose work is on main")
+def _(s):
+    @s.given("checkout-flow is the active ticket, its work on main")
+    def _(world):
+        seed_checkout_flow_open_on_pushed_main(world.project)
+        world.ticket = world.Ticket.load(CHECKOUT_FLOW.name)
+
+    @s.when("the Person closes checkout-flow")
+    def _(world):
+        world.leaving = world.data_of(world.ticket.work_branch())
+
+    @s.then("the close dialog offers to commit and push main")
+    def _(world):
+        expect((world.leaving["name"], world.leaving["is_checked_out"])).to(equal(("main", True)))
+
+    @s.when("the Person confirms")
+    def _(world):
+        world.closed = world.data_of(world.ticket.close(leaving=["commit", "push"]))
+
+    @s.then("main on origin holds the commit checkout-flow: leave session")
+    def _(world):
+        expect(world.project.origin_log("main")[0]).to(equal(LEAVE_SESSION_COMMIT))
+
+    @s.and_("the checkout is still on main")
+    def _(world):
+        expect(world.project.git("branch", "--show-current").strip()).to(equal("main"))
+
+    @s.and_("checkout-flow shows in Complete")
+    def _(world):
+        expect(world.closed["column"]["name"]).to(equal("Complete"))
+
+
+@shared_stories.scenario("Close Active Session", "Write a handoff for the session being closed")
+def _(s):
+    @s.given("checkout-flow is the active ticket, its story map held on violations")
+    def _(world):
+        seed_checkout_flow_open_on_main(world.project)
+
+    @s.when("the Person closes checkout-flow with Create handoff chosen")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).close(leaving=["handoff"])
+
+    @s.then("checkout-flow's folder in .sessions/_complete holds a handoff")
+    def _(world):
+        world.handoffs = sorted((world.project.sessions / "_complete" / CHECKOUT_FLOW.name).glob("handoff-*.md"))
+        expect(len(world.handoffs)).to(equal(1))
+
+    @s.and_("the handoff names stories-story-map as what comes next")
+    def _(world):
+        expect(world.handoffs[0].read_text(encoding="utf-8")).to(contain("stories-story-map"))
+
+
 @shared_stories.scenario("Close Active Session", "Complete a ticket that has no branch of its own")
 def _(s):
     @s.given("checkout-flow is the active ticket")
@@ -516,6 +569,26 @@ def _(s):
     def _(world):
         left_and_opened = (world.project.origin_log("main")[0], world.project.git("rev-parse", "--abbrev-ref", "HEAD"))
         expect(left_and_opened).to(equal((LEAVE_SESSION_COMMIT, BILLING_REPORT.name)))
+
+
+@shared_stories.scenario("Activate Ticket", "Write a handoff for the session being left")
+def _(s):
+    @s.given("checkout-flow is the active ticket")
+    def _(world):
+        seed_checkout_flow_open_on_main(world.project)
+        world.project.seed_session(BILLING_REPORT)
+
+    @s.when("the Person activates billing-report with Create handoff chosen")
+    def _(world):
+        world.Ticket.load(BILLING_REPORT.name).activate(leaving=["handoff"], opening=[])
+
+    @s.then("checkout-flow's session folder holds a handoff")
+    def _(world):
+        expect(len(list((world.project.sessions / CHECKOUT_FLOW.name).glob("handoff-*.md")))).to(equal(1))
+
+    @s.but_("billing-report's session folder holds none")
+    def _(world):
+        expect(list((world.project.sessions / BILLING_REPORT.name).glob("handoff-*.md"))).to(equal([]))
 
 
 @shared_stories.scenario("Activate Ticket", "Activate a ticket when the active one has no branch")

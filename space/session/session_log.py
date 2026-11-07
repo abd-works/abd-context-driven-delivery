@@ -66,6 +66,11 @@ class LogEntry:
         self._parts = line.split()
 
     @property
+    def text(self) -> str:
+        """The line as the log holds it."""
+        return " ".join(self._parts)
+
+    @property
     def time(self) -> str:
         return self._parts[0] if self._parts else ""
 

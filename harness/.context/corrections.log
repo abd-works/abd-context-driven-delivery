@@ -1,0 +1,21 @@
+2026-11-06 story-map.md / story-map.drawio (integrated harness map)
+Mistake: merged each Session Board story with its Chat Bar mirror into one story with Board and Chat bar lines, and kept the framework epics grouped by subject.
+Correction: the board and the chat bar are separate channels, so each gets its own epic, sub-epics and stories; the whole map reads register and install, then invoke through slash commands, then the channels. Every story carries its actor in the drawio.
+2026-11-06 story-map.md (Invoke Through Slash Commands epic)
+Mistake: stories named after mechanisms and the action that runs them (Partition Context Guidance, Route Hook Payload, Search Folder Extract), so nothing said what context guidance is for.
+Correction: the epic is Deliver Work With Context Guidance: invoke a practice at a fidelity, turn source into context, shape the solution, produce the artifacts, check them against the rules, and inject guidance into the chat at key moments. Each story says what it does for the person and cites its source.
+2026-11-06 story-map.md / story-map-v2.md (editor apps)
+Mistake: wrapped the Story UI, design canvas and knowledge graph maps, with the refine-and-test stories, under a new epic Extend Practice Content Editor Apps.
+Correction: the wrapper adds nothing; Refine And Test Editor Apps In Session Context and each app's map are epics directly under the root.
+2026-11-06 story-map.md / story-map-v2.md (root epic)
+Mistake: kept Deliver Context Driven Delivery as a root epic holding every other epic, so it was an epic of one child.
+Correction: the eight epics are the top level; the root's introduction is a paragraph under the title.
+2026-11-06 story-map.md / story-map-v2.md (Refine And Test Editor Apps In Session Context)
+Mistake: kept the refine-and-test stories as an epic of their own, which grouped nothing.
+Correction: each Test story sits in its app's epic (Save And Share Changes, Navigate The Story Explorer Tree, Review Violations In Graph App), and refining from test findings is part of each Test story.
+2026-11-06 information-architecture.drawio (integrated flow)
+Mistake: drew a separate screen for each app as a page and again as a side panel, and for its panels, so the same screen appeared over and over; gave regions slot names the renderer does not know, so every box was full width; left the story map and the story explorer inside the design canvas.
+Correction: one screen per app, whether page or side panel; regions use the renderer's layouts (holy-grail, sidebar); the Story UI editor holds the map with a screen frames view, and the frames open a browser story explorer framed by design canvas screens.
+2026-11-06 information-architecture.drawio (transition lines)
+Mistake: the IA renderer drew a transition between screens in different columns as a straight orthogonal line, so on a row of screens every line ran through the screens between and the lines lay on top of each other.
+Correction: drawio_ux.mjs routes each such line up from its own point on the source's top edge, along a lane of its own above every screen, and down into its own point on the target, so it crosses no screen or stories callout; specced in drawio_ux_map_spec.py.

@@ -270,6 +270,11 @@ export class TicketClient extends TicketClientGenerated {
     return this.chat.command(this.actionCommand(fixReportPrompt(report)))
   }
 
+  // A report whose saved graph is out of date has lost its graph's rules, so its fidelity is validated again to find them.
+  validateAgain(progress: FidelityProgressClient): Promise<void> {
+    return this.chat.command(this.actionCommand(`${RUN_NEXT_COMMANDS.validate} ${progress.fidelity.slug}`))
+  }
+
   get canRunNext(): boolean {
     if (!this.next || this.isLocked) return false
     return STEPS_WITHOUT_CHAT.includes(this.nextAction) || this.page.chat.canSend

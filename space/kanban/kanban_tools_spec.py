@@ -1073,10 +1073,13 @@ with description("the board tools") as self:
             with it("should say the ticket being left has no branch yet"):
                 expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_false)
 
-            with it("should commit nothing on a ticket that has no branch"):
-                self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "push", "merge"])
-                count = subprocess.run(["git", "rev-list", "--count", "HEAD"], cwd=self.project.root, check=True, capture_output=True, text=True)
-                expect(count.stdout.strip()).to(equal("1"))
+            with it("should name main as the branch its work is on"):
+                expect(self.project.call("ticket.work_branch", ticket="pet-visits")).to(equal({"name": "main", "exists": True, "is_checked_out": True}))
+
+            with it("should commit its work on main, merging nothing"):
+                self.project.call("ticket.activate", ticket="sign-up", leaving=["commit", "merge"])
+                count = subprocess.run(["git", "rev-list", "--count", "main"], cwd=self.project.root, check=True, capture_output=True, text=True)
+                expect(count.stdout.strip()).to(equal("2"))
 
             with it("should leave the branch checked out as it was"):
                 self.project.call("ticket.close", ticket="pet-visits", leaving=["commit", "merge"])
@@ -1112,9 +1115,10 @@ with description("the board tools") as self:
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="bdd-behavior")["python"]
                 expect(files).to(equal([{"path": "src/mine_spec.py", "exists": True}]))
 
-        with context("with the active ticket's branch not checked out"):
+        with context("with the active ticket's branch not checked out, and another branch checked out"):
             with before.each:
                 subprocess.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
+                subprocess.run(["git", "checkout", "-q", "-b", "someone-else"], cwd=self.project.root, check=True)
                 Sessions(self.project.root).switch("pet-visits")
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
@@ -1137,7 +1141,7 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.help", "board.folders", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.open_worktree", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations",
                 "fidelity-progress.finish_review", "fidelity-progress.report", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
                 "session.choose_workpath", "session.folder_files", "session.read_file",

@@ -111,6 +111,14 @@ export function checkoutFlowWith(fidelities: Record<string, FidelityState>, seed
   return { ...plain, progress: plain.progress.map(changedOf) }
 }
 
+// Seed: checkout-flow In progress in Discovery with all five practices turned on, every one writing under harness, as
+// a session on the whole repository chooses them.
+export function checkoutFlowOnOneFolder(folder = 'harness'): TicketData {
+  const plain = checkoutFlow({ column: 'Discovery', next: 'stories-story-map' })
+  const practices = Object.fromEntries(Object.entries(plain.session.practices).map(([key, practice]) => [key, { ...practice, enabled: true, root: folder, is_root_chosen: true }]))
+  return { ...plain, session: { ...plain.session, practices }, progress: plain.progress.map(progress => ({ ...progress, is_enabled: true })) }
+}
+
 // Seed: payment-retry, In progress in Discovery.
 export function paymentRetry(): TicketData {
   return checkoutFlow({ title: 'Payment retry', name: 'payment-retry', column: 'Discovery', next: 'stories-story-map' })
@@ -145,6 +153,9 @@ export const NEW_SESSION_NAME = 'payment-retry'
 // lists them by format.
 export const MODEL_FILES = { typescript: [{ path: 'pane/hooks/chat-bar/chat-bar-client.ts', exists: true }, { path: 'pane/hooks/chat-bar/fidelity-progress-client.ts', exists: true }] }
 
+// Seed: clean-engineering-model declares its class diagram beside the model's markdown.
+export const MODEL_DIAGRAM_FILES = { markdown: [{ path: 'pane/.context/chat-bar-model.md', exists: true }], drawio: [{ path: 'pane/.context/chat-bar-model.drawio', exists: true }] }
+
 // Seed: the text of chat-bar-client.ts under checkout-flow's Clean Engineering root.
 export const CHAT_BAR_CLIENT_TEXT = { 'pane/hooks/chat-bar/chat-bar-client.ts': '// Model shell for the chat bar\nexport class ChatBarClient {}' }
 
@@ -154,4 +165,5 @@ export const MODEL_REPORT = {
   text: '# Validation\n\n## no-legacy-api-after-refactor\n\nFail',
   rules: [],
   has_saved_graph: false,
+  is_out_of_date: false,
 }

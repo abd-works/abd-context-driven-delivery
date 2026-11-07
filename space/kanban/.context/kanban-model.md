@@ -270,10 +270,14 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + branch(): Branch
 	// `ticket.branch`: its own branch, named as the ticket, with whether the repository has it and whether it is checked out, so activating a ticket offers only what is missing and leaving one commits, pushes, and merges only its own branch
 	-> Repo.branch_named
++ work_branch(): Branch
+	// `ticket.work_branch`: the branch its work is on, which leaving commits and pushes: its own branch while it is checked out, else the default branch while the checkout is on it, as for a session with no branch of its own; any other checkout gives its own branch, not checked out
+	-> Ticket.branch
+	-> Repo.branch_named
 + progress_of(slug: str): FidelityProgress
 	// raises `FidelityNotFoundError` for a fidelity the ticket does not have
 + activate(leaving: list[str], opening: list[str]): Ticket
-	// `ticket.activate`: the active ticket leaves its work as leaving says (commit, push, merge), this ticket opens what opening names (branch, worktree), and its session becomes current
+	// `ticket.activate`: the active ticket leaves its work as leaving says (handoff, commit, push, merge), this ticket opens what opening names (branch, worktree), and its session becomes current
 	-> Board.active
 	-> Ticket.leave
 	-> Repo.switch_branch
@@ -285,8 +289,10 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> Branch.open_in_worktree
 	-> Board.load
 + leave(leaving: list[str])
-	// commits, pushes, and merges as leaving names, only when the ticket's own branch is checked out
-	-> Branch.is_checked_out
+	// writes a handoff for its session when leaving names handoff, then commits, pushes, and merges as leaving names, only while the branch its work is on is checked out; work on the default branch is committed and pushed there, never merged, and no worktree is removed
+	-> Handoffs.write
+	-> LeavingHandoff.document
+	-> Ticket.work_branch
 	-> Repo.push_commit
 	-> Repo.close_branch
 + move_next(): Ticket
