@@ -836,6 +836,8 @@ A module on a page: purpose, seam, nesting, and height. The format fills the lab
 
 ------
 + nested: bool
++ seam_bullets: int
+	// how many seam terms the card lists before it ends the list with `...`; six unless a subclass says otherwise
 ----
 + height(): int
 + header_height(): int

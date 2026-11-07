@@ -135,7 +135,6 @@ class GraphReading:
         """Add the class, its properties, and its operations; each is the object the parser built."""
         cls.load_source_facts()
         node = self.graph.add(self, cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", relative, cls.line, cls.end_line)
-        node.set_fact("folder", folder.node_id)
         self.graph.link("owns", folder, node)
         self.graph.link("belongsTo", node, folder, "relationship")
         for prop in _properties_of(cls):

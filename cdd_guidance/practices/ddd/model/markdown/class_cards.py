@@ -225,12 +225,15 @@ class ClassCard(MarkdownDomainNode):
         return self.property_lines() + self.operation_lines() + invariants
 
     def code_class(self, place: str, order: int) -> OoadClass:
-        """The class a code file writes for this card: its stereotypes, a copy of its members, and its place as the
-        first line of its intent. Code keeps its own copy, since a class belongs to one model."""
+        """The class a code file writes for this card: its stereotypes, a copy of its members with the relationships
+        their types name, and its place as the first line of its intent. Code keeps its own copy, since a class belongs
+        to one model."""
         oclass = OoadClass(self.name, order, intent=f"{place}\n{self.intent}" if self.intent else place)
         oclass.stereotypes = list(self.stereotypes)
         oclass.properties = [item.clone() for item in self.plain_properties]
         oclass.operations = [item.clone() for item in self.operations]
+        for prop in oclass.properties:
+            prop.derive_relationship()
         return oclass
 
     def _add_operation(self, access: str, _kind: str, name: str, parameters: str, returned: str) -> Operation:

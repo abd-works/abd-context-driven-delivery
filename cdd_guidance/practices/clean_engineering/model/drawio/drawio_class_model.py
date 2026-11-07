@@ -177,21 +177,24 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
 
 
 def _add_module_dependencies(model: DrawIOCleanEngineeringModel, document: DrawioPage, id_to_module: dict[str, Module]) -> None:
-    """A child cell depends on the top-level cell it sits in; then each edge source depends on its target."""
+    """A child cell depends on the top-level cell it sits in; then each edge source depends on its target, keeping the
+    words written on the edge."""
     nested = [
         (id_to_module.get(cell.get('id', '')), id_to_module.get(cell.get('parent', '')))
         for cell in document.vertices
     ]
     drawn = [
-        (id_to_module.get(cell.get('source', '')), id_to_module.get(cell.get('target', '')))
+        (id_to_module.get(cell.get('source', '')), id_to_module.get(cell.get('target', '')), html.unescape(cell.get('value', '') or ''))
         for cell in document.edges
     ]
-    nested = [(child, parent) for child, parent in nested if parent is None or parent in model.modules]
-    for dependent, depended_on in nested + drawn:
+    nested = [(child, parent, '') for child, parent in nested if parent is None or parent in model.modules]
+    for dependent, depended_on, label in nested + drawn:
         if dependent is None or depended_on is None or dependent not in model.modules:
             continue
         if depended_on.name not in dependent.dependencies:
             dependent.dependencies.append(depended_on.name)
+        if label:
+            dependent.dependency_labels[depended_on.name] = label
 
 
 class _ClassDiagramReader:
@@ -297,7 +300,6 @@ class _ModulesDiagramWriter:
         self._bounds: Dict[str, Box] = {}
         self._parent_ids: Dict[str, str] = {}
         self._cell_ids: Dict[str, str] = {}
-        self._drawing_order: List[str] = []
 
     def write(self) -> str:
         previous = DrawioPage.whole(self._channel.previous) if self._channel.previous else None
@@ -314,7 +316,7 @@ class _ModulesDiagramWriter:
         _set_graph_attrs(model_el, page_width, page_height)
         root_el = _add_graph_root(model_el)
         self._write_titles(root_el, page_width)
-        for name in self._drawing_order:
+        for name in self._in_model_order(self._forest.roots):
             self._write_module(root_el, name, previous_positions)
         self._write_dependencies(root_el)
         ET.indent(ET.ElementTree(mxfile), space='  ')
@@ -346,6 +348,15 @@ class _ModulesDiagramWriter:
         node.geometry = Geometry(float(x), float(y), float(width), float(height))
         node.append_to(root_el)
 
+    def _in_model_order(self, names: List[str]) -> List[str]:
+        """The modules named and everything nested in them, each parent before its children, in the model's order, so
+        parse reads the modules back in the order the model lists them."""
+        ordered: List[str] = []
+        for name in names:
+            ordered.append(name)
+            ordered.extend(self._in_model_order(self._forest.children_of.get(name, [])))
+        return ordered
+
     def _write_dependencies(self, root_el: ET.Element) -> None:
         edge_number = len(self._forest.by_name) + 20
         for module in self._channel.modules:
@@ -356,7 +367,8 @@ class _ModulesDiagramWriter:
                     continue
                 edge_number += 1
                 cell = ET.SubElement(root_el, 'mxCell', attrib={
-                    'id': f'dep-{edge_number}', 'value': '', 'style': MODULE_DEP_EDGE_STYLE, 'edge': '1',
+                    'id': f'dep-{edge_number}', 'value': self._cells[module.name].dependency_labels.get(dependency, ''),
+                    'style': MODULE_DEP_EDGE_STYLE, 'edge': '1',
                     'source': source_id, 'target': target_id, 'parent': '1',
                 })
                 ET.SubElement(cell, 'mxGeometry', attrib={'relative': '1', 'as': 'geometry'})
@@ -381,7 +393,6 @@ class _ModulesDiagramWriter:
         cell_id = f'nest-{_slug(name)}' if name in self._forest.synthetic else _slug(name) or name
         self._cell_ids[name] = cell_id
         self._parent_ids[name] = parent_id
-        self._drawing_order.append(name)
         children = self._forest.children_of.get(name, [])
         if not children:
             return

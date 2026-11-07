@@ -42,6 +42,10 @@ _LEAVES_CARD = ("integrations:", "emits events:", "consumes events:", "### ")
 # Where a class lives rides in its intent's first line when it is written as code: `Customer | custom · Customer Profile`.
 _PLACE = " · "
 _DEFAULT_CONTEXT = "Domain"
+# A module's path: the labels of the contexts that hold it, then its own name, as Clean Engineering nests modules.
+_PATH = "/"
+# The most members an aggregate lists on the map; the rest stay in the model.
+_DRAWN_MEMBERS = 10
 _CONSTRUCTORS = ("constructor", "__init__")
 # The `domain driven design:` section of a sketch, flattened to indentation: a context is `### Name | owner`, the
 # heading that holds aggregates `#### group` or `#### module/`, and an entity `##### Name`, each with a fence below.
@@ -204,6 +208,31 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
         """Where the aggregate lives, as code keeps it: each enclosing context's label, then its own name."""
         return _PLACE.join([context.label for context in self.parent.enclosing_contexts] + [self.name])
 
+    @property
+    def module_path(self) -> str:
+        """The aggregate as a module nested in its context's module: `Sales | custom/ShoppingCart`."""
+        return f"{self.parent.module_path}{_PATH}{self.name}"
+
+    @property
+    def drawn_members(self) -> list[str]:
+        """The members the map lists under the aggregate: up to ten of what the root holds, without the root itself,
+        prose, or operations."""
+        if self.root is None:
+            return []
+        names = [item.name.split("//", 1)[0].split(" - ", 1)[0].strip() for item in self.members]
+        seen = {self.root.name.split(" - ", 1)[0].strip().lower(), self.name.lower()}
+        drawn: list[str] = []
+        for name in names:
+            if name and name.lower() not in seen and not _looks_like_prose(name) and not looks_like_operation(name):
+                seen.add(name.lower())
+                drawn.append(name)
+        return drawn[:_DRAWN_MEMBERS]
+
+    def take_drawn_root(self, members: list[str]) -> None:
+        """The root a map drawing shows: the aggregate's own entity, holding the members listed under it."""
+        self._open_root(self.name, members, [])
+        super().load_root()
+
     def take_root_card(self) -> None:
         """At model fidelity the root is the <<Aggregate Root>> card; each repository card collects that root."""
         root = self.root_card
@@ -229,7 +258,23 @@ class MarkdownAggregate(Aggregate, MarkdownDomainNode):
             root = OoadClass(self.root.name, 1, intent=self.code_place)
             root.operations = [item.clone() for item in self.root.operations]
             module.classes.append(root)
+        self._depend_across(module)
         return module
+
+    def _depend_across(self, module: Module) -> None:
+        """Each class depends on the class of another aggregate its operations call, named by the calling operation,
+        and the root on each class an integration reaches, named by the integration's pattern."""
+        local = {card.name for card in self.cards} | {self.name}
+        for oclass in module.classes:
+            for operation in oclass.operations:
+                for callee in operation.callees:
+                    target, dot, _called = callee.strip().partition(".")
+                    if dot and target[:1].isupper() and target not in local:
+                        oclass.depend_on(target, operation.name)
+        if module.classes:
+            for integration in self.integrations:
+                if integration.target_name:
+                    module.classes[0].depend_on(integration.target_name, integration.pattern)
 
     def take_code_integrations(self) -> None:
         """Read back the arcs a code file kept after a class's intent, and leave the intent as it was."""
@@ -465,6 +510,11 @@ class MarkdownBoundedContext(BoundedContext, MarkdownDomainNode):
         self.append_aggregate(aggregate)
         return aggregate
 
+    @property
+    def module_path(self) -> str:
+        """The context as a module nested in the contexts around it: each enclosing context's label, joined by `/`."""
+        return _PATH.join(context.label for context in self.enclosing_contexts)
+
     def aggregate_named(self, name: str) -> "MarkdownAggregate":
         """This context's aggregate called name, opened the first time a class names it."""
         found = next((item for item in self.aggregates if item.name == name), None)
@@ -559,9 +609,13 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
             return self._wrap_bounded_context_document(body, previous)
         return body
 
+    @property
+    def has_class_cards(self) -> bool:
+        """Whether the map is a domain model, whose aggregates hold class cards, rather than a bounded context map."""
+        return any(isinstance(item, MarkdownAggregate) and item.cards for item in self.every_aggregate)
+
     def save(self) -> str:
-        has_cards = any(isinstance(item, MarkdownAggregate) and item.cards for item in self.every_aggregate)
-        lines = ["# Domain Model" if has_cards else "# Bounded Context Map", ""]
+        lines = ["# Domain Model" if self.has_class_cards else "# Bounded Context Map", ""]
         for context in self.contexts:
             if isinstance(context, MarkdownBoundedContext):
                 lines.extend(context.lines())
@@ -594,9 +648,12 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
                 if oclass.name.startswith("_"):
                     continue
                 first, _, rest = (oclass.intent or "").partition("\n")
-                place = [part.strip() for part in first.split(_PLACE.strip()) if part.strip()]
+                place = _place_in(first)
                 if len(place) < 2:
-                    place, rest = [], oclass.intent or ""
+                    # A diagram keeps the place as the class's module, not in its intent.
+                    place, rest = _place_in(module.name), oclass.intent or ""
+                if len(place) < 2:
+                    place = []
                 card = _code_card(oclass, rest.strip())
                 if place:
                     self._context_at(place[:-1]).aggregate_named(place[-1]).cards.append(card)
@@ -702,6 +759,19 @@ class MarkdownBoundedContextMap(BoundedContextMap, MarkdownDomainNode):
             elif in_event_map and line.startswith("- ") and ":" in line:
                 entries.append(line[2:])
         return entries
+
+
+def _place_in(text: str) -> list[str]:
+    """The context labels and the aggregate name a place names: `Customer | custom · Customer Profile`."""
+    return [part.strip() for part in text.split(_PLACE.strip()) if part.strip()]
+
+
+def _looks_like_prose(line: str) -> bool:
+    """A note or a sentence, not a member's name."""
+    text = line.strip()
+    if not text or text.lower().startswith("note:"):
+        return True
+    return ". " in text or text.endswith(".") or text[0].islower()
 
 
 def _code_card(oclass: OoadClass, intent: str) -> ClassCard:
