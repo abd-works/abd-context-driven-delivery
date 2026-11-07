@@ -50,6 +50,8 @@ class SketchOutline:
     def __init__(self, text: str, nesting_indent: int = 2) -> None:
         self._lines = text.splitlines()
         self._nesting_indent = nesting_indent
+        # Every practice's lens, made once: a heading that opens any of them starts that practice's section.
+        self._lenses = SketchLens.every()
 
     def holds(self, lens: SketchLens) -> bool:
         """True when this sketch has a section for that practice."""
@@ -69,7 +71,7 @@ class SketchOutline:
     @property
     def _names_a_lens(self) -> bool:
         return any(
-            any(lens.opens(title) for lens in SketchLens.every())
+            any(lens.opens(title) for lens in self._lenses)
             for _, _, title in self._outline
         )
 
@@ -106,7 +108,7 @@ class SketchOutline:
                 continue
             if other_depth and other_depth <= depth:
                 return other
-            if any(lens.opens(title) for lens in SketchLens.every()):
+            if any(lens.opens(title) for lens in self._lenses):
                 return other
         return len(self._lines)
 

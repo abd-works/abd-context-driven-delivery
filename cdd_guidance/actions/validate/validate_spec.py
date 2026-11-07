@@ -293,7 +293,8 @@ with description("a validate action on practice guidance") as self:
         with context("that the story map fidelity declares as its output"):
             with before.each:
                 declared = {"markdown": [str(self.folder / "board/.context/story-map.md")], "drawio": [str(self.folder / "board/.context/story-map.drawio")]}
-                self.action._fidelity_outputs = lambda item: declared
+                story_map = self.action.session.practice("stories").guidance.fidelities.entries["story_map"]
+                story_map.output_paths = lambda: declared
 
             with context("that is validated with no paths named"):
                 with before.each:
@@ -332,21 +333,21 @@ with description("a validate action on practice guidance") as self:
                 # checking the markdown, in the same session, leaves out of its report.
                 with context("while another call checks the drawio"):
                     with before.each:
-                        self.resolve = CheckedGraph.paths
+                        self.resolve = CheckedGraph.check_beside
                         resolve = self.resolve
                         markdown_call_waiting = threading.Event()
                         drawio_call_done = threading.Event()
 
-                        def resolve_after_the_drawio_call(checked_graph, graph, prefixes, reports):
+                        def resolve_after_the_drawio_call(checked_graph, reports):
                             if threading.current_thread() is markdown_call:
                                 markdown_call_waiting.set()
                                 drawio_call_done.wait(60)
-                            return resolve(checked_graph, graph, prefixes, reports)
+                            return resolve(checked_graph, reports)
 
                         def check_the_markdown():
                             self.report = self.action.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
 
-                        CheckedGraph.paths = resolve_after_the_drawio_call
+                        CheckedGraph.check_beside = resolve_after_the_drawio_call
                         markdown_call = threading.Thread(target=check_the_markdown)
                         markdown_call.start()
                         markdown_call_waiting.wait(60)
@@ -355,7 +356,7 @@ with description("a validate action on practice guidance") as self:
                         markdown_call.join()
 
                     with after.each:
-                        CheckedGraph.paths = self.resolve
+                        CheckedGraph.check_beside = self.resolve
 
                     with it("should report the violations in the markdown it checks"):
                         expect(self.report).to(contain("Boarding Stuff"))

@@ -26,7 +26,7 @@ from space.kanban.story_test import progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.repo.repo import Branch  # noqa: E402
 from space.kanban.board import FidelityNotFoundError, NotAStageError, PracticeNotFoundError  # noqa: E402
-from tools.file_manager.file_manager import PathOutsideRootsError  # noqa: E402
+from space.session.file_manager import PathOutsideRootsError  # noqa: E402
 from harness.mcp.mcp_server import McpServer  # noqa: E402
 from space.session import Sessions  # noqa: E402
 from space.session.session import UnknownPracticeError  # noqa: E402

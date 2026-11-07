@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import cached_property
 from pathlib import Path
 
 from harness.agent_tools import agent_tool, agent_toolset
@@ -11,6 +12,7 @@ from harness.installation.files import command
 from harness.mcp.mcp_server import mcp
 from harness.annotations.name import Name
 from space.repo.repo import Repo
+from space.session.file_manager import FileManager
 from space.session.session import COMPLETE_FOLDER, MAIN_SESSION_NAME, SESSION_FILE, Session
 from space.work_state import WorkState
 
@@ -38,8 +40,12 @@ class Sessions:
 
     def __init__(self, project: Path | str) -> None:
         self.project = Path(project).resolve()
-        self._repo = Repo(Repo(self.project).checkout_folder)
-        self.root = self._repo.root
+        # The checkout holding the project, made once: every session this loads works in it.
+        self.repo = Repo.of_project(self.project)
+        self.root = self.repo.root
+        # This checkout's own choice of open session. A linked worktree keeps its own, so a chat there never changes the
+        # session open in the main clone; the main clone's `.sessions`, where the board's tickets live, is the
+        # repository's (`repo.work_state`).
         self._state = WorkState(self.root)
 
     @classmethod
@@ -47,6 +53,11 @@ class Sessions:
     def of_project(cls, project: Path) -> Sessions:
         """The sessions of the checkout holding project, the project the running call names."""
         return cls(project)
+
+    @cached_property
+    def file_manager(self) -> FileManager:
+        """Lists, finds, and reads the files anywhere in this checkout, named from its top; made once."""
+        return FileManager(self.root, (self.root,))
 
     @property
     def folder(self) -> Path:
@@ -65,7 +76,7 @@ class Sessions:
         preferred = self.folder / name
         candidates = [preferred]
         if name != MAIN_SESSION_NAME:
-            candidates.insert(0, WorkState(self._repo.primary_root()).sessions_folder / name)
+            candidates.insert(0, self.repo.work_state.sessions_folder / name)
         return next((folder for folder in candidates if (folder / SESSION_FILE).is_file()), preferred)
 
     def all(self) -> list[Session]:
@@ -95,7 +106,7 @@ class Sessions:
 
     def load(self, folder: Path) -> Session:
         """The session kept in folder, read without opening it."""
-        return Session.load(folder, self.root)
+        return Session.load(folder, self.root, sessions=self)
 
     @property
     def open_name(self) -> str:
@@ -112,7 +123,7 @@ class Sessions:
         """A new session called name, working in workpath, with the title, scope, and parent a board ticket shows saved
         in its ``session.json``; it is not opened, because a session made for later, such as a board ticket, is not the
         one being worked on."""
-        session = Session(self.root)
+        session = Session(self.root, sessions=self)
         session.name = Name(name).title_slug
         session.workpath = Path(workpath).resolve()
         session.session_path = self.folder / session.name
@@ -166,11 +177,15 @@ class Sessions:
 
 class CallSessions:
     """How a tool call finds the sessions it works in: the session open in the call's project, or the one a board
-    command names by its session.json, each opened for that call so its log lines point at the call's chat. Registered
-    with *ToolCall* when this module is imported, so the framework opens a call's session without importing space."""
+    command names by its session.json, each opened for that call so its log lines point at the call's chat; and the
+    session open in a project for work that serves no call, such as a hook event. Registered with *ToolCall* when this
+    module is imported, so the framework opens a session without importing space."""
+
+    def saved_in(self, project: Path) -> Session:
+        return Sessions(project).saved
 
     def open_in(self, call: ToolCall) -> Session:
-        session = Sessions(call.project).saved
+        session = self.saved_in(call.project)
         session.chat = call.chat
         return session
 

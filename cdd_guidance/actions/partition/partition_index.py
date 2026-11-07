@@ -34,10 +34,18 @@ class PartitionIndex:
         return cls(path, text, cls._completeness_from_text(text))
 
     @classmethod
-    def resolve_near(cls, segment_path: str | Path) -> Path | None:
-        """Walk up from a segment file to session ``.context/*-index.md``."""
-        path = Path(segment_path)
-        start = path.parent
+    def at(cls, path: Path) -> PartitionIndex | None:
+        """The index kept in the file at path, read from it; none when there is no file there."""
+        if not path.is_file():
+            return None
+        resolved = path.resolve()
+        return cls.from_text(resolved, resolved.read_text(encoding="utf-8", errors="replace"))
+
+    @classmethod
+    def near(cls, segment_path: Path) -> PartitionIndex | None:
+        """The index a segment file belongs to: the first ``.context/*-index.md`` found walking up from the segment;
+        none when no folder above it holds one."""
+        start = segment_path.parent
         if start.name == ".context":
             start = start.parent
         for folder in [start, *start.parents]:
@@ -46,7 +54,7 @@ class PartitionIndex:
                 continue
             indexes = sorted(context_dir.glob("*-index.md"))
             if indexes:
-                return indexes[0].resolve()
+                return cls.at(indexes[0])
         return None
 
     @property

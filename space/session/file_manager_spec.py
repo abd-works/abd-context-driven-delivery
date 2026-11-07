@@ -15,7 +15,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet
 from space.session import Session, Sessions
-from tools.file_manager.file_manager import FileManager, PathOutsideRootsError
+from space.session.file_manager import FileManager, PathOutsideRootsError
 
 ORDER = b"export class Order {}\n"
 

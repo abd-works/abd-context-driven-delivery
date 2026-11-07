@@ -13,6 +13,10 @@ class SessionOpener(Protocol):
     """How a call finds the sessions it works in. The framework keeps no sessions of its own: the module that does
     registers its opener with ``ToolCall.open_sessions_with`` when it is imported, so the framework never imports it."""
 
+    def saved_in(self, project: Path) -> Any:
+        """The session saved as open in project's checkout, read for one caller that serves no call, such as a hook
+        event or a diagnostics probe."""
+
     def open_in(self, call: ToolCall) -> Any:
         """The session saved as open in the call's project, opened for this call alone."""
 
@@ -88,6 +92,15 @@ class ToolCall:
         if self._session is None:
             self._session = ToolCall._sessions.open_in(self)
         return self._session
+
+    @classmethod
+    def session_in(cls, project: Path | str) -> Any:
+        """The session saved as open in the ``.sessions/session.json`` of the checkout holding project, main when none
+        is, for work on a project that serves no call, such as a hook event or a diagnostics probe; none when no sessions
+        are registered. It is read again on each ask, so a switch or a close made through MCP is seen at once."""
+        if ToolCall._sessions is None:
+            return None
+        return ToolCall._sessions.saved_in(Path(project).resolve())
 
     def session_named(self, session_file: str) -> Any:
         """The session whose session.json is session_file, a path from the project or an absolute one, opened for this

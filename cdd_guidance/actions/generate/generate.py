@@ -5,6 +5,7 @@ from __future__ import annotations
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
+from harness.agent_tools.agent_tools import AgentInstructions
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_server import mcp
@@ -112,6 +113,11 @@ class Generate(GuidanceAction):
     def generate_output(self) -> str:
         """Write this context tool's artifact for the current fidelity. Override on the practice; the default writes nothing."""
         return ""
+
+    def fix_instructions(self) -> str:
+        """What generate_fixes_from_validate tells the agent, expanded for the guidance this generate works on, so another
+        action such as Satisfy can hand the fixes on after its own validate."""
+        return AgentInstructions.for_callable(Generate.generate_fixes_from_validate, self).expand({}).instructions
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:

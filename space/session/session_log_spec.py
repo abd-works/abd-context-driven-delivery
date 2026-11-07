@@ -2,6 +2,7 @@
 import json
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -12,6 +13,7 @@ from expects import contain, equal, expect
 from mamba import description, context, it
 
 from harness.agent_tools.tool_call import ToolCall
+from space.session.session_log import LogTimestamp
 from space.session.sessions import Sessions
 
 
@@ -43,3 +45,19 @@ with description("a session loop"):
             session = ToolCall.sent({"conversation_id": "chat-b", "transcript_path": str(transcript)}, repo).session
             session.log.next_loop()
             expect(session.log.path.read_text(encoding="utf-8")).to(contain(f"--- 1 chat-b {transcript} 1"))
+
+
+with description("a log timestamp"):
+    with context("of a moment in another time zone"):
+        with it("should write the moment in UTC to the second, as session logs do"):
+            moment = datetime(2026, 11, 7, 18, 30, 5, 900, tzinfo=timezone(timedelta(hours=1)))
+            expect(str(LogTimestamp(moment))).to(equal("2026-11-07T17:30:05Z"))
+
+    with context("read back from the text a log wrote"):
+        with it("should be the same moment"):
+            expect(LogTimestamp.read("2026-11-07T17:30:05Z").moment).to(equal(datetime(2026, 11, 7, 17, 30, 5, tzinfo=timezone.utc)))
+
+    with context("made for now"):
+        with it("should be the current moment"):
+            before_now = datetime.now(timezone.utc).replace(microsecond=0)
+            expect(LogTimestamp.now().moment >= before_now).to(equal(True))

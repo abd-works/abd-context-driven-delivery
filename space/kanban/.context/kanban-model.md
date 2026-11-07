@@ -114,7 +114,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	// `board.show`
 + folders(path: str): list[str]
 	// `board.folders`: the folders inside one folder of the repository, as paths from the project; installed packages, caches, and hidden folders are left out
-	-> Repo.file_manager
+	-> Sessions.file_manager
 	-> FileManager.list
 + help(practice: str): Help
 	// `board.help`: the help of the board's practice named practice, such as `stories`; a fidelity's help comes from its progress, `fidelity-progress.help`
@@ -562,7 +562,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Repo
 
-`space/repo/repo.py`. The board reads `root`, `is_clone`, `checkout_folder`, `primary_root()`, `worktrees` (the `Worktrees` of `space/repo/worktree.py`, each `Worktree` with its `path` and `branch`), `file_manager`, `path_from_top(path)`, and `branch_named(name)`; a ticket calls `switch_branch`, `switch_worktree`, `push_commit`, and `close_branch`.
+`space/repo/repo.py`. The board reads `root`, `is_clone`, `checkout_folder`, `primary_root()`, `worktrees` (the `Worktrees` of `space/repo/worktree.py`, each `Worktree` with its `path` and `branch`), `path_from_top(path)`, and `branch_named(name)`; a ticket calls `switch_branch`, `switch_worktree`, `push_commit`, and `close_branch`.
 
 ## Branch
 
@@ -592,4 +592,4 @@ The classes below belong to other modules and are modelled in those modules' own
 
 `harness/graph/violation.py`: one place a rule is broken, the one shape for graph hits and judged findings. `rule`, `practice`, `location`, `line`, `message`, and `source` (the numbered `SourceLine`s around the line, once `in_file(location, file, lines_before, lines_after)` has read them) are data fields. A judged finding is `Violation(rule, message, location=..., line=...)`. A report reads a saved graph's hits through `violations_from_graph_json_files` and `violations_by_rule` (`cdd_guidance/actions/validate/graph_json_reader.py`), and the rules a scanner checks now through the saved graph's practice, `SavedGraph.restored_graph().practice(key).checks()` (`harness/graph/graph.py`).
 
-`FileManager` and `FileEntry` (`tools/file_manager/file_manager.py`) list folders for `board.folders` and are the entries `fidelity-progress.files` sends.
+`FileManager` and `FileEntry` (`space/session/file_manager.py`) list folders for `board.folders`, through the board's `Sessions.file_manager`, and are the entries `fidelity-progress.files` sends.
