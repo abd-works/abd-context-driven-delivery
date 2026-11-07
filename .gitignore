@@ -117,3 +117,7 @@ sandbox/
 # Local secrets never go to git
 .secrets
 **/.secrets
+
+# Saved graphs are a cache graph.load_working_copy writes; spec fixtures are kept
+**/.context/graph.json
+!**/fixtures/**/.context/graph.json
