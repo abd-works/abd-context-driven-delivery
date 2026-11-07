@@ -49,21 +49,24 @@ function HeaderView($: EngineInterface, elements: ElementTable, chatBar: ChatBar
   )
 }
 
-// One fidelity under the dots: its square, its name (a press selects it) and its state, underlined when selected; its
-// folder beside it as a small chip, a press showing its files.
-function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient, columns: CardColumns) {
-  const { Box, Text } = elements
+// One fidelity under the dots: its square, its name and its state, underlined when selected, the whole line one press
+// that selects it; its folder beside it as a small chip, a press showing its files, on the first line of that folder.
+function FidelityRowView($: EngineInterface, elements: ElementTable, fidelity: FidelityProgressClient, columns: CardColumns, isFolderShown: boolean) {
+  const { Box, Button, Text } = elements
   const nameColour = fidelity.state === 'not_started' ? BRAND.muted : BRAND.text
   return (
     <Box key={`card-${fidelity.slug}`} flexDirection="row" marginLeft={columns.name} alignItems="center">
       <Box width={columns.fidelities}>
         <Box key={`card-cell-${fidelity.slug}`} flexDirection="row" gap={1} alignItems="center">
           <Text color={fidelity.shade}>■</Text>
-          {GlyphButtonView(elements, `card-pick-${fidelity.slug}`, fidelity.name, nameColour, () => selectFidelity($, fidelity), fidelity.isSelected)}
+          <Text color={nameColour} underline={fidelity.isSelected}>{fidelity.name}</Text>
           <Text color={fidelity.lookColour} underline={fidelity.isSelected}>{`${fidelity.mark} ${fidelity.word}`}</Text>
+          <Box position="absolute" top={0} left={0} width={rowWidthOf(fidelity)}>
+            <Button key={`card-pick-${fidelity.slug}`} plain label=" " onPress={() => selectFidelity($, fidelity)} />
+          </Box>
         </Box>
       </Box>
-      {fidelity.folder ? (
+      {isFolderShown ? (
         <Box key={`card-folder-chip-${fidelity.slug}`} paddingX={1} backgroundColor={BRAND.surface}>
           {GlyphButtonView(elements, `card-folder-${fidelity.slug}`, `▸ ${fidelity.folder}`, BRAND.muted, () => openFiles($, fidelity))}
         </Box>
@@ -86,7 +89,7 @@ export function SessionCardView($: EngineInterface, elements: ElementTable, { ch
         {chatBar.hasSession ? (
           <Box key="card-grid" flexDirection="column" paddingX={1} borderStyle="round" borderColor={BRAND.accent} backgroundColor={BRAND.raised}>
             {HeaderView($, elements, chatBar, columns)}
-            {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity, columns))}
+            {chatBar.fidelities.map(fidelity => FidelityRowView($, elements, fidelity, columns, chatBar.foldersListedBeside.has(fidelity.slug)))}
           </Box>
         ) : null}
       </Box>

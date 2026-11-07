@@ -111,6 +111,14 @@ export function checkoutFlowWith(fidelities: Record<string, FidelityState>, seed
   return { ...plain, progress: plain.progress.map(changedOf) }
 }
 
+// Seed: checkout-flow In progress in Discovery with all five practices turned on, every one writing under harness, as
+// a session on the whole repository chooses them.
+export function checkoutFlowOnOneFolder(folder = 'harness'): TicketData {
+  const plain = checkoutFlow({ column: 'Discovery', next: 'stories-story-map' })
+  const practices = Object.fromEntries(Object.entries(plain.session.practices).map(([key, practice]) => [key, { ...practice, enabled: true, root: folder, is_root_chosen: true }]))
+  return { ...plain, session: { ...plain.session, practices }, progress: plain.progress.map(progress => ({ ...progress, is_enabled: true })) }
+}
+
 // Seed: payment-retry, In progress in Discovery.
 export function paymentRetry(): TicketData {
   return checkoutFlow({ title: 'Payment retry', name: 'payment-retry', column: 'Discovery', next: 'stories-story-map' })
