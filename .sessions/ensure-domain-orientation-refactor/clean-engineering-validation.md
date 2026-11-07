@@ -361,3 +361,5 @@ Ordered so each step unblocks the next. **Decide** marks a choice that is yours.
 | 35 | Saved graphs in git | Untracked and ignored (fixtures kept) | They are a cache and had gone stale |
 | 36 | Identity fields that hold an object | Sent by reference | FidelityProgress sends its ticket, fidelity and practice without copying them |
 | 37 | Render probe | Hands render its own markdown file, read as markdown | It used to hand whole practice folders with no source |
+| 38 | Merging `harness/installer` into `harness/installation` | Not done for now | It makes installation, hooks and mcp import each other. It becomes possible once mcp and hooks register their installations with the framework, as the session opener already does |
+| 39 | Example toolsets in `tools/sub_agent` | Moved under `tools/sub_agent/fixtures/` | The installer skips `fixtures/` folders, so they stop being installed as real toolsets |
