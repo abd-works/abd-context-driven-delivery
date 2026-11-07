@@ -83,7 +83,7 @@ MODULE_SUBTITLE_STYLE = 'text;html=1;align=center;verticalAlign=middle;fontSize=
 _MODULE_MARKER = 'fillColor=#1a3a6e'
 _MODULE_CHILD_MARKER = 'fillColor=#dae8fc'
 _RELATIONSHIP_STRENGTH = {'inheritance': 4, 'composition': 3, 'aggregation': 2, 'association': 1, 'relative': 1, 'dependency': 0}
-# The interaction a dependency names, written on its arrow as `«stops»`.
+# The interaction a dependency names, written on its arrow as `«runs»` on `Repo ---<<runs>>--> Git`.
 _DEPENDENCY_LABEL = re.compile('«([^»]+)»')
 
 Box = Tuple[float, float, float, float]
@@ -526,7 +526,7 @@ class _ClassDiagramWriter:
             labels.append(dependency.label)
 
     def arrow_label(self, pair: Tuple[str, str]) -> str:
-        """The arrow's words: the properties it stands for, then each interaction its dependencies name, as `«stops»`."""
+        """The arrow's words: the properties it stands for, then each interaction its dependencies name, as `«runs»`."""
         named = [self.arrow_labels.get(pair, '')] + [f'«{label}»' for label in self.dependency_labels.get(pair, [])]
         return ' '.join(part for part in named if part)
 

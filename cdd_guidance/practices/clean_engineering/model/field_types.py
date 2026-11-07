@@ -1,6 +1,6 @@
 """A relationship from one class to another. On a property its kind is composition, aggregation, or association, with a
 cardinality of 0..1, 0..*, 1, or 1..*. A class's dependency has the kind dependency and a label that names the
-interaction, such as `stops` or `reads sections with`, drawn as `---<<stops>>--> RunningProcess`."""
+interaction, such as `runs` or `reads sections with`, drawn as `Repo ---<<runs>>--> Git`."""
 
 from __future__ import annotations
 

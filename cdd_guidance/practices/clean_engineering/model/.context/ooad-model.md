@@ -869,8 +869,10 @@ Routes every arrow between the placed cards.
 
 + ArrowRouter(cards: list[DiagramNode | DiagramCard], arrows: list[DiagramArrow], obstacles: list[Geometry] = (), kept_paths: list[list] = ())
 	Invariant: an arrow never passes through a card or runs along another arrow, and each has its own end points
+	Invariant: the inheritance arrows of two or more subclasses that reach one base from the same side join into one trunk — a drop from each subclass to a shared bar, and one line from the bar to one point on the base; a single subclass keeps a direct arrow
 ------
 ----
 + route(): list[DiagramArrow]
-	// routes shortest first, then lifts each arrow that crosses another and searches again with the rest in place
+	// lays each inheritance trunk first, breaking it into separate arrows when its lines would cross a card or run along another arrow
+	// then routes the other arrows shortest first, and lifts each that crosses another and searches again with the rest in place
 	-> DiagramArrow.corners

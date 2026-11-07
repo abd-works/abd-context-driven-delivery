@@ -235,6 +235,27 @@ def edge_kind(style: str) -> str:
     return 'unknown'
 
 
+def is_inheritance(edge: ET.Element) -> bool:
+    return edge_kind(edge.get('style', '')).startswith('inheritance')
+
+
+def anchor_fractions(edge: ET.Element, end: str) -> tuple[float | None, float | None]:
+    """The `exit` or `entry` anchor fractions an edge's style sets, or None for each one it leaves to Draw.io."""
+    style = edge.get('style', '')
+    return (style_number(style, f'{end}X'), style_number(style, f'{end}Y'))
+
+
+def share_inheritance_trunk(first: ET.Element, second: ET.Element) -> bool:
+    """True when two inheritance edges end at the same anchor on the same base: subclasses joined into one shared
+    line to their base, the UML tree style, which draws as one line and one arrowhead."""
+    return (
+        is_inheritance(first) and is_inheritance(second)
+        and first.get('target') == second.get('target')
+        and None not in anchor_fractions(first, 'entry')
+        and anchor_fractions(first, 'entry') == anchor_fractions(second, 'entry')
+    )
+
+
 def style_number(style: str, key: str) -> float | None:
     """A number set in a Draw.io style string, such as `exitX=0.3`."""
     match = re.search(f'(?:^|;){key}=(-?[0-9.]+)', style)
