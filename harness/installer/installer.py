@@ -65,8 +65,8 @@ class _InstallChannels:
 @noCatalog
 @agent_toolset
 class Installer:
-    """Publish every marked member of the toolsets a repository defines into one IDE folder, through the installation
-    of each channel its marks name, then start the hook server and the cdd server the install points at."""
+    """Publish every annotated member of the toolsets a repository defines into one IDE folder, through the installation
+    of each channel its annotations name, then start the hook server and the cdd server the install points at."""
 
     TOOLSET_REF = "harness.installer.installer:Installer"
     _SKILL_MCP_NAME = re.compile(r"Use MCP tool:\s*`([A-Za-z0-9_.-]+)")

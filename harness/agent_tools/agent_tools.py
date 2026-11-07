@@ -17,8 +17,8 @@ from harness.name.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema
 from harness.agent_tools.tool_call import ToolCall
 from harness.markdown.markdown import Markdown, MarkdownCollection
-from harness.marks.mark import Mark, mark_kinds
-from harness.agent_tools.sub_agent.mark import SubAgentMark
+from harness.annotations.annotation import Annotation, annotation_kinds
+from harness.agent_tools.sub_agent.annotation import SubAgentAnnotation
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource
 
 ContextDocument = dict[str, Any]
@@ -97,7 +97,7 @@ class ToolSetCollection:
         members = ToolsetMembers(type(self))
         return {
             name: AgentTool(name=name, callable=members.callable_on(self, name, member), toolset=self)
-            for name, member in members.marked
+            for name, member in members.annotated
         }
 
 
@@ -118,7 +118,7 @@ class Collect:
         getter.__doc__ = operation.__doc__
         getter.__name__ = self._name
         getter.__annotations__ = dict(getattr(operation, "__annotations__", {}))
-        mark_kinds.copy_marks(operation, getter)
+        annotation_kinds.copy_annotations(operation, getter)
         return property(getter)
 
     def of(self, collection: Any) -> Any:
@@ -152,7 +152,7 @@ collect = Collect
 
 
 class ToolsetMembers:
-    """The members of one toolset class and which of them its marks make tools. A class's functions and properties are
+    """The members of one toolset class and which of them its annotations make tools. A class's functions and properties are
     fixed once it is imported, and every hook dispatch asks this of every toolset, so each class is walked once."""
 
     _walked: ClassVar[dict[type, list[tuple[str, Any]]]] = {}
@@ -169,24 +169,24 @@ class ToolsetMembers:
         return walked
 
     @property
-    def marked(self) -> list[tuple[str, Any]]:
-        """The members that are tools: marked ``@agent_tool`` or ``@agent_instructions``, or enlisted by a destination
+    def annotated(self) -> list[tuple[str, Any]]:
+        """The members that are tools: annotated ``@agent_tool`` or ``@agent_instructions``, or enlisted by a destination
         such as a hook."""
         return [(name, member) for name, member in self.every if self.is_tool(member)]
 
     @property
     def tool_names(self) -> set[str]:
-        return {name for name, member in self.marked if AgentToolMark.marks(member)}
+        return {name for name, member in self.annotated if AgentToolAnnotation.annotates(member)}
 
     @property
     def instruction_names(self) -> frozenset[str]:
-        return frozenset(name for name, member in self.marked if AgentInstructionsMark.marks(member))
+        return frozenset(name for name, member in self.annotated if AgentInstructionsAnnotation.annotates(member))
 
     def is_tool(self, member: Any) -> bool:
-        return AgentToolMark.marks(member) or AgentInstructionsMark.marks(member) or mark_kinds.enlisting(member)
+        return AgentToolAnnotation.annotates(member) or AgentInstructionsAnnotation.annotates(member) or annotation_kinds.enlisting(member)
 
     def is_rules(self, member: Any) -> bool:
-        return mark_kinds.marked_for(InstallDestination.RULE, member)
+        return annotation_kinds.annotated_for(InstallDestination.RULE, member)
 
     def declared(self, name: str) -> Any:
         """The attribute name as the nearest class in the class order defines it, before Python resolves it."""
@@ -209,22 +209,22 @@ class ToolsetMembers:
         for name, member in inspect.getmembers(self._owner, predicate=inspect.isfunction):
             declared = self.declared(name)
             seen.add(name)
-            members.append((name, self._marked_function(declared) if isinstance(declared, (staticmethod, classmethod)) else member))
+            members.append((name, self._annotated_function(declared) if isinstance(declared, (staticmethod, classmethod)) else member))
         for base in self._owner.__mro__:
             for name, declared in base.__dict__.items():
                 if name not in seen and isinstance(declared, (staticmethod, classmethod)):
                     seen.add(name)
-                    members.append((name, self._marked_function(declared)))
+                    members.append((name, self._annotated_function(declared)))
         for name, member in inspect.getmembers(self._owner, predicate=inspect.isdatadescriptor):
             getter = getattr(member, "fget", None)
             if getter is not None and name not in seen:
                 members.append((name, getter))
         return members
 
-    def _marked_function(self, declared: staticmethod | classmethod) -> Any:
-        """The function a static or class method wraps, carrying the marks set on the wrapper."""
+    def _annotated_function(self, declared: staticmethod | classmethod) -> Any:
+        """The function a static or class method wraps, carrying the annotations set on the wrapper."""
         function = declared.__func__
-        for flag in mark_kinds.copied_flags:
+        for flag in annotation_kinds.copied_flags:
             if getattr(declared, flag, None) and not getattr(function, flag, None):
                 setattr(function, flag, getattr(declared, flag))
         return function
@@ -246,7 +246,7 @@ class ToolsetReference:
     def toolset_class(self) -> type:
         """The ``@agent_toolset`` class the reference names. Raises TypeError for a class that is not one."""
         loaded = getattr(self._module, self._class_name)
-        if not (isinstance(loaded, type) and AgentToolSetMark.marks(loaded)):
+        if not (isinstance(loaded, type) and AgentToolSetAnnotation.annotates(loaded)):
             raise TypeError(f"{self._reference} is not a @agent_toolset class")
         return loaded
 
@@ -300,7 +300,7 @@ class ToolsetValidator:
         """Raises AgentToolValidationError naming the recipe and what is wrong with it."""
         allowed = self._members.tool_names | set(self._members.instruction_names)
         for name, member in self._members.every:
-            if AgentInstructionsMark.marks(member):
+            if AgentInstructionsAnnotation.annotates(member):
                 self._validate_recipe(member, self._receiver(name), allowed)
 
     def _receiver(self, name: str) -> str | None:
@@ -513,7 +513,7 @@ class AgentToolSet(AgentToolSetOrigin):
     def toolset_collections(self) -> list[Any]:
         found: list[Any] = []
         for name, member in self._members.every:
-            if name in self._COLLECTION_SKIP or not ToolSetCollectionMark.marks(member):
+            if name in self._COLLECTION_SKIP or not ToolSetCollectionAnnotation.annotates(member):
                 continue
             value = getattr(self, name, None)
             if value is not None and value is not self:
@@ -561,7 +561,7 @@ class AgentToolSet(AgentToolSetOrigin):
     def _discover_operations(self) -> dict[str, AgentOperation]:
         return {
             name: AgentOperation(name=name, callable=self._operation_callable(name, member), toolset=self)
-            for name, member in self._members.marked if AgentToolMark.marks(member)
+            for name, member in self._members.annotated if AgentToolAnnotation.annotates(member)
         }
 
     def _operation_callable(self, name: str, member: Any) -> Any:
@@ -574,14 +574,14 @@ class AgentToolSet(AgentToolSetOrigin):
         members = self._members
         return {
             name: AgentInstructions(name=name, callable=members.callable_on(self, name, member), toolset=self)
-            for name, member in members.marked if AgentInstructionsMark.marks(member)
+            for name, member in members.annotated if AgentInstructionsAnnotation.annotates(member)
         }
 
     def _discover_enlisted_members(self) -> dict[str, AgentTool]:
         members = self._members
         return {
             name: AgentTool(name=name, callable=members.callable_on(self, name, member), toolset=self)
-            for name, member in members.marked if mark_kinds.enlisting(member)
+            for name, member in members.annotated if annotation_kinds.enlisting(member)
         }
 
     def _discover_collection_tools(self) -> dict[str, AgentTool]:
@@ -620,8 +620,8 @@ class AgentToolSet(AgentToolSetOrigin):
         for name, member in members.every:
             if name in self._COLLECTION_SKIP:
                 continue
-            marked = members.is_tool(member) or members.is_rules(member)
-            if not marked and not self._is_collection_type(self._return_type(member, type(instance))):
+            annotated = members.is_tool(member) or members.is_rules(member)
+            if not annotated and not self._is_collection_type(self._return_type(member, type(instance))):
                 continue
             value = getattr(instance, name, None)
             if value is not instance and self._is_tool_collection(value):
@@ -641,16 +641,16 @@ class AgentToolSet(AgentToolSetOrigin):
     def _is_collection_type(self, annotation: Any) -> bool:
         if not isinstance(annotation, type):
             return False
-        return issubclass(annotation, ToolSetCollection) or ToolSetCollectionMark.marks(annotation) or AgentToolSetMark.marks(annotation)
+        return issubclass(annotation, ToolSetCollection) or ToolSetCollectionAnnotation.annotates(annotation) or AgentToolSetAnnotation.annotates(annotation)
 
     def _is_tool_collection(self, value: Any) -> bool:
         if value is None:
             return False
-        return isinstance(value, ToolSetCollection) or ToolSetCollectionMark.marks(type(value)) or AgentToolSetMark.marks(type(value))
+        return isinstance(value, ToolSetCollection) or ToolSetCollectionAnnotation.annotates(type(value)) or AgentToolSetAnnotation.annotates(type(value))
 
 
 class ToolSubjectLoader:
-    """How a domain class marked ``@agent_toolset`` finds the object a tool call acts on: its ``@tool_subject``
+    """How a domain class annotated ``@agent_toolset`` finds the object a tool call acts on: its ``@tool_subject``
     classmethod. Each instance operation's tool takes the loader's arguments before its own, and a loader or class
     operation that takes ``project`` is handed the checkout its call names."""
 
@@ -659,10 +659,10 @@ class ToolSubjectLoader:
 
     @property
     def loader(self) -> Callable[..., Any] | None:
-        """The classmethod marked ``@tool_subject`` on the class, bound to it; none when it has none."""
+        """The classmethod annotated ``@tool_subject`` on the class, bound to it; none when it has none."""
         for name in dir(self._toolset_class):
             member = inspect.getattr_static(self._toolset_class, name, None)
-            if isinstance(member, classmethod) and ToolSubject.marks(member.__func__):
+            if isinstance(member, classmethod) and ToolSubject.annotates(member.__func__):
                 return self.given_the_called_project(getattr(self._toolset_class, name))
         return None
 
@@ -671,7 +671,7 @@ class ToolSubjectLoader:
         arguments and the operation's own, so every reader of its signature sees what a caller passes."""
         identity = list(inspect.signature(load).parameters.values())
         own = [param for param in inspect.signature(operation).parameters.values() if param.name != "self"]
-        identity_names = [*(param.name for param in identity), *([CALLED_PROJECT] if TakesCalledProject.marks(load) else [])]
+        identity_names = [*(param.name for param in identity), *([CALLED_PROJECT] if TakesCalledProject.annotates(load) else [])]
 
         @functools.wraps(operation)
         def on_subject(**arguments: Any) -> Any:
@@ -680,7 +680,7 @@ class ToolSubjectLoader:
 
         on_subject.__signature__ = inspect.Signature(identity + own, return_annotation=inspect.signature(operation).return_annotation)
         on_subject.__annotations__ = {**load.__annotations__, **operation.__annotations__}
-        if TakesCalledProject.marks(load):
+        if TakesCalledProject.annotates(load):
             TakesCalledProject(on_subject)
         return OnSubject(on_subject)
 
@@ -702,7 +702,7 @@ class ToolSubjectLoader:
 
 
 class InstallDestination:
-    """The channels a member is published to, in the order a tool lists them. Each channel's mark is a *Destination*
+    """The channels a member is published to, in the order a tool lists them. Each channel's annotation is a *Destination*
     its publisher defines (harness/installation, harness/mcp, harness/hooks), so this module names the channels and
     never imports the publishers."""
 
@@ -715,7 +715,7 @@ class InstallDestination:
 
 
 class AgentToolDestination:
-    """Which install destinations this tool is marked for."""
+    """Which install destinations this tool is annotated for."""
 
     callable: Callable[..., Any]
 
@@ -729,15 +729,15 @@ class AgentToolDestination:
 
     @property
     def hook_event(self) -> str:
-        """The IDE event this tool's ``@Hook`` mark names, or empty when the tool is not a hook."""
-        return mark_kinds.name_given_for(InstallDestination.HOOK, self.callable)
+        """The IDE event this tool's ``@Hook`` annotation names, or empty when the tool is not a hook."""
+        return annotation_kinds.name_given_for(InstallDestination.HOOK, self.callable)
 
     @property
     def install_to_skill(self) -> bool:
         return self.install_to(InstallDestination.SKILL)
 
     def install_to(self, destination: str) -> bool:
-        return mark_kinds.publishes(destination, self.callable)
+        return annotation_kinds.publishes(destination, self.callable)
 
     @property
     def destinations(self) -> list[str]:
@@ -762,8 +762,8 @@ class AgentTool(AgentToolDestination):
     @property
     def deploy_name(self) -> str:
         return (
-            mark_kinds.name_given_for(InstallDestination.COMMAND, self.callable)
-            or mark_kinds.name_given_for(InstallDestination.SKILL, self.callable)
+            annotation_kinds.name_given_for(InstallDestination.COMMAND, self.callable)
+            or annotation_kinds.name_given_for(InstallDestination.SKILL, self.callable)
             or self.name
         )
 
@@ -812,7 +812,7 @@ class AgentTool(AgentToolDestination):
 
     def _called_project(self, call: ToolCall) -> dict[str, Path]:
         """The project argument a callable that takes it is handed: the checkout call names."""
-        if not TakesCalledProject.marks(self.callable):
+        if not TakesCalledProject.annotates(self.callable):
             return {}
         if call.project is None:
             raise CallNamesNoProject(self.mcp_name)
@@ -821,9 +821,9 @@ class AgentTool(AgentToolDestination):
     def should_log_session_invocation(self, arguments: dict[str, Any] | None) -> bool:
         if arguments and arguments.get("ping") is True:
             return False
-        if NoSessionLog.marks(self.callable):
+        if NoSessionLog.annotates(self.callable):
             return False
-        if AgentToolMark.marks(self.callable):
+        if AgentToolAnnotation.annotates(self.callable):
             return True
         return self.install_to_mcp
 
@@ -844,9 +844,9 @@ class AgentTool(AgentToolDestination):
 
     @property
     def kind(self) -> str:
-        if AgentToolMark.marks(self.callable):
+        if AgentToolAnnotation.annotates(self.callable):
             return "tool"
-        if AgentInstructionsMark.marks(self.callable):
+        if AgentInstructionsAnnotation.annotates(self.callable):
             return "instructions"
         return "none"
 
@@ -871,7 +871,7 @@ class AgentTool(AgentToolDestination):
         return text
 
     def _with_sub_agent_preamble(self, text: str) -> str:
-        return SubAgentMark.with_hand_off(text) if SubAgentMark.marks(self.callable) else text
+        return SubAgentAnnotation.with_hand_off(text) if SubAgentAnnotation.annotates(self.callable) else text
 
     @functools.cached_property
     def description(self) -> str:
@@ -971,7 +971,7 @@ class AgentInstructions(AgentTool):
 
     @property
     def kind(self) -> str:
-        if AgentToolMark.marks(self.callable):
+        if AgentToolAnnotation.annotates(self.callable):
             return "tool"
         return "instructions"
 
@@ -1054,7 +1054,7 @@ class AgentInstructions(AgentTool):
     def provider_of(self, owner: Any, provider_name: str) -> Any:
         """The object owner's provider gives: a toolset it holds as it is, or what a provider operation answers."""
         provided = getattr(owner, provider_name)
-        if AgentToolSetMark.marks(type(provided)):
+        if AgentToolSetAnnotation.annotates(type(provided)):
             return provided
         return provided() if callable(provided) else provided
 
@@ -1074,7 +1074,7 @@ class AgentInstructions(AgentTool):
             recipe = owner.__dict__.get(method_name)
             if recipe is None or (after_class is None and recipe is own_recipe):
                 continue
-            if callable(recipe) and AgentInstructionsMark.marks(recipe):
+            if callable(recipe) and AgentInstructionsAnnotation.annotates(recipe):
                 return AgentInstructions(name=method_name, callable=recipe, toolset=self.toolset), owner
         return None
 
@@ -1116,39 +1116,39 @@ def instructions(*calls: Callable[..., Any]) -> str:
     return "\n\n".join(part for part in parts if part)
 
 
-class AgentToolMark(Mark):
-    """Mark a method as a tool; description comes from the method docstring."""
+class AgentToolAnnotation(Annotation):
+    """Annotate a method as a tool; description comes from the method docstring."""
 
     flag = "_is_agent_tool"
 
 
-class AgentInstructionsMark(Mark):
-    """Mark a method as @agent_instructions; unwrapped body code runs during expand."""
+class AgentInstructionsAnnotation(Annotation):
+    """Annotate a method as @agent_instructions; unwrapped body code runs during expand."""
 
     flag = "_is_agent_instructions"
 
 
-class _ClassJoiningMark(Mark):
-    """A class mark that gives the class it marks a framework base by making, in its place, a class of the same name
+class _ClassJoiningAnnotation(Annotation):
+    """A class annotation that gives the class it annotates a framework base by making, in its place, a class of the same name
     that derives from both: ``@agent_toolset`` gives AgentToolSet, ``@toolset_collection`` ToolSetCollection. Authors
-    mark the class rather than subclass the base, so a class reads as its own domain first."""
+    annotate the class rather than subclass the base, so a class reads as its own domain first."""
 
-    mark_name = ""
+    annotation_name = ""
 
     def __new__(cls, target: Any = None):
-        mark = object.__new__(cls)
-        return mark.annotate(target) if target is not None else mark
+        annotation = object.__new__(cls)
+        return annotation.annotate(target) if target is not None else annotation
 
     def __call__(self, target: Any) -> Any:
         return self.annotate(target)
 
     def _joined(self, target: type, base: type) -> type:
-        """target joined with base, or target itself when it already carries this mark. Raises TypeError for a class
+        """target joined with base, or target itself when it already carries this annotation. Raises TypeError for a class
         that subclasses base directly."""
-        if self.flag in target.__dict__ or self.marks(target):
+        if self.flag in target.__dict__ or self.annotates(target):
             return target
         if issubclass(target, base):
-            raise TypeError(f"{target.__name__} must use @{self.mark_name} — do not subclass {base.__name__} directly")
+            raise TypeError(f"{target.__name__} must use @{self.annotation_name} — do not subclass {base.__name__} directly")
         own = {name: value for name, value in vars(target).items() if name not in ("__dict__", "__weakref__")}
         joined = type(target.__name__, (target, base), own)
         joined.__doc__ = target.__doc__
@@ -1158,11 +1158,11 @@ class _ClassJoiningMark(Mark):
         return joined
 
 
-class AgentToolSetMark(_ClassJoiningMark):
-    """Mark a class as an agent toolset — @agent_tool and @agent_instructions."""
+class AgentToolSetAnnotation(_ClassJoiningAnnotation):
+    """Annotate a class as an agent toolset — @agent_tool and @agent_instructions."""
 
     flag = "_is_agent_toolset"
-    mark_name = "agent_toolset"
+    annotation_name = "agent_toolset"
     copied = False
 
     def __new__(cls, target: type | None = None):
@@ -1176,11 +1176,11 @@ class AgentToolSetMark(_ClassJoiningMark):
         return joined
 
 
-class ToolSetCollectionMark(_ClassJoiningMark):
-    """Mark a class as a ToolSetCollection, or a property as one of this toolset's collections."""
+class ToolSetCollectionAnnotation(_ClassJoiningAnnotation):
+    """Annotate a class as a ToolSetCollection, or a property as one of this toolset's collections."""
 
     flag = "_is_toolset_collection"
-    mark_name = "toolset_collection"
+    annotation_name = "toolset_collection"
 
     def annotate(self, target: Any) -> Any:
         if inspect.isclass(target):
@@ -1189,7 +1189,7 @@ class ToolSetCollectionMark(_ClassJoiningMark):
         return target
 
 
-class NoSessionLog(Mark):
+class NoSessionLog(Annotation):
     """Keep an operation's calls out of the session log. Use it on reads an agent or a mod repeats often, such as the
     session board, so the log keeps the work that was done rather than every look at it."""
 
@@ -1197,8 +1197,8 @@ class NoSessionLog(Mark):
     copied = False
 
 
-class ToolSubject(Mark):
-    """Mark the classmethod that finds the object a tool call acts on, so ``@agent_tool`` can sit on a domain class
+class ToolSubject(Annotation):
+    """Annotate the classmethod that finds the object a tool call acts on, so ``@agent_tool`` can sit on a domain class
     whose constructor takes collaborators. Each instance operation's tool takes this loader's arguments before its
     own: ``load(ticket)`` and ``move_next(self)`` make the tool ``ticket.move_next(ticket)``. A loader that takes
     ``project`` is handed the checkout of the project its call works on, so ``load(ticket, *, project)`` loads the
@@ -1208,7 +1208,7 @@ class ToolSubject(Mark):
     copied = False
 
 
-class OnSubject(Mark):
+class OnSubject(Annotation):
     """Set on the tool made from an instance operation of a ``@tool_subject`` class: it loads its object from its
     leading arguments before it runs the operation."""
 
@@ -1216,7 +1216,7 @@ class OnSubject(Mark):
     copied = False
 
 
-class TakesCalledProject(Mark):
+class TakesCalledProject(Annotation):
     """Set on a tool's callable that takes the project its call works on, which its signature leaves out because no
     caller passes it: the tool hands it the project its ``ToolCall`` names."""
 
@@ -1228,7 +1228,7 @@ noSessionLog = NoSessionLog
 tool_subject = ToolSubject
 
 
-agent_tool = AgentToolMark
-agent_toolset = AgentToolSetMark
-agent_instructions = AgentInstructionsMark
-toolset_collection = ToolSetCollectionMark
+agent_tool = AgentToolAnnotation
+agent_toolset = AgentToolSetAnnotation
+agent_instructions = AgentInstructionsAnnotation
+toolset_collection = ToolSetCollectionAnnotation

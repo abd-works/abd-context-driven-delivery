@@ -1,6 +1,6 @@
 # Hooks — object model (model fidelity)
 
-Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/marks`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess*, *StoppableProcess*, and *ProcessNotStopped* to `harness/process`, and *Session* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
+Markdown channel for **`harness/hooks`**. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet*, *AgentTool*, *ToolCall*, and *InstallDestination* belong to `harness/agent_tools`, *Destination* to `harness/annotations`, *Installation*, *RepositoryToolsets*, and *ContextConfig* to `harness/installation`, *RunningProcess*, *StoppableProcess*, and *ProcessNotStopped* to `harness/process`, and *Session* to `space/session`; they appear here only as names this module uses. *PromptLog* (`tools/prompt_log`) is one toolset whose members are hooks; it keeps its own model.
 
 **Install** writes files. **Runtime** is the IDE running `hook_server.py` with the event's JSON on stdin; that script finds or starts one long-running *HookServer* per repository through *HookDaemon* and passes the event to it. `@Hook` and `@mcp` on the same operation remain two independent installs.
 
@@ -28,11 +28,11 @@ The `@Hook` decorator on an operation. Event is required and must be an IDE even
 + EVENTS: frozenset[str]
 ----
 + annotate(operation): operation
-	// sets the hook mark; disabled sets _hook_disabled
+	// sets the hook annotation; disabled sets _hook_disabled
 + companion_flags(): tuple[str, ...]
 	// the destination's flags plus _hook_disabled
 + disabled_on(operation): bool
-	// the one reader of the disabled mark
+	// the one reader of the disabled annotation
 	// sessionStart → session_start
 
 ## Hooks                                                          <!-- Md -->
@@ -47,7 +47,7 @@ Class annotation. Turns off, or keeps out of the install, every hook on that too
 ----
 + annotate(toolset): toolset
 	// sets _hooks_disabled and _hooks_deploy
-	// write `@Hooks(disabled=True)` above `@agent_toolset` so the mark stays on the registered type
+	// write `@Hooks(disabled=True)` above `@agent_toolset` so the annotation stays on the registered type
 
 ## HookInstallation : Installation                                <!-- Md -->
 
@@ -172,7 +172,7 @@ Fields the IDE reads back from the hook process.
 
 ## HookHandler                                                    <!-- Md -->
 
-One marked operation that may run for an event.
+One annotated operation that may run for an event.
 
 + HookHandler(tool: AgentTool, repo_root: Path)
 ------
@@ -183,7 +183,7 @@ One marked operation that may run for an event.
 	// {toolset class}.{tool.name}, for the dispatch log and skipped handlers
 ----
 + is_enabled(payload: HookPayload | None = None): bool
-	// false when the toolset class is marked @Hooks(disabled=True)
+	// false when the toolset class is annotated @Hooks(disabled=True)
 	// a toolset with a `pattern` runs only where that guideline is enabled for the edited file
 	-> ContextConfig.guideline
 + invoke(payload: HookPayload): HookResult
@@ -209,7 +209,7 @@ The toolsets whose hooks the server runs.
 ----
 + ref_label(item): str
 + for_event(event_name: str): list[HookHandler]
-	// tools_for(InstallDestination.HOOK) whose hook_event matches; inject_rules marked postToolUse also serves afterFileEdit
+	// tools_for(InstallDestination.HOOK) whose hook_event matches; inject_rules annotated postToolUse also serves afterFileEdit
 
 ## HookIllegitimateHandler : Exception                            <!-- Md -->
 

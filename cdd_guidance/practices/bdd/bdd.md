@@ -321,7 +321,7 @@ Scratch pad — mistakes people still make against this practice. Each entry: th
 
 **Example:** Two top-level describes in one spec file: `a bare agentic toolset registered for deploy` and `a bare agentic toolset with mcp-published operations registered for deploy`, each with its own install `before.each`. Or a configuration branch *outside* install while a sibling repeats the same `that has been deployed to Cursor` wrapper.
 
-**What should have happened:** One outer `describe` for the shared subject (`an agent toolset registered for deploy`). Branch with sibling contexts (`that has been installed … from operations not marked mcp` vs `… marked mcp`). Shared subject promotion is also what **`shared-describe-subject`** flags.
+**What should have happened:** One outer `describe` for the shared subject (`an agent toolset registered for deploy`). Branch with sibling contexts (`that has been installed … from operations not annotated mcp` vs `… annotated mcp`). Shared subject promotion is also what **`shared-describe-subject`** flags.
 
 ### Treating results of install as install configuration
 

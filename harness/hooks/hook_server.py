@@ -380,7 +380,7 @@ class HandlerCatalog:
         return [tool for toolset in self.toolsets for tool in toolset.tools_for(InstallDestination.HOOK)]
 
     def _serves_event(self, tool: AgentTool, event_name: str) -> bool:
-        """A tool serves the event its mark names. Rule injection marked for ``postToolUse`` also serves
+        """A tool serves the event its annotation names. Rule injection annotated for ``postToolUse`` also serves
         ``afterFileEdit``, because Cursor reports a file edit under that event as well as ``postToolUse``."""
         if tool.hook_event == event_name:
             return True

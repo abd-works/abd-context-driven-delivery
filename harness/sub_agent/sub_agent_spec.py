@@ -1,4 +1,4 @@
-"""BDD spec for harness/sub_agent and the @subAgent mark."""
+"""BDD spec for harness/sub_agent and the @subAgent annotation."""
 import sys
 from pathlib import Path
 
@@ -7,9 +7,9 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from expects import contain, equal, expect
-from harness.sub_agent.fixtures import MarkedActionExample, MarkedToolExample
+from harness.sub_agent.fixtures import AnnotatedActionExample, AnnotatedToolExample
 from harness.agent_tools.agent_tools import AgentToolSet
-from harness.agent_tools.sub_agent.mark import SUB_AGENT_CALLER_PREAMBLE, SubAgentMark
+from harness.agent_tools.sub_agent.annotation import SUB_AGENT_CALLER_PREAMBLE, SubAgentAnnotation
 from harness.sub_agent.sub_agent import SubAgent
 from mamba import context, description, it
 
@@ -31,26 +31,26 @@ with description("SubAgent toolset"):
             expect(instructions).to(contain("{{instructions}}"))
 
 
-with description("@subAgent mark"):
+with description("@subAgent annotation"):
     with context("on @agent_tool"):
         with it("prepends delegation instructions to the tool description"):
-            tool = MarkedToolExample().operations["run_check"]
+            tool = AnnotatedToolExample().operations["run_check"]
             expect(tool.description).to(contain(SUB_AGENT_CALLER_PREAMBLE))
             expect(tool.description).to(contain("Run the focused check."))
 
-        with it("marks the tool as launched on a sub-agent"):
-            tool = MarkedToolExample().operations["run_check"]
-            expect(SubAgentMark.marks(tool.callable)).to(equal(True))
+        with it("annotates the tool as launched on a sub-agent"):
+            tool = AnnotatedToolExample().operations["run_check"]
+            expect(SubAgentAnnotation.annotates(tool.callable)).to(equal(True))
 
     with context("on @agent_instructions"):
         with it("prepends delegation instructions when expanded"):
-            expanded = MarkedActionExample().instructions["plan_work"].expand(
+            expanded = AnnotatedActionExample().instructions["plan_work"].expand(
                 {"task": "refactor auth"},
             )
             expect(expanded.instructions).to(contain(SUB_AGENT_CALLER_PREAMBLE))
             expect(expanded.instructions).to(contain("Plan work for refactor auth"))
             expect(expanded.instructions).to(contain("Break the task into steps."))
 
-        with it("marks the instructions as launched on a sub-agent"):
-            tool = MarkedActionExample().instructions["plan_work"]
-            expect(SubAgentMark.marks(tool.callable)).to(equal(True))
+        with it("annotates the instructions as launched on a sub-agent"):
+            tool = AnnotatedActionExample().instructions["plan_work"]
+            expect(SubAgentAnnotation.annotates(tool.callable)).to(equal(True))

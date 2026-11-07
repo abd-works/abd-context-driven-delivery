@@ -12,7 +12,7 @@ Use slash **`/install`** (command — not a skill, not MCP). Deployed **commands
 
 Every full install also re-deploys the Installer toolset last so the slash commands stay current.
 
-A toolset marked ``@language_adapter(language="typescript")`` also gets typed code under ``{install_path}/language-adapters/typescript/``, in the folders its source sits in: its data, a class that reads it, and a class that calls its MCP tools. `clean` removes these with the rest of the install, and `patterns-cdd-web-domain-access` says how applications use them.
+A toolset annotated ``@language_adapter(language="typescript")`` also gets typed code under ``{install_path}/language-adapters/typescript/``, in the folders its source sits in: its data, a class that reads it, and a class that calls its MCP tools. `clean` removes these with the rest of the install, and `patterns-cdd-web-domain-access` says how applications use them.
 
 Every chat in every project talks to **one cdd server**, installed once under `~/.cdd/`. Install writes the IDE's user-level `cdd` entry as that server's URL, starts the server when none answers, and pins it to this checkout's current commit only on the very first install. A later install from any worktree leaves the serving code alone, so it never repoints every open chat at that worktree. To change what serves every chat, say so: `python scripts/install.py --pin-runtime` serves this checkout's current commit, and `python scripts/install.py --serve-from-checkout` serves this checkout as it is on disk, for working on CDD itself; after editing Python there, `cdd.restart` reloads it for every chat.
 

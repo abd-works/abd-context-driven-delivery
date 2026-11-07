@@ -1,4 +1,4 @@
-"""The ``@Hook`` mark, and the files an IDE reads to run hooks: ``hooks.json``, which names the hook command for each
+"""The ``@Hook`` annotation, and the files an IDE reads to run hooks: ``hooks.json``, which names the hook command for each
 event, and ``hook-handlers.json``, which lists the operations that command may run."""
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools.agent_tools import AgentTool, InstallDestination
 from harness.installation.destination import Installation
-from harness.marks.mark import Destination
+from harness.annotations.annotation import Destination
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookServer
@@ -83,10 +83,10 @@ class Hook(Destination):
         return inst
 
     def annotate(self, target: Any) -> Any:
-        marked = super().annotate(target)
+        annotated = super().annotate(target)
         if self.disabled:
-            setattr(marked, self.disabled_flag, True)
-        return marked
+            setattr(annotated, self.disabled_flag, True)
+        return annotated
 
     @classmethod
     def companion_flags(cls) -> tuple[str, ...]:

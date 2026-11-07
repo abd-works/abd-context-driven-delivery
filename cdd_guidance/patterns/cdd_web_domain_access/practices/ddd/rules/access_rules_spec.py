@@ -62,7 +62,7 @@ with description("the cdd_web_domain_access pattern rules"):
         with it("should flag a node that extends a generated adapter, an adapter written by hand, and a connection written by hand"):
             expect(len(self.found["adapter-is-generated"])).to(equal(3))
 
-        with it("should flag an open result on a marked toolset"):
+        with it("should flag an open result on an annotated toolset"):
             expect(self.found).to(have_key("annotate-what-typescript-reads"))
 
         with it("should run the shared behavior rules through the same graph"):

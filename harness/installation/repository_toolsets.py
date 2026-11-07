@@ -20,7 +20,7 @@ class RepositoryToolsets:
     and puts the folders that load those classes on the import path. The installer, the hook server, and the MCP host
     each read the repository this way, so the three publish the same toolsets.
 
-    A class is a toolset when it carries ``@agent_toolset`` or a member carries a publication mark (``@skill``,
+    A class is a toolset when it carries ``@agent_toolset`` or a member carries a publication annotation (``@skill``,
     ``@mcp``, ``@Hook``, ...). Folders of examples, fixtures, tests, and retired code are skipped, and so are specs.
     """
 
@@ -52,7 +52,7 @@ class RepositoryToolsets:
     )
     _SKIP_FILE_NAMES = frozenset({"conftest.py"})
     _SKIP_FILE_SUFFIXES = ("_spec.py", "_test.py")
-    # The marks install reads on members, by name, because it reads the source without importing it. A mark is matched
+    # The annotations install reads on members, by name, because it reads the source without importing it. An annotation is matched
     # by its snake-case name, so its class name (``Mcp``) and its lowercase alias (``mcp``) both count.
     ANNOTATIONS = frozenset(
         {"skill", "command", "rules", "agent", "agent_guidance", "mcp", "hook", "hooks", "agent_tool", "agent_instructions"}

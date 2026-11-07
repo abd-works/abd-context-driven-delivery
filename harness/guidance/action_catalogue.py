@@ -9,7 +9,7 @@ from pathlib import Path
 from harness.agent_tools.agent_tools import InstallDestination
 from harness.name.name import Name
 from harness.installation.files import Skill  # noqa: F401 - defining Skill registers the skill channel this reads
-from harness.marks.mark import mark_kinds
+from harness.annotations.annotation import annotation_kinds
 
 _ACTIONS_FOLDER = Path(__file__).resolve().parents[2] / "cdd_guidance" / "actions"
 
@@ -55,7 +55,7 @@ class ActionCatalogue:
     """Every action CDD ships, read from its action folders: each folder under ``cdd_guidance/actions`` whose name
     does not start with ``_`` holds its toolset in the module of the folder's name, as the class of that name in Pascal
     case (``grill_context/grill_context.py`` holds ``GrillContext``). Each operation the toolset installs as a skill is
-    one action; an operation marked ``@noDeploy`` is not installed, so it is no action an agent or a person can run. A
+    one action; an operation annotated ``@noDeploy`` is not installed, so it is no action an agent or a person can run. A
     new action folder joins the catalogue by being there, so no other list has to learn about it.
 
     The toolsets are imported on first use and kept for the process, as the practice catalogue keeps its practices."""
@@ -76,7 +76,7 @@ class ActionCatalogue:
             Action(name, toolset)
             for toolset in cls.toolsets()
             for name, member in vars(toolset).items()
-            if mark_kinds.publishes(InstallDestination.SKILL, member)
+            if annotation_kinds.publishes(InstallDestination.SKILL, member)
         )
 
     @classmethod

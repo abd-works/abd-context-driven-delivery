@@ -1,6 +1,6 @@
 """Language adapters: typed code for a CDD domain object, deployed beside its skills and MCP operations.
 
-Marked toolsets are deployed to `<install path>/language-adapters/<language>/`, in the folders their source sits in, so
+Annotated toolsets are deployed to `<install path>/language-adapters/<language>/`, in the folders their source sits in, so
 an application outside Python reaches the same tools the agent calls. Every MCP call is made on the server, so each
 object gets a shared base that holds its state, a server adapter that calls its tools, a browser adapter that posts to
 its routes, and the routes that join the two. One connection carries every call."""
@@ -48,10 +48,10 @@ _REFERENCE = "reference"
 
 
 class MissingIdentityError(ValueError):
-    """A toolset's tools load one object by name, but its mark does not say which field of its data holds that name."""
+    """A toolset's tools load one object by name, but its annotation does not say which field of its data holds that name."""
 
     def __init__(self, toolset_name: str) -> None:
-        super().__init__(f"{toolset_name} loads one object by name; mark its class @identity(<field>), one field for each argument of its loader")
+        super().__init__(f"{toolset_name} loads one object by name; annotate its class @identity(<field>), one field for each argument of its loader")
 
 
 class PublishedSchema:
@@ -182,17 +182,17 @@ class _FieldHint:
 
     @property
     def is_shape(self) -> bool:
-        """A class that marks properties as its data."""
+        """A class that annotates properties as its data."""
         return isinstance(self.hint, type) and bool(DataClass(self.hint).fields)
 
     @property
     def is_reference(self) -> bool:
-        """A field marked `@data_field(reference=True)`, which sends its object by identity alone."""
+        """A field annotated `@data_field(reference=True)`, which sends its object by identity alone."""
         return _REFERENCE in self._annotations
 
     @property
     def is_source_file(self) -> bool:
-        """A field marked `Annotated[str, SourceFile]`, which holds a path the file manager reads."""
+        """A field annotated `Annotated[str, SourceFile]`, which holds a path the file manager reads."""
         return SourceFile in self._annotations
 
     @property
@@ -202,7 +202,7 @@ class _FieldHint:
 
 
 class _DataShape:
-    """A class whose marked properties are its data, typed in TypeScript as `{Class}Data`."""
+    """A class whose annotated properties are its data, typed in TypeScript as `{Class}Data`."""
 
     def __init__(self, shape: type, names: Mapping[str, Any]) -> None:
         self._shape = shape
@@ -252,7 +252,7 @@ class TypeScriptOperation:
         self.result = owner.result_of(tool)
         self.path_tail = Name(tool.name).kebab
         self.label = _PythonName(tool.name).label
-        self.marked_edits = DataClass(type(owner.toolset)).edited_by(tool.callable)
+        self.annotated_edits = DataClass(type(owner.toolset)).edited_by(tool.callable)
 
     @property
     def returns_itself(self) -> bool:
@@ -317,7 +317,7 @@ class TypeScriptOperation:
 
 
 class TypeScriptToolset:
-    """One marked toolset, written as one TypeScript file of its generated classes and one of its starting-point views."""
+    """One annotated toolset, written as one TypeScript file of its generated classes and one of its starting-point views."""
 
     def __init__(self, toolset: Any, tools: list[AgentTool], folder: Path, peers: dict[str, TypeScriptToolset]) -> None:
         self.toolset = toolset
@@ -356,13 +356,13 @@ class TypeScriptToolset:
 
     @property
     def _data_shape(self) -> type | None:
-        """The toolset's class when it marks properties as its data."""
+        """The toolset's class when it annotates properties as its data."""
         toolset_class = type(self.toolset)
         return toolset_class if DataClass(toolset_class).fields else None
 
     @property
     def peer_classes(self) -> dict[str, type]:
-        """Every marked toolset's class by name, for the types a module imports only for type checking."""
+        """Every annotated toolset's class by name, for the types a module imports only for type checking."""
         return {peer.name: type(peer.toolset) for peer in self._peers.values()}
 
     def _shape_named(self, name: str, function: Any) -> type | None:
@@ -601,7 +601,7 @@ class TypeScriptToolset:
 
     def identity_of(self, tool: AgentTool) -> tuple[str, ...]:
         """The arguments that name the object, its loader's: a loader with none, like the current board's, names none."""
-        if not OnSubject.marks(tool.callable):
+        if not OnSubject.annotates(tool.callable):
             return ()
         load = ToolSubjectLoader(type(self.toolset)).loader
         return tuple(inspect.signature(load).parameters)
@@ -797,7 +797,7 @@ class TypeScriptViews:
     def _argument_for(self, operation: TypeScriptOperation, field: str) -> str | None:
         if field in operation.properties:
             return field
-        if field in operation.marked_edits and len(operation.properties) == 1:
+        if field in operation.annotated_edits and len(operation.properties) == 1:
             return next(iter(operation.properties))
         return None
 
@@ -812,7 +812,7 @@ class TypeScriptViews:
 
 
 class LanguageAdapterInstallation(Installation):
-    """Records marked toolsets during the install walk, then writes them together, because their files import each other."""
+    """Records annotated toolsets during the install walk, then writes them together, because their files import each other."""
 
     channel = "language-adapter"
 
@@ -821,7 +821,7 @@ class LanguageAdapterInstallation(Installation):
         self._recorded: list[Any] = []
 
     def record(self, toolset: Any) -> None:
-        """Remember toolset when its class is marked for TypeScript."""
+        """Remember toolset when its class is annotated for TypeScript."""
         if _TYPESCRIPT in DataClass(type(toolset)).languages:
             self._recorded.append(toolset)
 

@@ -92,7 +92,7 @@ export function FileListViewGenerated({ api, folder = '', onOpen }: FileListView
   )
 }
 
-// A data field Python marks as a file: a link that opens the source view at that file and its line or range.
+// A data field Python annotates as a file: a link that opens the source view at that file and its line or range.
 export function SourceField({ api, label, ...source }: { label: string } & SourceViewProps): ReactNode {
   const [isOpen, setOpen] = useState(false)
   return (

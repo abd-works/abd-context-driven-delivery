@@ -1,4 +1,4 @@
-"""Marks that leave an operation or class out of the catalog or out of install."""
+"""Annotations that leave an operation or class out of the catalog or out of install."""
 
 from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
@@ -30,39 +30,39 @@ class _HiddenClass:
 
 
 with description("an operation"):
-    with context("that carries no omission mark"):
+    with context("that carries no omission annotation"):
         with it("should stay in the catalog"):
-            expect(NoCatalog.marks(_Shown.explain)).to(be_false)
+            expect(NoCatalog.annotates(_Shown.explain)).to(be_false)
 
         with it("should stay in install"):
-            expect(NoDeploy.marks(_Shown.explain)).to(be_false)
+            expect(NoDeploy.annotates(_Shown.explain)).to(be_false)
 
-    with context("that is marked noCatalog and noDeploy"):
+    with context("that is annotated noCatalog and noDeploy"):
         with it("should be left out of the catalog"):
-            expect(NoCatalog.marks(_Hidden.explain)).to(be_true)
+            expect(NoCatalog.annotates(_Hidden.explain)).to(be_true)
 
         with it("should be left out of install"):
-            expect(NoDeploy.marks(_Hidden.explain)).to(be_true)
+            expect(NoDeploy.annotates(_Hidden.explain)).to(be_true)
 
         with context("with the operation read from an instance"):
             with before.each:
                 self.bound = _Hidden().explain
 
             with it("should still be left out of the catalog"):
-                expect(NoCatalog.marks(self.bound)).to(be_true)
+                expect(NoCatalog.annotates(self.bound)).to(be_true)
 
-    with context("that is a classmethod marked beneath its classmethod"):
+    with context("that is a classmethod annotated beneath its classmethod"):
         with it("should be left out of install when read from the class body, through the function it wraps"):
-            expect(NoDeploy.marks(vars(_Hidden)["load"])).to(be_true)
+            expect(NoDeploy.annotates(vars(_Hidden)["load"])).to(be_true)
 
 
 with description("a class"):
-    with context("that is marked noCatalog"):
+    with context("that is annotated noCatalog"):
         with it("should be left out of the catalog"):
-            expect(NoCatalog.marks(_HiddenClass)).to(be_true)
+            expect(NoCatalog.annotates(_HiddenClass)).to(be_true)
 
         with it("should still be installed"):
-            expect(NoDeploy.marks(_HiddenClass)).to(be_false)
+            expect(NoDeploy.annotates(_HiddenClass)).to(be_false)
 
 
 @identity("name")

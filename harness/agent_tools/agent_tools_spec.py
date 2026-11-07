@@ -33,7 +33,7 @@ from harness.agent_tools.agent_tools import (
 )
 from harness.hooks.hooks import hook
 from harness.mcp.mcp_server import mcp
-from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionMark
+from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionAnnotation
 from harness.agent_tools.recipe import RecipeLineFailed, RecipePlaceholders
 from cdd_guidance.actions._examples.car_story.car_story import CarStory
 from harness.agent_tools._examples.super_delegation.super_delegation_demo import (
@@ -360,11 +360,11 @@ with description("AgentToolSet"):
                 car = CarInstance()
                 expect("Example context tool" in car.description).to(be_true)
 
-        with context("with methods marked as @agent_tool"):
+        with context("with methods annotated as @agent_tool"):
             with before.each:
                 self.car = CarInstance()
 
-            with it("should register every marked method in operations"):
+            with it("should register every annotated method in operations"):
                 expect(set(self.car.operations.keys())).to(
                     equal(
                         {
@@ -401,7 +401,7 @@ with description("AgentToolSet"):
                 expect(car.personality).to(equal("cheerful companion named Sunny"))
                 expect(car.running).to(equal(False))
 
-    with context("when a marked @agent_tool is invoked"):
+    with context("when an annotated @agent_tool is invoked"):
         with it("should invoke start on a constructed Car"):
             car = CarInstance()
             car.operations["start"].invoke({})
@@ -1057,7 +1057,7 @@ with description("AgentToolSet destination catalog"):
 
     with context("tools_for a destination"):
 
-        with it("should return only members marked for that destination"):
+        with it("should return only members annotated for that destination"):
             toolset = _DestinationFixture()
             expect([tool.name for tool in toolset.tools_for(InstallDestination.MCP)]).to(
                 equal(["ping"])
@@ -1103,38 +1103,38 @@ class _NestedChild:
 
 
 @toolset_collection
-class _MarkedBag:
+class _AnnotatedBag:
     pass
 
 
 @agent_toolset
 class _NestedParent:
     def __init__(self) -> None:
-        self._kids = _MarkedBag()
+        self._kids = _AnnotatedBag()
         self._kids.entries["code"] = _NestedChild()
 
     @toolset_collection
     @property
-    def kids(self) -> _MarkedBag:
+    def kids(self) -> _AnnotatedBag:
         return self._kids
 
 
 @agent_toolset
 class _TwoCollections:
     def __init__(self) -> None:
-        self._alpha = _MarkedBag()
+        self._alpha = _AnnotatedBag()
         self._alpha.entries["code"] = _NestedChild()
-        self._beta = _MarkedBag()
+        self._beta = _AnnotatedBag()
         self._beta.entries["extra"] = _NestedChild()
 
     @toolset_collection
     @property
-    def alpha(self) -> _MarkedBag:
+    def alpha(self) -> _AnnotatedBag:
         return self._alpha
 
     @toolset_collection
     @property
-    def beta(self) -> _MarkedBag:
+    def beta(self) -> _AnnotatedBag:
         return self._beta
 
 
@@ -1170,15 +1170,15 @@ with description("a class annotated as a toolset collection"):
         ThrowawayProject.close_all()
 
     with it("should be a ToolSetCollection without subclassing it"):
-        bag = _MarkedBag()
+        bag = _AnnotatedBag()
         bag.entries["code"] = object()
         expect(isinstance(bag, ToolSetCollection)).to(equal(True))
-        expect(ToolSetCollectionMark.marks(type(bag))).to(equal(True))
+        expect(ToolSetCollectionAnnotation.annotates(type(bag))).to(equal(True))
 
     with it("should attach the collection to the instance"):
         host = type("Host", (), {})()
-        host.bag = _MarkedBag()
-        replacement = _MarkedBag()
+        host.bag = _AnnotatedBag()
+        replacement = _AnnotatedBag()
         replacement.attach(host)
         expect(host.bag is replacement).to(equal(True))
         expect(replacement.parent).to(equal(host))
@@ -1202,7 +1202,7 @@ with description("a toolset collection with collected child properties"):
         expect(self.bag.bag.entries["one"]).to(equal({"a": 1}))
         expect(self.bag.bag.parent).to(equal(self.bag))
 
-    with it("should keep other marks on the collected property"):
+    with it("should keep other annotations on the collected property"):
         expect("overview" in self.bag.tools).to(equal(True))
 
 
@@ -1228,8 +1228,8 @@ with description("a toolset that exposes annotated properties and child collecti
         with it("should prefix the nested collection tools with the nest key"):
             expect("code.ping" in _NestedParent().tools).to(equal(True))
 
-    with context("with properties marked as toolset collections"):
-        with it("should treat each marked property as its own collection"):
+    with context("with properties annotated as toolset collections"):
+        with it("should treat each annotated property as its own collection"):
             host = _TwoCollections()
             expect(host.toolset_collections).to(equal([host.alpha, host.beta]))
             expect(list(host.child_toolsets())).to(
@@ -1294,7 +1294,7 @@ with description("a domain class whose constructor takes collaborators"):
     with after.each:
         ThrowawayProject.close_all()
 
-    with context("that marks a @tool_subject loader"):
+    with context("that annotates a @tool_subject loader"):
         with it("should build as a toolset with no arguments"):
             expect(AgentToolSet.instantiate(Parcel).tools).to(have_key("forward"))
 

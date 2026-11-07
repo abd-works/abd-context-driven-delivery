@@ -94,9 +94,9 @@ with description("context guidance"):
             inject = type(guidance.rules).inject_rules
             from harness.hooks.hooks import Hook
 
-            expect(Hook.marks(inject)).to(equal(True))
+            expect(Hook.annotates(inject)).to(equal(True))
             expect(Hook.disabled_on(inject)).to(equal(True))
-            expect(Hook.name_marked_on(inject)).to(equal("postToolUse"))
+            expect(Hook.name_annotated_on(inject)).to(equal("postToolUse"))
 
         with it("should list inject_rules on tools but not enroll a disabled hook"):
             guidance = SampleGuidance(format="markdown")
@@ -293,14 +293,14 @@ with description("a guidance collection of context guidance children") as self:
         self.practice = SamplePracticeWithFidelities(format="markdown")
         self.collection = self.practice.fidelities
 
-    with context("with the class marked as a toolset collection"):
+    with context("with the class annotated as a toolset collection"):
         with it("should be a ToolSetCollection without subclassing it in the source"):
             from harness.agent_tools.agent_tools import ToolSetCollection
 
             expect(isinstance(self.collection, ToolSetCollection)).to(equal(True))
-            from harness.agent_tools.agent_tools import ToolSetCollectionMark
+            from harness.agent_tools.agent_tools import ToolSetCollectionAnnotation
 
-            expect(ToolSetCollectionMark.marks(type(self.collection))).to(equal(True))
+            expect(ToolSetCollectionAnnotation.annotates(type(self.collection))).to(equal(True))
             from harness.markdown import MarkdownCollection
 
             expect(isinstance(self.collection, MarkdownCollection)).to(equal(True))

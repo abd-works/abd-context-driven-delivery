@@ -1,6 +1,6 @@
 # agent_tools — class model (model fidelity)
 
-Markdown channel for the *AgentToolSet* primitive. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet* is the toolset the author marks with `@agent_toolset`; its members are *AgentTool* objects — *AgentOperation* for `@agent_tool` and *AgentInstructions* for `@agent_instructions`. Writing members out to MCP, skills, commands, rules, and hooks belongs to `harness/installation`, `harness/mcp`, and `harness/hooks`. *Mark* and *Destination* belong to `harness/marks`, *Name* to `harness/name`, *Markdown* to `harness/markdown`, *Session* to `space/session`, *SubAgent* (the `sub-agent.sub_agent` operation) to `harness/sub_agent`, and *AgentToolsProbe* and *AgentToolsDiagnostics* to `harness/diagnostics`; they appear here only as names this module uses.
+Markdown channel for the *AgentToolSet* primitive. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *AgentToolSet* is the toolset the author marks with `@agent_toolset`; its members are *AgentTool* objects — *AgentOperation* for `@agent_tool` and *AgentInstructions* for `@agent_instructions`. Writing members out to MCP, skills, commands, rules, and hooks belongs to `harness/installation`, `harness/mcp`, and `harness/hooks`. *Mark* and *Destination* belong to `harness/annotations`, *Name* to `harness/name`, *Markdown* to `harness/markdown`, *Session* to `space/session`, *SubAgent* (the `sub-agent.sub_agent` operation) to `harness/sub_agent`, and *AgentToolsProbe* and *AgentToolsDiagnostics* to `harness/diagnostics`; they appear here only as names this module uses.
 
 **Out of scope:** guidance actions (`harness/guidance_actions`, Generate, Validate, …) keep their own model; *GuidanceAgentOperation* is listed only because this module defines it.
 
@@ -10,13 +10,13 @@ Markdown channel for the *AgentToolSet* primitive. The module's purpose, seam, a
 
 *AgentToolSet* is the toolset a practice or tool decorates with `@agent_toolset`. Callable members are *AgentTool* subtypes: *AgentOperation* (`@agent_tool`) runs Python; *AgentInstructions* (`@agent_instructions`) expands its body into a recipe the agent follows.
 
-Each *AgentTool* exposes `kind`, `description`, `parameters`, `response`, and `input_schema`, read from the callable, and holds the **`toolset`** that made it. Both marks use ordinary Python `self` (the toolset).
+Each *AgentTool* exposes `kind`, `description`, `parameters`, `response`, and `input_schema`, read from the callable, and holds the **`toolset`** that made it. Both annotations use ordinary Python `self` (the toolset).
 
 - `@agent_toolset` merges *AgentToolSet* onto the decorated class; do not subclass *AgentToolSet* directly. The class docstring is the toolset's **description**.
 - Inside an `@agent_instructions` body, `tools(...)` names operations the agent calls while following the recipe, and `instructions(...)` includes another recipe inline. A recipe that includes itself is rejected when the class is decorated.
 - *ExpansionMode* on the called toolset decides whether a nested recipe expands inline (`instructions`) or is listed as a tool to call (`tool`).
-- `@toolset_collection` on a class makes it a *ToolSetCollection*; on a property it marks one of the toolset's collections, whose children are published as nested toolsets.
-- `@tool_subject` marks the class method that loads the object a tool call acts on; a loader that takes `project` is handed the checkout the call names. `@noSessionLog` keeps a repeated read out of the session log.
+- `@toolset_collection` on a class makes it a *ToolSetCollection*; on a property it annotates one of the toolset's collections, whose children are published as nested toolsets.
+- `@tool_subject` annotates the class method that loads the object a tool call acts on; a loader that takes `project` is handed the checkout the call names. `@noSessionLog` keeps a repeated read out of the session log.
 - `@subAgent` on a member puts the hand-off to a background sub-agent at the start of its description.
 - A toolset's `parameter_notes` are added after the description of every tool that takes that parameter.
 
@@ -87,7 +87,7 @@ slug: str
 registration_name: str
 	// the toolset's registration_name
 deploy_name: str
-	// the name a @command or @skill mark gives, else name
+	// the name a @command or @skill annotation gives, else name
 mcp_name: str
 	// "{toolset slug}.{name}"; a practice's own instructions publish under the practice slug alone
 kind: str
@@ -109,7 +109,7 @@ invoke_line(): str
 invoke(arguments: dict | None = None, *, project: Path | None = None): Any
 	-> answer(ToolCall(arguments, project))
 answer(call: ToolCall): Any
-	// runs on the toolset made for the call; a callable marked as taking the project is handed call.project
+	// runs on the toolset made for the call; a callable annotated as taking the project is handed call.project
 	-> on(toolset.for_call(call)).log_session_invocation(call)
 	-> ParameterSchema.coerced
 	// then call the callable
@@ -196,7 +196,7 @@ log_session_invocation(call: ToolCall): None
 
 AgentInstructions(name: str, callable: Callable, toolset: AgentToolSet)
 ------
-	Invariant: kind == "instructions" unless the callable is also marked @agent_tool
+	Invariant: kind == "instructions" unless the callable is also annotated @agent_tool
 prompt: tuple[str, ...]
 tools: list[str]
 	// deferred operation names from tools(...), merged with those of every nested instructions(...); read-only
@@ -250,12 +250,12 @@ filled(template: str): str
 
 ## ToolsetMembers                                                 <!-- Md -->
 
-The members of one toolset class and which of them its marks make tools; each class is walked once.
+The members of one toolset class and which of them its annotations make tools; each class is walked once.
 
 ToolsetMembers(owner: type)
 ------
 every: list[tuple[str, Any]]
-marked: list[tuple[str, Any]]
+annotated: list[tuple[str, Any]]
 tool_names: set[str]
 instruction_names: frozenset[str]
 ----
@@ -306,7 +306,7 @@ result: str
 
 ## InstallDestination                                             <!-- Md -->
 
-The channels a member is published to, in the order a tool lists them. Each channel's mark is a *Destination* its publisher defines, so this module names the channels and never imports the publishers.
+The channels a member is published to, in the order a tool lists them. Each channel's annotation is a *Destination* its publisher defines, so this module names the channels and never imports the publishers.
 
 InstallDestination
 ------

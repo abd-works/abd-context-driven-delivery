@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Literal, TypeVar, get_args, get_origin, get_type_hints
 
 from harness.name.name import Name
-from harness.marks.mark import mark_kinds
+from harness.annotations.annotation import annotation_kinds
 from harness.markdown.format import TEMPLATE_FOLDER_NAMES, Format
 
 _F = TypeVar("_F", bound=Callable[..., Any])
@@ -959,7 +959,7 @@ class Markdown:
 
 class MarkdownProperty:
     """A property made from an operation whose body is empty: its value is read from markdown, and it carries the
-    operation's name, docstring, annotations, and copied marks, so it installs the way the operation would."""
+    operation's name, docstring, annotations, and copied annotations, so it installs the way the operation would."""
 
     def __init__(self, operation: Callable[..., Any]) -> None:
         self._operation = operation
@@ -972,7 +972,7 @@ class MarkdownProperty:
         getter.__doc__ = self._operation.__doc__
         getter.__name__ = self._operation.__name__
         getter.__annotations__ = dict(getattr(self._operation, "__annotations__", {}))
-        mark_kinds.copy_marks(self._operation, getter)
+        annotation_kinds.copy_annotations(self._operation, getter)
         return property(getter)
 
 

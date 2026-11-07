@@ -1,16 +1,16 @@
 # PromptNotify — class model (model fidelity)
 
-Markdown channel for *PromptNotify*. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *Toast* belongs to `harness/marks`; *Hook*, *HookPayload*, and *HookServer* to `harness/hooks`; *PracticeCatalogue* and *ActionCatalogue* to `harness/guidance`; *GuidanceAction* to `harness/guidance_actions`. They appear here only as names this module uses.
+Markdown channel for *PromptNotify*. The module's purpose, seam, and dependencies are in [module-context.md](module-context.md); this document holds only its classes. *Toast* belongs to `harness/annotations`; *Hook*, *HookPayload*, and *HookServer* to `harness/hooks`; *PracticeCatalogue* and *ActionCatalogue* to `harness/guidance`; *GuidanceAction* to `harness/guidance_actions`. They appear here only as names this module uses.
 
 ---
 
 ## Language
 
-*Toast* is the mark an author puts on an `@agent_tool` or `@agent_instructions` member so that an agent's call to that member shows an IDE toast naming it. `harness/guidance_actions` marks `GuidanceAction.begin`, the step every guidance action starts with, so each action toasts as **Action →** its name without its own mark.
+*Toast* is the annotation an author puts on an `@agent_tool` or `@agent_instructions` member so that an agent's call to that member shows an IDE toast naming it. `harness/guidance_actions` annotates `GuidanceAction.begin`, the step every guidance action starts with, so each action toasts as **Action →** its name without its own annotation.
 
 *PromptNotify* is the `preToolUse` *Hook*. It looks at the invoked member first, then at a toolset's inherited `begin`, then at its *catalog* of action, practice, fidelity, and guideline names, and writes the first match as a toast notice into each workspace folder. When the module is loaded it registers `PromptNotify.show_toast` with `HookServer.show_toasts_with`, so the toast any hook gives in its result is shown here.
 
-- **Invariant:** practice and fidelity `instructions` toast only when those members carry *Toast* — never because `begin` is marked.
+- **Invariant:** practice and fidelity `instructions` toast only when those members carry *Toast* — never because `begin` is annotated.
 - **Invariant:** toasts in the same burst join their rule lines under one `rules :` prefix; a later matching guideline never overwrites an earlier one.
 
 ---

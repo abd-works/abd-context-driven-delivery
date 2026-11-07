@@ -79,9 +79,9 @@ class CatalogPractice:
 
     @classmethod
     def load_all(cls) -> list[CatalogPractice]:
-        """Every practice in the practice catalogue with a fidelity on the board, unless marked ``@noCatalog``, in the
+        """Every practice in the practice catalogue with a fidelity on the board, unless annotated ``@noCatalog``, in the
         order each practice's catalog card gives."""
-        practices = [cls(practice) for practice in PracticeCatalogue.practices() if not NoCatalog.marks(type(practice))]
+        practices = [cls(practice) for practice in PracticeCatalogue.practices() if not NoCatalog.annotates(type(practice))]
         shown = [practice for practice in practices if practice.on_board]
         return sorted(shown, key=lambda practice: (practice.order, practice.display_name))
 
@@ -133,8 +133,8 @@ class CatalogPractice:
 
     @property
     def fidelities(self) -> list[FidelityGuidance]:
-        """The practice's fidelities in declared order, less those marked ``@noCatalog``."""
-        return [fidelity for fidelity in self.practice.fidelities if not NoCatalog.marks(fidelity)]
+        """The practice's fidelities in declared order, less those annotated ``@noCatalog``."""
+        return [fidelity for fidelity in self.practice.fidelities if not NoCatalog.annotates(fidelity)]
 
     def column_of(self, fidelity: FidelityGuidance) -> StageColumn | None:
         return STAGE_COLUMNS.of(fidelity.stage)
@@ -166,7 +166,7 @@ class CatalogPractice:
 
 
 # The utilities are the toolsets the installer finds in ``space`` (sessions, the board, the repository) and ``tools``
-# (chat, echo, Granola, the file manager), unless marked @noCatalog. The harness's own toolsets are the framework the
+# (chat, echo, Granola, the file manager), unless annotated @noCatalog. The harness's own toolsets are the framework the
 # practices and actions run on, and the guidance under ``cdd_guidance`` has its own pages.
 _UTILITY_PACKAGES = ("space.", "tools.")
 
@@ -179,11 +179,11 @@ class Utility:
 
     @classmethod
     def load_all(cls) -> list[Utility]:
-        """Every toolset the installer finds in ``space`` and ``tools``, less those marked ``@noCatalog``, in the order
+        """Every toolset the installer finds in ``space`` and ``tools``, less those annotated ``@noCatalog``, in the order
         the installer finds them. A toolset that cannot be imported raises rather than leaving a silent gap."""
         refs = [ref for ref in RepositoryToolsets(_REPO_ROOT).collect() if ref.startswith(_UTILITY_PACKAGES)]
         classes = [getattr(importlib.import_module(module), name) for module, name in (ref.split(":") for ref in refs)]
-        return [cls(toolset_class) for toolset_class in classes if not NoCatalog.marks(toolset_class)]
+        return [cls(toolset_class) for toolset_class in classes if not NoCatalog.annotates(toolset_class)]
 
     @property
     def name(self) -> str:
@@ -207,8 +207,8 @@ class LifecycleAction:
     @classmethod
     def load_all(cls) -> list[LifecycleAction]:
         """Every action in the action catalogue whose toolset has a live tool for it that the catalog shows: a toolset
-        or an operation marked ``@noCatalog`` stays out."""
-        shown = [cls(action) for action in ActionCatalogue.actions() if not NoCatalog.marks(action.toolset_class)]
+        or an operation annotated ``@noCatalog`` stays out."""
+        shown = [cls(action) for action in ActionCatalogue.actions() if not NoCatalog.annotates(action.toolset_class)]
         return [action for action in shown if action.tool is not None]
 
     @property
@@ -224,10 +224,10 @@ class LifecycleAction:
 
     @property
     def tool(self) -> object | None:
-        """The toolset's live tool for this action; none when it has no such tool or marks it ``@noCatalog``."""
+        """The toolset's live tool for this action; none when it has no such tool or annotates it ``@noCatalog``."""
         tools = self.toolset.tools
         tool = tools[self.name] if self.name in tools else None
-        if tool is None or NoCatalog.marks(getattr(tool, "callable", tool)):
+        if tool is None or NoCatalog.annotates(getattr(tool, "callable", tool)):
             return None
         return tool
 

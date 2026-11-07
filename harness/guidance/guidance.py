@@ -18,7 +18,7 @@ from harness.agent_tools.agent_tools import (
     agent_instructions,
     agent_tool,
     agent_toolset,
-    AgentToolSetMark,
+    AgentToolSetAnnotation,
     instructions,
     toolset_collection,
 )
@@ -583,7 +583,7 @@ class PracticeGuidance(Guidance):
     def _is_tool(self, content: Any) -> bool:
         if self._is_object_model(content):
             return False
-        return AgentToolSetMark.marks(type(content))
+        return AgentToolSetAnnotation.annotates(type(content))
 
     def _instantiate_from_tool(self, tool: Any, source: str | None) -> Any:
         source_format = Format(source or getattr(tool, "format", None) or self.format).name

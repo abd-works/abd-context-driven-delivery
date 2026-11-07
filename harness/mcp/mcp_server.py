@@ -1,4 +1,4 @@
-"""The ``@mcp`` mark, the install that writes each IDE's MCP entry, and the cdd server's MCP side: one *McpServer* of
+"""The ``@mcp`` annotation, the install that writes each IDE's MCP entry, and the cdd server's MCP side: one *McpServer* of
 toolsets for each project, and the *McpHost* answering every chat with them."""
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.installation.destination import Installation, data_of
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.marks.mark import Destination, Mark
+from harness.annotations.annotation import Destination, Annotation
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_daemon import MCP_PATH, PING_PATH, PROJECT_HEADER, McpDaemon
 from harness.mcp.restart_gate import _RestartGate
@@ -38,7 +38,7 @@ BUILTIN_PING_TOOL = "cdd.ping"
 BUILTIN_RESTART_TOOL = "cdd.restart"
 # How long a chat waits for a call before it hears that the call is still running.
 CALL_SECONDS = 10
-# The wait for an operation marked ``@long_call``, and for a restart, which waits for every running call to end.
+# The wait for an operation annotated ``@long_call``, and for a restart, which waits for every running call to end.
 LONG_CALL_SECONDS = 600
 # What loading a toolset's module, making the toolset, or reading a tool's schema raises when that toolset's code or
 # configuration is wrong. The server skips that toolset or tool and serves the rest; anything else stops the start.
@@ -56,8 +56,8 @@ class Mcp(Destination):
 mcp = Mcp
 
 
-class LongCall(Mark):
-    """Mark an MCP operation whose call may take minutes, such as one that walks the repository, waits on git over the
+class LongCall(Annotation):
+    """Annotate an MCP operation whose call may take minutes, such as one that walks the repository, waits on git over the
     network, or probes every other tool. The cdd server waits ``LONG_CALL_SECONDS`` for its answer, not
     ``CALL_SECONDS``, before telling the chat it is still running."""
 
@@ -510,12 +510,12 @@ class McpServer:
         return self._tools.get(resolved) or self._prompts.get(resolved)
 
     def call_seconds(self, name: str) -> float:
-        """How long a chat waits for a call of the tool published as name: longer for an operation marked
+        """How long a chat waits for a call of the tool published as name: longer for an operation annotated
         ``@long_call``, and for a restart."""
         if name == BUILTIN_RESTART_TOOL:
             return LONG_CALL_SECONDS
         tool = self.enrolled(name)
-        return LONG_CALL_SECONDS if tool is not None and LongCall.marks(tool.callable) else CALL_SECONDS
+        return LONG_CALL_SECONDS if tool is not None and LongCall.annotates(tool.callable) else CALL_SECONDS
 
     def invoke_tool(self, mcp_name: str, arguments: dict[str, object] | None = None) -> object:
         """Call the tool published as mcp_name on this server's project."""

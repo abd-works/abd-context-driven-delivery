@@ -17,7 +17,7 @@ section: body
 
 **Sources / context:** `.context/module-context.md` (the `harness` card); `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `harness/installation/.context/module-context.md`; `harness/hooks/.context/module-context.md`; `harness/hooks/.context/hooks-runtime-model.md`; `harness/guidance/guidance.py`; `harness/guidance/action_catalogue.py`; `harness/mcp/.context/module-context.md`; `cdd_guidance/actions/.context/module-context.md`; `cdd_guidance/practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions.
 
-**Evidence:** Observed behaviour is cited from those files. Intended: practice guidance and fidelity guidance declare real `@Hook` events from `Hook.EVENTS`, and lifecycle actions use the same mark-and-install path as practice guidance.
+**Evidence:** Observed behaviour is cited from those files. Intended: practice guidance and fidelity guidance declare real `@Hook` events from `Hook.EVENTS`, and lifecycle actions use the same annotation-and-install path as practice guidance.
 
 ---
 

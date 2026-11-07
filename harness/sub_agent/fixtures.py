@@ -3,7 +3,7 @@ from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, s
 
 
 @agent_toolset
-class MarkedToolExample:
+class AnnotatedToolExample:
     @subAgent
     @agent_tool
     def run_check(self) -> str:
@@ -12,7 +12,7 @@ class MarkedToolExample:
 
 
 @agent_toolset
-class MarkedActionExample:
+class AnnotatedActionExample:
     @subAgent
     @agent_instructions
     def plan_work(self, task: str) -> str:

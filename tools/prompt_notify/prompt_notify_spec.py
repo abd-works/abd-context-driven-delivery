@@ -17,7 +17,7 @@ from harness.installer.installer import Installer  # noqa: F401 — load Destina
 from tempfile import TemporaryDirectory
 
 from harness.hooks.hook_server import rules_toast
-from harness.marks.mark import Toast
+from harness.annotations.annotation import Toast
 from tools.prompt_notify.prompt_notify import PromptNotify
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset
 from harness.hooks.hook_server import HookPayload
@@ -296,7 +296,7 @@ class EchoPracticeChild(EchoPractice):
         return "child"
 
 
-with description("prompt echo @Toast mark"):
+with description("prompt echo @Toast annotation"):
     with context("that inherits @Toast on begin"):
         with it("should toast the action by its name when a recipe runs"):
             kind, label = _prompt_notify.detect_echo(
@@ -306,7 +306,7 @@ with description("prompt echo @Toast mark"):
             expect(kind).to(equal("action"))
             expect(label).to(equal("echo-action"))
 
-        with it("should not toast open_workspace from the begin mark"):
+        with it("should not toast open_workspace from the begin annotation"):
             expect(
                 _prompt_notify.detect_echo(
                     HookPayload({"tool_name": "echo-action.open_workspace", "tool_input": {}}),
@@ -314,7 +314,7 @@ with description("prompt echo @Toast mark"):
                 )
             ).to(equal(None))
 
-    with context("that marks a specific recipe"):
+    with context("that annotates a specific recipe"):
         with it("should toast that member when it is invoked"):
             kind, label = _prompt_notify.detect_echo(
                 HookPayload({"tool_name": "echo-action.spotlight", "tool_input": {}}),
@@ -323,7 +323,7 @@ with description("prompt echo @Toast mark"):
             expect(kind).to(equal("action"))
             expect(label).to(equal("spotlight"))
 
-    with context("that marks practice instructions"):
+    with context("that annotates practice instructions"):
         with it("should toast the practice from the instructions member"):
             kind, label = _prompt_notify.detect_echo(
                 HookPayload({"tool_name": "echo-practice.instructions", "tool_input": {}}),

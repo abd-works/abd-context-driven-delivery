@@ -12,7 +12,7 @@ A node's id is `{practice}:{type}:{file or folder}:{name}`, with the owning clas
 
 ## Graph
 
-The toolset the graph tools run on. Each project's cdd runtime holds one, so one chat's loads and filters never reach another project's graph. Marked `@language_adapter(language="typescript")`, so the explorer app calls the same operations through the generated `GraphClientGenerated`.
+The toolset the graph tools run on. Each project's cdd runtime holds one, so one chat's loads and filters never reach another project's graph. Annotated `@language_adapter(language="typescript")`, so the explorer app calls the same operations through the generated `GraphClientGenerated`.
 
 + practices: dict[str, PracticeGraph]
 + filter: Filter
@@ -596,7 +596,7 @@ invokes       relationship  Observation -> Operation|Property it drives   (link;
 Each adds nodes and rules when `overlays` names it. Its rules live in `cdd_guidance/patterns/{pattern}/practices/{practice}/rules`, and its node types and rule slugs in that folder's `model/schema.yaml` and `model/rules.yaml`.
 
 - `lern_domain_driven` (`LernOverlay`) — on DDD: each aggregate's tier files (`NodeRoot`, `ClientRoot`, `Route`, `JsonStore`, `View`), the behavior test files (`BehaviorShared`, `BehaviorDomain`, `BehaviorServer`, `BehaviorPlaywright`, `BehaviorE2e`), and `ContextMapping`s from a bounded context's arrows; on Stories: the story test files (`StoryShared`, `ServerSpec`, `DomainSpec`, `PlaywrightSpec`). Edge kinds come from the pattern schema (`owns`, `views`, `nodeRoot`, `interacts`, `calls`, `writes`, `nodeRepository`, `view`, `clientRoot`, `mappedTo`, ...).
-- `cdd_web_domain_access` (`WebDomainAccessOverlay`) — on DDD: `AccessRoute`, `AccessNode`, `AccessHandWrittenAdapter`, and `AccessMarkedToolset`, one per file, with the facts its rules read.
+- `cdd_web_domain_access` (`WebDomainAccessOverlay`) — on DDD: `AccessRoute`, `AccessNode`, `AccessHandWrittenAdapter`, and `AccessAnnotatedToolset`, one per file, with the facts its rules read.
 - `cdd_claude_mod` (`ClaudeModOverlay`) — adds no nodes; its guidance gives its rules their prose.
 
 The behaviour of a load on `harness/graph/_examples/input` is specified in `harness/graph/graph_spec.py`.

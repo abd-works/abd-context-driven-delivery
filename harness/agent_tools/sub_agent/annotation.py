@@ -1,7 +1,7 @@
-"""@subAgent mark — prepend non-blocking delegation instructions to agent ops."""
+"""@subAgent annotation — prepend non-blocking delegation instructions to agent ops."""
 from __future__ import annotations
 
-from harness.marks.mark import Mark
+from harness.annotations.annotation import Annotation
 
 SUB_AGENT_CALLER_PREAMBLE = """Hand work to a background sub-agent and continue without waiting.
 
@@ -14,8 +14,8 @@ generalPurpose. Pass the instructions below as the task prompt.
 Tell the user you launched a non-blocking sub-agent and summarize what you delegated."""
 
 
-class SubAgentMark(Mark):
-    """Mark an @agent_tool or @agent_instructions member for non-blocking sub-agent launch: its description starts with
+class SubAgentAnnotation(Annotation):
+    """Annotate an @agent_tool or @agent_instructions member for non-blocking sub-agent launch: its description starts with
     the hand-off to a background sub-agent."""
 
     flag = "_sub_agent"
@@ -28,4 +28,4 @@ class SubAgentMark(Mark):
         return f"{preamble}\n\n{body}" if body else preamble
 
 
-subAgent = SubAgentMark()
+subAgent = SubAgentAnnotation()

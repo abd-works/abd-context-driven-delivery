@@ -17,14 +17,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import ClassVar
 
-# The CDD checkout this hook runs from: its installed toolsets are the code the hook server runs, so their @Toast marks
+# The CDD checkout this hook runs from: its installed toolsets are the code the hook server runs, so their @Toast annotations
 # are read from here whichever project the event came from.
 _CDD_CHECKOUT = Path(__file__).resolve().parents[2]
 
 from harness.agent_tools.agent_tools import agent_toolset
 from harness.name.name import Name
 from harness.installation.destination import noCatalog
-from harness.marks.mark import Toast
+from harness.annotations.annotation import Toast
 from harness.hooks.hook_server import TOAST_ARROW, HookPayload, HookServer, rules_toast
 from harness.hooks.hooks import hook
 from space.session.session_log import SessionLog
@@ -118,7 +118,7 @@ class PromptNotify:
         return self._catalog_match(self._haystacks(payload), action_names)
 
     def echo_toolsets(self) -> list:
-        """The toolsets installed in the CDD checkout, whose @Toast marks say which tool calls toast; loaded once per
+        """The toolsets installed in the CDD checkout, whose @Toast annotations say which tool calls toast; loaded once per
         process. A toolset that fails to load raises, so a broken toolset is seen rather than silently not toasting."""
         if type(self)._echo_toolsets is None:
             type(self)._echo_toolsets = self._load_echo_toolsets()
@@ -147,9 +147,9 @@ class PromptNotify:
 
     def _detected(self, payload: HookPayload, toolsets: list | None) -> tuple[str, str] | None:
         if toolsets is not None:
-            marked = self.detect_echo(payload, toolsets=toolsets)
-            if marked:
-                return marked
+            annotated = self.detect_echo(payload, toolsets=toolsets)
+            if annotated:
+                return annotated
         return self.detect(payload)
 
     def _log_echo(self, tool_name: str, kind: str, label: str) -> None:
@@ -193,7 +193,7 @@ class PromptNotify:
         return self._begin_toast(match, tools, toolset)
 
     def _begin_toast(self, match, tools: dict, toolset) -> tuple[str, str] | None:
-        """The action toast of a toolset whose begin step is marked, for a tool of that toolset that is not marked."""
+        """The action toast of a toolset whose begin step is annotated, for a tool of that toolset that is not annotated."""
         begin = tools.get("begin")
         if begin is None or match.name in _SKIP_BEGIN_FALLBACK:
             return None
@@ -261,7 +261,7 @@ class PromptNotify:
     def _has_toast(self, operation) -> bool:
         target = operation.fget if isinstance(operation, property) else operation
         inner = getattr(target, "__func__", target)
-        return Toast.marks(inner) or Toast.marks(target)
+        return Toast.annotates(inner) or Toast.annotates(target)
 
     def _echo_kind_label(self, tool) -> tuple[str, str]:
         toolset = tool.toolset

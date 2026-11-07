@@ -138,5 +138,5 @@ with description("a generated catalog"):
         with it("should list the lifecycle actions on their grid page"):
             expect('href="actions/generate.html"' in (self.tmp / "actions.html").read_text(encoding="utf-8")).to(be_true)
 
-        with it("should leave a toolset marked noCatalog off the utilities grid"):
+        with it("should leave a toolset annotated noCatalog off the utilities grid"):
             expect("diagnose" in (self.tmp / "tools.html").read_text(encoding="utf-8")).to(equal(False))

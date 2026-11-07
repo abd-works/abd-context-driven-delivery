@@ -16,7 +16,7 @@ from harness.guidance.documents import load_document
 from harness.guidance.practice_catalogue import PracticeCatalogue
 from harness.hooks.hook_server import rules_toast
 from harness.hooks.hooks import hook
-from harness.marks.mark import Toast, mark_kinds
+from harness.annotations.annotation import Toast, annotation_kinds
 
 if TYPE_CHECKING:
     from harness.hooks.hook_server import HookPayload
@@ -200,12 +200,12 @@ class GuidanceAction:
         return self._session.document_named(content, paths) if self._session is not None else load_document(content, paths)
 
     def _discover_operations(self) -> dict[str, AgentOperation]:
-        from harness.agent_tools.agent_tools import AgentToolMark, GuidanceAgentOperation
+        from harness.agent_tools.agent_tools import AgentToolAnnotation, GuidanceAgentOperation
 
         members = self._members
         return {
             name: GuidanceAgentOperation(name=name, callable=members.callable_on(self, name, member), toolset=self)
-            for name, member in members.marked if AgentToolMark.marks(member)
+            for name, member in members.annotated if AgentToolAnnotation.annotates(member)
         }
 
     def _work_on(self, guidance: GuidanceArg | None = None) -> None:
@@ -395,7 +395,7 @@ class GuidanceAction:
         called = self._comparable(payload.tool_name.rsplit("__", 1)[-1])
         own = {
             self._comparable(f"{self.slug}.{name}")
-            for name, member in self._members.marked if mark_kinds.marked_for(InstallDestination.MCP, member)
+            for name, member in self._members.annotated if annotation_kinds.annotated_for(InstallDestination.MCP, member)
         }
         return bool(called) and called in own
 

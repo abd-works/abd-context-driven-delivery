@@ -30,7 +30,7 @@ from cdd_guidance.practices.ddd.ddd import Ddd
 
 
 with description("noCatalog"):
-    with description("a class or operation marked not ready for the catalog"):
+    with description("a class or operation annotated not ready for the catalog"):
         with it("drops the toolset from the utilities"):
             names = [utility.toolset_class.__name__ for utility in Utility.load_all()]
             expect("Echo" in names).to(be_false)
@@ -57,15 +57,15 @@ with description("noCatalog"):
             ]
             expect(shown).to(equal(["generate"]))
 
-        with it("leaves the skill mark in place so install still deploys it"):
+        with it("leaves the skill annotation in place so install still deploys it"):
             @noCatalog
             @skill
             def sketch(self):
                 """Sketch the plan."""
                 return None
 
-            expect(NoCatalog.marks(sketch)).to(be_true)
-            expect(Skill.marks(sketch)).to(be_true)
+            expect(NoCatalog.annotates(sketch)).to(be_true)
+            expect(Skill.annotates(sketch)).to(be_true)
             source = ast.parse(
                 "@agent_toolset\n"
                 "class Toolset:\n"
@@ -108,7 +108,7 @@ with description("Load Context Tool And Utility Registry"):
             names = {utility.toolset_class.__name__ for utility in self.utilities}
             expect(names & {"Graph", "Catalog", "Guidance", "GuidanceAction"}).to(equal(set()))
 
-        with it("omits utilities marked noCatalog"):
+        with it("omits utilities annotated noCatalog"):
             names = {utility.toolset_class.__name__ for utility in self.utilities}
             expect(names & {"Installer", "Echo"}).to(equal(set()))
 
@@ -156,7 +156,7 @@ with description("Resolve Lifecycle Actions From The Toolsets That Define Them")
         with it("leaves out a toolset's tools that are not skills"):
             expect("generate_fixes_from_validate" in [action.name for action in self.actions]).to(equal(False))
 
-        with it("leaves out a toolset marked noCatalog"):
+        with it("leaves out a toolset annotated noCatalog"):
             expect("diagnose" in [action.name for action in self.actions]).to(equal(False))
 
         with it("resolves partition to its folder under actions/partition/"):

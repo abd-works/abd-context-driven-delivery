@@ -101,7 +101,7 @@ Build order: `{first}` → `{second}` → `{third}`                   <!-- Mu --
 
 ## Constraint                                                    <!-- Mu -->
 
-{what callers must or must not do at this seam — the marks they type, not runtime names they never write}
+{what callers must or must not do at this seam — the annotations they type, not runtime names they never write}
 
 <!-- MODULES STOPS HERE. Do not copy the typed blocks below into module-context.md. -->
 

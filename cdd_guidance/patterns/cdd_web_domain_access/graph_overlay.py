@@ -1,5 +1,5 @@
 """How the CDD web domain access pattern takes part in the graph: each file that reaches the domain from outside Python
-(a route, a node tier, a hand-written adapter, a marked toolset) becomes a DDD node carrying the facts its rules read."""
+(a route, a node tier, a hand-written adapter, an annotated toolset) becomes a DDD node carrying the facts its rules read."""
 
 from __future__ import annotations
 
@@ -41,8 +41,8 @@ def _access_tier(file: Path, text: str) -> tuple[str, dict] | None:
         return "AccessHandWrittenAdapter", {}
     if file.name.endswith("-node.ts"):
         return "AccessNode", access_facts.node_facts(text)
-    if file.suffix == ".py" and access_facts.is_marked(text):
-        return "AccessMarkedToolset", access_facts.marked_toolset_facts(text)
+    if file.suffix == ".py" and access_facts.is_annotated(text):
+        return "AccessAnnotatedToolset", access_facts.annotated_toolset_facts(text)
     return None
 
 

@@ -1,4 +1,4 @@
-"""The skill, command, rule, and agent marks, and the installation that writes their markdown files."""
+"""The skill, command, rule, and agent annotations, and the installation that writes their markdown files."""
 from __future__ import annotations
 
 import os
@@ -12,7 +12,7 @@ from harness.installation.destination import Installation
 from harness.installation.ide_layout import IdeLayout
 from harness.markdown.front_matter import FrontMatter
 from harness.markdown.markdown import MarkdownText
-from harness.marks.mark import Destination, NamedDestination, mark_kinds
+from harness.annotations.annotation import Destination, NamedDestination, annotation_kinds
 
 
 class Skill(NamedDestination):
@@ -265,7 +265,7 @@ class FileInstallation(Installation):
             getter = getattr(member, "fget", member)
             invoke = (
                 f"Use MCP tool: `{getattr(child, 'slug', '')}()`"
-                if mark_kinds.marked_for(InstallDestination.MCP, getter)
+                if annotation_kinds.annotated_for(InstallDestination.MCP, getter)
                 else ""
             )
             parts.append("\n\n".join(piece for piece in (self._fidelity_one_liner(child), invoke) if piece))

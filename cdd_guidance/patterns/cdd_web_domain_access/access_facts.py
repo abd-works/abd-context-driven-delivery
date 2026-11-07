@@ -14,8 +14,8 @@ _STORE_IMPORT = re.compile(r"""from\s+['"]lowdb[^'"]*['"]""")
 # File names an application would give its own copy of what the installer generates.
 _HAND_WRITTEN_ADAPTER = re.compile(r"(?:-adapter|-tools|-connection-node|^cdd-connection)\.ts$")
 _MARK = re.compile(r"@language_adapter\(")
-# The mark that publishes an operation on MCP, spelled `@mcp` or `@Mcp`; TypeScript reads what such an operation returns.
-_OPERATION_MARK = "mcp"
+# The annotation that publishes an operation on MCP, spelled `@mcp` or `@Mcp`; TypeScript reads what such an operation returns.
+_OPERATION_ANNOTATION = "mcp"
 _OPEN_RESULT = "dict[str, Any]"
 
 
@@ -41,14 +41,14 @@ def is_hand_written_adapter(file_name: str, text: str) -> bool:
     return file_name.startswith("cdd-connection") or bool(_ADAPTER_IMPORT.search(text) or _TOOL_CALL.search(text))
 
 
-def is_marked(text: str) -> bool:
+def is_annotated(text: str) -> bool:
     return bool(_MARK.search(text))
 
 
-def marked_toolset_facts(text: str) -> dict:
-    """[line, operation] for each MCP operation of a marked toolset that answers an open ``dict[str, Any]``, which
-    TypeScript then reads with no type. The decorators are read from the parsed file, so every spelling of the mark and
-    any number of other marks above it count."""
+def annotated_toolset_facts(text: str) -> dict:
+    """[line, operation] for each MCP operation of an annotated toolset that answers an open ``dict[str, Any]``, which
+    TypeScript then reads with no type. The decorators are read from the parsed file, so every spelling of the annotation and
+    any number of other annotations above it count."""
     operations = [node for node in ast.walk(ast.parse(text)) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
     return {"open_results": [[node.lineno, node.name] for node in operations if _answers_open_dict(node) and _is_published(node)]}
 
@@ -58,12 +58,12 @@ def _answers_open_dict(operation: ast.FunctionDef | ast.AsyncFunctionDef) -> boo
 
 
 def _is_published(operation: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
-    return any(_mark_name(decorator).lower() == _OPERATION_MARK for decorator in operation.decorator_list)
+    return any(_annotation_name(decorator).lower() == _OPERATION_ANNOTATION for decorator in operation.decorator_list)
 
 
-def _mark_name(decorator: ast.expr) -> str:
+def _annotation_name(decorator: ast.expr) -> str:
     """The name a decorator is written with: `Mcp` for `@Mcp`, `@Mcp(...)`, and `@mcp_server.Mcp`."""
-    marked = decorator.func if isinstance(decorator, ast.Call) else decorator
-    if isinstance(marked, ast.Attribute):
-        return marked.attr
-    return marked.id if isinstance(marked, ast.Name) else ""
+    annotated = decorator.func if isinstance(decorator, ast.Call) else decorator
+    if isinstance(annotated, ast.Attribute):
+        return annotated.attr
+    return annotated.id if isinstance(annotated, ast.Name) else ""

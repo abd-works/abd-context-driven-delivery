@@ -16,4 +16,4 @@ templates/
                 └── {screen}-view.tsx     ← {Screen}View: a plain function painting the client
 ```
 
-The Python toolset is not templated. Mark the domain class itself, so its tools read `{object}.{operation}`.
+The Python toolset is not templated. Annotate the domain class itself, so its tools read `{object}.{operation}`.

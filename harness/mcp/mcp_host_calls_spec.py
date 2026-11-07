@@ -66,7 +66,7 @@ with description("a cdd server answering a chat's tool calls") as self:
         with it("should refuse a call made in process, naming the tool"):
             expect(lambda: self.host.dispatch("call-outcomes.audit", {})).to(raise_error(ToolNotEnrolled))
 
-    with context("with a tool marked as a long call"):
+    with context("with a tool annotated as a long call"):
         with it("should wait the long call's time for it"):
             expect(self.host.checkout_server.call_seconds("call-outcomes.reconcile")).to(equal(LONG_CALL_SECONDS))
 
